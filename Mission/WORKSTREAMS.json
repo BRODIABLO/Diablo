@@ -93,6 +93,21 @@
       ]
     },
     {
+      "id": "repair-costs-cap",
+      "name": "Repair Costs Cap",
+      "status": "paused",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/repair-costs-cap-3.2.md",
+      "nextGate": "After Prevent Merc Death in Town, identify and prove the 92777 client repair quote and authoritative server payment/repair paths, including Repair All, then audit their hook ranges against plugin-items.",
+      "include": [
+        "Mission/repair-costs-cap-3.2.md",
+        "addons/RepairCostsCap/**",
+        "data-BKVince/BKVince.mpq/RepairCostsCap.json",
+        "data-BKVince/d2rloader/plugins/RepairCostsCap-src/**",
+        "data-BKVince/d2rloader/plugins/RepairCostsCap.dll"
+      ]
+    },
+    {
       "id": "prevent-merc-death-in-town",
       "name": "Prevent Merc Death in Town",
       "status": "paused",
@@ -152,7 +167,7 @@
     },
     {
       "pattern": "reverse-engineering/d2r-3.2.92777/known-rvas.json",
-      "workstreams": ["extended-item-stats", "advanced-item-tooltips", "ground-item-label-limit", "configurable-larzuk-sockets", "remote-stash"],
+      "workstreams": ["extended-item-stats", "advanced-item-tooltips", "ground-item-label-limit", "configurable-larzuk-sockets", "remote-stash", "repair-costs-cap"],
       "reason": "Governed native evidence registry shared by native plugin missions."
     }
   ]

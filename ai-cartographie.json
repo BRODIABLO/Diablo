@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-24T11:29:30.6398691+00:00",
+    "generatedAt":  "2026-07-24T21:51:03.3415735+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -30241,6 +30241,16 @@
                                                            "name":  "prevent-merc-death-in-town-3.2.md",
                                                            "path":  "Mission/prevent-merc-death-in-town-3.2.md",
                                                            "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "repair-costs-cap-3.2.md",
+                                                           "path":  "Mission/repair-costs-cap-3.2.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-mission-native-plugin",
+                                                                        "summary":  "Décisions produit, audit initial et gates du plugin configurable de plafonnement des coûts de réparation chez les PNJ.",
+                                                                        "agentAccess":  "read-write"
+                                                                    }
                                                        },
                                                        {
                                                            "name":  "qty-display-issue-3.2.md",
