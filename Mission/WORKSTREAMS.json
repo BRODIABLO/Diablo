@@ -93,6 +93,17 @@
       ]
     },
     {
+      "id": "prevent-merc-death-in-town",
+      "name": "Prevent Merc Death in Town",
+      "status": "paused",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/prevent-merc-death-in-town-3.2.md",
+      "nextGate": "After the next RemoteStash evidence gate, verify the 92777 workbench and identify the authoritative persistent-damage path that can kill a mercenary in town.",
+      "include": [
+        "Mission/prevent-merc-death-in-town-3.2.md"
+      ]
+    },
+    {
       "id": "workstream-registry",
       "name": "Workstream Registry",
       "status": "maintenance",
