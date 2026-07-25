@@ -1,8 +1,8 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-24T21:51:03.3415735+00:00",
+    "generatedAt":  "2026-07-25T01:37:24.3759976+00:00",
     "root":  {
-                 "name":  "Diablo",
+                 "name":  "staged-checkpoint-f78025c4732d44da8e1f1d6b6ddc8bf0",
                  "path":  ".",
                  "kind":  "directory",
                  "meta":  {
@@ -13545,6 +13545,11 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
+                                                                                "name":  "PreventMercDeathInTown.json",
+                                                                                "path":  "data-BKVince/BKVince.mpq/PreventMercDeathInTown.json",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "QtyDisplayIssue.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/QtyDisplayIssue.json",
                                                                                 "kind":  "file"
@@ -14205,6 +14210,33 @@
                                                                                                                   ]
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "PreventMercDeathInTown-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/PreventMercDeathInTown-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/PreventMercDeathInTown-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/PreventMercDeathInTown-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/PreventMercDeathInTown-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "README.md",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/PreventMercDeathInTown-src/README.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "QtyDisplayIssue-src",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/QtyDisplayIssue-src",
                                                                                                      "kind":  "directory",
@@ -14399,6 +14431,11 @@
                                                                                                  {
                                                                                                      "name":  "PotionAutoPickup.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/PotionAutoPickup.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "PreventMercDeathInTown.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/PreventMercDeathInTown.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -30243,16 +30280,6 @@
                                                            "kind":  "file"
                                                        },
                                                        {
-                                                           "name":  "repair-costs-cap-3.2.md",
-                                                           "path":  "Mission/repair-costs-cap-3.2.md",
-                                                           "kind":  "file",
-                                                           "meta":  {
-                                                                        "role":  "x-mission-native-plugin",
-                                                                        "summary":  "Décisions produit, audit initial et gates du plugin configurable de plafonnement des coûts de réparation chez les PNJ.",
-                                                                        "agentAccess":  "read-write"
-                                                                    }
-                                                       },
-                                                       {
                                                            "name":  "qty-display-issue-3.2.md",
                                                            "path":  "Mission/qty-display-issue-3.2.md",
                                                            "kind":  "file"
@@ -30261,6 +30288,16 @@
                                                            "name":  "remote-stash-3.2.md",
                                                            "path":  "Mission/remote-stash-3.2.md",
                                                            "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "repair-costs-cap-3.2.md",
+                                                           "path":  "Mission/repair-costs-cap-3.2.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-mission-native-plugin",
+                                                                        "summary":  "Décisions produit, audit initial et gates du plugin configurable de plafonnement des coûts de réparation chez les PNJ.",
+                                                                        "agentAccess":  "read-write"
+                                                                    }
                                                        },
                                                        {
                                                            "name":  "reverse-engineering-runtime-tooling.md",

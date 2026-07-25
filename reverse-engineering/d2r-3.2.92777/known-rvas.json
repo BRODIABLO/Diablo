@@ -818,6 +818,38 @@
       "confidence": "high",
       "source": "Mission/bulk-skill-point-allocation-3.2.md",
       "notes": "Reads the stat index at widget+0xB88, constructs confirm and dismiss UI messages, resolves AssignAllStatPointsConfirmation plus native Yes/No labels, and calls UI_ShowConfirmationModal at 0x847C40. BulkSkillPointAllocation 1.2.1 calls this proven builder with a private sentinel instead of reimplementing Diablo's modal layout."
+    },
+    {
+      "rva": "0x448C00",
+      "name": "D2GAME_MONSTER_ApplyStatRegen",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/prevent-merc-death-in-town-3.2.md",
+      "notes": "Monster stat-regeneration event callback with proven x64 ABI (game, unit, a3, a4) -> void. The negative-life path reads HPREGEN and current hitpoints, checks current life below 256 before the town guard, then applies the tick; a tick crossing directly from positive life to zero therefore bypasses the vanilla town safeguard."
+    },
+    {
+      "rva": "0x34B440",
+      "name": "UNITS_GetRoom",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/prevent-merc-death-in-town-3.2.md",
+      "notes": "Returns the active room for a unit through its path representation. D2GAME_MONSTER_ApplyStatRegen passes this result directly to DUNGEON_IsRoomInTown before suppressing a low-life negative tick."
+    },
+    {
+      "rva": "0x2F0750",
+      "name": "DUNGEON_IsRoomInTown",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/prevent-merc-death-in-town-3.2.md",
+      "notes": "Null-safe room predicate that follows room+0x18 to the DRLG room and returns the level-record Town field through 0x360FC0. Its use in the stat-regeneration callback matches the D2MOO semantic implementation."
+    },
+    {
+      "rva": "0x48B720",
+      "name": "EVENT_SetEvent",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/prevent-merc-death-in-town-3.2.md",
+      "notes": "Schedules a unit event with x64 ABI (game, unit, eventType, expireFrame, customId, customParam) -> void. The monster stat-regeneration callback uses event type 3 at game frame + 1 before processing a nonzero life tick."
     }
   ]
 }

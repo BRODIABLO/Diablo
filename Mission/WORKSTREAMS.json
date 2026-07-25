@@ -113,9 +113,13 @@
       "status": "paused",
       "owner": "Vincent + Codex",
       "mission": "Mission/prevent-merc-death-in-town-3.2.md",
-      "nextGate": "After the next RemoteStash evidence gate, verify the 92777 workbench and identify the authoritative persistent-damage path that can kill a mercenary in town.",
+      "nextGate": "Deploy the governed Release hash to BKVince, confirm a clean 92777 cold start with fresh logs, then validate lethal persistent-damage ticks in town and the out-of-scope controls.",
       "include": [
-        "Mission/prevent-merc-death-in-town-3.2.md"
+        "Mission/prevent-merc-death-in-town-3.2.md",
+        "addons/PreventMercDeathInTown/**",
+        "data-BKVince/BKVince.mpq/PreventMercDeathInTown.json",
+        "data-BKVince/d2rloader/plugins/PreventMercDeathInTown-src/**",
+        "data-BKVince/d2rloader/plugins/PreventMercDeathInTown.dll"
       ]
     },
     {
@@ -137,37 +141,58 @@
   "sharedPaths": [
     {
       "pattern": "Mission/CURRENT.md",
-      "workstreams": ["*"],
+      "workstreams": [
+        "*"
+      ],
       "reason": "Operational pointer shared by whichever mission is the current project priority."
     },
     {
       "pattern": "ROADMAP.html",
-      "workstreams": ["*"],
+      "workstreams": [
+        "*"
+      ],
       "reason": "Shared project dashboard; stage only the relevant task fragments."
     },
     {
       "pattern": "ai-cartographie.json",
-      "workstreams": ["*"],
+      "workstreams": [
+        "*"
+      ],
       "reason": "Generated cadastre; stage only nodes belonging to the checkpoint."
     },
     {
       "pattern": "package.json",
-      "workstreams": ["extended-item-stats", "workstream-registry"],
+      "workstreams": [
+        "extended-item-stats",
+        "workstream-registry"
+      ],
       "reason": "Root commands currently serve both the active plugin tests and repository organization."
     },
     {
       "pattern": "AGENTS.md",
-      "workstreams": ["workstream-registry"],
+      "workstreams": [
+        "workstream-registry"
+      ],
       "reason": "Durable repository instructions make automatic checkpoint refresh mandatory."
     },
     {
       "pattern": "scripts/verify/verify.mjs",
-      "workstreams": ["workstream-registry"],
+      "workstreams": [
+        "workstream-registry"
+      ],
       "reason": "Repository verification orchestrator."
     },
     {
       "pattern": "reverse-engineering/d2r-3.2.92777/known-rvas.json",
-      "workstreams": ["extended-item-stats", "advanced-item-tooltips", "ground-item-label-limit", "configurable-larzuk-sockets", "remote-stash", "repair-costs-cap"],
+      "workstreams": [
+        "extended-item-stats",
+        "advanced-item-tooltips",
+        "ground-item-label-limit",
+        "configurable-larzuk-sockets",
+        "remote-stash",
+        "repair-costs-cap",
+        "prevent-merc-death-in-town"
+      ],
       "reason": "Governed native evidence registry shared by native plugin missions."
     }
   ]

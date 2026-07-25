@@ -2,9 +2,10 @@
 
 Dernière mise à jour : 24 juillet 2026
 
-Statut : mission planifiée selon l’Option B; elle démarrera après le prochain
-gate de preuve de RemoteStash. Aucun prototype, aucune configuration et aucune
-archive publique n’existent.
+Statut : prototype autonome hybride `PreventMercDeathInTown.dll` 0.1.0 et JSON
+implantés puis compilés en Release. La mission est mise en pause au gate runtime
+pendant Repair Costs Cap; aucune preuve n’est perdue et aucune archive publique
+n’existe.
 
 ## Décisions confirmées
 
@@ -12,8 +13,9 @@ archive publique n’existent.
   sous poison, Open Wounds ou autre dégénérescence persistante est un fait, et
   non un bug hypothétique ni une théorie à valider.
 - Le nom exact de la mission est `Prevent Merc Death in Town`.
-- Vincent a retenu l’Option B : RemoteStash reste la priorité courante jusqu’à
-  son prochain gate de preuve, puis cette mission devient le prochain chantier.
+- Vincent avait retenu l’Option B, puis a demandé `Commence` le 24 juillet 2026,
+  ce qui a autorisé l’implantation du prototype. La mission est maintenant mise
+  en pause à son gate runtime pendant Repair Costs Cap.
 - Vincent confirme la catégorie PluginPack `misc` le 24 juillet 2026, avec
   `plugin-misc.dll` comme DLL propriétaire future et
   `misc.preventMercDeathInTown` comme clé prévue.
@@ -68,6 +70,65 @@ serviteurs ou rester active après la sortie de ville.
   ses options sous `misc.preventMercDeathInTown`, puis supprimer la DLL et le
   JSON autonomes.
 
+## Audit initial
+
+- Le gate `npm.cmd run re:d2r32 -- status` est vert : images canonique et
+  d’analyse, index SQLite et projet Ghidra persistant du build 92777 sont
+  vérifiés; aucun redump ni réimport n’a été effectué.
+- La référence officielle `D2RL-Plugins@dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`
+  est propre et vérifiée. `plugin-misc` charge la section `misc` de l’unique
+  JSON (`src/plugin-misc/misc-main.cpp:136-140`) et ne possède que les callsites
+  `/players` `0x18885B`/`0x18887F` ainsi que le hook
+  `GAME_GetPlayerCountBonus` `0x542F40` (`misc-main.cpp:5-40,142-158`). Aucun de
+  ces sites ne chevauche le chemin périodique étudié autour de `0x448C21`.
+- Le patch gouverné `Thorns and Burn Kill Credit` identifie déjà `0x448DCA` et
+  `0x448DE5` dans la fonction `0x448C21-0x448E14`. Ce chemin applique un delta
+  de PV, détecte le passage létal, puis parcourt les états poison `2`, Open
+  Wounds `0x3E` et burning `0x73` afin d’en retrouver le propriétaire avant la
+  logique de mort. Cette fonction constitue le point de départ prouvé, sans que
+  son nom canonique ni son ABI complète soient encore promus.
+- Dans ce chemin, `0x34AB60` est un getter unique du champ `unit+0x0C`; la
+  séquence compare sa valeur à `0` puis `12`. Cela ne prouve ni la ville ni le
+  statut de mercenaire et ne doit pas être utilisé comme tel sans xrefs et
+  preuves supplémentaires.
+- La branche unique `0x448CEC` prouve la faiblesse du garde de ville : pour un
+  `HPREGEN` négatif, elle teste les PV courants contre `0x100` avant d’ajouter le
+  delta. Si les PV courants valent au moins 1 mais que le tick les fait passer
+  directement sous 1, le garde room/town n’est jamais consulté et la valeur
+  résultante est ramenée à zéro. La signature de 46 octets couvrant test du
+  delta, seuil `0x100`, résolution room/town et addition ne possède qu’un match
+  dans l’image 92777.
+- La correspondance sémantique D2MOO est exacte dans
+  `source/D2Game/src/MONSTER/MonsterMode.cpp:575-617` :
+  `D2GAME_MONSTER_ApplyStatRegen` teste également `current HP < 256` et la ville
+  avant de calculer `new HP`, puis ramène tout résultat inférieur à 1 à zéro.
+  Le correctif doit donc protéger le résultat projeté du mercenaire en ville,
+  sans neutraliser globalement son `HPREGEN` négatif.
+- D2MOO épinglé fournit seulement des références sémantiques :
+  `DUNGEON_IsTownLevelId` apparaît notamment dans
+  `source/D2Common/src/D2Dungeon.cpp:985-987`, tandis que le calcul Open Wounds
+  est documenté dans `source/D2Game/src/SKILLS/SkillItem.cpp:1296-1343`. Aucune
+  adresse, structure ou ABI 1.10f n’est transposée vers 92777.
+- L’entrée réelle est `0x448C00`, avec l’ABI x64
+  `(game, unit, a3, a4) -> void`. Le prototype valide son prologue strict de 21
+  octets avant d’installer son hook; tous les cas hors cible appellent le
+  trampoline vanilla.
+- La classification native des mercenaires est fermée par deux preuves :
+  D2MOO `MONSTERS_GetHirelingTypeId` classe seulement les cinq familles, et les
+  tables BKVince 3.2 byte-exactes donnent `classId` 271, 338, 359, 560 et 561.
+- `0x34B440` est promu comme `UNITS_GetRoom`; `0x2F0750` est promu comme
+  `DUNGEON_IsRoomInTown`. Ce dernier suit `room+0x18`, puis retourne le champ
+  `Town` du record de niveau via `0x360FC0` (`level record + 0x1F8`).
+- Le prototype recalcule le `HPREGEN` effectif comme vanilla, teste les PV
+  projetés, et n’intercepte que le tick négatif létal d’un des cinq mercenaires
+  dans une room de ville. Il appelle ensuite `EVENT_SetEvent` `0x48B720` pour
+  reprogrammer `STATREGEN` à `gameFrame + 1`; il ne guérit pas et ne fige pas
+  l’expiration de l’effet persistant.
+- Le build Release gouverné passe avec le SHA-256
+  `D49166D33B2DEA7BCECE0F972692802AE8BC4D48A1B15FF811FA2A10329C8980`.
+  Les trois exports requis, la section ressource, le binaire x64 et les
+  métadonnées RuffnecKk 0.1.0 sont contrôlés sur l’artefact synchronisé.
+
 ## Gates observables
 
 - propriétaire futur `misc` / `plugin-misc.dll` confirmé explicitement par Vincent;
@@ -82,7 +143,6 @@ serviteurs ou rester active après la sortie de ville.
 
 ## Prochain gate
 
-Après le prochain gate de preuve RemoteStash, exécuter
-`npm.cmd run re:d2r32 -- status`, construire les témoins de dégâts persistants
-et identifier le chemin serveur 92777 qui permet au tick de dégâts de tuer le
-mercenaire dans une zone de ville.
+Déployer le hash Release dans le profil BKVince avec le skill runtime. Exiger
+un cold start 92777 et des logs frais avant la matrice en jeu poison/Open
+Wounds, ville/hors ville et mercenaire/autres unités.
