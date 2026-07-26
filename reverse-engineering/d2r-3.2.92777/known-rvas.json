@@ -850,6 +850,30 @@
       "confidence": "high",
       "source": "Mission/prevent-merc-death-in-town-3.2.md",
       "notes": "Schedules a unit event with x64 ABI (game, unit, eventType, expireFrame, customId, customParam) -> void. The monster stat-regeneration callback uses event type 3 at game frame + 1 before processing a nonzero life tick."
+    },
+    {
+      "rva": "0x480650",
+      "name": "D2GAME_PACKETS_SendPacket0x77_Ui",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/remote-stash-3.2.md",
+      "notes": "Builds the two-byte server UI packet 0x77 with ABI (client, uiAction) and queues it for the client. The bank operation caller at 0x52829C passes action 0x10 (UPDATEUI_OPENSTASH); a second caller at 0x5809E1 passes 0x14. Its exact 16-byte entry signature 40 57 48 83 EC 40 C6 44 24 50 77 48 8B F9 88 54 is unique in build 92777."
+    },
+    {
+      "rva": "0x4B2BE0",
+      "name": "D2GAME_PACKETCALLBACK_InteractWithEntity",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/remote-stash-3.2.md",
+      "notes": "Network receive callback with ABI (game, player, packet, packetSize) -> int32. It requires a 9-byte interaction packet whose payload contains unit type at +1 and GUID at +5, then validates the target and interaction path. Its exact 23-byte prologue is unique. A runtime hook did not fire during a normal integrated local stash opening, proving this receive callback is not itself the local UI trigger."
+    },
+    {
+      "rva": "0x528270",
+      "name": "OBJECTS_OperateFunction32_Bank",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/remote-stash-3.2.md",
+      "notes": "Bank object operation handler with probable ABI (operation, operateMode) -> int32. It rejects a non-neutral stash object, resolves the player client through SUNIT_GetClientFromPlayer 0x48FDE0, and sends UI action 0x10 through D2GAME_PACKETS_SendPacket0x77_Ui 0x480650 before returning success. Its exact 18-byte entry signature 40 53 48 83 EC 20 48 8B D9 48 8B 49 08 E8 DE 28 E2 FF is unique. Static identity is high-confidence; a planned runtime entry hit was blocked before game entry by the official offline-login validation."
     }
   ]
 }

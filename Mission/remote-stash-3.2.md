@@ -1,15 +1,20 @@
 # RemoteStash — D2R 3.2.92777
 
-Dernière mise à jour : 24 juillet 2026
+Dernière mise à jour : 26 juillet 2026
 
-Statut : mission active; incubation et audit natif commencés. Aucun prototype,
-aucun bouton et aucune archive publique n’existent encore.
+Statut : phase 1 mise en pause à son gate de preuve pendant la priorité
+Transmogrify. Le chemin serveur natif d’ouverture du stash est identifié
+statiquement, mais sa confirmation dynamique reste suspendue par la validation
+officielle hors ligne de Battle.net. Aucun prototype public, aucun bouton, aucun
+sprite et aucune archive n’existent encore.
 
 ## Décisions confirmées
 
-- Vincent a retenu l’Option A le 24 juillet 2026 : RemoteStash devient la
-  priorité immédiate et Configurable Larzuk Sockets reste intacte à son gate de
-  validation en jeu.
+- Après une pause temporaire au profit de Repair Costs Cap, Vincent a repris
+  RemoteStash selon l’Option A le 24 juillet 2026. Configurable Larzuk Sockets
+  reste intacte à son gate de validation en jeu.
+- La mission est remise en pause le 26 juillet 2026 lorsque Vincent promeut
+  Transmogrify; les preuves et le prochain gate RemoteStash restent intacts.
 - La catégorie PluginPack future est `misc`, avec `plugin-misc.dll` comme DLL
   propriétaire et `misc.remoteStash` comme clé prévue dans l’unique
   `D2RPlugins.json`.
@@ -67,22 +72,63 @@ objets lui-même.
   `D2GAME_PACKETS_SendPacket0x77_Ui_6FC3E0B0`
   (`source/D2Game/src/GAME/SCmd.cpp:1159`). Cette preuve est uniquement
   sémantique 1.10f : aucune adresse ni ABI n’est transposée vers D2R 3.2.
-- Sur 92777, les 38 xrefs connus de `D2GAME_QueueServerPacket` `0x4817F0` ont
-  été inventoriés. Les premières signatures ciblant naïvement un producteur de
-  deux octets `0x77,0x10` ne donnent aucun match; le format ou le chemin D2R
-  doit donc être établi indépendamment plutôt que supposé identique à 1.10f.
+- Sur 92777, `D2GAME_QueueServerPacket` `0x4817F0` conserve son ABI prouvée
+  `(client, packetBytes, packetLength)`. Une recherche par construction du
+  paquet, et non par littéral contigu, identifie maintenant
+  `D2GAME_PACKETS_SendPacket0x77_Ui` `0x480650`. Cette fonction place `0x77`
+  dans le premier octet, l’action reçue dans le second, puis transmet le paquet
+  au client. Sa signature d’entrée stricte de 16 octets est unique.
+- Le caller `0x528270` charge le joueur depuis la structure d’opération, exige
+  que l’objet stash soit encore en mode neutre, résout le client du joueur par
+  `SUNIT_GetClientFromPlayer` `0x48FDE0`, passe l’action `0x10` à `0x480650`
+  et retourne le succès. Cette sémantique identifie avec confiance élevée
+  `OBJECTS_OperateFunction32_Bank`, avec l’ABI probable
+  `(D2ObjOperateFnStrc* operation, int32 operate) -> int32`; sa signature
+  d’entrée stricte de 18 octets est unique.
+- Le callback réseau `0x4B2BE0` valide un paquet d’interaction de 9 octets
+  contenant le type et le GUID d’une unité. Son ABI, sa signature unique de
+  23 octets et sa proximité sémantique avec le handler historique
+  `InteractWithEntity` sont établies. Un hook dynamique actif pendant une
+  ouverture locale normale du stash n’a toutefois reçu aucun appel : ce
+  callback appartient au chemin de réception réseau et ne doit pas être pris
+  pour le déclencheur local intégré.
+- Le dispatcher client d'interaction avec les objets appelle
+  `UNITS_GetClassId` `0x349860`, reconnaît explicitement la classe stash `267`
+  (`0x10B`) à `0x1E0F2B`, puis branche exclusivement vers `0x16EC10`.
+- L'analyse complète de `0x16EC10` invalide toutefois son identification comme
+  fonction d'ouverture. Elle exige l'unité stash dans deux champs, résout sa
+  position et soumet les identifiants `0x11C`, `0x128` et `0x125` à une longue
+  routine de présentation qui calcule des coordonnées et des effets. Cette voie
+  est conservée comme gestionnaire probable d'animation/FX du coffre, confiance
+  faible, et n'est ni promue ni appelée par le prototype.
+- Une autre routine observée autour de `0x4BA600` parcourt les unités objet,
+  reconnaît elle aussi la classe `267` et retient un stash à une distance
+  inférieure ou égale à `50`. Ce fragment prouve qu'un résolveur natif existe,
+  mais ses limites de fonction et son ABI ne sont pas encore assez sûres pour
+  l'appeler depuis le plugin.
+- Une ouverture native normale a été observée sous BKVince pendant le probe :
+  le panneau affiché conserve ses onglets et ses grilles personnalisés
+  `Personal`, `Shared`, `Crafting` et `BKDiablo`. Cela prouve que le panneau
+  natif actif rend déjà le layout du mod; cela ne prouve pas encore qu’un appel
+  distant à `0x528270` satisfera toutes les préconditions serveur.
+- Un probe d’analyse gitignoré a été compilé pour confirmer dynamiquement
+  l’entrée dans `0x528270`. Le jeu a ensuite refusé l’accès avec son contrôle
+  officiel « pas en ligne depuis 30 jours » avant l’entrée en partie. Le probe
+  a été retiré, la DLL d’origine restaurée et aucun processus Diablo n’a été
+  laissé actif. Aucune tentative de contournement n’est autorisée ni requise.
 
 ## Hypothèses à tester
 
-- L’interaction avec le coffre pourrait encore employer un événement UI serveur
-  équivalent au couple historique paquet `0x77` / action `16`, puis un
-  dispatcher client réutilisable qui initialise le panneau stash existant.
-- Si ce chemin ouvre le panneau déjà fourni par le jeu ou le mod actif, le
-  format de grille personnalisé pourrait rester sous la responsabilité de ce
-  panneau; ce n’est pas encore prouvé.
-- Si l’ouverture dépend d’un objet de monde, d’un contexte serveur ou d’un état
-  de transaction spécifique, un déclencheur distant pourrait exiger un chemin
-  plus large qu’un simple appel de fonction.
+- L’appel direct du handler banque `0x528270` depuis le thread et le contexte
+  serveur adéquats devrait réutiliser l’événement UI natif `0x77 / 0x10`; cette
+  hypothèse reste à confirmer dynamiquement.
+- Puisque l’ouverture locale affiche déjà le layout BKVince personnalisé, les
+  dimensions et onglets devraient rester sous la responsabilité du panneau
+  natif. La compatibilité distante demeure néanmoins non prouvée.
+- Le principal risque n’est plus de reconstruire le layout, mais de fournir un
+  contexte d’opération valide : joueur, client, objet stash, état d’interaction,
+  ville/hors ville et thread serveur. Un déclencheur hors ville ou sans coffre
+  résolu pourrait exiger un chemin plus large qu’un simple appel de fonction.
 
 ## Gates observables
 
@@ -97,7 +143,9 @@ objets lui-même.
 
 ## Prochain gate
 
-Identifier dans 92777 le producteur serveur et le consommateur client de
-l’événement qui ouvre réellement le stash, en partant des 38 callers de
-`D2GAME_QueueServerPacket` et de l’interaction avec l’objet; prouver ensuite le
-format, la fonction, les callers, l’ABI et les préconditions avant tout hook.
+Après renouvellement normal de la validation en ligne du jeu, confirmer qu’une
+interaction native avec le coffre entre dans `OBJECTS_OperateFunction32_Bank`
+`0x528270`. Déclencher ensuite cette même voie depuis une commande ou un raccourci
+technique minimal exécuté dans un contexte serveur valide, avant tout bouton ou
+sprite. Vérifier d’abord la ville, la fermeture et le layout BKVince; les cas
+hors ville, multijoueur et layouts tiers suivront seulement si ce gate est vert.
