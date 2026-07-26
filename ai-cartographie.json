@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-26T18:43:26.1937914+00:00",
+    "generatedAt":  "2026-07-26T20:51:26.4093376+00:00",
     "root":  {
                  "name":  "staged-checkpoint-f78025c4732d44da8e1f1d6b6ddc8bf0",
                  "path":  ".",
@@ -30389,6 +30389,11 @@
                                                        {
                                                            "name":  "transmogrify-restoration-3.2.md",
                                                            "path":  "Mission/transmogrify-restoration-3.2.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "vendor-stock-refresh-3.2.md",
+                                                           "path":  "Mission/vendor-stock-refresh-3.2.md",
                                                            "kind":  "file"
                                                        },
                                                        {
