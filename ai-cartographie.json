@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-26T22:12:38.7491513+00:00",
+    "generatedAt":  "2026-07-26T21:56:14.2881574+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -13563,6 +13563,11 @@
                                                                                 "name":  "RepairCostsCap.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/RepairCostsCap.json",
                                                                                 "kind":  "file"
+                                                                            },
+{
+                                                                                "name":  "VendorStockRefresh.json",
+                                                                                "path":  "data-BKVince/BKVince.mpq/VendorStockRefresh.json",
+                                                                                "kind":  "file"
                                                                             }
                                                                         ]
                                                        },
@@ -14514,6 +14519,54 @@
                                                                                                                       }
                                                                                                                   ]
                                                                                                  },
+{
+                                                                                                     "name":  "VendorStockRefresh-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/VendorStockRefresh-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "meta":  {
+                                                                                                         "role":  "x-plugin-incubation-source",
+                                                                                                         "summary":  "Sources, tests et documentation du prototype autonome Vendor Stock Refresh pour D2R 3.2.92777.",
+                                                                                                         "agentAccess":  "read-write",
+                                                                                                         "status":  "active",
+                                                                                                         "policy":  {
+                                                                                                             "editable":  true,
+                                                                                                             "canonical":  true,
+                                                                                                             "generated":  false
+                                                                                                         }
+                                                                                                     },
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/VendorStockRefresh-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/VendorStockRefresh-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/VendorStockRefresh-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "policy_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/VendorStockRefresh-src/policy_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "README.md",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/VendorStockRefresh-src/README.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "vendor_refresh_policy.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/VendorStockRefresh-src/vendor_refresh_policy.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
                                                                                                  {
                                                                                                      "name":  "AdvancedItemTooltips.dll.disabled",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/AdvancedItemTooltips.dll.disabled",
@@ -14632,6 +14685,11 @@
                                                                                                  {
                                                                                                      "name":  "Transmogrify.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/Transmogrify.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+{
+                                                                                                     "name":  "VendorStockRefresh.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/VendorStockRefresh.dll",
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]

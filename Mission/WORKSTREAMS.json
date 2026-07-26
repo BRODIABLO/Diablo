@@ -153,10 +153,10 @@
     {
       "id": "vendor-stock-refresh",
       "name": "Vendor Stock Refresh",
-      "status": "paused",
+      "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/vendor-stock-refresh-3.2.md",
-      "nextGate": "After Transmogrify and Readable Items, measure normal-vendor restock friction and prove the 92777 refresh path plus authoritative cache ownership before implementing any hook.",
+      "nextGate": "Prove one normal-vendor refresh before/after an item purchase while preserving the native gamble refresh; then extend the cold-started 0.1.0 prototype to controller, click-spam, global fallback and host/joiner tests.",
       "include": [
         "Mission/vendor-stock-refresh-3.2.md",
         "addons/VendorStockRefresh/**",
@@ -241,6 +241,22 @@
         "vendor-stock-refresh"
       ],
       "reason": "Governed native evidence registry shared by native plugin missions."
+    },
+    {
+      "pattern": "reverse-engineering/d2r-3.2.92777/findings.md",
+      "workstreams": [
+        "extended-item-stats",
+        "advanced-item-tooltips",
+        "ground-item-label-limit",
+        "configurable-larzuk-sockets",
+        "remote-stash",
+        "extended-act-level-ids",
+        "readable-items-clue-scrolls",
+        "repair-costs-cap",
+        "prevent-merc-death-in-town",
+        "vendor-stock-refresh"
+      ],
+      "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."
     }
   ]
 }

@@ -1042,6 +1042,126 @@
       "confidence": "high",
       "source": "Mission/repair-costs-cap-3.2.md",
       "notes": "Vanilla JE skips both debit and the second Repair All callback pass when total cost is zero. When its repair policy is enabled, RepairCostsCap 1.4.0 validates the unique 16-byte context at 0x53FF65 and changes only the displacement byte at 0x53FF70 from 0x6F to 0x21 so maximumGold=0 skips debit but still reaches the callback setup at 0x53FF92."
+    },
+    {
+      "rva": "0x502B70",
+      "name": "D2GAME_NPC_GetVendorChainEntry",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Resolves an NPC class id, then tail-calls the vendor-chain lookup at 0x502BB0. Proven x64 ABI: (game, npc, indexOut) -> VendorChainEntry*. FillStoreInventory and the store-opening dispatcher call it directly; the lookup walks D2GameStrc+0x3838 in 0x78-byte entries and compares the 16-bit NPC id at +0x00."
+    },
+    {
+      "rva": "0x502F00",
+      "name": "D2GAME_NPC_ClearVendorInventory",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Authoritative normal-vendor cleanup with proven x64 ABI (game, vendorEntry, npc) -> void. Its sole caller at 0x540952 executes only when VendorChainEntry+0x35 requests a refresh. It removes and synchronizes the current store inventory, clears the filled flag at +0x34 and timestamp at +0x38, then updates the NPC through 0x540AA0 before FillStoreInventory runs at 0x540960."
+    },
+    {
+      "rva": "0x503290",
+      "name": "D2GAME_NPC_UpdateVendorRefreshState",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Walks the 0x78-byte vendor chain, filters entries by the compiled NPC vendor group, and maintains normal-store refresh state. In its timed path, GetTickCount64 greater than VendorChainEntry+0x38 plus 0x3A980 (240000 ms) sets the refresh-pending byte at +0x35 and stores the new timestamp. Two direct callers at 0x502DEB and 0x502EE2 prove the server maintenance path."
+    },
+    {
+      "rva": "0x53C9F0",
+      "name": "D2GAME_NPC_FillStoreInventory",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Authoritative normal-store fill with proven x64 ABI (game, player, npc) -> void and one direct caller at 0x540960. It resolves the NPC's VendorChainEntry, writes GetTickCount64 to +0x38, generates random normal/magic stock from the 12-byte cache entries at +0x40/+0x48 and regenerates permanent item codes from +0x58/+0x60 through D2GAME_NPC_GenerateStoreItem. The pinned plugin-items hook owns this canonical entry."
+    },
+    {
+      "rva": "0x540EA0",
+      "name": "D2GAME_NPC_GenerateStoreItem",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Creates one server-side vendor item for the supplied NPC, item code, game, quality, item level and player level. Three direct callers belong to the normal-store fill path. The pinned plugin-items implementation calls this exact entry for random and permanent stock and validates its build-specific address before installing the FillStoreInventory hook."
+    },
+    {
+      "rva": "0x541880",
+      "name": "D2GAME_STORES_FillGamble",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Authoritative gamble fill reached from the store-opening dispatcher at 0x540913 only for interface type 3. This is distinct from normal-store cleanup at 0x502F00 and fill at 0x53C9F0. Its generation loop contains the separately governed GambleScreenGenerationLimitImmediate at 0x541A7E."
+    },
+    {
+      "rva": "0xEC730",
+      "name": "CLIENT_SendNineByteCommandPacket",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Builds the current 92777 client command layout {opcode:u8, action:u32, targetGuid:u32} and submits exactly nine bytes through CLIENT_QueueOutgoingPacket 0xEE2A0. Proven x64 ABI: (opcode byte, action dword, targetGuid dword) -> void. Twenty-six direct references include the vendor entity-action callers; its 48-byte entry signature is pinned by VendorStockRefresh 0.1.0."
+    },
+    {
+      "rva": "0x10CAC0",
+      "name": "CLIENT_GetVendorPanelGambleMode",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Returns the client gamble-state global used by VendorPanel configuration at 0x241240. A nonzero result stores panel mode 2 at panel+0x168. VendorStockRefresh uses this native predicate so RefreshAll keeps action 2 in gamble and selects action 1 only for a normal vendor panel."
+    },
+    {
+      "rva": "0x10F520",
+      "name": "CLIENT_SendVendorRefreshAction",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Loads the current NPC GUID, sets entity action 2 and tail-calls CLIENT_SendNineByteCommandPacket with opcode 0x38. Its exact 19-byte body is unique and it has exactly two references, both in the vendor panel: the direct input path at 0x240E82 and the VendorPanelMessage:RefreshAll branch at 0x241D79."
+    },
+    {
+      "rva": "0x240E0D",
+      "name": "VendorRefreshInputModeGuard",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Unique 23-byte vendor-panel input guard requiring panel+0x168 mode 2 before the direct refresh path reaches CLIENT_SendVendorRefreshAction. VendorStockRefresh 0.1.0 changes the same-length condition to reject only repair mode 1, enabling normal mode 0 while preserving gamble mode 2."
+    },
+    {
+      "rva": "0x24137D",
+      "name": "VendorRefreshButtonEnableModeGate",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "First of two unique, adjacent mode gates applied to the only widget enabled exclusively in vendor panel mode 2. The governed layout proves this widget is button_refresh. VendorStockRefresh changes cmp mode,2/sete to cmp mode,1/setne so normal and gamble enable the native button while repair does not."
+    },
+    {
+      "rva": "0x241391",
+      "name": "VendorRefreshButtonVisibilityModeGate",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Second unique mode gate for the native button_refresh widget, paired with the enable gate at 0x24137D through the widget vtable +0x50 method. VendorStockRefresh applies the same mode != 1 policy with a strict 20-byte replacement."
+    },
+    {
+      "rva": "0x241B20",
+      "name": "UI_VendorPanel_HandleMessage",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Vendor-panel message handler with ABI (panel, message) -> void. The branch comparing hash 0xB7AA1748D66EFCAF performs panel cleanup through 0x241EF0 and tail-calls CLIENT_SendVendorRefreshAction, proving the VendorPanelMessage:RefreshAll route declared by button_refresh."
+    },
+    {
+      "rva": "0x4B0470",
+      "name": "D2GAME_PACKETCALLBACK_EntityAction",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Authoritative server callback with ABI (game, player, packet, packetSize) -> int32. It requires the current nine-byte opcode-0x38 payload, resolves and validates the NPC, checks act and proximity, then routes action 1 normal store and action 2 gamble through the common store dispatcher 0x540850. The legacy D2MOO 13-byte packet layout does not apply to build 92777."
+    },
+    {
+      "rva": "0x502F60",
+      "name": "D2GAME_NPC_ConfigureVendorInteraction",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Configures the player's vendor session immediately before the common store dispatcher. Proven x64 ABI: (game, npc, player, mode byte) -> void. It reads and replaces PlayerData+0x100, where callers pass mode 2 normal store, 3 gamble and 4 hire, and stores the NPC class at +0xFC. VendorStockRefresh inspects the old normal-session state before forwarding unchanged to vanilla."
     }
   ]
 }

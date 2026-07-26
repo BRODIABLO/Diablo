@@ -1,47 +1,33 @@
 # Mission courante
 
-Dernière mise à jour : 24 juillet 2026
+Dernière mise à jour : 26 juillet 2026
 
 ## Priorité active
 
-[RemoteStash — D2R 3.2.92777](remote-stash-3.2.md)
+[Vendor Stock Refresh — D2R 3.2](vendor-stock-refresh-3.2.md)
 
-État : Vincent a retenu l’Option A le 24 juillet 2026. RemoteStash devient la
-priorité immédiate; Configurable Larzuk Sockets reste intacte à son gate de
-validation en jeu. La catégorie `misc`, la destination future `plugin-misc.dll`
-et la clé `misc.remoteStash` sont confirmées. Le workbench 92777 et la référence
-PluginPack épinglée sont vérifiés. Aucun chemin natif d’ouverture du panneau
-stash n’est encore prouvé et aucun prototype n’existe.
+État : le prototype autonome `VendorStockRefresh 0.1.0` est implanté, compile en
+Release x64 et passe son cold start mod-local sur 92777 : hashes DLL/JSON
+identiques, configuration mod-locale sélectionnée, cinq sites acceptés et zéro
+erreur fraîche. Il réutilise le bouton natif `button_refresh`, le paquet vanilla
+`0x38` de neuf octets et le cycle serveur `VendorChainEntry+0x35` sans nouvel
+opcode. La catégorie `items`, la destination future `plugin-items.dll` et la clé
+`items.vendorStockRefresh` restent confirmées. La DLL est attribuée exactement à
+`RuffnecKk`, hybride globale/mod-locale, configurée uniquement par
+`VendorStockRefresh.json` et ne modifie, lie ni redistribue une DLL d’eezstreet.
 
 ## Prochain gate
 
-Identifier dans 92777 le producteur serveur et le consommateur client de
-l’événement qui ouvre réellement le stash, en partant des 38 callers de
-`D2GAME_QueueServerPacket` et de l’interaction avec l’objet; prouver ensuite le
-format, la fonction, les callers, l’ABI et les préconditions avant tout hook.
-
-Gates suivants :
-
-- distinguer l’ouverture purement client des éventuels états ou paquets serveur;
-- déclencher d’abord le chemin prouvé depuis un contrôle technique minimal;
-- reporter sprites, placement final et layouts personnalisés après cette preuve;
-- ne préparer aucun ZIP avant validation fonctionnelle et de coexistence.
+Observer en jeu un rafraîchissement normal avant/après achat et la non-régression
+du gamble. Capturer logs, compteurs et stock avant/après; le focus manette, le
+spam de clics, tous les actes, le repli global et l’hôte/joiner suivent après ce
+témoin.
 
 ## Frontière Git
 
-Le lot RemoteStash comprend sa mission, les futures sources/DLL/JSON autonomes,
-les preuves RVA gouvernées, le registre de workstreams, le cadastre et les
-fragments associés de la ROADMAP. Il ne doit intégrer aucun fichier d’une DLL
-d’eezstreet; `plugin-misc.dll` demeure seulement la destination du merge futur.
-
-Ne pas mélanger sans checkpoint explicite les chantiers concurrents suivants :
-
-- Configurable Larzuk Sockets;
-- Extended Item Stats;
-- Advanced Item Tooltips;
-- Qty Display Issue;
-- Ground Item Label Limit;
-- toute évolution indépendante de `Transmogrify`.
-
-Ce fichier est un pointeur opérationnel. Les preuves, décisions et gates
-détaillés demeurent dans la mission liée et dans `ROADMAP.html`.
+Le lot Vendor Stock Refresh comprend sa mission, son entrée ROADMAP, son
+workstream, les preuves `known-rvas.json`/`findings.md` et ses sources/DLL/JSON
+autonomes. Les changements concurrents de Transmogrify,
+Readable Items, Repair Costs Cap, ExtendedItemStats et des autres plugins sont
+préservés. Le registre assigne ce périmètre au workstream
+`vendor-stock-refresh`.
