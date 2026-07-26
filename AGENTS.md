@@ -92,6 +92,51 @@ Après toute modification **structurelle** — ajout, suppression ou renommage d
 
 Cherche et trouve la mission courante avec le skill `diablo-roadmap-release`. Si le contexte ou la ROADMAP ne sont pas assez clairs, valide inline avec l'utilisateur le prochain pas.
 
+## Profondeur des réponses et phase de conception
+
+Lorsqu’un utilisateur explore une idée, pose une question technique, compare des
+approches ou évalue une architecture, produire par défaut une réponse approfondie
+orientée vers la décision.
+
+Ne pas confondre un effort de raisonnement élevé avec une réponse concise.
+Exposer dans la réponse finale les conclusions utiles du raisonnement.
+
+Sauf demande explicite de brièveté :
+
+1. reformuler précisément le besoin;
+2. inspecter le dépôt et les sources gouvernées avant toute affirmation technique;
+3. distinguer explicitement :
+   - les faits vérifiés;
+   - les hypothèses à tester;
+   - les inconnues;
+   - les recommandations démontrées;
+4. présenter les approches réellement viables;
+5. expliquer leur fonctionnement étape par étape;
+6. comparer leurs avantages, inconvénients, risques et prérequis;
+7. couvrir, lorsque pertinent :
+   - le runtime;
+   - la persistance et les sauvegardes;
+   - le multijoueur et l’autorité serveur/client;
+   - la compatibilité;
+   - la migration;
+   - la maintenance;
+8. recommander une approche et justifier ce choix;
+9. identifier les décisions utilisateur et les preuves techniques requises avant
+   l’implantation.
+
+Préférer une analyse Markdown structurée à une réponse conversationnelle courte.
+
+Lorsque l’utilisateur est encore en phase d’exploration, de clarification ou de
+choix architectural, ne modifier aucun fichier et ne commencer aucune
+implantation. Une formulation comme « étudions cette idée », « comment cela
+fonctionnerait-il ? » ou « quelles sont les options ? » constitue une demande
+d’analyse, pas une autorisation d’implanter.
+
+Lorsqu’une demande d’implantation est explicite, ne pas répéter inutilement
+l’analyse complète si les décisions et les gates requis sont déjà fermés.
+Rappeler brièvement l’architecture retenue, puis exécuter le travail conformément
+aux procédures du workspace.
+
 ## Gate anti-sauce
 
 Avant de recommander un nouvel outil, une automatisation ou une évolution d'architecture :
