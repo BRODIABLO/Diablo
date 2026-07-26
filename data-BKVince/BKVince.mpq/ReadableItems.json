@@ -1,0 +1,16 @@
+{
+  // Enables configured readable items after the native hook and renderer gates are proven.
+  "enabled": true,
+
+  // Adds this line to every configured item's tooltip.
+  "tooltip": "Right-click to read...",
+
+  // The dmy code is a development fixture. Replace it with a real mod item after validation.
+  "items": [
+    {
+      "code": "dmy",
+      "title": "Clue Scroll Test",
+      "text": "A bounded dummy message used only to validate Readable Items."
+    }
+  ]
+}

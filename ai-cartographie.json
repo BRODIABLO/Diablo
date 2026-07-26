@@ -13553,6 +13553,11 @@
                                                                                 "name":  "QtyDisplayIssue.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/QtyDisplayIssue.json",
                                                                                 "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "ReadableItems.json",
+                                                                                "path":  "data-BKVince/BKVince.mpq/ReadableItems.json",
+                                                                                "kind":  "file"
                                                                             }
                                                                         ]
                                                        },
@@ -14274,6 +14279,48 @@
                                                                                                                       {
                                                                                                                           "name":  "README.md",
                                                                                                                           "path":  "data-BKVince/d2rloader/plugins/QtyDisplayIssue-src/README.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "ReadableItems-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/ReadableItems-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "meta":  {
+                                                                                                                  "role":  "x-plugin-incubation-source",
+                                                                                                                  "summary":  "Socle autonome du futur plugin D2RLoader affichant un texte configurable au clic droit sur un objet.",
+                                                                                                                  "agentAccess":  "read-write",
+                                                                                                                  "status":  "active",
+                                                                                                                  "policy":  {
+                                                                                                                                 "editable":  true,
+                                                                                                                                 "canonical":  true,
+                                                                                                                                 "generated":  false
+                                                                                                                             },
+                                                                                                                  "notes":  [
+                                                                                                                                "Plugin autonome sans propriétaire PluginPack ni merge planifié.",
+                                                                                                                                "Aucune DLL avant preuve du rendu client et de la coexistence des hooks."
+                                                                                                                            ]
+                                                                                                              },
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ReadableItems-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "config_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ReadableItems-src/config_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "readable_items_config.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ReadableItems-src/readable_items_config.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "README.md",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ReadableItems-src/README.md",
                                                                                                                           "kind":  "file"
                                                                                                                       }
                                                                                                                   ]
@@ -30292,6 +30339,11 @@
                                                        {
                                                            "name":  "qty-display-issue-3.2.md",
                                                            "path":  "Mission/qty-display-issue-3.2.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "readable-items-clue-scrolls-3.2.md",
+                                                           "path":  "Mission/readable-items-clue-scrolls-3.2.md",
                                                            "kind":  "file"
                                                        },
                                                        {

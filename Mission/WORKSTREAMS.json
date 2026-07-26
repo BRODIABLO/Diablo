@@ -122,6 +122,20 @@
       ]
     },
     {
+      "id": "readable-items-clue-scrolls",
+      "name": "Readable Items / Clue Scrolls",
+      "status": "paused",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/readable-items-clue-scrolls-3.2.md",
+      "nextGate": "After the weighted Transmogrify engine is stable, prove a standalone client surface and close hook delegation before implementing ReadableItems.dll.",
+      "include": [
+        "Mission/readable-items-clue-scrolls-3.2.md",
+        "data-BKVince/BKVince.mpq/ReadableItems.json",
+        "data-BKVince/d2rloader/plugins/ReadableItems-src/**",
+        "data-BKVince/d2rloader/plugins/ReadableItems.dll"
+      ]
+    },
+    {
       "id": "prevent-merc-death-in-town",
       "name": "Prevent Merc Death in Town",
       "status": "paused",
@@ -205,6 +219,7 @@
         "configurable-larzuk-sockets",
         "remote-stash",
         "extended-act-level-ids",
+        "readable-items-clue-scrolls",
         "repair-costs-cap",
         "prevent-merc-death-in-town"
       ],
