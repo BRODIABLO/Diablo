@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-25T01:37:24.3759976+00:00",
+    "generatedAt":  "2026-07-26T18:43:26.1937914+00:00",
     "root":  {
                  "name":  "staged-checkpoint-f78025c4732d44da8e1f1d6b6ddc8bf0",
                  "path":  ".",
@@ -30224,6 +30224,16 @@
                                                            "name":  "eezstreet-pluginpack-integration.md",
                                                            "path":  "Mission/eezstreet-pluginpack-integration.md",
                                                            "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "extended-act-level-ids-3.2.md",
+                                                           "path":  "Mission/extended-act-level-ids-3.2.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-mission-native-plugin",
+                                                                        "summary":  "Décisions d’incubation, preuves initiales et gates de l’extension des Level IDs aux cinq actes D2R 3.2.",
+                                                                        "agentAccess":  "read-write"
+                                                                    }
                                                        },
                                                        {
                                                            "name":  "extended-item-stats-3.2.md",
