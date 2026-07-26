@@ -98,7 +98,7 @@
       "status": "paused",
       "owner": "Vincent + Codex",
       "mission": "Mission/repair-costs-cap-3.2.md",
-      "nextGate": "After Prevent Merc Death in Town, identify and prove the 92777 client repair quote and authoritative server payment/repair paths, including Repair All, then audit their hook ranges against plugin-items.",
+      "nextGate": "Validate maximumGold=0 for individual repair and Repair All in all difficulties, then set maximumGold=5000 and prove the same cap applies to one repaired item and the final Repair All total with matching quote, gold and repaired state; validate durability wear separately at 100% before restoring 10%.",
       "include": [
         "Mission/repair-costs-cap-3.2.md",
         "addons/RepairCostsCap/**",

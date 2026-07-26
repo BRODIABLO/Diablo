@@ -1,0 +1,15 @@
+{
+  // Enables the NPC repair cost cap and durability-wear policy.
+  "enabled": true,
+
+  // Maximum gold charged for one repaired item or the entire Repair All transaction.
+  // Zero makes both repair actions free.
+  "maximumGold": 0,
+
+  // Gives each physically repaired item a chance to permanently lose one maximum durability point.
+  // The chance ranges from 0.0 (never) to 1.0 (always); 0.10 means 10%.
+  "durabilityWear": {
+    "enabled": true,
+    "chance": 0.10
+  }
+}

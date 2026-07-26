@@ -13558,6 +13558,11 @@
                                                                                 "name":  "ReadableItems.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/ReadableItems.json",
                                                                                 "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "RepairCostsCap.json",
+                                                                                "path":  "data-BKVince/BKVince.mpq/RepairCostsCap.json",
+                                                                                "kind":  "file"
                                                                             }
                                                                         ]
                                                        },
@@ -14503,6 +14508,63 @@
                                                                                                  {
                                                                                                      "name":  "Transmogrify.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/Transmogrify.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "RepairCostsCap-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "meta":  {
+                                                                                                                  "role":  "x-plugin-incubation-source",
+                                                                                                                  "summary":  "Source autonome du prototype D2RLoader plafonnant avec une seule valeur les réparations individuelles et Repair All, avec usure permanente configurable.",
+                                                                                                                  "agentAccess":  "read-write",
+                                                                                                                  "status":  "active",
+                                                                                                                  "policy":  {
+                                                                                                                                 "editable":  true,
+                                                                                                                                 "canonical":  true,
+                                                                                                                                 "generated":  false
+                                                                                                                             },
+                                                                                                                  "notes":  [
+                                                                                                                                "Runtime cible : D2R 3.2.92777.",
+                                                                                                                                "Propriétaire futur : plugin-items.dll / items.repairCostsCap."
+                                                                                                                            ]
+                                                                                                              },
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "policy_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/policy_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "README.md",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/README.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "repair_cost_policy.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/repair_cost_policy.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "RepairCostsCap.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap.dll",
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]

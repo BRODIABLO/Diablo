@@ -874,6 +874,94 @@
       "confidence": "high",
       "source": "Mission/remote-stash-3.2.md",
       "notes": "Bank object operation handler with probable ABI (operation, operateMode) -> int32. It rejects a non-neutral stash object, resolves the player client through SUNIT_GetClientFromPlayer 0x48FDE0, and sends UI action 0x10 through D2GAME_PACKETS_SendPacket0x77_Ui 0x480650 before returning success. Its exact 18-byte entry signature 40 53 48 83 EC 20 48 8B D9 48 8B 49 08 E8 DE 28 E2 FF is unique. Static identity is high-confidence; a planned runtime entry hit was blocked before game entry by the official offline-login validation."
+    },
+    {
+      "rva": "0x36F0B0",
+      "name": "ITEMS_GetTransactionCost",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/repair-costs-cap-3.2.md",
+      "notes": "Public transaction-cost entry that tail-jumps to the implementation at 0x36F0C0. The client individual-repair quote at 0x10CD5F and authoritative server individual-repair path at 0x540277 pass repair transaction type 3 through this entry."
+    },
+    {
+      "rva": "0x36F0C0",
+      "name": "ITEMS_CalculateTransactionCost",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/repair-costs-cap-3.2.md",
+      "notes": "Shared transaction-cost implementation with proven x64 ABI (player, item, difficulty, questFlags, vendorId, transactionType) -> int32. Repair All calls it directly at 0x3754CB; RepairCostsCap 1.4.0 hooks its unique 29-byte prologue for transaction type 3 and applies the single non-increasing maximumGold cap, where zero makes the repair free."
+    },
+    {
+      "rva": "0x375330",
+      "name": "ITEMS_GetAllRepairCosts",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/repair-costs-cap-3.2.md",
+      "notes": "Iterates body locations 0 through 12, tests repairability and durability or charged-skill state, calls 0x36F0C0 with transaction type 3, totals each returned cost and invokes an optional per-item callback. Its x64 ABI is (game, player, vendorId, difficulty, questFlags, callback) -> int32 and its strict 33-byte prologue is unique. RepairCostsCap 1.4.0 hooks it so the same maximumGold setting caps the final Repair All total for the two UI callers and two authoritative server passes."
+    },
+    {
+      "rva": "0x53BB50",
+      "name": "D2GAME_NPC_RepairItem",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/repair-costs-cap-3.2.md",
+      "notes": "Common server-side repair routine with proven x64 ABI (game, item, player) -> void. The individual handler calls it at 0x5402C7; Repair All supplies its 0x5413F0 jump stub as the callback at 0x53FFC1. It repairs quantity, charges, broken state and physical durability, then synchronizes the affected stat with the player client. RepairCostsCap 1.4.0 hooks its unique 32-byte prologue for post-success permanent durability wear independently of whether the repair price is free."
+    },
+    {
+      "rva": "0x43EB30",
+      "name": "D2GAME_SetItemStatAndNotifyClient",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/repair-costs-cap-3.2.md",
+      "notes": "Sets an item stat through STATLIST_SetUnitStat and, when the supplied client is non-null, sends the matching stat update packet. Proven x64 ABI: (item, client, sendUpdate, statId, value, layer) -> void. The vanilla repair routine uses it for quantity stat 70 and durability stat 72; RepairCostsCap reuses it for maximum durability stat 73 and current durability stat 72."
+    },
+    {
+      "rva": "0x2F4B60",
+      "name": "STATLIST_GetMaxDurabilityFromUnit",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/repair-costs-cap-3.2.md",
+      "notes": "Returns an item's effective maximum durability. The common repair routine calls it at 0x53BC08 before restoring durability, matching the pinned D2MOO semantic reference without transposing its legacy address or ABI."
+    },
+    {
+      "rva": "0x34A1E0",
+      "name": "UNITS_GetSeed",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/repair-costs-cap-3.2.md",
+      "notes": "Returns the native seed at unit offset 0x28. RepairCostsCap uses the repaired item's own seed for the configurable durability-wear roll."
+    },
+    {
+      "rva": "0x153B00",
+      "name": "SEED_RollLimitedRandomNumber",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/repair-costs-cap-3.2.md",
+      "notes": "Advances the supplied native seed and returns a value in [0, upperBound). Its 14-byte body prefix is unique in .text; RepairCostsCap rolls over 10000 basis points for 0.01-percent resolution."
+    },
+    {
+      "rva": "0x48FDE0",
+      "name": "SUNIT_GetClientFromPlayer",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/repair-costs-cap-3.2.md",
+      "notes": "Returns the client pointer for a player unit and safely returns null for a null or non-player unit. The vanilla repair routine calls it before stat synchronization; RepairCostsCap reuses it after successful wear."
+    },
+    {
+      "rva": "0x53FE15",
+      "name": "D2GAME_NPC_RepairHandler",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/repair-costs-cap-3.2.md",
+      "notes": "Authoritative Repair All handler. It first calls 0x375330 without a callback, compares the total with the client request, validates carried and bank gold, debits nonzero cost, then calls 0x375330 again with the vanilla repair callback before returning success."
+    },
+    {
+      "rva": "0x53FF6F",
+      "name": "RepairAllZeroCostCallbackBranch",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/repair-costs-cap-3.2.md",
+      "notes": "Vanilla JE skips both debit and the second Repair All callback pass when total cost is zero. When its repair policy is enabled, RepairCostsCap 1.4.0 validates the unique 16-byte context at 0x53FF65 and changes only the displacement byte at 0x53FF70 from 0x6F to 0x21 so maximumGold=0 skips debit but still reaches the callback setup at 0x53FF92."
     }
   ]
 }
