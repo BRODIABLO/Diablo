@@ -69,6 +69,7 @@ auto& Frames = ProcessRendererStorage->frames;
 std::chrono::steady_clock::time_point LastFrameTime{};
 std::atomic<float> DisplayWidth{1920.0f};
 std::atomic<float> DisplayHeight{1080.0f};
+std::atomic<ExternalOverlayCallback> ExternalOverlay{};
 
 std::vector<std::vector<unsigned char>> EmbeddedFontData;
 std::array<ImFont*, kFloatingDamageFontCount> FloatingFonts{};
@@ -208,6 +209,13 @@ HRESULT STDMETHODCALLTYPE HookPresent(IDXGISwapChain3* swapChain, UINT syncInter
     DisplayWidth.store(io.DisplaySize.x, std::memory_order_relaxed);
     DisplayHeight.store(io.DisplaySize.y, std::memory_order_relaxed);
     FloatingDamage::Render(ImGui::GetBackgroundDrawList(), io.DisplaySize);
+    if (const auto overlay = ExternalOverlay.load(std::memory_order_acquire)) {
+        overlay(
+            ImGui::GetForegroundDrawList(),
+            io.DisplaySize.x,
+            io.DisplaySize.y,
+            Window);
+    }
     ImGui::Render();
 
     if (FAILED(frame.allocator->Reset())) return OriginalPresent(swapChain, syncInterval, flags);
@@ -334,6 +342,10 @@ bool CreateHook(std::size_t methodIndex, void* target, void** original) noexcept
 
 void SetDllModule(HMODULE module) noexcept {
     Module = module;
+}
+
+void SetExternalOverlayCallback(ExternalOverlayCallback callback) noexcept {
+    ExternalOverlay.store(callback, std::memory_order_release);
 }
 
 bool InstallHooks() noexcept {

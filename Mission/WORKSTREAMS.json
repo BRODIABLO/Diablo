@@ -10,7 +10,7 @@
       "mission": "Mission/extended-item-stats-3.2.md",
       "nextGate": "Measure native tooltip overflow across UI resolutions and scales.",
       "include": [
-        "data-BKVince/BKVince.mpq/ExtendedItemStats.json",
+        "Mission/extended-item-stats-3.2.md",
         "data-BKVince/d2rloader/plugins/ExtendedItemStats-src/**",
         "data-BKVince/d2rloader/plugins/ExtendedItemStats.dll",
         "data-BKVince/d2rloader/plugins/FloatingDamage-src/**",

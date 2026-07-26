@@ -36,12 +36,44 @@
       "notes": "Generic outgoing client packet queue called by the five-byte builder at 0xEC700. BulkSkillPointAllocation 1.2.1 preserves this native route and sends exactly one native 0x3B request per Ctrl or confirmed Shift action."
     },
     {
+      "rva": "0x12E2C0",
+      "name": "CLIENT_DispatchItemAction9C",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-item-stats-3.2.md",
+      "notes": "Common client dispatcher for the 8-byte 0x9C item-action envelope. It validates length-8 against the 0xF4 payload ceiling, copies the packet into a bounded local buffer, reads the action selector at +0x01 and dispatches through a 23-entry switch. Its strict 32-byte entry signature is unique in build 92777. ExtendedItemStats consumes EIT1 fragments here, before any action-specific handler can treat them as a native item bitstream."
+    },
+    {
+      "rva": "0x12E490",
+      "name": "CLIENT_DispatchItemAction9D",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-item-stats-3.2.md",
+      "notes": "Common client dispatcher for the 13-byte 0x9D item-action envelope. It rejects packets shorter than 13 bytes, copies the packet into a bounded local buffer, reads the action selector at +0x01 and dispatches through a 26-entry switch. Its strict 32-byte entry signature is unique in build 92777. ExtendedItemStats consumes EIT1 fragments here, before any action-specific handler can treat them as a native item bitstream."
+    },
+    {
       "rva": "0x214220",
       "name": "SKILLS_GetRuntimeMaxLevel",
       "kind": "function",
       "confidence": "high",
       "source": "Mission/bulk-skill-point-allocation-3.2.md",
       "notes": "Returns the effective runtime maximum for a compiled SkillsTxt row and data context. SKILLTREE_CanAllocateSkill calls it at 0x14C3E54. BulkSkillPointAllocation 1.2.1 delegates the cap to the authoritative native bulk handler and no longer calls this helper."
+    },
+    {
+      "rva": "0x2A7810",
+      "name": "UI_TOOLTIP_ResolveHoveredUnit",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-item-stats-3.2.md",
+      "notes": "Resolves the hovered unit from the tooltip panel state at +0x5C4/+0x5C8. The governed panel-update call at 0x2C89A5 returns to 0x2C89AA. ExtendedItemStats 0.3.0 substitutes the exact pinned unit only for the captured panel, allowing a huge tooltip to remain rendered while the pointer manipulates its scrollbar."
+    },
+    {
+      "rva": "0x2A89C0",
+      "name": "UI_TOOLTIP_ResolveHoveredWidget",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-item-stats-3.2.md",
+      "notes": "Resolves the active tooltip widget for the panel-update path. The governed call at 0x2C8B70 returns to 0x2C8B75. ExtendedItemStats 0.3.0 substitutes the exact pinned widget only for the captured panel so the native tooltip text persists outside the item hitbox."
     },
     {
       "rva": "0x2BD480",
@@ -324,12 +356,36 @@
       "notes": "Checks an item against an itemtypes row through D2R's compiled equivalence LUT. The plugin filters only the two ethereal-generation callers."
     },
     {
+      "rva": "0x374BF0",
+      "name": "ITEMS_DecodeItemFromBitstream",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-item-stats-3.2.md",
+      "notes": "Full item decoder reached by 36 direct callers. Item-action handlers pass the destination item, bitstream pointer, byte length, version 105 and a failure output. The unique 14-byte entry signature begins 40 55 53 41 55 41 57 48 8B EC 48 83 EC 68. ExtendedItemStats will override only the byte length during a thread-local validated EIT1 replay."
+    },
+    {
+      "rva": "0x374FF0",
+      "name": "ITEMS_ReadItemBitstreamMetadata",
+      "kind": "function",
+      "confidence": "medium",
+      "source": "Mission/extended-item-stats-3.2.md",
+      "notes": "Five-argument wrapper reached by 31 direct callers before item creation. It forwards data context, bitstream pointer, byte length, mode and metadata output to 0x375010 while supplying version 105. Its complete 27-byte wrapper signature is unique in build 92777. The output role is proven by 0x9C/0x9D receiver call sites; a more specific internal structure name remains intentionally unclaimed."
+    },
+    {
       "rva": "0x375560",
       "name": "ITEMS_AddSockets",
       "kind": "function",
       "confidence": "high",
       "source": "Mission/configurable-larzuk-sockets-3.2.md",
       "notes": "Applies a requested socket count after capping inventory area to six, quality to magic 4, rare 2, crafted/tempered 3 and set/unique 1 unless already socketed, then base/type/ilvl through ITEMS_GetMaxSockets. It sets IFLAG_SOCKETED and stat 0xC2. LarzukSockets owns a strict 16-byte inline hook here, forwards every non-Larzuk caller unchanged and bypasses only the generic quality cap for the guarded quest call."
+    },
+    {
+      "rva": "0x375EE0",
+      "name": "ITEMS_SerializeItemToBitstream",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-item-stats-3.2.md",
+      "notes": "Initializes the 0x28-byte bit-buffer, invokes the item serializer at 0x37FFD0, returns zero when the overflow field at +0x20 is set, and otherwise returns the written byte count. Its 20 direct callers include save paths using a 0x4000-byte capacity and item-action packet paths using 0xF4. The 29-byte prologue/signature beginning 48 89 5C 24 08 57 48 83 EC 60 48 8B D9 41 8B F9 is unique in build 92777."
     },
     {
       "rva": "0x382D20",
@@ -538,6 +594,30 @@
       "confidence": "high",
       "source": "Mission/transmogrify-restoration-3.2.md",
       "notes": "Places an item for a player from a 16-byte item state and cell value. Native Cube and generic move call sites prove that the state's inventory page controls the destination; Transmogrify also preserves the source node page for shared-stash routing."
+    },
+    {
+      "rva": "0x479CD0",
+      "name": "D2GAME_SendItemAction9C",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-item-stats-3.2.md",
+      "notes": "Builds server item-action packet 0x9C, serializes the item through 0x375EE0 with capacity 0xF4, adds the 8-byte packet header, enforces a total no greater than 0xFC and stores the length in one byte. Eleven direct call sites and a unique 24-byte entry signature prove the producer used for item actions without a parent-unit header."
+    },
+    {
+      "rva": "0x479EA0",
+      "name": "D2GAME_SendItemAction9D",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-item-stats-3.2.md",
+      "notes": "Builds server item-action packet 0x9D, serializes the item through 0x375EE0 with capacity 0xF4, adds the 13-byte parent-unit header, enforces a total no greater than 0xFC and stores the length in one byte. Twelve direct call sites and the unique entry signature beginning 40 53 55 56 57 41 57 48 81 EC 70 01 00 00 prove this producer."
+    },
+    {
+      "rva": "0x4817F0",
+      "name": "D2GAME_QueueServerPacket",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-item-stats-3.2.md",
+      "notes": "Queues a server packet with ABI (client, packetBytes, packetLength). The 0x9D producer calls it at 0x47A001 after placing the computed packet length in R8. Thirty-eight indexed references and the unique 22-byte entry signature beginning 40 55 56 57 48 83 EC 40 prove this shared queue. ExtendedItemStats will replace only a synchronous header-only 0x9C/0x9D send paired with its thread-local oversized serialization."
     },
     {
       "rva": "0x486AE0",

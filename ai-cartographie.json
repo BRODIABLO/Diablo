@@ -1,8 +1,8 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-26T20:51:26.4093376+00:00",
+    "generatedAt":  "2026-07-26T22:12:38.7491513+00:00",
     "root":  {
-                 "name":  "staged-checkpoint-f78025c4732d44da8e1f1d6b6ddc8bf0",
+                 "name":  "Diablo",
                  "path":  ".",
                  "kind":  "directory",
                  "meta":  {
@@ -13947,6 +13947,68 @@
                                                                                                                   ]
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "ExtendedItemStats-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/ExtendedItemStats-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ExtendedItemStats-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "extended_item_transport.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ExtendedItemStats-src/extended_item_transport.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "extended_item_transport.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ExtendedItemStats-src/extended_item_transport.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "extended_item_transport_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ExtendedItemStats-src/extended_item_transport_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ExtendedItemStats-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ExtendedItemStats-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "scrollable_tooltip.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ExtendedItemStats-src/scrollable_tooltip.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "scrollable_tooltip.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ExtendedItemStats-src/scrollable_tooltip.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "scrollable_tooltip_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ExtendedItemStats-src/scrollable_tooltip_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "tooltip_overlay.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ExtendedItemStats-src/tooltip_overlay.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "tooltip_overlay.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ExtendedItemStats-src/tooltip_overlay.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "FloatingDamage-src",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/FloatingDamage-src",
                                                                                                      "kind":  "directory",
@@ -14331,6 +14393,58 @@
                                                                                                                   ]
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "RepairCostsCap-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "meta":  {
+                                                                                                                  "role":  "x-plugin-incubation-source",
+                                                                                                                  "summary":  "Source autonome du prototype D2RLoader plafonnant avec une seule valeur les réparations individuelles et Repair All, avec usure permanente configurable.",
+                                                                                                                  "agentAccess":  "read-write",
+                                                                                                                  "status":  "active",
+                                                                                                                  "policy":  {
+                                                                                                                                 "editable":  true,
+                                                                                                                                 "canonical":  true,
+                                                                                                                                 "generated":  false
+                                                                                                                             },
+                                                                                                                  "notes":  [
+                                                                                                                                "Runtime cible : D2R 3.2.92777.",
+                                                                                                                                "Propriétaire futur : plugin-items.dll / items.repairCostsCap."
+                                                                                                                            ]
+                                                                                                              },
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "policy_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/policy_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "README.md",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/README.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "repair_cost_policy.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/repair_cost_policy.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "ReviveOverhaul-src",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/ReviveOverhaul-src",
                                                                                                      "kind":  "directory",
@@ -14426,6 +14540,11 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "ExtendedItemStats.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/ExtendedItemStats.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "FloatingDamage.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/FloatingDamage.dll",
                                                                                                      "kind":  "file"
@@ -14501,6 +14620,11 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "RepairCostsCap.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "ReviveOverhaul.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/ReviveOverhaul.dll",
                                                                                                      "kind":  "file"
@@ -14508,63 +14632,6 @@
                                                                                                  {
                                                                                                      "name":  "Transmogrify.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/Transmogrify.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "RepairCostsCap-src",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src",
-                                                                                                     "kind":  "directory",
-                                                                                                     "meta":  {
-                                                                                                                  "role":  "x-plugin-incubation-source",
-                                                                                                                  "summary":  "Source autonome du prototype D2RLoader plafonnant avec une seule valeur les réparations individuelles et Repair All, avec usure permanente configurable.",
-                                                                                                                  "agentAccess":  "read-write",
-                                                                                                                  "status":  "active",
-                                                                                                                  "policy":  {
-                                                                                                                                 "editable":  true,
-                                                                                                                                 "canonical":  true,
-                                                                                                                                 "generated":  false
-                                                                                                                             },
-                                                                                                                  "notes":  [
-                                                                                                                                "Runtime cible : D2R 3.2.92777.",
-                                                                                                                                "Propriétaire futur : plugin-items.dll / items.repairCostsCap."
-                                                                                                                            ]
-                                                                                                              },
-                                                                                                     "children":  [
-                                                                                                                      {
-                                                                                                                          "name":  "CMakeLists.txt",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/CMakeLists.txt",
-                                                                                                                          "kind":  "file"
-                                                                                                                      },
-                                                                                                                      {
-                                                                                                                          "name":  "plugin.cpp",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/plugin.cpp",
-                                                                                                                          "kind":  "file"
-                                                                                                                      },
-                                                                                                                      {
-                                                                                                                          "name":  "plugin.rc",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/plugin.rc",
-                                                                                                                          "kind":  "file"
-                                                                                                                      },
-                                                                                                                      {
-                                                                                                                          "name":  "policy_tests.cpp",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/policy_tests.cpp",
-                                                                                                                          "kind":  "file"
-                                                                                                                      },
-                                                                                                                      {
-                                                                                                                          "name":  "README.md",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/README.md",
-                                                                                                                          "kind":  "file"
-                                                                                                                      },
-                                                                                                                      {
-                                                                                                                          "name":  "repair_cost_policy.hpp",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src/repair_cost_policy.hpp",
-                                                                                                                          "kind":  "file"
-                                                                                                                      }
-                                                                                                                  ]
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "RepairCostsCap.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap.dll",
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
@@ -31082,6 +31149,26 @@
                                                                             {
                                                                                 "name":  "d2r32.py",
                                                                                 "path":  "scripts/reverse-engineering/d2r32.py",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "extended-item-stats-fixture.mjs",
+                                                                                "path":  "scripts/reverse-engineering/extended-item-stats-fixture.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "extended-item-stats-fixture.test.mjs",
+                                                                                "path":  "scripts/reverse-engineering/extended-item-stats-fixture.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "extended-item-transport.mjs",
+                                                                                "path":  "scripts/reverse-engineering/extended-item-transport.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "extended-item-transport.test.mjs",
+                                                                                "path":  "scripts/reverse-engineering/extended-item-transport.test.mjs",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

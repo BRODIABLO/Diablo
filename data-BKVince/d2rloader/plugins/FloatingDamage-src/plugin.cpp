@@ -478,6 +478,13 @@ auto ConsoleCommand(
 }
 } // namespace
 
+extern "C" __declspec(dllexport) bool __cdecl
+FloatingDamageRegisterExternalOverlay(
+    D3D12::ExternalOverlayCallback callback) noexcept {
+    D3D12::SetExternalOverlayCallback(callback);
+    return true;
+}
+
 D2RL_PLUGIN_EXPORT auto D2RLoaderGetPluginInfo() noexcept -> const D2RL::PluginInfo* {
     return &Info;
 }
@@ -517,6 +524,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
 }
 
 D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
+    D3D12::SetExternalOverlayCallback(nullptr);
     if (Context) {
         char message[192]{};
         std::snprintf(

@@ -8,8 +8,8 @@ GambleScreenLimit, Advanced Item Tooltips, BulkSkillPointAllocation et
 Transmogrify reprendront après ce chantier.
 
 La catégorie PluginPack est confirmée : `items`, avec `plugin-items.dll` comme
-propriétaire futur et `items.extendedItemStats` comme clé prévue dans l’unique
-`D2RPlugins.json` après fusion.
+propriétaire futur. La fonctionnalité ne possède aucune option externe : la
+présence du plugin active un plafond fixe de `4096` octets par objet.
 
 ## But joueur
 
@@ -91,11 +91,11 @@ sa longueur dans un octet.
 - conserver la sérialisation native et les IDs/valeurs du `ItemStatCost` actif :
   le plugin ne connaît aucun catalogue de contenu propre à un mod;
 - utiliser le paquet vanilla inchangé lorsque l’objet tient dans son budget;
-- fournir au sérialiseur un buffer borné configurable pour obtenir le flux item
+- fournir au sérialiseur un buffer borné à `4096` octets pour obtenir le flux item
   complet lorsque l’objet dépasse le budget réseau;
 - conserver le chemin de sauvegarde natif tant que l’objet tient dans son
   budget prouvé de `0x4000` octets;
-- refuser proprement un objet qui dépasse la limite configurée ou dont le schéma
+- refuser proprement un objet qui dépasse la limite fixe ou dont le schéma
   ne correspond pas aux tables chargées.
 
 Le plugin transporte des octets item opaques : il n’interprète pas le design du
@@ -120,9 +120,9 @@ tables.
 - ne créer aucun opcode réseau personnalisé. Les petits items et tous les flux
   sans marqueur restent entièrement vanilla.
 
-Limite initiale proposée : `4096` octets par objet, configurable et strictement
-bornée. La compatibilité avec un pair sans plugin est refusée; elle n’est pas un
-objectif produit.
+Limite produit : `4096` octets par objet, fixe et strictement bornée. La
+compatibilité avec un pair sans plugin est refusée; elle n’est pas un objectif
+produit.
 
 Le codec de référence limite chaque frame à `0xEF` (239) octets : avec
 l’enveloppe item-action `0x9D` de 13 octets, un carrier de cette famille resterait
@@ -132,8 +132,7 @@ incomplets demeure un gate natif et runtime explicite.
 
 ### 4. Huge tooltips
 
-- construire les lignes avec des buffers bornés et une limite configurable
-  sûre;
+- construire les lignes avec des buffers bornés et des garde-fous internes;
 - déterminer l’overflow depuis la hauteur réellement rendue selon la résolution,
   l’échelle UI, la police, la langue et le wrapping; le nombre de stats et la
   taille sérialisée de l’objet ne constituent pas le seuil produit;
@@ -176,19 +175,17 @@ installé. L’arbitrage doit aboutir à un pipeline final unique.
 - la même DLL autonome porte le transport étendu et le tooltip défilable; un
   moddeur n’installe jamais une seconde DLL pour obtenir la lisibilité des
   objets lourds;
-- configuration autonome prévue : `ExtendedItemStats.json`, en anglais,
-  compatible avec le lecteur du PluginPack, cherchée d’abord dans le mod actif
-  puis dans le dossier global du jeu;
+- aucune configuration externe : installer la DLL suffit et active le plafond
+  fixe de `4096` octets ainsi que le tooltip défilable;
 - aucun TOML;
 - aucune modification, liaison ou redistribution d’une DLL d’eezstreet pendant
   l’incubation;
 - destination de merge : fichiers internes
   `plugin-items/extended-item-stats.cpp` et
-  `plugin-items/extended-item-stats.h`, puis configuration sous
-  `items.extendedItemStats` dans l’unique `D2RPlugins.json`;
-- après fusion, aucune DLL ni configuration autonome ne subsiste pour cette
-  fonctionnalité;
-- éventuel ZIP public limité à la DLL autonome et à son JSON autonome.
+  `plugin-items/extended-item-stats.h`, sans nouvelle clé dans
+  `D2RPlugins.json`;
+- après fusion, aucune DLL autonome ne subsiste pour cette fonctionnalité;
+- éventuel ZIP public limité à la DLL autonome.
 
 ## Audit du propriétaire PluginPack
 
@@ -205,9 +202,8 @@ Les champs actuels de `ItemPluginOptions` sont bornés dans
 notamment `D2ItemsTxt`, `NpcItemCacheEntry`, `VendorChainEntry`, `D2GameStrc` et
 `D2UnitStrc`, définies respectivement à
 `src/plugin-shared/include/plugin-shared.h:101`, `:369`, `:381`, `:394` et
-`:444`. La future option `extendedItemStats` devra être ajoutée sous cette même
-structure et cette même section lors du merge, sans nouveau fichier de
-configuration.
+`:444`. Le merge n’ajoutera aucune option : le module `plugin-items` intégrera
+directement le plafond fixe et ses garde-fous internes.
 
 Empreinte native existante relevée dans `items-main.cpp:22-96` et installée à
 `items-main.cpp:599-700` :
@@ -246,13 +242,13 @@ RVA, plages de hooks et clés de configuration déjà possédés par `plugin-ite
 - taille réellement sauvegardée et émise sous chaque plafond documentée;
 - huge tooltip lisible jusqu’à sa dernière ligne à la souris et à la manette;
 - cycle de vie complet validé en solo, chez l’hôte et chez le joiner;
-- configuration absente gérée par défaut et JSON invalide refusé explicitement;
+- absence complète de dépendance ou de fichier de configuration;
 - build, signatures et ABI incompatibles refusés sûrement;
 - coexistence avec les cinq DLL eezstreet, Advanced Item Tooltips et
   Transmogrify sans hook concurrent non arbitré;
 - Release x64, manifeste v2, trois exports, hashes dépôt/runtime et deux portées
   d’installation validés avant toute livraison;
-- ZIP éventuel inspecté et limité strictement à la DLL et au JSON.
+- ZIP éventuel inspecté et limité strictement à la DLL.
 
 ## État
 
@@ -262,7 +258,7 @@ réassemblage byte-exact hors jeu : 120 stats produisent 271 octets, fragmentés
 en deux frames puis reconstitués byte-exact. Le cas maximal directement
 encodable avec le schéma BKVince courant couvre 233 stats, 576 octets et trois
 fragments. Un second fixture générique fondé sur des couches de stats valides
-atteint exactement la limite configurée : 1019 stats dans 4096 octets, avec un
+atteint exactement la limite fixe : 1019 stats dans 4096 octets, avec un
 round-trip stat/layer/value byte-exact. Son SHA-256 item est
 `2A42FC43F161770D89726F0806697371E363911690F0F32253546364F468A49B`.
 Les tests JavaScript ciblés et le test natif Release passent.
@@ -368,11 +364,28 @@ SHA-256 D2S
 `18B47F34B1813144078F254BB9C96E9AB313A4F195FCCDFD8A3F7B4D05AF2790`.
 Vincent confirme en jeu que le personnage, le coffre et l’objet fonctionnent
 sans crash, overflow ni anomalie observée. Cette confirmation ferme le gate
-solo de chargement au plafond configuré; elle ne ferme pas par inférence les
+solo de chargement au plafond fixe; elle ne ferme pas par inférence les
 gates de cycle de vie, save/reload au plafond, hôte/joiner ou portée globale.
+
+Le 26 juillet 2026, `ExtendedItemStats 0.3.15` supprime complètement la
+configuration externe : aucun JSON n’est recherché ou parsé, la dépendance
+`nlohmann/json` est retirée et le plafond item est compilé à `4096` octets. Les
+autres valeurs du transport et du tooltip sont des garde-fous internes fixes.
+Les neuf tests du fixture JavaScript et les deux tests natifs Release passent.
+La DLL du build, du dépôt et du runtime est byte-identique, mesure `436224`
+octets et porte le SHA-256
+`435E8D2B64317A84AAC945BEB39212D7FF715ED4D4F63F04F9A0F204C7D59C54`.
+Un cold start mod-local sans JSON accepte les dix hooks, puis un cold start
+global sans JSON accepte les neuf hooks non possédés par Transmogrify; les deux
+portées terminent avec `active=23`, `rejected=0`, `failed=0` et aucun rapport de
+crash frais. L’archive de test `ExtendedItemStats-0.3.15-test.zip` contient
+strictement `ExtendedItemStats.dll` à sa racine, mesure `228524` octets et porte
+le SHA-256
+`047DCC32F5A4315F7B83C13C0202F70DB52E57DC5A1FB077C54F4009606821D2`.
+Cette archive reste une livraison de test, pas une release fonctionnelle finale.
 
 Les gates encore ouverts sont la confirmation fonctionnelle du fenêtrage à la
 manette, la mesure native d’overflow selon résolution/échelle UI, la validation
 runtime du renderer autonome de repli sans `FloatingDamage`, la matrice de cycle de vie complète
-inventory/Cube/shared stash/corpse/drop/marchand/échange, la validation
-solo/hôte/joiner et la portée globale. Aucune archive publique n’est créée.
+inventory/Cube/shared stash/corpse/drop/marchand/échange et la validation
+solo/hôte/joiner.

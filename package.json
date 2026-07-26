@@ -36,6 +36,8 @@
     "test:bkvince-itemtypes": "node scripts/migrate-bkvince/rebuild-itemtypes.js --check",
     "generate:bkvince-staffmods": "node scripts/migrate-bkvince/generate-staffmod-patch.mjs",
     "test:bkvince-staffmods": "node scripts/migrate-bkvince/generate-staffmod-patch.mjs --check",
+    "test:extended-item-stats": "node --test scripts/reverse-engineering/extended-item-stats-fixture.test.mjs scripts/reverse-engineering/extended-item-transport.test.mjs",
+    "generate:extended-item-stats-fixture": "node scripts/reverse-engineering/extended-item-stats-fixture.mjs --output analysis-cache/extended-item-stats/synthetic-120-stats.d2i",
     "native:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/reverse-engineering/Build-NativePlugins.ps1",
     "re:tools": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/reverse-engineering/Runtime-Tools.ps1",
     "re:d2r32:capture": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/reverse-engineering/Capture-D2RRuntime.ps1",
