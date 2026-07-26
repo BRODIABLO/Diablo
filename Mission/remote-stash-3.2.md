@@ -2,19 +2,20 @@
 
 Dernière mise à jour : 26 juillet 2026
 
-Statut : phase 1 mise en pause à son gate de preuve pendant la priorité
-Transmogrify. Le chemin serveur natif d’ouverture du stash est identifié
-statiquement, mais sa confirmation dynamique reste suspendue par la validation
-officielle hors ligne de Battle.net. Aucun prototype public, aucun bouton, aucun
-sprite et aucune archive n’existent encore.
+Statut : préparation statique de phase 1 poursuivie en parallèle, sans promouvoir
+RemoteStash comme mission prioritaire du workspace. Le chemin serveur natif
+d’ouverture du stash est identifié statiquement, mais sa confirmation dynamique
+reste suspendue par la validation officielle hors ligne de Battle.net. Aucun
+prototype public, aucun bouton, aucun sprite et aucune archive n’existent encore.
 
 ## Décisions confirmées
 
 - Après une pause temporaire au profit de Repair Costs Cap, Vincent a repris
   RemoteStash selon l’Option A le 24 juillet 2026. Configurable Larzuk Sockets
   reste intacte à son gate de validation en jeu.
-- La mission est remise en pause le 26 juillet 2026 lorsque Vincent promeut
-  Transmogrify; les preuves et le prochain gate RemoteStash restent intacts.
+- Depuis le 26 juillet 2026, Vincent autorise la préparation statique et la
+  compilation des probes RemoteStash en parallèle de la mission active, sans
+  promouvoir ce chantier; aucun déploiement ni test runtime bloqué n’est forcé.
 - La catégorie PluginPack future est `misc`, avec `plugin-misc.dll` comme DLL
   propriétaire et `misc.remoteStash` comme clé prévue dans l’unique
   `D2RPlugins.json`.
@@ -85,6 +86,41 @@ objets lui-même.
   `OBJECTS_OperateFunction32_Bank`, avec l’ABI probable
   `(D2ObjOperateFnStrc* operation, int32 operate) -> int32`; sa signature
   d’entrée stricte de 18 octets est unique.
+- Dans cette structure moderne, le handler lit l’objet à l’offset `+0x08` et le
+  joueur à `+0x10`. Cela concorde avec l’élargissement x64 naturel de la
+  structure D2MOO historique (`game`, `object`, `player`, `object region`,
+  `object class id`), mais les champs suivants `+0x18` et `+0x20` restent une
+  hypothèse tant que le dispatcher moderne n’est pas borné.
+- Le handler moderne ne met lui-même à jour ni l’interaction du joueur, ni son
+  état occupé, et ne vérifie pas la ville : il ne fait que tester le mode de
+  l’objet puis envoyer `0x77 / 0x10`. Ces préconditions appartiennent donc à un
+  chemin plus large ou à des callbacks serveur ultérieurs; appeler uniquement
+  `0x480650` ne constitue pas encore une ouverture autoritaire complète.
+- Un callback serveur de 17 octets commençant à `0x4BA580` parcourt les objets
+  de la room du joueur, exige un objet de type `2`, de classe stash `267`, à une
+  distance inférieure ou égale à `50`, puis manipule les statistiques `14`
+  (or porté) et `15` (or en banque). Sa fonction exacte reste à nommer, mais sa
+  sémantique de transaction d’or du stash est établie statiquement. Cette preuve
+  exclut déjà l’hypothèse qu’un simple paquet visuel `OPENSTASH` suffirait à
+  reproduire toutes les opérations du stash hors de portée du coffre.
+- Le handler moderne d’insertion dans une grille est maintenant borné à
+  `0x4BFF30–0x4C022F`. Il parse exactement les 17 octets sémantiques du paquet
+  historique `InsertItemInBuffer` : GUID de l’item à `+1`, X à `+5`, Y à `+9`
+  et page de stockage à `+13`. Il normalise les pages hors de l’intervalle
+  `0..4`, construit l’état natif de placement, puis délègue la transaction à
+  `0x471E90`. Sa signature stricte de 32 octets est unique dans le build 92777.
+- Ni ce handler ni `0x471E90` n’appellent directement `UNITS_GetRoom`,
+  `UNITS_GetClassId` ou un calcul de distance. Contrairement à la transaction
+  d’or, aucune dépendance directe à un objet stash proche n’est donc observée
+  dans le chemin d’insertion. La routine déléguée reconstruit toutefois un état
+  complet d’inventaire et peut encore exiger un état de conteneur ou de joueur;
+  son acceptation après une ouverture seulement UI reste à tester dynamiquement.
+- Le paquet d’insertion ne contient aucune dimension de grille : la page et les
+  coordonnées proviennent du panneau natif actif. Un stash étendu ou personnalisé
+  n’exige donc pas que RemoteStash connaisse sa largeur, sa hauteur ou ses onglets
+  pour émettre ce mouvement; le layout demeure la responsabilité du mod et du
+  panneau natif. Cette conclusion ne couvre pas encore un mod qui remplace le
+  protocole ou les pages de stockage plutôt que seulement leur présentation.
 - Le callback réseau `0x4B2BE0` valide un paquet d’interaction de 9 octets
   contenant le type et le GUID d’une unité. Son ABI, sa signature unique de
   23 octets et sa proximité sémantique avec le handler historique
@@ -116,6 +152,16 @@ objets lui-même.
   officiel « pas en ligne depuis 30 jours » avant l’entrée en partie. Le probe
   a été retiré, la DLL d’origine restaurée et aucun processus Diablo n’a été
   laissé actif. Aucune tentative de contournement n’est autorisée ni requise.
+- Le probe gitignoré `RemoteStashPathProbe.dll` compile également une commande
+  console locale `remote-stash-open`. Elle vérifie la signature unique de
+  `0x480650`, reçoit le `Client*` fourni par le SDK et envoie seulement l’action
+  `0x77 / 0x10`. Son avertissement indique explicitement qu’un résultat visuel
+  ne prouvera ni les mouvements d’objets ni les transactions d’or à distance.
+  Le hook de `0x528270` demeure actif dans le même probe pour comparer plus tard
+  l’ouverture normale au déclenchement technique. Un second hook strict de
+  `0x4BFF30` journalise maintenant le GUID, X, Y, la page de stockage et le code
+  de retour de chaque insertion. La DLL compilée reste locale et non déployée
+  jusqu’au renouvellement normal de la validation en ligne.
 
 ## Hypothèses à tester
 
@@ -129,6 +175,14 @@ objets lui-même.
   contexte d’opération valide : joueur, client, objet stash, état d’interaction,
   ville/hors ville et thread serveur. Un déclencheur hors ville ou sans coffre
   résolu pourrait exiger un chemin plus large qu’un simple appel de fonction.
+- Les déplacements d’objets et la fermeture doivent encore être inspectés
+  séparément. La transaction d’or prouve déjà au moins une validation serveur
+  de proximité; on ne doit pas extrapoler qu’elle couvre tous les paquets, ni
+  supposer que les autres opérations accepteront une ouverture seulement UI.
+- L’insertion paraît indépendante de la proximité physique du coffre, mais cela
+  reste une inférence par absence de dépendance directe. Le test décisif sera le
+  code de retour de `0x4BFF30` après `remote-stash-open`, suivi d’une vérification
+  de persistance après fermeture et rechargement.
 
 ## Gates observables
 
@@ -147,5 +201,7 @@ Après renouvellement normal de la validation en ligne du jeu, confirmer qu’un
 interaction native avec le coffre entre dans `OBJECTS_OperateFunction32_Bank`
 `0x528270`. Déclencher ensuite cette même voie depuis une commande ou un raccourci
 technique minimal exécuté dans un contexte serveur valide, avant tout bouton ou
-sprite. Vérifier d’abord la ville, la fermeture et le layout BKVince; les cas
-hors ville, multijoueur et layouts tiers suivront seulement si ce gate est vert.
+sprite. Vérifier d’abord la ville, la fermeture et le layout BKVince, puis tracer
+un dépôt via le hook `0x4BFF30`, un retrait et une transaction d’or afin de
+borner les validations serveur réellement nécessaires. Les cas hors ville,
+multijoueur et layouts tiers suivront seulement si ce gate est vert.
