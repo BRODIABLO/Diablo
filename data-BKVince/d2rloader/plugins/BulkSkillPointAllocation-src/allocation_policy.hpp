@@ -16,8 +16,8 @@ inline constexpr std::uint32_t MaximumSkillPointsPerCtrlClick = 1'000;
 inline constexpr std::uint16_t AssignAllSkillPointsExtra = 0xFFFF;
 
 constexpr AllocationMode ResolveMode(bool shiftPressed, bool ctrlPressed) noexcept {
-    if (shiftPressed) return AllocationMode::ShiftAll;
     if (ctrlPressed) return AllocationMode::CtrlBatch;
+    if (shiftPressed) return AllocationMode::ShiftAll;
     return AllocationMode::Single;
 }
 

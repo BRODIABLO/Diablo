@@ -50,6 +50,7 @@ struct GameStringView {
 
 struct Config {
     std::uint32_t skillPointsPerCtrlClick{DefaultSkillPointsPerCtrlClick};
+    bool confirmShiftAllocation{};
     bool diagnostics{};
     std::string shiftConfirmationKey{DefaultShiftConfirmationLocalizationKey};
     std::string shiftConfirmationFallback{DefaultShiftConfirmation};
@@ -105,9 +106,9 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "bulk-skill-point-allocation",
     .name = "Bulk Skill Point Allocation",
-    .version = "1.2.2",
+    .version = "1.2.3",
     .author = "RuffnecKk",
-    .description = "Adds fast Ctrl and confirmed Shift skill allocation.",
+    .description = "Adds fast Ctrl and optional confirmed Shift skill allocation.",
     .flags = D2RL::PluginFlags::NativeHooks,
 };
 
@@ -147,6 +148,7 @@ bool LoadConfig() noexcept {
                 DefaultSkillPointsPerCtrlClick
             );
             Settings.skillPointsPerCtrlClick = ClampSkillPointsPerCtrlClick(configuredPoints);
+            Settings.confirmShiftAllocation = config.value("confirmShiftAllocation", false);
             Settings.diagnostics = config.value("diagnostics", false);
             LoadedConfigPath = path.string();
             return true;
@@ -409,6 +411,11 @@ void __fastcall HookSendFiveBytePacket(
     }
 
     if (mode == AllocationMode::ShiftAll) {
+        if (!Settings.confirmShiftAllocation) {
+            if (CancelPendingConfirmation()) ++ShiftCancelled;
+            BeginBulkAllocation(mode, value);
+            return;
+        }
         ShowShiftConfirmation(value);
         return;
     } else {
@@ -434,8 +441,9 @@ D2RL::ConsoleCommandResult __cdecl Status(
     std::snprintf(
         message,
         sizeof(message),
-        "BulkSkillPointAllocation 1.2.2: native modal and native bulk; ctrl skill points=%u; confirmation=%s; localization key=%s; last modifiers=0x%02X; incoming extra=0x%04X; outgoing extra=0x%04X; single=%llu; ctrl batches=%llu; shift confirmed=%llu; shift superseded=%llu; native bulk packets=%llu.",
+        "BulkSkillPointAllocation 1.2.3: native modal and native bulk; ctrl skill points=%u; shift confirmation=%s; confirmation=%s; localization key=%s; last modifiers=0x%02X; incoming extra=0x%04X; outgoing extra=0x%04X; single=%llu; ctrl batches=%llu; shift confirmed=%llu; shift superseded=%llu; native bulk packets=%llu.",
         Settings.skillPointsPerCtrlClick,
+        Settings.confirmShiftAllocation ? "enabled" : "disabled",
         confirmation.active ? "pending" : "idle",
         Settings.shiftConfirmationKey.c_str(),
         static_cast<unsigned>(LastModifierMask.load(std::memory_order_relaxed)),
@@ -580,9 +588,11 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         context->LogWarn("BulkSkillPointAllocation: status command could not be registered.");
     }
     const auto activeMessage = std::string(
-        "BulkSkillPointAllocation 1.2.2 active for D2R 3.2.92777 "
+        "BulkSkillPointAllocation 1.2.3 active for D2R 3.2.92777 "
         "(native confirmation modal; standalone DLL; JSON config: "
-    ) + LoadedConfigPath + "; native bulk enabled).";
+    ) + LoadedConfigPath + "; Shift confirmation: "
+        + (Settings.confirmShiftAllocation ? "enabled" : "disabled")
+        + "; native bulk enabled).";
     context->LogInfo(activeMessage.c_str());
     return true;
 }

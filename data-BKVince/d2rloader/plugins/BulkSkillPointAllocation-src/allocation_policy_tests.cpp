@@ -11,7 +11,7 @@ int main() {
     assert(ResolveMode(false, false) == AllocationMode::Single);
     assert(ResolveMode(false, true) == AllocationMode::CtrlBatch);
     assert(ResolveMode(true, false) == AllocationMode::ShiftAll);
-    assert(ResolveMode(true, true) == AllocationMode::ShiftAll);
+    assert(ResolveMode(true, true) == AllocationMode::CtrlBatch);
 
     assert(ClampSkillPointsPerCtrlClick(0) == 1);
     assert(ClampSkillPointsPerCtrlClick(5) == 5);
