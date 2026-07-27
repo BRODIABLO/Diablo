@@ -2,9 +2,11 @@
 
 ## Décision produit
 
-Le projet se concentre exclusivement sur l'indication `Max Sockets: N` pour
-les objets socketables. Les plages d'affixes, la défense de base et l'affichage
-`Sockets: courant / maximum` sont hors périmètre.
+La première phase du projet se concentre sur l'indication `Max Sockets: N` pour
+les objets socketables. La phase suivante, approuvée par Vincent le 27 juillet
+2026, ajoute les plages de rolls des propriétés et de la défense sans modifier
+le comportement acquis de `Max Sockets`. L'affichage
+`Sockets: courant / maximum` demeure hors périmètre.
 
 La ligne utilise le marqueur UTF-8 privé du renderer D2R pour le blanc vanilla.
 Sur une weapon, elle apparaît immédiatement sous le bloc de dommages; sur une
@@ -95,3 +97,43 @@ pour Transmogrify. Le cold start BKVince charge 24 plugins actifs, avec 0 rejet,
 0 échec et 20 memory patches appliqués sur 20. La validation visuelle finale
 des trois cas — weapon, armor et base déjà socketée — reste le dernier gate en
 jeu.
+
+## Phase approuvée le 27 juillet 2026 — Affix Roll Ranges
+
+Vincent retient le format SlashDiablo comme cible visuelle : la propriété
+conserve sa couleur native et reçoit sur la même ligne une plage verte
+`[minimum - maximum]`. Le tooltip doit s'adapter à la largeur et à la hauteur
+ajoutées sans changer la police. Les objets d'armor affichent aussi la plage de
+défense de base et les propriétés de défense variables.
+
+Le calcul doit provenir des tables effectivement chargées par le mod actif,
+sans dépendance à BKVince ni à des TXT libres obligatoirement présents sur le
+disque. Les tables compilées en mémoire sont la source prioritaire; un repli
+filesystem n'est acceptable que si son identité avec les données chargées est
+prouvée.
+
+La plage d'une ligne est la somme des contributions de toutes les sources
+réellement portées par l'objet, et non le meilleur affixe individuel possible.
+Cela couvre notamment les doubles affixes, les propriétés fixes de craft,
+l'Enhanced Damage et les dégâts plats minimum/maximum. Exemple obligatoire :
+un craft donnant `5-10% Faster Cast Rate` et un affixe fixe de `10%` doit
+afficher `[15 - 20]`.
+
+Le séquencement retenu privilégie l'exactitude :
+
+1. prouver sur le build 92777 les structures de l'objet et l'accès aux tables
+   compilées du mod actif;
+2. construire un évaluateur canonique des propriétés et additionner les plages
+   des sources identifiées;
+3. résoudre les propriétés fixes des crafted items, avec consensus par stat
+   lorsque plusieurs recettes restent candidates;
+4. traiter explicitement Enhanced Damage, dégâts plats et défense;
+5. augmenter le tooltip final avant le fenêtrage d'Extended Item Stats, puis
+   valider les contextes, résolutions, langues, souris et manette.
+
+Le moteur échoue fermé : si la provenance reste ambiguë, si la valeur roulée
+n'appartient pas à la plage calculée ou si une fonction de propriété n'est pas
+supportée, il omet la plage et journalise le diagnostic. Aucune plage
+approximative ne doit être présentée comme exacte. La fonctionnalité reste dans
+la DLL autonome hybride `AdvancedItemTooltips.dll` pendant son incubation et
+est destinée à la future `plugin-items.dll` sous configuration JSON.

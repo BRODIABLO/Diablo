@@ -26,7 +26,7 @@
       "status": "active",
       "owner": "Guillaume + Codex",
       "mission": "Mission/advanced-item-tooltips-3.2.md",
-      "nextGate": "Finish the remaining visual validation without merging it into Extended Item Stats.",
+      "nextGate": "Prove the 92777 loaded-mod compiled table access and item contribution sources before implementing exact fail-closed affix and defense ranges.",
       "include": [
         "Mission/advanced-item-tooltips-3.2.md",
         "data-BKVince/d2rloader/plugins/AdvancedItemTooltips-src/**",
