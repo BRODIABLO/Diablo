@@ -8,7 +8,7 @@ vendor stock through the existing vanilla refresh path.
 
 - Diablo II: Resurrected 3.2, build 92777 only.
 - D2RLoader global or mod-local plugin scope.
-- Standalone incubation DLL; future owner: `plugin-items.dll`.
+- Standalone incubation DLL; future owner: `plugin-misc.dll`.
 - No dependency on, modification of, or redistribution of eezstreet DLLs.
 
 The plugin validates every hooked function and native UI helper before changing
@@ -71,4 +71,4 @@ ctest --test-dir build -C Release --output-on-failure
 
 Authored by RuffnecKk. The D2RLoader Plugin SDK is maintained by the D2RLoader
 project. The pinned eezstreet PluginPack was audited only for coexistence and
-future `plugin-items.dll` ownership.
+future `plugin-misc.dll` ownership.

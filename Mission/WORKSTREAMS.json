@@ -166,7 +166,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/vendor-stock-refresh-3.2.md",
-      "nextGate": "Confirm that gamble preserves the original refresh button at the active layout position; then validate one mode-0 vendor and one genuinely resized or modded vendor layout before all-act vendors, controller, click-spam, global fallback and host/joiner tests.",
+      "nextGate": "Prepare the explicitly approved merge into plugin-misc.dll under misc.vendorStockRefresh as a separate checkpoint, retain the standalone until the merged build is validated, and carry gamble, mode-0 vendor, modded-layout, controller, click-spam, global fallback and host/joiner tests as regression gates.",
       "include": [
         "Mission/vendor-stock-refresh-3.2.md",
         "addons/VendorStockRefresh/**",

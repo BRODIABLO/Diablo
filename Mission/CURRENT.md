@@ -10,17 +10,19 @@ Dernière mise à jour : 27 juillet 2026
 override de layout. Le bouton natif unique est centré dynamiquement sous l’or
 des boutiques normales et Charsi est confirmé visuellement et
 fonctionnellement. Le test autonome, les trois exports, les hashes
-source/runtime et le cold start mod-local sont verts.
+source/runtime et le cold start mod-local sont verts. Vincent déclare le candidat
+prêt pour préparation du merge et remplace le classement initial : propriétaire
+futur `plugin-misc.dll`, clé `misc.vendorStockRefresh`.
 
 Le chantier Rift/Cow a été déclaré terminé par Vincent le 27 juillet 2026 et
 retiré de la ROADMAP active. Sa mission reste conservée comme preuve technique.
 
 ## Prochain gate
 
-Confirmer que le bouton original retrouve sa position et son comportement
-vanilla dans l’écran de gamble. Tester ensuite un vendeur de mode `0`, puis un
-layout vendeur réellement modifié ou agrandi avant d’étendre la matrice à tous
-les actes, à la manette, au spam de clics et au réseau hôte/joiner.
+Préparer le merge vers `plugin-misc.dll` dans un lot distinct explicitement
+demandé, puis valider le binaire fusionné. Conserver comme gates de
+non-régression le gamble, un vendeur de mode `0`, un layout réellement modifié,
+les cinq actes, la manette, les clics rapides et le réseau hôte/joiner.
 
 ## Frontière Git
 

@@ -2,14 +2,16 @@
 
 ## Statut et séquencement
 
-- Statut : **correctif autonome 0.1.5 dynamique compilé, cold start mod-local
-  vert et témoin Charsi fonctionnel — retour gamble encore à confirmer**.
+- Statut : **correctif autonome 0.1.5 dynamique validé chez Charsi et déclaré
+  prêt par Vincent pour préparation du merge dans `plugin-misc.dll` — gates de
+  non-régression gamble et compatibilité étendue encore ouverts**.
 - Cible éventuelle : `D2R.exe 3.2.92777` sous D2RLoader.
 - Vincent a demandé de commencer ce chantier le 26 juillet 2026; cette décision
   remplace l’attente initialement prévue après Transmogrify puis Readable Items /
   Clue Scrolls et fait de Vendor Stock Refresh la priorité courante.
-- Vincent a confirmé la catégorie future `items`, la DLL propriétaire
-  `plugin-items.dll` et la clé prévue `items.vendorStockRefresh`.
+- Vincent a remplacé le classement initial `items` le 27 juillet 2026 : la
+  catégorie future confirmée est `misc`, la DLL propriétaire devient
+  `plugin-misc.dll` et la clé prévue devient `misc.vendorStockRefresh`.
 - Pendant l’incubation, la DLL autonome est
   `VendorStockRefresh.dll`, hybride globale/mod-locale et attribuée exactement à
   `RuffnecKk`.
@@ -274,9 +276,10 @@ chez Charsi; la restauration du bouton original en gamble reste à observer.
 - Une éventuelle configuration utilise uniquement `VendorStockRefresh.json`, en
   anglais, recherchée d’abord dans le mod actif puis dans le dossier global du
   jeu. Aucun TOML n’est autorisé.
-- Après validation, la fonctionnalité doit rejoindre `plugin-items.dll` et
-  l’unique `D2RPlugins.json` sous `items.vendorStockRefresh`; la DLL et le JSON
-  autonomes seront alors supprimés.
+- Lors du merge approuvé, la fonctionnalité doit rejoindre `plugin-misc.dll` et
+  l’unique `D2RPlugins.json` sous `misc.vendorStockRefresh`; la DLL et le JSON
+  autonomes ne seront supprimés qu’après compilation, cold start et validation
+  fonctionnelle du binaire fusionné.
 - Description prévue : `Refreshes a vendor's stock with one click.`
 
 ## Gates observables
@@ -288,9 +291,12 @@ chez Charsi; la restauration du bouton original en gamble reste à observer.
    bouton, modes UI, callback, paquet neuf octets, actions, handler serveur,
    état de session et signatures strictes sont prouvés. La resynchronisation
    pendant un panel ouvert relève maintenant du runtime.
-3. **Audit PluginPack — fermé** — `plugin-items` est propriétaire du remplissage
-   et des structures du cache; aucun hook UI ou refresh manuel concurrent n’a
-   été trouvé au commit épinglé.
+3. **Audit PluginPack — fermé pour l’autonome** — `plugin-items` reste
+   propriétaire du remplissage et des structures du cache, mais Vincent classe
+   l’action UI de rafraîchissement sous `misc`; aucun hook UI ou refresh manuel
+   concurrent n’a été trouvé au commit épinglé. Le merge devra préserver cette
+   frontière et la coexistence avec la politique vendor-overhaul de
+   `plugin-items`.
 4. **Contrat produit — fermé pour le prototype** — gratuit, marchand normal
    actif seulement, stock complet vanilla/vendor-overhaul et refus fail-closed
    pendant un état transactionnel ambigu.
@@ -306,18 +312,22 @@ chez Charsi; la restauration du bouton original en gamble reste à observer.
    permanent, achats avant/après rafraîchissement, or insuffisant, souris,
    manette, résolutions, solo, hôte/joiner, nouvelle partie et retour au menu;
    zéro perte, duplication, objet fantôme, crash ou désynchronisation.
-8. **Distribution** — portées globale et mod-locale, repli de configuration,
+8. **Promotion PluginPack — acceptée par Vincent** — le candidat autonome est
+   prêt pour préparation du merge sous `plugin-misc.dll` avec la clé
+   `misc.vendorStockRefresh`; le merge lui-même et ses tests de non-régression
+   constituent un prochain lot séparé.
+9. **Distribution** — portées globale et mod-locale, repli de configuration,
    coexistence avec les cinq DLL eezstreet, Release x64, exports D2RLoader,
    hashes source/runtime et ZIP public strict DLL + JSON seulement.
 
 ## Prochain gate
 
-Ouvrir maintenant un écran de gamble et confirmer que `button_refresh` retrouve
-exactement sa position fournie par le layout actif et son comportement vanilla.
-Tester ensuite un autre vendeur de mode `0`, puis un layout vendeur réellement
-moddé ou agrandi pour compléter la preuve d’adaptation dynamique, avant d’étendre à la
-manette, à tous les vendeurs des cinq actes, au spam de clics, au repli global et
-à la matrice hôte/joiner.
+Préparer, dans un lot distinct explicitement demandé, le merge vers
+`plugin-misc.dll` sous `misc.vendorStockRefresh`, puis compiler et valider le
+binaire fusionné sans supprimer prématurément l’autonome. La matrice de
+non-régression doit encore confirmer le bouton original en gamble, un vendeur de
+mode `0`, un layout réellement moddé ou agrandi, la manette, les cinq actes, les
+clics rapides, le repli global et l’hôte/joiner.
 
 ## Frontière Git
 
