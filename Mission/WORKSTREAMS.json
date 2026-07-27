@@ -67,16 +67,16 @@
     },
     {
       "id": "configurable-larzuk-sockets",
-      "name": "Configurable Larzuk Sockets",
+      "name": "ForceLarzukSockets",
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/configurable-larzuk-sockets-3.2.md",
-      "nextGate": "Choose the 15 difficulty-by-quality ranges, then run the governed Larzuk runtime matrix.",
+      "nextGate": "Cold-start the final vanilla-valued template under the official ForceLarzukSockets name, then complete the remaining robustness matrix.",
       "include": [
         "Mission/configurable-larzuk-sockets-3.2.md",
-        "data-BKVince/BKVince.mpq/LarzukSockets.json",
-        "data-BKVince/d2rloader/plugins/LarzukSockets-src/**",
-        "data-BKVince/d2rloader/plugins/LarzukSockets.dll"
+        "data-BKVince/BKVince.mpq/*Larzuk*Socket*.json",
+        "data-BKVince/d2rloader/plugins/*Larzuk*Socket*-src/**",
+        "data-BKVince/d2rloader/plugins/*Larzuk*Socket*.dll"
       ]
     },
     {

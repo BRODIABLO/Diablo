@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-27T18:48:11.5829744+00:00",
+    "generatedAt":  "2026-07-27T18:48:31.5152475+00:00",
     "root":  {
                  "name":  "snapshot",
                  "path":  ".",
@@ -13615,6 +13615,11 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
+                                                                                "name":  "ForceLarzukSockets.json",
+                                                                                "path":  "data-BKVince/BKVince.mpq/ForceLarzukSockets.json",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "GambleScreenLimit.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/GambleScreenLimit.json",
                                                                                 "kind":  "file"
@@ -13622,11 +13627,6 @@
                                                                             {
                                                                                 "name":  "GroundItemLabelLimit.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/GroundItemLabelLimit.json",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "LarzukSockets.json",
-                                                                                "path":  "data-BKVince/BKVince.mpq/LarzukSockets.json",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
@@ -14238,6 +14238,49 @@
                                                                                                                   ]
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "ForceLarzukSockets-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/ForceLarzukSockets-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "meta":  {
+                                                                                                                  "role":  "x-plugin-incubation-source",
+                                                                                                                  "summary":  "Source autonome du prototype D2RLoader configurant la récompense de sockets de Larzuk par difficulté et qualité.",
+                                                                                                                  "agentAccess":  "read-write",
+                                                                                                                  "status":  "active",
+                                                                                                                  "policy":  {
+                                                                                                                                 "editable":  true,
+                                                                                                                                 "canonical":  true,
+                                                                                                                                 "generated":  false
+                                                                                                                             }
+                                                                                                              },
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ForceLarzukSockets-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "larzuk_policy.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ForceLarzukSockets-src/larzuk_policy.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "larzuk_policy_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ForceLarzukSockets-src/larzuk_policy_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ForceLarzukSockets-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ForceLarzukSockets-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "GambleScreenLimit-src",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/GambleScreenLimit-src",
                                                                                                      "kind":  "directory",
@@ -14312,49 +14355,6 @@
                                                                                                                       {
                                                                                                                           "name":  "README.md",
                                                                                                                           "path":  "data-BKVince/d2rloader/plugins/GroundItemLabelLimit-src/README.md",
-                                                                                                                          "kind":  "file"
-                                                                                                                      }
-                                                                                                                  ]
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "LarzukSockets-src",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/LarzukSockets-src",
-                                                                                                     "kind":  "directory",
-                                                                                                     "meta":  {
-                                                                                                                  "role":  "x-plugin-incubation-source",
-                                                                                                                  "summary":  "Source autonome du prototype D2RLoader configurant la récompense de sockets de Larzuk par difficulté et qualité.",
-                                                                                                                  "agentAccess":  "read-write",
-                                                                                                                  "status":  "active",
-                                                                                                                  "policy":  {
-                                                                                                                                 "editable":  true,
-                                                                                                                                 "canonical":  true,
-                                                                                                                                 "generated":  false
-                                                                                                                             }
-                                                                                                              },
-                                                                                                     "children":  [
-                                                                                                                      {
-                                                                                                                          "name":  "CMakeLists.txt",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/LarzukSockets-src/CMakeLists.txt",
-                                                                                                                          "kind":  "file"
-                                                                                                                      },
-                                                                                                                      {
-                                                                                                                          "name":  "larzuk_policy.hpp",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/LarzukSockets-src/larzuk_policy.hpp",
-                                                                                                                          "kind":  "file"
-                                                                                                                      },
-                                                                                                                      {
-                                                                                                                          "name":  "larzuk_policy_tests.cpp",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/LarzukSockets-src/larzuk_policy_tests.cpp",
-                                                                                                                          "kind":  "file"
-                                                                                                                      },
-                                                                                                                      {
-                                                                                                                          "name":  "plugin.cpp",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/LarzukSockets-src/plugin.cpp",
-                                                                                                                          "kind":  "file"
-                                                                                                                      },
-                                                                                                                      {
-                                                                                                                          "name":  "plugin.rc",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/LarzukSockets-src/plugin.rc",
                                                                                                                           "kind":  "file"
                                                                                                                       }
                                                                                                                   ]
@@ -14837,6 +14837,11 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "ForceLarzukSockets.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/ForceLarzukSockets.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "GambleScreenLimit.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/GambleScreenLimit.dll",
                                                                                                      "kind":  "file"
@@ -14844,11 +14849,6 @@
                                                                                                  {
                                                                                                      "name":  "GroundItemLabelLimit.dll.standalone-disabled",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/GroundItemLabelLimit.dll.standalone-disabled",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "LarzukSockets.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/LarzukSockets.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

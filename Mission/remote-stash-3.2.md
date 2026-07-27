@@ -18,7 +18,7 @@ persistance restent non validés.
 ## Décisions confirmées
 
 - Après une pause temporaire au profit de Repair Costs Cap, Vincent a repris
-  RemoteStash selon l’Option A le 24 juillet 2026. Configurable Larzuk Sockets
+  RemoteStash selon l’Option A le 24 juillet 2026. ForceLarzukSockets
   reste intacte à son gate de validation en jeu.
 - Depuis le 26 juillet 2026, Vincent autorise la préparation statique et la
   compilation de RemoteStash en parallèle de la mission active. Le prototype

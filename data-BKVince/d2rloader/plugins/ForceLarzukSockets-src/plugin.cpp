@@ -50,7 +50,7 @@ constexpr std::size_t ItemsInventoryWidthOffset = 0x11E;
 constexpr std::size_t ItemsInventoryHeightOffset = 0x11F;
 constexpr std::uint32_t SocketedItemFlag = 0x800;
 constexpr std::int32_t NumberOfSocketsStat = 0xC2;
-constexpr wchar_t ConfigFileName[] = L"LarzukSockets.json";
+constexpr wchar_t ConfigFileName[] = L"ForceLarzukSockets.json";
 
 constexpr std::array<std::string_view, DifficultyCount> DifficultyNames{
     "normal", "nightmare", "hell"
@@ -99,8 +99,8 @@ std::atomic<std::uint64_t> ConfiguredRewards{};
 constexpr D2RL::PluginInfo Info{
     .infoSize = D2RL::PluginInfoSize,
     .apiVersion = D2RL_PLUGIN_API_VERSION,
-    .id = "larzuk-sockets",
-    .name = "Larzuk Sockets",
+    .id = "force-larzuk-sockets",
+    .name = "ForceLarzukSockets",
     .version = "0.1.0",
     .author = "RuffnecKk",
     .description = "Configures Larzuk socket rewards by difficulty and item quality.",
@@ -231,7 +231,7 @@ bool LoadConfig() noexcept {
             return true;
         } catch (const std::exception& exception) {
             if (Context) {
-                const auto message = std::string("LarzukSockets: invalid ")
+                const auto message = std::string("ForceLarzukSockets: invalid ")
                     + path.string() + " (" + exception.what() + ").";
                 Context->LogError(message.c_str());
             }
@@ -326,7 +326,7 @@ __declspec(noinline) void __fastcall HookAddSockets(
         std::snprintf(
             message,
             sizeof(message),
-            "LarzukSockets: difficulty=%u quality=%d configured=%u-%u legalMax=%u result=%u.",
+            "ForceLarzukSockets: difficulty=%u quality=%d configured=%u-%u legalMax=%u result=%u.",
             static_cast<unsigned>(difficulty),
             quality,
             static_cast<unsigned>(rule.minSockets),
@@ -403,7 +403,7 @@ bool ValidateNativeSignatures() noexcept {
             expectedGetMaxSockets.data(),
             expectedGetMaxSockets.size());
     if (!valid) {
-        Context->LogError("LarzukSockets: native helper signature mismatch; plugin refused.");
+        Context->LogError("ForceLarzukSockets: native helper signature mismatch; plugin refused.");
     }
     return valid;
 }
@@ -420,7 +420,7 @@ bool InstallHook() noexcept {
             HookAddSockets,
             &OriginalAddSockets
         )) {
-        Context->LogError("LarzukSockets: ITEMS_AddSockets signature mismatch; hook refused.");
+        Context->LogError("ForceLarzukSockets: ITEMS_AddSockets signature mismatch; hook refused.");
         return false;
     }
     return true;
@@ -436,12 +436,12 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     Context = context;
     Base = reinterpret_cast<std::uint8_t*>(GetModuleHandleW(nullptr));
     if (!Base || !LoadConfig()) {
-        context->LogError("LarzukSockets: configuration could not be loaded.");
+        context->LogError("ForceLarzukSockets: configuration could not be loaded.");
         return false;
     }
     if (context->modDataVersionBuild != 0
         && context->modDataVersionBuild != SupportedBuild) {
-        context->LogError("LarzukSockets: only D2R build 92777 is supported.");
+        context->LogError("ForceLarzukSockets: only D2R build 92777 is supported.");
         return false;
     }
 
@@ -459,7 +459,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
 
     if (HasRules(Settings.rules) && !InstallHook()) return false;
 
-    const auto message = std::string("LarzukSockets 0.1.0 loaded from ")
+    const auto message = std::string("ForceLarzukSockets 0.1.0 loaded from ")
         + LoadedConfigPath
         + (HasRules(Settings.rules)
             ? " (configured Larzuk hook active)."

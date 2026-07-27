@@ -167,7 +167,7 @@ La référence officielle
 `D2RL-Plugins@dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` est propre et épinglée;
 sa recherche `repair` retourne zéro résultat. Les sites actuels de
 `plugin-items` comprennent notamment `0x53C9F0`, `0x540EA0` et `0x541880` et ne
-recouvrent aucune des quatre plages. `LarzukSockets` hooke `0x375560`, après la
+recouvrent aucune des quatre plages. `ForceLarzukSockets` hooke `0x375560`, après la
 fin du prologue `0x375330..0x375350`. Le propriétaire unique des trois hooks et
 du patch demeure donc
 `RepairCostsCap.dll` pendant l’incubation.

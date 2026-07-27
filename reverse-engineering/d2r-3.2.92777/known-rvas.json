@@ -113,7 +113,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/configurable-larzuk-sockets-3.2.md",
-      "notes": "Reads a unit stat with ABI (unit, statId, layer). ITEMS_AddSockets calls it with stat 0xC2 to preserve an existing socket count on set and unique items. LarzukSockets uses the same getter only to refuse overwriting an already-socketed item."
+      "notes": "Reads a unit stat with ABI (unit, statId, layer). ITEMS_AddSockets calls it with stat 0xC2 to preserve an existing socket count on set and unique items. ForceLarzukSockets uses the same getter only to refuse overwriting an already-socketed item."
     },
     {
       "rva": "0x2F5C60",
@@ -129,7 +129,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/configurable-larzuk-sockets-3.2.md",
-      "notes": "Sets a unit stat with ABI (unit, statId, value, layer). The proven tail of ITEMS_AddSockets calls it with stat 0xC2 after setting IFLAG_SOCKETED. LarzukSockets reuses this exact native setter only in the guarded Larzuk path after enforcing the physical and base/type/ilvl limits."
+      "notes": "Sets a unit stat with ABI (unit, statId, value, layer). The proven tail of ITEMS_AddSockets calls it with stat 0xC2 after setting IFLAG_SOCKETED. ForceLarzukSockets reuses this exact native setter only in the guarded Larzuk path after enforcing the physical and base/type/ilvl limits."
     },
     {
       "rva": "0x2F8AD0",
@@ -329,7 +329,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/configurable-larzuk-sockets-3.2.md",
-      "notes": "Validates UNIT_ITEM and returns ItemData+0x04, the low/high item RNG seed pair. The vanilla Larzuk magic-quality branch calls it before the 0x6AC690C5 LCG roll. LarzukSockets advances the same seed only when a configured inclusive range contains more than one legal result."
+      "notes": "Validates UNIT_ITEM and returns ItemData+0x04, the low/high item RNG seed pair. The vanilla Larzuk magic-quality branch calls it before the 0x6AC690C5 LCG roll. ForceLarzukSockets advances the same seed only when a configured inclusive range contains more than one legal result."
     },
     {
       "rva": "0x36CF60",
@@ -337,7 +337,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/configurable-larzuk-sockets-3.2.md",
-      "notes": "Returns ItemData quality, defaulting to normal when no valid item data exists. The Larzuk reward path branches on values 4 through 9; LarzukSockets configures only magic 4, set 5, rare 6, unique 7 and crafted 8, leaving all other qualities vanilla."
+      "notes": "Returns ItemData quality, defaulting to normal when no valid item data exists. The Larzuk reward path branches on values 4 through 9; ForceLarzukSockets configures only magic 4, set 5, rare 6, unique 7 and crafted 8, leaving all other qualities vanilla."
     },
     {
       "rva": "0x36EAD0",
@@ -345,7 +345,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/advanced-item-tooltips-3.2.md; Mission/configurable-larzuk-sockets-3.2.md",
-      "notes": "Returns the maximum socket count for the concrete item. The 92777 implementation reads ItemData item level at +0x38, ItemTypes socket thresholds and the compiled Items gemsockets cap. AdvancedItemTooltips and LarzukSockets call this native routine instead of duplicating those rules; LarzukSockets additionally preserves the inventory width-by-height cap applied by ITEMS_AddSockets."
+      "notes": "Returns the maximum socket count for the concrete item. The 92777 implementation reads ItemData item level at +0x38, ItemTypes socket thresholds and the compiled Items gemsockets cap. AdvancedItemTooltips and ForceLarzukSockets call this native routine instead of duplicating those rules; ForceLarzukSockets additionally preserves the inventory width-by-height cap applied by ITEMS_AddSockets."
     },
     {
       "rva": "0x3719E0",
@@ -385,7 +385,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/configurable-larzuk-sockets-3.2.md",
-      "notes": "Applies a requested socket count after capping inventory area to six, quality to magic 4, rare 2, crafted/tempered 3 and set/unique 1 unless already socketed, then base/type/ilvl through ITEMS_GetMaxSockets. It sets IFLAG_SOCKETED and stat 0xC2. LarzukSockets owns a strict 16-byte inline hook here, forwards every non-Larzuk caller unchanged and bypasses only the generic quality cap for the guarded quest call."
+      "notes": "Applies a requested socket count after capping inventory area to six, quality to magic 4, rare 2, crafted/tempered 3 and set/unique 1 unless already socketed, then base/type/ilvl through ITEMS_GetMaxSockets. It sets IFLAG_SOCKETED and stat 0xC2. ForceLarzukSockets owns a strict 16-byte inline hook here, forwards every non-Larzuk caller unchanged and bypasses only the generic quality cap for the guarded quest call."
     },
     {
       "rva": "0x375EE0",
