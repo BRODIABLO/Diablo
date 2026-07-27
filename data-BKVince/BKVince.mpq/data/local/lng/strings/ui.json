@@ -42243,5 +42243,22 @@
     "ptBR": "%s para mover",
     "ruRU": "Перенести – %s",
     "zhCN": "%s 移动"
+  },
+  {
+    "id": 30429,
+    "Key": "remoteStashTooltip",
+    "enUS": "YOUR PRIVATE STASH",
+    "zhTW": "YOUR PRIVATE STASH",
+    "deDE": "YOUR PRIVATE STASH",
+    "esES": "YOUR PRIVATE STASH",
+    "frFR": "YOUR PRIVATE STASH",
+    "itIT": "YOUR PRIVATE STASH",
+    "koKR": "YOUR PRIVATE STASH",
+    "plPL": "YOUR PRIVATE STASH",
+    "esMX": "YOUR PRIVATE STASH",
+    "jaJP": "YOUR PRIVATE STASH",
+    "ptBR": "YOUR PRIVATE STASH",
+    "ruRU": "YOUR PRIVATE STASH",
+    "zhCN": "YOUR PRIVATE STASH"
   }
 ]

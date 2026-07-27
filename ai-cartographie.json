@@ -9872,6 +9872,16 @@
                                                                                                                                                                                                               "name":  "classic_background.sprite",
                                                                                                                                                                                                               "path":  "data-BKVince/BKVince.mpq/data/hd/global/ui/panel/inventory/classic_background.sprite",
                                                                                                                                                                                                               "kind":  "file"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "name":  "remotestashbutton.lowend.sprite",
+                                                                                                                                                                                                              "path":  "data-BKVince/BKVince.mpq/data/hd/global/ui/panel/inventory/remotestashbutton.lowend.sprite",
+                                                                                                                                                                                                              "kind":  "file"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "name":  "remotestashbutton.sprite",
+                                                                                                                                                                                                              "path":  "data-BKVince/BKVince.mpq/data/hd/global/ui/panel/inventory/remotestashbutton.sprite",
+                                                                                                                                                                                                              "kind":  "file"
                                                                                                                                                                                                           }
                                                                                                                                                                                                       ]
                                                                                                                                                                                      },
@@ -14548,7 +14558,7 @@
                                                                                                      "kind":  "directory",
                                                                                                      "meta":  {
                                                                                                                   "role":  "x-plugin-incubation-source",
-                                                                                                                  "summary":  "Politique native-free et tests du placement dynamique du futur contrôle RemoteStash dans les layouts d\u0027inventaire.",
+                                                                                                                  "summary":  "Prototype autonome RemoteStash et tests du placement dynamique de son contrôle dans les layouts d\u0027inventaire.",
                                                                                                                   "agentAccess":  "read-write",
                                                                                                                   "status":  "active",
                                                                                                                   "policy":  {
@@ -14559,10 +14569,24 @@
                                                                                                                   "notes":  [
                                                                                                                                 "Runtime cible : D2R 3.2.92777.",
                                                                                                                                 "Propriétaire futur : plugin-misc.dll / misc.remoteStash.",
-                                                                                                                                "Aucune DLL, aucun hook, aucune configuration et aucun asset ne sont encore implantés."
+                                                                                                                                "Le prototype hybride 0.1.5 ouvre le panneau stash client depuis le bouton d\u0027inventaire validé en jeu.",
+                                                                                                                                "Les layouts BKVince et les sprites à quatre états portent actuellement le contrôle; la compatibilité native sans déclaration de layout reste ouverte.",
+                                                                                                                                "La session banque serveur autoritaire et le hotkey configurable restent des gates distincts."
                                                                                                                             ]
                                                                                                               },
                                                                                                      "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "assets",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RemoteStash-src/assets",
+                                                                                                                          "kind":  "directory",
+                                                                                                                          "children":  [
+                                                                                                                                           {
+                                                                                                                                               "name":  "remote-stash-button-states.png",
+                                                                                                                                               "path":  "data-BKVince/d2rloader/plugins/RemoteStash-src/assets/remote-stash-button-states.png",
+                                                                                                                                               "kind":  "file"
+                                                                                                                                           }
+                                                                                                                                       ]
+                                                                                                                      },
                                                                                                                       {
                                                                                                                           "name":  "CMakeLists.txt",
                                                                                                                           "path":  "data-BKVince/d2rloader/plugins/RemoteStash-src/CMakeLists.txt",
@@ -14571,6 +14595,16 @@
                                                                                                                       {
                                                                                                                           "name":  "layout_policy_tests.cpp",
                                                                                                                           "path":  "data-BKVince/d2rloader/plugins/RemoteStash-src/layout_policy_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RemoteStash-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RemoteStash-src/plugin.rc",
                                                                                                                           "kind":  "file"
                                                                                                                       },
                                                                                                                       {
@@ -14868,6 +14902,11 @@
                                                                                                  {
                                                                                                      "name":  "README.txt",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/README.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "RemoteStash.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/RemoteStash.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

@@ -5,31 +5,11 @@
 int main() {
     using namespace ruffneckk::remote_stash;
 
-    static_assert(
-        UiMessageHash("VendorPanelMessage:Repair") == 0x20BADA21BC8CB334ull
-    );
-    static_assert(
-        UiMessageHash("VendorPanelMessage:RepairAll") == 0x5680CE604E1D402Full
-    );
-    static_assert(
-        UiMessageHash("VendorPanelMessage:RefreshAll") == 0xB7AA1748D66EFCAFull
-    );
-    static_assert(
-        UiMessageHash("VendorPanelMessage:Close") == 0x5E8250FB85D64C23ull
-    );
-    static_assert(
-        UiMessageHash("PlayerInventoryPanelMessage:DropGold")
-        == 0xB3B0A478381C4725ull
-    );
-    static_assert(
-        RemoteStashMessageHash == 0x055A7CEA95897DC9ull
-    );
-
     constexpr WidgetRect bkvincePanel{0, 0, 1280, 1760};
-    constexpr WidgetRect bkvinceGrid{95, 857, 980, 760};
+    constexpr WidgetRect bkvinceGrid{95, 857, 980, 784};
     constexpr WidgetRect bkvinceGoldButton{780, 1656, 58, 58};
     constexpr WidgetRect bkvinceGoldAmount{840, 1656, 249, 48};
-    constexpr WidgetRect remoteButton{0, 0, 112, 96};
+    constexpr WidgetRect remoteButton{0, 0, 176, 112};
     constexpr auto bkvince = PlaceDesktopFooterLeft(
         bkvincePanel,
         bkvinceGrid,
@@ -39,7 +19,7 @@ int main() {
     );
     static_assert(bkvince.valid);
     static_assert(bkvince.rect.x == 95);
-    static_assert(bkvince.rect.y == 1637);
+    static_assert(bkvince.rect.y == 1641);
     static_assert(bkvince.failure == PlacementFailure::None);
 
     constexpr auto resized = PlaceDesktopFooterLeft(
@@ -55,7 +35,7 @@ int main() {
 
     constexpr auto goldButtonFallback = PlaceDesktopFooterLeft(
         WidgetRect{0, 0, 1280, 1760},
-        WidgetRect{95, 857, 980, 760},
+        WidgetRect{95, 857, 980, 784},
         WidgetRect{780, 1656, 309, 58},
         WidgetRect{},
         remoteButton

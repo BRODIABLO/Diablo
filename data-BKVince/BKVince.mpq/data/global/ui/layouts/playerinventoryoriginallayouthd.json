@@ -59,6 +59,16 @@
             }
         },
         {
+            "type": "ButtonWidget", "name": "remote_stash",
+            "fields": {
+                "rect": { "x": 95, "y": 1656 },
+                "filename": "PANEL\\Inventory\\RemoteStashButton",
+                "hoveredFrame": 3,
+                "tooltipString": "@remoteStashTooltip",
+                "onClickMessage": "PlayerInventoryPanelMessage:DropGold"
+            }
+        },
+        {
             "type": "ButtonWidget", "name": "close",
             "fields": {
                 "rect": { "x": 1185, "y": 9 },

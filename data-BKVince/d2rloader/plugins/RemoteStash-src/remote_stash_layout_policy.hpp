@@ -2,25 +2,8 @@
 
 #include <cstdint>
 #include <limits>
-#include <string_view>
 
 namespace ruffneckk::remote_stash {
-
-constexpr std::uint64_t UiMessageHashSeed = 0x1C1D8987E0EFCA1Aull;
-constexpr std::uint64_t Fnv1aPrime = 0x100000001B3ull;
-
-constexpr std::uint64_t UiMessageHash(std::string_view message) noexcept {
-    auto hash = UiMessageHashSeed;
-    for (const auto character : message) {
-        hash ^= static_cast<std::uint8_t>(character);
-        hash *= Fnv1aPrime;
-    }
-    return hash;
-}
-
-constexpr std::uint64_t RemoteStashMessageHash = UiMessageHash(
-    "PlayerInventoryPanelMessage:RemoteStash"
-);
 
 struct WidgetRect {
     std::int32_t x{};
@@ -109,8 +92,10 @@ constexpr WidgetRect UnionRect(
 }
 
 // Desktop policy: align the button with the runtime inventory-grid origin and
-// vertically center it on the runtime gold footer. Controller layouts require
-// a separate policy because their gold button occupies that same horizontal area.
+// keep it as close as possible to the runtime gold footer's vertical center.
+// When a taller custom sprite would overlap the grid, move it down into the
+// available footer strip. Controller layouts require a separate policy because
+// their gold button occupies that same horizontal area.
 constexpr PlacementResult PlaceDesktopFooterLeft(
     const WidgetRect& panel,
     const WidgetRect& grid,
@@ -132,8 +117,15 @@ constexpr PlacementResult PlaceDesktopFooterLeft(
         return {.failure = PlacementFailure::InvalidButton};
     }
 
-    const auto y = static_cast<std::int64_t>(footer.y)
+    const auto preferredY = static_cast<std::int64_t>(footer.y)
         + (static_cast<std::int64_t>(footer.height) - button.height) / 2;
+    const auto minimumY = Bottom(grid);
+    const auto maximumY = Bottom(panel) - button.height;
+    if (minimumY > maximumY) {
+        return {.failure = PlacementFailure::GridCollision};
+    }
+    auto y = preferredY < minimumY ? minimumY : preferredY;
+    if (y > maximumY) y = maximumY;
     if (y < std::numeric_limits<std::int32_t>::min()
         || y > std::numeric_limits<std::int32_t>::max()) {
         return {.failure = PlacementFailure::CoordinateOverflow};

@@ -33,6 +33,9 @@
             "type": "ButtonWidget", "name": "gold_button",
         },
         {
+            "type": "ButtonWidget", "name": "remote_stash",
+        },
+        {
             "type": "ButtonWidget", "name": "close",
         },
         {

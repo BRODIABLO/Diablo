@@ -85,10 +85,14 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/remote-stash-3.2.md",
-      "nextGate": "In parallel with the blocked runtime action proof, identify and prove the PlayerInventoryPanel lifecycle and a safe native ButtonWidget attachment path, then validate runtime anchors and collision fallback before implementing any panel hook.",
+      "nextGate": "Plan and implement a configurable hotkey that reuses the validated RemoteStash action with conflict and UI-state guards; then establish an authoritative server bank session before item, gold, persistence and third-party layout validation.",
       "include": [
         "Mission/remote-stash-3.2.md",
         "data-BKVince/BKVince.mpq/RemoteStash.json",
+        "data-BKVince/BKVince.mpq/data/hd/global/ui/panel/inventory/remotestashbutton*",
+        "data-BKVince/BKVince.mpq/data/global/ui/layouts/playerinventoryexpansionlayouthd.json",
+        "data-BKVince/BKVince.mpq/data/global/ui/layouts/playerinventoryoriginallayouthd.json",
+        "data-BKVince/BKVince.mpq/data/local/lng/strings/ui.json",
         "data-BKVince/d2rloader/plugins/RemoteStash-src/**",
         "data-BKVince/d2rloader/plugins/RemoteStash.dll"
       ]
@@ -304,6 +308,20 @@
         "readable-items-clue-scrolls"
       ],
       "reason": "The validated host binary includes the Readable Items mouse-input delegation."
+    },
+    {
+      "pattern": "data-BKVince/d2rloader/plugins/BulkSkillPointAllocation-src/plugin.cpp",
+      "workstreams": [
+        "remote-stash"
+      ],
+      "reason": "RemoteStash uses the existing Bulk Skill UI dispatcher hook as its shared message broker."
+    },
+    {
+      "pattern": "data-BKVince/d2rloader/plugins/BulkSkillPointAllocation.dll",
+      "workstreams": [
+        "remote-stash"
+      ],
+      "reason": "The deployed Bulk Skill binary exports the UI message broker consumed by RemoteStash."
     }
   ]
 }

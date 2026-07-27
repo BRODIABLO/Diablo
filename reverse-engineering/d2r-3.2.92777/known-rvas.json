@@ -1218,6 +1218,38 @@
       "confidence": "high",
       "source": "Mission/ground-item-label-limit-3.2.md",
       "notes": "Normalizes the synchronized ground-label layout list to 32 nodes. GroundItemLabelLimit validates and patches this comparison plus the coupled sites at 0x1519A4F, 0x1519AAA and 0x1519AF9."
+    },
+    {
+      "rva": "0x12DBC0",
+      "name": "CLIENT_HandleUiPacket77",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/remote-stash-3.2.md",
+      "notes": "Registered at runtime as the handler for opcode 0x77 with an exact packet length of two bytes. The registration table is proven by the adjacent 0x9C and 0x9D handlers and its 24-byte-per-opcode stride. This entry tail-jumps to CLIENT_ApplyUiPacket77 at 0x1F0AB0. RemoteStash 0.1.0 calls it on the UI thread with the native packet {0x77,0x10}; this proves only the local client panel action, not an authoritative server bank session."
+    },
+    {
+      "rva": "0x1F0AB0",
+      "name": "CLIENT_ApplyUiPacket77",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/remote-stash-3.2.md",
+      "notes": "Consumes the action byte at packet+1. Action 0x10 follows the native open-stash UI branch and action 0x14 follows its separate UI branch. The exact 32-byte entry signature is pinned by RemoteStash 0.1.0 before the wrapper at 0x12DBC0 can be called."
+    },
+    {
+      "rva": "0x22BA70",
+      "name": "UI_PlayerInventory_RefreshGoldControls",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/remote-stash-3.2.md",
+      "notes": "PlayerInventoryPanel refresh method with ABI (panel) -> void. It resolves gold_amount and gold_button through UI_FindChildWidgetByName, refreshes the displayed bank-gold value and applies the native gold-button state. RemoteStash 0.1.0 hooks its strict 32-byte prologue, calls the original first, then measures the active panel, grid, footer and private button for fail-closed dynamic placement."
+    },
+    {
+      "rva": "0x8F0F00",
+      "name": "UI_ButtonWidget_OnClick",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/remote-stash-3.2.md",
+      "notes": "Generic ButtonWidget click handler with probable ABI (button, inputMessage) -> void. Runtime type metadata proves onClickMessage at button+0x558; the handler dispatches that embedded message at 0x8F1069. RemoteStash 0.1.0 hooks the strict 32-byte prologue and consumes only hash 0x055A7CEA95897DC9 for PlayerInventoryPanelMessage:RemoteStash, forwarding every other button unchanged."
     }
   ]
 }

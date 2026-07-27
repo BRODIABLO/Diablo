@@ -16,6 +16,8 @@
 #include <string>
 #include <vector>
 
+using UiMessageInterceptorFn = bool(__fastcall*)(void*) noexcept;
+
 namespace {
 using tcp::bulk_skills::AllocationMode;
 using tcp::bulk_skills::AssignAllSkillPointsExtra;
@@ -76,6 +78,7 @@ IsVirtualKeyDownFn IsVirtualKeyDown{};
 GetLocalizedStringByKeyFn OriginalGetLocalizedStringByKey{};
 ShowAssignAllStatsConfirmationFn ShowAssignAllStatsConfirmation{};
 UiDispatchMessageFn OriginalUiDispatchMessage{};
+std::atomic<UiMessageInterceptorFn> ExternalUiMessageInterceptor{};
 
 std::mutex ConfirmationMutex;
 PendingConfirmationState PendingConfirmation{};
@@ -106,7 +109,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "bulk-skill-point-allocation",
     .name = "Bulk Skill Point Allocation",
-    .version = "1.2.3",
+    .version = "1.2.4",
     .author = "RuffnecKk",
     .description = "Adds fast Ctrl and optional confirmed Shift skill allocation.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -337,7 +340,19 @@ void BeginBulkAllocation(
     }
 }
 
+bool TryExternalUiMessageInterceptor(void* message) noexcept {
+    const auto interceptor = ExternalUiMessageInterceptor.load(std::memory_order_acquire);
+    if (!interceptor) return false;
+    __try {
+        return interceptor(message);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
 void __fastcall HookUiDispatchMessage(void* message) noexcept {
+    if (TryExternalUiMessageInterceptor(message)) return;
+
     std::int32_t statIndex{};
     std::int32_t mode{};
     const bool payloadRead = ReadMessagePayload(message, statIndex, mode);
@@ -441,7 +456,7 @@ D2RL::ConsoleCommandResult __cdecl Status(
     std::snprintf(
         message,
         sizeof(message),
-        "BulkSkillPointAllocation 1.2.3: native modal and native bulk; ctrl skill points=%u; shift confirmation=%s; confirmation=%s; localization key=%s; last modifiers=0x%02X; incoming extra=0x%04X; outgoing extra=0x%04X; single=%llu; ctrl batches=%llu; shift confirmed=%llu; shift superseded=%llu; native bulk packets=%llu.",
+        "BulkSkillPointAllocation 1.2.4: native modal and native bulk; ctrl skill points=%u; shift confirmation=%s; confirmation=%s; localization key=%s; last modifiers=0x%02X; incoming extra=0x%04X; outgoing extra=0x%04X; single=%llu; ctrl batches=%llu; shift confirmed=%llu; shift superseded=%llu; native bulk packets=%llu.",
         Settings.skillPointsPerCtrlClick,
         Settings.confirmShiftAllocation ? "enabled" : "disabled",
         confirmation.active ? "pending" : "idle",
@@ -498,6 +513,32 @@ bool ValidateRuntime() noexcept {
 
 } // namespace
 
+extern "C" __declspec(dllexport) bool __cdecl RuffneckkRegisterUiMessageInterceptor(
+    UiMessageInterceptorFn interceptor
+) noexcept {
+    if (!interceptor) return false;
+    UiMessageInterceptorFn expected{};
+    return ExternalUiMessageInterceptor.compare_exchange_strong(
+        expected,
+        interceptor,
+        std::memory_order_acq_rel,
+        std::memory_order_acquire
+    );
+}
+
+extern "C" __declspec(dllexport) void __cdecl RuffneckkUnregisterUiMessageInterceptor(
+    UiMessageInterceptorFn interceptor
+) noexcept {
+    if (!interceptor) return;
+    auto expected = interceptor;
+    ExternalUiMessageInterceptor.compare_exchange_strong(
+        expected,
+        nullptr,
+        std::memory_order_acq_rel,
+        std::memory_order_acquire
+    );
+}
+
 D2RL_PLUGIN_EXPORT auto D2RLoaderGetPluginInfo() noexcept -> const D2RL::PluginInfo* {
     return &Info;
 }
@@ -506,6 +547,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     if (!context) return false;
     Context = context;
     Base = reinterpret_cast<std::uint8_t*>(GetModuleHandleW(nullptr));
+    ExternalUiMessageInterceptor.store(nullptr, std::memory_order_relaxed);
     if (!Base) return false;
     if (context->modDataVersionBuild != 0 && context->modDataVersionBuild != SupportedBuild) {
         context->LogError("BulkSkillPointAllocation: only D2R build 92777 is supported.");
@@ -588,7 +630,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         context->LogWarn("BulkSkillPointAllocation: status command could not be registered.");
     }
     const auto activeMessage = std::string(
-        "BulkSkillPointAllocation 1.2.3 active for D2R 3.2.92777 "
+        "BulkSkillPointAllocation 1.2.4 active for D2R 3.2.92777 "
         "(native confirmation modal; standalone DLL; JSON config: "
     ) + LoadedConfigPath + "; Shift confirmation: "
         + (Settings.confirmShiftAllocation ? "enabled" : "disabled")
@@ -598,6 +640,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
 }
 
 D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
+    ExternalUiMessageInterceptor.store(nullptr, std::memory_order_release);
     CancelPendingConfirmation();
     OpeningSkillConfirmation = false;
     Context = nullptr;
