@@ -1390,7 +1390,7 @@
                                     "name": "desecratedzones_desecrated_zones_0_manual_zones_4_zones_0_levels_22",
                                     "level_id": 138,
                                     "zone_data_id": "Act5-Rift1",
-                                    "zone_completion_weight": 1.0,
+                                    "zone_completion_weight": 1.0
                                 },
                                 {
                                     "type": "DesecratedLevel",

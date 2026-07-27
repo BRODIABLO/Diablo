@@ -11,6 +11,7 @@
   "inventory": "system",
   "itemstatcost": "items",
   "itemtypes": "items",
+  "levelgroups": "other",
   "levels": "system",
   "lvlmaze": "system",
   "lvlprest": "system",

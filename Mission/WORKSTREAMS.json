@@ -168,6 +168,23 @@
       ]
     },
     {
+      "id": "rift-terror-zone-group",
+      "name": "Rift Terror Zone Group",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/rift-terror-zone-group-3.2.md",
+      "nextGate": "Confirm THE RIFTS and THE SECRET COW LEVEL on their next terrorized selections, then verify the same display for host and joiner.",
+      "include": [
+        "Mission/rift-terror-zone-group-3.2.md",
+        "data-BKVince/BKVince.mpq/data/global/excel/levelgroups.txt",
+        "data-BKVince/BKVince.mpq/data/local/lng/strings/levels.json",
+        "data-BKVince/BKVince.mpq/data/hd/global/excel/desecratedzones.json",
+        "schemas/_categories.json",
+        "schemas/levelgroups.json",
+        "scripts/migrate-bkvince/rift-terror-zone-group.js"
+      ]
+    },
+    {
       "id": "workstream-registry",
       "name": "Workstream Registry",
       "status": "maintenance",
@@ -216,6 +233,7 @@
       "pattern": "package.json",
       "workstreams": [
         "extended-item-stats",
+        "rift-terror-zone-group",
         "workstream-registry"
       ],
       "reason": "Root commands currently serve both the active plugin tests and repository organization."

@@ -1,0 +1,60 @@
+{
+  "table": "levelgroups",
+  "category": "other",
+  "file": "global/excel/levelgroups.txt",
+  "description": "This file controls how the game groups levels together. This is mainly used for condensing level names in desecrated (terror) zone messaging",
+  "source": "Colonnes du .txt (BKVince 3.2) ; types/descriptions du guide TXT eezstreet-d2rdoc.",
+  "documentation": {
+    "primary": "eezstreet-d2rdoc",
+    "url": "https://eezstreet.github.io/d2rdoc",
+    "target": "BKVince 3.2"
+  },
+  "columnsDocumented": 5,
+  "columns": [
+    {
+      "name": "LevelGroupId",
+      "type": "text",
+      "description": "Defines the unique name pointer for the level group, which is used in other files",
+      "guideType": "[text]",
+      "documentationSource": "eezstreet-d2rdoc",
+      "guideUrl": "https://eezstreet.github.io/d2rdoc/files/levelgroups.html#LevelGroupId"
+    },
+    {
+      "name": "ParentLevelGroupId",
+      "type": "text",
+      "description": "Defines a parent for this level group. If the parent group is completed then this level group will not be displayed.",
+      "guideType": "[reference]",
+      "documentationSource": "eezstreet-d2rdoc",
+      "guideUrl": "https://eezstreet.github.io/d2rdoc/files/levelgroups.html#ParentLevelGroupId"
+    },
+    {
+      "name": "CompleteThreshold",
+      "type": "number",
+      "description": "Percent amount of the level group to satisfy before it is marked as completed.",
+      "guideType": "[int]",
+      "documentationSource": "eezstreet-d2rdoc",
+      "guideUrl": "https://eezstreet.github.io/d2rdoc/files/levelgroups.html#CompleteThreshold"
+    },
+    {
+      "name": "Effect",
+      "type": "number",
+      "description": "Controls what effect to play for this level group when it is completed.",
+      "guideType": "[int]",
+      "documentationSource": "eezstreet-d2rdoc",
+      "guideUrl": "https://eezstreet.github.io/d2rdoc/files/levelgroups.html#Effect"
+    },
+    {
+      "name": "*Name",
+      "type": "text",
+      "comment": true
+    },
+    {
+      "name": "NameString",
+      "type": "text",
+      "description": "String Field. Used for displaying the name of the level group, such as when all levels in a group have been desecrated.",
+      "guideType": "[string]",
+      "documentationSource": "eezstreet-d2rdoc",
+      "guideUrl": "https://eezstreet.github.io/d2rdoc/files/levelgroups.html#NameString"
+    }
+  ]
+}

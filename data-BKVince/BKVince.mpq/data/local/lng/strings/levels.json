@@ -7108,19 +7108,19 @@
   {
     "id": 27338,
     "Key": "MooMooFarmGroup",
-    "enUS": "ÿc8a non-existent levelÿc0",
-    "zhTW": "ÿc8不存在的關卡ÿc0",
-    "deDE": "ÿc8ein Level, das es gar nicht gibtÿc0",
-    "esES": "ÿc8un nivel que no existeÿc0",
-    "frFR": "ÿc8un niveau inexistantÿc0",
-    "itIT": "ÿc8un livello inesistenteÿc0",
-    "koKR": "ÿc8존재하지 않는 곳ÿc0",
-    "plPL": "ÿc8nieistniejący poziomÿc0",
-    "esMX": "ÿc8un nivel inexistenteÿc0",
-    "jaJP": "ÿc8存在しないところÿc0",
-    "ptBR": "ÿc8um nível inexistenteÿc0",
-    "ruRU": "ÿc8несуществующий уровеньÿc0",
-    "zhCN": "ÿc8不存在的关卡ÿc0"
+    "enUS": "The Secret Cow Level",
+    "zhTW": "秘密乳牛關",
+    "deDE": "Das Geheime Kuhlevel",
+    "esES": "Nivel Secreto de las Vacas",
+    "frFR": "Le niveau secret des vaches",
+    "itIT": "Livello Bovino Segreto",
+    "koKR": "비밀의 젖소방",
+    "plPL": "Sekretny krowi poziom",
+    "esMX": "El Nivel Secreto de la Vaca",
+    "jaJP": "秘密のモーモー牧場",
+    "ptBR": "O Nível Secreto da Vaca",
+    "ruRU": "Секретный коровий уровень",
+    "zhCN": "神秘的奶牛关"
   },
   {
     "id": 27867,
@@ -7682,5 +7682,22 @@
     "ptBR": "Entering Rift Cave 2",
     "ruRU": "Entering Rift Cave 2",
     "zhCN": "Entering Rift Cave 2"
+  },
+  {
+    "id": 73040,
+    "Key": "RiftGroup",
+    "enUS": "The Rifts",
+    "zhTW": "裂谷",
+    "deDE": "Rifts",
+    "esES": "Rifts",
+    "frFR": "Les failles",
+    "itIT": "Rift",
+    "koKR": "리프트",
+    "plPL": "Szczeliny",
+    "esMX": "Rifts",
+    "jaJP": "リフト",
+    "ptBR": "Rifts",
+    "ruRU": "Rifts",
+    "zhCN": "裂谷"
   }
 ]
