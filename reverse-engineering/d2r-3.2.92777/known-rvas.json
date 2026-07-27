@@ -60,6 +60,14 @@
       "notes": "Returns the effective runtime maximum for a compiled SkillsTxt row and data context. SKILLTREE_CanAllocateSkill calls it at 0x14C3E54. BulkSkillPointAllocation 1.2.1 delegates the cap to the authoritative native bulk handler and no longer calls this helper."
     },
     {
+      "rva": "0x2411E0",
+      "name": "UI_VendorPanel_Configure",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Configures VendorPanel mode, child enabled/visible states and mode-specific backgrounds with ABI (panel) -> void. It stores gamble mode 2 when CLIENT_GetVendorPanelGambleMode is nonzero and otherwise selects normal-vendor modes 0 or 1 by NPC class. Its strict 32-byte entry is hooked by VendorStockRefresh 0.1.5 only after the original flow returns. The hook reuses button_refresh: it preserves the original state and layout position in gamble, then dynamically centers and shows that same native widget outside gamble."
+    },
+    {
       "rva": "0x2A7810",
       "name": "UI_TOOLTIP_ResolveHoveredUnit",
       "kind": "function",
@@ -820,6 +828,22 @@
       "notes": "Resolves a 16-bit localized string ID to the active-language UTF-8 text. Independent 92777 callers read the ItemsTxt name-string ID at record offset +0xFC before calling it. Transmogrify 1.0.3 validates its strict 14-byte entry signature and resolves UI string 5387 (convertsto) plus the TMogType output name."
     },
     {
+      "rva": "0x856220",
+      "name": "UI_FindChildWidgetByName",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Finds a direct child widget by name with ABI (panel, const char* name) -> widget*. The 92777 implementation walks the pointer range at panel+0x58/panel+0x60, compares each child name through 0x12277A0 and returns the matching widget or null. Runtime memory at the native VendorPanel callsites confirms raw names such as button_repair, button_repair_all and button_refresh. VendorStockRefresh 0.1.5 pins its strict 32-byte entry and resolves button_refresh plus the runtime anchors StashWidget, gold_icon and gold_amount without shipping a vendor layout."
+    },
+    {
+      "rva": "0x8562A0",
+      "name": "UI_GetWidgetLocalRect",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/vendor-stock-refresh-3.2.md",
+      "notes": "Reads a widget rectangle with ABI (widget, rectOut) -> rectOut. For ordinary widgets it copies the 16-byte signed integer rectangle {x,y,width,height} from widget+0x70. When the fill-parent flag at +0x52 is set it recursively derives the parent area. VendorStockRefresh 0.1.5 pins the strict 32-byte entry, reads the live refresh and gold-anchor geometry through this helper, and writes only button_refresh x/y at +0x70 after validating usable dimensions."
+    },
+    {
       "rva": "0x120A100",
       "name": "INPUT_IsVirtualKeyDownAsync",
       "kind": "function",
@@ -1097,7 +1121,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/vendor-stock-refresh-3.2.md",
-      "notes": "Builds the current 92777 client command layout {opcode:u8, action:u32, targetGuid:u32} and submits exactly nine bytes through CLIENT_QueueOutgoingPacket 0xEE2A0. Proven x64 ABI: (opcode byte, action dword, targetGuid dword) -> void. Twenty-six direct references include the vendor entity-action callers; its 48-byte entry signature is pinned by VendorStockRefresh 0.1.0."
+      "notes": "Builds the current 92777 client command layout {opcode:u8, action:u32, targetGuid:u32} and submits exactly nine bytes through CLIENT_QueueOutgoingPacket 0xEE2A0. Proven x64 ABI: (opcode byte, action dword, targetGuid dword) -> void. Twenty-six direct references include the vendor entity-action callers; its 48-byte entry signature is pinned by VendorStockRefresh 0.1.1."
     },
     {
       "rva": "0x10CAC0",
@@ -1105,7 +1129,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/vendor-stock-refresh-3.2.md",
-      "notes": "Returns the client gamble-state global used by VendorPanel configuration at 0x241240. A nonzero result stores panel mode 2 at panel+0x168. VendorStockRefresh uses this native predicate so RefreshAll keeps action 2 in gamble and selects action 1 only for a normal vendor panel."
+      "notes": "Returns the client gamble-state global used by VendorPanel configuration at 0x241240. A nonzero result stores panel mode 2 at panel+0x168. VendorStockRefresh uses this native predicate so RefreshAll keeps vanilla action 2 in gamble and selects its private VSRF marker only for a normal vendor panel."
     },
     {
       "rva": "0x10F520",
@@ -1121,7 +1145,7 @@
       "kind": "patch-site",
       "confidence": "high",
       "source": "Mission/vendor-stock-refresh-3.2.md",
-      "notes": "Unique 23-byte vendor-panel input guard requiring panel+0x168 mode 2 before the direct refresh path reaches CLIENT_SendVendorRefreshAction. VendorStockRefresh 0.1.0 changes the same-length condition to reject only repair mode 1, enabling normal mode 0 while preserving gamble mode 2."
+      "notes": "Unique 23-byte vendor-panel input guard requiring panel+0x168 mode 2 before the direct refresh path reaches CLIENT_SendVendorRefreshAction. The vendor configuration uses both modes 0 and 1 for normal NPC classes: Charsi hcIdx 154 selects jump-table entry 1 and reaches the explicit mode-1 store at 0x2412DE. VendorStockRefresh 0.1.5 leaves this vanilla direct-input guard intact; the reused native button still emits VendorPanelMessage:RefreshAll, while CLIENT_GetVendorPanelGambleMode distinguishes vanilla gamble action 2 from the private normal-vendor VSRF marker."
     },
     {
       "rva": "0x24137D",
@@ -1129,7 +1153,7 @@
       "kind": "patch-site",
       "confidence": "high",
       "source": "Mission/vendor-stock-refresh-3.2.md",
-      "notes": "First of two unique, adjacent mode gates applied to the only widget enabled exclusively in vendor panel mode 2. The governed layout proves this widget is button_refresh. VendorStockRefresh changes cmp mode,2/sete to cmp mode,1/setne so normal and gamble enable the native button while repair does not."
+      "notes": "First of two unique, adjacent mode gates applied to the only widget enabled exclusively in vendor panel mode 2. The governed layout proves this widget is the original button_refresh. Charsi hcIdx 154 resolves through the native jump table to panel mode 1 at 0x2412DE, disproving the earlier assumption that mode 1 was a separate repair screen. VendorStockRefresh 0.1.5 preserves this vanilla predicate and overrides the same widget only after UI_VendorPanel_Configure returns in a normal vendor panel."
     },
     {
       "rva": "0x241391",
@@ -1137,7 +1161,7 @@
       "kind": "patch-site",
       "confidence": "high",
       "source": "Mission/vendor-stock-refresh-3.2.md",
-      "notes": "Second unique mode gate for the native button_refresh widget, paired with the enable gate at 0x24137D through the widget vtable +0x50 method. VendorStockRefresh applies the same mode != 1 policy with a strict 20-byte replacement."
+      "notes": "Second unique mode gate for the native button_refresh widget, paired with the enable gate at 0x24137D through the widget vtable +0x50 method. VendorStockRefresh 0.1.5 preserves this vanilla mode-2 visibility gate, then applies the same enabled/visible methods to button_refresh only when CLIENT_GetVendorPanelGambleMode is zero."
     },
     {
       "rva": "0x241B20",
@@ -1153,7 +1177,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/vendor-stock-refresh-3.2.md",
-      "notes": "Authoritative server callback with ABI (game, player, packet, packetSize) -> int32. It requires the current nine-byte opcode-0x38 payload, resolves and validates the NPC, checks act and proximity, then routes action 1 normal store and action 2 gamble through the common store dispatcher 0x540850. The legacy D2MOO 13-byte packet layout does not apply to build 92777."
+      "notes": "Authoritative server callback with ABI (game, player, packet, packetSize) -> int32. It requires the current nine-byte opcode-0x38 payload, resolves and validates the NPC, checks act and proximity, then routes action 1 normal store and action 2 gamble through the common store dispatcher 0x540850. VendorStockRefresh 0.1.1 hooks its unique 21-byte prologue to translate only the private VSRF marker into action 1 before forwarding to all vanilla validation. The legacy D2MOO 13-byte packet layout does not apply to build 92777."
     },
     {
       "rva": "0x502F60",
@@ -1161,7 +1185,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/vendor-stock-refresh-3.2.md",
-      "notes": "Configures the player's vendor session immediately before the common store dispatcher. Proven x64 ABI: (game, npc, player, mode byte) -> void. It reads and replaces PlayerData+0x100, where callers pass mode 2 normal store, 3 gamble and 4 hire, and stores the NPC class at +0xFC. VendorStockRefresh inspects the old normal-session state before forwarding unchanged to vanilla."
+      "notes": "Configures the player's vendor session immediately before the common store dispatcher. Proven x64 ABI: (game, npc, player, mode byte) -> void. It reads and replaces PlayerData+0x100, where callers pass mode 2 normal store, 3 gamble and 4 hire, and stores the NPC class at +0xFC. VendorStockRefresh 0.1.0's old-session discriminator failed its first gameplay witness; 0.1.1 arms refresh state only inside the thread-local scope established by its validated VSRF entity-action callback."
     },
     {
       "rva": "0x9A1B0",

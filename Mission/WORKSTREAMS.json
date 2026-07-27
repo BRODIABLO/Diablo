@@ -162,7 +162,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/vendor-stock-refresh-3.2.md",
-      "nextGate": "Prove one normal-vendor refresh before/after an item purchase while preserving the native gamble refresh; then extend the cold-started 0.1.0 prototype to controller, click-spam, global fallback and host/joiner tests.",
+      "nextGate": "Confirm that gamble preserves the original refresh button at the active layout position; then validate one mode-0 vendor and one genuinely resized or modded vendor layout before all-act vendors, controller, click-spam, global fallback and host/joiner tests.",
       "include": [
         "Mission/vendor-stock-refresh-3.2.md",
         "addons/VendorStockRefresh/**",
