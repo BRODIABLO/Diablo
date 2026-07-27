@@ -175,10 +175,10 @@
     {
       "id": "rift-terror-zone-group",
       "name": "Rift Terror Zone Group",
-      "status": "active",
+      "status": "paused",
       "owner": "Vincent + Codex",
       "mission": "Mission/rift-terror-zone-group-3.2.md",
-      "nextGate": "Confirm THE RIFTS and THE SECRET COW LEVEL on their next terrorized selections, then verify the same display for host and joiner.",
+      "nextGate": "Closed by Vincent on 2026-07-27 after validating the Rift and Cow terror-zone labels; retain this mission as technical evidence.",
       "include": [
         "Mission/rift-terror-zone-group-3.2.md",
         "data-BKVince/BKVince.mpq/data/global/excel/levelgroups.txt",

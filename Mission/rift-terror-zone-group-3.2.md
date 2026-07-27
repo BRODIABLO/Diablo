@@ -2,9 +2,9 @@
 
 Dernière mise à jour : 27 juillet 2026
 
-Statut : implantation data autonome déployée et validée techniquement selon
-l’Option A confirmée par Vincent le 27 juillet 2026; contrôle visuel et réseau
-encore ouverts.
+Statut : correctif data autonome déployé, validé techniquement puis déclaré
+terminé par Vincent le 27 juillet 2026. La carte a été retirée de la ROADMAP
+active; la mission demeure comme preuve historique.
 
 ## Besoin joueur
 
@@ -58,12 +58,12 @@ sélection, les niveaux, les monstres ni les bonus de Terrozone.
 | Déploiement Cow | `levels.json` uniquement | hash source/runtime identique | passed | `analysis-cache/runtime-sync/20260727-140717271-apply.json`, SHA-256 `28319E9A…259756` |
 | Chargement | D2RLoader + BKVince `-txt` | cold start sans nouvelle assertion | passed | une instance relancée, 18 logs et 58 lignes frais à 10:07, zéro erreur |
 | Suite data | `npm run verify:data` | tous les validateurs gouvernés réussissent | passed | suite complète verte le 27 juillet 2026, avertissements Cube historiques seulement |
-| Visuel | sélection `Act5-Rifts` | ligne violette `THE RIFTS` | not run | observation en jeu |
-| Visuel | sélection Cow Level | ligne violette `THE SECRET COW LEVEL` | not run | observation en jeu |
+| Visuel | sélection `Act5-Rifts` | ligne violette `THE RIFTS` | passed | validation de clôture de Vincent, 27 juillet 2026 |
+| Visuel | sélection Cow Level | ligne violette `THE SECRET COW LEVEL` | passed | validation de clôture de Vincent, 27 juillet 2026 |
 | Réseau | hôte/joiner | même nom et même sélection | not run | observation en jeu |
 
-## Prochain gate
+## Clôture
 
-Lors des prochaines sélections concernées, confirmer visuellement les lignes
-violettes `THE RIFTS` et `THE SECRET COW LEVEL`, puis contrôler les mêmes noms en
-hôte/joiner.
+Aucun gate supplémentaire n’est requis pour la clôture demandée. Le contrôle
+hôte/joiner reste explicitement documenté comme `not run` et ne constitue pas
+une validation acquise.
