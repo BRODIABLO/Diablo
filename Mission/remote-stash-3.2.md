@@ -1,12 +1,14 @@
 # RemoteStash — D2R 3.2.92777
 
-Dernière mise à jour : 26 juillet 2026
+Dernière mise à jour : 27 juillet 2026
 
-Statut : préparation statique de phase 1 poursuivie en parallèle, sans promouvoir
-RemoteStash comme mission prioritaire du workspace. Le chemin serveur natif
-d’ouverture du stash est identifié statiquement, mais sa confirmation dynamique
-reste suspendue par la validation officielle hors ligne de Battle.net. Aucun
-prototype public, aucun bouton, aucun sprite et aucune archive n’existent encore.
+Statut : reprise statique en parallèle le 27 juillet 2026 pour prouver le placement
+dynamique du futur contrôle sur des inventaires de tailles différentes, sans
+remplacer Vendor Stock Refresh comme mission prioritaire du workspace. Le chemin
+serveur natif d’ouverture du stash est identifié statiquement, mais sa confirmation
+dynamique reste suspendue par la validation officielle hors ligne de Battle.net.
+Aucun prototype public, aucun bouton, aucun sprite et aucune archive n’existent
+encore.
 
 ## Décisions confirmées
 
@@ -26,6 +28,11 @@ prototype public, aucun bouton, aucun sprite et aucune archive n’existent enco
   et la possibilité de le déclencher depuis un autre contrôle UI. Les sprites,
   le placement final et l’adaptation aux layouts personnalisés viendront après
   la preuve fonctionnelle.
+- Le 27 juillet 2026, Vincent a demandé de commencer en parallèle la preuve du
+  placement adaptatif. Le futur bouton ne doit utiliser aucune coordonnée propre
+  à BKVince : il doit lire le layout runtime actif, se placer relativement à
+  des enfants nommés du `PlayerInventoryPanel`, vérifier les collisions et se
+  masquer si aucune géométrie sûre n’est disponible.
 
 ## Résultat joueur attendu
 
@@ -163,6 +170,66 @@ objets lui-même.
   de retour de chaque insertion. La DLL compilée reste locale et non déployée
   jusqu’au renouvellement normal de la validation en ligne.
 
+## Audit du placement dynamique
+
+- Le mécanisme gouverné de Vendor Stock Refresh fournit les deux primitives
+  génériques requises : `UI_FindChildWidgetByName` `0x856220` retrouve un enfant
+  direct par son nom, puis `UI_GetWidgetLocalRect` `0x8562A0` lit son rectangle
+  runtime signé `{x,y,width,height}`. Les chemins de rendu et de hit-test relisent
+  la même géométrie; un placement relatif peut donc suivre le layout réel sans
+  livrer un override JSON.
+- Les variantes HD souris `original` et `expansion` de BKVince, TCP, BK, BT et
+  VNP ont été comparées en lecture seule. Les variantes manette disponibles de
+  BKVince, BK, BT et VNP ont également été inspectées. Les quatre enfants
+  directs `background`, `gold_amount`, `gold_button` et `grid` sont communs aux
+  layouts observés malgré des rectangles, grilles et fonds fortement différents.
+- `close` n’est pas une ancre portable : il est absent des layouts manette
+  observés. `click_catcher` et `RightHinge` ne sont pas déclarés par toutes les
+  variantes d’expansion, même lorsqu’ils peuvent être hérités par `basedOn`.
+- Le contrat desktop proposé utilise `grid.x` pour suivre l’origine horizontale de la
+  grille et l’union runtime de `gold_button` avec `gold_amount` pour obtenir la
+  ligne verticale du footer. Le rectangle du panneau ou `background` sert de
+  limite. Avant d’afficher le contrôle, la politique devra prouver que le bouton
+  est contenu dans le panneau et ne chevauche ni `grid` ni le bloc d’or.
+- La manette exige une politique distincte : dans le layout BKVince observé,
+  `gold_button` commence à `x=201` tandis que `grid` commence à `x=210`; un
+  bouton aligné sur `grid.x` chevaucherait donc le contrôle d’or. Le repli sûr
+  actuel invalide ce candidat au lieu de le placer; la position et le graphe de
+  navigation manette restent un gate explicite.
+- Une grille simplement agrandie, déplacée ou redimensionnée demeure donc
+  adaptable tant que le `PlayerInventoryPanel` et ces ancres sémantiques sont
+  conservés. Un mod qui remplace le panneau, renomme les ancres ou fait occuper
+  tout le footer par sa grille devra utiliser un profil de compatibilité; sans
+  profil valide, le plugin se repliera en masquant son contrôle.
+- Contrairement à Vendor Stock Refresh, l’inventaire ne contient aucun bouton
+  natif RemoteStash à repositionner. Le point d’entrée de construction ou de
+  configuration du `PlayerInventoryPanel`, la création d’un `ButtonWidget`, son
+  rattachement comme enfant, son message de clic et son graphe de focus manette
+  restent à prouver avant toute implantation native.
+- Les constantes du handler vendeur prouvent aussi le hash de message UI :
+  FNV-1a 64 bits, offset initial `0x1C1D8987E0EFCA1A` et prime
+  `0x100000001B3`. Ce calcul reproduit indépendamment `Repair`
+  `0x20BADA21BC8CB334`, `RepairAll` `0x5680CE604E1D402F`, `RefreshAll`
+  `0xB7AA1748D66EFCAF` et `Close` `0x5E8250FB85D64C23`; il produit
+  `0xB3B0A478381C4725` pour `PlayerInventoryPanelMessage:DropGold`. La politique
+  contient maintenant le même calcul `constexpr` pour borner plus tard le
+  message privé `PlayerInventoryPanelMessage:RemoteStash`, hash
+  `0x055A7CEA95897DC9`, sans valeur magique non expliquée.
+- `RemoteStash-src` contient maintenant uniquement une politique C++20 sans
+  appel natif et sa suite de tests. Elle centre le rectangle du futur bouton sur
+  le footer d’or, l’aligne sur `grid.x`, vérifie les limites du panneau et refuse
+  les collisions avec la grille ou l’or. Elle ne construit aucune DLL, aucun
+  hook, aucune configuration et aucun asset; le cas manette y est couvert comme
+  repli invalide jusqu’à sa politique dédiée.
+- La configuration et le build MSVC Release x64 de cette suite native-free sont
+  verts : `remote-stash-layout-policy` passe `1/1`. Cette preuve couvre le calcul
+  de hash, un layout desktop BKVince-like, un layout redimensionné, le fallback
+  sur un seul contrôle d’or, les collisions grille/footer, les géométries
+  absentes et le refus explicite du candidat manette.
+- Le cadastre a été régénéré après l’ajout structurel de `RemoteStash-src`,
+  sa zone porte des métadonnées explicites et
+  `node scripts/validate-cartographie/validate.mjs` retourne `VALID`.
+
 ## Hypothèses à tester
 
 - L’appel direct du handler banque `0x528270` depuis le thread et le contexte
@@ -183,6 +250,11 @@ objets lui-même.
   reste une inférence par absence de dépendance directe. Le test décisif sera le
   code de retour de `0x4BFF30` après `remote-stash-open`, suivi d’une vérification
   de persistance après fermeture et rechargement.
+- Les ancres communes observées devraient permettre le même calcul runtime sur
+  plusieurs inventaires étendus. Cette compatibilité reste une preuve statique
+  de structure : elle ne sera considérée validée qu’après observation des
+  rectangles effectifs et du hit-test sur au moins BKVince et un layout tiers
+  réellement redimensionné.
 
 ## Gates observables
 
@@ -193,7 +265,12 @@ objets lui-même.
 - fermer proprement le panneau et préserver inventory, personal stash et shared stash;
 - vérifier ville/hors ville, changement d’acte, souris/manette, solo, hôte et joiner;
 - démontrer zéro perte, duplication, sauvegarde corrompue, crash ou désynchronisation;
-- seulement ensuite définir le contrat des layouts vanilla et personnalisés.
+- borner le cycle de vie du `PlayerInventoryPanel` et obtenir son pointeur après
+  construction complète des enfants;
+- prouver une voie sûre pour créer et rattacher un `ButtonWidget` natif, ou
+  rejeter cette voie avant de retenir explicitement une solution d’overlay;
+- tester la politique d’ancrage, de collision et de repli sur BKVince, un
+  inventaire étendu tiers et les layouts manette.
 
 ## Prochain gate
 
@@ -205,3 +282,9 @@ sprite. Vérifier d’abord la ville, la fermeture et le layout BKVince, puis tr
 un dépôt via le hook `0x4BFF30`, un retrait et une transaction d’or afin de
 borner les validations serveur réellement nécessaires. Les cas hors ville,
 multijoueur et layouts tiers suivront seulement si ce gate est vert.
+
+En parallèle, identifier statiquement le constructeur ou configurateur du
+`PlayerInventoryPanel`, son ABI et ses callers. Prouver ensuite comment un nouveau
+`ButtonWidget` peut devenir un enfant possédé du panneau et recevoir un message de
+clic sans remplacer le JSON du mod. Aucun hook de panneau ne sera implanté avant
+signature stricte, propriétaire unique et cycle de destruction démontrés.

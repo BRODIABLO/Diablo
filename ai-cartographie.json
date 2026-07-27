@@ -14503,6 +14503,49 @@
                                                                                                                   ]
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "RemoteStash-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/RemoteStash-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "meta":  {
+                                                                                                                  "role":  "x-plugin-incubation-source",
+                                                                                                                  "summary":  "Politique native-free et tests du placement dynamique du futur contrôle RemoteStash dans les layouts d\u0027inventaire.",
+                                                                                                                  "agentAccess":  "read-write",
+                                                                                                                  "status":  "active",
+                                                                                                                  "policy":  {
+                                                                                                                                 "editable":  true,
+                                                                                                                                 "canonical":  true,
+                                                                                                                                 "generated":  false
+                                                                                                                             },
+                                                                                                                  "notes":  [
+                                                                                                                                "Runtime cible : D2R 3.2.92777.",
+                                                                                                                                "Propriétaire futur : plugin-misc.dll / misc.remoteStash.",
+                                                                                                                                "Aucune DLL, aucun hook, aucune configuration et aucun asset ne sont encore implantés."
+                                                                                                                            ]
+                                                                                                              },
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RemoteStash-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "layout_policy_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RemoteStash-src/layout_policy_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "README.md",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RemoteStash-src/README.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "remote_stash_layout_policy.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RemoteStash-src/remote_stash_layout_policy.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "RepairCostsCap-src",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap-src",
                                                                                                      "kind":  "directory",

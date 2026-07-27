@@ -85,7 +85,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/remote-stash-3.2.md",
-      "nextGate": "Identify and prove the 92777 server producer and client consumer of the event that opens the existing stash panel before implementing any hook.",
+      "nextGate": "In parallel with the blocked runtime action proof, identify and prove the PlayerInventoryPanel lifecycle and a safe native ButtonWidget attachment path, then validate runtime anchors and collision fallback before implementing any panel hook.",
       "include": [
         "Mission/remote-stash-3.2.md",
         "data-BKVince/BKVince.mpq/RemoteStash.json",
