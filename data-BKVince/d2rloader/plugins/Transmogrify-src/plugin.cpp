@@ -74,6 +74,10 @@ using BuildItemTooltipFn = void*(__fastcall*)(
     void*, void*, void*, void*, std::uint64_t, std::uint64_t, std::uint64_t,
     std::uint64_t, std::uint64_t) noexcept;
 using EnsureStringCapacityFn = void(__fastcall*)(void*, std::size_t) noexcept;
+using BuildSocketLineFn = std::size_t(__cdecl*)(void*, char*, std::size_t) noexcept;
+using FindSocketLineInsertionFn = std::size_t(__cdecl*)(const char*, std::size_t) noexcept;
+using TooltipTransformFn = void*(__cdecl*)(void*, void*) noexcept;
+using TooltipOwnerFn = bool(__cdecl*)() noexcept;
 using UnitFn = void*(__fastcall*)(void*) noexcept;
 using UnitIntFn = std::uint32_t(__fastcall*)(void*) noexcept;
 using UnitByteFn = std::uint8_t(__fastcall*)(void*) noexcept;
@@ -116,6 +120,8 @@ GetItemsTxtRecordFn OriginalGetItemsTxtRecord{};
 GetItemRecordFromCodeFn GetItemRecordFromCode{};
 BuildItemTooltipFn OriginalBuildItemTooltip{};
 EnsureStringCapacityFn EnsureStringCapacity{};
+BuildSocketLineFn BuildSocketLine{};
+FindSocketLineInsertionFn FindSocketLineInsertion{};
 GetLocalizedStringFn GetLocalizedString{};
 UnitByteFn GetItemDataContext{};
 GetUnitClassIdFn GetUnitClassId{};
@@ -141,6 +147,8 @@ SendItemUpdateFn SendItemUpdate{};
 SetUnitStatFn SetUnitStat{};
 DeleteItemFn DeleteItem{};
 Config Settings{};
+bool TooltipHookInstalled{};
+bool TooltipDelegated{};
 thread_local bool ForceNoSocketsForTransmogrify{};
 
 constexpr D2RL::PluginInfo Info{
@@ -148,7 +156,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "transmogrify",
     .name = "Transmogrify",
-    .version = "1.2.0",
+    .version = "1.2.3",
     .author = "RuffnecKk",
     .description = "Transforms configured items with a right-click.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -359,12 +367,71 @@ std::string InsertTransmogrifyLine(std::string tooltip, std::string_view text) {
     return tooltip;
 }
 
+std::string InsertMaxSocketsBelowPrimaryStat(std::string tooltip, void* item) {
+    if (!BuildSocketLine || !FindSocketLineInsertion || !item) return tooltip;
+    std::array<char, 64> line{};
+    const auto length = BuildSocketLine(item, line.data(), line.size());
+    if (length == 0 || length >= line.size()) return tooltip;
+    const std::string_view text(line.data(), length);
+    if (tooltip.find(text) != std::string::npos) return tooltip;
+
+    const auto insertion = FindSocketLineInsertion(tooltip.data(), tooltip.size());
+    if (insertion > tooltip.size()) return tooltip;
+    tooltip.insert(insertion, std::string(text) + "\n");
+    return tooltip;
+}
+
+TooltipTransformFn FindExtendedItemStatsTransform() noexcept {
+    const auto module = GetModuleHandleW(L"ExtendedItemStats.dll");
+    return module ? reinterpret_cast<TooltipTransformFn>(
+        GetProcAddress(module, "ExtendedItemStatsTransformTooltip")) : nullptr;
+}
+
+TooltipOwnerFn FindExtendedItemStatsOwner() noexcept {
+    const auto module = GetModuleHandleW(L"ExtendedItemStats.dll");
+    return module ? reinterpret_cast<TooltipOwnerFn>(
+        GetProcAddress(module, "ExtendedItemStatsOwnsTooltipPipeline")) : nullptr;
+}
+
 std::uint8_t* __fastcall HookGetItemsTxtRecord(std::uint8_t context, std::int32_t classId) noexcept {
     auto* record = OriginalGetItemsTxtRecord(context, classId);
     if (IsTransmogrifyRecord(record)) {
         record[UseableOffset] = 1;
     }
     return record;
+}
+
+void* TransformTransmogrifyTooltip(void* result, void* item) noexcept {
+    if (!result || !item || !IsReadable(result, 24)) {
+        return result;
+    }
+
+    try {
+        const auto* object = static_cast<const std::uint8_t*>(result);
+        const auto* data = *reinterpret_cast<char* const*>(object);
+        const auto length = *reinterpret_cast<const std::size_t*>(object + 8);
+        if (length == 0 || length > 16 * 1024 || !IsReadable(data, length + 1)) return result;
+
+        const std::string original(data, length);
+        auto enhanced = InsertMaxSocketsBelowPrimaryStat(original, item);
+        auto* sourceRecord = ItemRecord(item);
+        if (IsTransmogrifyRecord(sourceRecord)) {
+            const auto line = ResolveTransmogrifyTooltipLine(item, sourceRecord);
+            enhanced = InsertTransmogrifyLine(std::move(enhanced), line);
+        }
+        if (enhanced == original) return result;
+
+        EnsureStringCapacity(result, enhanced.size());
+        auto* destination = *reinterpret_cast<char**>(result);
+        if (!IsReadable(destination, enhanced.size() + 1)) return result;
+        std::memcpy(destination, enhanced.c_str(), enhanced.size() + 1);
+        const auto enhancedLength = enhanced.size();
+        std::memcpy(static_cast<std::uint8_t*>(result) + 8,
+            &enhancedLength, sizeof(enhancedLength));
+    } catch (...) {
+        Context->LogError("Transmogrify: tooltip enhancement failed safely.");
+    }
+    return result;
 }
 
 void* __fastcall HookBuildItemTooltip(
@@ -378,31 +445,9 @@ void* __fastcall HookBuildItemTooltip(
     std::uint64_t a8,
     std::uint64_t a9) noexcept {
     auto* result = OriginalBuildItemTooltip(output, a2, a3, item, a5, a6, a7, a8, a9);
-    auto* sourceRecord = ItemRecord(item);
-    if (!result || !item || !IsTransmogrifyRecord(sourceRecord) || !IsReadable(result, 24)) {
-        return result;
-    }
-
-    try {
-        const auto* object = static_cast<const std::uint8_t*>(result);
-        const auto* data = *reinterpret_cast<char* const*>(object);
-        const auto length = *reinterpret_cast<const std::size_t*>(object + 8);
-        if (length == 0 || length > 16 * 1024 || !IsReadable(data, length + 1)) return result;
-
-        const std::string original(data, length);
-        const auto line = ResolveTransmogrifyTooltipLine(item, sourceRecord);
-        const auto enhanced = InsertTransmogrifyLine(original, line);
-        if (enhanced == original) return result;
-
-        EnsureStringCapacity(result, enhanced.size());
-        auto* destination = *reinterpret_cast<char**>(result);
-        if (!IsReadable(destination, enhanced.size() + 1)) return result;
-        std::memcpy(destination, enhanced.c_str(), enhanced.size() + 1);
-        const auto enhancedLength = enhanced.size();
-        std::memcpy(static_cast<std::uint8_t*>(result) + 8,
-            &enhancedLength, sizeof(enhancedLength));
-    } catch (...) {
-        Context->LogError("Transmogrify: tooltip enhancement failed safely.");
+    result = TransformTransmogrifyTooltip(result, item);
+    if (const auto extended = FindExtendedItemStatsTransform()) {
+        result = extended(result, item);
     }
     return result;
 }
@@ -622,6 +667,16 @@ auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void
 
 }
 
+extern "C" __declspec(dllexport) bool __cdecl
+TransmogrifyOwnsTooltipPipeline() noexcept {
+    return TooltipHookInstalled;
+}
+
+extern "C" __declspec(dllexport) void* __cdecl
+TransmogrifyTransformTooltip(void* result, void* item) noexcept {
+    return TransformTransmogrifyTooltip(result, item);
+}
+
 D2RL_PLUGIN_EXPORT auto D2RLoaderGetPluginInfo() noexcept -> const D2RL::PluginInfo* {
     return &Info;
 }
@@ -631,6 +686,16 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     Context = context;
     Base = reinterpret_cast<std::uint8_t*>(GetModuleHandleW(nullptr));
     if (!Base) return false;
+
+    if (const auto advanced = GetModuleHandleW(L"AdvancedItemTooltips.dll")) {
+        BuildSocketLine = reinterpret_cast<BuildSocketLineFn>(
+            GetProcAddress(advanced, "AdvancedItemTooltipsBuildSocketLine"));
+        FindSocketLineInsertion = reinterpret_cast<FindSocketLineInsertionFn>(
+            GetProcAddress(advanced, "AdvancedItemTooltipsFindSocketLineInsertion"));
+    }
+    if (!BuildSocketLine || !FindSocketLineInsertion) {
+        context->LogWarn("Transmogrify: AdvancedItemTooltips integration is unavailable.");
+    }
 
     constexpr std::array<std::uint8_t, 16> itemCodeResolverExpected{
         0x48,0x89,0x5C,0x24,0x08,0x48,0x89,0x74,
@@ -728,11 +793,17 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         0x55,0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,
         0x24,0xF8,0xB1,0xFF,0xFF,0xB8,0x08,0x4F,
         0x00,0x00,0xE8,0x41,0x3C,0x01,0x01,0x48};
-    if (!context->InstallInlineHook(BuildItemTooltipRva, tooltipExpected.data(),
+    if (const auto owner = FindExtendedItemStatsOwner(); owner && owner()) {
+        TooltipDelegated = true;
+    } else {
+        TooltipHookInstalled = context->InstallInlineHook(
+            BuildItemTooltipRva, tooltipExpected.data(),
             static_cast<std::uint32_t>(tooltipExpected.size()), HookBuildItemTooltip,
-            &OriginalBuildItemTooltip)) {
-        context->LogError("Transmogrify: D2R 3.2.92777 item-tooltip signature mismatch; hook refused.");
-        return false;
+            &OriginalBuildItemTooltip);
+        if (!TooltipHookInstalled) {
+            context->LogError("Transmogrify: D2R 3.2.92777 item-tooltip signature mismatch; hook refused.");
+            return false;
+        }
     }
 
     constexpr std::array<std::uint8_t, 8> useItemHandlerExpected{
@@ -760,12 +831,16 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         context->LogError("Transmogrify: console command registration failed.");
         return false;
     }
-    context->LogInfo(Settings.manualTooltip.empty()
-        ? "Transmogrify 1.2.0 native hooks active for D2R 3.2.92777 (automatic tooltip)."
-        : "Transmogrify 1.2.0 native hooks active for D2R 3.2.92777 (manual tooltip)." );
+    context->LogInfo(TooltipHookInstalled
+        ? "Transmogrify 1.2.3 native hooks active; tooltip owner."
+        : "Transmogrify 1.2.3 native hooks active; tooltip delegated to ExtendedItemStats.");
     return true;
 }
 
 D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
+    TooltipHookInstalled = false;
+    TooltipDelegated = false;
+    BuildSocketLine = nullptr;
+    FindSocketLineInsertion = nullptr;
     Context = nullptr;
 }

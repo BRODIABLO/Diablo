@@ -9,12 +9,12 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(D2RLPlugin)
 
-add_library(AdvancedItemTooltips SHARED plugin.cpp tooltip_ranges.cpp plugin.rc)
+add_library(AdvancedItemTooltips SHARED plugin.cpp socket_tooltip.cpp plugin.rc)
 target_compile_features(AdvancedItemTooltips PRIVATE cxx_std_20)
 target_link_libraries(AdvancedItemTooltips PRIVATE D2RLPlugin::D2RLPlugin)
 set_target_properties(AdvancedItemTooltips PROPERTIES OUTPUT_NAME "AdvancedItemTooltips")
 
-add_executable(AdvancedItemTooltipsTests tooltip_ranges_tests.cpp tooltip_ranges.cpp)
+add_executable(AdvancedItemTooltipsTests socket_tooltip_tests.cpp socket_tooltip.cpp)
 target_compile_features(AdvancedItemTooltipsTests PRIVATE cxx_std_20)
 enable_testing()
 add_test(NAME advanced-item-tooltips-policy COMMAND AdvancedItemTooltipsTests)

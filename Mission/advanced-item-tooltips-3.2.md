@@ -2,60 +2,96 @@
 
 ## Décision produit
 
-Le tooltip d'un objet socketable affiche sa capacité réelle calculée par le
-runtime. Un objet sans socket affiche `Maximum Sockets: N`; un objet déjà
-socketé affiche `Sockets: courant / N`. Le maximum est rendu avec le gris
-vanilla `ÿc5`.
+Le projet se concentre exclusivement sur l'indication `Max Sockets: N` pour
+les objets socketables. Les plages d'affixes, la défense de base et l'affichage
+`Sockets: courant / maximum` sont hors périmètre.
 
-Pour les objets identifiés seulement, les propriétés variables présentes sur
-l'objet reçoivent leur plage source en vert `ÿcU[min - max]`, puis la couleur
-bleue des propriétés est restaurée. La valeur roulée conserve son signe, mais
-les bornes sont toujours présentées comme des magnitudes positives. Les
-propriétés fixes et les correspondances ambiguës sont laissées intactes.
-
-Les armures identifiées affichent également leur défense de base et la plage de
-la base. La défense éthérée applique le facteur vanilla avant l'affichage. La
-ligne est omise si la défense de base ne peut pas être isolée sûrement de la
-défense finale.
+La ligne utilise le marqueur UTF-8 privé du renderer D2R pour le blanc vanilla.
+Sur une weapon, elle apparaît immédiatement sous le bloc de dommages; sur une
+armor, elle apparaît immédiatement sous la ligne de défense. Un item qui porte
+déjà des sockets — notamment une base naturellement affichée `Socketed (N)` —
+n'affiche aucune ligne `Max Sockets` supplémentaire.
 
 ## Implantation
 
-Le plugin hybride `AdvancedItemTooltips.dll` 1.0.0 est attribué à `RuffnecKk`
-et ne déclare pas `ModScopedOnly`. Il accepte uniquement le build 92777 et
-refuse d'installer son hook si les 32 octets attendus ne correspondent pas.
+Le plugin hybride `AdvancedItemTooltips.dll` 1.4.0 est attribué à `RuffnecKk`
+et ne déclare pas `ModScopedOnly`. Il accepte uniquement le build 92777.
 
-- `ITEMS_GetStatsDescription`, RVA `0x2DC4B0`, est intercepté après le rendu
-  vanilla afin de préserver le texte existant.
 - `ITEMS_GetMaxSockets`, RVA `0x36EAD0`, calcule la capacité de l'objet concret,
-  incluant son niveau, sa base et les limites de type. La logique n'est pas
-  dupliquée dans le plugin.
-- `STATLIST_UnitGetStatValue`, RVA `0x2F5C60`, fournit le nombre de sockets et la
-  défense finale.
-- `UNITS_GetItemData`, RVA `0x34A500`, fournit la qualité, les flags et les IDs
-  d'affixes. Le flag `0x10` interdit toute plage sur un objet non identifié.
-- Les plages sont lues en lecture seule depuis les tables TXT du mod actif :
-  `properties`, `itemstatcost`, préfixes, suffixes, automagic, uniques, sets et
-  `armor`. `item-modifiers.json` contient uniquement les libellés localisés
-  `TCPMaximumSockets`, `TCPSocketsCurrentMaximum`, `TCPBaseDefenseRange` et
-  `TCPModifierRange` (IDs 65024–65027).
+  incluant son niveau, sa base et les limites de type. Le plugin ne duplique pas
+  cette logique.
+- `STATLIST_GetUnitStat`, RVA `0x2F5020`, lit la stat socket `194`; une valeur
+  positive supprime entièrement l'ajout.
+- Advanced Item Tooltips n'installe aucun hook. Il expose une fonction bornée
+  qui retourne la ligne blanche et une fonction bornée qui résout son ancre.
+- Transmogrify 1.2.3, déjà propriétaire du hook final strict à
+  `ITEMS_BuildItemTooltip` (`0x2BD480`), appelle cette fonction puis insère la
+  ligne juste avant la première ligne interne contenant `Damage:` ou `Defense:`.
+  D2R assemble ce buffer du bas vers le haut : cette position correspond à la
+  ligne immédiatement sous le dernier dommage visible ou sous la défense.
+- Une capacité native nulle exclut l'objet de l'affichage.
 
-Une plage candidate doit correspondre à la fois à la valeur roulée et au
-libellé `*Tooltip` de sa propriété. Le plugin préfère donc ne rien afficher
-plutôt que d'associer une plage à la mauvaise ligne. Les propriétés calculées
-ou provenant de sources encore non résolues conservent le rendu vanilla.
+## Validation attendue
 
-## Validation du 20 juillet 2026
+- tests unitaires de placement sur tooltips blanc et magique;
+- weapon socketable sans socket : ligne blanche sous tous les dommages;
+- armor socketable sans socket : ligne blanche sous la défense;
+- item déjà socketé : ligne absente;
+- objet non socketable exclu;
+- inventaire, coffre, cube, marchand et sol;
+- souris et manette;
+- refus sûr sur un build ou une signature incompatible.
+
+## Validation du 22 juillet 2026
 
 - compilation Release x64 réussie;
-- tests unitaires réussis, incluant signe négatif, plage positive, propriété
-  fixe exclue et association par libellé;
-- lecture réelle des tables BKVince validée avec Griffon's Eye (`*ID 336`) :
-  défense `100–200`, dégâts foudre `10–15`, pierce foudre `8–15`, FCR fixe
-  exclu et Diadem `50–60`;
+- tests unitaires réussis pour les tooltips blanc et magique, les fins de ligne
+  CRLF et l'exclusion d'une capacité native nulle;
 - DLL finale SHA-256
-  `C49F55E7B8E1E8F7F71CB55B64E51E98613C75E3B7FE726399CC78E40668324F`;
-- cold-start D2RLoader : 12 plugins actifs, 0 rejet et 0 échec; partie BKVince
-  atteinte sans crash;
-- la capture visuelle finale d'un tooltip a été interrompue lorsque le contrôle
-  Windows a détecté une intervention utilisateur. Elle reste le gate manuel
-  avant de clore toute la matrice étendue de la ROADMAP.
+  `76676B83695F6AFD6BEE96159F2D39B7A7E333E2072E4E910284758888A3B605`;
+- DLL Transmogrify 1.2.2 SHA-256
+  `AC7CECE764072DA39CE494231F6AA5100B499E0897322261EB39AB77D8999EB5`;
+- cold-start BKVince réussi : Advanced Item Tooltips 1.3.0 et Transmogrify
+  1.2.1 actifs simultanément, sans échec de plugin ni avertissement
+  d'intégration;
+- partie DummyTester atteinte sans crash;
+- la comparaison visuelle blanc/magique reste à effectuer avec deux objets
+  socketables préparés dans le même inventaire.
+
+La validation visuelle du Hand Axe a révélé que la version 1.1.0 affichait les
+séquences de couleur littéralement et n'émettait aucun saut de ligne si le bloc
+vanilla n'en possédait pas. Un essai 1.1.1 avec des octets `0xFF` bruts a rendu
+la chaîne UTF-8 invalide, affiché `*c5` / `*c0` et déclenché la police de repli
+du renderer. La version 1.1.2 retire donc tout code de couleur et garantit un
+`0A` terminal avant la suite du tooltip.
+
+La version 1.1.3 rétablit le gris socketing avec le format réellement consommé
+par le renderer 3.2, déjà validé par Transmogrify : le marqueur UTF-8 privé
+`EE 81 BE 35`, suivi du texte, puis `EE 81 BE 30` pour restaurer la couleur.
+
+La version 1.2.0 a démontré que `ITEMS_GetStatsDescription` ne permet pas de
+cibler la frontière du nom et que son reset gris vers blanc écrase l'état bleu
+des modifiers suivants. La version 1.3.0 retire entièrement ce hook et ce reset;
+l'intégration finale de Transmogrify 1.2.1 a d'abord supposé à tort que le
+premier saut de ligne suivait le nom. La capture sur le sceptre magique a prouvé
+que le buffer final est assemblé dans l'ordre inverse de l'affichage : cette
+ancre plaçait `Max Sockets` juste avant le dernier affix visible. Transmogrify
+1.2.2 insère désormais la ligne avant la dernière ligne logique du buffer — le
+nom — sans modifier les octets vanilla des modifiers.
+
+## Révision du 26 juillet 2026
+
+Vincent retient finalement le blanc vanilla et abandonne le placement sous le
+nom. La version 1.4.0 prépare l'ancrage sous les dommages ou la défense et
+refuse la ligne lorsque `STATLIST_GetUnitStat(item, 194, 0)` est positive. Les
+tests statiques couvrent weapon à un dommage, throwing weapon à deux dommages,
+armor, absence d'ancre, capacité nulle et item déjà socketé. Le build, le cold
+start et les tests sont réussis. Les DLL déployées dans la source gouvernée,
+le dossier global et le dossier mod-local portent respectivement les SHA-256
+`DBC6AB50C85CB93842C70B2580FD31448E651E8111E7DE14CE39FE981ECF9920`
+pour Advanced Item Tooltips et
+`1A46F4777395C12788805C1AEF4986D324EFDA3FA9FA5F28EDABA895571CF438`
+pour Transmogrify. Le cold start BKVince charge 24 plugins actifs, avec 0 rejet,
+0 échec et 20 memory patches appliqués sur 20. La validation visuelle finale
+des trois cas — weapon, armor et base déjà socketée — reste le dernier gate en
+jeu.
