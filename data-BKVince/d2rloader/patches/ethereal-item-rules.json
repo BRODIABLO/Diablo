@@ -1,10 +1,10 @@
 {
   "version": 1,
   "name": "Ethereal Item Rules",
-  "description": "Controls the chance that an eligible generated item becomes ethereal (vanilla rate: 5%) and allows set items to retain the ethereal property.",
+  "description": "Controls one shared ethereal chance for all eligible items, including the set and indestructible items unlocked below.",
   "patches": [
     {
-      "description": "Set the ethereal item generation rate (vanilla rate: 5%)",
+      "description": "Set the shared ethereal generation rate. expected \"05\" is the vanilla 5% byte checked before patching; value is the desired percentage encoded as one hexadecimal byte (0x06 = 6%, 0x0A = 10%, 0x0F = 15%).",
       "op": "write-u8",
       "rva": "0x4434DF",
       "value": "0x06",
@@ -16,6 +16,20 @@
       "rva": "0x443315",
       "size": 6,
       "expected": "0F 84 3D 02 00 00"
+    },
+    {
+      "description": "Install a strict durability eligibility helper for indestructible items",
+      "op": "bytes",
+      "rva": "0x46D840",
+      "expected": "CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC",
+      "bytes": "48 83 EC 28 48 89 4C 24 20 E8 F2 5C F0 FF 85 C0 75 2C 48 8B 4C 24 20 45 33 C0 BA 98 00 00 00 E8 BC 77 E8 FF 85 C0 7E 14 48 8B 4C 24 20 E8 EE 72 E8 FF 85 C0 0F 9F C0 0F B6 C0 EB 02 33 C0 48 83 C4 28 C3"
+    },
+    {
+      "description": "Use the indestructible-aware helper for the ethereal eligibility gate",
+      "op": "call-rel32",
+      "rva": "0x4432F4",
+      "targetRva": "0x46D840",
+      "expected": "E8 47 02 F3 FF"
     }
   ]
 }

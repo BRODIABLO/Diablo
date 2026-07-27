@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-19",
+  "updatedAt": "2026-07-26",
   "target": {
     "game": "D2R 3.2",
     "build": 92777,
@@ -23,42 +23,48 @@
     ]
   },
   "statusSummary": {
-    "trackedLegacyTechnicalEntries": 49,
+    "trackedLegacyTechnicalEntries": 50,
     "trackedLegacyWriteSites": 95,
     "ported": 3,
-    "implementedAwaitingGameValidation": 39,
+    "implementedAwaitingGameValidation": 40,
     "nativeOrAbsorbed": 3,
     "notApplicable": 4,
     "pendingFromLegacyManifest": 0,
     "pendingSupplemental": 0,
     "pendingTotal": 0,
-    "deliveredOutsideLegacyManifest": 3,
+    "deliveredOutsideLegacyManifest": 4,
     "capturedPanels": 20,
     "capturedPanelsAlreadyInLegacyManifest": 1
   },
   "implementationSummary": {
-    "implementedAt": "2026-07-18",
+    "implementedAt": "2026-07-26",
     "targetPatchFiles": 20,
-    "targetPatchSites": 59,
+    "targetPatchSites": 61,
     "newPatchFiles": 17,
-    "newPatchSites": 52,
-    "newlyImplementedEntries": 39,
+    "newPatchSites": 54,
+    "newlyImplementedEntries": 40,
     "validation": {
       "targetImageArtifact": "codex-d2r-92777-decrypted.exe",
       "targetImageSha256": "CC59119DC2A6C7D43D088098FC162EAFA4AE1299B2079126AEF43C1ACA914715",
       "expectedByteMismatches": 0,
       "overlaps": 0,
       "staticPatchFilesValidated": 20,
-      "staticPatchSitesValidated": 59,
+      "staticPatchSitesValidated": 61,
       "thornsAndBurnPatchSha256": "AF35CC9093B52EFE5476C2D9E8D74EEE8B6F9043BFD5923DA368DC29862CFC79",
       "thornsAndBurnRuntimeByteIdentical": true,
       "thornsAndBurnRuntimeLoadStatus": "awaiting-next-launch",
       "runtimePatchFilesScanned": 20,
       "runtimePatchFilesApplied": 20,
       "runtimePatchFilesFailed": 0,
-      "runtimePluginFilesScanned": 7,
-      "runtimePluginFilesActive": 7,
+      "runtimePluginFilesScanned": 22,
+      "runtimePluginFilesActive": 22,
+      "runtimePluginFilesRejected": 0,
       "runtimePluginFilesFailed": 0,
+      "etherealItemRulesValidatedRuntimeSha256": "2F7C30BBB926EB994B4BABB98D058C35E5E7BDE2515D3856E8ADFEBBF6BB83A4",
+      "etherealItemRulesCurrentSourceSha256": "51548C9BA14E9143F95C571457BB95E75EB25FE5C6DF57F54D5429F721C7CD6A",
+      "etherealItemRulesRuntimeDifference": "player-friendly descriptions only; four patch operations unchanged",
+      "etherealIndestructibleLiveSites": ["0x4434DF", "0x443315", "0x4432F4", "0x46D840"],
+      "etherealIndestructibleColdStart": "20/20 patchsets, 22/22 plugins, 24/24 startup steps; gameplay validation pending",
       "monsterHpPlayerCountCap": 8,
       "monsterHpCapHookRva": "0x542F40",
       "monsterHpCapHookExpected": "48895C2418555741564883EC40498BD9",
@@ -67,7 +73,7 @@
       "monsterHpCapValidation": "runtime-hook-and-command-smoke-passed-awaiting-boss-gameplay-validation",
       "infiniteTomesPatchAppliedAt": "0x5817BD",
       "rejectedTomeSitesRemainVanilla": ["0x47145D", "0x4F5849"],
-      "status": "static-validation-and-runtime-sync-passed-awaiting-runtime-load-and-gameplay-validation"
+      "status": "static-validation-runtime-sync-and-cold-start-passed-awaiting-gameplay-validation"
     },
     "patches": [
       {
@@ -92,7 +98,7 @@
       },
       {
         "path": "data-BKVince/d2rloader/patches/ethereal-item-rules.json",
-        "entries": ["Change ethereal drop rate", "Enable ethereal set item drops"]
+        "entries": ["Change ethereal drop rate", "Enable ethereal set item drops", "Allow indestructible items to spawn ethereal"]
       },
       {
         "path": "data-BKVince/d2rloader/patches/force-crafted-affixes.json",
@@ -473,6 +479,15 @@
       "description": "Credits lethal Thorns and Burning damage to the responsible player, allowing experience and death-trigger events such as CTC missile portals.",
       "targetBuild": "D2R 3.2.92777",
       "targetPatch": "data-BKVince/d2rloader/patches/thorns-and-burn-kill-credit.json"
+    },
+    {
+      "name": "Allow indestructible items to spawn ethereal",
+      "group": "Items",
+      "status": "implemented-awaiting-game-validation",
+      "description": "Lets durable items with the Indestructible stat use the configured ethereal generation chance without admitting truly durability-free bases.",
+      "targetBuild": "D2R 3.2.92777",
+      "targetPatch": "data-BKVince/d2rloader/patches/ethereal-item-rules.json",
+      "evidence": "Mission/no-ethereal-item-types-3.2.md"
     }
   ],
   "targetAnalysis": {
@@ -485,9 +500,9 @@
       "targetDecryptedSha256": "CC59119DC2A6C7D43D088098FC162EAFA4AE1299B2079126AEF43C1ACA914715"
     },
     "coverage": {
-      "trackedEntries": 49,
-      "analyzedEntries": 49,
-      "entriesWithOwnConcreteSites": 43,
+      "trackedEntries": 50,
+      "analyzedEntries": 50,
+      "entriesWithOwnConcreteSites": 44,
       "entriesAbsorbedByOtherConcreteSites": 1,
       "cancelledEntries": 4,
       "nativeRedesignWithoutPatchSite": 1
@@ -612,6 +627,34 @@
         "classification": "patch-site-located",
         "confidence": "high",
         "sites": [{ "rva": "0x443315", "expected": "0F843D020000", "futureIntent": "NOP the six-byte branch." }]
+      },
+      {
+        "name": "Allow indestructible items to spawn ethereal",
+        "classification": "implemented-awaiting-game-validation",
+        "confidence": "high",
+        "sites": [
+          {
+            "rva": "0x4432F4",
+            "expected": "E84702F3FF",
+            "implemented": "CALL 0x46D840",
+            "role": "replace only the pre-roll ITEMS_HasDurability call with the strict indestructible-aware helper"
+          },
+          {
+            "rva": "0x46D840",
+            "expected": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+            "implemented": "67-byte helper preserving vanilla eligibility, then requiring stat 0x98 > 0 and effective max durability > 0",
+            "role": "unreferenced executable padding between the RET at 0x46D83C and the next code at 0x46D8F0"
+          }
+        ],
+        "semanticEvidence": {
+          "ITEMS_HasDurability": "0x373540",
+          "STATLIST_GetMaxDurabilityFromUnit": "0x2F4B60",
+          "STATLIST_GetUnitStat": "0x2F5020",
+          "indestructibleStatId": "0x98",
+          "etherealRollRva": "0x4434DF",
+          "configuredChancePercent": 6
+        },
+        "decision": "Keep the second post-ethereality ITEMS_HasDurability call at 0x443507 vanilla so indestructible items receive the ethereal flag without an unnecessary durability-halving write. The helper returns true for ordinary durable items exactly as before, false for genuinely durability-free items, and true for indestructible items only when an effective maximum durability exists."
       },
       {
         "name": "Force magic prefix",
@@ -869,6 +912,12 @@
       "status": "implemented-awaiting-game-validation",
       "targetPlugin": "data-BKVince/d2rloader/plugins/CharmInventoryAuras.dll",
       "evidence": "Mission/charm-inventory-auras-3.2.md"
+    },
+    {
+      "name": "Allow indestructible items to spawn ethereal",
+      "status": "implemented-awaiting-game-validation",
+      "targetPatch": "data-BKVince/d2rloader/patches/ethereal-item-rules.json",
+      "evidence": "Mission/no-ethereal-item-types-3.2.md"
     }
   ]
 }

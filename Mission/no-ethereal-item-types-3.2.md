@@ -68,6 +68,57 @@ le TOML est resolu par le contexte D2RLoader correspondant.
 - archive verifiee : DLL et TOML uniquement a la racine
 - compilation Release, test de politique et exports D2RLoader valides
 
+## Évolution — objets indestructibles éthérés (26 juillet 2026)
+
+Le patch JSON BKVince `ethereal-item-rules.json` conserve son jet configuré de
+6 % et accepte désormais les objets qui possèdent la statistique
+`item_indestructible`, sans rendre admissibles les bases réellement dépourvues
+de durabilité.
+
+La routine d'éthéréalité 92777 appelle `ITEMS_HasDurability` au RVA `0x373540`
+depuis `0x4432F4`. La référence sémantique D2MOO épinglée au commit
+`19019806df7f3e877fa105b05395d1e3597e2316` confirme que ce helper refuse un
+objet lorsque `STAT_ITEM_INDESCTRUCTIBLE` est positif. Le désassemblage 92777
+prouve le même veto : après les contrôles `items.txt` et la durabilité maximale,
+le helper lit la stat `0x98` par `STATLIST_GetUnitStat` au RVA `0x2F5020` et ne
+retourne vrai que lorsque sa valeur est inférieure ou égale à zéro.
+
+Le premier appel, antérieur au jet aléatoire, est redirigé vers un helper de
+67 octets au RVA `0x46D840`. Cette plage était composée uniquement de `INT3`,
+ne possédait aucune xref dans l'index gouverné et se situe entre le `RET` à
+`0x46D83C` et le code suivant à `0x46D8F0`. Le helper :
+
+1. réutilise `ITEMS_HasDurability` et conserve immédiatement son résultat vrai ;
+2. si le résultat est faux, exige `item_indestructible` (`0x98`) strictement
+   positif ;
+3. exige aussi une durabilité maximale effective strictement positive via
+   `STATLIST_GetMaxDurabilityFromUnit` au RVA `0x2F4B60` ;
+4. laisse intact le second appel vanilla à `ITEMS_HasDurability` au RVA
+   `0x443507`, après l'application du drapeau éthéré, afin de ne pas réécrire ou
+   réduire inutilement la durabilité d'un objet indestructible.
+
+Les tables BKVince ont été lues par le parseur TSV gouverné avec round-trip
+byte-exact et CRLF confirmé. Sept uniques portent actuellement la propriété
+`indestruct` — `Ethereal Edge`, `Ghostflame`, `Shadowkiller`, `Corrupted
+Harlequin Crest`, `The Corrupted Grandfather`, `Corrupted Arkaine's Valor` et
+`Wind God Fist` — et leurs sept bases ont une durabilité non nulle.
+
+Validation technique : image canonique 92777 vérifiée, 61/61 sites des 20
+patchsets conformes aux octets `expected`, zéro chevauchement. Le cold start
+frais du 26 juillet utilisait un JSON source/runtime byte-identique, SHA-256
+`2F7C30BBB926EB994B4BABB98D058C35E5E7BDE2515D3856E8ADFEBBF6BB83A4`.
+La clarification player-friendly ajoutée ensuite aux descriptions porte le
+SHA-256 source actuel à
+`51548C9BA14E9143F95C571457BB95E75EB25FE5C6DF57F54D5429F721C7CD6A`,
+sans modifier les quatre opérations du patch. Le cold start accepte le build
+92777, charge
+`Ethereal Item Rules` avec quatre patches, puis termine avec
+`scanned=20 applied=20 disabled=0 failed=0`, 22/22 plugins actifs sans rejet ni
+échec et les 24/24 étapes de démarrage. La relecture du processus confirme les
+quatre sites actifs : taux `06` à `0x4434DF`, NOP set à `0x443315`, redirection
+`E8 47 A5 02 00` à `0x4432F4` et helper exact de 67 octets à `0x46D840`.
+La validation gameplay reste distincte et ouverte.
+
 ## Validation requise
 
 1. Choisir au moins un code précis et, séparément, un parent pour la validation.
@@ -76,3 +127,6 @@ le TOML est resolu par le contexte D2RLoader correspondant.
    `ALWAYSETH`, solo, hôte/joiner, sauvegarde et rechargement.
 3. Vérifier que le taux BKVince de 6 % et les sets éthérés restent actifs pour
    les familles non exclues.
+4. Générer chacun des sept uniques `indestruct`, vérifier qu'ils peuvent recevoir
+   le drapeau éthéré tout en restant indestructibles, puis contrôler un arc ou
+   une autre base réellement sans durabilité comme témoin négatif.
