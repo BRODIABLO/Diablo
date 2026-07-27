@@ -14361,7 +14361,7 @@
                                                                                                      "kind":  "directory",
                                                                                                      "meta":  {
                                                                                                                   "role":  "x-plugin-incubation-source",
-                                                                                                                  "summary":  "Socle autonome du futur plugin D2RLoader affichant un texte configurable au clic droit sur un objet.",
+                                                                                                                  "summary":  "Source du plugin D2RLoader autonome affichant un lecteur configurable au clic droit sur un objet.",
                                                                                                                   "agentAccess":  "read-write",
                                                                                                                   "status":  "active",
                                                                                                                   "policy":  {
@@ -14371,7 +14371,7 @@
                                                                                                                              },
                                                                                                                   "notes":  [
                                                                                                                                 "Plugin autonome sans propriétaire PluginPack ni merge planifié.",
-                                                                                                                                "Aucune DLL avant preuve du rendu client et de la coexistence des hooks."
+                                                                                                                                "Témoin mod-local 0.2.1 délégué à Transmogrify et ExtendedItemStats; reveal ralenti, scrollbar cliquable/glissable et bouton Close ajoutés au lecteur supérieur, fallback autonome et release publique encore interdits."
                                                                                                                             ]
                                                                                                               },
                                                                                                      "children":  [
@@ -14383,6 +14383,16 @@
                                                                                                                       {
                                                                                                                           "name":  "config_tests.cpp",
                                                                                                                           "path":  "data-BKVince/d2rloader/plugins/ReadableItems-src/config_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ReadableItems-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ReadableItems-src/plugin.rc",
                                                                                                                           "kind":  "file"
                                                                                                                       },
                                                                                                                       {
@@ -14665,6 +14675,11 @@
                                                                                                  {
                                                                                                      "name":  "QtyDisplayIssue.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/QtyDisplayIssue.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "ReadableItems.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/ReadableItems.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

@@ -78,6 +78,7 @@ using BuildSocketLineFn = std::size_t(__cdecl*)(void*, char*, std::size_t) noexc
 using FindSocketLineInsertionFn = std::size_t(__cdecl*)(const char*, std::size_t) noexcept;
 using TooltipTransformFn = void*(__cdecl*)(void*, void*) noexcept;
 using TooltipOwnerFn = bool(__cdecl*)() noexcept;
+using ReadableUseItemFn = bool(__cdecl*)(void*) noexcept;
 using UnitFn = void*(__fastcall*)(void*) noexcept;
 using UnitIntFn = std::uint32_t(__fastcall*)(void*) noexcept;
 using UnitByteFn = std::uint8_t(__fastcall*)(void*) noexcept;
@@ -156,7 +157,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "transmogrify",
     .name = "Transmogrify",
-    .version = "1.2.3",
+    .version = "1.2.4",
     .author = "RuffnecKk",
     .description = "Transforms configured items with a right-click.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -393,6 +394,18 @@ TooltipOwnerFn FindExtendedItemStatsOwner() noexcept {
         GetProcAddress(module, "ExtendedItemStatsOwnsTooltipPipeline")) : nullptr;
 }
 
+TooltipTransformFn FindReadableItemsTransform() noexcept {
+    const auto module = GetModuleHandleW(L"ReadableItems.dll");
+    return module ? reinterpret_cast<TooltipTransformFn>(
+        GetProcAddress(module, "ReadableItemsTransformTooltip")) : nullptr;
+}
+
+ReadableUseItemFn FindReadableItemsUseHandler() noexcept {
+    const auto module = GetModuleHandleW(L"ReadableItems.dll");
+    return module ? reinterpret_cast<ReadableUseItemFn>(
+        GetProcAddress(module, "ReadableItemsHandleUseItem")) : nullptr;
+}
+
 std::uint8_t* __fastcall HookGetItemsTxtRecord(std::uint8_t context, std::int32_t classId) noexcept {
     auto* record = OriginalGetItemsTxtRecord(context, classId);
     if (IsTransmogrifyRecord(record)) {
@@ -446,6 +459,9 @@ void* __fastcall HookBuildItemTooltip(
     std::uint64_t a9) noexcept {
     auto* result = OriginalBuildItemTooltip(output, a2, a3, item, a5, a6, a7, a8, a9);
     result = TransformTransmogrifyTooltip(result, item);
+    if (const auto readable = FindReadableItemsTransform()) {
+        result = readable(result, item);
+    }
     if (const auto extended = FindExtendedItemStatsTransform()) {
         result = extended(result, item);
     }
@@ -635,6 +651,13 @@ std::int32_t __fastcall HookUseItemHandler(void* game, void* player,
         : nullptr;
     auto* record = ItemRecord(source);
 
+    if (source) {
+        if (const auto readable = FindReadableItemsUseHandler();
+            readable && readable(source)) {
+            return 1;
+        }
+    }
+
     if (!source || !IsTransmogrifyRecord(record)) {
         return OriginalUseItemHandler(game, player, packet, flag);
     }
@@ -660,8 +683,8 @@ auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void
     if (!command || !command->plugin) return D2RL::ConsoleCommandResult::Failed;
     command->plugin->WriteConsoleMessage(
         Settings.manualTooltip.empty()
-            ? "Transmogrify 1.2.0: same-container TXT transformations are active; tooltip=automatic."
-            : "Transmogrify 1.2.0: same-container TXT transformations are active; tooltip=manual.");
+            ? "Transmogrify 1.2.4: same-container TXT transformations are active; tooltip=automatic."
+            : "Transmogrify 1.2.4: same-container TXT transformations are active; tooltip=manual.");
     return D2RL::ConsoleCommandResult::Handled;
 }
 
@@ -832,8 +855,8 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         return false;
     }
     context->LogInfo(TooltipHookInstalled
-        ? "Transmogrify 1.2.3 native hooks active; tooltip owner."
-        : "Transmogrify 1.2.3 native hooks active; tooltip delegated to ExtendedItemStats.");
+        ? "Transmogrify 1.2.4 native hooks active; tooltip owner; ReadableItems delegated when loaded."
+        : "Transmogrify 1.2.4 native hooks active; tooltip delegated to ExtendedItemStats; ReadableItems delegated when loaded.");
     return true;
 }
 

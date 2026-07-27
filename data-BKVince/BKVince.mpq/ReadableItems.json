@@ -5,12 +5,18 @@
   // Adds this line to every configured item's tooltip.
   "tooltip": "Right-click to read...",
 
-  // The dmy code is a development fixture. Replace it with a real mod item after validation.
+  // dmy keeps the framework fixture. tsc is the spawnable in-game witness.
+  // Replace both entries with the mod author's real items after validation.
   "items": [
     {
       "code": "dmy",
       "title": "Clue Scroll Test",
       "text": "A bounded dummy message used only to validate Readable Items."
+    },
+    {
+      "code": "tsc",
+      "title": "Clue Scroll Test — Town Portal Scroll",
+      "text": "Traveler,\n\nThis Town Portal Scroll is the temporary Readable Items witness. It must remain in your inventory after every reading.\n\n1. The first mark waits beside the cold stone.\n2. The second mark hides where the torchlight ends.\n3. Follow the road until the broken cart is behind you.\n4. Turn toward the oldest tree.\n5. Count three ruined pillars.\n6. Do not enter the red doorway.\n7. Cross the shallow water.\n8. Search below the fallen banner.\n9. Keep the silver key.\n10. Leave the rusted key behind.\n11. Listen for the raven.\n12. Face the tower at dusk.\n13. Walk seven paces north.\n14. Read the carving from right to left.\n15. Return to the first mark.\n16. The final clue is under the stone that casts no shadow.\n\nThis deliberately long message validates wrapping, scrolling, reopening and closing. Use Up/Down or Page Up/Page Down, then press Escape."
     }
   ]
 }

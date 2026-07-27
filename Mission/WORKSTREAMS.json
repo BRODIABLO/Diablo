@@ -124,10 +124,10 @@
     {
       "id": "readable-items-clue-scrolls",
       "name": "Readable Items / Clue Scrolls",
-      "status": "paused",
+      "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/readable-items-clue-scrolls-3.2.md",
-      "nextGate": "After the weighted Transmogrify engine is stable, prove a standalone client surface and close hook delegation before implementing ReadableItems.dll.",
+      "nextGate": "Vincent validates the 0.2.1 tsc reader: slower 18-character-per-second reveal, clickable track, draggable scrollbar thumb, Close button, automatic following, fast-forward, reopen reset, item integrity and coexistence; afterward implement the standalone fallback and remaining containers.",
       "include": [
         "Mission/readable-items-clue-scrolls-3.2.md",
         "data-BKVince/BKVince.mpq/ReadableItems.json",

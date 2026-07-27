@@ -2,7 +2,9 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <cctype>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
@@ -82,7 +84,10 @@ inline std::uint32_t PackItemCode(std::string_view code) {
         }
     }
 
-    std::uint32_t packed{};
+    // Compiled ItemsTxt codes are fixed-width four-byte values padded with
+    // ASCII spaces.  A three-character JSON code such as "tsc" therefore
+    // needs to match the runtime value 0x20637374, not 0x00637374.
+    std::uint32_t packed{0x20202020U};
     std::memcpy(&packed, code.data(), code.size());
     return packed;
 }
@@ -139,5 +144,161 @@ inline const Entry* FindEntry(const Config& config, std::uint32_t packedCode) no
     }
     return nullptr;
 }
+
+class ReaderState final {
+public:
+    bool Open(
+        const Entry& entry,
+        std::size_t renderedLineCount,
+        std::size_t visibleLineCount
+    ) {
+        if (entry.packedCode == 0 || entry.title.empty() || entry.text.empty()) {
+            return false;
+        }
+
+        active_ = true;
+        packedCode_ = entry.packedCode;
+        title_ = entry.title;
+        text_ = entry.text;
+        scrollOffset_ = 0;
+        totalRevealCharacters_ = 0;
+        revealedCharacters_ = 0;
+        followingLatest_ = true;
+        SetViewport(renderedLineCount, visibleLineCount);
+        return true;
+    }
+
+    void Close() noexcept {
+        active_ = false;
+        packedCode_ = 0;
+        title_.clear();
+        text_.clear();
+        renderedLineCount_ = 0;
+        visibleLineCount_ = 0;
+        scrollOffset_ = 0;
+        totalRevealCharacters_ = 0;
+        revealedCharacters_ = 0;
+        followingLatest_ = true;
+    }
+
+    void SetViewport(
+        std::size_t renderedLineCount,
+        std::size_t visibleLineCount
+    ) noexcept {
+        renderedLineCount_ = renderedLineCount;
+        visibleLineCount_ = visibleLineCount;
+        scrollOffset_ = std::min(scrollOffset_, MaximumScrollOffset());
+    }
+
+    void ScrollLines(std::ptrdiff_t delta) noexcept {
+        if (!active_ || delta == 0) return;
+
+        if (delta < 0) {
+            followingLatest_ = false;
+            const auto magnitude = static_cast<std::size_t>(-(delta + 1)) + 1;
+            scrollOffset_ = magnitude >= scrollOffset_ ? 0 : scrollOffset_ - magnitude;
+            return;
+        }
+
+        const auto maximum = MaximumScrollOffset();
+        const auto distance = static_cast<std::size_t>(delta);
+        scrollOffset_ = distance >= maximum - scrollOffset_
+            ? maximum
+            : scrollOffset_ + distance;
+        // A deliberate scroll pauses the typewriter follow mode until the
+        // player returns to the newest visible line.
+        followingLatest_ = scrollOffset_ == maximum;
+    }
+
+    void SetRevealCharacterCount(std::size_t total) noexcept {
+        totalRevealCharacters_ = total;
+        revealedCharacters_ = std::min(revealedCharacters_, totalRevealCharacters_);
+    }
+
+    void AdvanceReveal(std::size_t count) noexcept {
+        if (!active_ || count == 0) return;
+        const auto remaining = totalRevealCharacters_ - revealedCharacters_;
+        revealedCharacters_ += std::min(count, remaining);
+    }
+
+    void RevealAll() noexcept {
+        if (active_) revealedCharacters_ = totalRevealCharacters_;
+    }
+
+    void FollowLatestLine(std::size_t latestLine) noexcept {
+        if (!active_ || !followingLatest_ || visibleLineCount_ == 0
+            || renderedLineCount_ == 0) {
+            return;
+        }
+        latestLine = std::min(latestLine, renderedLineCount_ - 1);
+        scrollOffset_ = latestLine + 1 > visibleLineCount_
+            ? latestLine + 1 - visibleLineCount_
+            : 0;
+        scrollOffset_ = std::min(scrollOffset_, MaximumScrollOffset());
+    }
+
+    void ResumeFollowingLatest() noexcept {
+        followingLatest_ = true;
+        scrollOffset_ = MaximumScrollOffset();
+    }
+
+    void SetScrollOffset(std::size_t offset) noexcept {
+        if (!active_) return;
+        const auto maximum = MaximumScrollOffset();
+        scrollOffset_ = std::min(offset, maximum);
+        followingLatest_ = scrollOffset_ == maximum;
+    }
+
+    [[nodiscard]] bool IsOpen() const noexcept { return active_; }
+    [[nodiscard]] std::uint32_t PackedCode() const noexcept { return packedCode_; }
+    [[nodiscard]] const std::string& Title() const noexcept { return title_; }
+    [[nodiscard]] const std::string& Text() const noexcept { return text_; }
+    [[nodiscard]] std::size_t ScrollOffset() const noexcept { return scrollOffset_; }
+    [[nodiscard]] std::size_t RenderedLineCount() const noexcept {
+        return renderedLineCount_;
+    }
+    [[nodiscard]] std::size_t VisibleLineCount() const noexcept {
+        return visibleLineCount_;
+    }
+    [[nodiscard]] bool CanScrollUp() const noexcept {
+        return active_ && scrollOffset_ > 0;
+    }
+    [[nodiscard]] bool CanScrollDown() const noexcept {
+        return active_ && scrollOffset_ < MaximumScrollOffset();
+    }
+    [[nodiscard]] std::size_t RevealedCharacters() const noexcept {
+        return revealedCharacters_;
+    }
+    [[nodiscard]] std::size_t TotalRevealCharacters() const noexcept {
+        return totalRevealCharacters_;
+    }
+    [[nodiscard]] bool RevealComplete() const noexcept {
+        return active_ && totalRevealCharacters_ > 0
+            && revealedCharacters_ == totalRevealCharacters_;
+    }
+    [[nodiscard]] bool FollowingLatest() const noexcept {
+        return followingLatest_;
+    }
+
+private:
+    [[nodiscard]] std::size_t MaximumScrollOffset() const noexcept {
+        if (!active_ || visibleLineCount_ == 0
+            || renderedLineCount_ <= visibleLineCount_) {
+            return 0;
+        }
+        return renderedLineCount_ - visibleLineCount_;
+    }
+
+    bool active_{};
+    std::uint32_t packedCode_{};
+    std::string title_;
+    std::string text_;
+    std::size_t renderedLineCount_{};
+    std::size_t visibleLineCount_{};
+    std::size_t scrollOffset_{};
+    std::size_t totalRevealCharacters_{};
+    std::size_t revealedCharacters_{};
+    bool followingLatest_{true};
+};
 
 } // namespace ruffneckk::readable_items
