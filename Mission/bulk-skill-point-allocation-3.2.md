@@ -8,11 +8,14 @@ Option A retenue par Vincent le 21 juillet 2026 : livrer
 Le comportement est le suivant :
 
 - clic normal : un point de compétence, sans confirmation;
-- `Ctrl + clic` : jusqu'à `skill_points_per_ctrl_click` points de compétence,
-  5 par défaut, sans
-  confirmation;
-- `Shift + clic` : tous les points de compétence encore utilisables, après confirmation;
-- `Ctrl + Shift + clic` : `Shift` prend la priorité et conserve la confirmation.
+- `Ctrl + clic` : jusqu'à `skillPointsPerCtrlClick` points de compétence,
+  5 par défaut, sans confirmation;
+- `Shift + clic` : tous les points de compétence encore utilisables,
+  immédiatement et sans confirmation par défaut;
+- `Ctrl + Shift + clic` : Ctrl garde la priorité et applique le même lot
+  configurable, sans confirmation;
+- `confirmShiftAllocation=true` : ajoute le modal Diablo localisé au seul
+  comportement Shift assign-all.
 
 Le lot Ctrl est configurable de 1 à 1000. Aucun plafond 20 n'est codé en dur :
 la capacité du lot provient du `MaxLvl` effectif de la compétence dans les
@@ -72,7 +75,7 @@ Les getters strictement signés utilisés pour observer la progression sont
 
 ## Implantation livrée
 
-`BulkSkillPointAllocation 1.2.2` est un plugin D2RLoader hybride, attribué à
+`BulkSkillPointAllocation 1.2.3` est un plugin D2RLoader hybride, attribué à
 `RuffnecKk`, sans `ModScopedOnly`. Il peut être installé globalement ou sous un
 mod. Il intercepte le builder à `0x000EC700` avec son prologue strict de 29
 octets et ne modifie que l'opcode `0x3B`; tous les autres paquets traversent le
@@ -80,16 +83,18 @@ trampoline intact.
 
 Ctrl envoie une seule requête native dont le dernier mot vaut
 `skillPointsPerCtrlClick - 1`; la valeur par défaut 5 produit donc `extra = 4`.
-Shift confirmé envoie une seule requête avec `extra = 0xFFFF`. Aucun timer,
+Shift envoie une seule requête avec `extra = 0xFFFF`. Aucun timer,
 worker, polling, paquet répété ni file mono-rang ne subsiste en 1.2.1. Le
 gestionnaire autoritaire du jeu applique lui-même les coûts `SkPoints`, la
 classe, les prérequis, les attributs, le niveau requis, les points restants et
 le `MaxLvl` effectif du runtime.
 
-Depuis la version 1.2.0, la confirmation Shift réutilise le `ConfirmationModal`
-natif de Diablo. Le modal est asynchrone : le rendu et le thread client ne sont
-plus bloqués pendant la décision. Refuser n'envoie aucun paquet; accepter
-envoie l'unique requête native assign-all. Ctrl ne demande aucune confirmation.
+Depuis la version 1.2.3, Shift envoie assign-all immédiatement par défaut.
+L'option `confirmShiftAllocation=true` réactive le `ConfirmationModal` natif de
+Diablo introduit en 1.2.0. Le modal est asynchrone : le rendu et le thread client
+ne sont pas bloqués pendant la décision. Refuser n'envoie aucun paquet; accepter
+envoie l'unique requête native assign-all. Ctrl et Ctrl+Shift ne demandent
+jamais de confirmation.
 
 La version 1.0.3 durcit la détection après l'échec fonctionnel de 1.0.2 :
 `Shift` est déduit du marqueur natif `extra = 0xFFFF` produit par le chemin
@@ -358,11 +363,38 @@ natifs. Compilation Release, test de politique 1/1, trois exports, métadonnée
 - ZIP DLL + deux JSON, sans README, SHA-256
   `53A94D27C524D8EC025D00EEAA99317D3FAAA6FB969CE21EC0E99BEB7F5642CF`.
 
-## Gate fonctionnel restant
+## Comportement final 1.2.3 et promotion merge du 26 juillet 2026
 
-La livraison technique ne remplace pas l'essai gameplay. Il reste à vérifier en
-jeu : clic normal; Ctrl avec lots 1/5/10 et moins de points que le lot; Shift
-accepté et annulé; Ctrl+Shift; plafonds 20/25/30; coûts `SkPoints` supérieurs à
-1; classe, prérequis, niveau requis et attributs invalides; souris/clavier;
-solo, hôte et joiner; sauvegarde/rechargement; absence de dépense excédentaire,
-duplication, rafale, crash ou désynchronisation.
+La configuration ajoute `confirmShiftAllocation=false`. Avec ce défaut, Shift
+attribue immédiatement tous les rangs permis. La valeur `true` conserve le
+modal Diablo localisé et son chemin de réponse Yes/No. La résolution donne
+désormais priorité à Ctrl : Ctrl+Shift exécute donc le lot Ctrl configuré, égal
+à cinq par défaut, sans confirmation.
+
+Vincent a validé en jeu le comportement final complet utilisé au quotidien :
+Ctrl attribue exactement cinq rangs en une opération, Ctrl+Shift conserve ce
+même lot, Shift attribue tout immédiatement par défaut et le modal optionnel
+attribue correctement après Yes sans bloquer le jeu. Les tests Release, le cold
+start conjoint avec les cinq DLL eezstreet et la synchronisation des artefacts
+restent verts.
+
+- DLL build, dépôt et runtime identiques, SHA-256
+  `DFCFC5686964F81D7E03CA4212E4217ADF5036A4B9741ED73935661DB4CFB604`;
+- JSON gameplay dépôt/runtime identiques, SHA-256
+  `CD118D1A9A66DA55543C8CF087E1F26C965A4DABAE25E486A346A0FD1B04FC62`;
+- JSON de chaîne inchangé, SHA-256
+  `A47DE4EE2E4E75E247A0D0E20E04FECEE5841F413B302DB9FC5FA69EF145CDCE`;
+- ZIP DLL + deux JSON, sans README, SHA-256
+  `2D333D13C049253C45ED8F265232CABF076C9A37A168CE0BDE84043048224DF2`.
+
+`BulkSkillPointAllocation 1.2.3` est donc promu candidat prêt pour la
+préparation du merge dans `plugin-misc.dll`, avec la configuration future
+`misc.bulkSkillPointAllocation` dans l'unique `D2RPlugins.json`. Ce statut ne
+fusionne encore aucun code d'eezstreet et ne remplace pas son acceptation. La
+DLL autonome demeure la livraison officielle jusqu'à un merge convenu.
+
+La matrice élargie reste utile après le port dans le pack : lots 1/10, plafonds
+20/25/30, coûts `SkPoints` supérieurs à 1, prérequis invalides, manette,
+hôte/joiner et sauvegarde/rechargement. Ces cas ne remettent pas en cause la
+validation du flux final observé; ils restent les gates de non-régression du
+futur merge.

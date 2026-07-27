@@ -5,8 +5,9 @@ It can be installed globally or inside a mod and does not declare `ModScopedOnly
 
 - Normal click invests one skill point.
 - Ctrl + click invests up to `skillPointsPerCtrlClick` skill points without confirmation.
-- Shift + click asks for confirmation, then invests every skill point the active runtime rules allow.
-- Shift takes precedence when Ctrl and Shift are held together.
+- Shift + click immediately invests every skill point the active runtime rules allow.
+- Ctrl keeps its configured batch behavior when Ctrl and Shift are held together.
+- `confirmShiftAllocation=true` adds Diablo's native confirmation to Shift only.
 
 Shift uses D2R's native packet marker. Ctrl checks the generic, left and right
 Control keys through both D2R's signed asynchronous key-state wrapper and
@@ -21,11 +22,12 @@ custom `SkPoints`, prerequisites, attributes, required level, class restrictions
 and runtime `MaxLvl`. The plugin contains no rank loop, timer, packet burst or
 hard-coded level-20 cap.
 
-Shift opens Diablo's native `ConfirmationModal` asynchronously. The plugin reuses the
-signed stat-allocation modal builder, substitutes only the prompt while that modal is
-being created, and recognizes its private callback marker at the UI dispatcher. The
-game keeps rendering while the modal is open. `Yes` sends the single native
-assign-all request; `No` sends no allocation request.
+When Shift confirmation is enabled, the plugin opens Diablo's native
+`ConfirmationModal` asynchronously. It reuses the signed stat-allocation modal
+builder, substitutes only the prompt while that modal is being created, and
+recognizes its private callback marker at the UI dispatcher. The game keeps
+rendering while the modal is open. `Yes` sends the single native assign-all
+request; `No` sends no allocation request.
 
 Use `bulk-skill-points` in the D2RLoader console to show the active settings,
 last modifier mask, incoming/outgoing packet values and diagnostic counters.
@@ -41,6 +43,10 @@ because this file configures only one plugin:
     // Ctrl + click invests up to this many points without confirmation.
     // Accepted range: 1 through 1000.
     "skillPointsPerCtrlClick": 5,
+
+    // Shift + click invests all usable points immediately by default.
+    // Set this to true to show Diablo's localized confirmation first.
+    "confirmShiftAllocation": false,
 
     // Emit native bulk diagnostics in the D2RLoader log.
     "diagnostics": false
@@ -84,7 +90,7 @@ Diablo's own localized strings.
 
 ## PluginPack compatibility
 
-Version 1.2.2 was audited against the latest eezstreet D2RL-Plugins 2.0.1 commit
+Version 1.2.3 was audited against the latest eezstreet D2RL-Plugins 2.0.1 commit
 `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`. Bulk Skill Point Allocation owns
 the allocation-packet builder hook at D2R RVA `0x000EC700`, the localized-key
 resolver hook at `0x005F4B90`, and the UI dispatcher hook at `0x00843D90`.
@@ -95,5 +101,7 @@ strict, so an unknown overlapping hook makes the plugin refuse to load safely.
 
 The standalone DLL does not link to, modify or redistribute any PluginPack DLL.
 If the feature is accepted upstream later, this flat configuration object can
-be moved into `D2RPlugins.json` and the implementation compiled into
-`plugin-misc`.
+be moved under `misc.bulkSkillPointAllocation` in `D2RPlugins.json` and the
+implementation compiled into `plugin-misc`. Version 1.2.3 is ready for that
+merge preparation; the standalone DLL remains the release until both authors
+agree to the integration.
