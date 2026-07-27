@@ -8,11 +8,11 @@ The governed patch changes only the immediate byte in the unique loop bound at
 RVA `0x541A7E`. The complete original signature is
 `83 FD 0E 0F 8C DB FE FF FF`; incompatible builds are rejected.
 
-The default is 32 items. Configure `itemLimit` from 14 through 127 in
-`GambleScreenLimit.json`. The standalone JSON supports comments and is loaded
-from the active mod first, then from the game directory. Higher values require in-game validation because
-item size, placement, UI navigation and network delivery can reduce the number
-of usable entries independently of the generation loop.
+The expanded limit is fixed at 32 generation attempts. `GambleScreenLimit.json`
+only exposes the boolean `enabled` switch. When disabled, the vanilla limit of
+14 remains unchanged. Unknown keys and non-boolean values are rejected. The
+standalone JSON supports comments and is loaded from the active mod first, then
+from the game directory.
 
 This standalone DLL is incubated for a future merge into eezstreet's
 `plugin-items.dll`. Its flat JSON object will become

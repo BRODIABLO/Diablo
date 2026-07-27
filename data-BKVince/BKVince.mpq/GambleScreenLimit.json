@@ -1,5 +1,4 @@
 {
-    // Number of generation attempts used to populate the gambling screen.
-    // Vanilla is 14. Accepted range: 14 through 127.
-    "itemLimit": 32
+    // Enable the fixed expansion from 14 to 32 gambling item-generation attempts.
+    "enabled": true
 }

@@ -30,7 +30,7 @@ No legacy address, structure or ABI is transferred to D2R 3.2.
 
 ## Implementation
 
-`GambleScreenLimit 1.1.0` is a hybrid D2RLoader plugin attributed to
+`GambleScreenLimit 1.2.0` is a hybrid D2RLoader plugin attributed to
 `RuffnecKk`. It can be installed globally or under a mod and does not declare
 `ModScopedOnly`.
 
@@ -41,13 +41,15 @@ first from the active mod and then from the game directory:
 
 ```jsonc
 {
-    "itemLimit": 32
+    "enabled": true
 }
 ```
 
-Accepted values are 14 through 127. The default 32 is deliberately conservative
-until the full UI and multiplayer matrix is validated. The plugin changes no TXT
-table and installs no inline hook.
+The only public option is the boolean `enabled`. When enabled, the plugin applies
+the fixed limit 32; when disabled, it leaves the vanilla limit 14 untouched.
+Unknown keys, including the former `itemLimit`, invalidate the configuration so
+no value above 32 can be requested through JSON. The plugin changes no TXT table
+and installs no inline hook.
 
 Vincent confirmed `items` as the future PluginPack owner on 2026-07-22. The
 standalone DLL does not modify, link or redistribute an eezstreet binary. Its
@@ -63,10 +65,10 @@ but writes a distinct byte range, so the current incubation is composable.
 - configuration: `data-BKVince/BKVince.mpq/GambleScreenLimit.json`;
 - public archive: `addons/GambleScreenLimit/GambleScreenLimit.zip`, containing
   only the DLL and JSON, without README, TOML or sources;
-- Release DLL SHA-256: `2F451CEA13C4D6807E27C33602B84D319A0E29FF02F24B85C4F39429FD3442ED`;
-- JSON SHA-256: `C161620F6955366A400462A617644EBFB7D9D5D31255685D6F3E2D38ED8B144B`;
-- ZIP SHA-256: `0BA0A6C35EC74E886BD421A5DE5690E3E6EEF405CBBFF10F33F4AC5CFE4DF1CA`;
-- policy tests: limit parsing and range gates pass;
+- Release DLL SHA-256: `D62CA2B907C37424A008D0FD586B8FDD78D041A56CFF8C101E083A2FB7256ABF`;
+- JSON SHA-256: `75771FC2FA6E20A4832B9237857465E9BC81146AE360CDE1DC56FCC046C781A6`;
+- ZIP SHA-256: `EDF43315B908A5DDECFCA4A2708C869665347EFDB7974EE7AD02A05686CB9574`;
+- policy tests: disabled resolves to 14 and enabled resolves to fixed 32;
 - workbench byte search: one match at `0x541A7C`.
 
 Cold-start validation passed on 2026-07-22: D2RLoader accepted the v2 manifest,
@@ -74,17 +76,19 @@ loaded the mod-scoped plugin, and logged that the bound changed from 14 to 32.
 The route to Gheed and the gamble UI was exercised separately; the post-patch
 visible-count and purchase matrix remains open.
 
-Vincent confirmed on 2026-07-22 that the configured value 32 is stable in his
-initial in-game test. This validates the current default, but it does not yet
-establish the maximum safe value. Higher values must be tested against actual
-merchant-grid saturation as well as crashes.
+Vincent confirmed on 2026-07-22 that 32 is stable in his initial in-game test.
+On 2026-07-26, 32 became the fixed product maximum because it corresponds to the
+gambling merchant grid capacity; higher values are no longer exposed.
 
-The remaining functional matrix covers purchasing first and last entries,
-repeated refreshes, mouse/controller, UI scales and resolutions, all gamble
-vendors, solo/host/joiner, and absence of invisible entries, truncation,
-duplication, crash or desynchronization.
+Vincent confirmed the final 1.2.0 build in game on 2026-07-26. The fixed limit
+32 behaves correctly and the standalone plugin is ready for a future integration
+under `plugin-items.dll`. Purchasing extremes, repeated refreshes, alternate
+vendors, controller, resolutions and host/joiner remain useful regression cases
+for that integration, but no longer block the standalone release.
 
-Version 1.1.0 passed both configuration paths in cold starts: mod-local JSON and
-global fallback JSON. With all five eezstreet PluginPack DLLs present,
+Version 1.2.0 passed three fresh configuration states in cold starts: `true`
+applied fixed 32, `false` preserved vanilla 14, and the legacy `itemLimit` key
+was rejected. With all five eezstreet PluginPack DLLs present,
 `GambleScreenLimit.dll` and `plugin-items.dll` loaded together with
-`rejected=0` and `failed=0`; the final runtime state uses the mod-local JSON.
+`rejected=0` and `failed=0`; the final runtime state uses the mod-local JSON with
+`enabled: true`.

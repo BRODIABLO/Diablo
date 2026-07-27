@@ -10,13 +10,13 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace {
-using tcp::gamble_screen_limit::DefaultLimit;
-using tcp::gamble_screen_limit::IsValidLimit;
-using tcp::gamble_screen_limit::MaximumLimit;
+using tcp::gamble_screen_limit::EffectiveLimit;
+using tcp::gamble_screen_limit::ExpandedLimit;
 using tcp::gamble_screen_limit::VanillaLimit;
 
 constexpr std::uint32_t SupportedBuild = 92777;
@@ -26,7 +26,7 @@ constexpr std::uint32_t GambleLoopLimitOffset = 2;
 constexpr wchar_t ConfigFileName[] = L"GambleScreenLimit.json";
 
 struct Config {
-    std::uint32_t itemLimit{DefaultLimit};
+    bool enabled{true};
 };
 
 const D2RL::PluginContext* Context{};
@@ -38,7 +38,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "gamble-screen-limit",
     .name = "Gamble Screen Limit",
-    .version = "1.1.0",
+    .version = "1.2.0",
     .author = "RuffnecKk",
     .description = "Expands the gambling screen with more item choices.",
     .flags = D2RL::PluginFlags::None,
@@ -70,11 +70,17 @@ bool LoadConfig() noexcept {
                     &config
                 );
             }
-            const auto configuredLimit = config.value("itemLimit", DefaultLimit);
-            if (!IsValidLimit(configuredLimit)) {
-                throw std::out_of_range("itemLimit must be between 14 and 127");
+            for (auto entry = config.begin(); entry != config.end(); ++entry) {
+                if (entry.key() != "enabled") {
+                    throw std::invalid_argument(
+                        std::string("unknown configuration key: ") + entry.key()
+                    );
+                }
             }
-            Settings.itemLimit = configuredLimit;
+            if (config.contains("enabled") && !config.at("enabled").is_boolean()) {
+                throw std::invalid_argument("enabled must be a boolean");
+            }
+            Settings.enabled = config.value("enabled", true);
             LoadedConfigPath = path.string();
             return true;
         } catch (const std::exception& exception) {
@@ -97,12 +103,12 @@ auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void
     std::snprintf(
         message,
         sizeof(message),
-        "GambleScreenLimit 1.1.0: JSON config=%s; item limit=%u; vanilla=%u; supported range=%u-%u.",
+        "GambleScreenLimit 1.2.0: JSON config=%s; enabled=%s; effective limit=%u; vanilla=%u; expanded=%u (fixed).",
         LoadedConfigPath.c_str(),
-        Settings.itemLimit,
+        Settings.enabled ? "yes" : "no",
+        EffectiveLimit(Settings.enabled),
         VanillaLimit,
-        VanillaLimit,
-        MaximumLimit
+        ExpandedLimit
     );
     command->plugin->WriteConsoleMessage(message);
     return D2RL::ConsoleCommandResult::Handled;
@@ -113,7 +119,7 @@ bool InstallPatch() noexcept {
         0x83, 0xFD, 0x0E, 0x0F, 0x8C, 0xDB, 0xFE, 0xFF, 0xFF
     };
     auto replacement = expected;
-    replacement[GambleLoopLimitOffset] = static_cast<std::uint8_t>(Settings.itemLimit);
+    replacement[GambleLoopLimitOffset] = static_cast<std::uint8_t>(ExpandedLimit);
     if (!Context->PatchBytes(
             GambleLoopSignatureRva,
             expected.data(),
@@ -143,7 +149,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         context->LogError("GambleScreenLimit: only D2R build 92777 is supported.");
         return false;
     }
-    if (!InstallPatch()) return false;
+    if (Settings.enabled && !InstallPatch()) return false;
 
     if (!context->RegisterConsoleCommand(
             "gamble-screen-limit",
@@ -152,15 +158,25 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         )) {
         context->LogWarn("GambleScreenLimit: status command could not be registered.");
     }
-    char message[192]{};
-    std::snprintf(
-        message,
-        sizeof(message),
-        "GambleScreenLimit 1.1.0 active: gamble item limit raised from %u to %u (JSON config: %s).",
-        VanillaLimit,
-        Settings.itemLimit,
-        LoadedConfigPath.c_str()
-    );
+    char message[256]{};
+    if (Settings.enabled) {
+        std::snprintf(
+            message,
+            sizeof(message),
+            "GambleScreenLimit 1.2.0 active: gamble item limit raised from %u to fixed limit %u (JSON config: %s).",
+            VanillaLimit,
+            ExpandedLimit,
+            LoadedConfigPath.c_str()
+        );
+    } else {
+        std::snprintf(
+            message,
+            sizeof(message),
+            "GambleScreenLimit 1.2.0 disabled by JSON config: vanilla gamble item limit %u remains unchanged (JSON config: %s).",
+            VanillaLimit,
+            LoadedConfigPath.c_str()
+        );
+    }
     context->LogInfo(message);
     return true;
 }
