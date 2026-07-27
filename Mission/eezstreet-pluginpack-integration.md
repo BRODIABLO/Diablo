@@ -249,41 +249,33 @@ fusionner : eezstreet peut faire évoluer ses plugins, RuffnecKk peut préparer 
 siens, et chaque contribution arrive déjà dans le même format de configuration,
 de compilation et de validation.
 
-## Prototype local de la tranche 1
+## Correction du premier pilote — 27 juillet 2026
 
-Après un premier essai sous forme de DLL distincte, `GroundItemLabelLimit` a été
-reclassé comme fonctionnalité interne de `plugin-misc`. Le clone local contient
-maintenant `ground-item-label-limit.cpp/.h`, compilés par la target existante
-`plugin-misc`; aucune sixième DLL ni aucun nouvel export D2RLoader n’est créé.
-L’intégration conserve :
+Vincent confirme que `GroundItemLabelLimit` appartient à la catégorie `items`,
+avec `plugin-items.dll` comme propriétaire futur et
+`items.groundItemLabels` comme clé prévue. Le premier pilote du 22 juillet sous
+`plugin-misc` est donc retiré : ses deux fichiers internes, son appel de
+chargement et `misc.groundItemLabels` ne sont plus présents dans le clone de
+travail ni dans BKVince.
 
-- la configuration `misc.groundItemLabels` dans l’unique `D2RPlugins.json`, avec
-  `enabled=false` et `limit=64` par défaut dans le clone du pack;
-- le crédit exact `RuffnecKk` dans les sources et le message d’activation;
-- les sept signatures strictes du build 92777;
-- l’absence totale de structure gameplay privée.
+Le `plugin-misc.dll` reconstruit conserve uniquement le correctif local
+indépendant qui déclare `PluginFlags::NativeHooks`, requis par son propre hook
+eezstreet. Son SHA-256 source/runtime est
+`4831EDDE0FBBFD3F01EB6F5AAFF7B9EFA476B78AB78850E9830CFEC519B50194`.
+Le `D2RPlugins.json` sans la section label possède le SHA-256
+`3119AC5C934A08287068C832467BF7D5711B4B362AD623665CF605FF2C73A87A` dans
+la source et le runtime.
 
-La compilation Release x64 complète réussit avec uniquement les cinq DLL
-d’eezstreet. La `plugin-misc.dll` fusionnée a le SHA-256
-`E5E4A15DD854782B211B35488BD2B629974D8D8770BC5775ABB8D62CA2EDA275`.
-Le correctif local déjà requis par `plugin-misc` pour déclarer
-`PluginFlags::NativeHooks` est repris dans le source fusionné.
+Le cold start du 27 juillet à 07:49 charge `plugin-misc` 2.0.1 avec son drapeau
+`0x2` et son hook `0x542F40`, sans aucune ligne d’activation Ground Item Label.
+Les résultats sont `20/20` patchsets, 24 plugins actifs, zéro rejet, zéro échec
+et démarrage `24/24` en 4,062 secondes. Le processus de test est ensuite fermé.
 
-Le test BKVince active cette section avec `limit=64`. La nouvelle DLL a été
-copiée dans la source gouvernée et dans le profil actif avec des SHA-256
-identiques. La DLL eezstreet originale est sauvegardée sous `analysis-cache/`
-avec le SHA-256
-`EF92AC285FA58083D0D3F89CADE94AD93220CAD3875D820F63A56C35C5CFED79`, et les
-trois binaires du prototype séparé ont été déplacés au même endroit. L’ancienne
-DLL standalone historique reste sous l’extension `.standalone-disabled`.
-
-Au démarrage à froid du 22 juillet, D2RLoader charge explicitement
-`plugin-misc.dll [mod]`, désactive sa copie globale, puis termine le scan des
-plugins avec `failed=0`. Le journal de `plugin-misc` confirme à la fois son hook
-natif existant et `Ground Item Label Limit by RuffnecKk active; limit raised
-from 32 to 64`. L’instance s’est ensuite fermée avec déchargement de D2RCore;
-la validation visuelle en jeu demeure à faire par Vincent. Le clone demeure
-local sous `analysis-cache/`, sans commit ni push.
+L’incubation reprend dans la DLL autonome hybride RuffnecKk 1.1.0. Son JSON
+autonome accepte uniquement `enabled` et `limit`, avec exactement 64 ou 128;
+il cherche la configuration mod-locale avant le repli global, ne crée aucun
+TOML et n’est pas déployé dans le profil actif. Cette isolation doit rester en
+place jusqu’au futur merge explicitement autorisé dans `plugin-items.dll`.
 
 ## Contribution SDK prête à envoyer
 

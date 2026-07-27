@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-26T21:56:14.2881574+00:00",
+    "generatedAt":  "2026-07-27T12:09:05.9932634+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -510,6 +510,54 @@
                                                                             {
                                                                                 "name":  "GambleScreenLimit.zip",
                                                                                 "path":  "addons/GambleScreenLimit/GambleScreenLimit.zip",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "GroundItemLabelLimitMemoryPatches",
+                                                           "path":  "addons/GroundItemLabelLimitMemoryPatches",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-ground-item-label-memory-patch-presets",
+                                                                        "summary":  "Bundle expérimental hors runtime contenant les presets memory patch mutuellement exclusifs 64 et 128 pour D2R 3.2.92777.",
+                                                                        "agentAccess":  "read-write"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "presets",
+                                                                                "path":  "addons/GroundItemLabelLimitMemoryPatches/presets",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "128",
+                                                                                                     "path":  "addons/GroundItemLabelLimitMemoryPatches/presets/128",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "increase-floor-item-label-cap-to-128.json",
+                                                                                                                          "path":  "addons/GroundItemLabelLimitMemoryPatches/presets/128/increase-floor-item-label-cap-to-128.json",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "64",
+                                                                                                     "path":  "addons/GroundItemLabelLimitMemoryPatches/presets/64",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "increase-floor-item-label-cap-to-64.json",
+                                                                                                                          "path":  "addons/GroundItemLabelLimitMemoryPatches/presets/64/increase-floor-item-label-cap-to-64.json",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/GroundItemLabelLimitMemoryPatches/README.md",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
@@ -13535,6 +13583,11 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
+                                                                                "name":  "GroundItemLabelLimit.json",
+                                                                                "path":  "data-BKVince/BKVince.mpq/GroundItemLabelLimit.json",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "LarzukSockets.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/LarzukSockets.json",
                                                                                 "kind":  "file"
@@ -14170,6 +14223,48 @@
                                                                                                                   ]
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "GroundItemLabelLimit-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/GroundItemLabelLimit-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/GroundItemLabelLimit-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "config_policy.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/GroundItemLabelLimit-src/config_policy.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "limit_policy.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/GroundItemLabelLimit-src/limit_policy.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/GroundItemLabelLimit-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/GroundItemLabelLimit-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "policy_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/GroundItemLabelLimit-src/policy_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "README.md",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/GroundItemLabelLimit-src/README.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "LarzukSockets-src",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/LarzukSockets-src",
                                                                                                      "kind":  "directory",
@@ -14615,6 +14710,11 @@
                                                                                                  {
                                                                                                      "name":  "GambleScreenLimit.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/GambleScreenLimit.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "GroundItemLabelLimit.dll.standalone-disabled",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/GroundItemLabelLimit.dll.standalone-disabled",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

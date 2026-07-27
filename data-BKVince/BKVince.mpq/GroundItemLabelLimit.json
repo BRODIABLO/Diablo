@@ -1,0 +1,7 @@
+{
+    // Enable the standalone ground-item label limit while it is being incubated.
+    "enabled": true,
+
+    // Choose exactly 64 or 128. Vanilla keeps 32 labels when disabled.
+    "limit": 64
+}

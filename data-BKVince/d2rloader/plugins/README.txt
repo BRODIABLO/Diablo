@@ -179,6 +179,10 @@ when either monster player-count cap is enabled, but declares no native-hook
 capability; D2RLoader 1.0.1-beta correctly rejects it. The local one-line patch
 declares `PluginFlags::NativeHooks` so the signature-checked hook can load.
 
+Ground Item Label Limit is not part of `plugin-misc.dll`. Its RuffnecKk 1.1.0
+incubation build remains disabled and autonomous, with a future owner of
+`plugin-items.dll` and planned configuration key `items.groundItemLabels`.
+
 ## TCP hybrid and mod-local plugins
 
 * `PotionAutoPickup.dll` routes configured potion families through the vanilla

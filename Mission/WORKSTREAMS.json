@@ -50,14 +50,15 @@
     {
       "id": "ground-item-label-limit",
       "name": "Ground Item Label Limit",
-      "status": "active",
-      "owner": "Guillaume + Codex",
+      "status": "paused",
+      "owner": "Vincent + Codex",
       "mission": "Mission/ground-item-label-limit-3.2.md",
-      "nextGate": "Finish the in-game visual validation before checkpointing the PluginPack prototype.",
+      "nextGate": "On Vincent's explicit request for a test window, deploy standalone 1.1.0 at 64 and 128, validate invalid-value refusal plus mod-local/global configuration priority, then keep plugin-items.dll as the only future PluginPack owner.",
       "include": [
         "Mission/ground-item-label-limit-3.2.md",
+        "addons/GroundItemLabelLimitMemoryPatches/**",
+        "data-BKVince/BKVince.mpq/GroundItemLabelLimit.json",
         "data-BKVince/BKVince.mpq/D2RPlugins.json",
-        "data-BKVince/d2rloader/config/ground-item-label-limit.toml",
         "data-BKVince/d2rloader/plugins/GroundItemLabelLimit-src/**",
         "data-BKVince/d2rloader/plugins/GroundItemLabelLimit.dll*",
         "data-BKVince/d2rloader/plugins/plugin-misc.dll",
@@ -189,6 +190,13 @@
         "*"
       ],
       "reason": "Operational pointer shared by whichever mission is the current project priority."
+    },
+    {
+      "pattern": "Mission/eezstreet-pluginpack-integration.md",
+      "workstreams": [
+        "*"
+      ],
+      "reason": "Cross-cutting ownership and merge ledger shared by every PluginPack-bound incubation."
     },
     {
       "pattern": "ROADMAP.html",

@@ -1162,6 +1162,38 @@
       "confidence": "high",
       "source": "Mission/vendor-stock-refresh-3.2.md",
       "notes": "Configures the player's vendor session immediately before the common store dispatcher. Proven x64 ABI: (game, npc, player, mode byte) -> void. It reads and replaces PlayerData+0x100, where callers pass mode 2 normal store, 3 gamble and 4 hire, and stores the NPC class at +0xFC. VendorStockRefresh inspects the old normal-session state before forwarding unchanged to vanilla."
+    },
+    {
+      "rva": "0x9A1B0",
+      "name": "ITEMS_GetDisplayName",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ground-item-label-limit-3.2.md",
+      "notes": "Resolves the localized display name for a unit, including the ItemsTxt name-string path for UNIT_ITEM. UI_BuildGroundItemTooltip calls it directly in the proven 92777 ground-label chain."
+    },
+    {
+      "rva": "0xCBEB0",
+      "name": "UI_BuildGroundItemTooltip",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ground-item-label-limit-3.2.md",
+      "notes": "Builds the bounded ground-label text and color using the ABI (unit, textBuffer, bufferSize, colorCode). Its sole direct caller at 0x1FAA18 belongs to the remastered ground-label record builder."
+    },
+    {
+      "rva": "0x1516EBE",
+      "name": "GroundItemLabelRecordLimit",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/ground-item-label-limit-3.2.md",
+      "notes": "First site in the coupled 92777 limit set. The renderer clamps or pads its dynamic vector to 32 records of size 0x144; the associated byte offset at 0x1516ECE and fill count at 0x1516F41 must be patched together."
+    },
+    {
+      "rva": "0x1519A14",
+      "name": "GroundItemLabelLayoutListLimit",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/ground-item-label-limit-3.2.md",
+      "notes": "Normalizes the synchronized ground-label layout list to 32 nodes. GroundItemLabelLimit validates and patches this comparison plus the coupled sites at 0x1519A4F, 0x1519AAA and 0x1519AF9."
     }
   ]
 }
