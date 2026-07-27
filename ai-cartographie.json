@@ -1,8 +1,8 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-27T14:50:23.8626857+00:00",
+    "generatedAt":  "2026-07-27T18:48:11.5829744+00:00",
     "root":  {
-                 "name":  "Diablo",
+                 "name":  "snapshot",
                  "path":  ".",
                  "kind":  "directory",
                  "meta":  {
@@ -570,6 +570,18 @@
                                                                             {
                                                                                 "name":  "NoEtherealItemTypes.zip",
                                                                                 "path":  "addons/NoEtherealItemTypes/NoEtherealItemTypes.zip",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "PreventMercDeathInTown",
+                                                           "path":  "addons/PreventMercDeathInTown",
+                                                           "kind":  "directory",
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "PreventMercDeathInTown-0.1.0-test.zip",
+                                                                                "path":  "addons/PreventMercDeathInTown/PreventMercDeathInTown-0.1.0-test.zip",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]

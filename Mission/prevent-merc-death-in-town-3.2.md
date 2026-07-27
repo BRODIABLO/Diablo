@@ -3,9 +3,9 @@
 Dernière mise à jour : 24 juillet 2026
 
 Statut : prototype autonome hybride `PreventMercDeathInTown.dll` 0.1.0 et JSON
-implantés puis compilés en Release. La mission est mise en pause au gate runtime
-pendant Repair Costs Cap; aucune preuve n’est perdue et aucune archive publique
-n’existe.
+implantés, compilés en Release et validés fonctionnellement par le testeur
+externe le 27 juillet 2026. Le lot est prêt à être intégré dans
+`plugin-misc.dll` sous `misc.preventMercDeathInTown`.
 
 ## Décisions confirmées
 
@@ -128,6 +128,19 @@ serviteurs ou rester active après la sortie de ville.
   `D49166D33B2DEA7BCECE0F972692802AE8BC4D48A1B15FF811FA2A10329C8980`.
   Les trois exports requis, la section ressource, le binaire x64 et les
   métadonnées RuffnecKk 0.1.0 sont contrôlés sur l’artefact synchronisé.
+- Le paquet de test externe
+  `addons/PreventMercDeathInTown/PreventMercDeathInTown-0.1.0-test.zip` contient
+  uniquement `PreventMercDeathInTown.dll` et `PreventMercDeathInTown.json` à sa
+  racine. SHA-256 du ZIP :
+  `152C54B88360A2B655837F8D88714CBB443ADD9D4DC3A4F3EA1DB48202EE636F`.
+  La DLL distribuée est byte-identique au build Release et au dépôt, SHA-256
+  `D49166D33B2DEA7BCECE0F972692802AE8BC4D48A1B15FF811FA2A10329C8980`;
+  le JSON porte `27358CD08B39917A924115EF6BA3F5D34C14EC2F6E53A1D204C01BCE7C3F7D8C`.
+  README, sources, symboles, TOML, logs, preuves et DLL eezstreet sont exclus.
+- Vincent confirme le 27 juillet 2026 que le test externe fonctionne. Cette
+  preuve ferme le gate fonctionnel du prototype distribué et autorise la
+  préparation du merge PluginPack; elle ne remplace pas les contrôles de build,
+  configuration et coexistence propres à la future DLL fusionnée.
 
 ## Gates observables
 
@@ -143,6 +156,8 @@ serviteurs ou rester active après la sortie de ville.
 
 ## Prochain gate
 
-Déployer le hash Release dans le profil BKVince avec le skill runtime. Exiger
-un cold start 92777 et des logs frais avant la matrice en jeu poison/Open
-Wounds, ville/hors ville et mercenaire/autres unités.
+Intégrer la fonctionnalité dans `plugin-misc.dll` sous la clé
+`misc.preventMercDeathInTown`, préserver le crédit RuffnecKk sans remplacer les
+métadonnées eezstreet, supprimer ensuite la DLL et le JSON autonomes, puis
+recompiler et valider le PluginPack fusionné avec cold start, logs frais et
+coexistence des autres options `misc`.
