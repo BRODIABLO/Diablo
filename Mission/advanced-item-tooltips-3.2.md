@@ -16,7 +16,7 @@ n'affiche aucune ligne `Max Sockets` supplémentaire.
 
 ## Implantation
 
-Le plugin hybride `AdvancedItemTooltips.dll` 1.4.0 est attribué à `RuffnecKk`
+Le plugin hybride `AdvancedItemTooltips.dll` 2.0.0 est attribué à `RuffnecKk`
 et ne déclare pas `ModScopedOnly`. Il accepte uniquement le build 92777.
 
 - `ITEMS_GetMaxSockets`, RVA `0x36EAD0`, calcule la capacité de l'objet concret,
@@ -26,7 +26,7 @@ et ne déclare pas `ModScopedOnly`. Il accepte uniquement le build 92777.
   positive supprime entièrement l'ajout.
 - Advanced Item Tooltips n'installe aucun hook. Il expose une fonction bornée
   qui retourne la ligne blanche et une fonction bornée qui résout son ancre.
-- Transmogrify 1.2.3, déjà propriétaire du hook final strict à
+- Transmogrify 1.2.5, déjà propriétaire du hook final strict à
   `ITEMS_BuildItemTooltip` (`0x2BD480`), appelle cette fonction puis insère la
   ligne juste avant la première ligne interne contenant `Damage:` ou `Defense:`.
   D2R assemble ce buffer du bas vers le haut : cette position correspond à la
@@ -90,9 +90,9 @@ tests statiques couvrent weapon à un dommage, throwing weapon à deux dommages,
 armor, absence d'ancre, capacité nulle et item déjà socketé. Le build, le cold
 start et les tests sont réussis. Les DLL déployées dans la source gouvernée,
 le dossier global et le dossier mod-local portent respectivement les SHA-256
-`DBC6AB50C85CB93842C70B2580FD31448E651E8111E7DE14CE39FE981ECF9920`
+`069CD1A9C2DD3F73E124A8D4E67E0EFB93E5D584B03438FD3745CB7FD46C78F8`
 pour Advanced Item Tooltips et
-`1A46F4777395C12788805C1AEF4986D324EFDA3FA9FA5F28EDABA895571CF438`
+`EB1A0052D71EB4D640FC179636B09B217DAD52CDD2135965A5BD47E3BC468026`
 pour Transmogrify. Le cold start BKVince charge 24 plugins actifs, avec 0 rejet,
 0 échec et 20 memory patches appliqués sur 20. La validation visuelle finale
 des trois cas — weapon, armor et base déjà socketée — reste le dernier gate en
@@ -106,11 +106,12 @@ conserve sa couleur native et reçoit sur la même ligne une plage verte
 ajoutées sans changer la police. Les objets d'armor affichent aussi la plage de
 défense de base et les propriétés de défense variables.
 
-Le calcul doit provenir des tables effectivement chargées par le mod actif,
-sans dépendance à BKVince ni à des TXT libres obligatoirement présents sur le
-disque. Les tables compilées en mémoire sont la source prioritaire; un repli
-filesystem n'est acceptable que si son identité avec les données chargées est
-prouvée.
+Le calcul doit provenir des TXT du mod effectivement chargé, conformément à la
+décision explicite de Vincent. La première implantation lit le dossier Excel
+loose du `modDirectory` actif, comme le font déjà les plugins eezstreet qui
+consomment des tables. Elle ne contient aucune donnée BKVince codée en dur et
+échoue fermée lorsque ces TXT ne sont pas disponibles. Le support futur des
+mods entièrement packés exigera une preuve séparée des tables compilées.
 
 La plage d'une ligne est la somme des contributions de toutes les sources
 réellement portées par l'objet, et non le meilleur affixe individuel possible.
@@ -137,3 +138,38 @@ supportée, il omet la plage et journalise le diagnostic. Aucune plage
 approximative ne doit être présentée comme exacte. La fonctionnalité reste dans
 la DLL autonome hybride `AdvancedItemTooltips.dll` pendant son incubation et
 est destinée à la future `plugin-items.dll` sous configuration JSON.
+
+## Implantation 2.0.0 du 27 juillet 2026
+
+- `ItemData` 92777 est lu aux offsets prouvés de qualité, file index, préfixes,
+  suffixes et automagic; les RVA runtime demeurent strictement verrouillées au
+  build 92777;
+- `properties.txt` est décodé uniquement pour les fonctions simples prouvées;
+  les fonctions paramétrées ou multi-valeurs non modélisées sont omises;
+- les contributions partageant une statistique canonique sont additionnées,
+  notamment Enhanced Damage et les dégâts minimum/maximum;
+- les propriétés fixes de `cubemain.txt` sont combinées aux affixes réels des
+  crafted items; les recettes incompatibles avec le roll visible sont filtrées
+  et les survivantes doivent produire exactement la même plage;
+- le test réel BKVince confirme le gate obligatoire : suffixe `+10% FCR` plus
+  craft `5-10% FCR` produit `[15 - 20]`;
+- la plage utilise le vert privé D2R puis restaure le dernier marqueur couleur
+  de la ligne, sans changer la police ni recolorer le modifier natif;
+- la défense de base est ajoutée en blanc sous `Defense` seulement lorsqu'elle
+  peut être reconstruite exactement; la présence d'Enhanced Defense la fait
+  omettre pour cette tranche;
+- Transmogrify demeure l'unique propriétaire du hook final et appelle l'export
+  borné d'Advanced Item Tooltips avant Max Sockets et avant le fenêtrage
+  d'Extended Item Stats;
+- builds Debug/Release et tests unitaires réussis;
+- déploiement mod-local vérifié par hashes : Advanced Item Tooltips
+  `4B621A76916993C676FE07821A1D8810A848052F11EBD2E6FDEBA450BC5573A1` et
+  Transmogrify
+  `B004FF2DA3BD391F24EDE6405BCB0FDAD7927761958FAFFFC3FDDF32B2D85E4B`;
+- cold start réussi : Advanced Item Tooltips 2.0.0 charge son catalogue sans
+  avertissement, Transmogrify 1.2.5 accepte ses trois hooks, et D2RLoader
+  termine avec `scanned=27 active=25 disabled=2 rejected=0 failed=0` et
+  `scanned=20 applied=20 disabled=0 failed=0` pour les memory patches.
+
+Les gates restants sont la validation visuelle des familles représentatives et
+la matrice souris/manette/contextes; le cold start ne les remplace pas.

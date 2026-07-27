@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-27T12:09:05.9932634+00:00",
+    "generatedAt":  "2026-07-27T14:50:23.8626857+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -13632,7 +13632,7 @@
                                                                                 "path":  "data-BKVince/BKVince.mpq/RepairCostsCap.json",
                                                                                 "kind":  "file"
                                                                             },
-{
+                                                                            {
                                                                                 "name":  "VendorStockRefresh.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/VendorStockRefresh.json",
                                                                                 "kind":  "file"
@@ -13847,6 +13847,21 @@
                                                                                                                       {
                                                                                                                           "name":  "README.md",
                                                                                                                           "path":  "data-BKVince/d2rloader/plugins/AdvancedItemTooltips-src/README.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "socket_tooltip.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/AdvancedItemTooltips-src/socket_tooltip.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "socket_tooltip.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/AdvancedItemTooltips-src/socket_tooltip.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "socket_tooltip_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/AdvancedItemTooltips-src/socket_tooltip_tests.cpp",
                                                                                                                           "kind":  "file"
                                                                                                                       },
                                                                                                                       {
@@ -14692,21 +14707,21 @@
                                                                                                                       }
                                                                                                                   ]
                                                                                                  },
-{
+                                                                                                 {
                                                                                                      "name":  "VendorStockRefresh-src",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/VendorStockRefresh-src",
                                                                                                      "kind":  "directory",
                                                                                                      "meta":  {
-                                                                                                         "role":  "x-plugin-incubation-source",
-                                                                                                         "summary":  "Sources, tests et documentation du prototype autonome Vendor Stock Refresh pour D2R 3.2.92777.",
-                                                                                                         "agentAccess":  "read-write",
-                                                                                                         "status":  "active",
-                                                                                                         "policy":  {
-                                                                                                             "editable":  true,
-                                                                                                             "canonical":  true,
-                                                                                                             "generated":  false
-                                                                                                         }
-                                                                                                     },
+                                                                                                                  "role":  "x-plugin-incubation-source",
+                                                                                                                  "summary":  "Sources, tests et documentation du prototype autonome Vendor Stock Refresh pour D2R 3.2.92777.",
+                                                                                                                  "agentAccess":  "read-write",
+                                                                                                                  "status":  "active",
+                                                                                                                  "policy":  {
+                                                                                                                                 "editable":  true,
+                                                                                                                                 "canonical":  true,
+                                                                                                                                 "generated":  false
+                                                                                                                             }
+                                                                                                              },
                                                                                                      "children":  [
                                                                                                                       {
                                                                                                                           "name":  "CMakeLists.txt",
@@ -14741,8 +14756,8 @@
                                                                                                                   ]
                                                                                                  },
                                                                                                  {
-                                                                                                     "name":  "AdvancedItemTooltips.dll.disabled",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/AdvancedItemTooltips.dll.disabled",
+                                                                                                     "name":  "AdvancedItemTooltips.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/AdvancedItemTooltips.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -14870,7 +14885,7 @@
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/Transmogrify.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
-{
+                                                                                                 {
                                                                                                      "name":  "VendorStockRefresh.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/VendorStockRefresh.dll",
                                                                                                      "kind":  "file"

@@ -76,6 +76,8 @@ using BuildItemTooltipFn = void*(__fastcall*)(
 using EnsureStringCapacityFn = void(__fastcall*)(void*, std::size_t) noexcept;
 using BuildSocketLineFn = std::size_t(__cdecl*)(void*, char*, std::size_t) noexcept;
 using FindSocketLineInsertionFn = std::size_t(__cdecl*)(const char*, std::size_t) noexcept;
+using EnhanceItemTooltipFn = std::size_t(__cdecl*)(
+    void*, const char*, std::size_t, char*, std::size_t) noexcept;
 using TooltipTransformFn = void*(__cdecl*)(void*, void*) noexcept;
 using TooltipOwnerFn = bool(__cdecl*)() noexcept;
 using ReadableUseItemFn = bool(__cdecl*)(void*) noexcept;
@@ -123,6 +125,7 @@ BuildItemTooltipFn OriginalBuildItemTooltip{};
 EnsureStringCapacityFn EnsureStringCapacity{};
 BuildSocketLineFn BuildSocketLine{};
 FindSocketLineInsertionFn FindSocketLineInsertion{};
+EnhanceItemTooltipFn EnhanceItemTooltip{};
 GetLocalizedStringFn GetLocalizedString{};
 UnitByteFn GetItemDataContext{};
 GetUnitClassIdFn GetUnitClassId{};
@@ -157,7 +160,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "transmogrify",
     .name = "Transmogrify",
-    .version = "1.2.4",
+    .version = "1.2.5",
     .author = "RuffnecKk",
     .description = "Transforms configured items with a right-click.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -426,7 +429,16 @@ void* TransformTransmogrifyTooltip(void* result, void* item) noexcept {
         if (length == 0 || length > 16 * 1024 || !IsReadable(data, length + 1)) return result;
 
         const std::string original(data, length);
-        auto enhanced = InsertMaxSocketsBelowPrimaryStat(original, item);
+        auto enhanced = original;
+        if (EnhanceItemTooltip) {
+            std::array<char, 64 * 1024> buffer{};
+            const auto enhancedLength = EnhanceItemTooltip(
+                item, enhanced.data(), enhanced.size(), buffer.data(), buffer.size());
+            if (enhancedLength > 0 && enhancedLength < buffer.size()) {
+                enhanced.assign(buffer.data(), enhancedLength);
+            }
+        }
+        enhanced = InsertMaxSocketsBelowPrimaryStat(std::move(enhanced), item);
         auto* sourceRecord = ItemRecord(item);
         if (IsTransmogrifyRecord(sourceRecord)) {
             const auto line = ResolveTransmogrifyTooltipLine(item, sourceRecord);
@@ -683,8 +695,8 @@ auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void
     if (!command || !command->plugin) return D2RL::ConsoleCommandResult::Failed;
     command->plugin->WriteConsoleMessage(
         Settings.manualTooltip.empty()
-            ? "Transmogrify 1.2.4: same-container TXT transformations are active; tooltip=automatic."
-            : "Transmogrify 1.2.4: same-container TXT transformations are active; tooltip=manual.");
+            ? "Transmogrify 1.2.5: same-container TXT transformations are active; tooltip=automatic."
+            : "Transmogrify 1.2.5: same-container TXT transformations are active; tooltip=manual.");
     return D2RL::ConsoleCommandResult::Handled;
 }
 
@@ -715,6 +727,8 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
             GetProcAddress(advanced, "AdvancedItemTooltipsBuildSocketLine"));
         FindSocketLineInsertion = reinterpret_cast<FindSocketLineInsertionFn>(
             GetProcAddress(advanced, "AdvancedItemTooltipsFindSocketLineInsertion"));
+        EnhanceItemTooltip = reinterpret_cast<EnhanceItemTooltipFn>(
+            GetProcAddress(advanced, "AdvancedItemTooltipsEnhanceTooltip"));
     }
     if (!BuildSocketLine || !FindSocketLineInsertion) {
         context->LogWarn("Transmogrify: AdvancedItemTooltips integration is unavailable.");
@@ -855,8 +869,8 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         return false;
     }
     context->LogInfo(TooltipHookInstalled
-        ? "Transmogrify 1.2.4 native hooks active; tooltip owner; ReadableItems delegated when loaded."
-        : "Transmogrify 1.2.4 native hooks active; tooltip delegated to ExtendedItemStats; ReadableItems delegated when loaded.");
+        ? "Transmogrify 1.2.5 native hooks active; tooltip owner; ReadableItems delegated when loaded."
+        : "Transmogrify 1.2.5 native hooks active; tooltip delegated to ExtendedItemStats; ReadableItems delegated when loaded.");
     return true;
 }
 
