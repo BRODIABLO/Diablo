@@ -193,6 +193,22 @@
       ]
     },
     {
+      "id": "transmute-hotkey",
+      "name": "Transmute Hotkey",
+      "status": "paused",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/transmute-hotkey-3.2.md",
+      "nextGate": "Resume only on Vincent's explicit request; choose the default hotkey and trace both visible convert widgets plus their native UI-message dispatch paths before implementation.",
+      "include": [
+        "Mission/transmute-hotkey-3.2.md",
+        "addons/TransmuteHotkey/**",
+        "data-BKVince/BKVince.mpq/TransmuteHotkey.json",
+        "data-BKVince/d2rloader/plugins/TransmuteHotkey-src/**",
+        "data-BKVince/d2rloader/plugins/TransmuteHotkey.dll*",
+        "scripts/reverse-engineering/transmute-hotkey*"
+      ]
+    },
+    {
       "id": "equipped-item-to-cube",
       "name": "Equipped Item to Cube",
       "status": "paused",
@@ -306,6 +322,7 @@
         "repair-costs-cap",
         "prevent-merc-death-in-town",
         "vendor-stock-refresh",
+        "transmute-hotkey",
         "equipped-item-to-cube",
         "cube-quick-move-bottom-right"
       ],
@@ -324,6 +341,7 @@
         "repair-costs-cap",
         "prevent-merc-death-in-town",
         "vendor-stock-refresh",
+        "transmute-hotkey",
         "equipped-item-to-cube"
       ],
       "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."
