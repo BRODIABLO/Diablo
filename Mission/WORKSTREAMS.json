@@ -177,6 +177,22 @@
       ]
     },
     {
+      "id": "equipped-item-to-cube",
+      "name": "Equipped Item to Cube",
+      "status": "paused",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/equipped-item-to-cube-3.2.md",
+      "nextGate": "After the short Vendor Stock Refresh milestone, trace Shift equipped-to-inventory, Ctrl inventory-to-Cube and Ctrl equipped-to-Cube to identify the first divergent branch before implementation.",
+      "include": [
+        "Mission/equipped-item-to-cube-3.2.md",
+        "addons/EquippedItemToCube/**",
+        "data-BKVince/BKVince.mpq/EquippedItemToCube.json",
+        "data-BKVince/d2rloader/plugins/EquippedItemToCube-src/**",
+        "data-BKVince/d2rloader/plugins/EquippedItemToCube.dll*",
+        "scripts/reverse-engineering/equipped-item-to-cube*"
+      ]
+    },
+    {
       "id": "rift-terror-zone-group",
       "name": "Rift Terror Zone Group",
       "status": "paused",
@@ -273,7 +289,8 @@
         "readable-items-clue-scrolls",
         "repair-costs-cap",
         "prevent-merc-death-in-town",
-        "vendor-stock-refresh"
+        "vendor-stock-refresh",
+        "equipped-item-to-cube"
       ],
       "reason": "Governed native evidence registry shared by native plugin missions."
     },
@@ -289,7 +306,8 @@
         "readable-items-clue-scrolls",
         "repair-costs-cap",
         "prevent-merc-death-in-town",
-        "vendor-stock-refresh"
+        "vendor-stock-refresh",
+        "equipped-item-to-cube"
       ],
       "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."
     },
