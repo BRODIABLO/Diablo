@@ -3,11 +3,11 @@
     // to force an exact value. Different bounds roll an inclusive range.
     // Every result is capped by the item's base, type, item level, and inventory size.
     "normal": {
-        "magic": null,
-        "rare": null,
-        "set": null,
-        "unique": null,
-        "crafted": null
+        "magic": { "minSockets": 2, "maxSockets": 3 },
+        "rare": { "minSockets": 2, "maxSockets": 2 },
+        "set": { "minSockets": 2, "maxSockets": 2 },
+        "unique": { "minSockets": 2, "maxSockets": 2 },
+        "crafted": { "minSockets": 2, "maxSockets": 2 }
     },
     "nightmare": {
         "magic": null,
@@ -25,5 +25,5 @@
     },
 
     // Emit one log line for each configured Larzuk reward.
-    "diagnostics": false
+    "diagnostics": true
 }

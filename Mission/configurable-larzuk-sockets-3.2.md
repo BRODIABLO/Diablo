@@ -1,9 +1,10 @@
 # Configurable Larzuk Sockets — D2R 3.2.92777
 
-Dernière mise à jour : 24 juillet 2026
+Dernière mise à jour : 27 juillet 2026
 
-Statut : mission active; prototype autonome `0.1.0` compilé et contrôlé
-statiquement, sans synchronisation runtime ni archive publique.
+Statut : mission active; prototype autonome `0.1.0` compilé et témoin
+`Normal / set = 2` validé en jeu. Le profil de travail passe maintenant à la
+matrice groupée des cinq qualités en Normal; aucune archive publique n’existe.
 
 ## Décisions confirmées
 
@@ -131,17 +132,77 @@ leur confiance.
   conserve le plafond physique `invwidth × invheight`, tire la plage inclusive
   sur le RNG de l’objet, puis réutilise le flag et le setter natifs. Les
   qualités absentes ou `null` restent entièrement vanilla.
-- `LarzukSockets.json` contient les trois difficultés et les cinq qualités,
-  toutes à `null` par défaut afin de ne modifier aucun gameplay sans choix de
-  Vincent. Une configuration locale au mod a priorité sur le repli global; le
-  premier fichier présent mais invalide fait échouer explicitement le plugin.
+- `LarzukSockets.json` contient les trois difficultés et les cinq qualités. Le
+  commit initial du prototype les conservait toutes à `null`; le profil de
+  travail active maintenant la matrice groupée Normal (`magic = 2..3` et les
+  quatre autres qualités à `2`) avec diagnostics, tandis que Nightmare et Hell
+  restent à `null`. Une configuration locale au mod a priorité sur le repli
+  global; le premier fichier présent mais invalide fait échouer explicitement
+  le plugin.
 - Build Release x64 réussi; test natif de politique `1/1` vert; trois exports
   présents; aucune dépendance vers une DLL eezstreet. SHA-256 build et dépôt :
   `121F2B714CE6044838409850A328EC1E6A39E38A6E8D57C0BF171507667FD6F3`.
 
-Ce résultat n’est pas encore une validation fonctionnelle en jeu : aucune DLL
-ni configuration n’a été synchronisée vers le profil actif, et aucun ZIP
-public n’a été créé.
+## Validation runtime du témoin — 24 juillet 2026
+
+- allowlist déployée : `LarzukSockets.dll` et `LarzukSockets.json` uniquement,
+  sous `mods/BKVince/`;
+- SHA-256 DLL source/runtime identique :
+  `121F2B714CE6044838409850A328EC1E6A39E38A6E8D57C0BF171507667FD6F3`;
+- SHA-256 JSON source/runtime identique :
+  `5BBA0F343EA1E9E87977C950B61B888F33175790083E9B5D4C2F1AE4E31BA89E`;
+- log frais : build `92777`, configuration mod-locale chargée, hook natif
+  `0x375560` installé et `Larzuk Sockets 0.1.0` actif;
+- initialisation complète `24/24`, patches `20/20`, plugins `21/21`, avec
+  `disabled=0`, `rejected=0` et `failed=0`;
+- aucun échec de chargement Larzuk;
+- validation gameplay du 27 juillet 2026 : Vincent a confié un véritable set
+  item admissible à Larzuk et observé exactement deux sockets;
+- diagnostic frais correspondant : `difficulty=0 quality=5 configured=2-2
+  legalMax=3 result=2` à `11:17:23`.
+
+Ce résultat valide le déploiement, les hashes, la configuration, le hook et le
+témoin gameplay qui dépasse le plafond vanilla des set items. Vincent a
+explicitement confirmé que le crash observé pendant la même période appartient
+à d’autres tests séparés; il est donc exclu de la matrice Larzuk. Les autres
+qualités, la plage aléatoire, le clamp, les difficultés Nightmare/Hell et le
+multijoueur restent ouverts; aucun ZIP public n’a été créé.
+
+## Matrice groupée Normal déployée — 27 juillet 2026
+
+Le succès du témoin Set déclenche le bloc convenu avec Vincent :
+
+- `normal.magic = 2..3`;
+- `normal.rare = 2`;
+- `normal.set = 2`;
+- `normal.unique = 2`;
+- `normal.crafted = 2`;
+- les cinq qualités Nightmare et Hell restent à `null`.
+
+Le test de politique Release retourne `0`. Le JSON source et le JSON runtime
+BKVince sont byte-exactement identiques avec le SHA-256
+`A001C59494BFF05765FA389B0FCB7E393E32FF52419AD68867AAB339EDDE2454`.
+Le cold start frais de `11:21` accepte la configuration mod-locale, installe le
+hook `0x375560`, applique `20/20` patchsets, charge 25 plugins actifs avec deux
+dédoublonnages globaux attendus, `rejected=0`, `failed=0`, puis termine
+l’initialisation `24/24`. Les nouveaux cas Rare, Unique, Crafted et Magic
+restent `not run` jusqu’aux observations en jeu.
+
+## Archive de test locale — 26 juillet 2026
+
+À la demande de Vincent, une archive destinée à un testeur externe a été créée
+sous `analysis-cache/test-packages/` sans l’ajouter à Git :
+
+- fichier : `LarzukSockets-0.1.0-normal-set-2-test.zip`;
+- contenu exact à la racine : `LarzukSockets.dll` et `LarzukSockets.json`;
+- configuration embarquée : uniquement `normal.set = 2`, diagnostics activés;
+- SHA-256 ZIP :
+  `CFE4BF6C3CEB758874ABFD197FC2A92F64F630B8C0CC792AD1B7EABB158E9878`;
+- les deux fichiers extraits ont des hashes byte-exact identiques aux sources
+  et au runtime BKVince validé.
+
+Cette archive est un paquet de test, pas une release publique : la matrice
+gameplay, les portées globale/mod-locale et le multijoueur restent ouvertes.
 
 ## Preuves et audit requis avant implantation
 
@@ -177,8 +238,9 @@ ce recadrage sont seulement des indices sémantiques. Leurs adresses et octets
 
 ## Prochain gate
 
-Choisir les valeurs réelles `minSockets`/`maxSockets` pour les 15 combinaisons,
-activer au moins une règle de témoin, puis appliquer le workflow runtime : cold
-start, logs frais, test Larzuk sur chaque qualité et difficulté, plafonds
-physiques et `ilvl`, consommation de quête, Infinite Larzuk, solo/hôte/joiner
-et portées globale/mod-locale. Aucun ZIP avant fermeture de cette matrice.
+Avec la matrice groupée Normal déjà déployée et cold-startée (`magic = 2..3`,
+`rare = 2`, `set = 2`, `unique = 2` et `crafted = 2`), observer une récompense
+Rare, Unique et Crafted, puis répéter Magic jusqu’à obtenir les deux bornes 2
+et 3 sur une base dont `legalMax >= 3`. Tester ensuite le clamp à un socket et
+Infinite Larzuk avant d’étendre les mêmes règles aux difficultés Nightmare et
+Hell. Aucun ZIP public avant fermeture de cette matrice.
