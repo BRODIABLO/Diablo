@@ -384,6 +384,28 @@ le SHA-256
 `047DCC32F5A4315F7B83C13C0202F70DB52E57DC5A1FB077C54F4009606821D2`.
 Cette archive reste une livraison de test, pas une release fonctionnelle finale.
 
+Le 27 juillet 2026, le rapport de YupGoogl établit une invalidation manquante :
+après un reroll dans le Cube, le tooltip pouvait conserver les anciennes stats
+jusqu’au survol d’un autre objet. La cause était locale au plugin :
+`completeText` était conservé selon la seule identité du pointeur item et la
+version la plus longue gagnait, alors que le Cube peut modifier le contenu de
+l’objet en place. `ExtendedItemStats 0.3.17` conserve désormais un texte complet
+uniquement lorsqu’une passe contient une section tronquée reconnue pour la même
+génération. Toute autre différence devient immédiatement autoritaire, même si
+le nouveau tooltip est plus court ou possède exactement la même longueur; la
+position de défilement revient alors à la première ligne et l’ancre est
+remesurée. Les régressions automatisées couvrent les rerolls long vers court,
+à longueur égale et les reconstructions tronquées légitimes; les deux tests
+natifs Release passent. La DLL build/dépôt/runtime est byte-identique, porte la
+version `0.3.17`, mesure `439808` octets et son SHA-256 est
+`DC7E9F12867674F252F4F09B944A8CD1210ECF256475B51B6D30ADA19B82CD8E`.
+Le cold start mod-local accepte les dix hooks, applique 20 patchsets sur 20,
+termine avec `active=25`, `rejected=0`, `failed=0` et atteint `24/24`, sans
+nouveau rapport de crash. Trois assertions de données BKVince étrangères au
+plugin demeurent visibles dans ce démarrage. Le reroll réel dans le mod de
+YupGoogl reste un gate gameplay externe : il n’est pas déclaré réussi par
+inférence depuis les tests et le cold start.
+
 Les gates encore ouverts sont la confirmation fonctionnelle du fenêtrage à la
 manette, la mesure native d’overflow selon résolution/échelle UI, la validation
 runtime du renderer autonome de repli sans `FloatingDamage`, la matrice de cycle de vie complète

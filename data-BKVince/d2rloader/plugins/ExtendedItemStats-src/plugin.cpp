@@ -22,6 +22,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -31,7 +32,8 @@ using ruffneck::extended_item_stats::FragmentItem;
 using ruffneck::extended_item_stats::BuildFittedTooltipWindow;
 using ruffneck::extended_item_stats::CountVisibleTooltipTextUnits;
 using ruffneck::extended_item_stats::ExpandTooltipSections;
-using ruffneck::extended_item_stats::PreferMostCompleteTooltipText;
+using ruffneck::extended_item_stats::IsKnownTruncatedTooltipPass;
+using ruffneck::extended_item_stats::ReconcileTooltipGenerationText;
 using ruffneck::extended_item_stats::Reassembler;
 using ruffneck::extended_item_stats::ScrollTooltipByLines;
 using ruffneck::extended_item_stats::TooltipRefreshCoalescer;
@@ -168,6 +170,7 @@ struct TooltipState {
     bool renderTextInOverlay{};
     std::string visibleText;
     std::string completeText;
+    std::vector<std::string> knownTruncatedStatBlocks;
 };
 
 TooltipState ActiveTooltip{};
@@ -224,7 +227,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "extended-item-stats",
     .name = "Extended Item Stats",
-    .version = "0.3.16",
+    .version = "0.3.17",
     .author = "RuffnecKk",
     .description = "Supports heavy items and makes oversized tooltips scrollable.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -315,7 +318,7 @@ void LogTooltipProbe(
     std::snprintf(
         message,
         sizeof(message),
-            "ExtendedItemStats 0.3.16 tooltip probe: stage=%s; input=%zu bytes/%zu rows; output=%zu bytes/%zu visible rows; vanilla capacity=%u; overflow=%s; refused=%s.",
+            "ExtendedItemStats 0.3.17 tooltip probe: stage=%s; input=%zu bytes/%zu rows; output=%zu bytes/%zu visible rows; vanilla capacity=%u; overflow=%s; refused=%s.",
         stage,
         inputBytes,
         inputRows,
@@ -390,21 +393,37 @@ ReadableMouseInputFn FindReadableItemsMouseInput() noexcept {
         GetProcAddress(module, "ReadableItemsHandleMouseInput")) : nullptr;
 }
 
-std::string ExpandCapturedStatBlocks(
+struct CapturedTooltipText {
+    std::string text;
+    std::vector<std::string> truncatedStatBlocks;
+    bool expanded{};
+};
+
+CapturedTooltipText ExpandCapturedStatBlocks(
     std::string_view tooltip,
     void*) {
     // Captures are scoped by HookBuildItemTooltip on the same thread.  The
     // first argument of ITEMS_GetStatsDescription is not guaranteed to be the
     // same pointer identity as the outer tooltip builder's item argument.
     if (PendingStatExpansions.empty()) {
-        return std::string(tooltip);
+        return {.text = std::string(tooltip)};
     }
-    auto expanded = ExpandTooltipSections(tooltip, PendingStatExpansions);
-    if (expanded != tooltip) {
-        StatBlocksExpanded.fetch_add(PendingStatExpansions.size());
-    }
+    auto expansions = std::move(PendingStatExpansions);
     PendingStatExpansions.clear();
-    return expanded;
+    CapturedTooltipText captured{
+        .text = ExpandTooltipSections(tooltip, expansions),
+    };
+    if (captured.text != tooltip) {
+        captured.expanded = true;
+        captured.truncatedStatBlocks.reserve(expansions.size());
+        for (const auto& expansion : expansions) {
+            if (!expansion.truncated.empty()) {
+                captured.truncatedStatBlocks.push_back(expansion.truncated);
+            }
+        }
+        StatBlocksExpanded.fetch_add(expansions.size());
+    }
+    return captured;
 }
 
 void* TransformScrollableTooltip(void* result, void* item, void* unit = nullptr) noexcept {
@@ -433,7 +452,8 @@ void* TransformScrollableTooltip(void* result, void* item, void* unit = nullptr)
         }
 
         const std::string vanilla(data, length);
-        const auto currentText = ExpandCapturedStatBlocks(vanilla, item);
+        const auto capturedText = ExpandCapturedStatBlocks(vanilla, item);
+        const auto& currentText = capturedText.text;
         std::string original;
         std::size_t firstVisibleLine{};
         {
@@ -451,11 +471,32 @@ void* TransformScrollableTooltip(void* result, void* item, void* unit = nullptr)
                 ActiveTooltip.item = item;
             }
             // A single native hover can rebuild the same tooltip more than
-            // once. Some passes expose only the fixed-size native stat buffer;
-            // never let that shorter pass erase the already captured full
-            // description or its pagination state.
-            ActiveTooltip.completeText = PreferMostCompleteTooltipText(
-                currentText, ActiveTooltip.completeText);
+            // once. Retain the full cached description only when this pass
+            // contains a truncated stat block captured for that exact content
+            // generation. A Cube reroll can mutate the item in place, so its
+            // pointer alone must never preserve a different, longer tooltip.
+            const auto knownTruncatedPass = !capturedText.expanded
+                && IsKnownTruncatedTooltipPass(
+                    currentText, ActiveTooltip.knownTruncatedStatBlocks);
+            const auto selectedText = ReconcileTooltipGenerationText(
+                currentText, ActiveTooltip.completeText, knownTruncatedPass);
+            const auto contentGenerationChanged =
+                !ActiveTooltip.completeText.empty()
+                && selectedText != ActiveTooltip.completeText;
+            if (contentGenerationChanged) {
+                ActiveTooltip.firstVisibleLine = 0;
+                ActiveTooltip.anchorCaptured = false;
+            }
+            if (selectedText != ActiveTooltip.completeText) {
+                ActiveTooltip.completeText.assign(selectedText);
+            }
+            if (capturedText.expanded) {
+                ActiveTooltip.knownTruncatedStatBlocks =
+                    capturedText.truncatedStatBlocks;
+            } else if (!knownTruncatedPass
+                && contentGenerationChanged) {
+                ActiveTooltip.knownTruncatedStatBlocks.clear();
+            }
             original = ActiveTooltip.completeText;
             ActiveTooltip.unit = unit ? unit : LastHoveredUnit.load();
             ActiveTooltip.panel = LastTooltipPanel.load();
@@ -974,7 +1015,7 @@ void __fastcall HookGetStatsDescription(
             std::snprintf(
                 message,
                 sizeof(message),
-                "ExtendedItemStats 0.3.16 stat-buffer probe: caller-size=%u; truncated=%zu; expanded=%zu.",
+                "ExtendedItemStats 0.3.17 stat-buffer probe: caller-size=%u; truncated=%zu; expanded=%zu.",
                 bufferSize,
                 truncatedLength,
                 expandedLength);
@@ -1538,7 +1579,7 @@ auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void
     std::snprintf(
         message,
         sizeof(message),
-        "ExtendedItemStats 0.3.16: fixed max item bytes=%u; max in-flight=%u; timeout=%u ms; tooltip=%s/%u vanilla lines; overlay=%s; tooltip owner=%s; hook calls=%llu; expanded stat blocks=%llu; windowed=%llu; scrolls=%llu; oversized=%llu; fragmented=%llu; frames sent=%llu; frames received=%llu; reassembled=%llu; rejected=%llu.",
+        "ExtendedItemStats 0.3.17: fixed max item bytes=%u; max in-flight=%u; timeout=%u ms; tooltip=%s/%u vanilla lines; overlay=%s; tooltip owner=%s; hook calls=%llu; expanded stat blocks=%llu; windowed=%llu; scrolls=%llu; oversized=%llu; fragmented=%llu; frames sent=%llu; frames received=%llu; reassembled=%llu; rejected=%llu.",
         Settings.maxItemBytes,
         Settings.maxInFlightTransfers,
         Settings.reassemblyTimeoutMs,
@@ -1623,7 +1664,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
             "extended-item-stats", Status, "Show extended item transport status.")) {
         context->LogWarn("ExtendedItemStats: status command could not be registered.");
     }
-    const auto message = std::string("ExtendedItemStats 0.3.16 active; fixed max item bytes=")
+    const auto message = std::string("ExtendedItemStats 0.3.17 active; fixed max item bytes=")
         + std::to_string(Settings.maxItemBytes)
         + "; tooltip owner="
         + (TooltipHookInstalled ? "ExtendedItemStats" : (TooltipDelegated ? "Transmogrify" : "none"))

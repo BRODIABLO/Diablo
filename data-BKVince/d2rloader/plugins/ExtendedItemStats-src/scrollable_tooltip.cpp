@@ -317,12 +317,22 @@ std::string ExpandTooltipSections(
     return result;
 }
 
-std::string PreferMostCompleteTooltipText(
+bool IsKnownTruncatedTooltipPass(
     std::string_view current,
-    std::string_view cached) {
-    return cached.size() > current.size()
-        ? std::string(cached)
-        : std::string(current);
+    const std::vector<std::string>& knownTruncatedSections) noexcept {
+    return std::any_of(
+        knownTruncatedSections.begin(),
+        knownTruncatedSections.end(),
+        [current](const std::string& section) {
+            return !section.empty() && current.find(section) != std::string_view::npos;
+        });
+}
+
+std::string_view ReconcileTooltipGenerationText(
+    std::string_view current,
+    std::string_view cached,
+    bool knownTruncatedPass) noexcept {
+    return knownTruncatedPass && !cached.empty() ? cached : current;
 }
 
 TooltipWindow BuildFittedTooltipWindow(

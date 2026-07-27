@@ -82,9 +82,14 @@ std::string ExpandTooltipSections(
     std::string_view original,
     const std::vector<TooltipSectionExpansion>& expansions);
 
-std::string PreferMostCompleteTooltipText(
+bool IsKnownTruncatedTooltipPass(
     std::string_view current,
-    std::string_view cached);
+    const std::vector<std::string>& knownTruncatedSections) noexcept;
+
+std::string_view ReconcileTooltipGenerationText(
+    std::string_view current,
+    std::string_view cached,
+    bool knownTruncatedPass) noexcept;
 
 TooltipWindow BuildFittedTooltipWindow(
     std::string_view original,

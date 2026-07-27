@@ -71,12 +71,24 @@ int main() {
         truncatedTooltip,
         {{"missing", "missing\nreplacement"}}) == truncatedTooltip);
 
-    Require(PreferMostCompleteTooltipText(
-        "native truncated", "native truncated\nfull stat block") ==
-        "native truncated\nfull stat block");
-    Require(PreferMostCompleteTooltipText(
-        "new complete stat block", "old") == "new complete stat block");
-    Require(PreferMostCompleteTooltipText("new", "old") == "new");
+    const std::vector<std::string> knownTruncatedSections{
+        "native truncated",
+    };
+    Require(IsKnownTruncatedTooltipPass(
+        "footer\nnative truncated\nitem name", knownTruncatedSections));
+    Require(!IsKnownTruncatedTooltipPass(
+        "footer\nrerolled stats\nitem name", knownTruncatedSections));
+    Require(ReconcileTooltipGenerationText(
+        "footer\nnative truncated\nitem name",
+        "footer\nnative truncated\nfull stat block\nitem name",
+        true) ==
+        "footer\nnative truncated\nfull stat block\nitem name");
+    Require(ReconcileTooltipGenerationText(
+        "new", "old tooltip that is much longer", false) == "new");
+    Require(ReconcileTooltipGenerationText(
+        "new affix 02", "old affix 01", false) == "new affix 02");
+    Require(ReconcileTooltipGenerationText(
+        "new complete stat block", "old", false) == "new complete stat block");
 
     const std::string longFirstStat(540, 'A');
     const std::string longRemainingStats(540, 'B');
