@@ -1,6 +1,6 @@
 # Readable Items / Clue Scrolls — D2R 3.2.92777
 
-Dernière mise à jour : 26 juillet 2026
+Dernière mise à jour : 27 juillet 2026
 
 ## Décision produit confirmée
 
@@ -25,8 +25,8 @@ d’eezstreet.
 - la fixture initiale utilise le code technique `dmy` uniquement pour tester le
   framework; le moddeur choisira ensuite son véritable objet, son titre et son
   texte;
-- la phase 2 ajoutera un fichier audio optionnel par texte, avec arrêt,
-  interruption et relecture déterministes.
+- la version 0.4.0 accepte un fichier WAV ou FLAC optionnel par texte, avec
+  arrêt, interruption et relecture déterministes.
 
 ## Faits vérifiés
 
@@ -91,7 +91,8 @@ Le premier contrat, couvert par tests C++ purs, accepte :
     {
       "code": "dmy",
       "title": "Clue Scroll Test",
-      "text": "A bounded dummy message used only to validate Readable Items."
+      "text": "A bounded dummy message used only to validate Readable Items.",
+      "audioFile": "data/global/sfx/item/readable_items_test.flac"
     }
   ]
 }
@@ -100,8 +101,10 @@ Le premier contrat, couvert par tests C++ purs, accepte :
 Contraintes initiales : code ASCII visible de 1 à 4 octets, codes uniques,
 maximum 256 objets, titre non vide de 128 octets maximum et texte non vide de
 8 192 octets maximum. Une clé inconnue ou une configuration invalide est
-refusée. Le champ audio ne sera ajouté qu’en phase 2 afin de ne pas annoncer une
-fonction silencieusement ignorée.
+refusée. `audioFile` est optionnel; lorsqu'il est présent, il doit être un chemin
+relatif sûr de 260 octets maximum vers un `.wav` ou un `.flac`. Les chemins absolus, les
+composants `..`, les extensions étrangères et les caractères Windows interdits
+sont refusés avant le chargement du plugin.
 
 Le 26 juillet 2026, Vincent a explicitement démarré ce chantier en parallèle de
 Transmogrify. Le noyau C++ du lecteur couvre désormais l’ouverture d’un objet
@@ -116,7 +119,7 @@ repli sur la police courante lorsque cet index n’existe pas. L’état pur cou
 aussi la révélation progressive, le suivi automatique de la dernière ligne et
 la suspension de ce suivi pendant une relecture manuelle.
 
-## Témoin mod-local 0.2.1 prêt à retester
+## Témoin mod-local 0.3.0 prêt à tester
 
 Le témoin demandé par Vincent le 26 juillet 2026 est compilé et synchronisé dans
 le runtime BKVince. `ReadableItems.dll` demeure une DLL distincte attribuée à
@@ -174,26 +177,187 @@ parallèle par `Transmogrify 1.2.3`, SHA-256 `1A46F477...71CF438`, sans les cha�
 elle a été resynchronisée byte-exact dans le runtime et le cold start conjoint
 0.2.1/1.3.1 est vert. Le comportement gameplay reste à retester.
 
+Vincent a ensuite signalé que les clics sur `Close` et la scrollbar atteignaient
+encore Diablo comme commandes de déplacement. La version 0.2.2 ferme ce défaut
+sans ajouter de hook D2R ni de second hook Windows : le hook souris bas niveau
+déjà possédé par Extended Item Stats délègue chaque événement à l'export
+`ReadableItemsHandleMouseInput`. Readable Items publie ses zones interactives en
+coordonnées écran, traite lui-même Close, flèches, piste, drag et fast-forward,
+puis consomme le bouton bas et le relâchement sur tout le panneau. Les mouvements
+de souris restent transmis pendant le drag afin de ne pas figer le curseur.
+
 Preuves techniques du 26 juillet 2026 :
 
-- Readable Items 0.2.1 : 2/2 tests Release, dont le padding ItemsTxt exact,
+- Readable Items 0.2.2 : 2/2 tests Release, dont le padding ItemsTxt exact,
   la révélation progressive, le suivi/repli manuel et le déplacement absolu
-  borné employé par le drag;
+  borné employé par le drag, avec conversion piste-vers-offset testée aux deux
+  bornes, au milieu et sur une piste dégénérée;
 - Transmogrify : 1/1 test Release après ajout de la délégation;
-- ExtendedItemStats : 2/2 tests Release après ajout du transform et du rendu;
-- manifeste v2 et six exports présents dans `ReadableItems.dll`;
+- ExtendedItemStats 0.3.16 : 2/2 tests Release après ajout de la délégation
+  d'entrée souris;
+- manifeste v2 et sept exports présents dans `ReadableItems.dll`;
 - hashes source/runtime identiques pour les quatre fichiers déployés;
-- cold start 0.2.1 : 20/20 patchsets, 24 plugins actifs, zéro rejet, zéro échec et
-  séquence D2R complète jusqu’à 24/24;
+- cold start 0.2.2 : 20/20 patchsets, 24 plugins actifs, zéro rejet, zéro échec et
+  séquence D2R complète jusqu'à 24/24;
 - aucune erreur fraîche dans Readable Items, Transmogrify, ExtendedItemStats ou
   FloatingDamage.
 
 SHA-256 :
 
-- `ReadableItems.dll` 0.2.1 : `DC3C1EE68839A363CA8195766617AA89E6A8708B4F64823FAC355D45D6A5D45F`;
+- `ReadableItems.dll` 0.2.2 : `C96BE644BC472952A8DDF89D28E25709EFEE47CEF892A0E479AF58BEAE1E55A7`;
 - `ReadableItems.json` : `355D2BAAD8E8F83E357CA0A47CA255DD2FA3FB53CB70EC716743A373B7992FED`;
 - `Transmogrify.dll` hôte : `EB1A0052D71EB4D640FC179636B09B217DAD52CDD2135965A5BD47E3BC468026`;
-- `ExtendedItemStats.dll` hôte : `13B3B67BB69ACFA63947E7A225F7E2A83A88774B2C86E39726DDFA3D9566F341`.
+- `ExtendedItemStats.dll` 0.3.16 hôte : `CC3506166A6D57971815A2CAFF81E1C448F0E1246E96177FABC67FE14B0D700C`.
+
+Vincent confirme le 27 juillet 2026 que le témoin 0.2.2 fonctionne très bien.
+Cette observation ferme le retest nominal du panneau, de son rythme, de la
+scrollbar, du bouton `Close` et de la capture souris demandée avant la phase
+audio; les scénarios étendus de conteneurs, manette et multijoueur restent
+distincts.
+
+### Audio autonome 0.3.0
+
+Vincent demande ensuite un fichier audio propre au parchemin, sans faire parler
+Charsi ni dépendre d'un PNJ. La version 0.3.0 lit donc directement un WAV depuis
+`items[].audioFile`, relativement au dossier du `ReadableItems.json` réellement
+sélectionné. Elle ne modifie pas `sounds.txt`, n'appelle aucune primitive sonore
+92777 et n'ajoute aucun hook : un moteur XAudio2 privé reçoit le PCM du fichier.
+
+Le contrat initial accepte uniquement un RIFF/WAVE PCM non compressé, 16 bits,
+mono ou stéréo, de 8 à 192 kHz, avec un plafond de 64 MiB et des champs RIFF,
+débit, alignement et données cohérents. Le son démarre avec l'ouverture du
+lecteur. Il s'arrête sur `Close`, Escape, la commande console `close`,
+l'ouverture d'un autre objet ou le déchargement du plugin; une réouverture
+repart du début. Un fichier absent ou illisible produit un warning et laisse le
+texte entièrement utilisable.
+
+Le témoin demandé est
+`BKVince.mpq/data/global/sfx/item/readable_items_test.wav`. Il prononce clairement
+« Readable Items audio test. If you hear this message, custom scroll audio is
+working. » et ses propriétés sont vérifiées automatiquement : PCM 16 bits,
+deux canaux et 48 000 Hz.
+
+Preuves techniques du 27 juillet 2026 :
+
+- build Release x64 réussi, manifeste v2 et sept exports attendus présents;
+- 2/2 tests CTest passent : contrat JSON, chemins audio sûrs, cycles du lecteur
+  et inspection réelle du WAV livré en stéréo 48 kHz;
+- cadastre régénéré avec le nouveau header et le WAV, puis validé `VALID`;
+- DLL, JSON et WAV synchronisés seuls dans le profil BKVince avec SHA-256
+  source/runtime identiques;
+- cold start : Readable Items 0.3.0 accepté, `20/20` patchsets,
+  `scanned=26 active=24 disabled=2 rejected=0 failed=0` et démarrage `24/24`;
+- aucun échec frais Readable Items au chargement. L'audition et les arrêts en
+  jeu restent à confirmer par Vincent.
+
+SHA-256 0.3.0 :
+
+- `ReadableItems.dll` : `CBFA4A6883BCEF7DBE7C27F1480D53A552977AB7021A032ECF341E9359528FF2`;
+- `ReadableItems.json` : `DE609CEA30C9DF8A448DE358C81EE560CB309A00BCEBE3E0EFCEC884335E6D63`;
+- `readable_items_test.wav` : `4218F785E4B9E78405B3F4B3C048DCEA5E6C4941227749262C97666DA5D15A7D`.
+
+Vincent confirme ensuite le 27 juillet 2026 que le témoin WAV est clairement
+audible en jeu. Cette observation ferme l'audition nominale 0.3.0 et motive le
+passage demandé à un format sans perte plus compact.
+
+### Décodage FLAC autonome 0.4.0
+
+La version 0.4.0 conserve le chemin WAV 16 bits et ajoute les fichiers FLAC
+natifs dans `items[].audioFile`. Le décodeur `dr_flac` 0.13.4 de David Reid est
+lié statiquement sous MIT-0 depuis le commit épinglé
+`34a89ffe6bfc4d78db6888fef76cd408dba18185`; aucune DLL additionnelle n'est
+requise et aucune primitive audio ou table `sounds.txt` de D2R n'est modifiée.
+
+Le plugin lit le FLAC depuis la mémoire, exige un ou deux canaux et une fréquence
+de 8 à 192 kHz, puis remet à XAudio2 un PCM signé 32 bits afin de conserver une
+source FLAC allant jusqu'à 32 bits. Le fichier compressé reste borné à 64 MiB et
+le PCM décodé à 128 MiB afin de refuser les fichiers dont l'expansion serait
+excessive. Les chemins absolus, traversées, extensions inconnues, FLAC tronqués,
+canaux ou fréquences hors contrat sont refusés sans empêcher l'ouverture du
+texte.
+
+Le témoin 0.4.0 est
+`BKVince.mpq/data/global/sfx/item/readable_items_test.flac`. Il est la conversion
+lossless du WAV déjà entendu par Vincent : stéréo, 48 000 Hz, source 16 bits,
+7,5 secondes et 159 046 octets au lieu de 1 439 950 octets. La configuration
+mod-locale pointe maintenant exclusivement vers ce FLAC.
+
+Preuves techniques du 27 juillet 2026 :
+
+- workbench D2R 3.2.92777 vérifié; aucun hook, RVA ou ABI n'a changé;
+- référence PluginPack `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`
+  vérifiée et aucun framework audio concurrent trouvé;
+- build Release x64 réussi, manifeste v2 et sept exports attendus présents;
+- 2/2 tests CTest passent, dont acceptation `.flac`, rejet d'un FLAC tronqué et
+  décodage réel du témoin livré en stéréo 48 kHz avec échantillons non vides;
+- DLL, JSON et FLAC synchronisés seuls dans le profil BKVince avec hashes
+  source/runtime identiques;
+- cold start 0.4.0 : `20/20` patchsets,
+  `scanned=26 active=24 disabled=2 rejected=0 failed=0` et démarrage `24/24`;
+- le log frais sélectionne le JSON mod-local et annonce
+  `optional WAV/FLAC audio enabled`; un clic droit a ensuite produit
+  `audio started` sur `readable_items_test.flac` sans erreur. L'audition FLAC
+  reste à confirmer explicitement par Vincent.
+
+SHA-256 0.4.0 :
+
+- `ReadableItems.dll` : `AEAEFE4B78BE598C354037B03F0C49520B7D77B633F83E6483E4331EDE075A44`;
+- `ReadableItems.json` : `4E37AA9FCF44D95260D8A5A3F05E8CA482EE36FCF0743C9517CD88B3AF73054F`;
+- `readable_items_test.flac` : `EF9BEDB1141A21FCA891889E0A06F96DEC8AC006DAE49F06CE1F58B13278F15B`.
+
+### Activation `pSpell` 0.5.0
+
+Vincent confirme le 27 juillet 2026 que les acquis du lecteur et du FLAC sont
+conservés, mais corrige le contrat demandé : l'activation doit être configurée
+comme un `pSpell`, et non seulement par la présence d'un code dans le JSON.
+
+La version 0.5.0 réserve donc la sentinelle privée `pSpell=-2`. Le record compilé
+est lu à l'offset prouvé `ItemsTxt+0x94`; le code reste lu à `+0x80`. Readable
+Items ne prend la commande que lorsque cette sentinelle est présente. Le JSON
+fournit ensuite le titre, le texte et l'audio optionnel, mais ne peut plus
+transformer à lui seul un objet vanilla en objet lisible. Une sentinelle sans
+entrée JSON est consommée sûrement et journalisée au lieu d'être transmise au
+dispatcher vanilla. Tous les autres `pSpell` sont délégués inchangés.
+
+Ce contrat reste un `pSpell` virtuel possédé par la DLL autonome : il n'étend
+pas la table native D2R avec un handler 16 non prouvé. `Transmogrify 1.3.1`
+conserve l'unique hook autoritaire `0x4F40C0` et appelle l'export
+`ReadableItemsHandleUseItem` avant le handler original; aucun hook D2R
+supplémentaire n'est installé.
+
+Le Town Portal Scroll `tsc` n'est plus une fixture Readable Items. Il conserve
+son `pSpell=2` vanilla et doit créer un portail normalement. Un témoin dédié
+`rds` (`Clue Scroll Test`) est ajouté en dernière ligne de `misc.txt`, sans
+déplacer les 277 Class IDs existants. Il copie l'art du parchemin, porte
+`useable=1`, `pSpell=-2`, `spawnable=0`, `PermStoreItem=1` et est disponible
+chez les vendeurs qui proposaient le témoin `tsc`. La chaîne localisée `rds`
+utilise l'ID 74077. Le script idempotent
+`scripts/migrate-bkvince/add-readable-items-test-witness.js` applique et vérifie
+la ligne avec `scripts/build-data/tsv.js`, CRLF et round-trip byte-exact.
+
+Preuves techniques du 27 juillet 2026 :
+
+- workbench 92777 et référence PluginPack épinglée vérifiés;
+- mutation `misc.txt` limitée à une ligne terminale et `item-names.json` à une
+  entrée; vérification idempotente `VALID (check)`;
+- build Release x64 réussi et 2/2 tests CTest verts, incluant la sentinelle
+  exacte et le témoin JSON `rds` avec décodage du FLAC réel;
+- `npm run verify:data` entièrement vert; le validateur Storage Bag exige
+  toujours son bloc gouverné contigu et byte-identique, mais accepte désormais
+  une extension étrangère après ce bloc afin de préserver tous les Class IDs;
+- DLL, JSON, `misc.txt`, `item-names.json` et FLAC synchronisés par allowlist
+  dans le profil BKVince avec hashes source/runtime identiques;
+- cold start 0.5.0 : plugin accepté, `20/20` patchsets,
+  `scanned=26 active=24 disabled=2 rejected=0 failed=0` et démarrage `24/24`;
+- le chargement des tables gameplay et des chaînes atteint 23/24 sans erreur.
+
+SHA-256 0.5.0 :
+
+- `ReadableItems.dll` : `C5494C5B0D2EC764B7804CC95209E970FBA97A31DE092FB0D3313803CBA7EAB1`;
+- `ReadableItems.json` : `E5A5A1C22CF1C83A08E7A806494B3B242A48B8A10A6927CC659AC6D4F4AB674A`;
+- `misc.txt` : `68D2160859916F9AB579CB66B0FDBA2E98CCD0C3B557A3EA21F2F53AF72D8DE2`;
+- `item-names.json` : `965DB141502B983063949144C30DB508F26D4A1F431BDFE3F2F662555F63F8ED`;
+- `readable_items_test.flac` : `EF9BEDB1141A21FCA891889E0A06F96DEC8AC006DAE49F06CE1F58B13278F15B`.
 
 Pour rendre le checkpoint Readable Items autonome sans absorber le chantier
 pondéré 1.3.1, le commit embarque aussi un hôte minimal Transmogrify 1.2.4 bâti
@@ -207,14 +371,21 @@ Matrice fonctionnelle actuelle :
 | Cas | Attendu | Statut |
 |---|---|---|
 | Console `readable-items preview` | panneau visible sans objet | not run |
-| Tooltip d’un `tsc` libre | `Right-click to read...` | pass visuel en 0.1.1 |
-| Clic droit `tsc` | lecteur ouvert, objet intact | failed avec hôte 1.2.3 sans délégation; hôte 1.3.1 restauré, à retester |
+| Tooltip du témoin `rds` | `Right-click to read...` | cold start 0.5.0 pass; gameplay not run |
+| Clic droit `rds`, `pSpell=-2` | lecteur ouvert, objet intact | cold start 0.5.0 pass; gameplay not run |
+| Clic droit `tsc`, `pSpell=2` | comportement vanilla, création d'un portail | not run |
 | Présentation PNJ | panneau supérieur, cadre doré, police Formal, sans UI technique | pass visuel en 0.2.0 |
-| Rythme de reveal 0.2.1 | environ 18 caractères/s, proche de Charsi | not run |
-| Piste et drag de scrollbar 0.2.1 | clic et déplacement proportionnel bornés | failed en 0.2.0; correction à retester |
+| Rythme de reveal 0.2.2 | environ 18 caractères/s, proche de Charsi | pass confirmé par Vincent |
+| Piste et drag de scrollbar 0.2.2 | clic et déplacement proportionnel bornés | pass confirmé par Vincent |
 | Flèches, Up/Down et Page Up/Page Down | défilement borné | not run |
 | Clic/Space/Enter | révèle immédiatement tout le texte | not run |
-| Bouton `Close` | ferme immédiatement le dialogue | absent en 0.2.0; correction à retester |
+| Bouton `Close` | ferme immédiatement le dialogue | pass confirmé par Vincent en 0.2.2 |
+| Capture souris du panneau | Close, texte, flèches, piste et thumb ne déplacent jamais le personnage | pass confirmé par Vincent en 0.2.2 |
+| Audio WAV 0.3.0 stéréo 48 kHz | message anglais clairement audible à l'ouverture | pass confirmé par Vincent |
+| Audio FLAC 0.4.0 stéréo 48 kHz | même message lossless clairement audible à l'ouverture | cold start pass; audition not run |
+| Interruption audio | Close et Escape coupent immédiatement le message | not run |
+| Relecture audio | chaque réouverture repart du début | not run |
+| Audio absent/invalide | texte lisible et warning sans crash | politique statique pass; runtime not run |
 | Escape puis réouverture | fermeture puis reprise progressive ligne 1 | not run |
 | Quantité et position | strictement inchangées | not run |
 | Transmogrify et ExtendedItemStats | comportements existants préservés | not run |
@@ -223,10 +394,11 @@ Matrice fonctionnelle actuelle :
 
 ## Prochain gate
 
-Vincent reteste maintenant le témoin `tsc` avec la 0.2.1 et valide le rythme
-ralenti, le clic dans la piste, le drag complet du curseur, le bouton `Close`,
-le suivi automatique, le reveal immédiat, la fermeture/réouverture et
-l’intégrité de l’objet. Si le témoin devient vert, implanter le fallback
+Vincent teste maintenant le témoin dédié `rds` avec la 0.5.0 : acheter `Clue
+Scroll Test` chez Akara, confirmer le tooltip et l'ouverture par `pSpell=-2`,
+entendre le FLAC, fermer pendant sa lecture avec `Close`, puis rouvrir pour
+confirmer le redémarrage au début. Un vrai `tsc` doit ensuite créer un portail
+normalement. Après ce gate `pSpell` et audio, implanter le fallback
 autonome pour tooltip, clic droit et rendu lorsque les trois hôtes sont absents,
 puis couvrir les autres conteneurs et la manette.
 
@@ -242,11 +414,12 @@ puis couvrir les autres conteneurs et la manette.
 - coexistence avec ExtendedItemStats, AdvancedItemTooltips et Transmogrify,
   sans hook concurrent;
 - installation globale et mod-locale, cold start sans rejet ni échec;
-- phase 2 séparée : audio absent, valide et invalide, synchronisation,
-  interruption, changement d’objet et relecture.
+- audio : absent, valide et invalide, interruption, changement d’objet et
+  relecture; le contrat et le témoin valide sont implantés, la matrice runtime
+  reste ouverte.
 
 ## Livraison interdite à ce stade
 
-La DLL 0.2.1 est uniquement un témoin local. Aucun ZIP public ni déclaration de
+La DLL 0.5.0 est uniquement un témoin local. Aucun ZIP public ni déclaration de
 livraison ne sont autorisés avant validation en jeu, fallback autonome et
 matrice de coexistence fermée.

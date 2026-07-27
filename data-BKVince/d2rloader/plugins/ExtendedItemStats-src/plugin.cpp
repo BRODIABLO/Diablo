@@ -99,6 +99,8 @@ using ResolveHoveredUnitFn = void*(__fastcall*)(void*) noexcept;
 using ResolveHoveredWidgetFn = void*(__fastcall*)(void*, std::uint64_t) noexcept;
 using TooltipTransformFn = void*(__cdecl*)(void*, void*) noexcept;
 using TooltipOwnerFn = bool(__cdecl*)() noexcept;
+using ReadableMouseInputFn = bool(__cdecl*)(
+    WPARAM, const MSLLHOOKSTRUCT*) noexcept;
 
 const D2RL::PluginContext* Context{};
 std::uint8_t* Base{};
@@ -222,7 +224,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "extended-item-stats",
     .name = "Extended Item Stats",
-    .version = "0.3.15",
+    .version = "0.3.16",
     .author = "RuffnecKk",
     .description = "Supports heavy items and makes oversized tooltips scrollable.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -313,7 +315,7 @@ void LogTooltipProbe(
     std::snprintf(
         message,
         sizeof(message),
-            "ExtendedItemStats 0.3.15 tooltip probe: stage=%s; input=%zu bytes/%zu rows; output=%zu bytes/%zu visible rows; vanilla capacity=%u; overflow=%s; refused=%s.",
+            "ExtendedItemStats 0.3.16 tooltip probe: stage=%s; input=%zu bytes/%zu rows; output=%zu bytes/%zu visible rows; vanilla capacity=%u; overflow=%s; refused=%s.",
         stage,
         inputBytes,
         inputRows,
@@ -380,6 +382,12 @@ TooltipTransformFn FindReadableItemsTransform() noexcept {
     const auto module = GetModuleHandleW(L"ReadableItems.dll");
     return module ? reinterpret_cast<TooltipTransformFn>(
         GetProcAddress(module, "ReadableItemsTransformTooltip")) : nullptr;
+}
+
+ReadableMouseInputFn FindReadableItemsMouseInput() noexcept {
+    const auto module = GetModuleHandleW(L"ReadableItems.dll");
+    return module ? reinterpret_cast<ReadableMouseInputFn>(
+        GetProcAddress(module, "ReadableItemsHandleMouseInput")) : nullptr;
 }
 
 std::string ExpandCapturedStatBlocks(
@@ -966,7 +974,7 @@ void __fastcall HookGetStatsDescription(
             std::snprintf(
                 message,
                 sizeof(message),
-                "ExtendedItemStats 0.3.15 stat-buffer probe: caller-size=%u; truncated=%zu; expanded=%zu.",
+                "ExtendedItemStats 0.3.16 stat-buffer probe: caller-size=%u; truncated=%zu; expanded=%zu.",
                 bufferSize,
                 truncatedLength,
                 expandedLength);
@@ -1240,6 +1248,10 @@ LRESULT CALLBACK TooltipMouseHook(
     LPARAM parameter) noexcept {
     if (code == HC_ACTION && CurrentProcessOwnsForegroundWindow()) {
         const auto* input = reinterpret_cast<const MSLLHOOKSTRUCT*>(parameter);
+        if (const auto readable = FindReadableItemsMouseInput();
+            readable && readable(message, input)) {
+            return 1;
+        }
         const auto active = TooltipIsActive();
         const auto hasRegion = ruffneck::extended_item_stats::tooltip_overlay::
             HasInteractionRegion();
@@ -1526,7 +1538,7 @@ auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void
     std::snprintf(
         message,
         sizeof(message),
-        "ExtendedItemStats 0.3.15: fixed max item bytes=%u; max in-flight=%u; timeout=%u ms; tooltip=%s/%u vanilla lines; overlay=%s; tooltip owner=%s; hook calls=%llu; expanded stat blocks=%llu; windowed=%llu; scrolls=%llu; oversized=%llu; fragmented=%llu; frames sent=%llu; frames received=%llu; reassembled=%llu; rejected=%llu.",
+        "ExtendedItemStats 0.3.16: fixed max item bytes=%u; max in-flight=%u; timeout=%u ms; tooltip=%s/%u vanilla lines; overlay=%s; tooltip owner=%s; hook calls=%llu; expanded stat blocks=%llu; windowed=%llu; scrolls=%llu; oversized=%llu; fragmented=%llu; frames sent=%llu; frames received=%llu; reassembled=%llu; rejected=%llu.",
         Settings.maxItemBytes,
         Settings.maxInFlightTransfers,
         Settings.reassemblyTimeoutMs,
@@ -1611,7 +1623,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
             "extended-item-stats", Status, "Show extended item transport status.")) {
         context->LogWarn("ExtendedItemStats: status command could not be registered.");
     }
-    const auto message = std::string("ExtendedItemStats 0.3.15 active; fixed max item bytes=")
+    const auto message = std::string("ExtendedItemStats 0.3.16 active; fixed max item bytes=")
         + std::to_string(Settings.maxItemBytes)
         + "; tooltip owner="
         + (TooltipHookInstalled ? "ExtendedItemStats" : (TooltipDelegated ? "Transmogrify" : "none"))

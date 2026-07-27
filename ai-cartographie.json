@@ -4256,6 +4256,16 @@
                                                                                                                                                                     "name":  "item_rune_sfx.flac",
                                                                                                                                                                     "path":  "data-BKVince/BKVince.mpq/data/global/sfx/item/item_rune_sfx.flac",
                                                                                                                                                                     "kind":  "file"
+                                                                                                                                                                },
+                                                                                                                                                                {
+                                                                                                                                                                    "name":  "readable_items_test.flac",
+                                                                                                                                                                    "path":  "data-BKVince/BKVince.mpq/data/global/sfx/item/readable_items_test.flac",
+                                                                                                                                                                    "kind":  "file"
+                                                                                                                                                                },
+                                                                                                                                                                {
+                                                                                                                                                                    "name":  "readable_items_test.wav",
+                                                                                                                                                                    "path":  "data-BKVince/BKVince.mpq/data/global/sfx/item/readable_items_test.wav",
+                                                                                                                                                                    "kind":  "file"
                                                                                                                                                                 }
                                                                                                                                                             ]
                                                                                                                                            }
@@ -14493,6 +14503,16 @@
                                                                                                                       {
                                                                                                                           "name":  "plugin.rc",
                                                                                                                           "path":  "data-BKVince/d2rloader/plugins/ReadableItems-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "readable_items_audio.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ReadableItems-src/readable_items_audio.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "readable_items_audio.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/ReadableItems-src/readable_items_audio.hpp",
                                                                                                                           "kind":  "file"
                                                                                                                       },
                                                                                                                       {
@@ -31238,6 +31258,11 @@
                                                            "path":  "scripts/migrate-bkvince",
                                                            "kind":  "directory",
                                                            "children":  [
+                                                                            {
+                                                                                "name":  "add-readable-items-test-witness.js",
+                                                                                "path":  "scripts/migrate-bkvince/add-readable-items-test-witness.js",
+                                                                                "kind":  "file"
+                                                                            },
                                                                             {
                                                                                 "name":  "analyze-staffmods-3.2.py",
                                                                                 "path":  "scripts/migrate-bkvince/analyze-staffmods-3.2.py",

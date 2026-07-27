@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -19,13 +20,20 @@ inline constexpr std::size_t MaximumItems = 256;
 inline constexpr std::size_t MaximumTooltipBytes = 128;
 inline constexpr std::size_t MaximumTitleBytes = 128;
 inline constexpr std::size_t MaximumTextBytes = 8192;
+inline constexpr std::size_t MaximumAudioPathBytes = 260;
 inline constexpr std::string_view DefaultTooltip = "Right-click to read...";
+inline constexpr std::int32_t ReadablePSpell = -2;
+
+inline constexpr bool IsReadablePSpell(std::int32_t pSpell) noexcept {
+    return pSpell == ReadablePSpell;
+}
 
 struct Entry {
     std::uint32_t packedCode{};
     std::string code;
     std::string title;
     std::string text;
+    std::string audioFile;
 };
 
 struct Config {
@@ -92,6 +100,47 @@ inline std::uint32_t PackItemCode(std::string_view code) {
     return packed;
 }
 
+inline bool HasAudioExtension(std::string_view value) noexcept {
+    const auto matches = [value](std::string_view extension) noexcept {
+        if (value.size() < extension.size()) return false;
+        const auto suffix = value.substr(value.size() - extension.size());
+        for (std::size_t index{}; index < extension.size(); ++index) {
+            const auto left = static_cast<unsigned char>(suffix[index]);
+            const auto right = static_cast<unsigned char>(extension[index]);
+            if (std::tolower(left) != std::tolower(right)) return false;
+        }
+        return true;
+    };
+    return matches(".wav") || matches(".flac");
+}
+
+inline bool IsSafeAudioPath(std::string_view value) noexcept {
+    if (value.empty() || value.size() > MaximumAudioPathBytes
+        || value.front() == '/' || value.front() == '\\') {
+        return false;
+    }
+    std::size_t componentStart{};
+    for (std::size_t index{}; index <= value.size(); ++index) {
+        const auto separator = index == value.size()
+            || value[index] == '/' || value[index] == '\\';
+        if (!separator) {
+            const auto character = static_cast<unsigned char>(value[index]);
+            if (character < 0x20 || character > 0x7E
+                || value[index] == ':' || value[index] == '*'
+                || value[index] == '?' || value[index] == '"'
+                || value[index] == '<' || value[index] == '>'
+                || value[index] == '|') {
+                return false;
+            }
+            continue;
+        }
+        const auto component = value.substr(componentStart, index - componentStart);
+        if (component.empty() || component == "." || component == "..") return false;
+        componentStart = index + 1;
+    }
+    return HasAudioExtension(value);
+}
+
 inline Config ParseConfig(const nlohmann::json& root) {
     ValidateObject(root, "configuration root", {"enabled", "tooltip", "items"});
 
@@ -117,7 +166,7 @@ inline Config ParseConfig(const nlohmann::json& root) {
     for (std::size_t index{}; index < root.at("items").size(); ++index) {
         const auto& item = root.at("items").at(index);
         const auto label = std::string("items[") + std::to_string(index) + "]";
-        ValidateObject(item, label, {"code", "title", "text"});
+        ValidateObject(item, label, {"code", "title", "text", "audioFile"});
 
         Entry entry;
         entry.code = ReadBoundedString(item, "code", label + ".code", 4);
@@ -126,6 +175,14 @@ inline Config ParseConfig(const nlohmann::json& root) {
             item, "title", label + ".title", MaximumTitleBytes);
         entry.text = ReadBoundedString(
             item, "text", label + ".text", MaximumTextBytes);
+        if (item.contains("audioFile")) {
+            entry.audioFile = ReadBoundedString(
+                item, "audioFile", label + ".audioFile", MaximumAudioPathBytes);
+            if (!IsSafeAudioPath(entry.audioFile)) {
+                throw std::invalid_argument(
+                    label + ".audioFile must be a safe relative .wav or .flac path");
+            }
+        }
         if (!codes.insert(entry.packedCode).second) {
             throw std::invalid_argument("duplicate item code: " + entry.code);
         }
@@ -143,6 +200,24 @@ inline const Entry* FindEntry(const Config& config, std::uint32_t packedCode) no
         if (item.packedCode == packedCode) return &item;
     }
     return nullptr;
+}
+
+inline std::size_t ScrollOffsetFromTrack(
+    float pointerPosition,
+    float trackStart,
+    float trackEnd,
+    float thumbSize,
+    float grabOffset,
+    std::size_t maximumOffset
+) noexcept {
+    const auto travel = trackEnd - trackStart - thumbSize;
+    if (maximumOffset == 0 || travel <= 0.0F) return 0;
+    const auto target = std::clamp(
+        pointerPosition - trackStart - grabOffset, 0.0F, travel);
+    return std::min(
+        maximumOffset,
+        static_cast<std::size_t>(std::lround(
+            target / travel * static_cast<float>(maximumOffset))));
 }
 
 class ReaderState final {

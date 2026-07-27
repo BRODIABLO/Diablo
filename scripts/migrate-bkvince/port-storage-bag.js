@@ -146,7 +146,20 @@ function suffixEquals(rows, expected) {
   return expected.every((row, index) => sameRow(rows[offset + index], row));
 }
 
-function ensureSuffix(table, expected, isGovernedRow, label, changed) {
+function contiguousGovernedBlockEquals(rows, expected, isGovernedRow) {
+  const first = rows.findIndex(isGovernedRow);
+  if (first < 0 || first + expected.length > rows.length) return false;
+  return expected.every((row, index) => sameRow(rows[first + index], row));
+}
+
+function ensureSuffix(
+  table,
+  expected,
+  isGovernedRow,
+  label,
+  changed,
+  allowTrailingForeignRows = false,
+) {
   const governed = table.rows.filter(isGovernedRow);
   if (governed.length === 0) {
     if (!CHECK_ONLY) {
@@ -156,7 +169,15 @@ function ensureSuffix(table, expected, isGovernedRow, label, changed) {
     return;
   }
   assert(governed.length === expected.length, `${label}: portage partiel (${governed.length}/${expected.length})`);
-  assert(suffixEquals(table.rows, expected), `${label}: les lignes gouvernees ne forment pas le suffixe attendu`);
+  const positionIsValid = allowTrailingForeignRows
+    ? contiguousGovernedBlockEquals(table.rows, expected, isGovernedRow)
+    : suffixEquals(table.rows, expected);
+  assert(
+    positionIsValid,
+    allowTrailingForeignRows
+      ? `${label}: les lignes gouvernees ne forment pas le bloc contigu attendu`
+      : `${label}: les lignes gouvernees ne forment pas le suffixe attendu`,
+  );
 }
 
 function prepareStatRows(source, target, changed) {
@@ -507,6 +528,7 @@ function prepare() {
     (row) => ITEM_CODES.includes(row[miscIndex]),
     'misc.txt',
     changed,
+    true,
   );
   assert(!target.misc.table.rows.some((row) => FORBIDDEN_CODES.includes(row[miscIndex])), 'misc: removers key/organ interdits');
 

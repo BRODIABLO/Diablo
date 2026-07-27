@@ -4,7 +4,10 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <nlohmann/json.hpp>
+#include <wrl/client.h>
+#include <xaudio2.h>
 
+#include "readable_items_audio.hpp"
 #include "readable_items_config.hpp"
 
 #include <algorithm>
@@ -19,6 +22,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <mutex>
 #include <string>
 #include <string_view>
@@ -26,11 +30,16 @@
 
 namespace {
 using ruffneckk::readable_items::Config;
+using ruffneckk::readable_items::DecodeFlacToPcm32;
+using ruffneckk::readable_items::DecodedFlac;
 using ruffneckk::readable_items::Entry;
 using ruffneckk::readable_items::FindEntry;
+using ruffneckk::readable_items::IsReadablePSpell;
 using ruffneckk::readable_items::PackItemCode;
+using ruffneckk::readable_items::ParsePcmWave;
 using ruffneckk::readable_items::ParseConfig;
 using ruffneckk::readable_items::ReaderState;
+using ruffneckk::readable_items::ScrollOffsetFromTrack;
 
 constexpr std::uint32_t SupportedBuild = 92777;
 constexpr std::uintptr_t GetItemsTxtRecordRva = 0x314110;
@@ -38,6 +47,7 @@ constexpr std::uintptr_t GetItemDataContextRva = 0x34A0E0;
 constexpr std::uintptr_t GetUnitClassIdRva = 0x349860;
 constexpr std::uintptr_t EnsureStringCapacityRva = 0x076210;
 constexpr std::size_t ItemCodeOffset = 0x080;
+constexpr std::size_t ItemPSpellOffset = 0x094;
 constexpr wchar_t ConfigFileName[] = L"ReadableItems.json";
 
 using GetItemsTxtRecordFn = std::uint8_t*(__fastcall*)(
@@ -47,6 +57,170 @@ using GetUnitClassIdFn = std::uint32_t(__fastcall*)(
     void*, const char*, int) noexcept;
 using EnsureStringCapacityFn = void(__fastcall*)(void*, std::size_t) noexcept;
 
+class AudioPlayer final {
+public:
+    bool Play(const std::filesystem::path& path, std::string& error) noexcept {
+        Stop();
+        try {
+            std::ifstream input(path, std::ios::binary | std::ios::ate);
+            if (!input.is_open()) {
+                throw std::runtime_error("file could not be opened");
+            }
+            const auto end = input.tellg();
+            if (end <= 0
+                || static_cast<std::uint64_t>(end)
+                    > ruffneckk::readable_items::MaximumAudioFileBytes) {
+                throw std::out_of_range("file is empty or exceeds 64 MiB");
+            }
+            bytes_.resize(static_cast<std::size_t>(end));
+            input.seekg(0, std::ios::beg);
+            input.read(
+                reinterpret_cast<char*>(bytes_.data()),
+                static_cast<std::streamsize>(bytes_.size()));
+            if (!input) throw std::runtime_error("file could not be read completely");
+
+            std::uint16_t channels{};
+            std::uint32_t sampleRate{};
+            std::uint16_t bitsPerSample{};
+            std::uint16_t blockAlign{};
+            const std::uint8_t* audioData{};
+            std::size_t audioBytes{};
+
+            auto extension = path.extension().string();
+            std::transform(
+                extension.begin(), extension.end(), extension.begin(),
+                [](unsigned char character) {
+                    return static_cast<char>(std::tolower(character));
+                });
+            if (extension == ".flac") {
+                decodedFlac_ = DecodeFlacToPcm32(bytes_);
+                channels = decodedFlac_.channels;
+                sampleRate = decodedFlac_.sampleRate;
+                bitsPerSample = 32;
+                blockAlign = static_cast<std::uint16_t>(channels * sizeof(std::int32_t));
+                audioData = reinterpret_cast<const std::uint8_t*>(
+                    decodedFlac_.samples.data());
+                audioBytes = decodedFlac_.samples.size() * sizeof(std::int32_t);
+            } else if (extension == ".wav") {
+                const auto wave = ParsePcmWave(bytes_);
+                channels = wave.channels;
+                sampleRate = wave.sampleRate;
+                bitsPerSample = wave.bitsPerSample;
+                blockAlign = wave.blockAlign;
+                audioData = bytes_.data() + wave.dataOffset;
+                audioBytes = wave.dataSize;
+            } else {
+                throw std::invalid_argument("audio file must use .wav or .flac");
+            }
+            if (audioBytes == 0 || audioBytes > std::numeric_limits<UINT32>::max()) {
+                throw std::out_of_range("decoded audio exceeds the XAudio2 buffer limit");
+            }
+            if (!EnsureEngine(error)) {
+                bytes_.clear();
+                decodedFlac_ = {};
+                return false;
+            }
+
+            WAVEFORMATEX format{};
+            format.wFormatTag = WAVE_FORMAT_PCM;
+            format.nChannels = channels;
+            format.nSamplesPerSec = sampleRate;
+            format.nAvgBytesPerSec = sampleRate * blockAlign;
+            format.nBlockAlign = blockAlign;
+            format.wBitsPerSample = bitsPerSample;
+            format.cbSize = 0;
+
+            auto result = engine_->CreateSourceVoice(&source_, &format);
+            if (FAILED(result)) {
+                error = HResultMessage("CreateSourceVoice", result);
+                Stop();
+                return false;
+            }
+
+            XAUDIO2_BUFFER buffer{};
+            buffer.Flags = XAUDIO2_END_OF_STREAM;
+            buffer.AudioBytes = static_cast<UINT32>(audioBytes);
+            buffer.pAudioData = audioData;
+            result = source_->SubmitSourceBuffer(&buffer);
+            if (FAILED(result)) {
+                error = HResultMessage("SubmitSourceBuffer", result);
+                Stop();
+                return false;
+            }
+            result = source_->Start();
+            if (FAILED(result)) {
+                error = HResultMessage("Start", result);
+                Stop();
+                return false;
+            }
+            return true;
+        } catch (const std::exception& exception) {
+            error = exception.what();
+            Stop();
+            return false;
+        }
+    }
+
+    void Stop() noexcept {
+        if (source_) {
+            source_->Stop();
+            source_->FlushSourceBuffers();
+            source_->DestroyVoice();
+            source_ = nullptr;
+        }
+        bytes_.clear();
+        decodedFlac_ = {};
+    }
+
+    void Shutdown() noexcept {
+        Stop();
+        if (mastering_) {
+            mastering_->DestroyVoice();
+            mastering_ = nullptr;
+        }
+        engine_.Reset();
+    }
+
+    [[nodiscard]] bool IsPlaying() const noexcept {
+        if (!source_) return false;
+        XAUDIO2_VOICE_STATE state{};
+        source_->GetState(&state, XAUDIO2_VOICE_NOSAMPLESPLAYED);
+        return state.BuffersQueued != 0;
+    }
+
+private:
+    static std::string HResultMessage(const char* operation, HRESULT result) {
+        std::array<char, 96> message{};
+        std::snprintf(
+            message.data(), message.size(), "%s failed with HRESULT 0x%08lX",
+            operation, static_cast<unsigned long>(result));
+        return message.data();
+    }
+
+    bool EnsureEngine(std::string& error) noexcept {
+        if (engine_ && mastering_) return true;
+        auto result = XAudio2Create(
+            engine_.ReleaseAndGetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
+        if (FAILED(result)) {
+            error = HResultMessage("XAudio2Create", result);
+            return false;
+        }
+        result = engine_->CreateMasteringVoice(&mastering_);
+        if (FAILED(result)) {
+            error = HResultMessage("CreateMasteringVoice", result);
+            engine_.Reset();
+            return false;
+        }
+        return true;
+    }
+
+    Microsoft::WRL::ComPtr<IXAudio2> engine_;
+    IXAudio2MasteringVoice* mastering_{};
+    IXAudio2SourceVoice* source_{};
+    std::vector<std::uint8_t> bytes_;
+    DecodedFlac decodedFlac_;
+};
+
 const D2RL::PluginContext* Context{};
 std::uint8_t* Base{};
 GetItemsTxtRecordFn GetItemsTxtRecord{};
@@ -55,10 +229,17 @@ GetUnitClassIdFn GetUnitClassId{};
 EnsureStringCapacityFn EnsureStringCapacity{};
 Config Settings{};
 std::string LoadedConfigPath{"not loaded"};
+std::filesystem::path LoadedConfigDirectory;
 ReaderState Reader;
+AudioPlayer Audio;
 std::mutex ReaderMutex;
 std::atomic<std::uint64_t> OpenCount{};
 std::atomic<std::uint64_t> TooltipCount{};
+std::atomic<std::uint64_t> AudioStartCount{};
+std::atomic<std::uint64_t> AudioErrorCount{};
+std::atomic<std::uint64_t> MissingEntryCount{};
+std::atomic<bool> HostedMouseInputAvailable{};
+std::atomic<bool> ConsumeNextLeftButtonUp{};
 
 bool PreviousEscape{};
 bool PreviousUp{};
@@ -81,7 +262,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "readable-items",
     .name = "Readable Items",
-    .version = "0.2.1",
+    .version = "0.5.0",
     .author = "RuffnecKk",
     .description = "Opens configured item text when the player right-clicks it.",
     .flags = D2RL::PluginFlags::None,
@@ -123,7 +304,12 @@ bool LoadConfig() noexcept {
             if (!input.is_open()) continue;
             const auto root = nlohmann::json::parse(input, nullptr, true, true);
             Settings = ParseConfig(root);
-            LoadedConfigPath = path.string();
+            auto resolved = std::filesystem::absolute(path, error);
+            if (error) resolved = path;
+            const auto canonical = std::filesystem::weakly_canonical(resolved, error);
+            if (!error) resolved = canonical;
+            LoadedConfigPath = resolved.string();
+            LoadedConfigDirectory = resolved.parent_path();
             return true;
         } catch (const std::exception& exception) {
             if (Context) {
@@ -140,19 +326,30 @@ bool LoadConfig() noexcept {
     return false;
 }
 
-const Entry* FindEntryForUnit(void* item) noexcept {
+struct ReadableItemLookup final {
+    bool usesReadablePSpell{};
+    std::uint32_t packedCode{};
+    const Entry* entry{};
+};
+
+ReadableItemLookup FindEntryForUnit(void* item) noexcept {
     if (!item || !GetItemDataContext || !GetUnitClassId || !GetItemsTxtRecord) {
-        return nullptr;
+        return {};
     }
     const auto context = GetItemDataContext(item);
     const auto classId = GetUnitClassId(item, nullptr, 0);
     auto* record = GetItemsTxtRecord(context, static_cast<std::int32_t>(classId));
-    if (!record || !IsReadableMemory(record + ItemCodeOffset, sizeof(std::uint32_t))) {
-        return nullptr;
+    if (!record
+        || !IsReadableMemory(record + ItemCodeOffset, sizeof(std::uint32_t))
+        || !IsReadableMemory(record + ItemPSpellOffset, sizeof(std::int32_t))) {
+        return {};
     }
     std::uint32_t code{};
+    std::int32_t pSpell{};
     std::memcpy(&code, record + ItemCodeOffset, sizeof(code));
-    return FindEntry(Settings, code);
+    std::memcpy(&pSpell, record + ItemPSpellOffset, sizeof(pSpell));
+    if (!IsReadablePSpell(pSpell)) return {};
+    return {true, code, FindEntry(Settings, code)};
 }
 
 std::string_view Trim(std::string_view value) noexcept {
@@ -265,6 +462,229 @@ struct PointerState final {
     bool released{};
 };
 
+struct InteractionLayout final {
+    HWND window{};
+    RECT panel{};
+    RECT body{};
+    RECT close{};
+    RECT scrollUp{};
+    RECT scrollDown{};
+    RECT scrollTrack{};
+    RECT scrollThumb{};
+    std::size_t maximumOffset{};
+    bool valid{};
+    bool dragging{};
+    float grabOffset{};
+};
+
+InteractionLayout Interaction;
+
+bool Contains(const POINT& point, const RECT& rectangle) noexcept {
+    return point.x >= rectangle.left && point.y >= rectangle.top
+        && point.x <= rectangle.right && point.y <= rectangle.bottom;
+}
+
+bool ToScreenRect(
+    HWND window,
+    float displayWidth,
+    float displayHeight,
+    const ImVec2& minimum,
+    const ImVec2& maximum,
+    RECT& result
+) noexcept {
+    if (!window || displayWidth <= 0.0F || displayHeight <= 0.0F) return false;
+    RECT client{};
+    POINT origin{};
+    if (!GetClientRect(window, &client) || !ClientToScreen(window, &origin)) return false;
+    const auto width = client.right - client.left;
+    const auto height = client.bottom - client.top;
+    if (width <= 0 || height <= 0) return false;
+    const auto xScale = static_cast<float>(width) / displayWidth;
+    const auto yScale = static_cast<float>(height) / displayHeight;
+    result.left = origin.x + static_cast<LONG>(std::lround(minimum.x * xScale));
+    result.top = origin.y + static_cast<LONG>(std::lround(minimum.y * yScale));
+    result.right = origin.x + static_cast<LONG>(std::lround(maximum.x * xScale));
+    result.bottom = origin.y + static_cast<LONG>(std::lround(maximum.y * yScale));
+    return result.right > result.left && result.bottom > result.top;
+}
+
+void ClearInteractionLayout() noexcept {
+    Interaction = {};
+}
+
+void PublishInteractionLayout(
+    HWND window,
+    float displayWidth,
+    float displayHeight,
+    const ImVec2& panelMinimum,
+    const ImVec2& panelMaximum,
+    const ImVec2& bodyMinimum,
+    const ImVec2& bodyMaximum,
+    const ImVec2& closeMinimum,
+    const ImVec2& closeMaximum,
+    const ImVec2& upMinimum,
+    const ImVec2& upMaximum,
+    const ImVec2& downMinimum,
+    const ImVec2& downMaximum,
+    const ImVec2& trackMinimum,
+    const ImVec2& trackMaximum,
+    const ImVec2& thumbMinimum,
+    const ImVec2& thumbMaximum,
+    std::size_t maximumOffset
+) noexcept {
+    InteractionLayout next{};
+    next.window = window;
+    next.maximumOffset = maximumOffset;
+    next.dragging = Interaction.dragging;
+    next.grabOffset = Interaction.grabOffset;
+    next.valid = ToScreenRect(
+        window, displayWidth, displayHeight, panelMinimum, panelMaximum, next.panel)
+        && ToScreenRect(window, displayWidth, displayHeight, bodyMinimum, bodyMaximum, next.body)
+        && ToScreenRect(window, displayWidth, displayHeight, closeMinimum, closeMaximum, next.close)
+        && ToScreenRect(window, displayWidth, displayHeight, upMinimum, upMaximum, next.scrollUp)
+        && ToScreenRect(window, displayWidth, displayHeight, downMinimum, downMaximum, next.scrollDown)
+        && ToScreenRect(window, displayWidth, displayHeight, trackMinimum, trackMaximum, next.scrollTrack)
+        && ToScreenRect(window, displayWidth, displayHeight, thumbMinimum, thumbMaximum, next.scrollThumb);
+    Interaction = next.valid ? next : InteractionLayout{};
+}
+
+void ResetReaderUi() noexcept {
+    LastRevealTick = 0;
+    RevealMilliCharacters = 0;
+    ScrollbarDragging = false;
+    ClearInteractionLayout();
+}
+
+void CloseReader() noexcept {
+    Reader.Close();
+    Audio.Stop();
+    ResetReaderUi();
+}
+
+bool PathComponentEquals(
+    const std::filesystem::path& left,
+    const std::filesystem::path& right
+) noexcept {
+    const auto& leftText = left.native();
+    const auto& rightText = right.native();
+    return CompareStringOrdinal(
+        leftText.c_str(), static_cast<int>(leftText.size()),
+        rightText.c_str(), static_cast<int>(rightText.size()), TRUE) == CSTR_EQUAL;
+}
+
+bool IsPathWithin(
+    const std::filesystem::path& root,
+    const std::filesystem::path& candidate
+) noexcept {
+    auto rootPart = root.begin();
+    auto candidatePart = candidate.begin();
+    for (; rootPart != root.end(); ++rootPart, ++candidatePart) {
+        if (candidatePart == candidate.end()
+            || !PathComponentEquals(*rootPart, *candidatePart)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ResolveAudioPath(
+    const Entry& entry,
+    std::filesystem::path& result,
+    std::string& error
+) noexcept {
+    if (entry.audioFile.empty() || LoadedConfigDirectory.empty()) {
+        error = "audio path has no configuration directory";
+        return false;
+    }
+    std::error_code pathError;
+    const auto root = std::filesystem::weakly_canonical(
+        LoadedConfigDirectory, pathError);
+    if (pathError) {
+        error = "configuration directory could not be resolved";
+        return false;
+    }
+    result = std::filesystem::weakly_canonical(
+        root / std::filesystem::path(entry.audioFile), pathError);
+    if (pathError || !IsPathWithin(root, result)) {
+        error = "audio path escapes the configuration directory";
+        return false;
+    }
+    return true;
+}
+
+void UpdateHostedScrollbar(const POINT& point) noexcept {
+    if (!Interaction.valid || Interaction.maximumOffset == 0) return;
+    Reader.SetScrollOffset(ScrollOffsetFromTrack(
+        static_cast<float>(point.y),
+        static_cast<float>(Interaction.scrollTrack.top),
+        static_cast<float>(Interaction.scrollTrack.bottom),
+        static_cast<float>(Interaction.scrollThumb.bottom - Interaction.scrollThumb.top),
+        Interaction.grabOffset,
+        Interaction.maximumOffset));
+}
+
+bool HandleHostedMouseInput(WPARAM message, const MSLLHOOKSTRUCT& input) noexcept {
+    HostedMouseInputAvailable.store(true, std::memory_order_release);
+    std::lock_guard lock(ReaderMutex);
+    const auto consumeRelease = message == WM_LBUTTONUP
+        && ConsumeNextLeftButtonUp.exchange(false, std::memory_order_acq_rel);
+    if (!Reader.IsOpen() || !Interaction.valid
+        || GetForegroundWindow() != Interaction.window) {
+        return consumeRelease;
+    }
+
+    const auto overPanel = Contains(input.pt, Interaction.panel);
+    if (message == WM_LBUTTONDOWN) {
+        if (Contains(input.pt, Interaction.close)) {
+            ConsumeNextLeftButtonUp = true;
+            CloseReader();
+            return true;
+        }
+        if (Contains(input.pt, Interaction.scrollUp)) {
+            ConsumeNextLeftButtonUp = true;
+            Reader.ScrollLines(-1);
+            return true;
+        }
+        if (Contains(input.pt, Interaction.scrollDown)) {
+            ConsumeNextLeftButtonUp = true;
+            Reader.ScrollLines(1);
+            return true;
+        }
+        if (Contains(input.pt, Interaction.scrollTrack)
+            && Interaction.maximumOffset > 0) {
+            Interaction.grabOffset = Contains(input.pt, Interaction.scrollThumb)
+                ? static_cast<float>(input.pt.y - Interaction.scrollThumb.top)
+                : static_cast<float>(
+                    Interaction.scrollThumb.bottom - Interaction.scrollThumb.top) * 0.5F;
+            Interaction.dragging = true;
+            ConsumeNextLeftButtonUp = true;
+            UpdateHostedScrollbar(input.pt);
+            return true;
+        }
+        if (Contains(input.pt, Interaction.body) && !Reader.RevealComplete()) {
+            ConsumeNextLeftButtonUp = true;
+            Reader.RevealAll();
+            Reader.ResumeFollowingLatest();
+            return true;
+        }
+        if (overPanel) ConsumeNextLeftButtonUp = true;
+        return overPanel;
+    }
+    if (message == WM_MOUSEMOVE && Interaction.dragging) {
+        UpdateHostedScrollbar(input.pt);
+        return false;
+    }
+    if (message == WM_LBUTTONUP) {
+        if (Interaction.dragging) {
+            UpdateHostedScrollbar(input.pt);
+            Interaction.dragging = false;
+            return true;
+        }
+        return consumeRelease || overPanel;
+    }
+    return message == WM_LBUTTONDBLCLK && overPanel;
+}
+
 PointerState ReadPointerState(
     HWND window,
     float displayWidth,
@@ -339,7 +759,10 @@ void DrawReader(
     if (window && GetForegroundWindow() != window) return;
 
     std::lock_guard lock(ReaderMutex);
-    if (!Reader.IsOpen()) return;
+    if (!Reader.IsOpen()) {
+        ClearInteractionLayout();
+        return;
+    }
 
     const float horizontalMargin = std::clamp(displayWidth * 0.025F, 16.0F, 48.0F);
     const float panelWidth = std::min(
@@ -377,10 +800,7 @@ void DrawReader(
     Reader.AdvanceReveal(advance);
 
     if (KeyPressed(VK_ESCAPE, PreviousEscape)) {
-        Reader.Close();
-        LastRevealTick = 0;
-        RevealMilliCharacters = 0;
-        ScrollbarDragging = false;
+        CloseReader();
         return;
     }
 
@@ -463,14 +883,33 @@ void DrawReader(
     const ImVec2 closeMaximum(
         closeMinimum.x + closeWidth, closeMinimum.y + closeHeight);
 
+    PublishInteractionLayout(
+        window,
+        displayWidth,
+        displayHeight,
+        ImVec2(left, top),
+        ImVec2(right, bottom),
+        ImVec2(bodyLeft, bodyTop),
+        ImVec2(bodyRight, bodyBottom),
+        closeMinimum,
+        closeMaximum,
+        upMinimum,
+        upMaximum,
+        downMinimum,
+        downMaximum,
+        ImVec2(scrollLeft - 7.0F, trackTop),
+        ImVec2(scrollRight + 7.0F, trackBottom),
+        ImVec2(scrollLeft - 7.0F, thumbTop),
+        ImVec2(scrollRight + 7.0F, thumbTop + thumbHeight),
+        maximumOffset);
+
     const auto pointer = ReadPointerState(window, displayWidth, displayHeight);
-    if (pointer.released || !pointer.down) ScrollbarDragging = false;
-    if (pointer.valid && pointer.pressed) {
+    const auto hostedInput = HostedMouseInputAvailable.load(std::memory_order_acquire);
+    if (hostedInput) ScrollbarDragging = false;
+    if (!hostedInput && (pointer.released || !pointer.down)) ScrollbarDragging = false;
+    if (!hostedInput && pointer.valid && pointer.pressed) {
         if (Contains(pointer.position, closeMinimum, closeMaximum)) {
-            Reader.Close();
-            LastRevealTick = 0;
-            RevealMilliCharacters = 0;
-            ScrollbarDragging = false;
+            CloseReader();
             return;
         }
         if (Contains(pointer.position, upMinimum, upMaximum)) {
@@ -505,7 +944,7 @@ void DrawReader(
             Reader.FollowLatestLine(latestLine);
         }
     }
-    if (ScrollbarDragging && pointer.valid && pointer.down
+    if (!hostedInput && ScrollbarDragging && pointer.valid && pointer.down
         && maximumOffset > 0 && thumbTravel > 0.0F) {
         const auto target = std::clamp(
             pointer.position.y - trackTop - ScrollbarGrabOffset,
@@ -608,7 +1047,8 @@ void* TransformTooltip(void* result, void* item) noexcept {
         || !IsReadableMemory(result, 24)) {
         return result;
     }
-    const auto* entry = FindEntryForUnit(item);
+    const auto lookup = FindEntryForUnit(item);
+    const auto* entry = lookup.entry;
     if (!entry) return result;
 
     try {
@@ -642,10 +1082,35 @@ void* TransformTooltip(void* result, void* item) noexcept {
 bool OpenEntry(const Entry& entry, const char* source) noexcept {
     std::lock_guard lock(ReaderMutex);
     if (!Reader.Open(entry, 1, 1)) return false;
+    Audio.Stop();
     LastRevealTick = GetTickCount64();
     RevealMilliCharacters = 0;
     ScrollbarDragging = false;
+    ClearInteractionLayout();
     ++OpenCount;
+    if (!entry.audioFile.empty()) {
+        std::filesystem::path audioPath;
+        std::string audioError;
+        if (ResolveAudioPath(entry, audioPath, audioError)
+            && Audio.Play(audioPath, audioError)) {
+            ++AudioStartCount;
+            if (Context) {
+                const auto message = std::string(
+                    "ReadableItems: audio started for code=")
+                    + entry.code + " file=" + audioPath.string() + ".";
+                Context->LogInfo(message.c_str());
+            }
+        } else {
+            ++AudioErrorCount;
+            if (Context) {
+                const auto message = std::string(
+                    "ReadableItems: audio unavailable for code=")
+                    + entry.code + ": " + audioError
+                    + "; text remains readable.";
+                Context->LogWarn(message.c_str());
+            }
+        }
+    }
     if (Context) {
         std::array<char, 256> message{};
         std::snprintf(message.data(), message.size(),
@@ -667,7 +1132,7 @@ auto ConsoleCommand(
         : std::string_view{});
 
     if (arguments == "preview") {
-        const auto* entry = FindEntry(Settings, PackItemCode("tsc"));
+        const auto* entry = FindEntry(Settings, PackItemCode("rds"));
         if (!entry && !Settings.items.empty()) entry = &Settings.items.front();
         if (!entry || !OpenEntry(*entry, "console-preview")) {
             return D2RL::ConsoleCommandResult::Failed;
@@ -677,10 +1142,7 @@ auto ConsoleCommand(
     }
     if (arguments == "close") {
         std::lock_guard lock(ReaderMutex);
-        Reader.Close();
-        LastRevealTick = 0;
-        RevealMilliCharacters = 0;
-        ScrollbarDragging = false;
+        CloseReader();
         command->plugin->WriteConsoleMessage("Readable Items reader closed.");
         return D2RL::ConsoleCommandResult::Handled;
     }
@@ -692,14 +1154,21 @@ auto ConsoleCommand(
 
     std::array<char, 512> message{};
     bool open{};
+    bool audioPlaying{};
     {
         std::lock_guard lock(ReaderMutex);
         open = Reader.IsOpen();
+        audioPlaying = Audio.IsPlaying();
     }
     std::snprintf(message.data(), message.size(),
-        "ReadableItems 0.2.1 test: enabled=%s; entries=%zu; reader=%s; opens=%llu; tooltips=%llu; config=%s.",
+        "ReadableItems 0.5.0 test: enabled=%s; pSpell=-2; entries=%zu; reader=%s; audio=%s; audio starts=%llu; audio errors=%llu; missing entries=%llu; hosted mouse=%s; opens=%llu; tooltips=%llu; config=%s.",
         Settings.enabled ? "true" : "false", Settings.items.size(),
         open ? "open" : "closed",
+        audioPlaying ? "playing" : "idle",
+        static_cast<unsigned long long>(AudioStartCount.load()),
+        static_cast<unsigned long long>(AudioErrorCount.load()),
+        static_cast<unsigned long long>(MissingEntryCount.load()),
+        HostedMouseInputAvailable.load() ? "available" : "pending",
         static_cast<unsigned long long>(OpenCount.load()),
         static_cast<unsigned long long>(TooltipCount.load()),
         LoadedConfigPath.c_str());
@@ -715,9 +1184,36 @@ ReadableItemsTransformTooltip(void* result, void* item) noexcept {
 
 extern "C" __declspec(dllexport) bool __cdecl
 ReadableItemsHandleUseItem(void* item) noexcept {
-    if (!Settings.enabled) return false;
-    const auto* entry = FindEntryForUnit(item);
-    return entry && OpenEntry(*entry, "right-click");
+    const auto lookup = FindEntryForUnit(item);
+    if (!lookup.usesReadablePSpell) return false;
+    if (!Settings.enabled) return true;
+    if (!lookup.entry) {
+        ++MissingEntryCount;
+        if (Context) {
+            std::array<char, 160> message{};
+            std::snprintf(message.data(), message.size(),
+                "ReadableItems: pSpell=-2 item code=0x%08X has no configuration entry; use was consumed safely.",
+                lookup.packedCode);
+            Context->LogWarn(message.data());
+        }
+        return true;
+    }
+    return OpenEntry(*lookup.entry, "right-click");
+}
+
+extern "C" __declspec(dllexport) bool __cdecl
+ReadableItemsHandleMouseInput(
+    WPARAM message,
+    const MSLLHOOKSTRUCT* input
+) noexcept {
+    if (!input || !Settings.enabled) return false;
+    try {
+        return HandleHostedMouseInput(message, *input);
+    } catch (...) {
+        if (Context) Context->LogWarn(
+            "ReadableItems: hosted mouse input failed safely.");
+        return false;
+    }
 }
 
 extern "C" __declspec(dllexport) void __cdecl
@@ -794,9 +1290,12 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         context->LogWarn("ReadableItems: console command could not be registered.");
     }
 
-    const auto message = std::string("ReadableItems 0.2.1 test loaded from ")
+    HostedMouseInputAvailable = false;
+    ConsumeNextLeftButtonUp = false;
+    ClearInteractionLayout();
+    const auto message = std::string("ReadableItems 0.5.0 test loaded from ")
         + LoadedConfigPath
-        + "; waiting for delegated tooltip, right-click and renderer hosts.";
+        + "; pSpell=-2 activation and optional WAV/FLAC audio enabled; waiting for delegated tooltip, right-click and renderer hosts.";
     context->LogInfo(message.c_str());
     return true;
 }
@@ -804,15 +1303,16 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
 D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
     {
         std::lock_guard lock(ReaderMutex);
-        Reader.Close();
-        LastRevealTick = 0;
-        RevealMilliCharacters = 0;
-        ScrollbarDragging = false;
+        CloseReader();
+        Audio.Shutdown();
     }
+    HostedMouseInputAvailable = false;
+    ConsumeNextLeftButtonUp = false;
     EnsureStringCapacity = nullptr;
     GetUnitClassId = nullptr;
     GetItemDataContext = nullptr;
     GetItemsTxtRecord = nullptr;
     Base = nullptr;
+    LoadedConfigDirectory.clear();
     Context = nullptr;
 }

@@ -18,7 +18,12 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG v1.91.5
 )
-FetchContent_MakeAvailable(D2RLPlugin nlohmann_json imgui)
+FetchContent_Declare(
+    dr_libs
+    GIT_REPOSITORY https://github.com/mackron/dr_libs.git
+    GIT_TAG 34a89ffe6bfc4d78db6888fef76cd408dba18185
+)
+FetchContent_MakeAvailable(D2RLPlugin nlohmann_json imgui dr_libs)
 
 add_library(ReadableItemsImGui STATIC
     ${imgui_SOURCE_DIR}/imgui.cpp
@@ -32,19 +37,32 @@ target_include_directories(ReadableItemsImGui PUBLIC
 target_compile_features(ReadableItemsImGui PUBLIC cxx_std_20)
 target_compile_definitions(ReadableItemsImGui PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
 
+add_library(ReadableItemsAudio STATIC readable_items_audio.cpp)
+target_include_directories(ReadableItemsAudio PRIVATE ${dr_libs_SOURCE_DIR})
+target_compile_features(ReadableItemsAudio PUBLIC cxx_std_20)
+target_compile_definitions(ReadableItemsAudio PRIVATE
+    DR_FLAC_NO_STDIO
+    DR_FLAC_NO_OGG
+)
+
 add_library(ReadableItems SHARED plugin.cpp plugin.rc)
 target_compile_features(ReadableItems PRIVATE cxx_std_20)
 target_link_libraries(ReadableItems PRIVATE
     D2RLPlugin::D2RLPlugin
+    ReadableItemsAudio
     ReadableItemsImGui
     nlohmann_json::nlohmann_json
     user32
+    xaudio2
 )
 set_target_properties(ReadableItems PROPERTIES OUTPUT_NAME "ReadableItems")
 
 add_executable(ReadableItemsTests config_tests.cpp)
 target_compile_features(ReadableItemsTests PRIVATE cxx_std_20)
-target_link_libraries(ReadableItemsTests PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(ReadableItemsTests PRIVATE
+    ReadableItemsAudio
+    nlohmann_json::nlohmann_json
+)
 
 enable_testing()
 add_test(NAME readable-items-config COMMAND ReadableItemsTests)

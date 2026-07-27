@@ -128,12 +128,17 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/readable-items-clue-scrolls-3.2.md",
-      "nextGate": "Vincent validates the 0.2.1 tsc reader: slower 18-character-per-second reveal, clickable track, draggable scrollbar thumb, Close button, automatic following, fast-forward, reopen reset, item integrity and coexistence; afterward implement the standalone fallback and remaining containers.",
+      "nextGate": "Vincent validates the 0.5.0 rds witness: pSpell=-2 tooltip and reader, FLAC playback and restart, item integrity, and vanilla pSpell=2 Town Portal behavior; afterward implement the standalone fallback and remaining containers.",
       "include": [
         "Mission/readable-items-clue-scrolls-3.2.md",
         "data-BKVince/BKVince.mpq/ReadableItems.json",
+        "data-BKVince/BKVince.mpq/data/global/excel/misc.txt",
+        "data-BKVince/BKVince.mpq/data/global/sfx/item/readable_items*",
+        "data-BKVince/BKVince.mpq/data/local/lng/strings/item-names.json",
         "data-BKVince/d2rloader/plugins/ReadableItems-src/**",
-        "data-BKVince/d2rloader/plugins/ReadableItems.dll"
+        "data-BKVince/d2rloader/plugins/ReadableItems.dll",
+        "scripts/migrate-bkvince/add-readable-items-test-witness.js",
+        "scripts/migrate-bkvince/port-storage-bag.js"
       ]
     },
     {
@@ -283,6 +288,22 @@
         "vendor-stock-refresh"
       ],
       "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."
+    },
+    {
+      "pattern": "data-BKVince/d2rloader/plugins/ExtendedItemStats-src/plugin.cpp",
+      "workstreams": [
+        "extended-item-stats",
+        "readable-items-clue-scrolls"
+      ],
+      "reason": "Extended Item Stats owns the shared low-level mouse hook and delegates Readable Items panel input."
+    },
+    {
+      "pattern": "data-BKVince/d2rloader/plugins/ExtendedItemStats.dll",
+      "workstreams": [
+        "extended-item-stats",
+        "readable-items-clue-scrolls"
+      ],
+      "reason": "The validated host binary includes the Readable Items mouse-input delegation."
     }
   ]
 }
