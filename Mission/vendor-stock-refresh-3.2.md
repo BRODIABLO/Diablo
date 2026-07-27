@@ -2,13 +2,12 @@
 
 ## Statut et séquencement
 
-- Statut : **correctif autonome 0.1.5 dynamique validé chez Charsi et déclaré
-  prêt par Vincent pour préparation du merge dans `plugin-misc.dll` — gates de
-  non-régression gamble et compatibilité étendue encore ouverts**.
+- Statut : **chantier déclaré réglé et clos par Vincent le 27 juillet 2026;
+  correctif autonome 0.1.5 conservé comme preuve technique hors ROADMAP active**.
 - Cible éventuelle : `D2R.exe 3.2.92777` sous D2RLoader.
-- Vincent a demandé de commencer ce chantier le 26 juillet 2026; cette décision
-  remplace l’attente initialement prévue après Transmogrify puis Readable Items /
-  Clue Scrolls et fait de Vendor Stock Refresh la priorité courante.
+- Vincent a demandé de commencer ce chantier le 26 juillet 2026, puis l’a
+  déclaré réglé le 27 juillet 2026. La mission et les artefacts restent conservés
+  sans constituer une priorité active.
 - Vincent a remplacé le classement initial `items` le 27 juillet 2026 : la
   catégorie future confirmée est `misc`, la DLL propriétaire devient
   `plugin-misc.dll` et la clé prévue devient `misc.vendorStockRefresh`.
@@ -322,17 +321,16 @@ chez Charsi; la restauration du bouton original en gamble reste à observer.
 
 ## Prochain gate
 
-Préparer, dans un lot distinct explicitement demandé, le merge vers
-`plugin-misc.dll` sous `misc.vendorStockRefresh`, puis compiler et valider le
-binaire fusionné sans supprimer prématurément l’autonome. La matrice de
-non-régression doit encore confirmer le bouton original en gamble, un vendeur de
-mode `0`, un layout réellement moddé ou agrandi, la manette, les cinq actes, les
-clics rapides, le repli global et l’hôte/joiner.
+Aucun gate actif : Vincent a clos le chantier le 27 juillet 2026. Une éventuelle
+reprise du merge vers `plugin-misc.dll` devra être demandée explicitement et
+rouvrira alors les non-régressions encore non exécutées : gamble, vendeur de mode
+`0`, layout réellement moddé ou agrandi, manette, cinq actes, clics rapides,
+repli global et hôte/joiner.
 
 ## Frontière Git
 
-Le lot actif comprend cette mission, son entrée ROADMAP, son workstream, les
-preuves gouvernées du workbench, `VendorStockRefresh-src/`,
+Le lot historique comprend cette mission, son workstream, les preuves gouvernées
+du workbench, `VendorStockRefresh-src/`,
 `VendorStockRefresh.json` et la DLL autonome. Aucun layout vendeur n’est livré;
 aucun
 fichier ni aucune DLL

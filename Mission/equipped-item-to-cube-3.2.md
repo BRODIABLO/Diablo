@@ -8,10 +8,9 @@
   la DLL propriétaire sera `plugin-misc.dll` et que la clé prévue sera
   `misc.equippedItemToCube`. Cette décision remplace le classement antérieur
   `items`, `plugin-items.dll` et `items.equippedItemToCube`.
-- Vendor Stock Refresh demeure la priorité courante. Cette mission commencera
-  après la confirmation de son bouton gamble original, d'un vendeur de mode
-  `0` et d'un layout réellement modifié ou agrandi, sauf nouvelle décision
-  explicite de Vincent sur le séquencement.
+- Cube Quick Move Bottom-Right est la priorité courante. Cette mission commencera
+  juste après son jalon de preuve selon le séquencement A retenu par Vincent le
+  27 juillet 2026, sauf nouvelle décision explicite sur l'ordre.
 
 ## Intention joueur
 
@@ -84,7 +83,7 @@ manuel par l'inventaire.
 
 ## Gates observables
 
-1. **Séquencement — ouvert** : fermer le jalon court Vendor Stock Refresh ou
+1. **Séquencement — ouvert** : fermer le jalon Cube Quick Move Bottom-Right ou
    obtenir une décision explicite de Vincent qui remplace cet ordre.
 2. **Traçage client — ouvert** : comparer Shift équipement vers inventaire,
    Ctrl inventaire vers Cube et Ctrl équipement vers Cube, puis identifier le
@@ -109,7 +108,7 @@ manuel par l'inventaire.
 
 ## Prochain gate
 
-Après le jalon court Vendor Stock Refresh, tracer les trois chemins d'entrée
+Après le jalon Cube Quick Move Bottom-Right, tracer les trois chemins d'entrée
 comparatifs et borner le premier branchement divergent avant toute implantation.
 
 ## Frontière Git

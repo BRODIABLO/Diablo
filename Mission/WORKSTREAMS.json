@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-26",
+  "updatedAt": "2026-07-27",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -163,10 +163,10 @@
     {
       "id": "vendor-stock-refresh",
       "name": "Vendor Stock Refresh",
-      "status": "active",
+      "status": "paused",
       "owner": "Vincent + Codex",
       "mission": "Mission/vendor-stock-refresh-3.2.md",
-      "nextGate": "Prepare the explicitly approved merge into plugin-misc.dll under misc.vendorStockRefresh as a separate checkpoint, retain the standalone until the merged build is validated, and carry gamble, mode-0 vendor, modded-layout, controller, click-spam, global fallback and host/joiner tests as regression gates.",
+      "nextGate": "Closed by Vincent on 2026-07-27 after validating the standalone Vendor Stock Refresh behavior; retain the mission and artifacts as technical evidence and reopen remaining regression gates only on explicit request.",
       "include": [
         "Mission/vendor-stock-refresh-3.2.md",
         "addons/VendorStockRefresh/**",
@@ -177,12 +177,28 @@
       ]
     },
     {
+      "id": "cube-quick-move-bottom-right",
+      "name": "Cube Quick Move Bottom-Right",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "nextGate": "Close the strict ABI, signature and call-site scope audit for the unique Cube transfer call at 0x4BBA73, then present the governed standalone wrapper plan before any implementation.",
+      "include": [
+        "Mission/cube-quick-move-bottom-right-3.2.md",
+        "addons/CubeQuickMove/**",
+        "data-BKVince/BKVince.mpq/CubeQuickMove.json",
+        "data-BKVince/d2rloader/plugins/CubeQuickMove-src/**",
+        "data-BKVince/d2rloader/plugins/CubeQuickMove.dll*",
+        "scripts/reverse-engineering/cube-quick-move*"
+      ]
+    },
+    {
       "id": "equipped-item-to-cube",
       "name": "Equipped Item to Cube",
       "status": "paused",
       "owner": "Vincent + Codex",
       "mission": "Mission/equipped-item-to-cube-3.2.md",
-      "nextGate": "After the short Vendor Stock Refresh milestone, trace Shift equipped-to-inventory, Ctrl inventory-to-Cube and Ctrl equipped-to-Cube to identify the first divergent branch before implementation.",
+      "nextGate": "After the Cube Quick Move Bottom-Right milestone, trace Shift equipped-to-inventory, Ctrl inventory-to-Cube and Ctrl equipped-to-Cube to identify the first divergent branch before implementation.",
       "include": [
         "Mission/equipped-item-to-cube-3.2.md",
         "addons/EquippedItemToCube/**",
@@ -290,7 +306,8 @@
         "repair-costs-cap",
         "prevent-merc-death-in-town",
         "vendor-stock-refresh",
-        "equipped-item-to-cube"
+        "equipped-item-to-cube",
+        "cube-quick-move-bottom-right"
       ],
       "reason": "Governed native evidence registry shared by native plugin missions."
     },

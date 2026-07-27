@@ -4,29 +4,30 @@ Dernière mise à jour : 27 juillet 2026
 
 ## Priorité active
 
-[Vendor Stock Refresh — D2R 3.2](vendor-stock-refresh-3.2.md)
+[Cube Quick Move Bottom-Right — D2R 3.2](cube-quick-move-bottom-right-3.2.md)
 
-État : `VendorStockRefresh 0.1.5` est déployé en DLL autonome hybride, sans
-override de layout. Le bouton natif unique est centré dynamiquement sous l’or
-des boutiques normales et Charsi est confirmé visuellement et
-fonctionnellement. Le test autonome, les trois exports, les hashes
-source/runtime et le cold start mod-local sont verts. Vincent déclare le candidat
-prêt pour préparation du merge et remplace le classement initial : propriétaire
-futur `plugin-misc.dll`, clé `misc.vendorStockRefresh`.
+État : mission de conception et de preuve active, sans implantation. Vincent
+retient le séquencement A et confirme le propriétaire futur `plugin-misc.dll`
+sous la catégorie `misc`, avec la clé `misc.cubeQuickMoveBottomRight`. Le chemin
+92777 vers la page Cube `3`, la règle native dépendant de la hauteur et l’appel
+unique à `INVENTORY_FindFreePosition` au site `0x4BBA73` sont identifiés.
 
-Le chantier Rift/Cow a été déclaré terminé par Vincent le 27 juillet 2026 et
-retiré de la ROADMAP active. Sa mission reste conservée comme preuve technique.
+Vendor Stock Refresh a été déclaré réglé par Vincent le 27 juillet 2026 et
+retiré de la ROADMAP active. Sa mission et ses artefacts restent conservés comme
+preuves techniques. Equipped Item to Cube demeure planifié juste après la
+présente mission.
 
 ## Prochain gate
 
-Préparer le merge vers `plugin-misc.dll` dans un lot distinct explicitement
-demandé, puis valider le binaire fusionné. Conserver comme gates de
-non-régression le gamble, un vendeur de mode `0`, un layout réellement modifié,
-les cinq actes, la manette, les clics rapides et le réseau hôte/joiner.
+Fermer l’audit ABI/signatures et la portée exacte du call-site `0x4BBA73`, puis
+présenter le plan du wrapper autonome `CubeQuickMove.dll` avant toute
+implantation. La validation devra couvrir toutes les dimensions d’objet, un Cube
+fragmenté ou plein, les contrôles manuels, les autres conteneurs, la manette et
+l’autorité hôte/joiner.
 
 ## Frontière Git
 
-Le lot Vendor Stock Refresh comprend sa mission, son entrée ROADMAP, son
-workstream, `VendorStockRefresh-src/`, `VendorStockRefresh.json` et la DLL
-autonome. Les missions Rift/Cow, Transmogrify, Readable Items, Extended Item
-Stats et les autres changements concurrents sont préservés.
+Le lot courant est documentaire : nouvelle mission, pointeur courant, workstream,
+ROADMAP et cadastre. Les artefacts Vendor Stock Refresh et tous les autres
+changements concurrents sont préservés; aucun code, JSON, binaire, commit ou push
+n’est inclus.
