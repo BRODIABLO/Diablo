@@ -125,15 +125,40 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
 - Le chemin indirect du Cube autour de `0x4BB8C0` vérifie le code de base `box `,
   sélectionne la page native `3`, résout l'Inventory.txt actif et appelle
   `INVENTORY_FindFreePosition` à `0x4BBA73`. Les cinq octets
-  `E8 38 AB EC FF` sont uniques dans `.text` et le retour est `0x4BBA78`.
+  `E8 38 AB EC FF` sont uniques dans `.text` et le retour est `0x4BBA78`, mais
+  cette unicité de signature ne prouve pas l'unicité sémantique du chemin Cube.
+- Parmi les `36` xrefs de `INVENTORY_FindFreePosition`, huit call-sites écrivent
+  explicitement la page `3` via `C6 44 24 28 03` avant leur `CALL rel32` :
+  `0x0FA33D`, `0x2C7306`, `0x471D62`, `0x4BBA73`, `0x4C21D6`, `0x4F2C8B`,
+  `0x527DC2` et `0x528053`. `0x4C21D6` appartient au parseur d'un paquet de
+  `0x15` octets et constitue le candidat principal du Ctrl-clic équipé.
 - La construction native de la grille d'occupation est reproduite sans structure
   inventée : `GetItemDataContext` à `0x34A0E0`, contexte temporaire à
-  `0x3C6D80`, résolution de grille à `0x38B070` avec `page + 2`, puis recherche
-  bas-droite à `0x38D8F0` avec largeur et hauteur en arguments de pile.
-- `CubeQuickMove 0.1.0` conserve la fonction et le gate partagés intacts. Il
-  remplace seulement l'appel `0x4BBA73` par un relais proche rel32, exécute
-  d'abord la recherche vanilla, puis recalcule seulement les objets plus hauts
-  qu'une case. Toute erreur restaure les coordonnées vanilla.
+  `0x3C6D80` et résolution de grille à `0x38B070` avec `page + 2`. La grille
+  expose sa largeur à `+0x10`, sa hauteur à `+0x11` et le tableau de cellules à
+  `+0x18`, comme le prouvent les deux branches de recherche 92777.
+- `CubeQuickMove 0.1.2` conservait la fonction et le gate partagés intacts et
+  remplaçait les huit appels explicites page `3`. Après l'échec gameplay de
+  l'épée, une lecture directe du processus a prouvé que les huit `CALL rel32`
+  visaient bien le relais `0x3E80000`, puis que `CubeCalls`, `redirected`,
+  `vanilla` et `safeFallbacks` valaient tous `0`. Le Ctrl-clic testé ne traversait
+  donc aucun de ces huit sites.
+- Les `36` xrefs directs se divisent en neuf appels dont le sixième argument est
+  constamment `0`, `2` ou `4`, et `27` appels capables de transporter la page
+  Cube `3`. À `0x15A25C`, le contrôle client reprend la page dynamique `r14b`;
+  son appelant `0x15A2BD` lui passe explicitement `cl=3`. À `0x4FBC0E`, la
+  branche serveur choisit dynamiquement la page `0` ou `3`, consomme les
+  coordonnées trouvées puis appelle `ITEMS_PlaceItemForPlayer 0x471500`.
+- `CubeQuickMove 0.1.3` redirige ces 27 sites vers le même relais, mais ne
+  modifie les coordonnées que si la page runtime vaut exactement `3`. Son cold
+  start a observé le premier calcul `1x3` à `3,3` depuis `0x15A25C`, contrôle
+  préalable de l'espace client.
+- Le témoin gameplay suivant identifie le producteur réel au call-site
+  `0x15F94F`, dans la routine client `0x15F8B0`. Cette routine copie la paire x/y
+  retournée dans sa structure de placement, puis le paquet `0x54` observé porte
+  les coordonnées `4,3`. Le serveur accepte le transfert (`result=1`) et Vincent
+  confirme visuellement l'épée `1x3` en bas à droite. `0x4FBC0E` reste une
+  branche serveur page 0/3 gouvernée, mais n'est pas le témoin de cette action.
 - L'audit du PluginPack épinglé
   `eezstreet/D2RL-Plugins@dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`
   ne trouve aucune clé Cube ni hook d'inventaire dans `plugin-misc`; les sites

@@ -1,7 +1,7 @@
 # Cube Quick Move
 
 `CubeQuickMove.dll` makes every item moved indirectly into the Horadric Cube use
-the native bottom-right placement order, independent of item height.
+the bottom-right placement order, independent of item height.
 
 ## Contract
 
@@ -26,16 +26,23 @@ the plugin instead of silently changing behavior.
 
 ## Native scope
 
-The plugin verifies the unique five-byte call at RVA `0x4BBA73` and redirects
-only that Cube-transfer call through a rel32-near relay. The shared
-`INVENTORY_FindFreePosition` function at `0x3865B0` remains untouched.
+The plugin inventories all 36 direct calls to `INVENTORY_FindFreePosition`.
+Nine calls are proven to pass only page `0`, `2`, or `4` and remain untouched.
+The remaining 27 calls include eight explicit Cube-page calls and nineteen
+dynamic-page calls, including the gameplay-proven client placement producer at
+`0x15F94F`.
+They share one rel32-near relay, while the shared function at `0x3865B0`
+remains untouched. The wrapper changes coordinates only when the runtime page
+is exactly `3`.
 
 The wrapper runs the vanilla search first. For items taller than one cell, it
-reuses the 92777 helpers that obtain the item dimensions, build the temporary
-occupancy grid and invoke the native bottom-right search at `0x38D8F0`. Any
-failed precondition or native exception restores the vanilla coordinates.
+reuses the 92777 helpers that obtain the item dimensions and resolve the temporary
+occupancy grid. It then scans valid anchors from right to left and bottom to top,
+matching the vanilla order used for one-row items without relying on the native
+owner-weighting branch. Any failed precondition or native exception restores the
+vanilla coordinates.
 
-The call-site and every helper carry strict expected bytes. A mismatched build
+Every call-site and helper carries strict expected bytes. A mismatched build
 is refused before any patch is written.
 
 ## Build and test

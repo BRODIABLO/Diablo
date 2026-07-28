@@ -2,8 +2,8 @@
 
 ## Statut et séquencement
 
-- Statut : **prototype autonome hybride 0.1.0 implanté et techniquement validé;
-  matrice gameplay encore ouverte**.
+- Statut : **CubeQuickMove 0.1.3 est validé en jeu sur l'épée `1x3` et prêt à
+  être intégré séparément dans `plugin-misc.dll`**.
 - Cible : `D2R.exe 3.2.92777` sous D2RLoader.
 - Vincent confirme le 27 juillet 2026 la catégorie future `misc`, le propriétaire
   `plugin-misc.dll` et la clé `misc.cubeQuickMoveBottomRight`.
@@ -52,11 +52,14 @@ donc un objet `2x1` suit aussi la branche bas-droite.
   `0x3865B0`. Le branchement `0x386735` compare la hauteur de l’objet à `1`;
   les routines natives pondérées sont `0x38D8F0` pour bas-droite et `0x38DCC0`
   pour haut-gauche.
-- Le chemin indirect vers le Cube autour de `0x4BB8C0` vérifie le code de base
-  `box `, sélectionne la page native `3`, résout sa grille et appelle
-  `INVENTORY_FindFreePosition` au site `0x4BBA73`.
-- Les cinq octets de cet appel relatif, `E8 38 AB EC FF`, n’apparaissent qu’une
-  fois dans la section `.text` du binaire canonique.
+- Le chemin indirect autour de `0x4BB8C0` vérifie le code de base `box ` et
+  appelle `INVENTORY_FindFreePosition` au site `0x4BBA73`. Cette signature de
+  cinq octets reste unique, mais le site n'est pas l'unique producteur
+  automatique de coordonnées pour la page Cube.
+- Le croisement des `36` xrefs de `INVENTORY_FindFreePosition` avec l'écriture
+  explicite `C6 44 24 28 03` de l'argument de page prouve huit call-sites Cube :
+  `0x0FA33D`, `0x2C7306`, `0x471D62`, `0x4BBA73`, `0x4C21D6`, `0x4F2C8B`,
+  `0x527DC2` et `0x528053`. Tous portent un `CALL rel32` strict vers `0x3865B0`.
 - La référence officielle
   `eezstreet/D2RL-Plugins@dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` est
   propre. Son `plugin-misc` ne possède que les clés
@@ -65,66 +68,114 @@ donc un objet `2x1` suit aussi la branche bas-droite.
   l’inventaire. Aucun conflit de propriétaire ou de site n’est actuellement
   identifié.
 
+## Retour gameplay du 28 juillet 2026
+
+- **Échec confirmé par Vincent sur 0.1.0** — les objets `1x1` arrivaient au coin
+  inférieur droit, mais les grands objets continuaient d'être placés en haut à
+  gauche. Le chargement technique ne constituait donc pas une validation
+  fonctionnelle.
+- Le call-site runtime restait bien patché vers le relais de CubeQuickMove; la
+  page `3`, l'ABI des dimensions et l'ordre des arguments ont été reconfirmés
+  dans le workbench 92777.
+- La dépendance ajoutée en 0.1.0 à
+  `INVENTORY_SearchBottomRightWeighted 0x38D8F0` est retirée du chemin runtime.
+  Le correctif 0.1.1 lit la grille d'occupation résolue par D2R et teste chaque
+  ancre valide dans l'ordre droite vers gauche, puis bas vers haut. Ce parcours
+  couvre réellement toute l'empreinte de l'objet et restaure les coordonnées
+  vanilla au moindre échec.
+- **Échec confirmé par Vincent sur 0.1.1** — l'épée continue d'arriver en haut à
+  gauche. Le balayage n'était pas en cause : 0.1.1 ne possédait que
+  `0x4BBA73`, alors que le build 92777 dispose de sept autres appels automatiques
+  avec page Cube `3`, dont le chemin paquet de 21 octets autour de `0x4C21D6`.
+- Le correctif 0.1.2 conserve un seul relais et un seul wrapper, mais remplace
+  strictement les huit `CALL rel32` prouvés. Les placements explicites et la
+  fonction partagée `INVENTORY_FindFreePosition` restent intacts.
+- **Échec confirmé par Vincent sur 0.1.2** — l'épée continue d'arriver en haut à
+  gauche. Une lecture directe du processus encore chargé prouve simultanément
+  que les huit calls visaient le relais `0x3E80000` et que les quatre compteurs
+  `CubeCalls`, `redirected`, `vanilla` et `safeFallbacks` étaient à zéro. Le
+  Ctrl-clic testé n'empruntait donc aucun des huit producteurs page `3` écrits
+  en dur.
+- Parmi les `36` xrefs directs, neuf écrivent constamment une page non-Cube
+  (`0`, `2` ou `4`). Les `27` autres comprennent les huit pages `3` explicites
+  et dix-neuf pages dynamiques ou héritées. Le contrôle client `0x15A25C`
+  reprend `r14b`, alimenté par `cl=3` à `0x15A2BB`; la branche serveur
+  `0x4FBC0E` choisit la page `0` ou `3`, consomme les coordonnées puis appelle
+  `ITEMS_PlaceItemForPlayer 0x471500`.
+- **Succès confirmé par Vincent sur 0.1.3** — le 28 juillet 2026, le même
+  Ctrl-clic place désormais visiblement l'épée `1x3` au coin inférieur droit du
+  Cube.
+- La sonde de ce témoin relève `EITC_TRANSFER_IN` avec destination native `3`,
+  puis le paquet client `0x54` avec les coordonnées `4,3`. Le producteur réel de
+  ce placement est l'appel dynamique `0x15F94F` dans la routine client
+  `0x15F8B0` : ses sorties x/y sont copiées dans la structure de placement avant
+  l'émission du paquet. Le serveur accepte ensuite le transfert (`result=1`).
+  `0x15A25C` reste le contrôle préalable d'espace; `0x4FBC0E` appartient à une
+  autre branche serveur et n'est pas le témoin de cette action.
+
 ## Implantation et preuves techniques
 
-- `CubeQuickMove 0.1.0` remplace uniquement l’appel relatif au site
-  `0x4BBA73` par un relais proche suivi d’un wrapper natif. Le wrapper appelle
+- `CubeQuickMove 0.1.3` remplace les 27 appels directs capables de transporter
+  la page Cube par un relais proche partagé suivi d’un wrapper natif. Le wrapper appelle
   d’abord `INVENTORY_FindFreePosition` vanilla, conserve ce résultat pour les
-  objets de hauteur `1`, puis reconstruit le contexte de grille natif et appelle
-  `INVENTORY_SearchBottomRightWeighted` pour les objets plus hauts. Toute
-  précondition invalide, exception ou recherche infructueuse restitue les
-  coordonnées vanilla.
+  objets de hauteur `1`, puis reconstruit le contexte de grille natif et balaie
+  directement les ancres libres pour les objets plus hauts. Toute précondition
+  invalide, exception ou recherche infructueuse restitue les coordonnées
+  vanilla et journalise le premier repli sûr.
 - Les ABI et signatures strictes sont gouvernées pour
   `ITEMS_GetDimensions 0x371850`, le gate de hauteur `0x386735`,
   `INVENTORY_ResolveOccupancyGrid 0x38B070`,
-  `INVENTORY_SearchBottomRightWeighted 0x38D8F0`,
-  `INVENTORY_BuildGridContext 0x3C6D80` et le call-site Cube `0x4BBA73`.
+  `INVENTORY_BuildGridContext 0x3C6D80` et les 27 call-sites capables de porter
+  la page Cube listés ci-dessus.
 - Le relais est alloué dans la plage positive d’un `rel32`, rendu RX avant
   l’installation du patch et conservé jusqu’à la fin du processus. D2RLoader
-  possède le patch du call-site; le plugin expose la commande
+  possède les 27 patches de call-site; le plugin expose la commande
   `cube-quick-move` et journalise les appels Cube, redirections, replis vanilla
   et replis sûrs.
 - Le build gouverné Release x64 passe son test de politique `1/1`. La DLL expose
   exactement `D2RLoaderGetPluginInfo`, `D2RLoaderLoadPlugin` et
   `D2RLoaderUnloadPlugin`; son manifeste v2 porte `NativeHooks`, sans
   `ModScopedOnly`. SHA-256 DLL :
-  `AEABDA0B8ED90765A752B22988F862B995B1739EADDB6A55D46D81D76D22C833`.
+  `AF2E2282D562C2E8055B44B583C8430330669550B6D3A026632A6AB5FB2CF7C9`.
 - `CubeQuickMove.json` expose uniquement `enabled`, utilise la priorité mod actif
   puis le repli global et refuse une configuration inconnue ou mal formée.
   SHA-256 JSON :
   `70CD57A3B6076C764A000C77E37EFCA407C20A3AC767986E95DA05B4CCE65C72`.
-- Les cold starts frais mod-local et global chargent respectivement
-  `CubeQuickMove.dll [mod]` et `[global]`, activent le relais au RVA
-  `0x3E80000`, appliquent `20/20` patchsets et atteignent `24/24` sans échec du
-  plugin. L’état final est restauré en portée mod-locale avec les hashes
-  source/runtime identiques. Le dernier démarrage signale séparément le rejet
-  d’un artefact concurrent `EquippedItemToCubeProbe.dll`; CubeQuickMove reste
-  chargé et actif.
+- Les cold starts 0.1.0 mod-local et global restent des preuves de portée, mais
+  pas de gameplay. Le cold start frais 0.1.3 mod-local charge
+  `CubeQuickMove.dll [mod]`, applique `20/20` patchsets, atteint `24/24`, active
+  `28` plugins sur 30 avec deux désactivés, sans rejet ni échec. Les hashes DLL
+  source/runtime sont identiques. Le wrapper observe d'abord `0x15A25C` pour un
+  objet `1x3`, puis le producteur de placement `0x15F94F`; le paquet `0x54`
+  transporte `4,3` et Vincent confirme le résultat visuel en bas à droite.
 - L’archive candidate `addons/CubeQuickMove/CubeQuickMove.zip` contient
   strictement `CubeQuickMove.dll` et `CubeQuickMove.json`. SHA-256 ZIP :
-  `2FE7079C726B5668995843523971C48A1FE9D6B95A57C62D3389E73DCD5DD30F`.
+  `B9D826DEFD02C9F6159002405D27E9507B3094B4ABE4868FD9E1BA2EC0614ED6`.
 
 ## Hypothèses à tester et inconnues
 
-- **Hypothèse** — souris et manette convergent vers le même paquet de déplacement
-  indirect; la portée exacte du site `0x4BBA73` doit le confirmer en runtime.
+- **Hypothèse** — souris et manette convergent vers l'un des 27 chemins de
+  placement automatique gouvernés; la matrice runtime doit le confirmer.
 - **Hypothèse** — le placement est autoritaire côté hôte. Un joiner qui charge
   seul le plugin ne devrait pas pouvoir imposer la position au serveur.
 - **Inconnue** — une prédiction client peut afficher brièvement une autre case
   avant la réponse du serveur; les logs et une capture réseau doivent trancher.
-- **Inconnue** — le site unique peut couvrir d’autres transferts indirects vers
-  la page Cube. Chaque origine doit être inventoriée avant d’affirmer que la
-  portée correspond exactement au Ctrl + clic.
+- **Inconnue** — l'association exacte entre les autres origines UI et les
+  call-sites dynamiques reste à inventorier; pour le Ctrl-clic testé,
+  `0x15A25C` contrôle l'espace et `0x15F94F` produit les coordonnées envoyées au
+  serveur.
 
 ## Architecture retenue
 
 1. Conserver `INVENTORY_FindFreePosition` intact afin de ne pas modifier les
    inventaires, coffres et placements manuels globaux.
-2. Vérifier strictement le build, la signature et l’ABI du site `0x4BBA73`, puis
-   remplacer uniquement cet appel relatif par un wrapper autonome.
+2. Vérifier strictement le build, la signature et l’ABI des 27 appels qui
+   peuvent porter la page `3`, puis les remplacer par un relais partagé vers le
+   wrapper autonome; laisser intacts les neuf appels constamment non-Cube.
 3. Faire exécuter au wrapper la recherche vanilla, puis recalculer la position
-   avec la routine native bas-droite pour toutes les hauteurs lorsque la cible
-   est bien le Cube et que l’option est activée.
+   sur la grille d'occupation native avec un balayage borné bas-droite pour les
+   objets de hauteur supérieure à une case lorsque la cible est bien le Cube et
+   que l’option est activée.
 4. En cas de précondition, signature ou recherche invalide, conserver le
    résultat vanilla sans altérer l’objet.
 5. Distribuer pendant l’incubation uniquement `CubeQuickMove.dll` et son JSON
@@ -136,31 +187,33 @@ donc un objet `2x1` suit aussi la branche bas-droite.
 
 ## Gates observables
 
-1. **Portée et ABI — franchi statiquement** : graphe du chemin `0x4BB8C0`, ABI
-   des routines appelées, call-site unique et signatures strictes gouvernées.
+1. **Portée et ABI — franchi pour le témoin épée** : 36 xrefs inventoriés, neuf
+   pages non-Cube exclues, ABI et signatures strictes gouvernées; `0x15A25C` et
+   le producteur `0x15F94F` observés en runtime, paquet `0x54` à `4,3` accepté.
 2. **Prototype autonome — franchi** : Release x64, test `1/1`, trois exports
    D2RLoader, auteur `RuffnecKk`, JSON anglais, aucun TOML et repli sûr.
-3. **Dimensions et fragmentation — non exécuté en jeu** : `1x1`, `2x1`, `1x2`,
-   `2x2`, `2x3`, Cube vide, fragmenté et plein; aucune superposition ni perte
-   d’objet.
+3. **Dimensions et fragmentation — témoin `1x3` franchi sous 0.1.3** : Vincent
+   confirme l'épée en bas à droite. La matrice complémentaire `1x1`, `2x1`,
+   `1x2`, `2x2`, `2x3`, Cube vide, fragmenté et plein reste à rejouer après le
+   port dans `plugin-misc.dll`; aucune superposition ni perte d’objet.
 4. **Périmètre UI — non exécuté en jeu** : Ctrl + clic inventaire→Cube, autres
    origines indirectes, souris, manette et clics rapides; glisser-déposer manuel
    et autres conteneurs inchangés.
 5. **Autorité et persistance — non exécuté en jeu** : solo, hôte, joiner,
    sauvegarde/rechargement, nouvelle partie et retour au menu; aucune
    duplication, désynchronisation ni migration de sauvegarde.
-6. **Distribution — gate technique franchi, release finale ouverte** : portées
+6. **Distribution — autonome prêt pour intégration, release finale ouverte** : portées
    globale et mod-locale, coexistence PluginPack, cold starts frais, hashes
    source/runtime et ZIP strict DLL + JSON sont prouvés. Le ZIP demeure une
    candidate technique jusqu’à validation des gates 3 à 5.
 
 ## Prochain gate
 
-Valider visuellement en jeu les cinq dimensions d’objet dans un Cube vide,
-fragmenté et plein, puis fermer le périmètre UI, la persistance et l’autorité
-hôte/joiner. La première redirection réelle doit apparaître dans
-`cube-quick-move.log` avec les dimensions et les coordonnées vanilla puis
-bas-droite avant de déclarer l’archive public-ready.
+Porter séparément la politique 0.1.3 dans `plugin-misc.dll` sous
+`misc.cubeQuickMoveBottomRight`, sans retirer l'autonome avant un build, un cold
+start et un témoin épée équivalents. Rejouer ensuite `1x1`, `2x1`, `1x2`, `2x2`
+et `2x3` dans un Cube vide, fragmenté et plein, puis fermer le périmètre UI, la
+persistance et l’autorité hôte/joiner avant de déclarer la distribution finale.
 
 ## Frontière Git
 
@@ -168,4 +221,5 @@ Le lot actuel comprend cette mission, `Mission/CURRENT.md`,
 `Mission/WORKSTREAMS.json`, `ROADMAP.html`, les preuves gouvernées 92777, les
 sources `CubeQuickMove-src/`, le JSON, la DLL autonome, l’archive candidate et le
 cadastre régénéré. Aucun fichier ni aucune DLL d’eezstreet n’est modifié, lié ou
-redistribué. Aucun commit ni push n’est inclus.
+redistribué. Le lot autonome validé est prêt pour un port ultérieur dans le
+propriétaire `misc`; ce port ne fait pas partie du présent checkpoint.

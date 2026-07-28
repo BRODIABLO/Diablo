@@ -1297,7 +1297,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/cube-quick-move-bottom-right-3.2.md",
-      "notes": "Native bottom-right-to-top-left weighted placement search with ABI (inventory, occupancyGrid, freeXOut, freeYOut, widthByte, heightByte) -> int32. Its only vanilla xref is the height-equals-one branch at 0x386754; CubeQuickMove reuses the function for taller Cube items after a successful vanilla search."
+      "notes": "Native bottom-right-to-top-left weighted placement search with ABI (inventory, occupancyGrid, freeXOut, freeYOut, widthByte, heightByte) -> int32. Its only vanilla xref is the height-equals-one branch at 0x386754. CubeQuickMove 0.1.0 reused it for taller Cube items, but that design was retired after the first gameplay witness failed; 0.1.1 scans the resolved occupancy grid directly."
     },
     {
       "rva": "0x3C6D80",
@@ -1308,12 +1308,92 @@
       "notes": "Builds the temporary grid context consumed by INVENTORY_ResolveOccupancyGrid with ABI (itemDataContextByte, inventoryRecordId, reservedZero, gridContextOut) -> void. The exact call sequence is proven inside INVENTORY_FindFreePosition."
     },
     {
+      "rva": "0x0FA33D",
+      "name": "CubeAutomaticFindFreePositionCall_0FA33D",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Automatic placement call E8 6E C2 28 00 to INVENTORY_FindFreePosition. Its caller writes the sixth page argument as native Cube page 3 with C6 44 24 28 03. CubeQuickMove 0.1.2 owned this five-byte call; 0.1.3 retains it in the 27-site page-3-capable set."
+    },
+    {
+      "rva": "0x2C7306",
+      "name": "CubeAutomaticFindFreePositionCall_2C7306",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Automatic placement call E8 A5 F2 0B 00 to INVENTORY_FindFreePosition. Its caller writes the sixth page argument as native Cube page 3 with C6 44 24 28 03. CubeQuickMove 0.1.2 owned this five-byte call; 0.1.3 retains it in the 27-site page-3-capable set."
+    },
+    {
+      "rva": "0x471D62",
+      "name": "CubeAutomaticFindFreePositionCall_471D62",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Automatic placement call E8 49 48 F1 FF to INVENTORY_FindFreePosition. Its caller writes the sixth page argument as native Cube page 3 with C6 44 24 28 03. CubeQuickMove 0.1.2 owned this five-byte call; 0.1.3 retains it in the 27-site page-3-capable set."
+    },
+    {
       "rva": "0x4BBA73",
       "name": "CubeIndirectMoveFindFreePositionCall",
       "kind": "call-site",
       "confidence": "high",
       "source": "Mission/cube-quick-move-bottom-right-3.2.md",
-      "notes": "Unique E8 38 AB EC FF call in the indirect Cube-transfer path after base-code box validation, native page 3 selection and inventory-grid resolution. The proven substituted ABI is (inventory, item, inventoryRecordId, freeXOut, freeYOut, pageByte) -> int32 and returns at 0x4BBA78. CubeQuickMove owns only this call-site."
+      "notes": "Unique E8 38 AB EC FF signature in one indirect Cube-transfer path after base-code box validation, native page 3 selection and inventory-grid resolution. The proven substituted ABI is (inventory, item, inventoryRecordId, freeXOut, freeYOut, pageByte) -> int32 and returns at 0x4BBA78. CubeQuickMove 0.1.2 owned it among eight explicit page-3 calls; 0.1.3 retains it in the 27-site page-3-capable set."
+    },
+    {
+      "rva": "0x4C21D6",
+      "name": "CubePacket15FindFreePositionCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Automatic Cube placement call E8 D5 43 EC FF to INVENTORY_FindFreePosition inside the 0x15-byte packet parser beginning at 0x4C2050. The caller resolves inventory grid page 3 and writes page argument 3 explicitly. Runtime counters disproved it as the reported 0.1.2 equipped-sword path. CubeQuickMove 0.1.3 retains it in the 27-site page-3-capable set."
+    },
+    {
+      "rva": "0x4F2C8B",
+      "name": "CubeAutomaticFindFreePositionCall_4F2C8B",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Automatic placement call E8 20 39 E9 FF to INVENTORY_FindFreePosition. Its caller writes the sixth page argument as native Cube page 3 with C6 44 24 28 03. CubeQuickMove 0.1.2 owned this five-byte call; 0.1.3 retains it in the 27-site page-3-capable set."
+    },
+    {
+      "rva": "0x527DC2",
+      "name": "CubeAutomaticFindFreePositionCall_527DC2",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Automatic placement call E8 E9 E7 E5 FF to INVENTORY_FindFreePosition. Its caller writes the sixth page argument as native Cube page 3 with C6 44 24 28 03. CubeQuickMove 0.1.2 owned this five-byte call; 0.1.3 retains it in the 27-site page-3-capable set."
+    },
+    {
+      "rva": "0x528053",
+      "name": "CubeAutomaticFindFreePositionCall_528053",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Automatic placement call E8 58 E5 E5 FF to INVENTORY_FindFreePosition. Its caller writes the sixth page argument as native Cube page 3 with C6 44 24 28 03. CubeQuickMove 0.1.2 owned this five-byte call; 0.1.3 retains it in the 27-site page-3-capable set."
+    },
+    {
+      "rva": "0x15A25C",
+      "name": "UI_DynamicPageFindFreePositionCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Client availability call E8 4F C3 22 00 to INVENTORY_FindFreePosition. The helper preserves its page argument in r14b and writes it as the sixth argument; UI_CanQuickMoveItemToCube calls the helper with native Cube page 3 at 0x15A2BB-0x15A2BD. CubeQuickMove 0.1.3 observed this site at runtime for a 1x3 item."
+    },
+    {
+      "rva": "0x15F94F",
+      "name": "UI_QuickMovePlacementFindFreePositionCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Gameplay-proven client placement call to INVENTORY_FindFreePosition inside the routine beginning at 0x15F8B0. The routine copies the returned x/y pair into its placement output before emitting packet 0x54. The 0.1.3 equipped-sword witness observed native Cube page 3, outgoing coordinates 4,3, accepted transfer result 1 and Vincent's visible 1x3 placement at the bottom-right."
+    },
+    {
+      "rva": "0x4FBC0E",
+      "name": "ServerDynamicPageFindFreePositionCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Server placement call E8 9D A9 E8 FF to INVENTORY_FindFreePosition. The enclosing branch selects native page 0 or 3 dynamically, consumes both output coordinates, then calls ITEMS_PlaceItemForPlayer at 0x4FBD90. The gameplay probe identified 0x15F94F plus packet handler 0x4C2050 for the reported equipped-sword action, so 0x4FBC0E is not that action's current runtime witness."
     },
     {
       "rva": "0x23ECD0",

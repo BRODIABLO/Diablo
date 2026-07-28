@@ -185,8 +185,8 @@ incubation build remains disabled and autonomous, with a future owner of
 
 ## TCP hybrid and mod-local plugins
 
-* `CubeQuickMove.dll` 0.1.0 is hybrid (global or mod-local) and places every
-  quick-moved Cube item with the native bottom-right weighted search. Its JSON
+* `CubeQuickMove.dll` 0.1.3 is hybrid (global or mod-local) and places every
+  quick-moved Cube item with a bounded bottom-right grid scan. Its JSON
   is loaded from the active mod first, then the game directory; the command
   `cube-quick-move` reports runtime placement counters.
 * `PotionAutoPickup.dll` routes configured potion families through the vanilla
