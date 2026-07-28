@@ -461,6 +461,24 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "CubeQuickMove",
+                                                           "path":  "addons/CubeQuickMove",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-d2rloader-package-candidate",
+                                                                        "summary":  "Archive technique candidate DLL + JSON du plugin hybride CubeQuickMove 0.1.0; publication finale conditionnée par la matrice gameplay.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "experimental"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "CubeQuickMove.zip",
+                                                                                "path":  "addons/CubeQuickMove/CubeQuickMove.zip",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "DurabilityResistance",
                                                            "path":  "addons/DurabilityResistance",
                                                            "kind":  "directory",
@@ -13610,6 +13628,11 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
+                                                                                "name":  "CubeQuickMove.json",
+                                                                                "path":  "data-BKVince/BKVince.mpq/CubeQuickMove.json",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "D2RPlugins.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/D2RPlugins.json",
                                                                                 "kind":  "file"
@@ -13978,6 +14001,43 @@
                                                                                                                       {
                                                                                                                           "name":  "README.md",
                                                                                                                           "path":  "data-BKVince/d2rloader/plugins/CharmInventoryAuras-src/README.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "CubeQuickMove-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/CubeQuickMove-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/CubeQuickMove-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "cube_quick_move_policy.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/CubeQuickMove-src/cube_quick_move_policy.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/CubeQuickMove-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/CubeQuickMove-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "policy_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/CubeQuickMove-src/policy_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "README.md",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/CubeQuickMove-src/README.md",
                                                                                                                           "kind":  "file"
                                                                                                                       }
                                                                                                                   ]
@@ -14814,6 +14874,11 @@
                                                                                                  {
                                                                                                      "name":  "CharmInventoryAuras.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/CharmInventoryAuras.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "CubeQuickMove.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/CubeQuickMove.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

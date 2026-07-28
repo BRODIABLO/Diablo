@@ -15,6 +15,13 @@
         "CharmInventoryAuras.dll"
       ]
     },
+    "addons/CubeQuickMove/CubeQuickMove.zip": {
+      "kind": "plugin",
+      "entries": [
+        "CubeQuickMove.dll",
+        "CubeQuickMove.json"
+      ]
+    },
     "addons/ConfigurableCharsiReward/ConfigurableCharsiReward.zip": {
       "kind": "plugin",
       "legacy": true,

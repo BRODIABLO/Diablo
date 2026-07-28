@@ -2,14 +2,14 @@
 
 ## Statut et séquencement
 
-- Statut : **mission active de conception et de preuve; aucune implantation n’a
-  encore commencé**.
-- Cible éventuelle : `D2R.exe 3.2.92777` sous D2RLoader.
+- Statut : **prototype autonome hybride 0.1.0 implanté et techniquement validé;
+  matrice gameplay encore ouverte**.
+- Cible : `D2R.exe 3.2.92777` sous D2RLoader.
 - Vincent confirme le 27 juillet 2026 la catégorie future `misc`, le propriétaire
   `plugin-misc.dll` et la clé `misc.cubeQuickMoveBottomRight`.
 - Vincent retient le séquencement A : après la clôture de Vendor Stock Refresh,
   ce chantier devient prioritaire avant Equipped Item to Cube.
-- Pendant l’incubation, le candidat recommandé est une DLL autonome hybride
+- Pendant l’incubation, la fonctionnalité reste dans la DLL autonome hybride
   `CubeQuickMove.dll`, attribuée exactement à `RuffnecKk`, pilotée par un JSON
   autonome et sans TOML.
 
@@ -65,6 +65,45 @@ donc un objet `2x1` suit aussi la branche bas-droite.
   l’inventaire. Aucun conflit de propriétaire ou de site n’est actuellement
   identifié.
 
+## Implantation et preuves techniques
+
+- `CubeQuickMove 0.1.0` remplace uniquement l’appel relatif au site
+  `0x4BBA73` par un relais proche suivi d’un wrapper natif. Le wrapper appelle
+  d’abord `INVENTORY_FindFreePosition` vanilla, conserve ce résultat pour les
+  objets de hauteur `1`, puis reconstruit le contexte de grille natif et appelle
+  `INVENTORY_SearchBottomRightWeighted` pour les objets plus hauts. Toute
+  précondition invalide, exception ou recherche infructueuse restitue les
+  coordonnées vanilla.
+- Les ABI et signatures strictes sont gouvernées pour
+  `ITEMS_GetDimensions 0x371850`, le gate de hauteur `0x386735`,
+  `INVENTORY_ResolveOccupancyGrid 0x38B070`,
+  `INVENTORY_SearchBottomRightWeighted 0x38D8F0`,
+  `INVENTORY_BuildGridContext 0x3C6D80` et le call-site Cube `0x4BBA73`.
+- Le relais est alloué dans la plage positive d’un `rel32`, rendu RX avant
+  l’installation du patch et conservé jusqu’à la fin du processus. D2RLoader
+  possède le patch du call-site; le plugin expose la commande
+  `cube-quick-move` et journalise les appels Cube, redirections, replis vanilla
+  et replis sûrs.
+- Le build gouverné Release x64 passe son test de politique `1/1`. La DLL expose
+  exactement `D2RLoaderGetPluginInfo`, `D2RLoaderLoadPlugin` et
+  `D2RLoaderUnloadPlugin`; son manifeste v2 porte `NativeHooks`, sans
+  `ModScopedOnly`. SHA-256 DLL :
+  `AEABDA0B8ED90765A752B22988F862B995B1739EADDB6A55D46D81D76D22C833`.
+- `CubeQuickMove.json` expose uniquement `enabled`, utilise la priorité mod actif
+  puis le repli global et refuse une configuration inconnue ou mal formée.
+  SHA-256 JSON :
+  `70CD57A3B6076C764A000C77E37EFCA407C20A3AC767986E95DA05B4CCE65C72`.
+- Les cold starts frais mod-local et global chargent respectivement
+  `CubeQuickMove.dll [mod]` et `[global]`, activent le relais au RVA
+  `0x3E80000`, appliquent `20/20` patchsets et atteignent `24/24` sans échec du
+  plugin. L’état final est restauré en portée mod-locale avec les hashes
+  source/runtime identiques. Le dernier démarrage signale séparément le rejet
+  d’un artefact concurrent `EquippedItemToCubeProbe.dll`; CubeQuickMove reste
+  chargé et actif.
+- L’archive candidate `addons/CubeQuickMove/CubeQuickMove.zip` contient
+  strictement `CubeQuickMove.dll` et `CubeQuickMove.json`. SHA-256 ZIP :
+  `2FE7079C726B5668995843523971C48A1FE9D6B95A57C62D3389E73DCD5DD30F`.
+
 ## Hypothèses à tester et inconnues
 
 - **Hypothèse** — souris et manette convergent vers le même paquet de déplacement
@@ -77,7 +116,7 @@ donc un objet `2x1` suit aussi la branche bas-droite.
   la page Cube. Chaque origine doit être inventoriée avant d’affirmer que la
   portée correspond exactement au Ctrl + clic.
 
-## Architecture recommandée
+## Architecture retenue
 
 1. Conserver `INVENTORY_FindFreePosition` intact afin de ne pas modifier les
    inventaires, coffres et placements manuels globaux.
@@ -89,7 +128,7 @@ donc un objet `2x1` suit aussi la branche bas-droite.
 4. En cas de précondition, signature ou recherche invalide, conserver le
    résultat vanilla sans altérer l’objet.
 5. Distribuer pendant l’incubation uniquement `CubeQuickMove.dll` et son JSON
-   autonome. Description recommandée :
+   autonome. Description retenue :
    `Places quick-moved Cube items from the bottom-right.`
 6. Après validation autonome, préparer séparément une éventuelle promotion dans
    `plugin-misc.dll` sous `misc.cubeQuickMoveBottomRight`, sans modifier, lier ni
@@ -97,30 +136,36 @@ donc un objet `2x1` suit aussi la branche bas-droite.
 
 ## Gates observables
 
-1. **Portée et ABI** — fermer le graphe de callers du chemin `0x4BB8C0`, prouver
-   les arguments et retours de `0x3865B0`, `0x38D8F0` et du call-site, puis
-   enregistrer les signatures strictes gouvernées.
-2. **Prototype autonome** — Release x64, trois exports D2RLoader, auteur
-   `RuffnecKk`, JSON anglais, aucune configuration TOML et échec sûr.
-3. **Dimensions et fragmentation** — `1x1`, `2x1`, `1x2`, `2x2`, `2x3`, Cube
-   vide, fragmenté et plein; aucune superposition ni perte d’objet.
-4. **Périmètre UI** — Ctrl + clic inventaire→Cube, autres origines indirectes,
-   souris, manette, clics rapides; glisser-déposer manuel et autres conteneurs
-   inchangés.
-5. **Autorité et persistance** — solo, hôte, joiner, sauvegarde/rechargement,
-   nouvelle partie et retour au menu; aucune duplication, désynchronisation ni
-   migration de sauvegarde.
-6. **Distribution** — portées globale et mod-locale, coexistence PluginPack,
-   cold start frais, hashes source/runtime et ZIP public strict DLL + JSON.
+1. **Portée et ABI — franchi statiquement** : graphe du chemin `0x4BB8C0`, ABI
+   des routines appelées, call-site unique et signatures strictes gouvernées.
+2. **Prototype autonome — franchi** : Release x64, test `1/1`, trois exports
+   D2RLoader, auteur `RuffnecKk`, JSON anglais, aucun TOML et repli sûr.
+3. **Dimensions et fragmentation — non exécuté en jeu** : `1x1`, `2x1`, `1x2`,
+   `2x2`, `2x3`, Cube vide, fragmenté et plein; aucune superposition ni perte
+   d’objet.
+4. **Périmètre UI — non exécuté en jeu** : Ctrl + clic inventaire→Cube, autres
+   origines indirectes, souris, manette et clics rapides; glisser-déposer manuel
+   et autres conteneurs inchangés.
+5. **Autorité et persistance — non exécuté en jeu** : solo, hôte, joiner,
+   sauvegarde/rechargement, nouvelle partie et retour au menu; aucune
+   duplication, désynchronisation ni migration de sauvegarde.
+6. **Distribution — gate technique franchi, release finale ouverte** : portées
+   globale et mod-locale, coexistence PluginPack, cold starts frais, hashes
+   source/runtime et ZIP strict DLL + JSON sont prouvés. Le ZIP demeure une
+   candidate technique jusqu’à validation des gates 3 à 5.
 
 ## Prochain gate
 
-Fermer l’audit ABI/signatures et la portée exacte du site `0x4BBA73`, puis
-présenter le plan de patch autonome avant toute implantation de code ou de
-configuration.
+Valider visuellement en jeu les cinq dimensions d’objet dans un Cube vide,
+fragmenté et plein, puis fermer le périmètre UI, la persistance et l’autorité
+hôte/joiner. La première redirection réelle doit apparaître dans
+`cube-quick-move.log` avec les dimensions et les coordonnées vanilla puis
+bas-droite avant de déclarer l’archive public-ready.
 
 ## Frontière Git
 
-Le lot actuel est documentaire : cette mission, `Mission/CURRENT.md`,
-`Mission/WORKSTREAMS.json`, `ROADMAP.html` et le cadastre régénéré. Aucun code,
-JSON, binaire, ZIP, commit ou push n’est autorisé par cette étape.
+Le lot actuel comprend cette mission, `Mission/CURRENT.md`,
+`Mission/WORKSTREAMS.json`, `ROADMAP.html`, les preuves gouvernées 92777, les
+sources `CubeQuickMove-src/`, le JSON, la DLL autonome, l’archive candidate et le
+cadastre régénéré. Aucun fichier ni aucune DLL d’eezstreet n’est modifié, lié ou
+redistribué. Aucun commit ni push n’est inclus.

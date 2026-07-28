@@ -6,11 +6,12 @@ Dernière mise à jour : 27 juillet 2026
 
 [Cube Quick Move Bottom-Right — D2R 3.2](cube-quick-move-bottom-right-3.2.md)
 
-État : mission de conception et de preuve active, sans implantation. Vincent
-retient le séquencement A et confirme le propriétaire futur `plugin-misc.dll`
-sous la catégorie `misc`, avec la clé `misc.cubeQuickMoveBottomRight`. Le chemin
-92777 vers la page Cube `3`, la règle native dépendant de la hauteur et l’appel
-unique à `INVENTORY_FindFreePosition` au site `0x4BBA73` sont identifiés.
+État : prototype autonome hybride `CubeQuickMove 0.1.0` implanté, compilé en
+Release x64 et déployé dans BKVince. Vincent retient le séquencement A et confirme
+le propriétaire futur `plugin-misc.dll` sous la catégorie `misc`, avec la clé
+`misc.cubeQuickMoveBottomRight`. Le wrapper ne redirige que l’appel Cube unique
+au site `0x4BBA73`; les portées mod-locale et globale ont chacune franchi un cold
+start `24/24` avec les hashes source/runtime identiques.
 
 Vendor Stock Refresh a été déclaré réglé par Vincent le 27 juillet 2026 et
 retiré de la ROADMAP active. Sa mission et ses artefacts restent conservés comme
@@ -19,15 +20,15 @@ présente mission.
 
 ## Prochain gate
 
-Fermer l’audit ABI/signatures et la portée exacte du call-site `0x4BBA73`, puis
-présenter le plan du wrapper autonome `CubeQuickMove.dll` avant toute
-implantation. La validation devra couvrir toutes les dimensions d’objet, un Cube
-fragmenté ou plein, les contrôles manuels, les autres conteneurs, la manette et
-l’autorité hôte/joiner.
+Valider visuellement en jeu les Ctrl-déplacements `1x1`, `2x1`, `1x2`, `2x2` et
+`2x3` dans un Cube vide, fragmenté et plein, puis fermer les contrôles de
+non-régression : placement manuel, autres conteneurs, manette, persistance et
+autorité hôte/joiner. L’archive DLL + JSON reste une candidate technique tant
+que cette matrice gameplay n’est pas observée.
 
 ## Frontière Git
 
-Le lot courant est documentaire : nouvelle mission, pointeur courant, workstream,
-ROADMAP et cadastre. Les artefacts Vendor Stock Refresh et tous les autres
-changements concurrents sont préservés; aucun code, JSON, binaire, commit ou push
-n’est inclus.
+Le lot Cube Quick Move comprend la mission, le pointeur courant, le workstream,
+la ROADMAP, les preuves 92777, les sources, le JSON, la DLL autonome, l’archive
+candidate et le cadastre. Les artefacts Vendor Stock Refresh et tous les autres
+changements concurrents sont préservés. Aucun commit ni push n’est inclus.

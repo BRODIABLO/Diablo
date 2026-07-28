@@ -1266,6 +1266,54 @@
       "confidence": "high",
       "source": "Mission/remote-stash-3.2.md",
       "notes": "Generic ButtonWidget click handler with probable ABI (button, inputMessage) -> void. Runtime type metadata proves onClickMessage at button+0x558; the handler dispatches that embedded message at 0x8F1069. RemoteStash 0.1.0 hooks the strict 32-byte prologue and consumes only hash 0x055A7CEA95897DC9 for PlayerInventoryPanelMessage:RemoteStash, forwarding every other button unchanged."
+    },
+    {
+      "rva": "0x371850",
+      "name": "ITEMS_GetDimensions",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Returns an item's one-byte width and height through the proven x64 ABI (item, widthOut, heightOut, sourceFile, sourceLine) -> void. INVENTORY_FindFreePosition calls it before choosing a scan direction; CubeQuickMove pins its 32-byte prologue and uses it only after the vanilla Cube search succeeds."
+    },
+    {
+      "rva": "0x386735",
+      "name": "InventoryPlayerHeightPlacementGate",
+      "kind": "branch-site",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "The exact bytes 40 80 FE 01 compare the item height with one inside INVENTORY_FindFreePosition. Equality calls the bottom-right weighted search at 0x38D8F0; other heights continue into the player top-left path. CubeQuickMove does not patch this shared branch."
+    },
+    {
+      "rva": "0x38B070",
+      "name": "INVENTORY_ResolveOccupancyGrid",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Resolves the temporary occupancy grid used by free-position searches with ABI (inventory, pagePlusTwo, gridContext) -> occupancyGrid. The Cube caller supplies native page 3, so INVENTORY_FindFreePosition passes grid index 5."
+    },
+    {
+      "rva": "0x38D8F0",
+      "name": "INVENTORY_SearchBottomRightWeighted",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Native bottom-right-to-top-left weighted placement search with ABI (inventory, occupancyGrid, freeXOut, freeYOut, widthByte, heightByte) -> int32. Its only vanilla xref is the height-equals-one branch at 0x386754; CubeQuickMove reuses the function for taller Cube items after a successful vanilla search."
+    },
+    {
+      "rva": "0x3C6D80",
+      "name": "INVENTORY_BuildGridContext",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Builds the temporary grid context consumed by INVENTORY_ResolveOccupancyGrid with ABI (itemDataContextByte, inventoryRecordId, reservedZero, gridContextOut) -> void. The exact call sequence is proven inside INVENTORY_FindFreePosition."
+    },
+    {
+      "rva": "0x4BBA73",
+      "name": "CubeIndirectMoveFindFreePositionCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
+      "notes": "Unique E8 38 AB EC FF call in the indirect Cube-transfer path after base-code box validation, native page 3 selection and inventory-grid resolution. The proven substituted ABI is (inventory, item, inventoryRecordId, freeXOut, freeYOut, pageByte) -> int32 and returns at 0x4BBA78. CubeQuickMove owns only this call-site."
     }
   ]
 }

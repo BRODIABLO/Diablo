@@ -107,6 +107,38 @@ prototype autonome 0.1.0 compile et ses tests statiques passent. Le prochain
 travail efficace est le cold start puis l'observation runtime de la
 resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
 
+## Cube Quick Move Bottom-Right
+
+- La référence sémantique épinglée
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`,
+  `source/D2Common/src/D2Inventory.cpp:658-690`, montre que
+  `INVENTORY_GetFreePosition` choisit le parcours pondéré bas-droite uniquement
+  lorsque la hauteur de l'objet vaut `1`; D2MOO 1.10f ne fournit aucune adresse
+  transposable au build 92777.
+- L'équivalent 92777 est `INVENTORY_FindFreePosition` à `0x3865B0`. Son ABI x64
+  est `(inventory, item, inventoryRecordId, freeXOut, freeYOut, pageByte) ->
+  int32`. `ITEMS_GetDimensions` à `0x371850` écrit largeur puis hauteur.
+- Le gate `0x386735` porte les octets `40 80 FE 01`. L'égalité appelle l'unique
+  xref vanilla de `INVENTORY_SearchBottomRightWeighted` à `0x38D8F0`; les objets
+  plus hauts suivent les branches joueur qui aboutissent au parcours haut-gauche
+  à `0x38DCC0`.
+- Le chemin indirect du Cube autour de `0x4BB8C0` vérifie le code de base `box `,
+  sélectionne la page native `3`, résout l'Inventory.txt actif et appelle
+  `INVENTORY_FindFreePosition` à `0x4BBA73`. Les cinq octets
+  `E8 38 AB EC FF` sont uniques dans `.text` et le retour est `0x4BBA78`.
+- La construction native de la grille d'occupation est reproduite sans structure
+  inventée : `GetItemDataContext` à `0x34A0E0`, contexte temporaire à
+  `0x3C6D80`, résolution de grille à `0x38B070` avec `page + 2`, puis recherche
+  bas-droite à `0x38D8F0` avec largeur et hauteur en arguments de pile.
+- `CubeQuickMove 0.1.0` conserve la fonction et le gate partagés intacts. Il
+  remplace seulement l'appel `0x4BBA73` par un relais proche rel32, exécute
+  d'abord la recherche vanilla, puis recalcule seulement les objets plus hauts
+  qu'une case. Toute erreur restaure les coordonnées vanilla.
+- L'audit du PluginPack épinglé
+  `eezstreet/D2RL-Plugins@dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`
+  ne trouve aucune clé Cube ni hook d'inventaire dans `plugin-misc`; les sites
+  existants `0x18885B`, `0x18887F` et `0x542F40` sont distincts.
+
 ## Discipline de promotion
 
 Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de

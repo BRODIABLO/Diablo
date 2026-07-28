@@ -69,7 +69,7 @@ export function normalizeRepoPath(value, repoRoot = null) {
   }
   candidate = candidate.replace(/^\.\//, '').replace(/^(?:a|b)\//, '');
   const normalized = path.posix.normalize(candidate);
-  return normalized === '.' ? '.' : normalized.replace(/^\/+/, '');
+  return normalized === '.' ? '.' : normalized.replace(/^\/+|\/+$/g, '');
 }
 
 export function isWithin(candidate, root) {

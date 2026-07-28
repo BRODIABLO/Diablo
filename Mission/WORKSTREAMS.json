@@ -177,12 +177,24 @@
       ]
     },
     {
+      "id": "configurable-charsi-reward",
+      "name": "Configurable Charsi Reward",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/eezstreet-pluginpack-integration.md",
+      "nextGate": "Complete and checkpoint Configurable Charsi Reward 2.1.1 as a separate lot; keep its four active files outside Cube Quick Move.",
+      "include": [
+        "Mission/eezstreet-pluginpack-integration.md",
+        "addons/ConfigurableCharsiReward/**"
+      ]
+    },
+    {
       "id": "cube-quick-move-bottom-right",
       "name": "Cube Quick Move Bottom-Right",
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/cube-quick-move-bottom-right-3.2.md",
-      "nextGate": "Close the strict ABI, signature and call-site scope audit for the unique Cube transfer call at 0x4BBA73, then present the governed standalone wrapper plan before any implementation.",
+      "nextGate": "Validate Ctrl quick-moves in game for 1x1, 2x1, 1x2, 2x2 and 2x3 items in empty, fragmented and full Cubes, then cover manual placement, other containers, controller, persistence and host/joiner authority before declaring the candidate public-ready.",
       "include": [
         "Mission/cube-quick-move-bottom-right-3.2.md",
         "addons/CubeQuickMove/**",
@@ -308,6 +320,20 @@
         "workstream-registry"
       ],
       "reason": "Repository verification orchestrator."
+    },
+    {
+      "pattern": "scripts/verify/zip-policy.json",
+      "workstreams": [
+        "workstream-registry"
+      ],
+      "reason": "Shared allowlist for public plugin archive contents."
+    },
+    {
+      "pattern": "scripts/verify/repo-policy.mjs",
+      "workstreams": [
+        "workstream-registry"
+      ],
+      "reason": "Shared repository policy and path normalization guardrails."
     },
     {
       "pattern": "reverse-engineering/d2r-3.2.92777/known-rvas.json",
