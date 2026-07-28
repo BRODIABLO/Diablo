@@ -1,6 +1,6 @@
 # RemoteStash — D2R 3.2.92777
 
-Dernière mise à jour : 27 juillet 2026
+Dernière mise à jour : 28 juillet 2026
 
 Statut : prototype technique autonome `RemoteStash 0.1.5` compilé et déployé
 pour BKVince le 27 juillet 2026. Vincent confirme que le bouton desktop ouvre
@@ -13,7 +13,10 @@ natif `YOUR PRIVATE STASH` résolu par la clé `remoteStashTooltip`. Le bouton d
 reste à la position imposée par le layout BKVince et n’est jamais déplacé par
 RemoteStash. Ce jalon ne crée pas
 encore une session banque autoritaire côté serveur : opérations d’items, or et
-persistance restent non validés.
+persistance restent non validés. Le 28 juillet 2026, un profil isolé
+`RemoteStashRetail` sans BKVince valide aussi le bouton sur un inventaire
+desktop retail-like `10 × 4` : placement, sprite, hit-test, tooltip retail
+`OPEN CURRENT STASH` et ouverture sans dialogue `Drop Gold` sont confirmés.
 
 ## Décisions confirmées
 
@@ -312,6 +315,40 @@ objets lui-même.
   dont toutes les langues affichent volontairement `YOUR PRIVATE STASH`.
   Vincent confirme maintenant ce rendu au survol ainsi que la conservation de
   la position BKVince du bouton d’or.
+- Le 28 juillet 2026, le profil temporaire `RemoteStashRetail` a isolé la DLL
+  mod-locale et les seuls assets/layouts requis, sans charger BKVince ni aucun
+  autre plugin. Les six fichiers source/runtime étaient byte-exacts, dont
+  `RemoteStash.dll` au SHA-256
+  `21033A82199A550D60DB82EB16CE7071351F6E912BD3DAC8F6FAA7FDBEF8D7C2`.
+  Le cold start du build `3.2.92777` a chargé `Remote Stash 0.1.5`, accepté les
+  hooks `0x22BA70` et `0x843D90`, puis terminé avec
+  `scanned=1 active=1 disabled=0 rejected=0 failed=0` et `24/24`. Sur le layout
+  desktop retail-like `10 × 4`, Vincent confirme visuellement le bouton en bas
+  à gauche, le bloc d’or inchangé, le hit-test, le tooltip retail localisé
+  `OPEN CURRENT STASH` et l’ouverture du panneau sans dialogue `Drop Gold`.
+  Cette preuve ferme le témoin desktop retail-like distinct de BKVince; elle ne
+  valide toujours ni un inventaire étendu tiers, ni la manette, ni les opérations
+  d’items/or et leur persistance sans session banque serveur.
+- Le kit privé `RemoteStash-0.1.5-intermod-test-retail-validated.zip` reprend la
+  DLL et les deux sprites byte-exacts testés, deux fragments de layout à fusionner
+  et les consignes de validation. Il utilise désormais la clé Blizzard native
+  `@OpenCurrentStashLegend`; aucun fichier de localisation, ID custom ou override
+  complet de layout BKVince n’est distribué. L’archive contient zéro source,
+  TOML, log, PDB ou DLL tierce et porte le SHA-256
+  `FE27E9AC96343C4BC8BC1E27B18F42739BA83A40A1986B8C8FF526515D24230F`.
+  Il s’agit d’un kit d’intégration destiné au testeur, pas encore du ZIP public
+  strict du plugin : la création native du widget et la matrice serveur restent
+  ouvertes.
+- Le kit documenté `RemoteStash-0.1.5-intermod-kit-20260728.zip` contient un
+  `README.txt` anglais volontairement court et lisible en texte brut :
+  installation, sprite, tooltip, placement et test. Son allowlist contient
+  exactement le README, `RemoteStash.dll`, deux snippets JSON valides et les
+  deux sprites; aucun source, layout complet, TOML, log, PDB ou DLL tierce n’est
+  distribué. La DLL et les sprites conservent leurs hashes validés; le ZIP de
+  182366 octets porte le SHA-256
+  `4596EBB5CD6EB35F70DE58C9CF57F188D2F2E7B45FA2F6D59B5DEE557D5794D3`.
+  Cette archive demeure un kit développeur privé et non le ZIP public minimal
+  gouverné par la checklist d’incubation.
 
 ## Hypothèses à tester
 
