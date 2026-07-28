@@ -29,6 +29,20 @@ témoins autonomes sont restés en place. Après le test, les cinq DLL et
 processus D2R n’est resté actif. Le rapport local complet est
 `analysis-cache/pluginpack-foundation-runtime-validation/20260728-191656701/report.json`.
 
+Le premier composant de l'Option A est maintenant implanté. Vincent fixe
+`EtherealItemRules.dll`, `EtherealItemRules.json` et l'identifiant
+`ethereal-item-rules`; son propriétaire futur reste `plugin-items.dll`. La DLL
+autonome 0.1.0 fusionne le hook d'exclusion et les quatre opérations du patch.
+Elle compile en Release x64, passe son test `1/1`, expose le manifeste v2 et les
+trois exports attendus. Les cold starts actif mod-local et global réussissent
+avec les anciens propriétaires neutralisés, zéro rejet/échec et `24/24`; les
+cinq sites sont confirmés dans la mémoire du processus. Un troisième cold start
+prouve que le JSON livré aux valeurs vanilla n'installe aucun hook ni patch pour
+la nouvelle DLL. Les anciens témoins sont restaurés, la nouvelle DLL demeure
+mod-locale avec son JSON vanilla et zéro processus D2R reste actif. Un quatrième
+cold start refuse explicitement `chancePercent=101`, puis restaure le JSON
+vanilla par son SHA-256 exact.
+
 Cube Quick Move 0.1.3 reste conservé et validé comme autonome, mais son port dans
 `plugin-misc.dll` est mis en pause avant mutation du pack. Transmogrify demeure
 exclu de ce lot. Après la fondation, l’Option A impose de réunir d’abord
@@ -38,18 +52,20 @@ puis de porter ensemble `items.etherealExclusions` et
 
 ## Prochain gate
 
-Figer le nom public et le contrat JSON unique du sous-système ethereal autonome
-commun, réauditer le hook `0x373890` et les quatre sites du patch, puis réunir
-`NoEtherealItemTypes` et `Ethereal Item Rules` dans ce témoin hybride avant tout
-port du lot. Son propriétaire futur dans le pack reste `plugin-items.dll`, sous
-`items.etherealExclusions` et `items.etherealItemRules`.
+Valider en jeu le composant autonome commun avant tout port dans le pack : code
+précis et parent, descendant non ciblé, taux 6 %, sets, sept uniques
+indestructibles et base sans durabilité, Cube/`ALWAYSETH`, solo, hôte/joiner et
+save/reload. Après équivalence autonome, porter ensemble
+`items.etherealExclusions` et
+`items.etherealItemRules` dans `plugin-items.dll`, puis rejouer la matrice.
 
 ## Frontière Git
 
-Le code de fondation vit uniquement dans le clone séparé
-`analysis-cache/pluginpack-foundation`; le dépôt principal ne reçoit que la mise
-à jour gouvernée de la mission et de la ROADMAP. Les autres changements actifs
-du workspace, notamment Cube Quick Move et Configurable Charsi Reward, restent
-préservés. Le code est committé et poussé séparément sur le fork; aucun
-déploiement runtime persistant n’est inclus et le profil BKVince a été restauré
-après le cold start temporaire.
+Le code de fondation vit dans le clone séparé
+`analysis-cache/pluginpack-foundation`. Le dépôt principal reçoit maintenant le
+prototype autonome `EtherealItemRules`, son JSON vanilla, sa DLL Release et les
+preuves gouvernées de mission/ROADMAP; le PluginPack n'est pas encore modifié
+par ce port. Les autres changements actifs du workspace, notamment Cube Quick
+Move et Configurable Charsi Reward, restent préservés. Le runtime BKVince final
+conserve les anciens témoins et la nouvelle DLL désactivée par son profil
+vanilla.

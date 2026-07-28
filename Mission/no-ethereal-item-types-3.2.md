@@ -26,14 +26,16 @@ validé avec `NoEtherealItemTypes.dll`, son TOML et le patch JSON d'origine
 neutralisés dans le runtime, mais conservés comme témoins jusqu'à équivalence.
 Seulement après cette validation combinée, les deux sous-sections distinctes
 `items.etherealExclusions` et `items.etherealItemRules` seront portées ensemble
-dans `plugin-items.dll`. Le nom public du composant intermédiaire reste à figer
-avant toute implantation.
+dans `plugin-items.dll`. Vincent fixe le 28 juillet 2026 le nom public du
+composant intermédiaire : `EtherealItemRules.dll`,
+`EtherealItemRules.json` et l'identifiant `ethereal-item-rules`.
 
 Vincent retient l'option A le 28 juillet 2026 : après la fondation commune des
 hooks, ce composant ethereal autonome est construit et validé avant les autres
 ports du lot. Son port conjoint dans `plugin-items.dll` ne commence qu'après
 équivalence fonctionnelle de l'étape autonome. Cette décision fixe l'ordre du
-lot sans remplacer la mission courante ni autoriser encore l'implantation.
+lot sans remplacer la mission courante. Vincent approuve ensuite ce nom et ce
+contrat, ce qui ferme le gate préalable à l'implantation autonome.
 
 Permettre à BKVince de déclarer des codes de `itemtypes.txt` qui ne doivent
 jamais devenir éthérés. La politique doit être configurable sans recompilation,
@@ -154,9 +156,51 @@ La validation gameplay reste distincte et ouverte.
 
 ## Validation requise
 
-1. Construire et cold-starter d'abord le composant autonome commun avec les
+### Prototype autonome unifié 0.1.0 — 28 juillet 2026
+
+`EtherealItemRules` réunit maintenant les deux témoins dans une DLL RuffnecKk
+hybride unique, sans TOML et sans liaison ni redistribution d'une DLL
+d'eezstreet. Le JSON expose directement `etherealExclusions` et
+`etherealItemRules`. À la demande de Vincent, le fichier livré est strictement
+vanilla par défaut : les deux sections sont désactivées, le taux visible vaut
+`5`, et les autorisations set/indestructible valent `false`; la DLL n'installe
+alors aucun hook ni patch.
+
+- Release x64 : 142 336 octets, SHA-256
+  `BAF958001ED43624F98C04672D4B844B6D2D0FEBE9B0EA1A04DF37EF76859174` ;
+- JSON vanilla : SHA-256
+  `22E0A07F5654FDE49F2693E6627BC649F963BDCBABC2A14879F8947B280ADA80` ;
+- test de politique `1/1`, manifeste API v2, PE32+ x64 et trois exports
+  D2RLoader attendus ;
+- audits du build 92777 et du PluginPack officiel épinglé `dc75b49` fermés :
+  aucun propriétaire existant dans `plugin-items`, signatures strictes
+  préflightées avant toute mutation ;
+- cold start actif mod-local puis global avec les anciens propriétaires
+  neutralisés : hook `0x373890`, taux `06`, six NOP set, call
+  `E8 47 A5 02 00` et helper exact de 67 octets observés dans le processus ;
+  dans les deux portées, `scanned=29 active=27 disabled=2 rejected=0 failed=0`,
+  `scanned=19 applied=19 disabled=0 failed=0` et démarrage `24/24` ;
+- cold start final avec le JSON livré vanilla et les témoins restaurés : zéro
+  ligne de hook pour `ethereal-item-rules`, une ligne pour l'ancien témoin,
+  `scanned=30 active=28 disabled=2 rejected=0 failed=0`, 20/20 patchsets et
+  démarrage `24/24` ;
+- JSON présent mais invalide (`chancePercent=101`) refusé avec l'erreur attendue,
+  `failed=1` pour cette case négative et démarrage `24/24`; le JSON vanilla est
+  ensuite restauré par son SHA-256 exact ;
+- runtime final : nouvelle DLL mod-locale et JSON vanilla byte-identiques aux
+  sources, trois anciens témoins restaurés avec leurs hashes exacts, aucune
+  copie globale et zéro processus D2R restant ;
+- rapport local :
+  `analysis-cache/ethereal-item-rules-runtime-validation/20260728-unified-prototype/report.json`.
+
+La validation technique autonome est acquise. Les comportements en jeu, le
+multijoueur et la persistance restent ouverts; aucun ZIP public n'est produit à
+ce stade.
+
+1. ✅ Construire et cold-starter d'abord le composant autonome commun avec les
    anciens propriétaires désactivés, puis vérifier que son hook et ses quatre
-   opérations sont les seuls sites actifs de ce sous-système.
+   opérations sont les seuls sites actifs de ce sous-système — acquis dans les
+   deux portées le 28 juillet 2026.
 2. Choisir au moins un code précis et, séparément, un parent pour la validation.
 3. Matrice en jeu : type précis, parent, descendant non ciblé, normal/magic/
    rare/set/unique/crafted, drop naturel, vendeur, gamble, Cube forcé éthéré,

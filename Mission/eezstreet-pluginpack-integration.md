@@ -244,7 +244,18 @@ par eezstreet sans modifier la fondation.
 | Plugin | Version validée | Propriétaire futur | Configuration future | État |
 |---|---|---|---|---|
 | `BulkSkillPointAllocation` | `1.2.3` | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | prêt pour préparation du merge |
-| sous-système ethereal commun | `NoEtherealItemTypes 1.1.0` + patch à quatre opérations | composant RuffnecKk autonome, puis `plugin-items.dll` | JSON autonome commun, puis `items.etherealExclusions` et `items.etherealItemRules` | fusion intermédiaire et validation combinée requises avant le pack |
+| sous-système ethereal commun | `EtherealItemRules 0.1.0` | composant RuffnecKk autonome, puis `plugin-items.dll` | JSON autonome commun, puis `items.etherealExclusions` et `items.etherealItemRules` | fusion autonome compilée et cold-startée dans les deux portées; gameplay combiné requis avant le pack |
+
+Le 28 juillet 2026, Vincent fixe l'identité intermédiaire
+`EtherealItemRules.dll` / `EtherealItemRules.json` / `ethereal-item-rules` et
+demande des valeurs vanilla dans le fichier livré. La 0.1.0 autonome réunit le
+hook `0x373890` et les quatre sites du patch, compile en Release x64, passe son
+test de politique et charge en portées mod-locale puis globale avec les témoins
+neutralisés, zéro rejet/échec et démarrage `24/24`. Les cinq sites actifs sont
+confirmés dans la mémoire du processus. Le cold start final du JSON vanilla
+charge la DLL sans hook ni patch propre; le test négatif refuse ensuite
+explicitement `chancePercent=101` avant restauration du JSON vanilla. La matrice
+gameplay autonome reste le gate avant toute mutation de `plugin-items.dll`.
 
 Vincent a validé en jeu le 26 juillet 2026 le comportement final : clic normal
 inchangé, Ctrl et Ctrl+Shift en lot natif de cinq, Shift en assign-all natif

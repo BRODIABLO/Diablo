@@ -1,0 +1,12 @@
+{
+  "etherealExclusions": {
+    "enabled": false,
+    "itemTypes": []
+  },
+  "etherealItemRules": {
+    "enabled": false,
+    "chancePercent": 5,
+    "allowSetItems": false,
+    "allowIndestructibleItems": false
+  }
+}
