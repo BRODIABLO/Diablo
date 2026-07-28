@@ -43,9 +43,12 @@ restaurés et vérifiés par SHA-256 après un retry de verrou tardif; aucun pro
 D2R/D2RLoader ne reste actif. Les preuves locales sont sous
 `analysis-cache/pluginpack-foundation-runtime-validation/20260728-170819582/`.
 
-Le checkpoint `387dff8` porte maintenant le contrat final en un seul bloc
-`items.etherealItemRules` et intègre `items.repairCostsCap` dans le même
-`plugin-items.dll`. Le manifeste valide 66 sites sans chevauchement, les
+Le checkpoint `387dff8` porte maintenant le contrat final d’`EthItemRules` en
+un seul bloc `items.etherealItemRules`. Il ajoute séparément
+`items.repairCostsCap` comme une autre fonctionnalité de `plugin-items.dll`.
+Ces deux fonctionnalités ont chacune leur configuration, leur activation, leur
+code, leurs hooks et leurs tests; elles ne forment aucun bloc commun. Le
+manifeste valide 66 sites sans chevauchement, les
 cinq targets Release et 4/4 CTest sont verts. Les cold starts vanilla exact et
 conjoint actif atteignent `24/24` avec zéro rejet/échec; le runtime a été restauré
 par SHA-256. Les prototypes autonomes restent seulement des témoins. Cube Quick
@@ -53,10 +56,12 @@ Move 0.1.3 demeure en pause et Transmogrify reste exclu de ce lot.
 
 ## Prochain gate
 
-Reprendre l’équivalence gameplay du code fusionné : exclusions par code précis et
-parent, descendant non ciblé, taux 6 %, sets, sept uniques indestructibles et
-base sans durabilité, Cube/`ALWAYSETH`, plafond Repair individuel/Repair All,
-usure et persistance, solo, hôte/joiner et save/reload.
+Porter ensuite `GroundItemLabelLimit` sous l’option indépendante
+`items.groundItemLabels` de `plugin-items.dll`. `GambleScreenLimit` est maintenant
+intégré sous `items.gambleScreenLimit`, désactivé par défaut, avec 5/5 tests et
+les cold starts 14/32 verts. Les régressions gameplay encore ouvertes pour
+`EthItemRules`, `Repair Costs Cap` et le port Gamble restent des matrices
+indépendantes et ne bloquent pas les autres ports acceptés.
 
 ## Frontière Git
 

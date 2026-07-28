@@ -62,7 +62,7 @@ visible tant qu’aucun consommateur explicitement activé ne l’utilise.
 Sont explicitement hors de ce lot : `Transmogrify`,
 `ConfigurableCharsiReward`, la DLL autonome finale `EtherealItemRules.dll`, et
 tout autre candidat seulement cité dans l’audit. Les autonomes ethereal restent
-des témoins différentiels temporaires jusqu’à la validation du port fusionné.
+des témoins différentiels temporaires jusqu’à la validation du port intégré.
 
 ## Preuve de l’environnement ciblé
 
@@ -271,8 +271,9 @@ dans `analysis-cache/pluginpack-foundation-runtime-validation/20260728-191656701
 
 ### Tranche 1 — intégrations sans structure gameplay
 
-1. `GroundItemLabelLimit`, nouveau plugin indépendant;
-2. `GambleScreenLimit`, intégré comme option de `plugin-items`.
+1. `GambleScreenLimit`, intégré comme option indépendante de `plugin-items`;
+2. `GroundItemLabelLimit`, à intégrer ensuite comme option indépendante de
+   `plugin-items`.
 
 ### Tranche 2 — petits hooks à ABI opaque
 
@@ -290,9 +291,20 @@ par eezstreet sans modifier la fondation.
 
 | Plugin | Version validée | Propriétaire cible | Configuration | État |
 |---|---|---|---|---|
+| `GambleScreenLimit` | `1.2.0` | `plugin-items.dll` | `items.gambleScreenLimit` dans `D2RPlugins.json` | port intégré, Release et cold starts vanilla/actif validés; régression gameplay intégrée optionnelle |
 | `BulkSkillPointAllocation` | `1.2.3` | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | prêt pour préparation du merge |
 | bloc unifié `EthItemRules` | témoin historique `EtherealItemRules 0.1.0` | `plugin-items.dll` | bloc unique `items.etherealItemRules` | contrat unifié compilé et cold-starté; équivalence gameplay ouverte |
-| `RepairCostsCap` | `1.4.0` | `plugin-items.dll` | `items.repairCostsCap` dans `D2RPlugins.json` | intégré au même arbre source et cold-starté avec `EthItemRules`; équivalence gameplay ouverte |
+| `RepairCostsCap` | `1.4.0` | `plugin-items.dll` | `items.repairCostsCap` dans `D2RPlugins.json` | fonctionnalité indépendante intégrée et cold-startée; équivalence gameplay ouverte |
+
+Le port `GambleScreenLimit` ajouté après le checkpoint `387dff8` conserve le
+contrat autonome 1.2.0 sans créer de nouveau plugin runtime : un bloc
+`items.gambleScreenLimit` indépendant, désactivé par défaut, applique 32 lorsqu’il
+est activé. Le manifeste porte maintenant 67 sites uniques. Les 5/5 tests et les
+deux cold starts ciblés sont verts; la preuve est conservée sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260728-185755322-gamble/`.
+La DLL et le JSON de développement portent respectivement les SHA-256
+`453F6D548B032104A6A8DF51C959A9215DAA6D08A183715E68281D03B38276D8` et
+le défaut joueur `enabled=false`. Le runtime a été restauré après la validation.
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est
@@ -305,6 +317,13 @@ exceptions set/indestructible et la liste des ItemTypes exclus. La clé sœur
 le hook `0x373890` et les quatre opérations `0x4434DF`, `0x443315`, `0x4432F4`
 et `0x46D840` sous ce propriétaire unique.
 
+La fusion décrite ici concerne exclusivement les deux anciennes composantes
+ethereal. `RepairCostsCap` n’est pas fusionné avec `EthItemRules` : ce sont deux
+fonctionnalités sœurs de `plugin-items.dll`, avec deux blocs JSON, deux drapeaux
+d’activation, deux modules source, des hooks distincts et des tests distincts.
+Leur présence dans la même DLL ne crée ni bloc de configuration commun, ni
+dépendance fonctionnelle entre elles.
+
 Le JSON joueur final doit livrer ce bloc unique désactivé, le taux vanilla de
 5 %, les exceptions set/indestructible à `false`, une liste d’exclusions vide,
 et conserver `skills.selfHealParams=false` afin que le pack entier demeure
@@ -313,8 +332,8 @@ passif par défaut. `items.repairCostsCap` est lui aussi livré désactivé, ave
 valeurs restent vanilla même si seul le drapeau principal est activé.
 
 Le checkpoint `387dff8`, poussé le 28 juillet 2026 sur
-`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`, réunit les deux ports dans
-le même `plugin-items.dll`. Il ne reste
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`, intègre les deux
+fonctionnalités indépendantes dans le même `plugin-items.dll`. Il ne reste
 aucun bloc `items.etherealExclusions` et aucun patch Repair Costs Cap séparé à
 appliquer. Le manifeste commun porte 66 sites uniques, dont les cinq opérations
 `EthItemRules` et les quatre écritures `RepairCostsCap`; les cinq targets Release
@@ -337,7 +356,7 @@ crédite RuffnecKk dans le source, le log et la mission. Son ancien patch local,
 qui ciblait directement le commit amont et ne s’appliquait plus proprement sur
 `a51c865`, a été retiré de `data-BKVince` et archivé avec les preuves runtime.
 La DLL autonome désactivée reste seulement un témoin jusqu’au test d’équivalence
-gameplay du module fusionné.
+gameplay du port `RepairCostsCap` intégré.
 
 Vincent a validé en jeu le 26 juillet 2026 le comportement final : clic normal
 inchangé, Ctrl et Ctrl+Shift en lot natif de cinq, Shift en assign-all natif

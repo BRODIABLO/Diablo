@@ -7,9 +7,11 @@ le prototype autonome `RepairCostsCap.dll` 1.4.0. Vincent a ensuite autorisé le
 28 juillet 2026 son intégration dans `plugin-items.dll`, sous la clé
 `items.repairCostsCap`. Le port source intégré, le Release x64, les tests de
 politique, les exports, la synchronisation par hash et le cold start
-fusionné passent. La DLL autonome est neutralisée de manière récupérable dans
+du port intégré passent. La DLL autonome est neutralisée de manière récupérable dans
 le profil runtime afin qu'un seul propriétaire pose les hooks. Le gameplay du
-module fusionné reste à confirmer avant de retirer les témoins autonomes.
+port `RepairCostsCap` reste à confirmer avant de retirer les témoins autonomes.
+`RepairCostsCap` demeure une fonctionnalité indépendante d’`EthItemRules`;
+elles partagent seulement la DLL propriétaire `plugin-items.dll`.
 
 ## Décisions confirmées
 
@@ -220,12 +222,13 @@ désactivé jusqu'à la validation gameplay d'équivalence.
   cold start actif a temporairement exercé `maximumGold=100` avec
   usure à `1.0`, puis BKVince a été restauré à `enabled=false`,
   `durabilityWear.enabled=false`;
-- le port est implanté directement dans le même arbre source que le bloc unifié
-  `items.etherealItemRules`, au checkpoint poussé `387dff8`;
+- le port est implanté comme module indépendant de `plugin-items.dll`, au
+  checkpoint poussé `387dff8`; il ne partage avec `EthItemRules` ni bloc JSON,
+  ni drapeau d’activation, ni logique fonctionnelle;
   l’ancien patch séparé, devenu non applicable sur cette tête, a été retiré de
   `data-BKVince` et archivé sous les preuves runtime;
 - les cinq targets du PluginPack compilent en Release x64, les quatre CTest sont
-  verts et le manifeste valide 66 sites uniques; le module fusionné porte le
+  verts et le manifeste valide 66 sites uniques; `plugin-items.dll` porte le
   SHA-256
   `508D5A77F155D74C02B45C054F642A7CAA3B165287CE28694279561DD9F50EE0`;
 - le JSON autonome témoin est lui aussi restauré au défaut vanilla et synchronisé
@@ -246,7 +249,7 @@ désactivé jusqu'à la validation gameplay d'équivalence.
 - le source, la DLL et le JSON autonomes versionnés restent temporairement des
   témoins de comparaison; ils seront retirés seulement après équivalence en jeu.
 
-## Gates gameplay du module fusionné encore ouverts
+## Gates gameplay du port intégré encore ouverts
 
 - `maximumGold=0` en Normal, Nightmare et Hell : réparation individuelle et
   `Repair All`, devis zéro, aucun gold retiré et objets réellement réparés;
@@ -266,7 +269,7 @@ désactivé jusqu'à la validation gameplay d'équivalence.
 
 ## Prochain gate
 
-Le défaut vanilla est maintenant restauré. Pour fermer l'équivalence fusionnée,
+Le défaut vanilla est maintenant restauré. Pour fermer l'équivalence du port,
 activer temporairement `items.repairCostsCap`, régler `maximumGold=100`, activer
 l'usure à `chance=1.0`, puis réparer un objet endommagé seul et plusieurs objets
 avec `Repair All`. Chaque action doit coûter au plus 100 gold et chaque objet

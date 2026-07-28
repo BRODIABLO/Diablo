@@ -1,5 +1,29 @@
 # Increased gamble screen item limit — D2RLoader 3.2
 
+## Current PluginPack status
+
+On 2026-07-28, the validated 1.2.0 behavior was integrated directly as the
+independent `items.gambleScreenLimit` feature of `plugin-items.dll`. It remains
+separate from `items.gambleFilter`: both operate in the gamble subsystem, but
+they own distinct byte ranges and configuration blocks.
+
+The shipped PluginPack JSON uses `enabled=false`, preserving the vanilla limit
+14. Enabling the block applies the fixed grid-capacity limit 32. The integrated
+port validates the complete nine-byte loop signature at `0x541A7C` and writes
+only the immediate byte at `0x541A7E`.
+
+All five PluginPack DLLs build in Release, the hook manifest accepts 67 unique
+sites and 5/5 CTest cases pass. Targeted cold starts with the standalone witness
+temporarily neutralized confirmed effective limits 14 and 32 respectively;
+both reached startup `24/24` with
+`scanned=29 active=27 disabled=2 rejected=0 failed=0`. The original runtime DLL,
+configuration and standalone witness were then restored byte-exactly. Evidence:
+`analysis-cache/pluginpack-foundation-runtime-validation/20260728-185755322-gamble/report.json`.
+
+The integrated port still has an optional gameplay regression at Gheed, but the
+standalone 1.2.0 behavior at fixed 32 was already confirmed in game by Vincent.
+This regression does not block continuing the other accepted PluginPack ports.
+
 ## Scope
 
 Increase the number of item-generation attempts used to populate the gambling
@@ -81,8 +105,8 @@ On 2026-07-26, 32 became the fixed product maximum because it corresponds to the
 gambling merchant grid capacity; higher values are no longer exposed.
 
 Vincent confirmed the final 1.2.0 build in game on 2026-07-26. The fixed limit
-32 behaves correctly and the standalone plugin is ready for a future integration
-under `plugin-items.dll`. Purchasing extremes, repeated refreshes, alternate
+32 behaves correctly; that standalone proof is the witness used by the
+`plugin-items.dll` integration documented above. Purchasing extremes, repeated refreshes, alternate
 vendors, controller, resolutions and host/joiner remain useful regression cases
 for that integration, but no longer block the standalone release.
 

@@ -66,6 +66,23 @@
       ]
     },
     {
+      "id": "gamble-screen-limit",
+      "name": "Gamble Screen Limit",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/gamble-screen-limit-3.2.md",
+      "nextGate": "Keep the integrated gameplay regression at fixed 32 as an independent non-blocking check while the PluginPack sequence continues with GroundItemLabelLimit.",
+      "include": [
+        "Mission/gamble-screen-limit-3.2.md",
+        "addons/GambleScreenLimit/**",
+        "data-BKVince/BKVince.mpq/GambleScreenLimit.json",
+        "data-BKVince/BKVince.mpq/D2RPlugins.json",
+        "data-BKVince/d2rloader/plugins/GambleScreenLimit-src/**",
+        "data-BKVince/d2rloader/plugins/GambleScreenLimit.dll",
+        "data-BKVince/d2rloader/plugins/plugin-items.dll"
+      ]
+    },
+    {
       "id": "configurable-larzuk-sockets",
       "name": "ForceLarzukSockets",
       "status": "active",
@@ -103,7 +120,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/repair-costs-cap-3.2.md",
-      "nextGate": "Temporarily enable items.repairCostsCap in the merged plugin-items module with maximumGold=100 and durability wear at 100%; validate one damaged item and Repair All, including the exact one-point maximum-durability loss and persistence, then restore enabled=false before removing the standalone witnesses.",
+      "nextGate": "Temporarily enable the independent items.repairCostsCap feature in plugin-items.dll with maximumGold=100 and durability wear at 100%; validate one damaged item and Repair All, including the exact one-point maximum-durability loss and persistence, then restore enabled=false before removing the standalone witnesses.",
       "include": [
         "Mission/repair-costs-cap-3.2.md",
         "addons/RepairCostsCap/**",
@@ -184,9 +201,11 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Run merged EthItemRules and RepairCostsCap gameplay equivalence from checkpoint 387dff8, then continue the accepted PluginPack ports.",
+      "nextGate": "Port GroundItemLabelLimit as the independent items.groundItemLabels feature after the technically validated GambleScreenLimit port; keep each remaining gameplay regression as a separate matrix.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
+        "data-BKVince/BKVince.mpq/D2RPlugins.json",
+        "data-BKVince/d2rloader/plugins/plugin-items.dll",
         "addons/ConfigurableCharsiReward/**"
       ]
     },
@@ -286,6 +305,16 @@
         "*"
       ],
       "reason": "Cross-cutting ownership and merge ledger shared by every PluginPack-bound incubation."
+    },
+    {
+      "pattern": "data-BKVince/BKVince.mpq/D2RPlugins.json",
+      "workstreams": ["ground-item-label-limit", "gamble-screen-limit", "repair-costs-cap", "eezstreet-pluginpack-integration"],
+      "reason": "The single PluginPack configuration contains independent feature blocks owned by concurrent integration workstreams."
+    },
+    {
+      "pattern": "data-BKVince/d2rloader/plugins/plugin-items.dll",
+      "workstreams": ["gamble-screen-limit", "repair-costs-cap", "eezstreet-pluginpack-integration"],
+      "reason": "The common plugin-items binary packages multiple independently tracked feature ports."
     },
     {
       "pattern": "ROADMAP.html",
