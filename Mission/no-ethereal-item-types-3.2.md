@@ -17,25 +17,22 @@ ayant une durabilité effective. Elle ne doit pas être confondue avec
 `items.etherealExclusions`, qui retire au contraire des familles configurées du
 tirage éthéré.
 
-Le séquencement est confirmé en deux paliers. Avant tout port dans le pack, les
-deux implémentations sont réunies dans un composant RuffnecKk autonome commun :
-le hook d'exclusion des familles et les quatre opérations d'`Ethereal Item
-Rules` y partagent la même politique de chargement, le même contrôle du build
-92777 et une seule configuration JSON. Ce composant intermédiaire doit être
-validé avec `NoEtherealItemTypes.dll`, son TOML et le patch JSON d'origine
-neutralisés dans le runtime, mais conservés comme témoins jusqu'à équivalence.
-Seulement après cette validation combinée, les deux sous-sections distinctes
-`items.etherealExclusions` et `items.etherealItemRules` seront portées ensemble
-dans `plugin-items.dll`. Vincent fixe le 28 juillet 2026 le nom public du
-composant intermédiaire : `EtherealItemRules.dll`,
-`EtherealItemRules.json` et l'identifiant `ethereal-item-rules`.
+Le séquencement comporte deux paliers techniques. Les deux implémentations sont
+d'abord réunies dans le témoin RuffnecKk autonome `EtherealItemRules 0.1.0` : le
+hook d'exclusion des familles et les quatre opérations d'`Ethereal Item Rules`
+y partagent le contrôle du build 92777 et une configuration JSON. Après ses
+preuves de compilation, signatures et cold start, Vincent précise que ce témoin
+ne doit pas être traité comme un composant spécial ni comme un gate gameplay
+avant le pack. Il reste disponible uniquement pour comparer un comportement en
+cas d'écart.
 
-Vincent retient l'option A le 28 juillet 2026 : après la fondation commune des
-hooks, ce composant ethereal autonome est construit et validé avant les autres
-ports du lot. Son port conjoint dans `plugin-items.dll` ne commence qu'après
-équivalence fonctionnelle de l'étape autonome. Cette décision fixe l'ordre du
-lot sans remplacer la mission courante. Vincent approuve ensuite ce nom et ce
-contrat, ce qui ferme le gate préalable à l'implantation autonome.
+Les deux sous-sections distinctes `items.etherealExclusions` et
+`items.etherealItemRules` sont donc portées ensemble directement dans
+`plugin-items.dll`, propriétaire final ordinaire du sous-système. Le pack final
+ne distribue ni `EtherealItemRules.dll`, ni identifiant
+`ethereal-item-rules`, ni configuration autonome. Cette décision conserve
+l'Option A — fusionner les deux fonctions avant leur intégration — sans imposer
+une requalification exhaustive de fonctions autonomes déjà opérationnelles.
 
 Permettre à BKVince de déclarer des codes de `itemtypes.txt` qui ne doivent
 jamais devenir éthérés. La politique doit être configurable sans recompilation,
@@ -197,18 +194,53 @@ La validation technique autonome est acquise. Les comportements en jeu, le
 multijoueur et la persistance restent ouverts; aucun ZIP public n'est produit à
 ce stade.
 
+### Port conjoint dans `plugin-items.dll` — 28 juillet 2026
+
+Le module `plugin-items` contient maintenant les deux politiques dans des
+sources internes et demeure l'unique propriétaire runtime. Le manifeste passe
+de 57 à 62 sites uniques. Les cinq DLL Release x64 compilent et les trois CTest
+passent. Le `D2RPlugins.json` joueur conserve vanilla par défaut : sections
+désactivées, taux 5 %, sets et indestructibles à `false`; le défaut actif
+historique `skills.selfHealParams=true` est également corrigé à `false`.
+
+- `plugin-items.dll` : SHA-256
+  `FB4AD6015DFCEE02FFECEFBF2056155F4EB1E7E8CAB9A54AE13DC0B0BBBC823D` ;
+- checkpoint PluginPack : `a51c865` (`Port ethereal rules into plugin-items
+  prototype`), poussé et synchronisé à `0/0` sur
+  `RuffDood/D2RL-Plugins:codex/pluginpack-foundation` ;
+- JSON joueur : SHA-256
+  `68889F5D3BA02FAE6D3CA251172BBA50AE35B8C1815F4D2CB784F470CAAD10B7` ;
+- cold start vanilla : cinq plugins eezstreet actifs, aucun hook ethereal,
+  `scanned=28 active=26 disabled=2 rejected=0 failed=0`, startup `24/24` ;
+- cold start actif avec `belt`, `armo`, taux 6 %, sets et indestructibles :
+  hook `0x373890` installé par `eezstreet-plugin-items`, tous les patches
+  acceptés, aucun propriétaire autonome chargé, même résumé sans échec et
+  startup `24/24` ;
+- rollback : les cinq anciennes DLL du pack, le JSON BKVince, les deux DLL
+  témoins et le patch JSON ont tous été restaurés par SHA-256 après un retry de
+  verrou tardif; aucun processus D2R/D2RLoader ne reste actif ;
+- preuves locales :
+  `analysis-cache/pluginpack-foundation-runtime-validation/20260728-170819582/`.
+
+Cette validation prouve l'intégration technique et l'absence de double
+propriétaire. Elle ne remplace pas l'observation gameplay du module fusionné.
+
 1. ✅ Construire et cold-starter d'abord le composant autonome commun avec les
    anciens propriétaires désactivés, puis vérifier que son hook et ses quatre
    opérations sont les seuls sites actifs de ce sous-système — acquis dans les
    deux portées le 28 juillet 2026.
-2. Choisir au moins un code précis et, séparément, un parent pour la validation.
-3. Matrice en jeu : type précis, parent, descendant non ciblé, normal/magic/
+2. ✅ Porter les deux politiques sous `plugin-items.dll`, compiler le pack et
+   cold-starter les profils vanilla et actif sans les anciens propriétaires —
+   acquis le 28 juillet 2026.
+3. Choisir au moins un code précis et, séparément, un parent pour la validation
+   du module fusionné.
+4. Matrice en jeu : type précis, parent, descendant non ciblé, normal/magic/
    rare/set/unique/crafted, drop naturel, vendeur, gamble, Cube forcé éthéré,
    `ALWAYSETH`, solo, hôte/joiner, sauvegarde et rechargement.
-4. Vérifier que le taux BKVince de 6 % et les sets éthérés restent actifs pour
+5. Vérifier que le taux BKVince de 6 % et les sets éthérés restent actifs pour
    les familles non exclues.
-5. Générer chacun des sept uniques `indestruct`, vérifier qu'ils peuvent recevoir
+6. Générer chacun des sept uniques `indestruct`, vérifier qu'ils peuvent recevoir
    le drapeau éthéré tout en restant indestructibles, puis contrôler un arc ou
    une autre base réellement sans durabilité comme témoin négatif.
-6. Rejouer la même matrice après le port conjoint dans `plugin-items.dll` avant
-   de retirer les artefacts autonomes témoins.
+7. En cas d'écart, rejouer uniquement le cas fautif avec le témoin autonome;
+   retirer les artefacts autonomes du lot final après équivalence fusionnée.

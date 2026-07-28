@@ -166,10 +166,11 @@ sera envisagé que si D2RLoader fournit explicitement ce service ou si
 ## Séquencement retenu
 
 Vincent retient l'option A le 28 juillet 2026 : une fois la fondation de la
-tranche 0 disponible, le sous-système ethereal commun est le premier composant
-multi-fonctions à réunir et valider de façon autonome. Son port conjoint dans
-`plugin-items` précède les autres ports du lot. Vincent ouvre explicitement la
-fondation PluginPack le 28 juillet 2026; Cube Quick Move reste en pause avant son
+tranche 0 disponible, les deux fonctions ethereal sont réunies puis portées
+ensemble dans `plugin-items` avant les autres ports du lot. Le prototype
+autonome unifié fournit une preuve et un témoin de comparaison; Vincent précise
+ensuite qu'il ne doit pas devenir un composant à part ni bloquer le port après
+ses validations techniques. Cube Quick Move reste en pause avant son propre
 port dans le pack, avec son prototype autonome et ses preuves conservés.
 
 ### Tranche 0 — fondation
@@ -182,18 +183,23 @@ port dans le pack, avec son prototype autonome et ses preuves conservés.
 **État local — 28 juillet 2026.** La fondation est implantée dans le clone de
 travail séparé `analysis-cache/pluginpack-foundation`, épinglé sur le commit
 officiel `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`; la référence gouvernée reste
-intacte. `hook-manifest.json` inventorie 57 plages d’écriture uniques sur les
+intacte. Le checkpoint de fondation inventorie 57 plages d’écriture uniques sur les
 cinq DLL avec owner, feature, type, RVA, longueur, octets attendus et fichier
 source. CMake valide ce manifeste à la configuration et avant chaque build; un
 fixture négatif prouve qu’un chevauchement inter-DLL bloque effectivement la
 validation. Les anciens alias de `plugin-quests` qui écrivaient deux fois sept
 mêmes sites sont consolidés en une seule écriture par RVA. Le champ canonique
 `D2UnitStrc+0x04` devient `classId`, avec assertions d’offset et accesseurs
-partagés minimaux pour le type et le class ID. La compilation Release x64 des
-cinq DLL réussit et les deux CTest passent. Le checkpoint code `2a23212`
+partagés minimaux pour le type et le class ID. Le port ethereal ajoute ensuite
+cinq sites, portant le manifeste courant à 62 propriétaires uniques. La
+compilation Release x64 des cinq DLL réussit et les trois CTest passent. Le
+checkpoint code `2a23212`
 (`Establish PluginPack foundation prototype`) est poussé sur le fork
 `RuffDood/D2RL-Plugins`, branche `codex/pluginpack-foundation`, synchronisée à
 `0/0`; l’`origin` local reste la référence officielle eezstreet en lecture seule.
+Le port ethereal conjoint est ensuite livré dans le checkpoint `a51c865`
+(`Port ethereal rules into plugin-items prototype`), poussé sur la même branche
+et vérifié synchronisé à `0/0`.
 
 #### Cold start de fondation — 28 juillet 2026
 
@@ -229,9 +235,8 @@ dans `analysis-cache/pluginpack-foundation-runtime-validation/20260728-191656701
 ### Tranche 2 — petits hooks à ABI opaque
 
 1. `EnhancedDamageMinMaxFix`;
-2. fusionner `NoEtherealItemTypes` et `Ethereal Item Rules` dans un composant
-   autonome commun, le valider, puis porter les deux sous-sections ensemble
-   dans `plugin-items`;
+2. `NoEtherealItemTypes` et `Ethereal Item Rules` réunis puis portés ensemble
+   dans `plugin-items`; validation gameplay fusionnée ouverte;
 3. `BulkSkillPointAllocation`, intégré comme option de `plugin-skills`;
 4. `AdvancedItemTooltips`;
 5. `PotionAutoPickup`.
@@ -244,18 +249,33 @@ par eezstreet sans modifier la fondation.
 | Plugin | Version validée | Propriétaire futur | Configuration future | État |
 |---|---|---|---|---|
 | `BulkSkillPointAllocation` | `1.2.3` | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | prêt pour préparation du merge |
-| sous-système ethereal commun | `EtherealItemRules 0.1.0` | composant RuffnecKk autonome, puis `plugin-items.dll` | JSON autonome commun, puis `items.etherealExclusions` et `items.etherealItemRules` | fusion autonome compilée et cold-startée dans les deux portées; gameplay combiné requis avant le pack |
+| sous-système ethereal commun | témoin `EtherealItemRules 0.1.0` | `plugin-items.dll` | `items.etherealExclusions` et `items.etherealItemRules` | port conjoint compilé et cold-starté actif/vanilla; équivalence gameplay fusionnée ouverte |
 
-Le 28 juillet 2026, Vincent fixe l'identité intermédiaire
-`EtherealItemRules.dll` / `EtherealItemRules.json` / `ethereal-item-rules` et
-demande des valeurs vanilla dans le fichier livré. La 0.1.0 autonome réunit le
-hook `0x373890` et les quatre sites du patch, compile en Release x64, passe son
-test de politique et charge en portées mod-locale puis globale avec les témoins
-neutralisés, zéro rejet/échec et démarrage `24/24`. Les cinq sites actifs sont
-confirmés dans la mémoire du processus. Le cold start final du JSON vanilla
-charge la DLL sans hook ni patch propre; le test négatif refuse ensuite
-explicitement `chancePercent=101` avant restauration du JSON vanilla. La matrice
-gameplay autonome reste le gate avant toute mutation de `plugin-items.dll`.
+Le 28 juillet 2026, Vincent précise que le témoin autonome
+`EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est
+simplement `plugin-items.dll`, au même titre que les autres ports. Les deux
+politiques sont donc implantées dans des sources internes au module, sans DLL,
+identifiant ni chargeur JSON supplémentaire. Le manifeste inventorie leur hook
+`0x373890` et les quatre opérations `0x4434DF`, `0x443315`, `0x4432F4` et
+`0x46D840` sous ce propriétaire unique.
+
+Le JSON joueur livre les deux sections désactivées, le taux vanilla de 5 %, les
+exceptions set/indestructible à `false`, et corrige aussi
+`skills.selfHealParams=false` afin que le pack entier demeure passif par défaut.
+Les cinq targets Release compilent, le manifeste de 62 sites et les trois CTest
+sont verts. `plugin-items.dll` porte le SHA-256
+`FB4AD6015DFCEE02FFECEFBF2056155F4EB1E7E8CAB9A54AE13DC0B0BBBC823D`.
+Ces sources correspondent au checkpoint `a51c865` poussé sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
+
+Le cold start vanilla charge les cinq plugins sans hook ethereal; le cold start
+actif charge seulement le propriétaire `eezstreet-plugin-items`, installe le
+hook commun et accepte tous les patches, avec dans les deux cas
+`scanned=28 active=26 disabled=2 rejected=0 failed=0` et startup `24/24`. Les
+anciens propriétaires autonomes et le patch JSON ont été neutralisés pendant le
+test, puis les neuf fichiers runtime ont été restaurés par SHA-256. La matrice
+gameplay à rejouer porte désormais sur le module fusionné; les autonomes ne sont
+que des témoins de diagnostic en cas d'écart.
 
 Vincent a validé en jeu le 26 juillet 2026 le comportement final : clic normal
 inchangé, Ctrl et Ctrl+Shift en lot natif de cinq, Shift en assign-all natif

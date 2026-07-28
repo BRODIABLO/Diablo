@@ -182,7 +182,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Freeze the public name and unified JSON contract, re-audit the five ethereal sites, then build the shared standalone witness before porting both sections to plugin-items.dll.",
+      "nextGate": "Validate gameplay equivalence of the merged ethereal module, using standalone plugins only as differential witnesses when needed.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
         "addons/ConfigurableCharsiReward/**"

@@ -9,63 +9,57 @@ Dernière mise à jour : 28 juillet 2026
 État : Vincent a ouvert explicitement la fondation du PluginPack. Le laboratoire
 modifiable est isolé sous `analysis-cache/pluginpack-foundation` au commit amont
 exact `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`; la référence officielle
-gouvernée demeure intacte. La tranche 0 locale possède maintenant un manifeste
-de 57 écritures/hook sites à propriétaire unique, un gate CMake bloquant et un
-test négatif de chevauchement. Les sept doubles écritures historiques de
-`plugin-quests` sont consolidées. `D2UnitStrc+0x04` est corrigé en `classId`
-selon la preuve 92777 à `0x349860`, avec deux accesseurs partagés minimaux. Les
-cinq DLL compilent en Release x64 et les deux CTest réussissent.
-Le checkpoint code `2a23212` (`Establish PluginPack foundation prototype`) est
-poussé et synchronisé sur le fork `RuffDood/D2RL-Plugins`, branche
-`codex/pluginpack-foundation`.
+gouvernée demeure intacte. Le checkpoint de fondation `2a23212` est poussé sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
 
-Le cold start de fondation est maintenant acquis sur BKVince et D2R 3.2.92777.
-La configuration temporaire a désactivé toutes les options, y compris
-`skills.selfHealParams`; les cinq identifiants eezstreet ont chargé exactement
-une fois, le résumé a donné `scanned=29 active=27 disabled=2 rejected=0 failed=0`,
-aucun hook de fondation n’a été installé et le démarrage a atteint `24/24`. Les
-témoins autonomes sont restés en place. Après le test, les cinq DLL et
-`D2RPlugins.json` d’origine ont été restaurés avec leurs SHA-256 exacts et aucun
-processus D2R n’est resté actif. Le rapport local complet est
-`analysis-cache/pluginpack-foundation-runtime-validation/20260728-191656701/report.json`.
+Le sous-système ethereal est maintenant porté conjointement dans
+`plugin-items.dll` comme une fonctionnalité ordinaire du pack. Il expose les
+deux options distinctes `items.etherealExclusions` et
+`items.etherealItemRules`; il ne crée ni nouvelle DLL, ni nouvel identifiant de
+plugin, ni chargeur de configuration autonome. Le manifeste passe de 57 à 62
+sites à propriétaire unique. Les cinq DLL compilent en Release x64 et les trois
+CTest réussissent. `plugin-items.dll` porte le SHA-256
+`FB4AD6015DFCEE02FFECEFBF2056155F4EB1E7E8CAB9A54AE13DC0B0BBBC823D`.
 
-Le premier composant de l'Option A est maintenant implanté. Vincent fixe
-`EtherealItemRules.dll`, `EtherealItemRules.json` et l'identifiant
-`ethereal-item-rules`; son propriétaire futur reste `plugin-items.dll`. La DLL
-autonome 0.1.0 fusionne le hook d'exclusion et les quatre opérations du patch.
-Elle compile en Release x64, passe son test `1/1`, expose le manifeste v2 et les
-trois exports attendus. Les cold starts actif mod-local et global réussissent
-avec les anciens propriétaires neutralisés, zéro rejet/échec et `24/24`; les
-cinq sites sont confirmés dans la mémoire du processus. Un troisième cold start
-prouve que le JSON livré aux valeurs vanilla n'installe aucun hook ni patch pour
-la nouvelle DLL. Les anciens témoins sont restaurés, la nouvelle DLL demeure
-mod-locale avec son JSON vanilla et zéro processus D2R reste actif. Un quatrième
-cold start refuse explicitement `chancePercent=101`, puis restaure le JSON
-vanilla par son SHA-256 exact.
+Le `D2RPlugins.json` destiné aux joueurs conserve vanilla par défaut : les deux
+sections ethereal sont désactivées, le taux visible vaut 5 %, les exceptions
+set/indestructible valent `false`, et `skills.selfHealParams` est désormais
+également désactivé. Le cold start de ce fichier n'installe aucun hook ethereal;
+les cinq plugins eezstreet chargent, avec
+`scanned=28 active=26 disabled=2 rejected=0 failed=0` et startup `24/24`.
 
-Cube Quick Move 0.1.3 reste conservé et validé comme autonome, mais son port dans
-`plugin-misc.dll` est mis en pause avant mutation du pack. Transmogrify demeure
-exclu de ce lot. Après la fondation, l’Option A impose de réunir d’abord
-`NoEtherealItemTypes` et `Ethereal Item Rules` dans un composant autonome commun,
-puis de porter ensemble `items.etherealExclusions` et
-`items.etherealItemRules` dans `plugin-items.dll`.
+Un second cold start active ensemble les exclusions `belt`/`armo`, le taux 6 %,
+les sets et les objets indestructibles. Les anciens propriétaires autonomes et
+le patch JSON sont neutralisés pendant le test : seul
+`eezstreet-plugin-items` installe le hook gouverné `0x373890`; les appels de
+patch réussissent, les cinq plugins du pack restent actifs, aucun plugin
+ethereal autonome n'est chargé, le résumé reste à zéro rejet/échec et le
+démarrage atteint `24/24`. Les neuf fichiers runtime d'origine ont ensuite été
+restaurés et vérifiés par SHA-256 après un retry de verrou tardif; aucun processus
+D2R/D2RLoader ne reste actif. Les preuves locales sont sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260728-170819582/`.
+
+Le prototype autonome `EtherealItemRules 0.1.0` et les deux implémentations
+initiales restent seulement des témoins de comparaison jusqu'à l'équivalence
+gameplay; ils ne constituent plus un composant spécial ni un gate préalable au
+port. Cube Quick Move 0.1.3 demeure en pause avant son propre merge et
+Transmogrify reste exclu de ce lot.
 
 ## Prochain gate
 
-Valider en jeu le composant autonome commun avant tout port dans le pack : code
-précis et parent, descendant non ciblé, taux 6 %, sets, sept uniques
-indestructibles et base sans durabilité, Cube/`ALWAYSETH`, solo, hôte/joiner et
-save/reload. Après équivalence autonome, porter ensemble
-`items.etherealExclusions` et
-`items.etherealItemRules` dans `plugin-items.dll`, puis rejouer la matrice.
+Valider maintenant l'équivalence gameplay du module fusionné : code précis et
+parent, descendant non ciblé, taux 6 %, sets, sept uniques indestructibles et
+base sans durabilité, Cube/`ALWAYSETH`, solo, hôte/joiner et save/reload. Les
+plugins autonomes servent de témoins si un résultat diffère; leur fonctionnement
+déjà acquis n'a pas à être requalifié intégralement.
 
 ## Frontière Git
 
-Le code de fondation vit dans le clone séparé
-`analysis-cache/pluginpack-foundation`. Le dépôt principal reçoit maintenant le
-prototype autonome `EtherealItemRules`, son JSON vanilla, sa DLL Release et les
-preuves gouvernées de mission/ROADMAP; le PluginPack n'est pas encore modifié
-par ce port. Les autres changements actifs du workspace, notamment Cube Quick
-Move et Configurable Charsi Reward, restent préservés. Le runtime BKVince final
-conserve les anciens témoins et la nouvelle DLL désactivée par son profil
-vanilla.
+Le code du pack vit dans le clone séparé
+`analysis-cache/pluginpack-foundation`. Le checkpoint ethereal `a51c865`
+(`Port ethereal rules into plugin-items prototype`) est poussé et synchronisé à
+`0/0` sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le dépôt principal
+conserve les sources et binaires autonomes comme témoins ainsi que les preuves
+gouvernées de mission/ROADMAP. Les autres changements actifs du workspace
+restent préservés. Le runtime BKVince a été restauré exactement à son état
+antérieur au test; le pack de travail n'y est donc pas laissé déployé.
