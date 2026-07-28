@@ -19,6 +19,16 @@ Le checkpoint code `2a23212` (`Establish PluginPack foundation prototype`) est
 poussé et synchronisé sur le fork `RuffDood/D2RL-Plugins`, branche
 `codex/pluginpack-foundation`.
 
+Le cold start de fondation est maintenant acquis sur BKVince et D2R 3.2.92777.
+La configuration temporaire a désactivé toutes les options, y compris
+`skills.selfHealParams`; les cinq identifiants eezstreet ont chargé exactement
+une fois, le résumé a donné `scanned=29 active=27 disabled=2 rejected=0 failed=0`,
+aucun hook de fondation n’a été installé et le démarrage a atteint `24/24`. Les
+témoins autonomes sont restés en place. Après le test, les cinq DLL et
+`D2RPlugins.json` d’origine ont été restaurés avec leurs SHA-256 exacts et aucun
+processus D2R n’est resté actif. Le rapport local complet est
+`analysis-cache/pluginpack-foundation-runtime-validation/20260728-191656701/report.json`.
+
 Cube Quick Move 0.1.3 reste conservé et validé comme autonome, mais son port dans
 `plugin-misc.dll` est mis en pause avant mutation du pack. Transmogrify demeure
 exclu de ce lot. Après la fondation, l’Option A impose de réunir d’abord
@@ -28,10 +38,11 @@ puis de porter ensemble `items.etherealExclusions` et
 
 ## Prochain gate
 
-Cold-starter les cinq DLL de fondation avec toutes les options désactivées, sans
-remplacer les témoins autonomes; vérifier cinq plugins actifs, zéro rejet et zéro
-échec. Commencer ensuite le sous-système ethereal autonome commun retenu par
-l’Option A, avant tout autre port du lot.
+Figer le nom public et le contrat JSON unique du sous-système ethereal autonome
+commun, réauditer le hook `0x373890` et les quatre sites du patch, puis réunir
+`NoEtherealItemTypes` et `Ethereal Item Rules` dans ce témoin hybride avant tout
+port du lot. Son propriétaire futur dans le pack reste `plugin-items.dll`, sous
+`items.etherealExclusions` et `items.etherealItemRules`.
 
 ## Frontière Git
 
@@ -40,4 +51,5 @@ Le code de fondation vit uniquement dans le clone séparé
 à jour gouvernée de la mission et de la ROADMAP. Les autres changements actifs
 du workspace, notamment Cube Quick Move et Configurable Charsi Reward, restent
 préservés. Le code est committé et poussé séparément sur le fork; aucun
-déploiement runtime n’est inclus.
+déploiement runtime persistant n’est inclus et le profil BKVince a été restauré
+après le cold start temporaire.

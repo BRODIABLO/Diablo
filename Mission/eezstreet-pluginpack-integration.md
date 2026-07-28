@@ -190,11 +190,36 @@ validation. Les anciens alias de `plugin-quests` qui écrivaient deux fois sept
 mêmes sites sont consolidés en une seule écriture par RVA. Le champ canonique
 `D2UnitStrc+0x04` devient `classId`, avec assertions d’offset et accesseurs
 partagés minimaux pour le type et le class ID. La compilation Release x64 des
-cinq DLL réussit et les deux CTest passent. Aucun déploiement runtime ni cold
-start n’est inclus à ce stade. Le checkpoint code `2a23212`
+cinq DLL réussit et les deux CTest passent. Le checkpoint code `2a23212`
 (`Establish PluginPack foundation prototype`) est poussé sur le fork
 `RuffDood/D2RL-Plugins`, branche `codex/pluginpack-foundation`, synchronisée à
 `0/0`; l’`origin` local reste la référence officielle eezstreet en lecture seule.
+
+#### Cold start de fondation — 28 juillet 2026
+
+Les cinq DLL Release du commit `2a2321271b81e58d038319d143b777571686c453`
+ont été déployées temporairement dans le profil BKVince, avec un
+`D2RPlugins.json` de test qui désactive explicitement toutes les options, y
+compris `skills.selfHealParams`. Les plugins RuffnecKk autonomes sont demeurés
+en place et n’ont pas été remplacés.
+
+| Cible temporaire | SHA-256 testé | SHA-256 original restauré |
+|---|---|---|
+| `plugin-items.dll` | `CCB2FA2B9FED219171997E6A3912086DECE6CE31B3FB486E8F1495EFF3F6C041` | `C621BED261D9FA3A91EF547D7CD570E6E3E5A4B757D86BF5F9E380279E9CA130` |
+| `plugin-levels.dll` | `00B649002F5D7E91E2714786733CB7F58554248AE200365A9CEEF8385F571A54` | `F16FB9AF9BDBCD4F21A265806249728C6089590B8BBA316B12D2CFCBCD3693D9` |
+| `plugin-misc.dll` | `E4B7BC4B855C33C336F10ADD02506FECE79E9BA80424CE4D5EF66BB26D226018` | `4831EDDE0FBBFD3F01EB6F5AAFF7B9EFA476B78AB78850E9830CFEC519B50194` |
+| `plugin-quests.dll` | `E4CF72FBCB55539970F9EDB27BC10EC0CDD6E642F90A7006CBA405C4E73E7DDD` | `D1F93BB1AB463656BAFD04A1DA02768846D723292868DCD598B6AE5B047B2AFF` |
+| `plugin-skills.dll` | `B4FF5536CD0F63344A78925B6DBDD4AA79A726D3E4FB145246ADD6046D9232BD` | `65CBF15EAD04C59CB654F5DA5A3841BC376353097071DC4FFBBFDB4B80CBAD23` |
+| `D2RPlugins.json` | `CB3CB12112C3C28228D2A02D187D5E078D3B6B350C5F3590C077C1E63D5C9D4A` | `AD81571FF3944DBBD7B7F1D47651D61CCC9A5AEEE0DD729D8CB3325909747460` |
+
+Le log frais confirme les cinq IDs `eezstreet-plugin-*` exactement une fois,
+`scanned=29 active=27 disabled=2 rejected=0 failed=0`, aucun hook installé par
+les cinq DLL désactivées et le démarrage `24/24`. Cette preuve ferme le gate de
+chargement de la fondation; elle ne vaut pas validation gameplay des options.
+Le premier rollback a rencontré un verrou transitoire sur `plugin-items.dll`;
+après arrêt vérifié du processus, le retry a restauré les six hashes originaux
+et laissé zéro processus D2R actif. L’incident et sa résolution sont conservés
+dans `analysis-cache/pluginpack-foundation-runtime-validation/20260728-191656701/report.json`.
 
 ### Tranche 1 — intégrations sans structure gameplay
 
