@@ -207,10 +207,10 @@
     {
       "id": "transmute-hotkey",
       "name": "Transmute Hotkey",
-      "status": "paused",
+      "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/transmute-hotkey-3.2.md",
-      "nextGate": "Resume only on Vincent's explicit request; choose the default hotkey and trace both visible convert widgets plus their native UI-message dispatch paths before implementation.",
+      "nextGate": "Validate one exact CTRL+SHIFT+T activation in the standalone and integrated Cube, confirm refusal while chat is active, then cover invalid recipes, full Cube, held and rapid presses, simultaneous click, controller, persistence, host/joiner and global scope.",
       "include": [
         "Mission/transmute-hotkey-3.2.md",
         "addons/TransmuteHotkey/**",

@@ -1314,6 +1314,30 @@
       "confidence": "high",
       "source": "Mission/cube-quick-move-bottom-right-3.2.md",
       "notes": "Unique E8 38 AB EC FF call in the indirect Cube-transfer path after base-code box validation, native page 3 selection and inventory-grid resolution. The proven substituted ABI is (inventory, item, inventoryRecordId, freeXOut, freeYOut, pageByte) -> int32 and returns at 0x4BBA78. CubeQuickMove owns only this call-site."
+    },
+    {
+      "rva": "0x23ECD0",
+      "name": "UI_BankCube_UpdateControls",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/transmute-hotkey-3.2.md",
+      "notes": "Integrated stash/Cube control update with proven x64 ABI (controller) -> void. The panel root is controller+0x2A0; the function resolves horadriccube_grid, convert and horadriccube_cover through UI_FindChildWidgetByName, then applies native enabled and visible state through widget vtable slots +0x48/+0x50. TransmuteHotkey pins the strict 32-byte prologue, calls the original first and considers only the same panel's visible enabled convert button."
+    },
+    {
+      "rva": "0x2CDA90",
+      "name": "UI_HoradricCube_UpdatePanel",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/transmute-hotkey-3.2.md",
+      "notes": "Standalone Horadric Cube panel update with proven x64 ABI (panel) -> void. It resolves grid, flourish and convert, updates native widget state and tail-calls the base update path. TransmuteHotkey pins the strict 32-byte entry beginning at 0x2CDA90 despite the wider unwind range beginning at 0x2CDA80, calls the original first and dispatches only the embedded message of the same panel's visible enabled convert button."
+    },
+    {
+      "rva": "0x846170",
+      "name": "UI_FindTopLevelPanelByName",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/transmute-hotkey-3.2.md",
+      "notes": "Finds a top-level panel by UTF-8 name with proven x64 ABI (const char* name) -> panel*. The 22-byte wrapper forwards the name and the global UI manager to 0x89F760 or returns null. TransmuteHotkey validates the wrapper and uses it only on the UI thread to refuse ChatPanel and known text-entry or confirmation modals."
     }
   ]
 }

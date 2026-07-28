@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-27T18:48:31.5152475+00:00",
+    "generatedAt":  "2026-07-28T00:36:23.0122113+00:00",
     "root":  {
                  "name":  "snapshot",
                  "path":  ".",
@@ -13678,6 +13678,11 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
+                                                                                "name":  "TransmuteHotkey.json",
+                                                                                "path":  "data-BKVince/BKVince.mpq/TransmuteHotkey.json",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "VendorStockRefresh.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/VendorStockRefresh.json",
                                                                                 "kind":  "file"
@@ -14814,6 +14819,43 @@
                                                                                                                   ]
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "TransmuteHotkey-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/TransmuteHotkey-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/TransmuteHotkey-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "hotkey_policy.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/TransmuteHotkey-src/hotkey_policy.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/TransmuteHotkey-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/TransmuteHotkey-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "policy_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/TransmuteHotkey-src/policy_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "README.md",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/TransmuteHotkey-src/README.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "VendorStockRefresh-src",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/VendorStockRefresh-src",
                                                                                                      "kind":  "directory",
@@ -14999,6 +15041,11 @@
                                                                                                  {
                                                                                                      "name":  "Transmogrify.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/Transmogrify.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "TransmuteHotkey.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/TransmuteHotkey.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

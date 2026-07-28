@@ -2,17 +2,18 @@
 
 ## Statut et séquencement
 
-- Statut : **planifié; aucune implantation commencée**.
-- Cible éventuelle : `D2R.exe 3.2.92777` sous D2RLoader.
+- Statut : **prototype autonome 0.1.0 implanté, compilé et chargé à froid;
+  validation fonctionnelle en jeu restante**.
+- Cible : `D2R.exe 3.2.92777` sous D2RLoader.
 - Vincent confirme le 27 juillet 2026 l'Option A : inscrire la mission sans
   remplacer la priorité courante. Vendor Stock Refresh a ensuite été déclaré
   réglé et Cube Quick Move Bottom-Right est devenu la mission active, avec
-  Equipped Item to Cube placé juste après. Transmute Hotkey reste donc en pause
-  jusqu'à une demande explicite de reprise.
+  Equipped Item to Cube placé juste après. Vincent demande explicitement la
+  reprise puis l'implantation de Transmute Hotkey le 27 juillet 2026.
 - Vincent confirme le 27 juillet 2026 la catégorie `misc`, la DLL propriétaire
   future `plugin-misc.dll` et la clé prévue `misc.transmuteHotkey`.
-- Pendant l'incubation, le prototype éventuel sera `TransmuteHotkey.dll`, une DLL
-  autonome hybride globale/mod-locale attribuée exactement à `RuffnecKk`.
+- Le prototype incubé est `TransmuteHotkey.dll`, une DLL autonome hybride
+  globale/mod-locale attribuée exactement à `RuffnecKk`.
 
 ## Intention joueur et gain mesurable
 
@@ -33,10 +34,9 @@ invalide ou répétée ne doit produire aucune transaction.
   image d'analyse SHA-256
   `673E8C0B2E89563E75525B24D137098EFD07B2DB4ED42ADEC56AA1ADDF0E63AB`,
   index SQLite et projet Ghidra persistants présents.
-- Aucune identification stable `transmute` n'est encore promue dans
-  `known-rvas.json`. Les identifications Cube actuellement gouvernées concernent
-  la page d'inventaire `3` et les primitives de placement d'objet, pas le
-  dispatcher du bouton Transmute.
+- Trois identifications stables sont promues dans `known-rvas.json` : mise à jour
+  du Cube intégré `0x23ECD0`, mise à jour du Cube standalone `0x2CDA90` et
+  recherche d'un panneau racine par nom `0x846170`.
 - Le layout BKVince
   `data/global/ui/layouts/horadriccubelayouthd.json:43-49` déclare le
   `ButtonWidget` visible `convert` et son message
@@ -59,6 +59,39 @@ invalide ou répétée ne doit produire aucune transaction.
   manifeste et charge la section `misc` de l'unique `D2RPlugins.json`.
 - Les recherches gouvernées `transmute` et `hotkey` dans cette référence ne
   retournent aucun comportement existant à réutiliser directement.
+
+## Implantation autonome 0.1.0 — 27 juillet 2026
+
+- `TransmuteHotkey.dll` accroche les prologues stricts de `0x23ECD0` et
+  `0x2CDA90`, appelle chaque original en premier, retrouve le `convert` du même
+  panneau et exige que le panneau et le bouton soient visibles, que le bouton
+  soit enabled et que son message embarqué à `button+0x558` soit non vide.
+- L'activation appelle le dispatcher UI existant `0x843D90` avec le message
+  embarqué réel. Le plugin n'accroche pas ce dispatcher, ne concurrence donc pas
+  son propriétaire/broker actuel et ne construit aucun paquet réseau.
+- Le hotkey par défaut est `CTRL+SHIFT+T`. Le JSON accepte `A-Z`, `0-9`,
+  `F1-F24`, `SPACE`, `TAB`, `INSERT`, `DELETE`, `HOME`, `END`, `PAGEUP` et
+  `PAGEDOWN` avec `CTRL`, `SHIFT` ou `ALT`; une touche imprimable exige `CTRL`
+  ou `ALT`, et les modificateurs doivent correspondre exactement.
+- Un hook clavier bas niveau chaîné accepte seulement le processus D2R au
+  premier front descendant, ignore les événements injectés et les répétitions,
+  puis délègue la demande au prochain update du panneau UI. Une demande expire
+  après 250 ms; le maintien ne peut donc pas produire plusieurs transmutations.
+- `ChatPanel` et les panneaux connus de saisie/confirmation bloquent la demande.
+  Le chord n'est consommé que lorsque le processus possède le foreground, que
+  le bouton a été observé utilisable dans les 120 ms et qu'aucun blocker n'est
+  actif.
+- `TransmuteHotkey.json` est strict, commenté en anglais et recherché dans le mod
+  actif avant le dossier global; une configuration présente mais invalide fait
+  refuser le plugin. Aucun TOML ni changement d'une DLL eezstreet n'est produit.
+- La Release x64 est reproductible par le builder gouverné, le test de politique
+  passe `1/1`, le manifeste v2 expose exactement les trois exports D2RLoader,
+  l'auteur est `RuffnecKk` et le SHA-256 source/runtime de la DLL vaut
+  `10B1E9F8D63FD29F9641ED45DDD3F9B0C1E187F9378B615FFD740B4C0B07436A`.
+- La synchronisation mod-locale est limitée à la DLL et au JSON. Le cold start
+  frais charge les deux hooks, `20/20` memory patch files et `28` plugins actifs
+  sur `30` scannés (`2` overrides globaux désactivés, `0` rejet, `0` échec), puis
+  atteint `24/24` étapes de démarrage.
 
 ## Hypothèses à tester
 
@@ -114,22 +147,19 @@ invalide ou répétée ne doit produire aucune transaction.
 
 ## Gates observables
 
-1. **Séquencement — ouvert** : reprendre cette mission uniquement sur demande
-   explicite de Vincent, sans remplacer Cube Quick Move Bottom-Right ni la file
-   Equipped Item to Cube par inférence.
-2. **Contrat du hotkey — ouvert** : fixer la combinaison par défaut, la syntaxe
-   JSON, les modificateurs autorisés, la détection de conflits et la politique
-   de consommation de l'événement.
-3. **Preuve UI 92777 — ouvert** : borner les deux chemins de configuration et de
-   dispatch des widgets `convert`; prouver fonctions, xrefs, ABI, état
-   visible/enabled, thread d'appel, octets attendus et plage de hook éventuelle.
-4. **Audit PluginPack — ouvert** : inventorier dans `plugin-misc` les fichiers,
-   structures, callbacks, configurations, RVA et plages; auditer le broker UI et
-   les hooks clavier locaux, puis désigner un propriétaire unique par site.
-5. **Prototype autonome — ouvert** : compiler Release x64, vérifier le manifeste
-   v2, les trois exports, l'auteur `RuffnecKk`, la description, le JSON strict et
-   les portées globale/mod-locale sans TOML.
-6. **Entrée et états UI — ouvert** : une pression produit une activation;
+1. **Séquencement — fermé** : Vincent a explicitement repris puis demandé
+   l'implantation de la mission.
+2. **Contrat du hotkey — fermé pour le prototype** : `CTRL+SHIFT+T`, JSON strict,
+   correspondance exacte, front montant unique et consommation bornée sont
+   implantés; les collisions restent à éprouver en jeu et avant le merge.
+3. **Preuve UI 92777 — fermée pour le prototype** : les deux updates, leurs ABI,
+   signatures, racines, widgets et le message embarqué sont bornés et gouvernés.
+4. **Audit PluginPack — fermé pour le prototype** : aucun comportement homonyme,
+   aucune plage de hook concurrente et aucun second hook du dispatcher partagé.
+5. **Prototype autonome — partiellement fermé** : Release x64, test, manifeste,
+   exports, auteur, description, JSON, absence de TOML et cold start mod-local
+   sont verts; la portée globale reste à charger réellement.
+6. **Entrée et états UI — ouvert fonctionnellement** : une pression produit une activation;
    maintien, répétition et rebond n'en produisent pas; chat, console, texte,
    modales, panneaux absents et widgets désactivés sont refusés.
 7. **Fonctionnel Cube — ouvert** : couvrir recette valide, aucune recette,
@@ -146,9 +176,11 @@ invalide ou répétée ne doit produire aucune transaction.
 
 ## Prochain gate
 
-Sur demande explicite de reprise, fixer le contrat du hotkey puis tracer les deux
-widgets `convert` et leurs chemins de dispatch sous 92777 avant toute
-implantation.
+Valider en jeu `CTRL+SHIFT+T` sur une recette réelle dans le Cube standalone puis
+le Cube intégré, observer exactement une activation par pression et confirmer le
+refus pendant le chat. Enchaîner ensuite la matrice recette invalide/Cube plein,
+maintien/pressions rapides/clic simultané, souris/manette, save/reload,
+solo/hôte/joiner et portée globale.
 
 ## Frontière Git
 
