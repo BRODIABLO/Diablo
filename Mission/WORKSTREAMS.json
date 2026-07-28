@@ -210,7 +210,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/transmute-hotkey-3.2.md",
-      "nextGate": "Validate one exact CTRL+SHIFT+T activation in the standalone and integrated Cube, confirm refusal while chat is active, then cover invalid recipes, full Cube, held and rapid presses, simultaneous click, controller, persistence, host/joiner and global scope.",
+      "nextGate": "Repeat the gameplay-validated physical MOUSE4 transmute in the integrated Cube, confirm refusal while chat is active, then cover alternate keyboard bindings, invalid recipes, full Cube, held and rapid presses, controller, persistence, host/joiner and global scope.",
       "include": [
         "Mission/transmute-hotkey-3.2.md",
         "addons/TransmuteHotkey/**",

@@ -2,8 +2,9 @@
 
 ## Statut et séquencement
 
-- Statut : **prototype autonome 0.1.0 implanté, compilé et chargé à froid;
-  validation fonctionnelle en jeu restante**.
+- Statut : **correctif autonome 0.2.0 compilé, synchronisé et chargé à froid
+  avec `MOUSE4`; entrée physique, dispatch standalone et transmutation visible
+  validés en jeu, matrice complémentaire restante**.
 - Cible : `D2R.exe 3.2.92777` sous D2RLoader.
 - Vincent confirme le 27 juillet 2026 l'Option A : inscrire la mission sans
   remplacer la priorité courante. Vendor Stock Refresh a ensuite été déclaré
@@ -14,12 +15,15 @@
   future `plugin-misc.dll` et la clé prévue `misc.transmuteHotkey`.
 - Le prototype incubé est `TransmuteHotkey.dll`, une DLL autonome hybride
   globale/mod-locale attribuée exactement à `RuffnecKk`.
+- Vincent signale le 28 juillet 2026 que `CTRL+SHIFT+T` ne produit rien et choisit
+  `Mouse 4` pour BKVince, tout en exigeant que le binding public reste configurable.
 
 ## Intention joueur et gain mesurable
 
-Déclencher au clavier le bouton natif **Transmute** du Horadric Cube afin qu'un
-clic de souris ne soit plus obligatoire, sans retirer ni altérer le bouton, son
-tooltip, le son, la navigation manette ou les validations natives.
+Déclencher au clavier ou par bouton latéral le bouton natif **Transmute** du
+Horadric Cube afin qu'un clic sur le widget ne soit plus obligatoire, sans
+retirer ni altérer le bouton, son tooltip, le son, la navigation manette ou les
+validations natives.
 
 La friction est directement observée dans la demande de Vincent du 27 juillet
 2026 : chaque transmutation impose actuellement un déplacement et un clic de
@@ -60,7 +64,7 @@ invalide ou répétée ne doit produire aucune transaction.
 - Les recherches gouvernées `transmute` et `hotkey` dans cette référence ne
   retournent aucun comportement existant à réutiliser directement.
 
-## Implantation autonome 0.1.0 — 27 juillet 2026
+## Implantation autonome 0.1.0 remplacée — 27 juillet 2026
 
 - `TransmuteHotkey.dll` accroche les prologues stricts de `0x23ECD0` et
   `0x2CDA90`, appelle chaque original en premier, retrouve le `convert` du même
@@ -93,26 +97,54 @@ invalide ou répétée ne doit produire aucune transaction.
   sur `30` scannés (`2` overrides globaux désactivés, `0` rejet, `0` échec), puis
   atteint `24/24` étapes de démarrage.
 
-## Hypothèses à tester
+## Correctif autonome 0.2.0 — 28 juillet 2026
 
-- La voie la plus sûre devrait résoudre le widget `convert` réellement visible
-  et activé, puis déclencher son message embarqué comme le ferait le clic natif.
-  Cette approche couvrirait les deux messages BKVince sans inventer de paquet ni
-  dupliquer la logique Cube; le dispatcher exact, l'ABI et les états du widget
-  restent à prouver sous 92777.
-- Le hotkey peut probablement être détecté sur un front montant et délégué au
-  thread UI, mais le mécanisme exact doit éviter les hooks clavier globaux
-  concurrents et toute exécution hors du thread attendu par le jeu.
+- Le retour gameplay de Vincent invalide la fiabilité de la 0.1.0. Le log
+  historique contient un seul dispatch standalone le 28 juillet à `08:20:00`,
+  mais aucun nouveau dispatch pendant l'essai signalé. L'entrée exigeait en
+  outre `now <= ReadyUntil`, une fenêtre de seulement `120 ms` réarmée par les
+  updates natifs `0x23ECD0` ou `0x2CDA90`; ces callbacks ne constituent pas une
+  boucle d'entrée garantie.
+- La 0.2.0 supprime cette fenêtre. Le hook clavier ou souris ne fait que poster
+  une demande enregistrée au thread de la fenêtre D2R; un hook Win32 ciblé
+  `WH_GETMESSAGE` consomme ensuite cette demande sur le thread UI, revalide le
+  panneau, le bouton `convert`, ses états et son message, puis appelle le même
+  dispatcher natif `0x843D90`. Aucun nouveau hook D2R, RVA ou paquet réseau n'est
+  ajouté.
+- Le parseur public accepte toujours les bindings clavier documentés, plus
+  `MOUSE3`, `MOUSE4` et `MOUSE5`; `MIDDLE`, `XBUTTON1` et `XBUTTON2` sont des
+  alias, et les modificateurs exacts `CTRL`, `SHIFT` ou `ALT` restent possibles.
+  Le défaut intégré sûr demeure `CTRL+SHIFT+T`, tandis que le JSON BKVince fixe
+  explicitement `"hotkey": "MOUSE4"` selon le choix de Vincent.
+- Le front descendant unique, le refus des événements injectés, la consommation
+  bornée, l'expiration à `250 ms`, les blockers de saisie et la revalidation du
+  bouton sur le thread UI sont conservés. Une touche ou un bouton maintenu ne
+  peut produire qu'une seule demande avant relâchement.
+- La Release x64 et le test de politique passent `1/1`. La DLL gouvernée et la
+  DLL mod-locale sont byte-identiques au SHA-256
+  `278A5282A438A3BD4E3BBEA5D487ED2F0E1F12A329E48656D13DB8887F9153BE`;
+  le JSON source/runtime `MOUSE4` vaut
+  `B63B50B456EB616FF3B9D5DFE79B5E2D845C69E65E0EC235A0A0221A9EE309B1`.
+- Le cold start frais du 28 juillet à `10:34` accepte les deux hooks natifs,
+  charge `Transmute Hotkey 0.2.0` avec `input=mouse`, confirme le relais UI sur
+  le thread `16744`, applique `20/20` patches, active `28/30` plugins avec deux
+  overrides globaux désactivés, zéro rejet/échec et atteint `24/24`. Le processus
+  relancé reste répondant. À `10:35:51`, une pression physique `MOUSE4` produit
+  le premier dispatch natif standalone avec `count=1`; Vincent confirme ensuite
+  que la transmutation visible fonctionne en jeu.
+
+## Hypothèses restant à tester
+
 - Si le clic natif route déjà toute transmutation vers l'autorité de l'hôte, le
   hotkey ne devrait introduire aucun nouveau protocole réseau. Cette équivalence
   doit être confirmée par les appels et par une session hôte/joiner.
 
 ## Inconnues et risques
 
-- Touche ou combinaison par défaut, représentation JSON et politique de conflit
-  avec les raccourcis du jeu et des autres plugins RuffnecKk.
-- Détection exacte des panneaux Cube standalone et intégré, du widget visible,
-  de son état enabled/disabled et du focus clavier actif.
+- Collision éventuelle de `MOUSE4` avec un binding D2R ou un autre plugin selon
+  le profil public; le JSON permet de choisir un autre bouton ou chord.
+- Observation physique du relais Win32 ciblé et de l'activation exacte sur les
+  panneaux Cube standalone et intégré.
 - Blocage requis lorsque le chat, une console, un champ texte, un écran modal ou
   un autre contexte capturant le clavier est actif.
 - Effet d'une répétition Windows, d'une touche maintenue, de pressions rapides ou
@@ -149,19 +181,21 @@ invalide ou répétée ne doit produire aucune transaction.
 
 1. **Séquencement — fermé** : Vincent a explicitement repris puis demandé
    l'implantation de la mission.
-2. **Contrat du hotkey — fermé pour le prototype** : `CTRL+SHIFT+T`, JSON strict,
-   correspondance exacte, front montant unique et consommation bornée sont
-   implantés; les collisions restent à éprouver en jeu et avant le merge.
+2. **Contrat du hotkey — fermé pour le prototype** : BKVince utilise `MOUSE4`;
+   clavier, `MOUSE3/4/5`, alias, JSON strict, correspondance exacte, front unique
+   et consommation bornée sont implantés; les collisions restent à éprouver.
 3. **Preuve UI 92777 — fermée pour le prototype** : les deux updates, leurs ABI,
    signatures, racines, widgets et le message embarqué sont bornés et gouvernés.
 4. **Audit PluginPack — fermé pour le prototype** : aucun comportement homonyme,
    aucune plage de hook concurrente et aucun second hook du dispatcher partagé.
 5. **Prototype autonome — partiellement fermé** : Release x64, test, manifeste,
-   exports, auteur, description, JSON, absence de TOML et cold start mod-local
+   exports, auteur, description, JSON `MOUSE4`, relais UI et cold start mod-local
    sont verts; la portée globale reste à charger réellement.
-6. **Entrée et états UI — ouvert fonctionnellement** : une pression produit une activation;
-   maintien, répétition et rebond n'en produisent pas; chat, console, texte,
-   modales, panneaux absents et widgets désactivés sont refusés.
+6. **Entrée et états UI — partiellement fermé** : `CTRL+SHIFT+T` 0.1.0 est
+   signalé sans effet; la 0.2.0 corrige la fenêtre de 120 ms et un `MOUSE4`
+   physique produit exactement un dispatch et une transmutation visible
+   standalone confirmée par Vincent. Maintien, chat, texte, modales et panneaux
+   absents restent à confirmer en jeu.
 7. **Fonctionnel Cube — ouvert** : couvrir recette valide, aucune recette,
    ingrédients invalides, sortie stackable/non-stackable, Cube plein, pressions
    rapides, clic simultané, son, animation, grille et fermeture du panneau.
@@ -176,11 +210,10 @@ invalide ou répétée ne doit produire aucune transaction.
 
 ## Prochain gate
 
-Valider en jeu `CTRL+SHIFT+T` sur une recette réelle dans le Cube standalone puis
-le Cube intégré, observer exactement une activation par pression et confirmer le
-refus pendant le chat. Enchaîner ensuite la matrice recette invalide/Cube plein,
-maintien/pressions rapides/clic simultané, souris/manette, save/reload,
-solo/hôte/joiner et portée globale.
+Répéter le `MOUSE4` validé dans le Cube intégré et confirmer le refus pendant le
+chat. Enchaîner ensuite la matrice recette invalide/Cube plein,
+maintien/pressions rapides/clic simultané, bindings clavier alternatifs,
+souris/manette, save/reload, solo/hôte/joiner et portée globale.
 
 ## Frontière Git
 

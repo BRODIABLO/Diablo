@@ -1,8 +1,8 @@
 {
     // Trigger only while a visible, enabled native Transmute button is available.
     "enabled": true,
-    // Printable keys require CTRL or ALT. Modifiers must match exactly.
-    "hotkey": "CTRL+SHIFT+T",
+    // Supported mouse buttons are MOUSE3, MOUSE4, and MOUSE5. Keyboard modifiers must match exactly.
+    "hotkey": "MOUSE4",
     // Prevent the same chord from reaching the game while a request is accepted.
     "consume": true,
     // Log accepted, refused, stale, and dispatched requests.

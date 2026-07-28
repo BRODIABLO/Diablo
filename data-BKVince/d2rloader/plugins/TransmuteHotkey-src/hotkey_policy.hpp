@@ -9,8 +9,14 @@
 
 namespace ruffneckk::transmute_hotkey {
 
+enum class InputDevice : std::uint8_t {
+    Keyboard,
+    Mouse,
+};
+
 struct Hotkey {
     std::uint32_t virtualKey{};
+    InputDevice device{InputDevice::Keyboard};
     bool control{};
     bool shift{};
     bool alt{};
@@ -27,11 +33,16 @@ inline std::string UpperTrim(std::string_view value) {
     return result;
 }
 
-inline bool ParseMainKey(const std::string& token, std::uint32_t& virtualKey) {
+inline bool ParseMainKey(
+    const std::string& token,
+    std::uint32_t& virtualKey,
+    InputDevice& device
+) {
     if (token.size() == 1) {
         const auto ch = static_cast<unsigned char>(token.front());
         if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')) {
             virtualKey = ch;
+            device = InputDevice::Keyboard;
             return true;
         }
     }
@@ -43,6 +54,7 @@ inline bool ParseMainKey(const std::string& token, std::uint32_t& virtualKey) {
         }
         if (value >= 1 && value <= 24) {
             virtualKey = 0x70U + value - 1U;
+            device = InputDevice::Keyboard;
             return true;
         }
     }
@@ -58,6 +70,24 @@ inline bool ParseMainKey(const std::string& token, std::uint32_t& virtualKey) {
     for (const auto& key : namedKeys) {
         if (token == key.name) {
             virtualKey = key.virtualKey;
+            device = InputDevice::Keyboard;
+            return true;
+        }
+    }
+    struct NamedMouseButton {
+        std::string_view name;
+        std::uint32_t virtualKey;
+    };
+    constexpr NamedMouseButton mouseButtons[]{
+        {"MOUSE3", 0x04}, {"MOUSE 3", 0x04}, {"MIDDLE", 0x04},
+        {"MBUTTON", 0x04},
+        {"MOUSE4", 0x05}, {"MOUSE 4", 0x05}, {"XBUTTON1", 0x05},
+        {"MOUSE5", 0x06}, {"MOUSE 5", 0x06}, {"XBUTTON2", 0x06},
+    };
+    for (const auto& button : mouseButtons) {
+        if (token == button.name) {
+            virtualKey = button.virtualKey;
+            device = InputDevice::Mouse;
             return true;
         }
     }
@@ -66,6 +96,7 @@ inline bool ParseMainKey(const std::string& token, std::uint32_t& virtualKey) {
 
 inline bool IsSafeHotkey(const Hotkey& hotkey) noexcept {
     if (hotkey.virtualKey == 0) return false;
+    if (hotkey.device == InputDevice::Mouse) return true;
     const auto printable = (hotkey.virtualKey >= 'A' && hotkey.virtualKey <= 'Z')
         || (hotkey.virtualKey >= '0' && hotkey.virtualKey <= '9')
         || hotkey.virtualKey == 0x20;
@@ -95,7 +126,13 @@ inline bool ParseHotkey(std::string_view text, Hotkey& hotkey) {
             if (parsed.alt) return false;
             parsed.alt = true;
         } else {
-            if (hasMainKey || !ParseMainKey(token, parsed.virtualKey)) return false;
+            if (hasMainKey || !ParseMainKey(
+                    token,
+                    parsed.virtualKey,
+                    parsed.device
+                )) {
+                return false;
+            }
             hasMainKey = true;
         }
         if (separator == std::string_view::npos) break;
@@ -104,6 +141,10 @@ inline bool ParseHotkey(std::string_view text, Hotkey& hotkey) {
     if (!hasMainKey || !IsSafeHotkey(parsed)) return false;
     hotkey = parsed;
     return true;
+}
+
+inline bool IsMouseHotkey(const Hotkey& hotkey) noexcept {
+    return hotkey.device == InputDevice::Mouse;
 }
 
 inline bool ExactModifiersMatch(

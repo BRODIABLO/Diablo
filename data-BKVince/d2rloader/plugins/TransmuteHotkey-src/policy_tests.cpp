@@ -8,6 +8,7 @@ int main() {
     Hotkey hotkey{};
     assert(ParseHotkey("CTRL+SHIFT+T", hotkey));
     assert(hotkey.virtualKey == 'T');
+    assert(hotkey.device == InputDevice::Keyboard);
     assert(hotkey.control && hotkey.shift && !hotkey.alt);
     assert(ExactModifiersMatch(hotkey, true, true, false));
     assert(!ExactModifiersMatch(hotkey, true, true, true));
@@ -18,10 +19,21 @@ int main() {
     assert(ParseHotkey("alt + pageup", hotkey));
     assert(hotkey.virtualKey == 0x21 && hotkey.alt);
 
+    assert(ParseHotkey("MOUSE4", hotkey));
+    assert(hotkey.virtualKey == 0x05);
+    assert(IsMouseHotkey(hotkey));
+    assert(!hotkey.control && !hotkey.shift && !hotkey.alt);
+    assert(ExactModifiersMatch(hotkey, false, false, false));
+    assert(ParseHotkey("ctrl + mouse 5", hotkey));
+    assert(hotkey.virtualKey == 0x06 && hotkey.control);
+    assert(ParseHotkey("middle", hotkey));
+    assert(hotkey.virtualKey == 0x04 && IsMouseHotkey(hotkey));
+
     assert(!ParseHotkey("T", hotkey));
     assert(!ParseHotkey("SHIFT+T", hotkey));
     assert(!ParseHotkey("CTRL+CTRL+T", hotkey));
     assert(!ParseHotkey("CTRL+T+U", hotkey));
+    assert(!ParseHotkey("MOUSE4+T", hotkey));
     assert(!ParseHotkey("F25", hotkey));
     assert(!ParseHotkey("CTRL+", hotkey));
 
