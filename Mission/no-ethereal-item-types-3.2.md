@@ -1,21 +1,16 @@
-# Mission — interdire l’éthéré par famille d’item types sous D2R 3.2
+# Mission — bloc EthItemRules unifié sous D2R 3.2
 
 ## Intention
 
-Le 28 juillet 2026, Vincent confirme l'intégration future dans la catégorie
-`items`, avec `plugin-items.dll` comme DLL propriétaire et
-`items.etherealExclusions` comme clé prévue dans l'unique `D2RPlugins.json`. Le
-port remplacera la configuration TOML autonome par cette section JSON et
-conservera la DLL autonome jusqu'à validation fonctionnelle équivalente du
-module fusionné.
-
-Vincent confirme également que le patch distinct `Ethereal Item Rules` doit
-être absorbé par le même `plugin-items.dll`, sous la clé séparée
-`items.etherealItemRules`. Cette fonctionnalité conserve son propre contrat :
-taux éthéré commun, sets éthérés et admissibilité des objets indestructibles
-ayant une durabilité effective. Elle ne doit pas être confondue avec
-`items.etherealExclusions`, qui retire au contraire des familles configurées du
-tirage éthéré.
+Le 28 juillet 2026, Vincent confirme l’intégration future dans la catégorie
+`items`, avec `plugin-items.dll` comme DLL propriétaire. Il clarifie ensuite que
+`Exclude ItemTypes from Rolling Ethereal` et `Ethereal Item Rules` ne sont pas
+deux fonctionnalités finales : elles forment ensemble un seul bloc
+`EthItemRules` sous l’unique clé `items.etherealItemRules` de
+`D2RPlugins.json`. L’exclusion des familles devient un champ interne du même
+bloc que le taux éthéré, les sets éthérés et l’admissibilité des objets
+indestructibles. La clé `items.etherealExclusions` ne fait pas partie du contrat
+final.
 
 Le séquencement comporte deux paliers techniques. Les deux implémentations sont
 d'abord réunies dans le témoin RuffnecKk autonome `EtherealItemRules 0.1.0` : le
@@ -26,13 +21,13 @@ ne doit pas être traité comme un composant spécial ni comme un gate gameplay
 avant le pack. Il reste disponible uniquement pour comparer un comportement en
 cas d'écart.
 
-Les deux sous-sections distinctes `items.etherealExclusions` et
-`items.etherealItemRules` sont donc portées ensemble directement dans
+Le bloc unique `items.etherealItemRules` est donc porté directement dans
 `plugin-items.dll`, propriétaire final ordinaire du sous-système. Le pack final
 ne distribue ni `EtherealItemRules.dll`, ni identifiant
 `ethereal-item-rules`, ni configuration autonome. Cette décision conserve
-l'Option A — fusionner les deux fonctions avant leur intégration — sans imposer
-une requalification exhaustive de fonctions autonomes déjà opérationnelles.
+l’Option A — fusionner les deux apports avant leur intégration — et interdit de
+les représenter comme deux plugins, deux composants ou deux blocs de
+configuration.
 
 Permettre à BKVince de déclarer des codes de `itemtypes.txt` qui ne doivent
 jamais devenir éthérés. La politique doit être configurable sans recompilation,
@@ -155,13 +150,14 @@ La validation gameplay reste distincte et ouverte.
 
 ### Prototype autonome unifié 0.1.0 — 28 juillet 2026
 
-`EtherealItemRules` réunit maintenant les deux témoins dans une DLL RuffnecKk
-hybride unique, sans TOML et sans liaison ni redistribution d'une DLL
-d'eezstreet. Le JSON expose directement `etherealExclusions` et
-`etherealItemRules`. À la demande de Vincent, le fichier livré est strictement
-vanilla par défaut : les deux sections sont désactivées, le taux visible vaut
-`5`, et les autorisations set/indestructible valent `false`; la DLL n'installe
-alors aucun hook ni patch.
+`EtherealItemRules` a réuni les deux témoins dans une DLL RuffnecKk hybride
+unique, sans TOML et sans liaison ni redistribution d’une DLL d’eezstreet. Son
+prototype 0.1.0 exposait encore deux objets JSON, `etherealExclusions` et
+`etherealItemRules`; cette représentation est désormais explicitement rejetée.
+Le prochain port doit exposer un seul bloc `etherealItemRules`, désactivé par
+défaut, contenant le taux vanilla `5`, les autorisations set/indestructible à
+`false` et une liste vide des ItemTypes exclus. Aucun gameplay final ne doit être
+validé contre l’ancien contrat à deux blocs.
 
 - Release x64 : 142 336 octets, SHA-256
   `BAF958001ED43624F98C04672D4B844B6D2D0FEBE9B0EA1A04DF37EF76859174` ;

@@ -22,6 +22,48 @@ copie modifiable réservée aux prototypes. Avant chaque nouvelle fonctionnalit�
 la déclaration de licence. Une mise à jour amont n’avance jamais silencieusement
 le pin : elle doit être examinée avant de devenir la nouvelle référence.
 
+## Périmètre canonique du lot accepté
+
+Le 28 juillet 2026, Vincent confirme le lot suivant. Cette liste gouverne
+l’inclusion au futur PluginPack; le tableau d’audit plus bas mesure seulement
+les collisions et la difficulté technique et ne vaut pas inclusion implicite.
+
+| Propriétaire final | Fonctionnalité source | Configuration dans `D2RPlugins.json` |
+|---|---|---|
+| `plugin-items.dll` | `GambleScreenLimit` | `items.gambleScreenLimit` |
+| `plugin-items.dll` | `GroundItemLabelLimit` | `items.groundItemLabels` |
+| `plugin-items.dll` | Item Durability / `DurabilityResistance` | `items.itemDurability` |
+| `plugin-items.dll` | Charm Aura Trigger Fix | `items.charmAuraTriggerFix` |
+| `plugin-items.dll` | `EnhancedDamageMinMaxFix` | `items.enhancedDamageMinMaxFix` |
+| `plugin-items.dll` | bloc unifié `EthItemRules`, incluant l’exclusion d’ItemTypes | `items.etherealItemRules` |
+| `plugin-items.dll` | `ExtendedItemStats` | aucune clé externe; infrastructure intégrée |
+| `plugin-items.dll` | `RepairCostsCap` | `items.repairCostsCap` |
+| `plugin-items.dll` | Qty Display Fix / `QtyDisplayIssue` | `items.qtyDisplayIssue` |
+| `plugin-misc.dll` | Cube Quick Move Bottom-Right | `misc.cubeQuickMoveBottomRight` |
+| `plugin-misc.dll` | Equipped Item to Cube | `misc.equippedItemToCube` |
+| `plugin-misc.dll` | Assign Transmute Hotkey | `misc.transmuteHotkey` |
+| `plugin-misc.dll` | `VendorStockRefresh` | `misc.vendorStockRefresh` |
+| `plugin-misc.dll` | `PreventMercDeathInTown` | `misc.preventMercDeathInTown` |
+| `plugin-quests.dll` | `ForceLarzukSockets` | `quests.larzukSockets` |
+| `plugin-skills.dll` | `BulkSkillPointAllocation` | `skills.bulkSkillPointAllocation` |
+
+Le lot contient donc 16 fonctionnalités sources. `EthItemRules` est un seul
+composant et un seul bloc de configuration : l’exclusion d’ItemTypes fait partie
+de ses règles et ne possède aucune identité sœur. `ExtendedItemStats` n’ajoute
+aucune option publique. `plugin-levels.dll` ne reçoit actuellement aucune
+fonctionnalité confirmée.
+
+Le `D2RPlugins.json` livré aux joueurs doit conserver le comportement vanilla :
+toutes les nouvelles fonctions configurables sont désactivées par défaut et
+leurs autres valeurs initiales reprennent les valeurs vanilla lorsqu’elles en
+ont une. L’infrastructure `ExtendedItemStats` doit rester sans effet gameplay
+visible tant qu’aucun consommateur explicitement activé ne l’utilise.
+
+Sont explicitement hors de ce lot : `Transmogrify`,
+`ConfigurableCharsiReward`, la DLL autonome finale `EtherealItemRules.dll`, et
+tout autre candidat seulement cité dans l’audit. Les autonomes ethereal restent
+des témoins différentiels temporaires jusqu’à la validation du port fusionné.
+
 ## Preuve de l’environnement ciblé
 
 Le workbench persistant `D2R.exe 3.2.92777` est vérifié :
@@ -249,24 +291,31 @@ par eezstreet sans modifier la fondation.
 | Plugin | Version validée | Propriétaire futur | Configuration future | État |
 |---|---|---|---|---|
 | `BulkSkillPointAllocation` | `1.2.3` | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | prêt pour préparation du merge |
-| sous-système ethereal commun | témoin `EtherealItemRules 0.1.0` | `plugin-items.dll` | `items.etherealExclusions` et `items.etherealItemRules` | port conjoint compilé et cold-starté actif/vanilla; équivalence gameplay fusionnée ouverte |
+| bloc unifié `EthItemRules` | témoin historique `EtherealItemRules 0.1.0` | `plugin-items.dll` | bloc unique `items.etherealItemRules` | refonte du contrat JSON requise avant de reprendre l’équivalence gameplay |
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est
-simplement `plugin-items.dll`, au même titre que les autres ports. Les deux
-politiques sont donc implantées dans des sources internes au module, sans DLL,
-identifiant ni chargeur JSON supplémentaire. Le manifeste inventorie leur hook
-`0x373890` et les quatre opérations `0x4434DF`, `0x443315`, `0x4432F4` et
-`0x46D840` sous ce propriétaire unique.
+simplement `plugin-items.dll`, au même titre que les autres ports. Il précise
+ensuite que les deux entrées historiques ne doivent subsister ni comme plugins,
+ni comme blocs JSON distincts. Le composant final unique s’appelle
+`EthItemRules`; le bloc unique `items.etherealItemRules` porte le taux, les
+exceptions set/indestructible et la liste des ItemTypes exclus. La clé sœur
+`items.etherealExclusions` est supprimée du contrat final. Le manifeste conserve
+le hook `0x373890` et les quatre opérations `0x4434DF`, `0x443315`, `0x4432F4`
+et `0x46D840` sous ce propriétaire unique.
 
-Le JSON joueur livre les deux sections désactivées, le taux vanilla de 5 %, les
-exceptions set/indestructible à `false`, et corrige aussi
-`skills.selfHealParams=false` afin que le pack entier demeure passif par défaut.
+Le JSON joueur final doit livrer ce bloc unique désactivé, le taux vanilla de
+5 %, les exceptions set/indestructible à `false`, une liste d’exclusions vide,
+et conserver `skills.selfHealParams=false` afin que le pack entier demeure
+passif par défaut.
 Les cinq targets Release compilent, le manifeste de 62 sites et les trois CTest
 sont verts. `plugin-items.dll` porte le SHA-256
 `FB4AD6015DFCEE02FFECEFBF2056155F4EB1E7E8CAB9A54AE13DC0B0BBBC823D`.
 Ces sources correspondent au checkpoint `a51c865` poussé sur
-`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Ce checkpoint prouve la
+cohabitation technique des hooks, mais son découpage en deux blocs JSON est
+maintenant rejeté. Il doit être amendé en un bloc avant toute validation gameplay
+du contrat final.
 
 Le cold start vanilla charge les cinq plugins sans hook ethereal; le cold start
 actif charge seulement le propriétaire `eezstreet-plugin-items`, installe le

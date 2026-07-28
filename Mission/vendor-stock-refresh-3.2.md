@@ -321,11 +321,12 @@ chez Charsi; la restauration du bouton original en gamble reste à observer.
 
 ## Prochain gate
 
-Aucun gate actif : Vincent a clos le chantier le 27 juillet 2026. Une éventuelle
-reprise du merge vers `plugin-misc.dll` devra être demandée explicitement et
-rouvrira alors les non-régressions encore non exécutées : gamble, vendeur de mode
-`0`, layout réellement moddé ou agrandi, manette, cinq actes, clics rapides,
-repli global et hôte/joiner.
+Vincent a explicitement ajouté Vendor Stock Refresh au lot PluginPack accepté le
+28 juillet 2026. Le chantier autonome reste clos; lorsque le séquencement atteint
+`plugin-misc.dll`, porter `misc.vendorStockRefresh` puis rouvrir les
+non-régressions encore non exécutées : gamble, vendeur de mode `0`, layout
+réellement moddé ou agrandi, manette, cinq actes, clics rapides, repli global et
+hôte/joiner.
 
 ## Frontière Git
 

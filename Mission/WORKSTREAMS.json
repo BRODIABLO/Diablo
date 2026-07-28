@@ -39,7 +39,7 @@
       "status": "active",
       "owner": "Guillaume + Codex",
       "mission": "Mission/qty-display-issue-3.2.md",
-      "nextGate": "Complete the active quantity tooltip validation before packaging another checkpoint.",
+      "nextGate": "When selected in the accepted PluginPack sequence, merge items.qtyDisplayIssue into plugin-items.dll and preserve standalone 1.1.0 only as a witness until integration validation passes.",
       "include": [
         "Mission/qty-display-issue-3.2.md",
         "addons/QtyDisplayIssue/QtyDisplayIssue.zip",
@@ -151,7 +151,7 @@
       "status": "paused",
       "owner": "Vincent + Codex",
       "mission": "Mission/prevent-merc-death-in-town-3.2.md",
-      "nextGate": "Deploy the governed Release hash to BKVince, confirm a clean 92777 cold start with fresh logs, then validate lethal persistent-damage ticks in town and the out-of-scope controls.",
+      "nextGate": "When selected in the accepted PluginPack sequence, merge misc.preventMercDeathInTown into plugin-misc.dll, preserve the standalone only as a witness, then rebuild and validate the merged option.",
       "include": [
         "Mission/prevent-merc-death-in-town-3.2.md",
         "addons/PreventMercDeathInTown/**",
@@ -166,7 +166,7 @@
       "status": "paused",
       "owner": "Vincent + Codex",
       "mission": "Mission/vendor-stock-refresh-3.2.md",
-      "nextGate": "Closed by Vincent on 2026-07-27 after validating the standalone Vendor Stock Refresh behavior; retain the mission and artifacts as technical evidence and reopen remaining regression gates only on explicit request.",
+      "nextGate": "When selected in the accepted PluginPack sequence, merge misc.vendorStockRefresh into plugin-misc.dll, preserve the standalone only as a witness, then rerun the remaining vendor regression matrix.",
       "include": [
         "Mission/vendor-stock-refresh-3.2.md",
         "addons/VendorStockRefresh/**",
@@ -182,7 +182,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Validate gameplay equivalence of the merged ethereal module, using standalone plugins only as differential witnesses when needed.",
+      "nextGate": "Refactor EthItemRules into one items.etherealItemRules JSON block, remove items.etherealExclusions as a separate identity, rebuild and cold-start both vanilla and active configurations, then resume gameplay equivalence.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
         "addons/ConfigurableCharsiReward/**"
