@@ -264,6 +264,7 @@
         "Mission/WORKSTREAMS.json",
         ".agents/skills/diablo-git-checkpoint/SKILL.md",
         ".agents/skills/diablo-git-checkpoint/scripts/inspect-checkpoint.mjs",
+        "reverse-engineering/cheat-spawn.md",
         "scripts/checkpoint/**",
         "scripts/workstreams/**"
       ]

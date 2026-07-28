@@ -11,6 +11,13 @@ volumineux et potentiellement soumis aux droits du jeu.
 
 Le workbench actif est [d2r-3.2.92777](d2r-3.2.92777/README.md).
 
+## Aide-mémoire de test en jeu
+
+Le guide [`spawn` cheat command](cheat-spawn.md) rassemble la syntaxe complète,
+les options, les qualités et des exemples fondés sur les codes d'items actuels
+de BKVince. Il s'agit d'une référence pratique importée dont la provenance
+runtime reste à confirmer, pas d'une preuve native promue pour le build 92777.
+
 ## Références externes épinglées
 
 Le registre [references.json](references.json) gouverne les clones de sources

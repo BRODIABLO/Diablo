@@ -31185,6 +31185,11 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "cheat-spawn.md",
+                                                           "path":  "reverse-engineering/cheat-spawn.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "README.md",
                                                            "path":  "reverse-engineering/README.md",
                                                            "kind":  "file"
