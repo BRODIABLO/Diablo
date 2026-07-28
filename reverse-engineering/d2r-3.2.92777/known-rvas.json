@@ -1338,6 +1338,38 @@
       "confidence": "high",
       "source": "Mission/transmute-hotkey-3.2.md",
       "notes": "Finds a top-level panel by UTF-8 name with proven x64 ABI (const char* name) -> panel*. The 22-byte wrapper forwards the name and the global UI manager to 0x89F760 or returns null. TransmuteHotkey validates the wrapper and uses it only on the UI thread to refuse ChatPanel and known text-entry or confirmation modals."
+    },
+    {
+      "rva": "0x15A170",
+      "name": "UI_IsHoradricCubePage",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/equipped-item-to-cube-3.2.md",
+      "notes": "Recognizes native inventory page 3 as the Horadric Cube in the quick-move eligibility path. The corresponding D2R 2.4 helper is at 0x130DC0. EquippedItemToCube leaves this helper unchanged."
+    },
+    {
+      "rva": "0x15A280",
+      "name": "UI_CanQuickMoveItemToCube",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/equipped-item-to-cube-3.2.md",
+      "notes": "Central Cube quick-move eligibility helper. It validates the relevant panels, calls UI_IsHoradricCubePage, excludes the Cube item itself and keeps the native destination-space and transaction path. EquippedItemToCube does not patch this function."
+    },
+    {
+      "rva": "0x228AC0",
+      "name": "UI_HandleEquippedItemQuickMove",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/equipped-item-to-cube-3.2.md",
+      "notes": "Hovered/equipped-item quick-move handler. It resolves the hovered unit, evaluates a new 3.2 client guard at 0x228B91, tests Ctrl at 0x228B9E and then reuses the native Cube eligibility and item-move path. The corresponding 2.4 handler lacks the new conditional exit."
+    },
+    {
+      "rva": "0x228B98",
+      "name": "EquippedItemCubeEligibilityGuardBranch",
+      "kind": "branch-site",
+      "confidence": "high",
+      "source": "Mission/equipped-item-to-cube-3.2.md",
+      "notes": "Exact six-byte 0F 84 55 01 00 00 conditional exit introduced before the native Ctrl test in build 92777. EquippedItemToCube owns only 0x228B98..0x228B9D and replaces this branch with six NOPs after validating the 47-byte context at 0x228B81."
     }
   ]
 }

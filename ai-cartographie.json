@@ -1,8 +1,8 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-28T00:36:23.0122113+00:00",
+    "generatedAt":  "2026-07-28T00:48:01.4197324+00:00",
     "root":  {
-                 "name":  "snapshot",
+                 "name":  "snapshot-pre-ai",
                  "path":  ".",
                  "kind":  "directory",
                  "meta":  {
@@ -504,6 +504,46 @@
                                                                             {
                                                                                 "name":  "EnhancedDamageMinMaxFix.zip",
                                                                                 "path":  "addons/EnhancedDamageMinMaxFix/EnhancedDamageMinMaxFix.zip",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "EquippedItemToCube",
+                                                           "path":  "addons/EquippedItemToCube",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-d2rloader-package-candidate",
+                                                                        "summary":  "Archive technique candidate DLL + JSON du plugin hybride EquippedItemToCube 0.1.0, avec README d’accompagnement hors ZIP; publication finale conditionnée par la matrice gameplay.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "experimental"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "package",
+                                                                                "path":  "addons/EquippedItemToCube/package",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "EquippedItemToCube.dll",
+                                                                                                     "path":  "addons/EquippedItemToCube/package/EquippedItemToCube.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "EquippedItemToCube.json",
+                                                                                                     "path":  "addons/EquippedItemToCube/package/EquippedItemToCube.json",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "README.md",
+                                                                                                     "path":  "addons/EquippedItemToCube/package/README.md",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "EquippedItemToCube.zip",
+                                                                                "path":  "addons/EquippedItemToCube/EquippedItemToCube.zip",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
@@ -13638,6 +13678,11 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
+                                                                                "name":  "EquippedItemToCube.json",
+                                                                                "path":  "data-BKVince/BKVince.mpq/EquippedItemToCube.json",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "ForceLarzukSockets.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/ForceLarzukSockets.json",
                                                                                 "kind":  "file"
@@ -14117,6 +14162,43 @@
                                                                                                                       {
                                                                                                                           "name":  "README.md",
                                                                                                                           "path":  "data-BKVince/d2rloader/plugins/EnhancedDamageMinMaxFix-src/README.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "EquippedItemToCube-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/EquippedItemToCube-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/EquippedItemToCube-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "equipped_item_to_cube_policy.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/EquippedItemToCube-src/equipped_item_to_cube_policy.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/EquippedItemToCube-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/EquippedItemToCube-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "policy_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/EquippedItemToCube-src/policy_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "README.md",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/EquippedItemToCube-src/README.md",
                                                                                                                           "kind":  "file"
                                                                                                                       }
                                                                                                                   ]
@@ -14931,6 +15013,11 @@
                                                                                                  {
                                                                                                      "name":  "EnhancedDamageMinMaxFix.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/EnhancedDamageMinMaxFix.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "EquippedItemToCube.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/EquippedItemToCube.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -30796,6 +30883,11 @@
                                                                     }
                                                        },
                                                        {
+                                                           "name":  "cube-quick-move-bottom-right-3.2.md",
+                                                           "path":  "Mission/cube-quick-move-bottom-right-3.2.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "CURRENT.md",
                                                            "path":  "Mission/CURRENT.md",
                                                            "kind":  "file"
@@ -30818,11 +30910,6 @@
                                                        {
                                                            "name":  "eezstreet-pluginpack-integration.md",
                                                            "path":  "Mission/eezstreet-pluginpack-integration.md",
-                                                           "kind":  "file"
-                                                       },
-                                                       {
-                                                           "name":  "cube-quick-move-bottom-right-3.2.md",
-                                                           "path":  "Mission/cube-quick-move-bottom-right-3.2.md",
                                                            "kind":  "file"
                                                        },
                                                        {

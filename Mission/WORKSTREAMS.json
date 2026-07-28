@@ -223,10 +223,10 @@
     {
       "id": "equipped-item-to-cube",
       "name": "Equipped Item to Cube",
-      "status": "paused",
+      "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/equipped-item-to-cube-3.2.md",
-      "nextGate": "After the Cube Quick Move Bottom-Right milestone, trace Shift equipped-to-inventory, Ctrl inventory-to-Cube and Ctrl equipped-to-Cube to identify the first divergent branch before implementation.",
+      "nextGate": "Validate one real equipped-slot Ctrl-click into the open Cube, then the absent/full Cube refusals; if it fails, capture a fresh log and trace the first post-0x228B98 divergence.",
       "include": [
         "Mission/equipped-item-to-cube-3.2.md",
         "addons/EquippedItemToCube/**",
