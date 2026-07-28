@@ -1,17 +1,24 @@
-# BKVince — source de développement TCP 3.2
+# BKVince — quartier général du mod sous D2RLoader 3.2
 
-Cette copie provient du **BKDiablo converti par D2RLoader pour D2R 3.2**. Elle
-est la cible gouvernée du portage de TCP; `data-TCP/` demeure la référence
-historique 2.4. La conversion a été finalisée le 17 juillet 2026 avec
-`d2rl convert BKVince` sous D2RLoader 1.0.1-beta et le build D2R 92777.
+BKVince est le mod actuel de Vincent et sa source gouvernée vit dans ce dossier.
+Il s'agit d'un assemblage dirigé par Vincent : son squelette provient de
+**BKDiablo**, créé par Baron et Kex, puis il est enrichi par des apports
+sélectionnés de plusieurs mods publiés sur **Nexus Mods** et par ses propres
+idées. Chaque apport tiers doit conserver sa provenance et ses crédits,
+distinctement des créations RuffnecKk.
+
+La base technique a été amorcée par conversion de BKDiablo pour D2R 3.2. Cette
+conversion a été finalisée le 17 juillet 2026 avec `d2rl convert BKVince` sous
+D2RLoader 1.0.1-beta et le build D2R 92777. `data-TCP/` demeure une référence
+historique D2R 2.4 distincte de BKVince.
 
 - Source Git : `data-BKVince/BKVince.mpq/` et `data-BKVince/d2rloader/`
 - Runtime local : `mods/BKVince/BKVince.mpq/` et `mods/BKVince/d2rloader/`
 - Intégration D2RLoader : métadonnées, configuration, README et gabarit de
   patch générés dans `data-BKVince/d2rloader/`; le profil de sauvegarde
   utilise désormais `BKVince/`.
-- Méthode : calculer les deltas `BK → TCP`, puis les rejouer sélectivement sur
-  BKVince afin de préserver Warlock, l'endgame et les adaptations 3.2.
+- Méthode : intégrer chaque apport sélectivement afin de préserver l'identité de
+  BKVince, Warlock, l'endgame, les adaptations 3.2 et les crédits d'origine.
 - Sécurité : ne jamais remplacer BKVince en bloc par TCP et ne synchroniser le
   runtime qu'après fermeture complète du jeu et de D2RLoader.
 

@@ -1,22 +1,25 @@
-# Diablo — atelier du mod TCP + plateforme des 3 mods
+# Workspace RuffnecKk — laboratoire D2RLoader 3.2 et quartier général de BKVince
 
-Deux choses dans un même dépôt :
+Ce dépôt réunit trois dimensions complémentaires :
 
-1. Les **données** des mods Diablo II Resurrected de Vincent — **BKVince 3.2** comme cible active sous D2RLoader, **TCP 2.4** comme source historique, plus les références **BK**, **BT**, **VNP** et vanilla.
-2. Une **plateforme web** (monorepo **npm + turbo**) par-dessus : un **éditeur** pour modifier ces tables confortablement, et (à venir) un **wiki** de comparaison des 3 mods.
+1. Un **laboratoire de plugins et de patches pour D2R 3.2**, au service de la communauté Discord D2RLoader : reverse engineering gouverné, DLL autonomes et hybrides, patches mémoire JSON et add-ons publiables indépendamment de BKVince.
+2. Le **quartier général de BKVince**, le mod actuel de Vincent sous D2RLoader 3.2. BKVince est un assemblage dirigé par Vincent : son squelette provient de **BKDiablo**, puis il est enrichi par des apports sélectionnés de plusieurs mods publiés sur **Nexus Mods** et par ses propres idées. Les sources tierces et leurs crédits restent distingués des créations RuffnecKk.
+3. Les **données et l'outillage** qui soutiennent ces travaux : tables et assets des mods, atelier de reverse engineering, missions gouvernées, éditeur web et futur wiki.
 
 Les `.txt` restent la **source de vérité** ; pas de base de données — git est la « base ».
 
 ## Structure
 
-- `data-TCP/` — source historique 2.4 du mod de Vincent, conservée pendant la migration
+- `addons/` — plugins, patches et add-ons autonomes préparés pour une publication communautaire indépendante de BKVince
+- `reverse-engineering/` — ateliers persistants, manifestes et preuves natives pour D2R 3.2
+- `data-BKVince/` — quartier général et source gouvernée du mod actuel; squelette BKDiablo enrichi d'apports Nexus Mods et de créations propres, synchronisé vers le runtime seulement par lots validés
+- `data-TCP/` — mod historique D2R 2.4, distinct de BKVince
   - `global/excel/` — tables de gameplay (`.txt`) : armor, weapons, hireling, runes, setitems…
   - `local/lng` — chaînes localisées, **versionnées**
   - `hd/` — assets HD **versionnés via Git LFS**
   - `D2RLAN/` — profil launcher local et intégration runtime de TCP, **modifiable mais non versionné**
-- `data-BKVince/` — cible de migration **D2RLoader 3.2**, issue de BK converti; nouvelle zone de développement modifiable, synchronisée vers le mod local BKVince seulement par lots validés
-- `data-BK/`, `data-BT/` — mods externes de **référence** (lecture seule) ; `local/` et `hd/` de BK sont versionnés, tandis que `hd/` de BT reste local
-- `data-VNP/` — Mod Vanilla++ servant d'inspiration pour mon mod TCP (**lecture seule**, hors Comparateur) ; seuls `global/`, `local/` et `hd/` sont versionnés
+- `data-BK/`, `data-BT/` — mods externes de **référence** (lecture seule); BKDiablo constitue le squelette historique de BKVince; `local/` et `hd/` de BK sont versionnés, tandis que `hd/` de BT reste local
+- `data-VNP/` — Mod Vanilla++ servant d'inspiration pour BKVince (**lecture seule**, hors Comparateur); seuls `global/`, `local/` et `hd/` sont versionnés
 - `excel-vanilla2.4/` — tables du jeu de base D2 2.4 (référence, lecture seule)
 - `data-vanilla3.2/` — extraction CASCView du jeu de base D2R 3.2 (référence, lecture seule) ; seul `data/data/global/excel/` est versionné, les autres branches demeurent locales
 - `apps/admin/` — **éditeur web** des tables (Vite + React)
@@ -25,7 +28,7 @@ Les `.txt` restent la **source de vérité** ; pas de base de données — git e
 - `guide/d2rdoc/` — clone local non versionné de [`eezstreet/d2rdoc`](https://eezstreet.github.io/d2rdoc/), référence primaire des `.txt` D2R 3.2 et des descriptions de headers
 - `guide/legacy/` — ancien D2R Data Guide, conservé localement uniquement pour les assets et certains JSON
 - `wiki-template/` — références pour le futur wiki (dont l'index du wiki BT)
-- `Mission/` — besoins et intentions du mod
+- `Mission/` — besoins, décisions et preuves des chantiers du workspace
 - `ai-cartographie.json` (+ `.schema.json`) — **cadastre** gouverné du dépôt (arbre + rôles + accès agents)
 - `AGENTS.md`, `CLAUDE.md` — orientation des agents
 

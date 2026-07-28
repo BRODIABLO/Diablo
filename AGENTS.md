@@ -10,17 +10,18 @@ N'interroge jamais spontanément le user sur l'ouverture de l'éditeur. Ouvre-le
 
 | Terme | Signification |
 |---|---|
-| **Workspace RuffnecKk** | Ensemble du dépôt, de ses outils et de ses projets |
-| **BKVince** | Mod actuel et cible active sous D2RLoader 3.2 |
+| **Workspace RuffnecKk** | Laboratoire de plugins et de patches D2R 3.2 au service de la communauté Discord D2RLoader, et quartier général de BKVince |
+| **BKVince** | Mod actuel sous D2RLoader 3.2, construit sur le squelette de BKDiablo puis enrichi par plusieurs mods provenant de Nexus Mods et par les idées propres de Vincent |
 | **TCP** | Mod historique D2R 2.4, distinct de BKVince |
 | **BK, BT, VNP** | Mods de référence distincts, jamais synonymes de BKVince |
 
 Lorsque Vincent dit « mon mod » sans autre précision, interpréter **BKVince**. Ne jamais employer **TCP** comme synonyme du mod actuel; ne le mentionner que si Vincent le nomme explicitement ou si le travail concerne réellement `data-TCP/`.
 
-Deux choses cohabitent :
+Trois activités complémentaires cohabitent :
 
-1. **Les données des mods** — les tables `.txt` (TSV) de `data-BKVince/`, `data-TCP/`, `data-BK/` et `data-BT/`, les références `data-VNP/`, `excel-vanilla2.4/` et `data-vanilla3.2/data/data/global/excel/`. C'est la source de vérité du gameplay selon le runtime ciblé.
-2. **Une plateforme web** (monorepo **npm + turbo**) construite par-dessus : un **Admin** pour éditer ces `.txt`, et (à venir) un **Wiki** de comparaison des 3 mods.
+1. **Un laboratoire communautaire D2RLoader 3.2** — reverse engineering gouverné, plugins natifs autonomes et hybrides, patches mémoire JSON et add-ons publiables séparément de BKVince. Les travaux réutilisables ont vocation à servir la communauté Discord D2RLoader.
+2. **Le quartier général de BKVince** — le mod actuel de Vincent, assemblé à partir du squelette de BKDiablo, d'apports sélectionnés provenant de plusieurs mods publiés sur Nexus Mods et de ses propres idées. Les sources tierces et leurs crédits restent explicitement distingués des créations RuffnecKk.
+3. **Les données et l'outillage du workspace** — les tables `.txt` (TSV), les assets, les missions, le cadastre et une plateforme web en monorepo **npm + turbo** : un **Admin** pour éditer les tables et, à venir, un **Wiki** de comparaison.
 
 Les `.txt` restent la source ; **pas de base de données**. Les dossiers `local/` et `hd/` de TCP et BK sont également versionnés, avec les binaires HD sous **Git LFS**. Stack : **Vite + React** (fronts), **Netlify** (hébergement en ligne : `diablo-tcp-admin.netlify.app`), git comme « base » (chaque édition = commit).
 
@@ -32,12 +33,14 @@ Les `.txt` restent la source ; **pas de base de données**. Les dossiers `local/
 |---|---|---|
 | `data-TCP/` (`global`, `hd`, `local`) | mod historique D2R 2.4 | **modifiable** |
 | `data-TCP/D2RLAN/` | profil local D2RLAN et intégration runtime de TCP | **modifiable** |
-| `data-BKVince/` | mod actuel et source de développement D2RLoader 3.2, issue de BK converti | **modifiable** |
-| `data-BK/`, `data-BT/` | mods de référence / inspiration | **read-only** |
+| `data-BKVince/` | quartier général et source de développement du mod actuel sous D2RLoader 3.2; squelette BKDiablo enrichi d'apports Nexus Mods et de créations propres | **modifiable** |
+| `data-BK/`, `data-BT/` | mods de référence / inspiration; BKDiablo constitue le squelette historique de BKVince | **read-only** |
 | `data-VNP/` | Mod Vanilla++ servant d'inspiration pour BKVince | **read-only** |
 | `excel-vanilla2.4/` | données vanilla Diablo II 2.4 | **read-only** |
 | `data-vanilla3.2/` | extraction locale CASCView de D2R 3.2 ; seul `data/data/global/excel` est versionné | **read-only** |
 | `Mission/` | besoins et intentions | modifiable |
+| `addons/` | plugins, patches et add-ons autonomes destinés à une publication communautaire indépendante de BKVince | modifiable |
+| `reverse-engineering/` | ateliers persistants et preuves natives pour D2R 3.2 | modifiable |
 | `apps/` | plateforme web (admin, wiki) | modifiable |
 | `schemas/` | catalogue de schémas de colonnes (dérivé du guide TXT eezstreet/d2rdoc) | modifiable |
 | `scripts/` | outillage (cadastre, validateur, TSV, dev-server) | modifiable |
@@ -45,7 +48,7 @@ Les `.txt` restent la source ; **pas de base de données**. Les dossiers `local/
 | `guide/d2rdoc/` | guide TXT courant pour D2R 3.x/3.2 (`eezstreet/d2rdoc`) | **gitignoré — source primaire des schémas TXT** |
 | `guide/legacy/` | ancien D2R Data Guide | **gitignoré — référence complémentaire pour assets et certains JSON, jamais normative pour les `.txt` 3.2** |
 
-En clair : côté **données et runtime**, `data-TCP` demeure la source historique 2.4 et `data-BKVince` est le mod actuel sous D2RLoader 3.2; les références servent uniquement de comparaison. Côté **plateforme**, `apps/`, `schemas/`, `scripts/` sont le code de l'outil.
+En clair : `addons/`, `reverse-engineering/` et les procédures natives portent le laboratoire communautaire; `data-BKVince/` est le quartier général du mod actuel; `data-TCP/` demeure la source historique 2.4 et n'est jamais un synonyme de BKVince. `apps/`, `schemas/` et `scripts/` fournissent la plateforme et l'outillage communs.
 
 ## Conventions
 

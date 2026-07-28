@@ -7,7 +7,7 @@
                  "kind":  "directory",
                  "meta":  {
                               "role":  "modding-workspace",
-                              "summary":  "Workspace de développement du mod Diablo II de Vincent et de ses sources de référence.",
+                              "summary":  "Laboratoire de plugins et de patches D2R 3.2 au service de la communauté Discord D2RLoader, et quartier général de BKVince, construit sur le squelette de BKDiablo puis enrichi d\u0027apports Nexus Mods et de créations propres.",
                               "agentAccess":  "read-write"
                           },
                  "children":  [
@@ -344,7 +344,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "x-external-addons",
-                                                   "summary":  "Add-ons autonomes publiables séparément du mod TCP/BKVince.",
+                                                   "summary":  "Plugins, patches et add-ons D2R 3.2 autonomes destinés à une publication au service de la communauté Discord D2RLoader, séparément de BKVince.",
                                                    "agentAccess":  "read-write"
                                                },
                                       "children":  [
@@ -820,7 +820,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "mod-reference",
-                                                   "summary":  "Mod externe créé par BK à partir de Diablo II 3.2 et utilisé comme source d\u0027inspiration.",
+                                                   "summary":  "Référence read-only de BKDiablo, créé par Baron et Kex et constituant le squelette historique de BKVince.",
                                                    "agentAccess":  "read-only"
                                                },
                                       "children":  [
@@ -4036,11 +4036,11 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "mod-development",
-                                                   "summary":  "Source de développement TCP pour D2RLoader 3.2, initialisée depuis BK converti et portée par fusion sélective.",
+                                                   "summary":  "Quartier général et source gouvernée de BKVince sous D2RLoader 3.2, construit sur le squelette de BKDiablo puis enrichi d\u0027apports sélectionnés de plusieurs mods Nexus Mods et de créations propres à Vincent.",
                                                    "agentAccess":  "read-write",
                                                    "status":  "active",
                                                    "provenance":  {
-                                                                      "source":  "BKDiablo converti par D2RLoader",
+                                                                      "source":  "Squelette BKDiablo converti par D2RLoader, apports sélectionnés de mods Nexus Mods et créations propres à Vincent",
                                                                       "version":  "D2R 3.2.0 build 92777"
                                                                   },
                                                    "policy":  {
@@ -15942,8 +15942,8 @@
                                       "path":  "data-TCP",
                                       "kind":  "directory",
                                       "meta":  {
-                                                   "role":  "mod-development",
-                                                   "summary":  "Mod de Vincent en développement visant à modifier le gameplay de Diablo II 2.4."
+                                                   "role":  "x-mod-historical",
+                                                   "summary":  "Mod historique D2R 2.4, distinct de BKVince et conservé comme source modifiable de référence."
                                                },
                                       "children":  [
                                                        {
@@ -27712,7 +27712,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "mod-reference",
-                                                   "summary":  "Mod Vanilla++ servant d\u0027inspiration pour mon mod TCP",
+                                                   "summary":  "Mod Vanilla++ servant d\u0027inspiration pour BKVince",
                                                    "agentAccess":  "read-only"
                                                },
                                       "children":  [
