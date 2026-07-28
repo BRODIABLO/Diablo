@@ -23,8 +23,10 @@ ni échec, avec les hashes source/runtime identiques.
 Vendor Stock Refresh a été déclaré réglé par Vincent le 27 juillet 2026 et
 retiré de la ROADMAP active. Sa mission et ses artefacts restent conservés comme
 preuves techniques. Le pilote I8 d’atmosphère macabre des Catacombes est
-désormais intercalé après le gate gameplay de la présente mission; Equipped Item
-to Cube demeure planifié immédiatement après ce pilote.
+abandonné par Vincent le 28 juillet 2026 avant toute implantation, après des
+essais ElevenLabs gratuits non concluants; aucun WAV n’a été ingéré dans
+BKVince. Equipped Item to Cube redevient planifié immédiatement après le gate
+gameplay de la présente mission.
 
 ## Prochain gate
 
