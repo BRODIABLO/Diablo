@@ -2,6 +2,12 @@
 
 ## Décision et séquencement
 
+Le 28 juillet 2026, Vincent confirme son intégration future dans la catégorie
+`items`, avec `plugin-items.dll` comme DLL propriétaire et
+`items.itemDurability` comme clé prévue dans l'unique `D2RPlugins.json`. Le port
+remplacera la configuration TOML autonome par cette section JSON et conservera
+la DLL autonome jusqu'à validation fonctionnelle équivalente du module fusionné.
+
 Option A retenue par Vincent le 18 juillet 2026 : entreprendre ce memory edit
 immédiatement après la validation fonctionnelle des tomes TP/ID illimités, puis
 reprendre `pierce-res` et les autres memory edits.

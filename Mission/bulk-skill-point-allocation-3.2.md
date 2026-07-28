@@ -2,6 +2,11 @@
 
 ## Décision gameplay
 
+Le 28 juillet 2026, Vincent corrige le classement du futur merge : cette
+fonctionnalité appartient à la catégorie `skills`, avec `plugin-skills.dll`
+comme DLL propriétaire et `skills.bulkSkillPointAllocation` comme clé dans
+l'unique `D2RPlugins.json`. La qualification antérieure sous `misc` est annulée.
+
 Option A retenue par Vincent le 21 juillet 2026 : livrer
 `BulkSkillPointAllocation` avant le prochain chantier de plugin natif.
 
@@ -229,7 +234,7 @@ patch est refusé.
 
 Le plugin demeure une DLL RuffnecKk distincte. Il ne lie, ne modifie et ne
 redistribue aucune DLL d'eezstreet. La destination logique d'une intégration
-future est `plugin-misc`, conformément au découpage retenu pour le
+future est `plugin-skills`, conformément au découpage retenu pour le
 CommunityPack.
 
 La configuration TOML individuelle est remplacée par
@@ -240,7 +245,7 @@ JSON avec commentaires, recherche prioritaire dans le dossier du mod actif,
 puis repli dans le dossier du jeu. Une configuration absente emploie les
 valeurs par défaut; une configuration présente mais invalide fait refuser le
 chargement. Lors d'un merge accepté, les clés pourront être intégrées au format
-retenu par `plugin-misc` dans `D2RPlugins.json` sans modifier leur sémantique.
+retenu par `plugin-skills` dans `D2RPlugins.json` sans modifier leur sémantique.
 
 La compatibilité a été auditée contre le dernier commit officiel
 D2RL-Plugins 2.0.1, `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` : aucun
@@ -388,8 +393,8 @@ restent verts.
   `2D333D13C049253C45ED8F265232CABF076C9A37A168CE0BDE84043048224DF2`.
 
 `BulkSkillPointAllocation 1.2.3` est donc promu candidat prêt pour la
-préparation du merge dans `plugin-misc.dll`, avec la configuration future
-`misc.bulkSkillPointAllocation` dans l'unique `D2RPlugins.json`. Ce statut ne
+préparation du merge dans `plugin-skills.dll`, avec la configuration future
+`skills.bulkSkillPointAllocation` dans l'unique `D2RPlugins.json`. Ce statut ne
 fusionne encore aucun code d'eezstreet et ne remplace pas son acceptation. La
 DLL autonome demeure la livraison officielle jusqu'à un merge convenu.
 

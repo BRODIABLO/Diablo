@@ -2,6 +2,12 @@
 
 ## Décision
 
+Le 28 juillet 2026, Vincent confirme son intégration future dans la catégorie
+`items`, avec `plugin-items.dll` comme DLL propriétaire et
+`items.enhancedDamageMinMaxFix` comme clé prévue dans l'unique
+`D2RPlugins.json`. La DLL autonome demeure le témoin de référence jusqu'à
+validation fonctionnelle équivalente du module fusionné.
+
 Mission confirmée par Vincent le 19 juillet 2026. Le correctif doit être livré
 comme plugin D2RLoader hybride, utilisable depuis le dossier global ou depuis
 le dossier d'un mod, sans configuration TOML obligatoire.

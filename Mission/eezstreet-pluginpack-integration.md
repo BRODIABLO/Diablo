@@ -74,8 +74,8 @@ ciblées et, pour quelques plugins, des offsets locaux documentés.
 | `GroundItemLabelLimit` | sept patches entre `0x1516EBE` et `0x1519AF9` | aucune structure gameplay | 1 |
 | `GambleScreenLimit` | patch `0x541A7C`, immédiat à `0x541A7E` | aucune structure | 1, fusion dans `plugin-items` |
 | `EnhancedDamageMinMaxFix` | hook `0x2FA430` | accès ciblés stat/unit via fonctions natives | 2 |
-| `NoEtherealItemTypes` | hook `0x373890` | records `ItemTypesTxt` par offsets ciblés | 2 |
-| `BulkSkillPointAllocation` | hooks `0x0EC700`, `0x5F4B90`, `0x843D90` | appels natifs, aucune structure complète | 2, fusion dans `plugin-misc` |
+| `NoEtherealItemTypes` + `Ethereal Item Rules` | hook `0x373890` et quatre opérations du patch | records `ItemTypesTxt`, taux, sets et durabilité effective | 2, fusion autonome commune avant `plugin-items` |
+| `BulkSkillPointAllocation` | hooks `0x0EC700`, `0x5F4B90`, `0x843D90` | appels natifs, aucune structure complète | 2, fusion dans `plugin-skills` |
 | `AdvancedItemTooltips` | hook `0x2DC4B0` | tooltip et résolveur natif de sockets | 2 |
 | `PotionAutoPickup` | hook `0x4B9DF0` | accesseurs natifs d’unités | 2 |
 | `FloatingDamage` | hook `0x427150`, plus D3D12/MinHook | vue locale de l’événement de dégâts et rendu privé | 3 |
@@ -165,6 +165,12 @@ sera envisagé que si D2RLoader fournit explicitement ce service ou si
 
 ## Séquencement retenu
 
+Vincent retient l'option A le 28 juillet 2026 : une fois la fondation de la
+tranche 0 disponible, le sous-système ethereal commun est le premier composant
+multi-fonctions à réunir et valider de façon autonome. Son port conjoint dans
+`plugin-items` précède les autres ports du lot; la mission courante n'est pas
+changée par cette décision de ROADMAP.
+
 ### Tranche 0 — fondation
 
 - ajouter le manifeste des hooks et le contrôle de chevauchement;
@@ -180,8 +186,10 @@ sera envisagé que si D2RLoader fournit explicitement ce service ou si
 ### Tranche 2 — petits hooks à ABI opaque
 
 1. `EnhancedDamageMinMaxFix`;
-2. `NoEtherealItemTypes`;
-3. `BulkSkillPointAllocation`, intégré comme option de `plugin-misc`;
+2. fusionner `NoEtherealItemTypes` et `Ethereal Item Rules` dans un composant
+   autonome commun, le valider, puis porter les deux sous-sections ensemble
+   dans `plugin-items`;
+3. `BulkSkillPointAllocation`, intégré comme option de `plugin-skills`;
 4. `AdvancedItemTooltips`;
 5. `PotionAutoPickup`.
 
@@ -192,7 +200,8 @@ par eezstreet sans modifier la fondation.
 
 | Plugin | Version validée | Propriétaire futur | Configuration future | État |
 |---|---|---|---|---|
-| `BulkSkillPointAllocation` | `1.2.3` | `plugin-misc.dll` | `misc.bulkSkillPointAllocation` dans `D2RPlugins.json` | prêt pour préparation du merge |
+| `BulkSkillPointAllocation` | `1.2.3` | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | prêt pour préparation du merge |
+| sous-système ethereal commun | `NoEtherealItemTypes 1.1.0` + patch à quatre opérations | composant RuffnecKk autonome, puis `plugin-items.dll` | JSON autonome commun, puis `items.etherealExclusions` et `items.etherealItemRules` | fusion intermédiaire et validation combinée requises avant le pack |
 
 Vincent a validé en jeu le 26 juillet 2026 le comportement final : clic normal
 inchangé, Ctrl et Ctrl+Shift en lot natif de cinq, Shift en assign-all natif
@@ -202,7 +211,7 @@ cold start conjoint et l’absence de collision avec le PluginPack 2.0.1 sont
 également acquis. La branche officielle `master` d’eezstreet pointe toujours au
 commit audité `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` lors de cette promotion.
 
-Ce statut autorise la préparation d’un port source interne à `plugin-misc`; il
+Ce statut autorise la préparation d’un port source interne à `plugin-skills`; il
 ne vaut ni acceptation amont ni merge déjà effectué. Jusqu’à une décision
 commune avec eezstreet, la DLL RuffnecKk et ses JSON autonomes demeurent la
 distribution officielle, sans modification ni redistribution d’une DLL tierce.

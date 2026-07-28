@@ -2,6 +2,39 @@
 
 ## Intention
 
+Le 28 juillet 2026, Vincent confirme l'intégration future dans la catégorie
+`items`, avec `plugin-items.dll` comme DLL propriétaire et
+`items.etherealExclusions` comme clé prévue dans l'unique `D2RPlugins.json`. Le
+port remplacera la configuration TOML autonome par cette section JSON et
+conservera la DLL autonome jusqu'à validation fonctionnelle équivalente du
+module fusionné.
+
+Vincent confirme également que le patch distinct `Ethereal Item Rules` doit
+être absorbé par le même `plugin-items.dll`, sous la clé séparée
+`items.etherealItemRules`. Cette fonctionnalité conserve son propre contrat :
+taux éthéré commun, sets éthérés et admissibilité des objets indestructibles
+ayant une durabilité effective. Elle ne doit pas être confondue avec
+`items.etherealExclusions`, qui retire au contraire des familles configurées du
+tirage éthéré.
+
+Le séquencement est confirmé en deux paliers. Avant tout port dans le pack, les
+deux implémentations sont réunies dans un composant RuffnecKk autonome commun :
+le hook d'exclusion des familles et les quatre opérations d'`Ethereal Item
+Rules` y partagent la même politique de chargement, le même contrôle du build
+92777 et une seule configuration JSON. Ce composant intermédiaire doit être
+validé avec `NoEtherealItemTypes.dll`, son TOML et le patch JSON d'origine
+neutralisés dans le runtime, mais conservés comme témoins jusqu'à équivalence.
+Seulement après cette validation combinée, les deux sous-sections distinctes
+`items.etherealExclusions` et `items.etherealItemRules` seront portées ensemble
+dans `plugin-items.dll`. Le nom public du composant intermédiaire reste à figer
+avant toute implantation.
+
+Vincent retient l'option A le 28 juillet 2026 : après la fondation commune des
+hooks, ce composant ethereal autonome est construit et validé avant les autres
+ports du lot. Son port conjoint dans `plugin-items.dll` ne commence qu'après
+équivalence fonctionnelle de l'étape autonome. Cette décision fixe l'ordre du
+lot sans remplacer la mission courante ni autoriser encore l'implantation.
+
 Permettre à BKVince de déclarer des codes de `itemtypes.txt` qui ne doivent
 jamais devenir éthérés. La politique doit être configurable sans recompilation,
 comprendre l’héritage natif des types et ne modifier aucun type non sélectionné.
@@ -121,12 +154,17 @@ La validation gameplay reste distincte et ouverte.
 
 ## Validation requise
 
-1. Choisir au moins un code précis et, séparément, un parent pour la validation.
-2. Matrice en jeu : type précis, parent, descendant non ciblé, normal/magic/
+1. Construire et cold-starter d'abord le composant autonome commun avec les
+   anciens propriétaires désactivés, puis vérifier que son hook et ses quatre
+   opérations sont les seuls sites actifs de ce sous-système.
+2. Choisir au moins un code précis et, séparément, un parent pour la validation.
+3. Matrice en jeu : type précis, parent, descendant non ciblé, normal/magic/
    rare/set/unique/crafted, drop naturel, vendeur, gamble, Cube forcé éthéré,
    `ALWAYSETH`, solo, hôte/joiner, sauvegarde et rechargement.
-3. Vérifier que le taux BKVince de 6 % et les sets éthérés restent actifs pour
+4. Vérifier que le taux BKVince de 6 % et les sets éthérés restent actifs pour
    les familles non exclues.
-4. Générer chacun des sept uniques `indestruct`, vérifier qu'ils peuvent recevoir
+5. Générer chacun des sept uniques `indestruct`, vérifier qu'ils peuvent recevoir
    le drapeau éthéré tout en restant indestructibles, puis contrôler un arc ou
    une autre base réellement sans durabilité comme témoin négatif.
+6. Rejouer la même matrice après le port conjoint dans `plugin-items.dll` avant
+   de retirer les artefacts autonomes témoins.

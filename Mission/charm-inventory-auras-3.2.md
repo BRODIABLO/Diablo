@@ -2,6 +2,12 @@
 
 ## État
 
+Le 28 juillet 2026, Vincent confirme l'intégration future de ce correctif dans
+la catégorie `items`, avec `plugin-items.dll` comme DLL propriétaire et
+`items.charmAuraTriggerFix` comme clé prévue dans l'unique `D2RPlugins.json`.
+La fonctionnalité restera désactivable et la DLL autonome ne sera retirée
+qu'après validation fonctionnelle équivalente du module fusionné.
+
 Implémenté pour `D2R.exe 3.2.92777` sous forme de plugin natif D2RLoader.
 Compilation, tests unitaires, signatures statiques et synchronisation runtime
 validés. Le maintien de l'aura et du `oskill` sélectionné pendant les
