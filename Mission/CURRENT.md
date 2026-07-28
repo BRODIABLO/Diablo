@@ -1,6 +1,6 @@
 # Mission courante
 
-Dernière mise à jour : 27 juillet 2026
+Dernière mise à jour : 28 juillet 2026
 
 ## Priorité active
 
@@ -15,8 +15,9 @@ start `24/24` avec les hashes source/runtime identiques.
 
 Vendor Stock Refresh a été déclaré réglé par Vincent le 27 juillet 2026 et
 retiré de la ROADMAP active. Sa mission et ses artefacts restent conservés comme
-preuves techniques. Equipped Item to Cube demeure planifié juste après la
-présente mission.
+preuves techniques. Le pilote I8 d’atmosphère macabre des Catacombes est
+désormais intercalé après le gate gameplay de la présente mission; Equipped Item
+to Cube demeure planifié immédiatement après ce pilote.
 
 ## Prochain gate
 
