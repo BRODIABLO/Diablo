@@ -1,22 +1,25 @@
 # Repair Costs Cap — D2R 3.2.92777
 
-Dernière mise à jour : 26 juillet 2026
+Dernière mise à jour : 28 juillet 2026
 
-Statut : prototype autonome hybride `RepairCostsCap.dll` 1.4.0 implanté,
-compilé en Release et chargé avec succès dans BKVince sur le build 92777. Les
-tests de politique, les trois hooks, le patch du mode zéro, les exports, les
-métadonnées, la synchronisation par hash et le cold start passent. La matrice
-gameplay reste ouverte. Un ZIP local de test strict DLL + JSON est préparé; il
-ne constitue pas encore une release publique validée en jeu.
+Statut : le plafond à 100 gold et l'usure à 100 % ont été confirmés en jeu sur
+le prototype autonome `RepairCostsCap.dll` 1.4.0. Vincent a ensuite autorisé le
+28 juillet 2026 son intégration dans `plugin-items.dll`, sous la clé
+`items.repairCostsCap`. Le port source intégré, le Release x64, les tests de
+politique, les exports, la synchronisation par hash et le cold start
+fusionné passent. La DLL autonome est neutralisée de manière récupérable dans
+le profil runtime afin qu'un seul propriétaire pose les hooks. Le gameplay du
+module fusionné reste à confirmer avant de retirer les témoins autonomes.
 
 ## Décisions confirmées
 
 - Vincent a confirmé le nom exact `Repair Costs Cap`, l’Option B, la catégorie
   `items`, puis l’évolution créative de la politique de prix le 24 juillet 2026.
-- La DLL propriétaire future est `plugin-items.dll` et la clé prévue dans
-  l’unique `D2RPlugins.json` est `items.repairCostsCap`.
-- L’incubation reste une DLL autonome attribuée exactement à `RuffnecKk`, sans
-  modifier, lier ni redistribuer une DLL d’eezstreet.
+- La DLL propriétaire est désormais `plugin-items.dll` et la clé dans l’unique
+  `D2RPlugins.json` est `items.repairCostsCap`.
+- L’incubation a été réalisée dans une DLL autonome attribuée exactement à
+  `RuffnecKk`, sans modifier, lier ni redistribuer une DLL d’eezstreet; ce témoin
+  est maintenant neutralisé dans le profil actif après le port autorisé.
 - Le JSON autonome est en anglais, recherché d’abord dans le mod actif puis dans
   le dossier global du jeu. Aucun TOML n’est utilisé.
 - Vincent a demandé le 26 juillet 2026 de remplacer la politique de prix
@@ -44,25 +47,27 @@ Les achats, ventes, résultats nuls, négatifs et sentinelles restent inchangés
 Une configuration absente conserve vanilla; une configuration présente mais
 invalide ou contenant une clé inconnue fait refuser explicitement le plugin.
 
-Configuration BKVince active :
+Configuration BKVince livrée par défaut :
 
 ```jsonc
 {
-  "enabled": true,
-  "maximumGold": 0,
+  "enabled": false,
+  "maximumGold": 2147483647,
   "durabilityWear": {
-    "enabled": true,
-    "chance": 0.10
+    "enabled": false,
+    "chance": 0.0
   }
 }
 ```
 
-Effet concret : avec `maximumGold: 0`, les réparations individuelles et
-`Repair All` sont actuellement gratuits. Une valeur positive devient le plafond
-commun par objet et par transaction `Repair All`; aucune variation par
-difficulté ni aucun multiplicateur ne subsiste. L’usure demeure indépendante et
-active à 10 % : après chaque réparation physique réussie, même gratuite, l’objet
-a cette probabilité de perdre définitivement un point de
+Effet concret : ces valeurs conservent intégralement les prix et les réparations
+vanilla; aucun hook Repair Costs Cap n'est installé. Même si seul `enabled`
+passe à `true`, `maximumGold: 2147483647` ne plafonne aucun prix et l’usure à
+`0.0` ne retire rien. La valeur `0` rend les réparations individuelles et
+`Repair All` gratuites; une autre valeur positive devient leur plafond commun; aucune
+variation par difficulté ni aucun multiplicateur ne subsiste. L'usure est elle
+aussi inactive par défaut. Lorsqu'elle est activée, chaque réparation physique
+réussie donne à l'objet la probabilité configurée de perdre définitivement un point de
 durabilité maximale, sans jamais descendre sous 1. Les réparations de charges
 seules, les objets intacts, les objets sans durabilité et la génération du stock
 marchand sont exclus. L’objet reste complètement réparé à son nouveau maximum.
@@ -168,9 +173,10 @@ La référence officielle
 sa recherche `repair` retourne zéro résultat. Les sites actuels de
 `plugin-items` comprennent notamment `0x53C9F0`, `0x540EA0` et `0x541880` et ne
 recouvrent aucune des quatre plages. `ForceLarzukSockets` hooke `0x375560`, après la
-fin du prologue `0x375330..0x375350`. Le propriétaire unique des trois hooks et
-du patch demeure donc
-`RepairCostsCap.dll` pendant l’incubation.
+fin du prologue `0x375330..0x375350`. Depuis le port autorisé du 28 juillet,
+`plugin-items.dll` est le propriétaire unique des trois hooks et du patch dans
+le profil actif. La DLL autonome est conservée comme témoin source/runtime
+désactivé jusqu'à la validation gameplay d'équivalence.
 
 ## Build, cold start et ZIP de test 1.4.0
 
@@ -186,8 +192,8 @@ du patch demeure donc
   `75FF5ADD222319CF6418DA8FEC39E453C57D922BBF4BF6C880668F051A3CAAB2`;
 - SHA-256 JSON source/runtime :
   `E931EF486690FB55A202F738177C0A939329CBC4000A4C6C95F5F17F4E969CA1`;
-- configuration mod-locale résolue avec `maximumGold=0` commun aux réparations
-  individuelles et à `Repair All`, et usure active à 10 %;
+- configuration du cold start autonome historique résolue avec `maximumGold=0`
+  commun aux réparations individuelles et à `Repair All`, et usure à 10 %;
 - hooks acceptés à `0x36F0C0`, `0x375330` et `0x53BB50`, puis chargement complet
   confirmant l’acceptation du patch conditionnel et des signatures helpers;
 - patchsets : `scanned=20 applied=20 disabled=0 failed=0`;
@@ -200,7 +206,47 @@ du patch demeure donc
 - SHA-256 ZIP :
   `C8F949435719EEC255D4B178D3FF39C9EFB39E9C41832593841DA88CFEA65831`.
 
-## Gates gameplay encore ouverts
+## Intégration dans plugin-items — 28 juillet 2026
+
+- propriétaire confirmé une seconde fois par Vincent : catégorie `items`, DLL
+  `plugin-items.dll`, clé `items.repairCostsCap`;
+- trois fichiers internes attribués à `RuffnecKk` sont compilés par le target
+  existant : `repair-costs-cap.cpp`, `repair-costs-cap.h` et
+  `repair-costs-cap-policy.h`;
+- les métadonnées de `eezstreet-plugin-items` 2.0.1 et le crédit d'eezstreet
+  restent inchangés; RuffnecKk est crédité dans le source, le log et la mission;
+- le modèle `D2RPlugins.json` du pack expose la fonctionnalité désactivée par
+  défaut avec `maximumGold=2147483647`, usure désactivée et `chance=0.0`; le
+  cold start actif a temporairement exercé `maximumGold=100` avec
+  usure à `1.0`, puis BKVince a été restauré à `enabled=false`,
+  `durabilityWear.enabled=false`;
+- le port est implanté directement dans le même arbre source que le bloc unifié
+  `items.etherealItemRules`, au checkpoint poussé `387dff8`;
+  l’ancien patch séparé, devenu non applicable sur cette tête, a été retiré de
+  `data-BKVince` et archivé sous les preuves runtime;
+- les cinq targets du PluginPack compilent en Release x64, les quatre CTest sont
+  verts et le manifeste valide 66 sites uniques; le module fusionné porte le
+  SHA-256
+  `508D5A77F155D74C02B45C054F642A7CAA3B165287CE28694279561DD9F50EE0`;
+- le JSON autonome témoin est lui aussi restauré au défaut vanilla et synchronisé
+  source/runtime au SHA-256
+  `2A81D81017F593267704270F2DC122E0CB5401CA2CB532A69CE86CB13C9E981C`;
+- cold start conjoint actif : `EthItemRules` utilise son bloc JSON unique,
+  `RepairCostsCap` installe les hooks `0x36F0C0`, `0x375330` et `0x53BB50`, les
+  patches directs sont acceptés et `eezstreet-plugin-items` reste actif;
+- cold start vanilla : aucun hook `EthItemRules` ni Repair Costs Cap n'est posé;
+  les deux cas atteignent `24/24` avec
+  `scanned=28 active=26 disabled=2 rejected=0 failed=0`;
+- `RepairCostsCap.dll` n'est plus chargée dans le profil actif : elle est
+  renommée `RepairCostsCap.dll.standalone-disabled`, son journal reste inchangé,
+  et l'instance de validation est ensuite fermée;
+- les cinq fichiers runtime temporairement touchés ont été restaurés à leur
+  SHA-256 d’origine et aucun processus D2R n’est resté ouvert; rapport :
+  `analysis-cache/pluginpack-foundation-runtime-validation/20260728-181150128/report.json`;
+- le source, la DLL et le JSON autonomes versionnés restent temporairement des
+  témoins de comparaison; ils seront retirés seulement après équivalence en jeu.
+
+## Gates gameplay du module fusionné encore ouverts
 
 - `maximumGold=0` en Normal, Nightmare et Hell : réparation individuelle et
   `Repair All`, devis zéro, aucun gold retiré et objets réellement réparés;
@@ -220,9 +266,10 @@ du patch demeure donc
 
 ## Prochain gate
 
-Valider d’abord `maximumGold=0` en jeu sur une réparation individuelle puis
-`Repair All` : devis zéro, aucun gold retiré et objets réellement réparés. Passer
-temporairement `durabilityWear.chance` à `1.0` pour confirmer simultanément la
-perte brute de 1, l’objet plein au nouveau maximum et la persistance après
-sauvegarde/rechargement. Restaurer ensuite 10 %, passer `maximumGold` à 5 000 et
-valider le plafond commun sur un objet puis sur `Repair All`.
+Le défaut vanilla est maintenant restauré. Pour fermer l'équivalence fusionnée,
+activer temporairement `items.repairCostsCap`, régler `maximumGold=100`, activer
+l'usure à `chance=1.0`, puis réparer un objet endommagé seul et plusieurs objets
+avec `Repair All`. Chaque action doit coûter au plus 100 gold et chaque objet
+physiquement réparé doit perdre exactement un point de durabilité maximale tout
+en restant plein. Après sauvegarde/rechargement, confirmer la persistance, puis
+remettre `enabled=false` avant la livraison finale.

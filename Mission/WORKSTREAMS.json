@@ -100,14 +100,16 @@
     {
       "id": "repair-costs-cap",
       "name": "Repair Costs Cap",
-      "status": "paused",
+      "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/repair-costs-cap-3.2.md",
-      "nextGate": "Validate maximumGold=0 for individual repair and Repair All in all difficulties, then set maximumGold=5000 and prove the same cap applies to one repaired item and the final Repair All total with matching quote, gold and repaired state; validate durability wear separately at 100% before restoring 10%.",
+      "nextGate": "Temporarily enable items.repairCostsCap in the merged plugin-items module with maximumGold=100 and durability wear at 100%; validate one damaged item and Repair All, including the exact one-point maximum-durability loss and persistence, then restore enabled=false before removing the standalone witnesses.",
       "include": [
         "Mission/repair-costs-cap-3.2.md",
         "addons/RepairCostsCap/**",
+        "data-BKVince/BKVince.mpq/D2RPlugins.json",
         "data-BKVince/BKVince.mpq/RepairCostsCap.json",
+        "data-BKVince/d2rloader/plugins/plugin-items.dll",
         "data-BKVince/d2rloader/plugins/RepairCostsCap-src/**",
         "data-BKVince/d2rloader/plugins/RepairCostsCap.dll"
       ]
@@ -182,7 +184,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Refactor EthItemRules into one items.etherealItemRules JSON block, remove items.etherealExclusions as a separate identity, rebuild and cold-start both vanilla and active configurations, then resume gameplay equivalence.",
+      "nextGate": "Run merged EthItemRules and RepairCostsCap gameplay equivalence from checkpoint 387dff8, then continue the accepted PluginPack ports.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
         "addons/ConfigurableCharsiReward/**"

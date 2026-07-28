@@ -286,12 +286,13 @@ dans `analysis-cache/pluginpack-foundation-runtime-validation/20260728-191656701
 L’ordre final de cette tranche peut suivre les plugins effectivement acceptés
 par eezstreet sans modifier la fondation.
 
-## Candidats prêts pour préparation du merge
+## Candidats et ports locaux
 
-| Plugin | Version validée | Propriétaire futur | Configuration future | État |
+| Plugin | Version validée | Propriétaire cible | Configuration | État |
 |---|---|---|---|---|
 | `BulkSkillPointAllocation` | `1.2.3` | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | prêt pour préparation du merge |
-| bloc unifié `EthItemRules` | témoin historique `EtherealItemRules 0.1.0` | `plugin-items.dll` | bloc unique `items.etherealItemRules` | refonte du contrat JSON requise avant de reprendre l’équivalence gameplay |
+| bloc unifié `EthItemRules` | témoin historique `EtherealItemRules 0.1.0` | `plugin-items.dll` | bloc unique `items.etherealItemRules` | contrat unifié compilé et cold-starté; équivalence gameplay ouverte |
+| `RepairCostsCap` | `1.4.0` | `plugin-items.dll` | `items.repairCostsCap` dans `D2RPlugins.json` | intégré au même arbre source et cold-starté avec `EthItemRules`; équivalence gameplay ouverte |
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est
@@ -307,24 +308,36 @@ et `0x46D840` sous ce propriétaire unique.
 Le JSON joueur final doit livrer ce bloc unique désactivé, le taux vanilla de
 5 %, les exceptions set/indestructible à `false`, une liste d’exclusions vide,
 et conserver `skills.selfHealParams=false` afin que le pack entier demeure
-passif par défaut.
-Les cinq targets Release compilent, le manifeste de 62 sites et les trois CTest
-sont verts. `plugin-items.dll` porte le SHA-256
-`FB4AD6015DFCEE02FFECEFBF2056155F4EB1E7E8CAB9A54AE13DC0B0BBBC823D`.
-Ces sources correspondent au checkpoint `a51c865` poussé sur
-`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Ce checkpoint prouve la
-cohabitation technique des hooks, mais son découpage en deux blocs JSON est
-maintenant rejeté. Il doit être amendé en un bloc avant toute validation gameplay
-du contrat final.
+passif par défaut. `items.repairCostsCap` est lui aussi livré désactivé, avec
+`maximumGold=2147483647`, `durabilityWear.enabled=false` et `chance=0.0` : ses
+valeurs restent vanilla même si seul le drapeau principal est activé.
 
-Le cold start vanilla charge les cinq plugins sans hook ethereal; le cold start
-actif charge seulement le propriétaire `eezstreet-plugin-items`, installe le
-hook commun et accepte tous les patches, avec dans les deux cas
-`scanned=28 active=26 disabled=2 rejected=0 failed=0` et startup `24/24`. Les
-anciens propriétaires autonomes et le patch JSON ont été neutralisés pendant le
-test, puis les neuf fichiers runtime ont été restaurés par SHA-256. La matrice
-gameplay à rejouer porte désormais sur le module fusionné; les autonomes ne sont
-que des témoins de diagnostic en cas d'écart.
+Le checkpoint `387dff8`, poussé le 28 juillet 2026 sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`, réunit les deux ports dans
+le même `plugin-items.dll`. Il ne reste
+aucun bloc `items.etherealExclusions` et aucun patch Repair Costs Cap séparé à
+appliquer. Le manifeste commun porte 66 sites uniques, dont les cinq opérations
+`EthItemRules` et les quatre écritures `RepairCostsCap`; les cinq targets Release
+et les quatre CTest sont verts. `plugin-items.dll` porte le SHA-256
+`508D5A77F155D74C02B45C054F642A7CAA3B165287CE28694279561DD9F50EE0`.
+
+La matrice cold-start conjointe est verte. Le cas vanilla ne pose aucun hook des
+deux composants. Le cas actif utilise un seul bloc `items.etherealItemRules`,
+`items.repairCostsCap.maximumGold=100` et une usure à `1.0`; le propriétaire
+`eezstreet-plugin-items` installe le hook éthéré et les trois hooks Repair, puis
+reste actif après les patches directs. Les deux cas terminent avec
+`scanned=28 active=26 disabled=2 rejected=0 failed=0` et startup `24/24`.
+Les anciens propriétaires ethereal et leur patch JSON ont été neutralisés
+pendant le test. Les cinq fichiers runtime touchés ont ensuite été restaurés par
+SHA-256, sans processus D2R restant. Les preuves sont dans
+`analysis-cache/pluginpack-foundation-runtime-validation/20260728-181150128/`.
+
+Repair Costs Cap conserve les métadonnées eezstreet du module propriétaire et
+crédite RuffnecKk dans le source, le log et la mission. Son ancien patch local,
+qui ciblait directement le commit amont et ne s’appliquait plus proprement sur
+`a51c865`, a été retiré de `data-BKVince` et archivé avec les preuves runtime.
+La DLL autonome désactivée reste seulement un témoin jusqu’au test d’équivalence
+gameplay du module fusionné.
 
 Vincent a validé en jeu le 26 juillet 2026 le comportement final : clic normal
 inchangé, Ctrl et Ctrl+Shift en lot natif de cinq, Shift en assign-all natif

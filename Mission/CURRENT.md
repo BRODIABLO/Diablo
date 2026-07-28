@@ -43,27 +43,29 @@ restaurés et vérifiés par SHA-256 après un retry de verrou tardif; aucun pro
 D2R/D2RLoader ne reste actif. Les preuves locales sont sous
 `analysis-cache/pluginpack-foundation-runtime-validation/20260728-170819582/`.
 
-Le prototype autonome `EtherealItemRules 0.1.0` et les implémentations initiales
-restent seulement des témoins de comparaison. Ils ne justifient pas deux blocs
-dans le pack final. Cube Quick Move 0.1.3 demeure en pause avant son propre merge
-et Transmogrify reste exclu de ce lot.
+Le checkpoint `387dff8` porte maintenant le contrat final en un seul bloc
+`items.etherealItemRules` et intègre `items.repairCostsCap` dans le même
+`plugin-items.dll`. Le manifeste valide 66 sites sans chevauchement, les
+cinq targets Release et 4/4 CTest sont verts. Les cold starts vanilla exact et
+conjoint actif atteignent `24/24` avec zéro rejet/échec; le runtime a été restauré
+par SHA-256. Les prototypes autonomes restent seulement des témoins. Cube Quick
+Move 0.1.3 demeure en pause et Transmogrify reste exclu de ce lot.
 
 ## Prochain gate
 
-Refondre d’abord le contrat et le chargeur en un seul bloc
-`items.etherealItemRules`, supprimer l’identité `items.etherealExclusions`, puis
-recompiler et refaire les cold starts vanilla/actif. Reprendre ensuite
-l’équivalence gameplay du bloc final : code précis et parent, descendant non
-ciblé, taux 6 %, sets, sept uniques indestructibles et base sans durabilité,
-Cube/`ALWAYSETH`, solo, hôte/joiner et save/reload.
+Reprendre l’équivalence gameplay du code fusionné : exclusions par code précis et
+parent, descendant non ciblé, taux 6 %, sets, sept uniques indestructibles et
+base sans durabilité, Cube/`ALWAYSETH`, plafond Repair individuel/Repair All,
+usure et persistance, solo, hôte/joiner et save/reload.
 
 ## Frontière Git
 
 Le code du pack vit dans le clone séparé
-`analysis-cache/pluginpack-foundation`. Le checkpoint ethereal `a51c865`
-(`Port ethereal rules into plugin-items prototype`) est poussé et synchronisé à
-`0/0` sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le dépôt principal
-conserve les sources et binaires autonomes comme témoins ainsi que les preuves
-gouvernées de mission/ROADMAP. Les autres changements actifs du workspace
-restent préservés. Le runtime BKVince a été restauré exactement à son état
+`analysis-cache/pluginpack-foundation`. Le checkpoint unifié `387dff8`
+(`Unify EthItemRules and integrate Repair Costs Cap prototype`) est poussé et
+synchronisé à `0/0` sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le dépôt principal
+conserve les témoins autonomes et les preuves gouvernées de mission/ROADMAP. Les
+autres changements actifs du workspace restent préservés. Le runtime BKVince a
+été restauré exactement à son état
 antérieur au test; le pack de travail n'y est donc pas laissé déployé.
