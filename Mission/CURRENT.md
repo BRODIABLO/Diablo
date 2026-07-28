@@ -4,43 +4,40 @@ Dernière mise à jour : 28 juillet 2026
 
 ## Priorité active
 
-[Cube Quick Move Bottom-Right — D2R 3.2](cube-quick-move-bottom-right-3.2.md)
+[Intégration sélective au PluginPack d’eezstreet](eezstreet-pluginpack-integration.md)
 
-État : après les échecs 0.1.0 à 0.1.2, `CubeQuickMove 0.1.3` possède les `27`
-appels capables de transporter la page Cube `3`. Vincent confirme le 28 juillet
-2026 que le même Ctrl-clic place désormais visiblement l'épée `1x3` en bas à
-droite. Le contrôle client `0x15A25C` et le producteur de placement `0x15F94F`
-sont observés; le paquet `0x54` porte les coordonnées `4,3` et le serveur accepte
-le transfert. Le prototype autonome est prêt pour intégration dans
-`plugin-misc.dll`. Vincent retient le
-séquencement A et confirme
-le propriétaire futur `plugin-misc.dll` sous la catégorie `misc`, avec la clé
-`misc.cubeQuickMoveBottomRight`. Le wrapper 0.1.3 balaie directement la grille d'occupation native depuis
-le coin inférieur droit et conserve un repli vanilla sûr. Son cold start
-mod-local atteint `24/24`, `20/20` patchsets et `28` plugins actifs sans rejet
-ni échec, avec les hashes source/runtime identiques.
+État : Vincent a ouvert explicitement la fondation du PluginPack. Le laboratoire
+modifiable est isolé sous `analysis-cache/pluginpack-foundation` au commit amont
+exact `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`; la référence officielle
+gouvernée demeure intacte. La tranche 0 locale possède maintenant un manifeste
+de 57 écritures/hook sites à propriétaire unique, un gate CMake bloquant et un
+test négatif de chevauchement. Les sept doubles écritures historiques de
+`plugin-quests` sont consolidées. `D2UnitStrc+0x04` est corrigé en `classId`
+selon la preuve 92777 à `0x349860`, avec deux accesseurs partagés minimaux. Les
+cinq DLL compilent en Release x64 et les deux CTest réussissent.
+Le checkpoint code `2a23212` (`Establish PluginPack foundation prototype`) est
+poussé et synchronisé sur le fork `RuffDood/D2RL-Plugins`, branche
+`codex/pluginpack-foundation`.
 
-Vendor Stock Refresh a été déclaré réglé par Vincent le 27 juillet 2026 et
-retiré de la ROADMAP active. Sa mission et ses artefacts restent conservés comme
-preuves techniques. Le pilote I8 d’atmosphère macabre des Catacombes est
-abandonné par Vincent le 28 juillet 2026 avant toute implantation, après des
-essais ElevenLabs gratuits non concluants; aucun WAV n’a été ingéré dans
-BKVince. Equipped Item to Cube redevient planifié immédiatement après le gate
-gameplay de la présente mission.
+Cube Quick Move 0.1.3 reste conservé et validé comme autonome, mais son port dans
+`plugin-misc.dll` est mis en pause avant mutation du pack. Transmogrify demeure
+exclu de ce lot. Après la fondation, l’Option A impose de réunir d’abord
+`NoEtherealItemTypes` et `Ethereal Item Rules` dans un composant autonome commun,
+puis de porter ensemble `items.etherealExclusions` et
+`items.etherealItemRules` dans `plugin-items.dll`.
 
 ## Prochain gate
 
-Porter séparément la politique 0.1.3 dans `plugin-misc.dll` sous
-`misc.cubeQuickMoveBottomRight`, puis obtenir le même cold start et le même
-témoin épée avant de retirer l'autonome. Rejouer ensuite les Ctrl-déplacements
-`1x1`, `2x1`, `1x2`, `2x2` et `2x3` dans un Cube vide, fragmenté et plein, puis
-fermer les contrôles de non-régression : placement manuel, autres conteneurs,
-manette, persistance et autorité hôte/joiner. L’archive DLL + JSON reste une candidate technique tant
-que cette matrice gameplay n’est pas observée.
+Cold-starter les cinq DLL de fondation avec toutes les options désactivées, sans
+remplacer les témoins autonomes; vérifier cinq plugins actifs, zéro rejet et zéro
+échec. Commencer ensuite le sous-système ethereal autonome commun retenu par
+l’Option A, avant tout autre port du lot.
 
 ## Frontière Git
 
-Le lot Cube Quick Move comprend la mission, le pointeur courant, le workstream,
-la ROADMAP, les preuves 92777, les sources, le JSON, la DLL autonome, l’archive
-candidate et le cadastre. Les artefacts Vendor Stock Refresh et tous les autres
-changements concurrents sont préservés. Aucun commit ni push n’est inclus.
+Le code de fondation vit uniquement dans le clone séparé
+`analysis-cache/pluginpack-foundation`; le dépôt principal ne reçoit que la mise
+à jour gouvernée de la mission et de la ROADMAP. Les autres changements actifs
+du workspace, notamment Cube Quick Move et Configurable Charsi Reward, restent
+préservés. Le code est committé et poussé séparément sur le fork; aucun
+déploiement runtime n’est inclus.

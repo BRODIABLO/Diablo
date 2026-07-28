@@ -168,8 +168,9 @@ sera envisagé que si D2RLoader fournit explicitement ce service ou si
 Vincent retient l'option A le 28 juillet 2026 : une fois la fondation de la
 tranche 0 disponible, le sous-système ethereal commun est le premier composant
 multi-fonctions à réunir et valider de façon autonome. Son port conjoint dans
-`plugin-items` précède les autres ports du lot; la mission courante n'est pas
-changée par cette décision de ROADMAP.
+`plugin-items` précède les autres ports du lot. Vincent ouvre explicitement la
+fondation PluginPack le 28 juillet 2026; Cube Quick Move reste en pause avant son
+port dans le pack, avec son prototype autonome et ses preuves conservés.
 
 ### Tranche 0 — fondation
 
@@ -177,6 +178,23 @@ changée par cette décision de ROADMAP.
 - conserver `D2UnitStrc` canonique dans `plugin-shared`;
 - introduire des vues/accesseurs minimaux pour les offsets réellement partagés;
 - documenter la règle de propriété unique des hooks.
+
+**État local — 28 juillet 2026.** La fondation est implantée dans le clone de
+travail séparé `analysis-cache/pluginpack-foundation`, épinglé sur le commit
+officiel `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`; la référence gouvernée reste
+intacte. `hook-manifest.json` inventorie 57 plages d’écriture uniques sur les
+cinq DLL avec owner, feature, type, RVA, longueur, octets attendus et fichier
+source. CMake valide ce manifeste à la configuration et avant chaque build; un
+fixture négatif prouve qu’un chevauchement inter-DLL bloque effectivement la
+validation. Les anciens alias de `plugin-quests` qui écrivaient deux fois sept
+mêmes sites sont consolidés en une seule écriture par RVA. Le champ canonique
+`D2UnitStrc+0x04` devient `classId`, avec assertions d’offset et accesseurs
+partagés minimaux pour le type et le class ID. La compilation Release x64 des
+cinq DLL réussit et les deux CTest passent. Aucun déploiement runtime ni cold
+start n’est inclus à ce stade. Le checkpoint code `2a23212`
+(`Establish PluginPack foundation prototype`) est poussé sur le fork
+`RuffDood/D2RL-Plugins`, branche `codex/pluginpack-foundation`, synchronisée à
+`0/0`; l’`origin` local reste la référence officielle eezstreet en lecture seule.
 
 ### Tranche 1 — intégrations sans structure gameplay
 
