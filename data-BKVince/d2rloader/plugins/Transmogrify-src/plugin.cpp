@@ -385,14 +385,21 @@ std::string InsertMaxSocketsBelowPrimaryStat(std::string tooltip, void* item) {
     return tooltip;
 }
 
+HMODULE FindExtendedItemStatsModule() noexcept {
+    if (const auto standalone = GetModuleHandleW(L"ExtendedItemStats.dll")) {
+        return standalone;
+    }
+    return GetModuleHandleW(L"plugin-items.dll");
+}
+
 TooltipTransformFn FindExtendedItemStatsTransform() noexcept {
-    const auto module = GetModuleHandleW(L"ExtendedItemStats.dll");
+    const auto module = FindExtendedItemStatsModule();
     return module ? reinterpret_cast<TooltipTransformFn>(
         GetProcAddress(module, "ExtendedItemStatsTransformTooltip")) : nullptr;
 }
 
 TooltipOwnerFn FindExtendedItemStatsOwner() noexcept {
-    const auto module = GetModuleHandleW(L"ExtendedItemStats.dll");
+    const auto module = FindExtendedItemStatsModule();
     return module ? reinterpret_cast<TooltipOwnerFn>(
         GetProcAddress(module, "ExtendedItemStatsOwnsTooltipPipeline")) : nullptr;
 }

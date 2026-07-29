@@ -13,45 +13,45 @@ gouvernée demeure intacte. Le checkpoint de fondation `2a23212` est poussé sur
 `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
 
 Les checkpoints poussés `a51c865`, `387dff8`, `8d41581`, `a4d8dbb`,
-`5ef599f`, `78d6290`, `ab5fd53` et `25811d8` ont successivement porté le bloc unique
+`5ef599f`, `78d6290`, `ab5fd53`, `25811d8` et `c4566d4` ont successivement porté le bloc unique
 `items.etherealItemRules`, puis les fonctionnalités indépendantes
 `items.repairCostsCap`, `items.gambleScreenLimit`, `items.groundItemLabels` et
 `items.enhancedDamageMinMaxFix`, `items.itemDurability` et
-`items.charmAuraTriggerFix` dans
+`items.charmAuraTriggerFix` et l'infrastructure `ExtendedItemStats` dans
 `plugin-items.dll`, puis `skills.bulkSkillPointAllocation` dans
 `plugin-skills.dll`. Les configurations, hooks et tests restent indépendants;
 leur présence dans les DLL du pack ne crée aucun bloc fonctionnel commun.
 
-Charm Aura Trigger Fix / `CharmInventoryAuras 1.6.0` est maintenant intégré sous
-`items.charmAuraTriggerFix`. Le template joueur livre `enabled=false` et
-`diagnostics=false`; aucun de ses trois hooks n'est donc posé par défaut et le
-comportement vanilla reste inchangé. Lorsqu'il est actif, les retours uniques
-sélectionnent seulement transition, récupération du cadavre et réapparition en
-ville. L'appel de `CheckItemType` traverse le propriétaire actuel de `0x373890`
-et compose avec `EthItemRules` sans revendiquer un second hook.
+`ExtendedItemStats 0.3.17` est maintenant compilé directement dans
+`plugin-items.dll` sans clé JSON publique. Le transport fixe `4096` octets, le
+réassemblage borné et le tooltip défilable conservent le contrat autonome;
+les objets et tooltips vanilla ordinaires restent inchangés. Les deux exports
+de broker historiques rejoignent les trois exports D2RLoader de la DLL.
 
-Les cinq DLL Release compilent, 10/10 CTest passent et le manifeste porte 84
+Les cinq DLL Release compilent, 12/12 CTest passent et le manifeste porte 94
 sites à propriétaire unique. `plugin-items.dll` porte le SHA-256
-`4C59668F0011256DFFD19B695CCA053D8A4000397BDF57D36B6F9A08181A210F`.
-Les cold starts vanilla et actif atteignent tous deux `24/24`, avec
-`scanned=29 active=27 disabled=2 rejected=0 failed=0`; ils montrent
-respectivement zéro puis exactement trois hooks Charm Aura. Le runtime, le JSON
-et le témoin autonome sont restaurés byte-exact; aucun processus ne reste. Les
-preuves gameplay autonomes transition/oskill et récupération du cadavre restent
-acquises, tandis que town-respawn et l'équivalence intégrée restent ouvertes.
+`C63DB14DD3715009DB4044B39FFB470543BCCA01A1F454C45DDC737266F52161`.
+Le cold start sans Transmogrify pose les dix hooks et atteint `24/24` avec le
+JSON vanilla. Le cold start conjoint laisse l'unique hook tooltip à
+Transmogrify et pose les neuf autres dans le pack; le pont externe recherche
+désormais aussi les exports de `plugin-items.dll`, sans faire entrer
+Transmogrify dans le lot. Les deux démarrages terminent sans rejet ni échec.
+Le runtime et sa configuration sont restaurés byte-exact; aucun processus ne
+reste. Le témoin DLL autonome est retiré de la source, ses sources et preuves
+gameplay demeurent disponibles.
 
 ## Prochain gate
 
-Porter ensuite `ExtendedItemStats` comme infrastructure interne de
-`plugin-items.dll`, sans clé JSON publique. Les régressions gameplay ouvertes
-des ports précédents restent des matrices indépendantes et ne bloquent pas ce
-prochain port.
+Porter ensuite Qty Display Fix / `QtyDisplayIssue` dans `plugin-items.dll` sous
+`items.qtyDisplayIssue`, avec un template vanilla. Les régressions gameplay
+ouvertes des ports précédents restent des matrices indépendantes et ne bloquent
+pas ce prochain port.
 
 ## Frontière Git
 
 Le code du pack vit dans le clone séparé
 `analysis-cache/pluginpack-foundation`. Le dernier checkpoint poussé est
-`25811d8` (`Integrate Charm Aura Trigger Fix prototype`), synchronisé à `0/0`
+`c4566d4` (`Integrate Extended Item Stats prototype`), synchronisé à `0/0`
 sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le clone de fondation
 est propre.
 Le dépôt principal conserve la DLL gouvernée, la configuration vanilla et les

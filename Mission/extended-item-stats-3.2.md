@@ -411,3 +411,36 @@ manette, la mesure native d’overflow selon résolution/échelle UI, la validat
 runtime du renderer autonome de repli sans `FloatingDamage`, la matrice de cycle de vie complète
 inventory/Cube/shared stash/corpse/drop/marchand/échange et la validation
 solo/hôte/joiner.
+
+## Promotion dans le PluginPack — 28 juillet 2026
+
+Le contrat `0.3.17` est maintenant compilé directement dans
+`plugin-items.dll`, sans clé JSON publique et sans DLL runtime supplémentaire.
+Le port conserve les six hooks de transport, les trois hooks de capture/hover,
+le hook final de tooltip, les deux bibliothèques de politique testables et le
+renderer ImGui/MinHook. Les dix signatures sont uniques dans l'image canonique
+92777 et possèdent un propriétaire unique dans le manifeste commun.
+
+La Release du pack mesure `622592` octets, porte le SHA-256
+`C63DB14DD3715009DB4044B39FFB470543BCCA01A1F454C45DDC737266F52161` et
+expose les trois exports D2RLoader plus
+`ExtendedItemStatsOwnsTooltipPipeline` et
+`ExtendedItemStatsTransformTooltip`. Les cinq DLL Release compilent et 12/12
+CTest passent. Un cold start sans Transmogrify pose les dix hooks et atteint
+`24/24`; un second démarrage laisse le seul hook `0x2BD480` à Transmogrify et
+pose les neuf autres sous `eezstreet-plugin-items`, sans rejet ni échec.
+
+Transmogrify reste un plugin autonome hors lot. Son pont de tooltip cherche
+désormais les exports dans `ExtendedItemStats.dll`, puis dans
+`plugin-items.dll`, ce qui arbitre les deux ordres de chargement sans second
+propriétaire. Le binaire autonome `ExtendedItemStats.dll` est retiré de la
+source BKVince après fusion; ses sources demeurent le témoin de comparaison.
+Le runtime, le JSON et les deux portées Transmogrify ont été restaurés
+byte-exact, avec zéro processus et zéro rapport de crash frais. Le rapport est
+conservé sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260728-extended-item-stats/report.json`.
+
+Cette promotion ferme le gate technique du merge, mais ne transforme pas le
+cold start en preuve gameplay. Le survol intégré, le renderer autonome de
+repli, la manette, le cycle de vie complet d'un objet de 4096 octets et la
+matrice solo/hôte/joiner restent des régressions indépendantes ouvertes.

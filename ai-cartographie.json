@@ -15063,11 +15063,6 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
-                                                                                                     "name":  "ExtendedItemStats.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/ExtendedItemStats.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
                                                                                                      "name":  "FloatingDamage.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/FloatingDamage.dll",
                                                                                                      "kind":  "file"

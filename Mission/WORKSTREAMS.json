@@ -201,7 +201,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Port ExtendedItemStats as internal plugin-items.dll infrastructure with no public JSON key after the technically validated Charm Aura Trigger Fix port; keep gameplay regressions as separate matrices.",
+      "nextGate": "Port Qty Display Fix / QtyDisplayIssue into plugin-items.dll under items.qtyDisplayIssue with vanilla defaults; keep prior gameplay regressions as separate matrices.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
         "Mission/bulk-skill-point-allocation-3.2.md",

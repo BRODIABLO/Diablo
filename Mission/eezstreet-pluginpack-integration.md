@@ -302,6 +302,7 @@ par eezstreet sans modifier la fondation.
 | `BulkSkillPointAllocation` | `1.2.4` intégré | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | port intégré, Release et trois cold starts validés; équivalence gameplay intégrée ouverte |
 | bloc unifié `EthItemRules` | témoin historique `EtherealItemRules 0.1.0` | `plugin-items.dll` | bloc unique `items.etherealItemRules` | contrat unifié compilé et cold-starté; équivalence gameplay ouverte |
 | `RepairCostsCap` | `1.4.0` | `plugin-items.dll` | `items.repairCostsCap` dans `D2RPlugins.json` | fonctionnalité indépendante intégrée et cold-startée; équivalence gameplay ouverte |
+| `ExtendedItemStats` | `0.3.17` intégré | `plugin-items.dll` | aucune clé publique | transport 4096 octets et tooltip défilable intégrés; deux cold starts et broker externe validés; équivalence gameplay intégrée ouverte |
 
 Le port `GambleScreenLimit` ajouté après le checkpoint `387dff8` conserve le
 contrat autonome 1.2.0 sans créer de nouveau plugin runtime : un bloc
@@ -421,8 +422,51 @@ Les preuves gameplay transition/oskill et récupération du cadavre du témoin
 autonome restent acquises; la réapparition en ville et l'équivalence intégrée
 restent des matrices séparées ouvertes.
 
-Le prochain port séquencé du lot canonique est `ExtendedItemStats`, intégré
-comme infrastructure de `plugin-items.dll` sans clé JSON publique.
+`ExtendedItemStats 0.3.17` est maintenant une infrastructure interne de
+`plugin-items.dll`, sans clé dans `D2RPlugins.json`. Le contrat complet du
+témoin est conservé : transport fragmenté `EIT1` jusqu'à `4096` octets,
+réassemblage borné, capture des descriptions de stats tronquées, fenêtrage du
+tooltip, entrées souris/clavier/manette et overlay hébergé par `FloatingDamage`
+ou rendu par son repli D3D12. Les deux exports
+`ExtendedItemStatsOwnsTooltipPipeline` et
+`ExtendedItemStatsTransformTooltip` sont désormais portés directement par
+`plugin-items.dll`; avec les trois exports D2RLoader, la DLL expose exactement
+cinq symboles publics.
+
+Les dix signatures strictes sont uniques dans l'image canonique 92777 et le
+manifeste commun atteint 94 sites sans chevauchement. Les cinq DLL Release
+compilent et 12/12 CTest passent. `plugin-items.dll` mesure `622592` octets et
+porte le SHA-256
+`C63DB14DD3715009DB4044B39FFB470543BCCA01A1F454C45DDC737266F52161`.
+Le cold start sans Transmogrify pose les dix hooks sous le propriétaire
+`eezstreet-plugin-items`, atteint `24/24` et termine avec
+`scanned=27 active=26 disabled=1 rejected=0 failed=0`; il utilise le template
+vanilla SHA-256
+`65768DFADB33D2E3EE29FA7BFAB6D48665A09AF50BFBC46F674C333EEA4BD2B1`.
+
+Transmogrify reste hors du lot. Son autonome reçoit seulement un pont de
+découverte compatible : il cherche les exports historiques dans
+`ExtendedItemStats.dll`, puis dans `plugin-items.dll`. Cette symétrie rend
+l'ordre de chargement indifférent. Dans le cold start conjoint, Transmogrify
+chargé en premier possède seul `0x2BD480`, `plugin-items` délègue ce site et
+pose les neuf autres hooks; le démarrage atteint `24/24` avec
+`scanned=29 active=27 disabled=2 rejected=0 failed=0`. Sans Transmogrify,
+`plugin-items` reprend seul le dixième hook. Le témoin autonome
+`ExtendedItemStats.dll` est retiré de la source après fusion; ses sources
+restent comme témoin de comparaison. Tous les fichiers runtime touchés sont
+restaurés byte-exact et aucun processus ne demeure. Les preuves sont conservées
+sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260728-extended-item-stats/report.json`.
+
+Le checkpoint code `c4566d4` (`Integrate Extended Item Stats prototype`) est
+poussé sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation` et synchronisé à
+`0/0`. Les tests et cold starts ne remplacent pas la matrice gameplay : le
+survol intégré, le cycle de vie d'un objet de 4096 octets et les cas
+solo/hôte/joiner demeurent des régressions indépendantes et non bloquantes.
+
+Le prochain port séquencé du lot canonique est Qty Display Fix /
+`QtyDisplayIssue`, sous `items.qtyDisplayIssue` dans `plugin-items.dll` avec
+des valeurs livrées vanilla.
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est
