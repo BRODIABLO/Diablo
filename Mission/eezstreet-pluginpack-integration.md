@@ -42,7 +42,7 @@ les collisions et la difficulté technique et ne vaut pas inclusion implicite.
 | `plugin-misc.dll` | Cube Quick Move Bottom-Right | `misc.cubeQuickMoveBottomRight` |
 | `plugin-misc.dll` | Equipped Item to Cube | `misc.equippedItemToCube` |
 | `plugin-misc.dll` | Assign Transmute Hotkey | `misc.transmuteHotkey` |
-| `plugin-misc.dll` | `VendorStockRefresh` | `misc.vendorStockRefresh` |
+| `plugin-items.dll` | `VendorStockRefresh` | `items.vendorStockRefresh` |
 | `plugin-misc.dll` | `PreventMercDeathInTown` | `misc.preventMercDeathInTown` |
 | `plugin-quests.dll` | `ForceLarzukSockets` | `quests.larzukSockets` |
 | `plugin-skills.dll` | `BulkSkillPointAllocation` | `skills.bulkSkillPointAllocation` |
@@ -53,11 +53,13 @@ de ses règles et ne possède aucune identité sœur. `ExtendedItemStats` n’aj
 aucune option publique. `plugin-levels.dll` ne reçoit actuellement aucune
 fonctionnalité confirmée.
 
-Le `D2RPlugins.json` livré aux joueurs doit conserver le comportement vanilla :
-toutes les nouvelles fonctions configurables sont désactivées par défaut et
-leurs autres valeurs initiales reprennent les valeurs vanilla lorsqu’elles en
-ont une. L’infrastructure `ExtendedItemStats` doit rester sans effet gameplay
-visible tant qu’aucun consommateur explicitement activé ne l’utilise.
+Le `D2RPlugins.json` livré aux joueurs conserve les valeurs historiques
+d'eezstreet. Parmi les ajouts RuffnecKk, Charm Aura Trigger Fix, Enhanced Damage
+Min/Max Fix, Qty Display Fix et Equipped Item to Cube sont activés par défaut à
+la demande de Vincent; toutes les autres nouvelles fonctions configurables
+restent désactivées et leurs valeurs initiales reprennent les valeurs vanilla
+lorsqu’elles en ont une. L’infrastructure `ExtendedItemStats` doit rester sans
+effet gameplay visible tant qu’aucun consommateur actif ne l’utilise.
 
 Sont explicitement hors de ce lot : `Transmogrify`,
 `ConfigurableCharsiReward`, la DLL autonome finale `EtherealItemRules.dll`, et
@@ -308,7 +310,7 @@ par eezstreet sans modifier la fondation.
 | Cube Quick Move Bottom-Right | `0.1.3` intégré | `plugin-misc.dll` | `misc.cubeQuickMoveBottomRight` | 27 producteurs Cube intégrés, Release et cold starts vanilla/actif validés; preuve gameplay autonome `1x3` conservée |
 | Equipped Item to Cube | `0.2.0` intégré | `plugin-misc.dll` | `misc.equippedItemToCube` | deux hooks intégrés, composition avec ExtendedItemStats et cold starts vanilla/conjoint validés; preuve gameplay autonome conservée |
 | Assign Transmute Hotkey | `0.2.0` intégré | `plugin-misc.dll` | `misc.transmuteHotkey` | deux hooks intégrés, deux régimes du dispatcher UI validés et cold starts vanilla/actifs verts; preuve gameplay autonome conservée |
-| `VendorStockRefresh` | `0.1.5` intégré | `plugin-misc.dll` | `misc.vendorStockRefresh` | quatre hooks uniques, séparation du vendor overhaul et cold starts vanilla/actif validés; preuve gameplay autonome conservée |
+| `VendorStockRefresh` | `0.1.5` intégré | `plugin-items.dll` | `items.vendorStockRefresh` | quatre hooks uniques, bloc indépendant placé après le vendor overhaul et cold starts vanilla/actif validés; preuve gameplay autonome conservée |
 | `PreventMercDeathInTown` | `0.1.0` intégré | `plugin-misc.dll` | `misc.preventMercDeathInTown` | hook unique, composition avec Item Durability et cold starts vanilla/actif validés; preuve gameplay externe conservée |
 
 Le port `GambleScreenLimit` ajouté après le checkpoint `387dff8` conserve le
@@ -344,8 +346,8 @@ témoins de développement. La régression gameplay du port reste une matrice
 indépendante et non bloquante.
 
 Le port `EnhancedDamageMinMaxFix 1.2.0` est maintenant une option indépendante
-de `plugin-items.dll`. Le défaut `enabled=false` ne pose aucun hook. L'activation
-attribue uniquement `STATLIST_EvaluateAndUpdateStat` à `0x2FA430` à cette
+de `plugin-items.dll`. Le défaut joueur final `enabled=true` attribue uniquement
+`STATLIST_EvaluateAndUpdateStat` à `0x2FA430` à cette
 fonctionnalité; ses quatre autres RVA sont des appels natifs. L'appel à
 `0x373890` demeure compatible avec le hook d'`EthItemRules`, qui délègue ce
 retour non éthéré au chemin original. Le manifeste atteint 75 sites sans
@@ -406,9 +408,8 @@ ouverte et indépendante de la preuve autonome.
 
 Charm Aura Trigger Fix / `CharmInventoryAuras 1.6.0` est maintenant une option
 indépendante de `plugin-items.dll`. Le bloc strict
-`items.charmAuraTriggerFix` livre `enabled=false` et `diagnostics=false`; le
-JSON joueur ne pose donc aucun de ses hooks et conserve le comportement
-vanilla. L'activation attribue exactement `0x502D00`, `0x491960` et `0x42D2C0`
+`items.charmAuraTriggerFix` accepte uniquement `enabled` et livre désormais
+`enabled=true`. Il attribue exactement `0x502D00`, `0x491960` et `0x42D2C0`
 à cette fonctionnalité. Les retours uniques `0x486AE5`, `0x4B35A6` et
 `0x4B6650` filtrent respectivement transition, récupération du cadavre et
 réapparition en ville. Son appel de `CheckItemType` à `0x373890` ne revendique
@@ -473,8 +474,7 @@ solo/hôte/joiner demeurent des régressions indépendantes et non bloquantes.
 
 Qty Display Fix / `QtyDisplayIssue 1.1.0` est maintenant une option indépendante
 de `plugin-items.dll` sous `items.qtyDisplayIssue`. Le bloc strict accepte
-uniquement `enabled` et livre `false`; le JSON joueur conserve donc les octets
-vanilla `75 0F` à `0x2BE118`. Lorsqu'il est activé, l'unique signature de 33
+uniquement `enabled` et livre désormais `true`; l'unique signature de 33
 octets à `0x2BE103` est vérifiée puis seul ce branchement devient `90 90`, ce
 qui rétablit l'appel au formateur natif de quantité sans texte personnalisé.
 
@@ -550,8 +550,7 @@ gameplay de l'épée `1x3` placée à `4,3` sont conservés. Le checkpoint
 
 Equipped Item to Cube `0.2.0` est maintenant intégré dans `plugin-misc.dll`
 sous `misc.equippedItemToCube`. Le bloc strict accepte uniquement `enabled` et
-livre `false`, de sorte que le comportement vanilla reste inchangé et qu'aucun
-hook ne soit installé par défaut.
+livre désormais `true`, de sorte que ses deux hooks sont installés par défaut.
 
 Le module possède les deux sites uniques `0x0EE2A0` (file de paquets sortants)
 et `0x2CACF0` (clic réel dans un emplacement équipé). Les six signatures des
@@ -578,9 +577,15 @@ sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
 
 Assign Transmute Hotkey / `TransmuteHotkey 0.2.0` est maintenant integre dans
 `plugin-misc.dll` sous `misc.transmuteHotkey`. Le JSON livre `enabled=false`,
-`hotkey="CTRL+SHIFT+T"`, `consume=true` et `diagnostics=false`; aucun hook ni
+`hotkey="CTRL+SHIFT+T"` et `consume=true`; aucun hook ni
 worker d'entree n'est installe par defaut, donc le comportement vanilla demeure
 intact.
+
+Le contrat final accepte une touche principale reconnue seule ou combinée avec
+`CTRL`, `SHIFT` et `ALT`; la restriction historique qui exigeait `CTRL` ou
+`ALT` pour les touches imprimables est retirée. Avec `consume=true`, une demande
+effectivement capturée n'est pas aussi transmise au jeu; hors du Cube, la touche
+conserve son comportement normal.
 
 Le composant possede les deux sites uniques `0x23ECD0` et `0x2CDA90`, puis
 appelle le dispatcher UI vivant `0x843D90` sans en revendiquer le hook. Les cinq
@@ -607,8 +612,8 @@ validation integree; les sources, l'archive et la preuve gameplay standalone
 restent les oracles de comparaison. La regression gameplay MOUSE4 dans le pack
 reste une matrice independante et ne bloque pas les ports suivants.
 
-Vendor Stock Refresh / `VendorStockRefresh 0.1.5` est maintenant integre dans
-`plugin-misc.dll` sous `misc.vendorStockRefresh`. Le bloc strict livre
+Le premier port de Vendor Stock Refresh / `VendorStockRefresh 0.1.5` a été
+intégré dans `plugin-misc.dll` sous `misc.vendorStockRefresh`. Le bloc strict livre
 `enabled=false`; aucun hook n'est installe par defaut et le stock vendeur reste
 vanilla. Active, la fonctionnalite conserve le bouton natif, son paquet neuf
 octets et l'autorite serveur du chemin autonome valide.
@@ -636,6 +641,11 @@ pousse sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le JSON et la
 DLL standalone gouvernes sont retires de BKVince; sources, archive et preuve
 gameplay Charsi restent l'oracle. La regression gameplay integree demeure une
 matrice independante.
+
+Le contrat joueur final du 29 juillet reclasse ensuite cette fonctionnalité
+sous `plugin-items.dll` et `items.vendorStockRefresh`, immédiatement après le
+bloc indépendant `items.vendorOverhaul`. Ses quatre hooks et son comportement
+ne changent pas; seul leur propriétaire au sein des cinq DLL existantes change.
 
 Prevent Merc Death in Town / `PreventMercDeathInTown 0.1.0` est maintenant
 intégré dans `plugin-misc.dll` sous `misc.preventMercDeathInTown`. Le bloc strict
@@ -688,22 +698,26 @@ testés sont :
 
 | Artefact | Taille | SHA-256 |
 |---|---:|---|
-| `plugin-items.dll` | 626688 | `44D9992D67D1F1E02A5E2050DB7C461FD1D6E8DD8DD00204859EDBC075EEC006` |
-| `plugin-levels.dll` | 105984 | `00B649002F5D7E91E2714786733CB7F58554248AE200365A9CEEF8385F571A54` |
-| `plugin-misc.dll` | 183296 | `9FDF2C1B89DC9CC5F3F8CE11EAF02D53242F04A8428CACD02812F5AE7EC723A6` |
-| `plugin-quests.dll` | 141824 | `754F372772B5D1E15ACDD74E65E35ECE2BC9E4DECAB63B3496833805A452F387` |
-| `plugin-skills.dll` | 144896 | `43ED46F061F3AE6816F7F386CAA5A93ABDE195AEADADD9B750AA467CB13D4A08` |
+| `plugin-items.dll` | 638464 | `FA815B5AB8B36543F69F56162FCA419C706FAAA02D5602927CEBFBEFC9D08B4C` |
+| `plugin-levels.dll` | 105984 | `4DCFB19EBE9AE9AE2B4B13224CECDE43EA8641253592EE51A117B06BDD170348` |
+| `plugin-misc.dll` | 167936 | `B6D0AAF7DC566B0DFF263B1C8E2FA0B597628B0E56D706492832384F71B27AB1` |
+| `plugin-quests.dll` | 141312 | `BDDDCFD07149D6D56F1D4B9068EC01993DB3E9FF620A716B90EF1FA91EFB04B1` |
+| `plugin-skills.dll` | 144384 | `5261FA145C36E9280599479FEC16C435656F4039DFA5CC15D72406DACA1F0C8E` |
 
 Le fichier livré aux joueurs est le `D2RPlugins.json` du fork et de BKVince,
 SHA-256
-`F4077ED0C2CBF69AF5C394BAE704A647117668F3ED21BB256FC76F69E3A7532D`.
-Toutes les nouvelles fonctions configurables y sont désactivées; les 15 règles
-Larzuk visibles reprennent les quantités vanilla et l'infrastructure interne
-ExtendedItemStats n'a aucune clé publique. Le cold start de contrôle atteint
+`CFD7DDD1B1B63CE9DFE031FAB6E7A52ABBAE9CAE743B3A26B709F9725BC40974`.
+Charm Aura Trigger Fix, Enhanced Damage Min/Max Fix, Qty Display Fix et Equipped
+Item to Cube y sont activés; les autres ajouts configurables restent désactivés.
+Les 15 règles Larzuk visibles reprennent les quantités vanilla et
+l'infrastructure interne ExtendedItemStats n'a aucune clé publique. Le cold
+start de contrôle historique sur le précédent template tout désactivé atteint
 `24/24`, avec `scanned=16 active=14 disabled=2 rejected=0 failed=0` et
 `scanned=19 applied=19 disabled=0 failed=0` pour les memory patches. Les hooks
 internes ExtendedItemStats et Larzuk restent stricts mais reproduisent le
-résultat joueur vanilla avec ce template.
+résultat joueur vanilla avec ce template historique. Il ne remplace pas le
+futur cold start du défaut joueur actuel avec les quatre fonctions choisies
+actives.
 
 Le cold start conjoint active les 16 chemins avec deux gardes externes :
 `bowsAndCrossbowsHaveDurability=false` laisse `0x314110` au Transmogrify hors
@@ -835,6 +849,34 @@ Ce contrat rend les ajouts indépendants côté développement, mais prévisible
 fusionner : eezstreet peut faire évoluer ses plugins, RuffnecKk peut préparer les
 siens, et chaque contribution arrive déjà dans le même format de configuration,
 de compilation et de validation.
+
+## Contrat final de configuration joueur — 29 juillet 2026
+
+Vincent fixe la règle de livraison : `skills.selfHealParams` demeure à `true`,
+comme dans le fichier original d'eezstreet; toutes les descriptions originales
+d'eezstreet restent byte-identiques et seules celles des blocs RuffnecKk ajoutés
+sont reformulées dans un langage plus clair pour les joueurs. L'indentation des
+deux caps de monstres les présente visuellement comme enfants du réglage
+`playersCommandLimit`, sans changer leurs clés directes sous `misc`. Charm Aura
+Trigger Fix, Enhanced Damage Min/Max Fix,
+Qty Display Fix et Equipped Item to Cube sont livrés avec `enabled=true`; toutes
+les autres fonctionnalités RuffnecKk configurables restent à `enabled=false`.
+Aucune clé publique `diagnostics` ne demeure.
+
+Vendor Stock Refresh appartient maintenant à `plugin-items.dll`, sous
+`items.vendorStockRefresh`, comme bloc indépendant immédiatement après
+`items.vendorOverhaul`. Force Larzuk Sockets demeure un bloc indépendant sous
+`quests.larzukSockets` et reçoit son propre `enabled=false`; ses quinze valeurs
+vanilla restent visibles à titre de modèle, sans installer le hook tant que le
+bloc est désactivé.
+
+La comparaison avec le commit amont épinglé `dc75b49` ne montre aucune
+description eezstreet réécrite; outre les blocs RuffnecKk ajoutés et leurs
+virgules structurelles, seules les espaces d'indentation des deux caps `/players`
+changent pour exprimer ce lien visuel. Les cinq DLL Release recompilent, le manifeste
+reste valide avec 132 sites à propriétaire unique et 19/19 CTest passent. Le
+JSON final synchronisé vers BKVince porte le SHA-256
+`CFD7DDD1B1B63CE9DFE031FAB6E7A52ABBAE9CAE743B3A26B709F9725BC40974`.
 
 ## Correction du premier pilote — 27 juillet 2026
 
