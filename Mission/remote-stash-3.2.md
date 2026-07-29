@@ -1,9 +1,9 @@
 # RemoteStash — D2R 3.2.92777
 
-Dernière mise à jour : 28 juillet 2026
+Dernière mise à jour : 29 juillet 2026
 
-Statut : prototype technique autonome `RemoteStash 0.1.6` compilé et déployé
-pour BKVince le 27 juillet 2026. Vincent confirme que le bouton desktop ouvre
+Statut : prototype technique autonome `RemoteStash 0.2.24` compilé, déployé et
+validé en jeu pour BKVince. Vincent confirme que le bouton desktop ouvre
 désormais le panneau stash natif. Le clic passe par le broker partagé du
 dispatcher UI, détenu soit par l'autonome Bulk Skill Point Allocation, soit par
 `plugin-skills.dll`, sans conflit de hook. Un sprite coffre personnalisé à
@@ -12,9 +12,10 @@ en `176 × 112` avec un placement dynamique qui préserve intégralement le bout
 d’or. Vincent confirme son rendu, son hit-test, l’ouverture au clic et le tooltip
 natif `YOUR PRIVATE STASH` résolu par la clé `remoteStashTooltip`. Le bouton d’or
 reste à la position imposée par le layout BKVince et n’est jamais déplacé par
-RemoteStash. Ce jalon ne crée pas
-encore une session banque autoritaire côté serveur : opérations d’items, or et
-persistance restent non validés. Le 28 juillet 2026, un profil isolé
+RemoteStash. La session distante autoritaire permet désormais le dépôt, le
+retrait et le quick move hors ville dans les coffres personnel et partagé;
+la persistance du shared stash est confirmée après Save & Exit. Le 28 juillet
+2026, un profil isolé
 `RemoteStashRetail` sans BKVince valide aussi le bouton sur un inventaire
 desktop retail-like `10 × 4` : placement, sprite, hit-test, tooltip retail
 `OPEN CURRENT STASH` et ouverture sans dialogue `Drop Gold` sont confirmés.
@@ -428,3 +429,84 @@ possède seul `0x843D90`, tandis que `plugin-skills` possède `0x5F4B90` et
 `0x0EC700`. Le runtime est ensuite restauré byte-exact. Cette validation ferme
 le conflit de chargement technique; elle ne remplace pas les gates serveur,
 items, or et persistance de RemoteStash.
+
+## Session distante 0.2.1 — 29 juillet 2026
+
+- Vincent confirme que le prototype 0.2.0 ouvre visuellement le stash dans
+  City of the Damned, mais qu'il est impossible d'y prendre un objet ou d'en
+  ajouter un. Le log prouve la réception de la requête privée et l'envoi du
+  paquet serveur `0x77 / 0x10`; ce résultat invalide explicitement l'affirmation
+  selon laquelle ce seul paquet constituerait une session banque autoritaire.
+- Le callback miroir de retrait est borné à `0x4AA100`. Il reçoit le même paquet
+  de 17 octets, construit la page et les coordonnées comme état source, construit
+  le curseur vide comme destination, puis appelle le même moteur de transition
+  `0x471E90` que l'insertion `0x4BFF30`. Son ABI et sa signature stricte de
+  32 octets sont établies statiquement; le succès distant reste un gate runtime.
+- Deux callsites client propres au cycle de vie du stash, `0x259132` et
+  `0x25A11D`, appellent `DUNGEON_IsRoomInTown` `0x2F0750`. RemoteStash 0.2.1
+  intercepte ce prédicat, mais ne retourne vrai artificiellement que pour leurs
+  adresses de retour exactes pendant une ouverture RemoteStash, ou de manière
+  synchrone dans les callbacks serveur de dépôt/retrait du joueur possédant la
+  session. Tous les autres appels, y compris les mécaniques de ville des autres
+  plugins, passent par le trampoline original.
+- Aucun layout, rectangle, sprite, tooltip ni bouton d'or BKVince n'a été
+  modifié. Le build Release et le test de placement passent; la DLL gouvernée et
+  runtime porte la version 0.2.1 et le SHA-256
+  `42FB06F9081D6A3CB9B5FB29EB714C1481093E6F9896A44D17FF838C6BF0F6DA`.
+- Le cold start BKVince charge les six hooks RemoteStash, dont `0x2F0750` et
+  `0x4AA100`, avec `scanned=30 active=28 disabled=2 rejected=0 failed=0`.
+  Le prochain gate est le retest manuel City of the Damned : retrait, dépôt,
+  fermeture/réouverture puis persistance. L'or, le client joint et le profil
+  retail restent ensuite à valider séparément.
+
+## Barrière de transaction page 4 — 0.2.2 — 29 juillet 2026
+
+- Le retest 0.2.1 dans City of the Damned produit des résultats serveur
+  déterministes : les transitions vers la page `0` réussissent avec `result=0`,
+  tandis que les dépôts et retraits visant la page `4` échouent avec `result=1`.
+  `scopedTownBypasses=0` prouve qu'aucun appel à `DUNGEON_IsRoomInTown` ne
+  participe à ces refus; le contournement serveur ajouté en 0.2.1 ciblait donc
+  la mauvaise barrière.
+- Le moteur commun `0x471E90` valide chaque état de paquet par `0x474700`. Cette
+  fonction reçoit l'instantané de transaction, l'état de 16 octets et un booléen
+  natif de contournement de proximité. Pour une page `4`, elle refuse si ce
+  booléen est faux et si `snapshot+0x20` n'indique pas un coffre proche. Le
+  constructeur d'instantané `0x46C690` ne positionne ce champ qu'après avoir
+  trouvé l'objet de classe `267` à une distance native d'au plus `50`.
+- RemoteStash 0.2.2 promeut ce booléen existant uniquement pendant le callback
+  synchrone du joueur possédant une session distante et uniquement lorsque
+  l'état exact vise la page `4`. Les validations natives de propriété, curseur,
+  coordonnées, dimensions, occupation et cohérence de l'instantané continuent
+  de s'exécuter. `DUNGEON_IsRoomInTown` ne conserve que ses deux callsites client
+  bornés au cycle de vie visuel du stash.
+- Aucun fichier de layout, rectangle, sprite, tooltip ni bouton d'or BKVince
+  n'est modifié. Le build Release et le test de placement `1/1` passent. La DLL
+  gouvernée et runtime porte le SHA-256
+  `17867C42F3EB4472AAD176523FCD324724D5CD3CD86ED38F15AD2F33A26FA264`.
+- Le cold start BKVince charge le nouveau hook `0x474700` et atteint
+  `scanned=30 active=28 disabled=2 rejected=0 failed=0`. Le gate manuel reste
+  le retrait puis le dépôt dans City of the Damned; les logs attendus sont
+  `result=0` avec `scopedStashProximityBypasses=1` pour chaque transition page 4.
+
+## Validation fonctionnelle hors ville — 0.2.24 — 29 juillet 2026
+
+- Vincent confirme dans City of the Damned le dépôt et le retrait manuels dans
+  le coffre personnel, le shared stash et le crafting tab. Un objet déposé dans
+  le shared stash à la page 69 persiste après Save & Exit, puis peut être repris
+  et replacé dans l’inventaire.
+- Le quick move `Ctrl + clic gauche` nécessitait encore deux callsites client de
+  `DUNGEON_IsRoomInTown`, `0xFEE3B` et `0xFF1DC`. RemoteStash 0.2.24 ne les
+  contourne que pendant une session distante active, pour un retrait exact du
+  stash vers l’inventaire et pendant une fenêtre bornée à 1000 ms. Le hook
+  d’état UI conserve toujours le résultat natif et ne fabrique aucun panneau.
+- La matrice finale en difficulté Pain, à Outer Cloister, réussit dans les deux
+  directions avec `Ctrl + clic gauche` pour le coffre personnel et le shared
+  stash, sur les pages partagées 1 et 69. Le processus D2RLoader reste actif et
+  répondant; aucun événement Windows Application Error ou WER n’est observé.
+- Le build Release et le test de placement `1/1` passent. La DLL gouvernée et la
+  DLL runtime BKVince sont byte-identiques au SHA-256
+  `A7E4A1C98F68DF432E1DCF2D39C8E78F1607E772895F38F17E44F2B4FE524FF8`.
+- Le placement dynamique, le sprite, le tooltip, le bouton d’or et les layouts
+  BKVince restent inchangés. Les messages transitoires `CASC container locked`
+  du loader se réparent par la résolution résidente/fichier suivante et ne
+  correspondent pas à un crash observé.
