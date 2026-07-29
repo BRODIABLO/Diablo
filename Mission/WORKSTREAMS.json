@@ -279,6 +279,17 @@
       ]
     },
     {
+      "id": "configurable-charsi-reward",
+      "name": "Configurable Charsi Reward",
+      "status": "paused",
+      "owner": "Vincent + Codex",
+      "mission": null,
+      "nextGate": "Resume only on Vincent's explicit request; keep the 2.1.1 changes as low-priority work in progress and validate them before any release.",
+      "include": [
+        "addons/ConfigurableCharsiReward/**"
+      ]
+    },
+    {
       "id": "workstream-registry",
       "name": "Workstream Registry",
       "status": "maintenance",
