@@ -572,8 +572,37 @@ runtime est restauré byte-exact. Le rapport est conservé sous
 Le checkpoint `bc3ea0d` (`Integrate Equipped Item to Cube prototype`) est poussé
 sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
 
-Le prochain port séquencé du lot canonique est Assign Transmute Hotkey sous
-`misc.transmuteHotkey` dans `plugin-misc.dll`.
+Assign Transmute Hotkey / `TransmuteHotkey 0.2.0` est maintenant integre dans
+`plugin-misc.dll` sous `misc.transmuteHotkey`. Le JSON livre `enabled=false`,
+`hotkey="CTRL+SHIFT+T"`, `consume=true` et `diagnostics=false`; aucun hook ni
+worker d'entree n'est installe par defaut, donc le comportement vanilla demeure
+intact.
+
+Le composant possede les deux sites uniques `0x23ECD0` et `0x2CDA90`, puis
+appelle le dispatcher UI vivant `0x843D90` sans en revendiquer le hook. Les cinq
+DLL Release compilent, le manifeste atteint 127 sites uniques et 17/17 CTest
+passent. `plugin-misc.dll` porte le SHA-256
+`C6BB54B872415C257D91808CD1CF1D6A36C16F1634BC27C12443B6278D6B1FC3`.
+Les checkpoints pack `51b3871` et `183f955` sont pousses sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
+
+Le cold start vanilla atteint `24/24` avec
+`scanned=26 active=24 disabled=2 rejected=0 failed=0`. Deux cold starts actifs
+prouvent ensuite les deux regimes du dispatcher : avec l'ancien RemoteStash,
+Bulk sans confirmation n'exige plus `0x843D90` et les 24 plugins actifs chargent
+sans echec; sans RemoteStash, `plugin-skills` possede seul `0x843D90` lorsque la
+confirmation Shift est active, et Transmute appelle correctement cette chaine.
+Les lectures memoire confirment les deux hooks Transmute, le hook paquet Bulk et
+le proprietaire attendu du dispatcher dans chaque regime. Le relais UI MOUSE4
+est pret dans les deux cas. Le runtime, les standalones et RemoteStash sont
+restaures byte-exact, sans processus restant. Le rapport est conserve sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260729-transmute-hotkey/report.json`.
+
+Le JSON et la DLL standalone gouvernes sont retires de BKVince apres cette
+validation integree; les sources, l'archive et la preuve gameplay standalone
+restent les oracles de comparaison. La regression gameplay MOUSE4 dans le pack
+reste une matrice independante et ne bloque pas le prochain port canonique :
+`VendorStockRefresh` sous `misc.vendorStockRefresh` dans `plugin-misc.dll`.
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est

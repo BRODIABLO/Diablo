@@ -204,9 +204,13 @@ invalide ou répétée ne doit produire aucune transaction.
    hôte/joiner, sauvegarde/rechargement, portées globale/mod-locale et coexistence
    avec les cinq DLL eezstreet, sans perte, duplication, crash ni
    désynchronisation.
-9. **Promotion `plugin-misc` — ouverte** : porter la fonctionnalité sous
-   `misc.transmuteHotkey`, compiler le pack complet et répéter les gates de
-   non-régression avant de retirer l'autonome.
+9. **Promotion `plugin-misc` — fermee techniquement** : la fonctionnalite est
+   portee sous `misc.transmuteHotkey`; cinq DLL Release et 17/17 tests sont
+   verts, le manifeste recense 127 sites uniques, et trois cold starts prouvent
+   le defaut vanilla ainsi que la composition avec RemoteStash et avec le
+   dispatcher possede par `plugin-skills`. La DLL et le JSON autonomes sont
+   retires de BKVince, tandis que leurs sources et preuves restent les temoins.
+   La repetition gameplay physique dans le pack reste ouverte et independante.
 
 ## Prochain gate
 

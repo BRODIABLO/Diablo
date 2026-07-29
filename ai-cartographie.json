@@ -13696,11 +13696,6 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
-                                                                                "name":  "TransmuteHotkey.json",
-                                                                                "path":  "data-BKVince/BKVince.mpq/TransmuteHotkey.json",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
                                                                                 "name":  "VendorStockRefresh.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/VendorStockRefresh.json",
                                                                                 "kind":  "file"
@@ -15118,11 +15113,6 @@
                                                                                                  {
                                                                                                      "name":  "Transmogrify.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/Transmogrify.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "TransmuteHotkey.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/TransmuteHotkey.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

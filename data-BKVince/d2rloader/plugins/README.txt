@@ -202,8 +202,17 @@ Bulk Skill Point Allocation 1.2.4 is integrated in `plugin-skills.dll` under
 `skills.bulkSkillPointAllocation`. The shipped block is disabled and installs
 no Bulk hooks, preserving vanilla clicks. When enabled, Ctrl uses the configured
 native batch and Shift uses native assign-all. Its UI dispatcher broker composes
-with RemoteStash 0.1.6 so exactly one module owns `0x843D90`. Keep the standalone
-Bulk DLL only as a gameplay witness and never enable both implementations.
+with RemoteStash 0.1.6 so exactly one module owns `0x843D90`; when Shift
+confirmation is disabled, Bulk does not inspect or hook that dispatcher at all.
+Keep the standalone Bulk DLL only as a gameplay witness and never enable both
+implementations.
+
+Transmute Hotkey 0.2.0 is integrated in `plugin-misc.dll` under
+`misc.transmuteHotkey`. The shipped block is disabled and preserves vanilla
+input. When enabled, it accepts a configurable keyboard chord or mouse button,
+then dispatches the visible Cube Transmute action on the UI thread. It calls
+through the current `0x843D90` dispatcher without owning that hook, so it
+composes with RemoteStash or the optional Bulk confirmation broker.
 
 Item Durability 1.2.0 is integrated in `plugin-items.dll` under
 `items.itemDurability`. The shipped block is disabled and its resistance,
