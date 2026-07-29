@@ -27,6 +27,10 @@ reverse-engineering/**/sdk-contribution/*.zip
 # Reference externe : guide D2R communautaire (clone local, non versionne)
 guide/
 
+# Third-party GUI tools: keep governed documentation, not local vendor binaries.
+/tools/**/bin/
+/tools/**/backups/
+
 # Atelier de donnees : HD/local de TCP et BK sont versionnes.
 # BT et le profil launcher TCP restent locaux; ses modules Runtime sont versionnes.
 data-BT/hd/

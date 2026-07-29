@@ -31919,6 +31919,40 @@
                                                    ]
                                   },
                                   {
+                                      "name":  "tools",
+                                      "path":  "tools",
+                                      "kind":  "directory",
+                                      "meta":  {
+                                                   "role":  "x-local-modding-tools",
+                                                   "summary":  "Utilitaires tiers locaux qui complètent l’outillage du workspace; la documentation et la provenance sont versionnées, tandis que les binaires fournisseurs restent ignorés.",
+                                                   "agentAccess":  "read-write"
+                                               },
+                                      "children":  [
+                                                       {
+                                                           "name":  "D2R-Sprite-ED2R",
+                                                           "path":  "tools/D2R-Sprite-ED2R",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-third-party-sprite-editor",
+                                                                        "summary":  "Installation locale documentée de D2R Sprite ED2R 1.5 pour convertir et éditer les assets .sprite en anglais.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "active",
+                                                                        "provenance":  {
+                                                                                           "source":  "TEAM ED2R — publication Inven 7942",
+                                                                                           "version":  "1.5"
+                                                                                       }
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "tools/D2R-Sprite-ED2R/README.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       }
+                                                   ]
+                                  },
+                                  {
                                       "name":  "wiki-template",
                                       "path":  "wiki-template",
                                       "kind":  "directory",

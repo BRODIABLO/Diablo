@@ -25,6 +25,7 @@ Les `.txt` restent la **source de vérité** ; pas de base de données — git e
 - `apps/admin/` — **éditeur web** des tables (Vite + React)
 - `schemas/` — schémas de colonnes des tables BKVince 3.2 (typage, descriptions et validation de l'éditeur), générés depuis le guide TXT courant
 - `scripts/` — `dev-server.js` (API locale de lecture/écriture des `.txt`), `build-data/` (parseur/écrivain TSV), `generate-architecture.ps1` (cadastre), `validate-cartographie/` (validateur), `publish-tcp.ps1`
+- `tools/` — utilitaires tiers locaux de modding; la documentation et la provenance sont versionnées, tandis que les binaires fournisseurs restent ignorés
 - `guide/d2rdoc/` — clone local non versionné de [`eezstreet/d2rdoc`](https://eezstreet.github.io/d2rdoc/), référence primaire des `.txt` D2R 3.2 et des descriptions de headers
 - `guide/legacy/` — ancien D2R Data Guide, conservé localement uniquement pour les assets et certains JSON
 - `wiki-template/` — références pour le futur wiki (dont l'index du wiki BT)

@@ -328,6 +328,21 @@
   ],
   "sharedPaths": [
     {
+      "pattern": ".gitignore",
+      "workstreams": ["*"],
+      "reason": "Repository-wide local and generated file exclusions shared by every workstream."
+    },
+    {
+      "pattern": "README.md",
+      "workstreams": ["*"],
+      "reason": "Repository-wide workspace orientation shared by every workstream."
+    },
+    {
+      "pattern": "tools/**",
+      "workstreams": ["*"],
+      "reason": "Cross-workspace local modding utilities and their governed provenance documentation."
+    },
+    {
       "pattern": "Mission/CURRENT.md",
       "workstreams": [
         "*"
