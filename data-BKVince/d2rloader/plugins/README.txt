@@ -205,6 +205,15 @@ native batch and Shift uses native assign-all. Its UI dispatcher broker composes
 with RemoteStash 0.1.6 so exactly one module owns `0x843D90`. Keep the standalone
 Bulk DLL only as a gameplay witness and never enable both implementations.
 
+Item Durability 1.2.0 is integrated in `plugin-items.dll` under
+`items.itemDurability`. The shipped block is disabled and its resistance,
+ethereal maximum, forced maximum, ranged durability, and diagnostics values all
+preserve vanilla behavior. The normal feature composes with Repair Costs Cap and
+with standalone Transmogrify. The optional bow/crossbow extension shares
+`0x314110` with standalone Transmogrify, so only one may own that site until an
+external broker is implemented. Keep DurabilityResistance.dll only as a
+gameplay witness and never load it with the integrated option enabled.
+
 ## TCP hybrid and mod-local plugins
 
 * `CubeQuickMove.dll` 0.1.3 is hybrid (global or mod-local) and places every

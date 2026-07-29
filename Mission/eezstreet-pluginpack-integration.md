@@ -123,8 +123,8 @@ ciblées et, pour quelques plugins, des offsets locaux documentés.
 | `FloatingDamage` | hook `0x427150`, plus D3D12/MinHook | vue locale de l’événement de dégâts et rendu privé | 3 |
 | `CharmInventoryAuras` | hooks `0x42D2C0`, `0x491960`, `0x502D00` | offsets skill/item/stat-list ciblés | 3 |
 | `ReviveOverhaul` | hooks `0x4A3A20`, `0x4A7270`, `0x4A8090`, `0x596720` | ABI IA et return-sites stricts | 3 |
-| `DurabilityResistance` | hooks `0x2F48C0`, `0x314110`, `0x441B10` | `ItemsTxt` et `ItemTypesTxt` par offsets ciblés | 4, conflit interne à résoudre |
-| `Transmogrify` | hooks `0x2BD480`, `0x314110`, `0x43D530`, `0x4F40C0` | records items, tooltip, création et placement | 4, conflit interne à résoudre |
+| `DurabilityResistance` | hooks `0x2F48C0`, `0x314110`, `0x441B10` | `ItemsTxt` et `ItemTypesTxt` par offsets ciblés | intégré; conflit externe ranged documenté |
+| `Transmogrify` | hooks `0x2BD480`, `0x314110`, `0x43D530`, `0x4F40C0` | records items, tooltip, création et placement | hors lot; témoin externe seulement |
 | `ConfigurableCharsiReward` | hooks `0x325C00`, `0x441300`, `0x5DA1C0` | difficulté `D2GameStrc+0x104`, class/TXT ID unité `+0x04` | 4, conflit PluginPack à résoudre |
 
 Les tranches mesurent le coût d’intégration au PluginPack, pas la qualité ou la
@@ -171,10 +171,14 @@ loader.
 - le premier active la durabilité des bows/crossbows ciblés;
 - le second force `useable=1` pour les records Transmogrify.
 
-Solution recommandée dans le PluginPack : un seul hook propriétaire appelle
-l’original puis exécute une chaîne ordonnée de transformateurs de record. Les
-deux transformations sont additives, mais leur installation indépendante ne
-doit pas être conservée dans le pack fusionné.
+Solution appliquée au lot canonique : Transmogrify demeure entièrement hors du
+pack. `items.itemDurability` ne pose `0x314110` que lorsque l'extension
+bows/crossbows est explicitement activée; le défaut joueur la désactive. Les
+résistances et le maximum éthéré coexistent donc avec le Transmogrify autonome,
+qui reste seul propriétaire de ce site. Une activation simultanée de l'extension
+ranged et de l'autonome exige un broker externe ou un propriétaire unique; le
+transformateur Transmogrify ne doit pas être copié dans le pack pour contourner
+ce contrat.
 
 ### Sous-système gamble — recouvrement sémantique
 
@@ -292,6 +296,7 @@ par eezstreet sans modifier la fondation.
 |---|---|---|---|---|
 | `GambleScreenLimit` | `1.2.0` | `plugin-items.dll` | `items.gambleScreenLimit` dans `D2RPlugins.json` | port intégré, Release et cold starts vanilla/actif validés; régression gameplay intégrée optionnelle |
 | `GroundItemLabelLimit` | `1.2.0` intégré | `plugin-items.dll` | `items.groundItemLabels` dans `D2RPlugins.json` | port intégré, Release et cold starts 32/64/128 validés; régression gameplay intégrée ouverte |
+| Item Durability / `DurabilityResistance` | `1.2.0` intégré | `plugin-items.dll` | `items.itemDurability` dans `D2RPlugins.json` | port intégré, Release et trois cold starts validés; compatibilité ranged avec Transmogrify externe ouverte |
 | `EnhancedDamageMinMaxFix` | `1.2.0` intégré | `plugin-items.dll` | `items.enhancedDamageMinMaxFix` dans `D2RPlugins.json` | port intégré, Release et cold starts vanilla/actif validés; équivalence gameplay intégrée ouverte |
 | `BulkSkillPointAllocation` | `1.2.4` intégré | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | port intégré, Release et trois cold starts validés; équivalence gameplay intégrée ouverte |
 | bloc unifié `EthItemRules` | témoin historique `EtherealItemRules 0.1.0` | `plugin-items.dll` | bloc unique `items.etherealItemRules` | contrat unifié compilé et cold-starté; équivalence gameplay ouverte |
@@ -367,10 +372,32 @@ atteignent tous `24/24`, sans rejet ni échec. Le checkpoint code `78d6290`
 L'équivalence gameplay intégrée reste une matrice indépendante; le témoin
 autonome n'est jamais chargé en même temps que l'option.
 
-La tranche 1 et les deux petits hooks opaques déjà sélectionnés sont validés
-techniquement. Le prochain port séquencé du lot canonique est Item Durability /
-`DurabilityResistance` sous `items.itemDurability` dans `plugin-items.dll`; le
-composant ethereal, déjà intégré, ne constitue pas une étape séparée.
+Item Durability / `DurabilityResistance 1.2.0` est maintenant une option
+indépendante de `plugin-items.dll`. Son bloc strict
+`items.itemDurability` livre `enabled=false`, résistances `0/0`, maximum éthéré
+`50`, maximum forcé/ranged/diagnostics désactivés : le JSON joueur ne pose donc
+aucun hook et conserve le comportement vanilla. Les signatures complètes
+uniques couvrent `0x441B10`, `0x2F48C0` et `0x314110`.
+
+Le manifeste atteint 81 sites uniques, les cinq DLL Release compilent et 9/9
+CTest passent. `plugin-items.dll` porte le SHA-256
+`2DE85E30792C163281EBC9FEE461456128CAD32DE9C76ED2AA0E6D7F3807751C`.
+Les cold starts vanilla, résistances/max éthéré actifs avec Transmogrify, puis
+ranged actif sans les témoins Transmogrify atteignent tous `24/24`, sans rejet
+ni échec. Le scénario conjoint active aussi Repair Costs Cap avec usure `0 %`
+et confirme sa composition derrière le hook `0x2F48C0`. Le checkpoint code
+`ab5fd53` (`Integrate Item Durability prototype`) est poussé sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation` et synchronisé à `0/0`.
+
+Transmogrify reste hors du lot. Il coexiste avec les résistances et le maximum
+éthéré lorsque ranged est désactivé; l'extension bows/crossbows partage encore
+`0x314110` avec son autonome et exige un broker externe ou un propriétaire
+unique pour une activation simultanée. L'équivalence gameplay intégrée reste
+ouverte et indépendante de la preuve autonome.
+
+Le prochain port séquencé du lot canonique est Charm Aura Trigger Fix sous
+`items.charmAuraTriggerFix` dans `plugin-items.dll`; le composant ethereal,
+déjà intégré, ne constitue pas une étape séparée.
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est
@@ -443,10 +470,10 @@ distribution officielle, sans modification ni redistribution d’une DLL tierce.
 traités séparément, avec validation de leurs dépendances graphiques, offsets de
 structures ou chemins IA.
 
-### Tranche 4 — conflits à fusionner
+### Tranche 4 — conflits à arbitrer
 
-- réunir les transformateurs `GetItemsTxtRecord` de `DurabilityResistance` et
-  `Transmogrify` derrière un hook unique;
+- conserver Transmogrify hors lot et exiger un broker externe ou un propriétaire
+  unique si son autonome doit coexister avec l'extension ranged d'Item Durability;
 - faire de `plugin-items` le propriétaire du hook drop `0x441300` et brancher
   `ConfigurableCharsiReward` sur son callback post-drop;
 - valider toutes les combinaisons d’options concernées.

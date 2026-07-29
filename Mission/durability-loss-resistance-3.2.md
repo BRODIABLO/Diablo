@@ -208,3 +208,51 @@ celui du contexte d'installation choisi par D2RLoader.
 9. Avec l'option ranged active, tirer avec au moins un bow, un crossbow et un
    Amazon bow, confirmer la perte selon la résistance configurée, le bris à zéro,
    la réparation marchande, la sauvegarde/rechargement et le comportement éthéré.
+
+## Port intégré au PluginPack — 28 juillet 2026
+
+`DurabilityResistance 1.2.0` est maintenant porté comme fonctionnalité interne
+ordinaire de `plugin-items.dll` sous `items.itemDurability`. Le bloc JSON strict
+remplace le TOML dans le pack et expose `enabled`, les résistances normale et
+éthérée, le pourcentage du maximum éthéré, le maximum forcé, l'extension
+bows/crossbows et les diagnostics. Le template joueur livre `enabled=false`,
+les deux résistances à `0`, le maximum éthéré vanilla à `50`, et les trois
+booléens optionnels à `false`; aucun hook de cette fonctionnalité n'est donc posé
+par défaut.
+
+Les signatures instruction-alignées sont prouvées sur l'image gouvernée
+92777 : une occurrence exacte de 28 octets à `0x441B10`, une occurrence exacte
+de 55 octets à `0x2F48C0` et une occurrence exacte de 19 octets à `0x314110`.
+Le manifeste commun atteint 81 sites à propriétaire unique, les cinq DLL
+Release compilent et 9/9 CTest passent. Le `plugin-items.dll` intégré et sa copie
+gouvernée BKVince portent le SHA-256
+`2DE85E30792C163281EBC9FEE461456128CAD32DE9C76ED2AA0E6D7F3807751C`.
+
+Trois cold starts isolés, avec le témoin `DurabilityResistance.dll` neutralisé,
+atteignent `24/24` sans rejet ni échec :
+
+- défaut vanilla avec Transmogrify :
+  `scanned=29 active=27 disabled=2 rejected=0 failed=0`, aucun hook Durability
+  posé par `plugin-items` et Transmogrify seul propriétaire de `0x314110`;
+- résistances `50/75`, maximum éthéré `75`, ranged désactivé et Repair Costs Cap
+  actif avec usure `0 %` : mêmes compteurs, `plugin-items` possède seul
+  `0x441B10` et `0x2F48C0`, tandis que Transmogrify conserve `0x314110`;
+- mêmes réglages avec ranged actif et les témoins Transmogrify global/mod-local
+  neutralisés : `scanned=27 active=26 disabled=1 rejected=0 failed=0`, et
+  `plugin-items` possède seul les trois sites.
+
+Le second scénario confirme aussi que Repair Costs Cap se charge après le hook
+de stat de base et conserve son appel composé à `0x2F48C0`. Le runtime, le JSON,
+`plugin-items.dll`, DurabilityResistance et les deux témoins Transmogrify ont été
+restaurés byte-exact; aucun processus ne reste. Le rapport local réside sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260728-210515-item-durability/report.json`.
+Le checkpoint code `ab5fd53` (`Integrate Item Durability prototype`) est poussé
+sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation` et synchronisé à `0/0`.
+
+Transmogrify demeure hors du lot canonique. Ses modes actuels coexistent avec
+les résistances et le maximum éthéré tant que l'extension ranged reste
+désactivée. Cette extension et le Transmogrify autonome partagent néanmoins
+`0x314110`; les charger ensemble exige encore un broker externe ou un propriétaire
+unique. L'équivalence gameplay intégrée reste ouverte, notamment la fréquence,
+les maxima éthérés, les bows/crossbows/Amazon bows, la réparation, la
+persistance et le multijoueur. La DLL autonome reste un témoin non simultané.
