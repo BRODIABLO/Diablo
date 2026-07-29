@@ -36,7 +36,7 @@ les collisions et la difficulté technique et ne vaut pas inclusion implicite.
 | `plugin-items.dll` | Charm Aura Trigger Fix | `items.charmAuraTriggerFix` |
 | `plugin-items.dll` | `EnhancedDamageMinMaxFix` | `items.enhancedDamageMinMaxFix` |
 | `plugin-items.dll` | bloc unifié `EthItemRules`, incluant l’exclusion d’ItemTypes | `items.etherealItemRules` |
-| `plugin-items.dll` | `ExtendedItemStats` | aucune clé externe; infrastructure intégrée |
+| `plugin-items.dll` | `ExtendedItemStats` | `items.extendedItemStats` |
 | `plugin-items.dll` | `RepairCostsCap` | `items.repairCostsCap` |
 | `plugin-items.dll` | Qty Display Fix / `QtyDisplayIssue` | `items.qtyDisplayIssue` |
 | `plugin-misc.dll` | Cube Quick Move Bottom-Right | `misc.cubeQuickMoveBottomRight` |
@@ -49,17 +49,17 @@ les collisions et la difficulté technique et ne vaut pas inclusion implicite.
 
 Le lot contient donc 16 fonctionnalités sources. `EthItemRules` est un seul
 composant et un seul bloc de configuration : l’exclusion d’ItemTypes fait partie
-de ses règles et ne possède aucune identité sœur. `ExtendedItemStats` n’ajoute
-aucune option publique. `plugin-levels.dll` ne reçoit actuellement aucune
+de ses règles et ne possède aucune identité sœur. `ExtendedItemStats` est
+présenté comme une fonctionnalité indépendante. `plugin-levels.dll` ne reçoit actuellement aucune
 fonctionnalité confirmée.
 
 Le `D2RPlugins.json` livré aux joueurs conserve les valeurs historiques
 d'eezstreet. Parmi les ajouts RuffnecKk, Charm Aura Trigger Fix, Enhanced Damage
-Min/Max Fix, Qty Display Fix et Equipped Item to Cube sont activés par défaut à
+Min/Max Fix, Qty Display Fix, Equipped Item to Cube et Extended Item Stats sont activés par défaut à
 la demande de Vincent; toutes les autres nouvelles fonctions configurables
 restent désactivées et leurs valeurs initiales reprennent les valeurs vanilla
-lorsqu’elles en ont une. L’infrastructure `ExtendedItemStats` doit rester sans
-effet gameplay visible tant qu’aucun consommateur actif ne l’utilise.
+lorsqu’elles en ont une. Extended Item Stats n'altère pas les objets ni les
+tooltips ordinaires; sa désactivation retire ses hooks et ses listeners.
 
 Sont explicitement hors de ce lot : `Transmogrify`,
 `ConfigurableCharsiReward`, la DLL autonome finale `EtherealItemRules.dll`, et
@@ -304,7 +304,7 @@ par eezstreet sans modifier la fondation.
 | `BulkSkillPointAllocation` | `1.2.4` intégré | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | port intégré, Release et trois cold starts validés; équivalence gameplay intégrée ouverte |
 | bloc unifié `EthItemRules` | témoin historique `EtherealItemRules 0.1.0` | `plugin-items.dll` | bloc unique `items.etherealItemRules` | contrat unifié compilé et cold-starté; équivalence gameplay ouverte |
 | `RepairCostsCap` | `1.4.0` | `plugin-items.dll` | `items.repairCostsCap` dans `D2RPlugins.json` | fonctionnalité indépendante intégrée et cold-startée; équivalence gameplay ouverte |
-| `ExtendedItemStats` | `0.3.17` intégré | `plugin-items.dll` | aucune clé publique | transport 4096 octets et tooltip défilable intégrés; deux cold starts et broker externe validés; équivalence gameplay intégrée ouverte |
+| `ExtendedItemStats` | `0.3.17` intégré | `plugin-items.dll` | `items.extendedItemStats` | transport 4096 octets et tooltip défilable intégrés; activé par défaut, deux cold starts et broker externe validés; équivalence gameplay intégrée ouverte |
 | Qty Display Fix / `QtyDisplayIssue` | `1.1.0` intégré | `plugin-items.dll` | `items.qtyDisplayIssue` | patch natif intégré, Release et cold starts vanilla/actif validés; preuve gameplay autonome conservée |
 | `ForceLarzukSockets` | `0.1.0` intégré | `plugin-quests.dll` | `quests.larzukSockets` | quinze valeurs vanilla, signature unique, Release et cold start conjoint avec Item Durability validés; preuve gameplay autonome conservée |
 | Cube Quick Move Bottom-Right | `0.1.3` intégré | `plugin-misc.dll` | `misc.cubeQuickMoveBottomRight` | 27 producteurs Cube intégrés, Release et cold starts vanilla/actif validés; preuve gameplay autonome `1x3` conservée |
@@ -430,8 +430,8 @@ Les preuves gameplay transition/oskill et récupération du cadavre du témoin
 autonome restent acquises; la réapparition en ville et l'équivalence intégrée
 restent des matrices séparées ouvertes.
 
-`ExtendedItemStats 0.3.17` est maintenant une infrastructure interne de
-`plugin-items.dll`, sans clé dans `D2RPlugins.json`. Le contrat complet du
+`ExtendedItemStats 0.3.17` est intégré à `plugin-items.dll` sous la clé publique
+`items.extendedItemStats`, activée par défaut. Le contrat complet du
 témoin est conservé : transport fragmenté `EIT1` jusqu'à `4096` octets,
 réassemblage borné, capture des descriptions de stats tronquées, fenêtrage du
 tooltip, entrées souris/clavier/manette et overlay hébergé par `FloatingDamage`
@@ -707,16 +707,15 @@ testés sont :
 Le fichier livré aux joueurs est le `D2RPlugins.json` du fork et de BKVince,
 SHA-256
 `CFD7DDD1B1B63CE9DFE031FAB6E7A52ABBAE9CAE743B3A26B709F9725BC40974`.
-Charm Aura Trigger Fix, Enhanced Damage Min/Max Fix, Qty Display Fix et Equipped
-Item to Cube y sont activés; les autres ajouts configurables restent désactivés.
-Les 15 règles Larzuk visibles reprennent les quantités vanilla et
-l'infrastructure interne ExtendedItemStats n'a aucune clé publique. Le cold
+Charm Aura Trigger Fix, Enhanced Damage Min/Max Fix, Qty Display Fix, Equipped
+Item to Cube et Extended Item Stats y sont activés; les autres ajouts configurables restent désactivés.
+Les 15 règles Larzuk visibles reprennent les quantités vanilla. Le cold
 start de contrôle historique sur le précédent template tout désactivé atteint
 `24/24`, avec `scanned=16 active=14 disabled=2 rejected=0 failed=0` et
 `scanned=19 applied=19 disabled=0 failed=0` pour les memory patches. Les hooks
-internes ExtendedItemStats et Larzuk restent stricts mais reproduisent le
+ExtendedItemStats et Larzuk restent stricts mais reproduisent le
 résultat joueur vanilla avec ce template historique. Il ne remplace pas le
-futur cold start du défaut joueur actuel avec les quatre fonctions choisies
+futur cold start du défaut joueur actuel avec les cinq fonctions choisies
 actives.
 
 Le cold start conjoint active les 16 chemins avec deux gardes externes :
@@ -859,7 +858,8 @@ sont reformulées dans un langage plus clair pour les joueurs. L'indentation des
 deux caps de monstres les présente visuellement comme enfants du réglage
 `playersCommandLimit`, sans changer leurs clés directes sous `misc`. Charm Aura
 Trigger Fix, Enhanced Damage Min/Max Fix,
-Qty Display Fix et Equipped Item to Cube sont livrés avec `enabled=true`; toutes
+Qty Display Fix, Equipped Item to Cube et Extended Item Stats sont livrés avec
+`enabled=true`; toutes
 les autres fonctionnalités RuffnecKk configurables restent à `enabled=false`.
 Aucune clé publique `diagnostics` ne demeure.
 
@@ -870,13 +870,32 @@ Vendor Stock Refresh appartient maintenant à `plugin-items.dll`, sous
 vanilla restent visibles à titre de modèle, sans installer le hook tant que le
 bloc est désactivé.
 
+Vincent choisit ensuite d'exposer Extended Item Stats afin que les joueurs
+voient explicitement sa présence. Le bloc strict `items.extendedItemStats`
+livre `enabled=true`; l'absence du bloc conserve également ce défaut pour la
+compatibilité. `enabled=false` court-circuite l'installation des dix hooks, des
+listeners d'entrée et de l'overlay, tandis que les deux exports de composition
+restent neutres. Le nouveau test de politique porte la suite à 20/20.
+
 La comparaison avec le commit amont épinglé `dc75b49` ne montre aucune
 description eezstreet réécrite; outre les blocs RuffnecKk ajoutés et leurs
 virgules structurelles, seules les espaces d'indentation des deux caps `/players`
 changent pour exprimer ce lien visuel. Les cinq DLL Release recompilent, le manifeste
-reste valide avec 132 sites à propriétaire unique et 19/19 CTest passent. Le
+reste valide avec 132 sites à propriétaire unique et 20/20 CTest passent. Le
 JSON final synchronisé vers BKVince porte le SHA-256
-`CFD7DDD1B1B63CE9DFE031FAB6E7A52ABBAE9CAE743B3A26B709F9725BC40974`.
+`660664986598F076A45843C2712672EA933375E726388F057192BD35F71F8D5F`;
+`plugin-items.dll` porte
+`6102C64B2B86880CF44722754023BA389AEAEE41C74896393E095E72B09495D6`.
+
+L'indépendance envers Transmogrify est également revalidée avec cette version
+publique de la configuration. Un cold start BKVince sans aucune DLL
+`Transmogrify.dll` installe les dix hooks Extended Item Stats, dont le hook
+final de tooltip `0x2BD480`, et journalise
+`tooltip owner=ExtendedItemStats; config=items.extendedItemStats`. Le chargeur
+termine avec `scanned=14 active=13 disabled=1 rejected=0 failed=0`, applique
+les 20/20 patchsets et atteint l'étape de démarrage 24/24. Transmogrify reste
+donc un compagnon optionnel : lorsqu'il est absent, `plugin-items.dll` possède
+et exécute lui-même tout le pipeline Extended Item Stats.
 
 ## Correction du premier pilote — 27 juillet 2026
 
