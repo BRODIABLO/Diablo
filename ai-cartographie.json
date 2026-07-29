@@ -13656,11 +13656,6 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
-                                                                                "name":  "CubeQuickMove.json",
-                                                                                "path":  "data-BKVince/BKVince.mpq/CubeQuickMove.json",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
                                                                                 "name":  "D2RPlugins.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/D2RPlugins.json",
                                                                                 "kind":  "file"
@@ -15013,11 +15008,6 @@
                                                                                                  {
                                                                                                      "name":  "CharmInventoryAuras.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/CharmInventoryAuras.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "CubeQuickMove.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/CubeQuickMove.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

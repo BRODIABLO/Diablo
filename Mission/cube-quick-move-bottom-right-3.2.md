@@ -2,8 +2,8 @@
 
 ## Statut et séquencement
 
-- Statut : **CubeQuickMove 0.1.3 est validé en jeu sur l'épée `1x3` et prêt à
-  être intégré séparément dans `plugin-misc.dll`**.
+- Statut : **CubeQuickMove 0.1.3 est validé en jeu sur l'épée `1x3`, puis
+  intégré dans `plugin-misc.dll` sous `misc.cubeQuickMoveBottomRight`**.
 - Cible : `D2R.exe 3.2.92777` sous D2RLoader.
 - Vincent confirme le 27 juillet 2026 la catégorie future `misc`, le propriétaire
   `plugin-misc.dll` et la clé `misc.cubeQuickMoveBottomRight`.
@@ -152,6 +152,33 @@ donc un objet `2x1` suit aussi la branche bas-droite.
   strictement `CubeQuickMove.dll` et `CubeQuickMove.json`. SHA-256 ZIP :
   `B9D826DEFD02C9F6159002405D27E9507B3094B4ABE4868FD9E1BA2EC0614ED6`.
 
+## Intégration au PluginPack — 28 juillet 2026
+
+- Le checkpoint `9835aa8` porte la politique 0.1.3 dans `plugin-misc.dll` sous
+  `misc.cubeQuickMoveBottomRight`, avec `enabled=false` dans le template joueur.
+  Aucun call-site n'est donc redirigé par défaut.
+- Les 27 appels Cube-capables sont les seuls sites ajoutés au manifeste. Leurs
+  octets originaux sont exacts `27/27` dans l'image canonique 92777; les cinq
+  signatures de helpers sont chacune uniques. Le manifeste atteint 123 sites à
+  propriétaire unique.
+- Les cinq DLL Release compilent, 15/15 CTest passent et `plugin-misc.dll`
+  mesure `120832` octets avec le SHA-256
+  `EB2EBA83A19E693A6FCE07D0807407A6B6D23351C23ED13205951312530D1463`.
+- Le cold start vanilla atteint `24/24`, termine à
+  `scanned=29 active=27 disabled=2 rejected=0 failed=0` et n'installe aucune
+  redirection Cube.
+- Le cold start actif atteint les mêmes compteurs; la lecture mémoire confirme
+  que les 27 `CALL rel32` convergent vers l'unique relais `0x3E80000`. Aucun
+  crash frais n'est créé.
+- Le runtime est restauré byte-exact et aucun processus ne reste. La DLL et le
+  JSON autonomes sont retirés de BKVince; les sources, l'archive et la preuve
+  gameplay `1x3` à `4,3` restent l'oracle différentiel.
+- Les preuves sont conservées sous
+  `analysis-cache/pluginpack-foundation-runtime-validation/20260729-cube-quick-move-bottom-right/`.
+
+Le cold start ne remplace pas l'équivalence gameplay intégrée. La matrice des
+dimensions, de fragmentation, d'UI, de persistance et d'autorité reste ouverte.
+
 ## Hypothèses à tester et inconnues
 
 - **Hypothèse** — souris et manette convergent vers l'un des 27 chemins de
@@ -209,17 +236,12 @@ donc un objet `2x1` suit aussi la branche bas-droite.
 
 ## Prochain gate
 
-Porter séparément la politique 0.1.3 dans `plugin-misc.dll` sous
-`misc.cubeQuickMoveBottomRight`, sans retirer l'autonome avant un build, un cold
-start et un témoin épée équivalents. Rejouer ensuite `1x1`, `2x1`, `1x2`, `2x2`
-et `2x3` dans un Cube vide, fragmenté et plein, puis fermer le périmètre UI, la
+Rejouer le port intégré avec l'épée `1x3`, puis `1x1`, `2x1`, `1x2`, `2x2` et
+`2x3` dans un Cube vide, fragmenté et plein. Fermer ensuite le périmètre UI, la
 persistance et l’autorité hôte/joiner avant de déclarer la distribution finale.
 
 ## Frontière Git
 
-Le lot actuel comprend cette mission, `Mission/CURRENT.md`,
-`Mission/WORKSTREAMS.json`, `ROADMAP.html`, les preuves gouvernées 92777, les
-sources `CubeQuickMove-src/`, le JSON, la DLL autonome, l’archive candidate et le
-cadastre régénéré. Aucun fichier ni aucune DLL d’eezstreet n’est modifié, lié ou
-redistribué. Le lot autonome validé est prêt pour un port ultérieur dans le
-propriétaire `misc`; ce port ne fait pas partie du présent checkpoint.
+Le lot autonome demeure l'oracle historique dans ses sources et son archive.
+La distribution BKVince courante conserve uniquement `plugin-misc.dll` et
+`D2RPlugins.json`; aucun binaire autonome CubeQuickMove n'y subsiste.

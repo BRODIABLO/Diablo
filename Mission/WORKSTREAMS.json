@@ -201,15 +201,17 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Port the gameplay-validated Cube Quick Move Bottom-Right policy into plugin-misc.dll under misc.cubeQuickMoveBottomRight; keep prior gameplay regressions as separate matrices.",
+      "nextGate": "Port Equipped Item to Cube into plugin-misc.dll under misc.equippedItemToCube while preserving its standalone witness as the gameplay oracle; keep prior regressions as separate matrices.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
         "Mission/bulk-skill-point-allocation-3.2.md",
         "Mission/durability-loss-resistance-3.2.md",
         "Mission/charm-inventory-auras-3.2.md",
         "Mission/configurable-larzuk-sockets-3.2.md",
+        "Mission/cube-quick-move-bottom-right-3.2.md",
         "data-BKVince/BKVince.mpq/D2RPlugins.json",
         "data-BKVince/d2rloader/plugins/plugin-items.dll",
+        "data-BKVince/d2rloader/plugins/plugin-misc.dll",
         "data-BKVince/d2rloader/plugins/plugin-quests.dll",
         "data-BKVince/d2rloader/plugins/plugin-skills.dll"
       ]
@@ -217,10 +219,10 @@
     {
       "id": "cube-quick-move-bottom-right",
       "name": "Cube Quick Move Bottom-Right",
-      "status": "active",
+      "status": "paused",
       "owner": "Vincent + Codex",
       "mission": "Mission/cube-quick-move-bottom-right-3.2.md",
-      "nextGate": "Port the gameplay-validated 0.1.3 policy into plugin-misc.dll under misc.cubeQuickMoveBottomRight while retaining the standalone witness until integrated validation passes.",
+      "nextGate": "Replay the integrated 1x3 witness, then cover 1x1, 2x1, 1x2, 2x2 and 2x3 in empty, fragmented and full Cubes before UI, persistence and host/joiner validation.",
       "include": [
         "Mission/cube-quick-move-bottom-right-3.2.md",
         "addons/CubeQuickMove/**",

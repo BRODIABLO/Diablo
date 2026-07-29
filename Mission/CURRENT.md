@@ -13,54 +13,46 @@ gouvernée demeure intacte. Le checkpoint de fondation `2a23212` est poussé sur
 `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
 
 Les checkpoints poussés `a51c865`, `387dff8`, `8d41581`, `a4d8dbb`,
-`5ef599f`, `78d6290`, `ab5fd53`, `25811d8`, `c4566d4`, `d6562d4` et
-`be1ff95` ont successivement porté le bloc unique
+`5ef599f`, `78d6290`, `ab5fd53`, `25811d8`, `c4566d4`, `d6562d4`,
+`be1ff95` et `9835aa8` ont successivement porté le bloc unique
 `items.etherealItemRules`, puis les fonctionnalités indépendantes
 `items.repairCostsCap`, `items.gambleScreenLimit`, `items.groundItemLabels` et
 `items.enhancedDamageMinMaxFix`, `items.itemDurability` et
 `items.charmAuraTriggerFix`, l'infrastructure `ExtendedItemStats` et
 `items.qtyDisplayIssue` dans
 `plugin-items.dll`, `skills.bulkSkillPointAllocation` dans `plugin-skills.dll`,
-puis `quests.larzukSockets` dans `plugin-quests.dll`. Les configurations, hooks et tests restent indépendants;
+`quests.larzukSockets` dans `plugin-quests.dll`, puis
+`misc.cubeQuickMoveBottomRight` dans `plugin-misc.dll`. Les configurations, hooks et tests restent indépendants;
 leur présence dans les DLL du pack ne crée aucun bloc fonctionnel commun.
 
-Qty Display Fix / `QtyDisplayIssue 1.1.0` est maintenant intégré sous
-`items.qtyDisplayIssue`. Le template livre `enabled=false` : aucune écriture
-n'est faite et les octets vanilla `75 0F` restent à `0x2BE118`. L'activation
-vérifie l'unique signature de 33 octets puis écrit seulement `90 90`, laissant
-D2R produire la ligne de quantité native.
+Cube Quick Move `0.1.3` est maintenant intégré sous
+`misc.cubeQuickMoveBottomRight`. Le template livre `enabled=false`, donc aucun
+call-site n'est redirigé par défaut. L'activation conserve les neuf producteurs
+prouvés non-Cube et possède les 27 appels dynamiques ou explicites capables de
+porter la page Cube.
 
-`ForceLarzukSockets 0.1.0` est maintenant intégré sous
-`quests.larzukSockets`. Le JSON joueur contient les quinze règles vanilla :
-Magic `1..2`, puis Rare, Set, Unique et Crafted à `1`, dans chacune des trois
-difficultés. Sa signature Larzuk a été étendue de 16 à 24 octets et est unique
-à `0x375560` dans l'image canonique 92777.
-
-Les cinq DLL Release compilent, 14/14 CTest passent et le manifeste porte 96
-sites à propriétaire unique. `plugin-quests.dll` porte le SHA-256
-`754F372772B5D1E15ACDD74E65E35ECE2BC9E4DECAB63B3496833805A452F387`.
-Le premier cold start a révélé que Larzuk revalidait à tort le helper
-`GetItemsTxtRecord` après le hook composable d'Item Durability. Cette fausse
-revendication a été retirée : le retest avec le hook Durability déjà présent
-atteint `24/24`, installe Larzuk et termine à
-`scanned=29 active=27 disabled=2 rejected=0 failed=0`, sans crash frais. Le
-runtime est restauré byte-exact et aucun processus ne reste. La DLL et le JSON
-autonomes Larzuk sont retirés de BKVince; leurs sources et preuves gameplay
-restent disponibles.
+Les cinq DLL Release compilent, 15/15 CTest passent et le manifeste porte 123
+sites à propriétaire unique. `plugin-misc.dll` porte le SHA-256
+`EB2EBA83A19E693A6FCE07D0807407A6B6D23351C23ED13205951312530D1463`.
+Les cold starts vanilla et actif atteignent `24/24` et
+`scanned=29 active=27 disabled=2 rejected=0 failed=0`, sans crash frais. La
+lecture mémoire confirme que les 27 calls actifs convergent vers l'unique relais
+`0x3E80000`. Le runtime est restauré byte-exact et aucun processus ne reste. La
+DLL et le JSON autonomes Cube sont retirés de BKVince; leurs sources, ZIP et
+preuve gameplay de l'épée `1x3` à `4,3` restent disponibles.
 
 ## Prochain gate
 
-Porter ensuite Cube Quick Move Bottom-Right dans `plugin-misc.dll` sous
-`misc.cubeQuickMoveBottomRight`, en conservant le clic vanilla et le témoin
-autonome comme oracle gameplay. Les régressions gameplay ouvertes des ports
-précédents restent des matrices indépendantes et ne bloquent pas ce prochain
-port.
+Porter ensuite Equipped Item to Cube dans `plugin-misc.dll` sous
+`misc.equippedItemToCube`, en conservant son témoin autonome comme oracle. Les
+régressions gameplay ouvertes des ports précédents restent des matrices
+indépendantes et ne bloquent pas ce prochain port.
 
 ## Frontière Git
 
 Le code du pack vit dans le clone séparé
 `analysis-cache/pluginpack-foundation`. Le dernier checkpoint poussé est
-`be1ff95` (`Integrate ForceLarzukSockets prototype`), poussé
+`9835aa8` (`Integrate Cube Quick Move prototype`), poussé
 sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le clone de fondation
 est propre.
 Le dépôt principal conserve la DLL gouvernée, la configuration vanilla et les

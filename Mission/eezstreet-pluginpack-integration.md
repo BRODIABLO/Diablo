@@ -305,6 +305,7 @@ par eezstreet sans modifier la fondation.
 | `ExtendedItemStats` | `0.3.17` intégré | `plugin-items.dll` | aucune clé publique | transport 4096 octets et tooltip défilable intégrés; deux cold starts et broker externe validés; équivalence gameplay intégrée ouverte |
 | Qty Display Fix / `QtyDisplayIssue` | `1.1.0` intégré | `plugin-items.dll` | `items.qtyDisplayIssue` | patch natif intégré, Release et cold starts vanilla/actif validés; preuve gameplay autonome conservée |
 | `ForceLarzukSockets` | `0.1.0` intégré | `plugin-quests.dll` | `quests.larzukSockets` | quinze valeurs vanilla, signature unique, Release et cold start conjoint avec Item Durability validés; preuve gameplay autonome conservée |
+| Cube Quick Move Bottom-Right | `0.1.3` intégré | `plugin-misc.dll` | `misc.cubeQuickMoveBottomRight` | 27 producteurs Cube intégrés, Release et cold starts vanilla/actif validés; preuve gameplay autonome `1x3` conservée |
 
 Le port `GambleScreenLimit` ajouté après le checkpoint `387dff8` conserve le
 contrat autonome 1.2.0 sans créer de nouveau plugin runtime : un bloc
@@ -520,8 +521,31 @@ sources/preuves gameplay sont conservées. Le checkpoint `be1ff95`
 (`Integrate ForceLarzukSockets prototype`) est poussé sur
 `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
 
-Le prochain port séquencé du lot canonique est Cube Quick Move Bottom-Right
-sous `misc.cubeQuickMoveBottomRight` dans `plugin-misc.dll`.
+Cube Quick Move `0.1.3` est maintenant intégré dans `plugin-misc.dll` sous
+`misc.cubeQuickMoveBottomRight`. Le bloc strict accepte uniquement `enabled` et
+livre `false`; le JSON joueur n'installe donc aucune redirection par défaut.
+
+Le port conserve `INVENTORY_FindFreePosition` intact et possède seulement les
+27 calls dynamiques ou explicitement page `3` déjà prouvés. Les neuf callers
+constamment page `0`, `2` ou `4` restent vanilla. Les 27 séquences originales
+ont été revérifiées byte-for-byte dans l'image canonique 92777 et les cinq
+signatures de helpers sont uniques. Le manifeste commun atteint 123 sites sans
+chevauchement. Les cinq DLL Release compilent, 15/15 CTest passent et
+`plugin-misc.dll` mesure `120832` octets avec le SHA-256
+`EB2EBA83A19E693A6FCE07D0807407A6B6D23351C23ED13205951312530D1463`.
+
+Le cold start vanilla atteint `24/24` sans redirection. Le cold start actif
+atteint aussi `24/24` avec
+`scanned=29 active=27 disabled=2 rejected=0 failed=0`; une lecture directe du
+processus confirme que les 27 calls convergent vers l'unique relais
+`0x3E80000`. Aucun crash frais n'est créé. Le runtime est restauré byte-exact,
+le témoin autonome est retiré de BKVince et ses sources, son ZIP et sa preuve
+gameplay de l'épée `1x3` placée à `4,3` sont conservés. Le checkpoint
+`9835aa8` (`Integrate Cube Quick Move prototype`) est poussé sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
+
+Le prochain port séquencé du lot canonique est Equipped Item to Cube sous
+`misc.equippedItemToCube` dans `plugin-misc.dll`.
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est
