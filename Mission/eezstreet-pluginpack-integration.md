@@ -304,6 +304,7 @@ par eezstreet sans modifier la fondation.
 | `RepairCostsCap` | `1.4.0` | `plugin-items.dll` | `items.repairCostsCap` dans `D2RPlugins.json` | fonctionnalité indépendante intégrée et cold-startée; équivalence gameplay ouverte |
 | `ExtendedItemStats` | `0.3.17` intégré | `plugin-items.dll` | aucune clé publique | transport 4096 octets et tooltip défilable intégrés; deux cold starts et broker externe validés; équivalence gameplay intégrée ouverte |
 | Qty Display Fix / `QtyDisplayIssue` | `1.1.0` intégré | `plugin-items.dll` | `items.qtyDisplayIssue` | patch natif intégré, Release et cold starts vanilla/actif validés; preuve gameplay autonome conservée |
+| `ForceLarzukSockets` | `0.1.0` intégré | `plugin-quests.dll` | `quests.larzukSockets` | quinze valeurs vanilla, signature unique, Release et cold start conjoint avec Item Durability validés; preuve gameplay autonome conservée |
 
 Le port `GambleScreenLimit` ajouté après le checkpoint `387dff8` conserve le
 contrat autonome 1.2.0 sans créer de nouveau plugin runtime : un bloc
@@ -492,8 +493,35 @@ tous les DLL autonomes remplacés avant le cold start final du lot complet.
 L'équivalence visuelle intégrée reste une régression indépendante; le témoin
 1.1.0 a déjà validé en jeu le cas central du stackable socketé.
 
-Le prochain port séquencé du lot canonique est `ForceLarzukSockets` sous
-`quests.larzukSockets` dans `plugin-quests.dll`, avec ses quinze valeurs vanilla.
+`ForceLarzukSockets 0.1.0` est maintenant intégré dans `plugin-quests.dll` sous
+`quests.larzukSockets`. Le bloc strict contient les trois difficultés et les
+cinq qualités avec les quantités visibles vanilla : Magic `1..2`, puis Rare,
+Set, Unique et Crafted à `1`. Les règles `null` ou absentes délèguent à vanilla;
+le diagnostic est désactivé dans le template joueur.
+
+Le hook propriétaire unique demeure `ITEMS_AddSockets` à `0x375560`. Sa
+signature a été étendue de 16 à 24 octets et ne possède plus qu'une occurrence
+dans l'image canonique 92777. Le manifeste commun atteint 96 sites sans
+chevauchement. Les cinq DLL Release compilent, 14/14 CTest passent et
+`plugin-quests.dll` mesure `141824` octets avec le SHA-256
+`754F372772B5D1E15ACDD74E65E35ECE2BC9E4DECAB63B3496833805A452F387`.
+
+Le premier cold start a découvert une incompatibilité de validation, pas une
+collision de hook : Larzuk vérifiait encore les octets originaux de
+`GetItemsTxtRecord` après qu'Item Durability avait installé son hook composable
+à `0x314110`. Larzuk ne possède pas cette entrée et son appel peut traverser le
+hook en conservant le même contrat. La fausse revendication a donc été retirée,
+tandis que le build guard, la signature unique du hook Larzuk et huit autres
+signatures de helpers demeurent stricts. Le retest avec le hook Durability déjà
+présent installe `0x375560`, atteint `24/24` et termine à
+`scanned=29 active=27 disabled=2 rejected=0 failed=0`, sans crash frais. Le
+runtime est restauré byte-exact, le témoin autonome est retiré de BKVince et ses
+sources/preuves gameplay sont conservées. Le checkpoint `be1ff95`
+(`Integrate ForceLarzukSockets prototype`) est poussé sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
+
+Le prochain port séquencé du lot canonique est Cube Quick Move Bottom-Right
+sous `misc.cubeQuickMoveBottomRight` dans `plugin-misc.dll`.
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est

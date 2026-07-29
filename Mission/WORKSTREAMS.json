@@ -88,7 +88,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/configurable-larzuk-sockets-3.2.md",
-      "nextGate": "Cold-start the final vanilla-valued template under the official ForceLarzukSockets name, then complete the remaining robustness matrix.",
+      "nextGate": "Run the integrated gameplay robustness matrix: clamp, invalid config, quest consumption, Infinite Larzuk and host/joiner; the vanilla-valued PluginPack cold start is complete.",
       "include": [
         "Mission/configurable-larzuk-sockets-3.2.md",
         "data-BKVince/BKVince.mpq/*Larzuk*Socket*.json",
@@ -201,24 +201,26 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Port ForceLarzukSockets into plugin-quests.dll under quests.larzukSockets with all fifteen shipped values matching vanilla; keep prior gameplay regressions as separate matrices.",
+      "nextGate": "Port the gameplay-validated Cube Quick Move Bottom-Right policy into plugin-misc.dll under misc.cubeQuickMoveBottomRight; keep prior gameplay regressions as separate matrices.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
         "Mission/bulk-skill-point-allocation-3.2.md",
         "Mission/durability-loss-resistance-3.2.md",
         "Mission/charm-inventory-auras-3.2.md",
+        "Mission/configurable-larzuk-sockets-3.2.md",
         "data-BKVince/BKVince.mpq/D2RPlugins.json",
         "data-BKVince/d2rloader/plugins/plugin-items.dll",
+        "data-BKVince/d2rloader/plugins/plugin-quests.dll",
         "data-BKVince/d2rloader/plugins/plugin-skills.dll"
       ]
     },
     {
       "id": "cube-quick-move-bottom-right",
       "name": "Cube Quick Move Bottom-Right",
-      "status": "paused",
+      "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/cube-quick-move-bottom-right-3.2.md",
-      "nextGate": "Resume only after the PluginPack foundation and unified ethereal subsystem; then port the gameplay-validated 0.1.3 policy into plugin-misc.dll while retaining the standalone witness.",
+      "nextGate": "Port the gameplay-validated 0.1.3 policy into plugin-misc.dll under misc.cubeQuickMoveBottomRight while retaining the standalone witness until integrated validation passes.",
       "include": [
         "Mission/cube-quick-move-bottom-right-3.2.md",
         "addons/CubeQuickMove/**",

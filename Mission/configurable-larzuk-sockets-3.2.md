@@ -1,11 +1,12 @@
 # ForceLarzukSockets — D2R 3.2.92777
 
-Dernière mise à jour : 27 juillet 2026
+Dernière mise à jour : 28 juillet 2026
 
 Statut : cœur fonctionnel du prototype autonome `0.1.0` validé en jeu pour les
-cinq qualités et pour le routage Normal/Nightmare/Hell. Le template final expose
-les 15 règles avec des valeurs vanilla modifiables; aucune archive publique
-n’existe et les gates de robustesse restent ouverts.
+cinq qualités et pour le routage Normal/Nightmare/Hell, puis intégré dans
+`plugin-quests.dll` sous `quests.larzukSockets`. Le template du pack expose les
+15 règles avec des valeurs vanilla modifiables; les gates de robustesse
+gameplay restent ouvertes.
 
 ## Décisions confirmées
 
@@ -269,6 +270,37 @@ Les anciennes références Diablo II 1.13c/1.13d conservées dans la ROADMAP ava
 ce recadrage sont seulement des indices sémantiques. Leurs adresses et octets
 32 bits ne sont pas transposables à D2R 3.2.92777.
 
+## Intégration au PluginPack — 28 juillet 2026
+
+- Le checkpoint `be1ff95` porte la politique autonome dans
+  `plugin-quests.dll` sous `quests.larzukSockets`, sans DLL ou JSON séparé dans
+  BKVince. Les sources autonomes restent l'oracle différentiel.
+- Le template joueur conserve les quinze quantités vanilla : Magic `1..2`,
+  puis Rare, Set, Unique et Crafted à `1` dans Normal, Nightmare et Hell;
+  `diagnostics=false`.
+- La signature du hook `ITEMS_AddSockets` à `0x375560` est étendue à 24 octets
+  et possède une seule occurrence dans l'image canonique 92777. Le manifeste
+  atteint 96 sites à propriétaire unique.
+- Les cinq DLL Release compilent et 14/14 CTest passent.
+  `plugin-quests.dll` mesure `141824` octets et porte le SHA-256
+  `754F372772B5D1E15ACDD74E65E35ECE2BC9E4DECAB63B3496833805A452F387`.
+- Le premier cold start a révélé une fausse incompatibilité : Larzuk
+  revalidait l'entrée `GetItemsTxtRecord` après le hook composable d'Item
+  Durability à `0x314110`. Larzuk n'en est pas propriétaire et son appel doit
+  traverser ce hook. Cette validation redondante est retirée, tout en conservant
+  le build guard, le hook Larzuk strict et huit signatures de helpers.
+- Le retest avec le hook Durability déjà présent installe `0x375560`, atteint
+  `24/24` et termine à
+  `scanned=29 active=27 disabled=2 rejected=0 failed=0`, sans crash frais.
+  Le runtime est ensuite restauré byte-exact et aucun processus ne reste.
+- Les preuves techniques et les logs du premier échec utile puis du retest vert
+  sont conservés sous
+  `analysis-cache/pluginpack-foundation-runtime-validation/20260729-force-larzuk-sockets/`.
+
+Le cold start intégré ne remplace pas la matrice gameplay. Les preuves autonomes
+des cinq qualités et du routage de difficulté restent valides comme oracle;
+clamp, configuration invalide, Infinite Larzuk et hôte/joiner demeurent ouverts.
+
 ## Gates observables
 
 - configuration absente, valide et invalide testée séparément;
@@ -290,8 +322,7 @@ ce recadrage sont seulement des indices sémantiques. Leurs adresses et octets
 
 ## Prochain gate
 
-Cold-starter le template final aux 15 valeurs vanilla et vérifier son chargement
-sans erreur. Tester ensuite le clamp sur une base plafonnée à un socket, la
-configuration invalide, le repli global, la consommation normale de quête et la
-coexistence avec Infinite Larzuk. Les portées globale/mod-locale et la matrice
-solo/hôte/joiner restent requises avant tout ZIP public.
+Tester le port intégré en jeu sur une base plafonnée à un socket, puis vérifier
+la configuration invalide, la consommation normale de quête et la coexistence
+avec Infinite Larzuk. La matrice solo/hôte/joiner reste requise avant toute
+proposition de merge ou livraison publique du pack.

@@ -13676,11 +13676,6 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
-                                                                                "name":  "ForceLarzukSockets.json",
-                                                                                "path":  "data-BKVince/BKVince.mpq/ForceLarzukSockets.json",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
                                                                                 "name":  "GambleScreenLimit.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/GambleScreenLimit.json",
                                                                                 "kind":  "file"
@@ -15048,11 +15043,6 @@
                                                                                                  {
                                                                                                      "name":  "FloatingDamage.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/FloatingDamage.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "ForceLarzukSockets.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/ForceLarzukSockets.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
