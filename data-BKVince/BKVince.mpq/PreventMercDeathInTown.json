@@ -1,4 +1,0 @@
-{
-  // Prevents persistent negative-life ticks from killing mercenaries in town.
-  "enabled": true
-}

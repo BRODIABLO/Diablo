@@ -167,16 +167,14 @@
     {
       "id": "prevent-merc-death-in-town",
       "name": "Prevent Merc Death in Town",
-      "status": "paused",
+      "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/prevent-merc-death-in-town-3.2.md",
-      "nextGate": "When selected in the accepted PluginPack sequence, merge misc.preventMercDeathInTown into plugin-misc.dll, preserve the standalone only as a witness, then rebuild and validate the merged option.",
+      "nextGate": "Run the integrated gameplay regression for lingering damage in and out of town, transitions, non-target units, solo, host/joiner, and save/reload; retain the standalone sources as the oracle.",
       "include": [
         "Mission/prevent-merc-death-in-town-3.2.md",
         "addons/PreventMercDeathInTown/**",
-        "data-BKVince/BKVince.mpq/PreventMercDeathInTown.json",
-        "data-BKVince/d2rloader/plugins/PreventMercDeathInTown-src/**",
-        "data-BKVince/d2rloader/plugins/PreventMercDeathInTown.dll"
+        "data-BKVince/d2rloader/plugins/PreventMercDeathInTown-src/**"
       ]
     },
     {
@@ -199,7 +197,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Port Prevent Merc Death in Town into plugin-misc.dll under misc.preventMercDeathInTown while preserving its standalone witness; keep prior regressions as separate matrices.",
+      "nextGate": "Run the final complete-pack validation with all five Release DLLs, the vanilla-default player JSON, temporary neutralization of superseded standalones, shared-hook checks, and a subsystem gameplay test plan.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
         "Mission/bulk-skill-point-allocation-3.2.md",

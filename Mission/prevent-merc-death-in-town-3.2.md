@@ -1,11 +1,13 @@
 # Prevent Merc Death in Town — D2R 3.2.92777
 
-Dernière mise à jour : 24 juillet 2026
+Dernière mise à jour : 29 juillet 2026
 
-Statut : prototype autonome hybride `PreventMercDeathInTown.dll` 0.1.0 et JSON
-implantés, compilés en Release et validés fonctionnellement par le testeur
-externe le 27 juillet 2026. Le lot est prêt à être intégré dans
-`plugin-misc.dll` sous `misc.preventMercDeathInTown`.
+Statut : comportement autonome `PreventMercDeathInTown.dll` 0.1.0 validé
+fonctionnellement par le testeur externe le 27 juillet 2026, puis porté dans
+`plugin-misc.dll` sous `misc.preventMercDeathInTown`. Le port intégré compile,
+passe 19/19 tests et ses cold starts vanilla/actif sont verts; son JSON et sa
+DLL standalone gouvernés sont retirés. La régression gameplay intégrée demeure
+ouverte et distincte de cette validation technique.
 
 ## Décisions confirmées
 
@@ -14,8 +16,8 @@ externe le 27 juillet 2026. Le lot est prêt à être intégré dans
   non un bug hypothétique ni une théorie à valider.
 - Le nom exact de la mission est `Prevent Merc Death in Town`.
 - Vincent avait retenu l’Option B, puis a demandé `Commence` le 24 juillet 2026,
-  ce qui a autorisé l’implantation du prototype. La mission est maintenant mise
-  en pause à son gate runtime pendant Repair Costs Cap.
+  ce qui a autorisé l’implantation du prototype. Son intégration au PluginPack a
+  ensuite été incluse dans la tâche autonome de nuit du 28 au 29 juillet.
 - Vincent confirme la catégorie PluginPack `misc` le 24 juillet 2026, avec
   `plugin-misc.dll` comme DLL propriétaire future et
   `misc.preventMercDeathInTown` comme clé prévue.
@@ -141,6 +143,32 @@ serviteurs ou rester active après la sortie de ville.
   préparation du merge PluginPack; elle ne remplace pas les contrôles de build,
   configuration et coexistence propres à la future DLL fusionnée.
 
+## Port PluginPack validé — 29 juillet 2026
+
+- `plugin-misc.dll` possède maintenant la fonctionnalité sous le bloc strict
+  `misc.preventMercDeathInTown`; le template joueur livre `enabled=false` et
+  n'installe aucun hook Prevent par défaut.
+- Le port emploie le `D2UnitStrc` canonique et les accesseurs partagés de type et
+  class ID. Il possède uniquement `0x448C00`; les six autres RVA sont des appels
+  natifs validés, pas des hooks revendiqués.
+- `GetUnitBaseStat` à `0x2F48C0` peut déjà être hooké par Item Durability. Prevent
+  valide donc le corps intact à `+5` puis appelle l'entrée vivante, ce qui a été
+  confirmé pendant le cold start actif avec DurabilityResistance chargé avant
+  `plugin-misc`.
+- Les cinq DLL Release compilent, 19/19 CTest passent et le manifeste commun
+  contient 132 sites uniques. `plugin-misc.dll` mesure 183296 octets, SHA-256
+  `9FDF2C1B89DC9CC5F3F8CE11EAF02D53242F04A8428CACD02812F5AE7EC723A6`.
+- Les cold starts vanilla et actif atteignent `24/24` avec
+  `scanned=26 active=24 disabled=2 rejected=0 failed=0`. Le cas actif installe
+  `0x448C00`; le cas vanilla ne le pose pas. Aucun crash frais n'est observé.
+- Le runtime, le JSON, les quatre standalones misc temporairement neutralisés et
+  les logs remplacés ont été restaurés byte-for-byte. Le standalone Prevent
+  n'était pas présent dans le runtime actif et n'a donc pas été neutralisé.
+- Le rapport local est conservé sous
+  `analysis-cache/pluginpack-foundation-runtime-validation/20260729-prevent-merc-death-in-town/report.json`.
+- Le checkpoint du fork `4f8b276` est poussé sur
+  `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
+
 ## Gates observables
 
 - propriétaire futur `misc` / `plugin-misc.dll` confirmé explicitement par Vincent;
@@ -155,8 +183,7 @@ serviteurs ou rester active après la sortie de ville.
 
 ## Prochain gate
 
-Intégrer la fonctionnalité dans `plugin-misc.dll` sous la clé
-`misc.preventMercDeathInTown`, préserver le crédit RuffnecKk sans remplacer les
-métadonnées eezstreet, supprimer ensuite la DLL et le JSON autonomes, puis
-recompiler et valider le PluginPack fusionné avec cold start, logs frais et
-coexistence des autres options `misc`.
+Inclure la fonctionnalité dans le cold start final du pack complet, puis exécuter
+une régression gameplay intégrée ciblant poison/Open Wounds, ville/hors-ville,
+portail/waypoint, joueur/autres serviteurs, solo, hôte/joiner et save/reload. Le
+cold start ne ferme pas ces observations en jeu par inférence.

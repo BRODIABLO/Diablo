@@ -221,6 +221,12 @@ under the loaded layout's gold display and keeps item generation authoritative
 on the server. Its UI and packet hooks do not overlap the vendor-overhaul hooks
 owned by `plugin-items.dll`.
 
+Prevent Merc Death in Town 0.1.0 is integrated in `plugin-misc.dll` under
+`misc.preventMercDeathInTown`. The shipped block is disabled and preserves
+vanilla regeneration. When enabled, it prevents only a lethal lingering-damage
+tick on a living mercenary in town, without healing the mercenary or protecting
+it after leaving town. Its base-stat call composes with the Item Durability hook.
+
 Item Durability 1.2.0 is integrated in `plugin-items.dll` under
 `items.itemDurability`. The shipped block is disabled and its resistance,
 ethereal maximum, forced maximum, ranged durability, and diagnostics values all

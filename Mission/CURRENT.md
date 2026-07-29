@@ -14,7 +14,8 @@ gouvernée demeure intacte. Le checkpoint de fondation `2a23212` est poussé sur
 
 Les checkpoints poussés `a51c865`, `387dff8`, `8d41581`, `a4d8dbb`,
 `5ef599f`, `78d6290`, `ab5fd53`, `25811d8`, `c4566d4`, `d6562d4`,
-`be1ff95`, `9835aa8`, `bc3ea0d`, `51b3871`, `183f955` et `2748167` ont successivement porté le bloc unique
+`be1ff95`, `9835aa8`, `bc3ea0d`, `51b3871`, `183f955`, `2748167` et
+`4f8b276` ont successivement porté le bloc unique
 `items.etherealItemRules`, puis les fonctionnalités indépendantes
 `items.repairCostsCap`, `items.gambleScreenLimit`, `items.groundItemLabels` et
 `items.enhancedDamageMinMaxFix`, `items.itemDurability` et
@@ -23,37 +24,40 @@ Les checkpoints poussés `a51c865`, `387dff8`, `8d41581`, `a4d8dbb`,
 `plugin-items.dll`, `skills.bulkSkillPointAllocation` dans `plugin-skills.dll`,
 `quests.larzukSockets` dans `plugin-quests.dll`, puis
 `misc.cubeQuickMoveBottomRight`, `misc.equippedItemToCube` puis
-`misc.transmuteHotkey` puis `misc.vendorStockRefresh` dans
+`misc.transmuteHotkey`, `misc.vendorStockRefresh` puis
+`misc.preventMercDeathInTown` dans
 `plugin-misc.dll`. Les configurations, hooks et tests restent indépendants;
 leur présence dans les DLL du pack ne crée aucun bloc fonctionnel commun.
 
-Vendor Stock Refresh `0.1.5` est maintenant integre sous
-`misc.vendorStockRefresh`. Le template livre `enabled=false`; aucun de ses
-quatre hooks n'est installe par defaut. Le port durcit le guard de configuration
-du panel a 36 octets uniques et conserve les chemins natifs UI, paquet et
-serveur sans chevaucher le vendor overhaul de `plugin-items`.
+Prevent Merc Death in Town `0.1.0` est maintenant intégré sous
+`misc.preventMercDeathInTown`. Le template livre `enabled=false`; aucun hook
+n'est installé par défaut. Activé, le port possède uniquement `0x448C00`,
+emploie le `D2UnitStrc` canonique et valide le corps intact de
+`GetUnitBaseStat+5`, ce qui lui permet de composer avec le hook Item Durability
+déjà vivant à `0x2F48C0`.
 
-Les cinq DLL Release compilent, 18/18 CTest passent et le manifeste porte 131
-sites a proprietaire unique. `plugin-misc.dll` porte le SHA-256
-`189115496962912D6B781E4B89A3F4926882513B429830663B3DCD9ADC04CA4F`.
-Les cold starts vanilla et actif atteignent `24/24`, zero rejet et zero echec;
-la lecture memoire confirme les quatre hooks du cas actif. Le runtime et les
-standalones sont restaures byte-exact, sans processus restant. La DLL et le JSON
-standalone sont retires de BKVince; leurs sources et la preuve gameplay Charsi
-demeurent l'oracle.
+Les cinq DLL Release compilent, 19/19 CTest passent et le manifeste porte 132
+sites à propriétaire unique. `plugin-misc.dll` porte le SHA-256
+`9FDF2C1B89DC9CC5F3F8CE11EAF02D53242F04A8428CACD02812F5AE7EC723A6`.
+Les cold starts vanilla et actif atteignent `24/24`, zéro rejet et zéro échec;
+la lecture mémoire confirme le hook du cas actif et la coexistence avec
+DurabilityResistance. Le runtime est restauré byte-exact, sans processus
+restant. La DLL et le JSON standalone gouvernés sont retirés de BKVince; leurs
+sources et la preuve gameplay externe demeurent l'oracle.
 
 ## Prochain gate
 
-Porter ensuite Prevent Merc Death in Town dans `plugin-misc.dll` sous
-`misc.preventMercDeathInTown`, en conservant son temoin autonome valide comme
-oracle. Les regressions gameplay ouvertes des ports precedents restent des
-matrices independantes et ne bloquent pas ce prochain port.
+Exécuter la validation finale du pack complet : cinq DLL Release au même commit,
+JSON joueur vanilla, neutralisation temporaire de tous les standalones remplacés,
+cold starts vanilla et conjoint actif, audit des hooks partagés, puis produire le
+plan de tests joueur par sous-système. Les régressions gameplay restent des
+matrices indépendantes et ne doivent pas être déclarées réussies par inférence.
 
 ## Frontière Git
 
 Le code du pack vit dans le clone séparé
 `analysis-cache/pluginpack-foundation`. Le dernier checkpoint poussé est
-`2748167` (`Integrate Vendor Stock Refresh prototype`), pousse
+`4f8b276` (`Integrate Prevent Merc Death in Town prototype`), poussé
 sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le clone de fondation
 est propre.
 Le dépôt principal conserve la DLL gouvernée, la configuration vanilla et les

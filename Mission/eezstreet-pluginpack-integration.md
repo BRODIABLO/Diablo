@@ -306,6 +306,10 @@ par eezstreet sans modifier la fondation.
 | Qty Display Fix / `QtyDisplayIssue` | `1.1.0` intégré | `plugin-items.dll` | `items.qtyDisplayIssue` | patch natif intégré, Release et cold starts vanilla/actif validés; preuve gameplay autonome conservée |
 | `ForceLarzukSockets` | `0.1.0` intégré | `plugin-quests.dll` | `quests.larzukSockets` | quinze valeurs vanilla, signature unique, Release et cold start conjoint avec Item Durability validés; preuve gameplay autonome conservée |
 | Cube Quick Move Bottom-Right | `0.1.3` intégré | `plugin-misc.dll` | `misc.cubeQuickMoveBottomRight` | 27 producteurs Cube intégrés, Release et cold starts vanilla/actif validés; preuve gameplay autonome `1x3` conservée |
+| Equipped Item to Cube | `0.2.0` intégré | `plugin-misc.dll` | `misc.equippedItemToCube` | deux hooks intégrés, composition avec ExtendedItemStats et cold starts vanilla/conjoint validés; preuve gameplay autonome conservée |
+| Assign Transmute Hotkey | `0.2.0` intégré | `plugin-misc.dll` | `misc.transmuteHotkey` | deux hooks intégrés, deux régimes du dispatcher UI validés et cold starts vanilla/actifs verts; preuve gameplay autonome conservée |
+| `VendorStockRefresh` | `0.1.5` intégré | `plugin-misc.dll` | `misc.vendorStockRefresh` | quatre hooks uniques, séparation du vendor overhaul et cold starts vanilla/actif validés; preuve gameplay autonome conservée |
+| `PreventMercDeathInTown` | `0.1.0` intégré | `plugin-misc.dll` | `misc.preventMercDeathInTown` | hook unique, composition avec Item Durability et cold starts vanilla/actif validés; preuve gameplay externe conservée |
 
 Le port `GambleScreenLimit` ajouté après le checkpoint `387dff8` conserve le
 contrat autonome 1.2.0 sans créer de nouveau plugin runtime : un bloc
@@ -631,8 +635,41 @@ Le checkpoint pack `2748167` (`Integrate Vendor Stock Refresh prototype`) est
 pousse sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le JSON et la
 DLL standalone gouvernes sont retires de BKVince; sources, archive et preuve
 gameplay Charsi restent l'oracle. La regression gameplay integree demeure une
-matrice independante. Le prochain et dernier port canonique est
-`PreventMercDeathInTown` sous `misc.preventMercDeathInTown`.
+matrice independante.
+
+Prevent Merc Death in Town / `PreventMercDeathInTown 0.1.0` est maintenant
+intégré dans `plugin-misc.dll` sous `misc.preventMercDeathInTown`. Le bloc strict
+livre `enabled=false`; aucun hook n'est installé par défaut et le tick vanilla
+reste intact. Activé, le module protège seulement le résultat projeté d'un tick
+négatif létal appliqué à l'une des cinq classes de mercenaires dans une room de
+ville; il ne guérit pas, reprogramme `STATREGEN` au frame suivant et délègue tous
+les cas hors cible au trampoline vanilla.
+
+Le module possède l'unique hook `0x448C00`. Les helpers `0x2F5020`, `0x335E80`,
+`0x34B440`, `0x2F0750` et `0x48B720` conservent leurs signatures uniques. Pour
+`GetUnitBaseStat` à `0x2F48C0`, le port valide le corps intact à `+5` et appelle
+le point d'entrée vivant : il compose donc avec Item Durability lorsque celui-ci
+possède déjà le hook. `D2UnitStrc`, le type et le class ID viennent du contrat
+canonique partagé, sans structure locale dupliquée.
+
+Les cinq DLL Release compilent, 19/19 CTest passent et le manifeste atteint 132
+sites sans chevauchement. `plugin-misc.dll` mesure 183296 octets et porte le
+SHA-256 `9FDF2C1B89DC9CC5F3F8CE11EAF02D53242F04A8428CACD02812F5AE7EC723A6`.
+Les cold starts vanilla et actif atteignent `24/24` avec
+`scanned=26 active=24 disabled=2 rejected=0 failed=0`; le cas vanilla ne pose
+aucun hook Prevent, tandis que le cas actif installe `0x448C00` après le hook
+Durability déjà vivant à `0x2F48C0`. Le runtime et les quatre standalones misc
+temporairement neutralisés sont restaurés byte-exact, sans processus restant.
+Le rapport est conservé sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260729-prevent-merc-death-in-town/report.json`.
+
+Le checkpoint pack `4f8b276` (`Integrate Prevent Merc Death in Town prototype`)
+est poussé sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le JSON et la
+DLL standalone gouvernés sont retirés de BKVince; les sources et la preuve
+gameplay externe du 27 juillet restent l'oracle. Les 16 fonctionnalités du lot
+canonique sont maintenant portées. La validation finale du pack complet et le
+plan de tests joueur constituent le prochain gate; les régressions gameplay
+intégrées restent des matrices indépendantes.
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est
