@@ -671,6 +671,64 @@ canonique sont maintenant portées. La validation finale du pack complet et le
 plan de tests joueur constituent le prochain gate; les régressions gameplay
 intégrées restent des matrices indépendantes.
 
+## Validation finale du pack complet — 29 juillet 2026
+
+Le lot canonique des 16 fonctionnalités est maintenant complet sur la branche
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le checkpoint documentaire
+`5b56690` ajoute au fork `RUFFNECKK-INTEGRATION.md`, qui expose l'inventaire,
+les propriétaires, les défauts vanilla, les contrats de hooks partagés, les
+limites avec Transmogrify et les cinq lots de tests joueur. La structure
+d'eezstreet demeure inchangée : cinq DLL, cinq IDs existants et un seul
+`D2RPlugins.json`; aucun standalone RuffnecKk remplacé ne fait partie du runtime
+final du pack.
+
+Les cinq DLL Release ont été reconstruites du même commit. Le manifeste commun
+contient 132 sites à propriétaire unique et 19/19 CTest passent. Les artefacts
+testés sont :
+
+| Artefact | Taille | SHA-256 |
+|---|---:|---|
+| `plugin-items.dll` | 626688 | `44D9992D67D1F1E02A5E2050DB7C461FD1D6E8DD8DD00204859EDBC075EEC006` |
+| `plugin-levels.dll` | 105984 | `00B649002F5D7E91E2714786733CB7F58554248AE200365A9CEEF8385F571A54` |
+| `plugin-misc.dll` | 183296 | `9FDF2C1B89DC9CC5F3F8CE11EAF02D53242F04A8428CACD02812F5AE7EC723A6` |
+| `plugin-quests.dll` | 141824 | `754F372772B5D1E15ACDD74E65E35ECE2BC9E4DECAB63B3496833805A452F387` |
+| `plugin-skills.dll` | 144896 | `43ED46F061F3AE6816F7F386CAA5A93ABDE195AEADADD9B750AA467CB13D4A08` |
+
+Le fichier livré aux joueurs est le `D2RPlugins.json` du fork et de BKVince,
+SHA-256
+`F4077ED0C2CBF69AF5C394BAE704A647117668F3ED21BB256FC76F69E3A7532D`.
+Toutes les nouvelles fonctions configurables y sont désactivées; les 15 règles
+Larzuk visibles reprennent les quantités vanilla et l'infrastructure interne
+ExtendedItemStats n'a aucune clé publique. Le cold start de contrôle atteint
+`24/24`, avec `scanned=16 active=14 disabled=2 rejected=0 failed=0` et
+`scanned=19 applied=19 disabled=0 failed=0` pour les memory patches. Les hooks
+internes ExtendedItemStats et Larzuk restent stricts mais reproduisent le
+résultat joueur vanilla avec ce template.
+
+Le cold start conjoint active les 16 chemins avec deux gardes externes :
+`bowsAndCrossbowsHaveDurability=false` laisse `0x314110` au Transmogrify hors
+lot, et `confirmShiftAllocation=false` laisse `0x843D90` à RemoteStash.
+Advanced Item Tooltips, RemoteStash et Transmogrify demeurent chargés. Les
+lectures mémoire confirment Item Durability `0x2F48C0`, Prevent
+`0x448C00`, ExtendedItemStats `0x2A7810`, EthItemRules `0x373890` et le relais
+Cube `0x3E80000`. Le résultat reste `24/24`, `active=14 rejected=0 failed=0`,
+sans crash frais. Les deux plugins désactivés sont seulement les doublons
+globaux de deux plugins déjà chargés mod-localement.
+
+Treize DLL standalone mod-locales, Qty Display global et l'ancien patch mémoire
+ethereal ont été neutralisés uniquement pendant le test. Après les trois cold
+starts — contrôle, préflight actif et actif final — les cinq DLL originales, le
+JSON, les 14 standalones, le patch, 59 logs et 13 rapports de crash ont tous été
+restaurés : 93/93 hashes identiques et zéro processus restant. Le rapport local
+est conservé sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260729-final-pack/report.json`.
+
+Cette preuve ferme le gate technique de coexistence et de chargement; elle ne
+transforme pas les observations gameplay non exécutées en succès. Vincent peut
+tester par cinq lots plutôt qu'un redémarrage par plugin : UI/limites, règles
+d'items et durabilité, workflow Cube, services de ville, puis quêtes/skills. Les
+témoins standalone déjà validés restent les oracles en cas d'écart.
+
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est
 simplement `plugin-items.dll`, au même titre que les autres ports. Il précise

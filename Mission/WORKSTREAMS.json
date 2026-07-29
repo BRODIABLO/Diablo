@@ -197,7 +197,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Run the final complete-pack validation with all five Release DLLs, the vanilla-default player JSON, temporary neutralization of superseded standalones, shared-hook checks, and a subsystem gameplay test plan.",
+      "nextGate": "Run the five documented integrated gameplay batches, record only observed results, then submit the validated five-DLL branch and vanilla-default JSON for eezstreet's upstream review.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
         "Mission/bulk-skill-point-allocation-3.2.md",

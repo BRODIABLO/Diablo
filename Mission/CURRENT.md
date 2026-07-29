@@ -1,6 +1,6 @@
 # Mission courante
 
-Dernière mise à jour : 28 juillet 2026
+Dernière mise à jour : 29 juillet 2026
 
 ## Priorité active
 
@@ -29,35 +29,36 @@ Les checkpoints poussés `a51c865`, `387dff8`, `8d41581`, `a4d8dbb`,
 `plugin-misc.dll`. Les configurations, hooks et tests restent indépendants;
 leur présence dans les DLL du pack ne crée aucun bloc fonctionnel commun.
 
-Prevent Merc Death in Town `0.1.0` est maintenant intégré sous
-`misc.preventMercDeathInTown`. Le template livre `enabled=false`; aucun hook
-n'est installé par défaut. Activé, le port possède uniquement `0x448C00`,
-emploie le `D2UnitStrc` canonique et valide le corps intact de
-`GetUnitBaseStat+5`, ce qui lui permet de composer avec le hook Item Durability
-déjà vivant à `0x2F48C0`.
+Les 16 fonctionnalités canoniques sont maintenant portées et la validation
+finale du pack complet est verte. Les cinq DLL Release proviennent du même
+commit, 19/19 CTest passent et le manifeste porte 132 sites à propriétaire
+unique. Le JSON joueur SHA-256
+`F4077ED0C2CBF69AF5C394BAE704A647117668F3ED21BB256FC76F69E3A7532D`
+conserve les effets configurables désactivés et les valeurs vanilla.
 
-Les cinq DLL Release compilent, 19/19 CTest passent et le manifeste porte 132
-sites à propriétaire unique. `plugin-misc.dll` porte le SHA-256
-`9FDF2C1B89DC9CC5F3F8CE11EAF02D53242F04A8428CACD02812F5AE7EC723A6`.
-Les cold starts vanilla et actif atteignent `24/24`, zéro rejet et zéro échec;
-la lecture mémoire confirme le hook du cas actif et la coexistence avec
-DurabilityResistance. Le runtime est restauré byte-exact, sans processus
-restant. La DLL et le JSON standalone gouvernés sont retirés de BKVince; leurs
-sources et la preuve gameplay externe demeurent l'oracle.
+Les cold starts vanilla et conjoint actif atteignent tous deux `24/24` avec
+`scanned=16 active=14 disabled=2 rejected=0 failed=0`. Le cas actif prouve
+notamment Item Durability `0x2F48C0` avec Prevent `0x448C00`, EthItemRules
+`0x373890`, ExtendedItemStats `0x2A7810`, le relais Cube `0x3E80000`, ainsi que
+RemoteStash propriétaire de `0x843D90` et Transmogrify externe propriétaire de
+`0x314110`. Aucun crash frais n'est créé. Les 93 fichiers runtime contrôlés sont
+restaurés par SHA-256 et aucun processus ne reste. Le document public
+`RUFFNECKK-INTEGRATION.md` du fork contient l'inventaire, les limites de
+compatibilité et le plan de tests joueur par sous-système.
 
 ## Prochain gate
 
-Exécuter la validation finale du pack complet : cinq DLL Release au même commit,
-JSON joueur vanilla, neutralisation temporaire de tous les standalones remplacés,
-cold starts vanilla et conjoint actif, audit des hooks partagés, puis produire le
-plan de tests joueur par sous-système. Les régressions gameplay restent des
-matrices indépendantes et ne doivent pas être déclarées réussies par inférence.
+Faire les smoke tests gameplay intégrés par lots — UI/limites, règles d'items,
+Cube, services de ville, quêtes/skills — puis soumettre la branche à la revue
+d'eezstreet. Il n'est pas nécessaire de relancer le jeu une fois par plugin;
+chaque observation gameplay non exécutée reste néanmoins ouverte et ne doit pas
+être déduite des cold starts techniques.
 
 ## Frontière Git
 
 Le code du pack vit dans le clone séparé
 `analysis-cache/pluginpack-foundation`. Le dernier checkpoint poussé est
-`4f8b276` (`Integrate Prevent Merc Death in Town prototype`), poussé
+`5b56690` (`Document complete PluginPack validation`), poussé
 sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le clone de fondation
 est propre.
 Le dépôt principal conserve la DLL gouvernée, la configuration vanilla et les
