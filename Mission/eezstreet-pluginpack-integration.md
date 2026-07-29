@@ -1038,6 +1038,176 @@ Le JSON public conserve donc exactement son contenu et son hash précédents; ce
 gates techniques autorisent le début des observations gameplay sans les
 remplacer.
 
+## Durcissement de la suite de tests du pack — 29 juillet 2026
+
+L'audit préalable à la revue amont a démontré que 20 des 21 exécutables de test
+C++ employaient uniquement `assert(...)`, alors que les projets MSVC Release
+définissent `NDEBUG`. Les expressions correspondantes n'étaient donc pas
+évaluées en Release et l'ancien résultat `25/25` ne constituait pas une preuve
+valide pour ces tests.
+
+Le fork remplace maintenant toutes les assertions de test par un même
+`TEST_REQUIRE` indépendant de `NDEBUG`. Les 21 exécutables contiennent 507
+contrôles actifs et aucune invocation de l'assertion standard. Le pack complet,
+les deux validateurs du manifeste et les tests compilent puis passent `25/25`
+en Debug et `25/25` en Release. Un contrôle négatif exécuté sur le binaire
+Release `items-ethereal-policy-tests.exe` sans son argument JSON échoue bien à
+la ligne attendue avec `test requirement failed: argc == 2`; cette condition
+était auparavant supprimée par le préprocesseur.
+
+Ce résultat rétablit la valeur probante de la suite existante, sans encore
+prouver le comportement en jeu. Le prochain gate de durcissement est la barrière
+d'activation des fonctionnalités lors d'un échec partiel de transaction, puis
+la fermeture sûre des threads de travail avant tout déchargement de DLL.
+
+## Barrière d’activation et cycle de vie des threads — 29 juillet 2026
+
+Le commit différé est maintenant une vraie frontière d’activation. Les
+opérations requises sont appliquées avant les commandes console optionnelles;
+les hooks inline et les relais de call site passent par un garde alloué pour la
+durée du processus. Tant que toutes les opérations requises n’ont pas réussi,
+ce garde délègue au trampoline original. Un échec désactive immédiatement tous
+les détours gardés et restaure en ordre inverse chaque écriture directe déjà
+appliquée. La DLL peut donc être rejetée après un rollback complet; elle reste
+chargée mais inactive uniquement si une restauration a elle-même échoué.
+
+Le test transactionnel injecte maintenant un refus à chacune de cinq positions,
+vérifie l’ordre inverse des rollbacks, le comptage d’un échec de rollback et
+l’exécution réelle du relais x64 avant activation, après commit et après
+désactivation. Il applique aussi une écriture exécutable par le wrapper public,
+force l’échec de l’opération suivante et prouve que l’octet original est remis.
+
+Les workers de Transmute Hotkey et Extended Item Stats retiennent désormais une
+référence sur leur propre module avant de démarrer, la libèrent seulement en
+quittant leur thread et ne détruisent plus leurs handles ou leur état après un
+timeout d’arrêt. L’overlay Extended Item Stats bloque les nouvelles callbacks,
+attend la fin des callbacks actives, retire ses trois hooks MinHook et ne libère
+sa référence de module qu’après une fermeture complète. Les cinq exports
+d’unload abaissent le garde transactionnel avant tout nettoyage.
+
+Les builds complets Debug et Release passent `25/25` CTest; le manifeste et le
+code source concordent toujours sur `135/135` sites gouvernés. Les artefacts
+Release ont ensuite subi deux cold starts isolés avec le JSON public :
+
+- portée mod-locale :
+  `analysis-cache/pluginpack-foundation-runtime-validation/20260729-155350644-hardening-activation-thread-lifecycle-mod-local/`;
+- portée globale :
+  `analysis-cache/pluginpack-foundation-runtime-validation/20260729-155436236-hardening-activation-thread-lifecycle-global/`.
+
+Dans les deux portées, D2RLoader charge `5/5` plugins sans rejet ni erreur, les
+six logs sont frais, les caps restent aux valeurs vanilla `40`, `50` et `95`,
+et les `36/36` fichiers neutralisés sont restaurés sans écart de hash. Ces cold
+starts ferment le gate de chargement des nouveaux gardes. Ils arrêtent toutefois
+le processus de test de force : l’appel runtime des exports d’unload et le
+comportement fonctionnel en partie restent des observations distinctes à faire.
+
+## Défauts sûrs, indépendance et reproductibilité — 29 juillet 2026
+
+L’audit de la fonctionnalité Extended Item Stats a séparé trois effets qui
+étaient jusque-là activés par le même booléen. Le JSON joueur conserve
+`items.extendedItemStats.enabled=true` pour afficher les listes complètes de
+stats dans un tooltip scrollable, mais livre
+`oversizedItemDataTransport=false` et `showScrollBar=false`. Le chemin par
+défaut n’installe donc ni les six hooks de paquets d’items ni les trois hooks
+Direct3D de l’indicateur graphique. Les deux capacités avancées restent
+explicitement disponibles sans devenir des dépendances de l’affichage local.
+
+La politique JSON couvre les deux nouveaux booléens, leurs défauts et leurs
+types invalides. Avec les défauts publics, `plugin-items` commet `18/18`
+opérations; avec le transport explicitement activé, il commet `24/24` et les
+six RVA de transport sont présents. Les deux modes ont chacun réussi un cold
+start isolé. L’indicateur graphique activé séparément a lui aussi démarré sans
+rejet; cette preuve de chargement ne remplace pas l’observation visuelle en jeu.
+
+Les recherches et appels codés en dur vers des DLL externes ont été retirés des
+pipelines tooltip, item-record, overlay et confirmation de skills. Item
+Durability et Bulk Skill Point Allocation possèdent maintenant leurs hooks via
+l’API composable de D2RLoader. Leurs exports génériques d’inscription demeurent
+disponibles, avec désinscription explicite, mais le pack ne recherche aucun
+projet tiers par son nom. Un cold start témoin avec bows/crossbows et la
+confirmation Shift activés ensemble prouve les hooks propriétaires
+`0x314110`, `0x5F4B90` et `0x843D90`, sans rejet ni mention externe dans
+les logs.
+
+La version des cinq DLL est centralisée à `2.1.0`. Les dépendances ImGui
+1.91.5 et MinHook 1.3.4 sont épinglées à leurs commits exacts plutôt qu’à des
+tags déplaçables. Le workflow Windows ajouté configure un build x64 neuf,
+compile et exécute les tests en Debug puis en Release. La même séquence a été
+reproduite localement sous `build-ci` et passe `25/25` dans les deux modes.
+La déclaration MIT du README possède maintenant son fichier `LICENSE`, et les
+licences d’ImGui, MinHook et de ses composants HDE sont reproduites dans
+`THIRD_PARTY_NOTICES.md` pour accompagner une future distribution binaire.
+
+Les artefacts finaux `2.1.0` et le JSON public ont enfin réussi les deux
+portées hybrides :
+
+- mod-locale :
+  `analysis-cache/pluginpack-foundation-runtime-validation/20260729-161937125-final-safe-default-v210-mod-local/`;
+- globale :
+  `analysis-cache/pluginpack-foundation-runtime-validation/20260729-162009343-final-safe-default-v210-global/`.
+
+Chaque essai charge `5/5` DLL, sans memory patch, rejet ou échec, conserve les
+caps vanilla `40/50/95` et restaure `36/36` fichiers par hash. Les hashes
+finaux sont `83D4C38DD511D2572CAB37BBE83C945630579F2C5F799B3B15A42EBAE4AA708A`
+pour le JSON et
+`FFC691ABD08EF11DEE715C284C752D6633A0FF503179BBEF2A559935E471DD15`
+pour `plugin-items.dll`. Depuis le checkpoint poussé `e3ec761`, le seul
+changement du JSON concerne le bloc RuffnecKk Extended Item Stats; aucune
+description historique d’eezstreet n’a été réécrite.
+
+## Matrice tout activé et correction des relais `call rel32` — 29 juillet 2026
+
+Un premier cold start avec toutes les fonctions historiques et nouvelles
+activées simultanément a révélé un défaut réel du wrapper commun des call sites.
+Le relais x64 alloué près de l’instruction pouvait se trouver à une adresse
+inférieure à la base de `D2R.exe`; sa conversion en RVA non signé avant l’appel
+à `PatchRel32` produisait alors `rva address overflow`. Items, misc et skills
+étaient correctement refusés et désactivés par la transaction, avec restauration
+des écritures directes déjà appliquées, mais la coexistence complète n’était pas
+encore acquise. Cette preuve négative est conservée sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260729-162557300-all-features-enabled-coexistence-mod-local/`.
+
+Le wrapper encode maintenant lui-même l’instruction `E8 + rel32` à partir des
+adresses absolues du call site et du relais, puis remet ces cinq octets à
+`D2RLoader::PatchBytes`. Le déplacement reste strictement borné à l’intervalle
+signé rel32; le loader conserve donc la validation des octets attendus et le
+rejet des collisions, sans imposer qu’un relais valide soit situé après la base
+de l’exécutable. Un test dédié vérifie en Debug et en Release que ce chemin
+emploie bien `PatchBytes`, produit un `E8` décodable et cible une page relais
+exécutable valide.
+
+La matrice tout activé rejouée après correction atteint le frontend `24/24` et
+charge les cinq DLL, avec `active=5 rejected=0 failed=0`. Les transactions
+commettent `72/72` opérations pour items, `2/2` pour levels, `39/39` pour misc,
+`17/17` pour quests et `13/13` pour skills, incluant simultanément le transport
+Extended Item Stats, son indicateur graphique, Item Durability, Bulk Skill Point
+Allocation et toutes les fonctions historiques d’eezstreet. La preuve est sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260729-163414577-all-features-enabled-rel32-fix-mod-local/`.
+
+Après remise du JSON public à ses défauts, les `25/25` CTest repassent en Debug
+et en Release et les `135/135` écritures demeurent gouvernées. Deux derniers cold
+starts utilisent les mêmes DLL Release et le JSON public, d’abord en portée
+mod-locale puis globale :
+
+- `analysis-cache/pluginpack-foundation-runtime-validation/20260729-163621284-final-default-v210-rel32-fix-mod-local/`;
+- `analysis-cache/pluginpack-foundation-runtime-validation/20260729-163708192-final-default-v210-rel32-fix-global/`.
+
+Les deux essais atteignent `24/24`, chargent `5/5` plugins sans erreur, gardent
+les caps vanilla `40/50/95` et restaurent `36/36` fichiers sans écart de hash.
+Avec les défauts publics, les commits sont `18/18` pour items, `0/0` pour levels,
+`6/6` pour misc, `0/0` pour quests et `2/2` pour skills. Les SHA-256 finaux sont :
+
+- `D2RPlugins.json` : `C596C017F0D0F64203859266C968F0D84AFFC608140B9C3ADB435AB4621F715A`;
+- `plugin-items.dll` : `B9DB7CA2A84751EA287FBA3EB8194E659445BEF9C085BEDAEB0227D42385CF86`;
+- `plugin-levels.dll` : `2E9146802ECF8F3967A30EBB4A4A4B530AF1383CFA5556DBB161B3EC6ECB5000`;
+- `plugin-misc.dll` : `FFA7338126F27FFE752CB6223828995A3C44249123C678CF1DFADA5655E3E58D`;
+- `plugin-quests.dll` : `FB134ECAB64EC952BC2B9CE11CFB2654A9C29E9B34867350A3529712E544B721`;
+- `plugin-skills.dll` : `23548D8CD916BF83E9CCB74E44A6C651FBA2EC2FD05E58F3572178A7263B57FF`.
+
+Cette matrice ferme le gate technique de coexistence et de chargement. Elle ne
+remplace pas les observations fonctionnelles en partie ni un test explicite des
+exports d’unload à chaud.
+
 ## Correction du premier pilote — 27 juillet 2026
 
 Vincent confirme que `GroundItemLabelLimit` appartient à la catégorie `items`,
