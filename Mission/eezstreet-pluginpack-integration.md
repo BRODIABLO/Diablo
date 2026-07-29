@@ -298,7 +298,7 @@ par eezstreet sans modifier la fondation.
 |---|---|---|---|---|
 | `GambleScreenLimit` | `1.2.0` | `plugin-items.dll` | `items.gambleScreenLimit` dans `D2RPlugins.json` | port intégré, Release et cold starts vanilla/actif validés; régression gameplay intégrée optionnelle |
 | `GroundItemLabelLimit` | `1.2.0` intégré | `plugin-items.dll` | `items.groundItemLabels` dans `D2RPlugins.json` | port intégré, Release et cold starts 32/64/128 validés; régression gameplay intégrée ouverte |
-| Item Durability / `DurabilityResistance` | `1.2.0` intégré | `plugin-items.dll` | `items.itemDurability` dans `D2RPlugins.json` | port intégré, Release et trois cold starts validés; compatibilité ranged avec Transmogrify externe ouverte |
+| Item Durability / `DurabilityResistance` | `1.2.0` intégré | `plugin-items.dll` | `items.itemDurability` dans `D2RPlugins.json` | port intégré; pipeline partagé de records et trois ordres de coexistence validés; équivalence gameplay ouverte |
 | Charm Aura Trigger Fix / `CharmInventoryAuras` | `1.6.0` intégré | `plugin-items.dll` | `items.charmAuraTriggerFix` dans `D2RPlugins.json` | port intégré, Release et cold starts vanilla/actif validés; équivalence gameplay town-respawn ouverte |
 | `EnhancedDamageMinMaxFix` | `1.2.0` intégré | `plugin-items.dll` | `items.enhancedDamageMinMaxFix` dans `D2RPlugins.json` | port intégré, Release et cold starts vanilla/actif validés; équivalence gameplay intégrée ouverte |
 | `BulkSkillPointAllocation` | `1.2.4` intégré | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | port intégré, Release et trois cold starts validés; équivalence gameplay intégrée ouverte |
@@ -896,6 +896,96 @@ termine avec `scanned=14 active=13 disabled=1 rejected=0 failed=0`, applique
 les 20/20 patchsets et atteint l'étape de démarrage 24/24. Transmogrify reste
 donc un compagnon optionnel : lorsqu'il est absent, `plugin-items.dll` possède
 et exécute lui-même tout le pipeline Extended Item Stats.
+
+## Suppression de la restriction bows/crossbows — 29 juillet 2026
+
+Vincent refuse qu'une option publique du pack exige de connaître, désactiver ou
+ordonner un plugin externe. La collision historique de `0x314110` est donc
+remplacée par un courtier symétrique de records : le premier module chargé pose
+l'unique hook et le second enregistre une transformation pure auprès de ce
+propriétaire. Chaque côté conserve aussi son fonctionnement autonome; aucun
+ordre de chargement ni réglage de compatibilité n'est exposé au joueur.
+
+La configuration runtime de test active simultanément
+`items.itemDurability.enabled=true` et
+`bowsAndCrossbowsHaveDurability=true`. Trois cold starts frais atteignent 24/24,
+avec 20/20 patchsets, zéro rejet et zéro échec : `plugin-items` propriétaire
+puis consommateur délégué; ordre inverse avec l'autre module propriétaire;
+enfin `plugin-items` seul et propriétaire. Chaque scénario ne journalise qu'une
+installation de `0x314110`. Les tests Release restent verts à 20/20 pour le
+pack et 1/1 pour le consommateur de coexistence. Le JSON runtime et les DLL
+temporaires sont ensuite restaurés à leurs chemins normaux; le JSON public
+conserve ses valeurs vanilla par défaut.
+
+Le README et les instructions publiques décrivent désormais le pack comme un
+produit indépendant. Ils ne nomment aucun projet externe et ne présentent plus
+de « compatibility limits »; les détails de coexistence restent une preuve
+interne de mission, pas une responsabilité du joueur.
+
+## Durcissement du socle historique du pack — 29 juillet 2026
+
+Le checkpoint du fork `4d482c6` (`Harden PluginPack integration prototype`) est
+poussé sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
+
+L'audit final a trouvé trois réglages historiques d'eezstreet qui étaient lus
+dans `D2RPlugins.json` sans être appliqués par `plugin-items.dll` :
+`items.physResistCap`, `items.elementalResistCap` et `items.absorbCap`. Le
+workbench vérifié de `D2R.exe 3.2.92777` prouve maintenant leurs trois octets
+immédiats : `0x4524D6` vaut `50` en vanilla, `0x4524DE` vaut `95` et
+`0x4506A1` vaut `40`. Les séquences strictes qui les entourent sont uniques
+dans ce build; les trois sites sont inscrits dans `known-rvas.json` avec une
+confiance haute et dans le manifeste du fork.
+
+Le chargement des cinq DLL est désormais fail-closed. Chaque point d'entrée
+refuse un contexte nul ou un build autre que `92777`; chaque module prévalide
+toutes ses signatures historiques configurées avant sa première écriture, puis
+arrête immédiatement son chargement si un patch, un relais ou un hook échoue.
+Les redirections historiques `/players` et `PlayerConditionCalc` utilisent un
+relais proche enregistré par D2RLoader au lieu d'une écriture exécutable directe.
+Les valeurs `0` des seuils de difficulté des vendeurs délèguent de nouveau au
+comportement vanilla, conformément aux commentaires originaux d'eezstreet.
+
+Le manifeste porte maintenant `135` sites à propriétaire unique. Une nouvelle
+validation croise le manifeste et le code source : chacune des `135` écritures
+exécutables porte exactement un identifiant de site, aucun identifiant n'est
+dupliqué ou absent, et un test négatif refuse explicitement une écriture brute
+qui contournerait les wrappers gouvernés. La configuration CMake, les cinq DLL
+Release x64 et `22/22` CTest sont verts.
+
+Le cold start isolé du pack déploie uniquement les cinq DLL et le JSON public,
+sans autre DLL ni memory patch dans les portées globale ou mod-locale. Les
+hashes source/runtime sont identiques, D2RLoader détecte le build `3.2.92777`,
+charge `scanned=5 active=5 disabled=0 rejected=0 failed=0`, applique
+`scanned=0` memory patch et atteint `24/24`. Les cinq correctifs livrés actifs
+par défaut suivent la configuration publique, tandis que les autres ajouts
+restent désactivés.
+
+Un second démarrage isolé active les trois caps à des valeurs témoins non
+vanilla. La lecture du processus vivant prouve `absorbCap=41` à `0x4506A1`,
+`physResistCap=51` à `0x4524D6` et `elementalResistCap=96` à `0x4524DE`; les
+cinq DLL restent actives sans rejet ni échec et le démarrage atteint encore
+`24/24`. Après chaque essai, les `36/36` DLL, patches et fichiers de
+configuration temporairement déplacés sont restaurés par SHA-256 et aucun
+processus D2R ne reste.
+
+Les artefacts Release validés portent les SHA-256 suivants :
+
+- `D2RPlugins.json` : `660664986598F076A45843C2712672EA933375E726388F057192BD35F71F8D5F`;
+- `plugin-items.dll` : `BB2964AF3E4772E5EFCCAA90445F89E13A1E1A4BAA24CF1B1CE16D77FB7656F2`;
+- `plugin-levels.dll` : `CE3AE7075413374281D58569BE86707CE901E3865FAAB61E075E0F611720D081`;
+- `plugin-misc.dll` : `54E8240DA11D26834A0B39C8783D82442482463E62C8FD6E94885D97DCCFC7D1`;
+- `plugin-quests.dll` : `DEBEBCA10D3EA60B3528F2FFE8AE241F1294814BF0C42A921BE64A3E80EC1D5E`;
+- `plugin-skills.dll` : `8537A975E8D77A1943707D69EBE6F5C72301DBD352CBB8405E6AAD7322E7952D`.
+
+Les logs frais sont conservés sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260729-133844065-pack-only-hardening/`
+pour le défaut public et sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260729-134211996-pack-only-caps-memory/`
+pour la lecture mémoire des caps. L'assertion de données BKVince concernant
+l'identifiant de zone dupliqué `Act5-Rifts` demeure visible après le chargement
+réussi des DLL; elle n'est pas causée par le pack et ne masque aucun rejet de
+plugin. Les observations gameplay intégrées restent ouvertes et ne sont pas
+déduites de ces cold starts techniques.
 
 ## Correction du premier pilote — 27 juillet 2026
 

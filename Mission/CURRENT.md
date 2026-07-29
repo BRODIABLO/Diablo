@@ -24,27 +24,29 @@ Les checkpoints poussés `a51c865`, `387dff8`, `8d41581`, `a4d8dbb`,
 `plugin-items.dll`, `skills.bulkSkillPointAllocation` dans `plugin-skills.dll`,
 `quests.larzukSockets` dans `plugin-quests.dll`, puis
 `misc.cubeQuickMoveBottomRight`, `misc.equippedItemToCube` puis
-`misc.transmuteHotkey`, `misc.vendorStockRefresh` puis
-`misc.preventMercDeathInTown` dans
-`plugin-misc.dll`. Les configurations, hooks et tests restent indépendants;
+`misc.transmuteHotkey` et `misc.preventMercDeathInTown` dans
+`plugin-misc.dll`; `items.vendorStockRefresh` appartient à `plugin-items.dll`.
+Les configurations, hooks et tests restent indépendants;
 leur présence dans les DLL du pack ne crée aucun bloc fonctionnel commun.
 
-Les 16 fonctionnalités canoniques sont maintenant portées et la validation
-finale du pack complet est verte. Les cinq DLL Release proviennent du même
-commit, 19/19 CTest passent et le manifeste porte 132 sites à propriétaire
-unique. Le JSON joueur SHA-256
-`F4077ED0C2CBF69AF5C394BAE704A647117668F3ED21BB256FC76F69E3A7532D`
-conserve les effets configurables désactivés et les valeurs vanilla.
+Les 16 fonctionnalités canoniques sont portées. Le durcissement final corrige
+aussi trois réglages historiques d'eezstreet qui étaient lus sans être appliqués :
+les caps physique, élémentaire et d'absorption. Les cinq DLL Release compilent,
+`22/22` CTest passent et le manifeste porte `135/135` sites à propriétaire
+unique, chacun relié exactement une fois à une écriture source gouvernée. Le
+JSON joueur SHA-256
+`660664986598F076A45843C2712672EA933375E726388F057192BD35F71F8D5F`
+conserve les valeurs vanilla et seulement les cinq fixes explicitement retenus
+actifs par défaut.
 
-Les cold starts vanilla et conjoint actif atteignent tous deux `24/24` avec
-`scanned=16 active=14 disabled=2 rejected=0 failed=0`. Le cas actif prouve
-notamment Item Durability `0x2F48C0` avec Prevent `0x448C00`, EthItemRules
-`0x373890`, ExtendedItemStats `0x2A7810`, le relais Cube `0x3E80000`, ainsi que
-RemoteStash propriétaire de `0x843D90` et Transmogrify externe propriétaire de
-`0x314110`. Aucun crash frais n'est créé. Les 93 fichiers runtime contrôlés sont
-restaurés par SHA-256 et aucun processus ne reste. Le document public
-`RUFFNECKK-INTEGRATION.md` du fork contient l'inventaire, les limites de
-compatibilité et le plan de tests joueur par sous-système.
+Un cold start isolé avec uniquement les cinq DLL et le JSON public atteint
+`24/24`, avec `scanned=5 active=5 disabled=0 rejected=0 failed=0` et aucun
+memory patch chargé. Un second démarrage prouve dans le processus vivant les
+trois caps témoins : absorption `41`, physique `51`, élémentaire `96`. Les
+`36/36` fichiers temporairement neutralisés sont restaurés par SHA-256 après
+chaque essai et aucun processus ne reste. Le document public du fork décrit le
+pack comme un produit indépendant et conserve le plan de tests joueur par
+sous-système.
 
 ## Prochain gate
 
@@ -58,9 +60,8 @@ chaque observation gameplay non exécutée reste néanmoins ouverte et ne doit p
 
 Le code du pack vit dans le clone séparé
 `analysis-cache/pluginpack-foundation`. Le dernier checkpoint poussé est
-`5b56690` (`Document complete PluginPack validation`), poussé
-sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le clone de fondation
-est propre.
-Le dépôt principal conserve la DLL gouvernée, la configuration vanilla et les
-preuves de mission/ROADMAP. Le runtime BKVince a été restauré exactement à son
-état antérieur aux tests; le pack de travail n’y est donc pas laissé déployé.
+`4d482c6` (`Harden PluginPack integration prototype`), sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le dépôt principal
+conserve les preuves gouvernées et les trois RVA ajoutés. Le runtime
+BKVince a été restauré exactement à son état antérieur aux tests; le pack de
+travail n’y est donc pas laissé déployé.

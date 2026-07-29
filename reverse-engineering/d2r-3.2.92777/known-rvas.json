@@ -564,12 +564,36 @@
       "notes": "Pre-roll ethereal eligibility call to ITEMS_HasDurability, returning to 0x4432F9. Ethereal Item Rules redirects only this call to the strict helper at 0x46D840 so durable indestructible items reach the configured roll while genuinely durability-free bases remain excluded; the post-application call at 0x443507 stays vanilla."
     },
     {
+      "rva": "0x4506A1",
+      "name": "AbsorbPercentageCapImmediate",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/eezstreet-pluginpack-integration.md",
+      "notes": "Low byte of the MOV ECX,40 immediate at 0x4506A0 in the native percentage-absorb path. The strict sequence B9 28 00 00 00 3B C1 0F 4C C8 85 C9 is unique in build 92777; plugin-items changes only this byte when items.absorbCap is enabled."
+    },
+    {
       "rva": "0x4523E0",
       "name": "SUNITDMG_ApplyResistancesAndAbsorb",
       "kind": "function",
       "confidence": "high",
       "source": "Mission/floating-damage-portage-3.2.md",
       "notes": "D2R 3.2 equivalent proven from the unique 12-entry damage-stat loop at 0x44EC44, matching damage offsets, resistance/pierce/absorb flow, fixed-point percentage branches, and the post-resolution observer call at 0x452651."
+    },
+    {
+      "rva": "0x4524D6",
+      "name": "PhysicalResistanceCapImmediate",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/eezstreet-pluginpack-integration.md",
+      "notes": "Low byte of the MOV EAX,50 immediate selected for physical damage inside SUNITDMG_ApplyResistancesAndAbsorb. The surrounding physical/elemental cap sequence at 0x4524D0 is unique in build 92777; plugin-items changes only this byte when items.physResistCap is enabled."
+    },
+    {
+      "rva": "0x4524DE",
+      "name": "ElementalResistanceCapImmediate",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/eezstreet-pluginpack-integration.md",
+      "notes": "Low byte of the adjacent MOV EAX,95 immediate used as the elemental resistance ceiling inside SUNITDMG_ApplyResistancesAndAbsorb. It shares the unique 0x4524D0 signature with the physical cap; plugin-items changes only this byte when items.elementalResistCap is enabled."
     },
     {
       "rva": "0x46E8C0",
