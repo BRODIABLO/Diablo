@@ -311,28 +311,26 @@ chez Charsi; la restauration du bouton original en gamble reste à observer.
    permanent, achats avant/après rafraîchissement, or insuffisant, souris,
    manette, résolutions, solo, hôte/joiner, nouvelle partie et retour au menu;
    zéro perte, duplication, objet fantôme, crash ou désynchronisation.
-8. **Promotion PluginPack — acceptée par Vincent** — le candidat autonome est
-   prêt pour préparation du merge sous `plugin-misc.dll` avec la clé
-   `misc.vendorStockRefresh`; le merge lui-même et ses tests de non-régression
-   constituent un prochain lot séparé.
+8. **Promotion PluginPack — fermee techniquement** — le candidat est integre
+   sous `plugin-misc.dll` avec `misc.vendorStockRefresh`, defaut vanilla,
+   quatre hooks uniques, manifeste sans chevauchement, cinq DLL Release,
+   18/18 tests et cold starts vanilla/actif a `24/24`. Le gameplay integre
+   restant constitue une matrice separee.
 9. **Distribution** — portées globale et mod-locale, repli de configuration,
    coexistence avec les cinq DLL eezstreet, Release x64, exports D2RLoader,
    hashes source/runtime et ZIP public strict DLL + JSON seulement.
 
 ## Prochain gate
 
-Vincent a explicitement ajouté Vendor Stock Refresh au lot PluginPack accepté le
-28 juillet 2026. Le chantier autonome reste clos; lorsque le séquencement atteint
-`plugin-misc.dll`, porter `misc.vendorStockRefresh` puis rouvrir les
-non-régressions encore non exécutées : gamble, vendeur de mode `0`, layout
-réellement moddé ou agrandi, manette, cinq actes, clics rapides, repli global et
-hôte/joiner.
+Repeter le clic Charsi valide avec le binaire integre, puis rouvrir les
+non-regressions encore non executees : gamble, vendeur de mode `0`, layout
+reellement modde ou agrandi, manette, cinq actes, clics rapides, repli global et
+hote/joiner.
 
 ## Frontière Git
 
-Le lot historique comprend cette mission, son workstream, les preuves gouvernées
-du workbench, `VendorStockRefresh-src/`,
-`VendorStockRefresh.json` et la DLL autonome. Aucun layout vendeur n’est livré;
-aucun
-fichier ni aucune DLL
-d’eezstreet n’est modifié, lié ou redistribué.
+Le lot historique conserve cette mission, son workstream, les preuves du
+workbench, `VendorStockRefresh-src/` et l'archive autonome comme oracles. Le JSON
+et la DLL standalone sont retires de BKVince apres validation du port. Aucun
+layout vendeur n'est livre; les DLL du pack sont reconstruites depuis le fork
+source sans modifier, lier ni redistribuer un binaire d'eezstreet.

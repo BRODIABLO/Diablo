@@ -185,13 +185,11 @@
       "status": "paused",
       "owner": "Vincent + Codex",
       "mission": "Mission/vendor-stock-refresh-3.2.md",
-      "nextGate": "When selected in the accepted PluginPack sequence, merge misc.vendorStockRefresh into plugin-misc.dll, preserve the standalone only as a witness, then rerun the remaining vendor regression matrix.",
+      "nextGate": "Repeat the validated Charsi click with misc.vendorStockRefresh enabled in plugin-misc.dll, then run the remaining vendor regression matrix.",
       "include": [
         "Mission/vendor-stock-refresh-3.2.md",
         "addons/VendorStockRefresh/**",
-        "data-BKVince/BKVince.mpq/VendorStockRefresh.json",
         "data-BKVince/d2rloader/plugins/VendorStockRefresh-src/**",
-        "data-BKVince/d2rloader/plugins/VendorStockRefresh.dll",
         "scripts/reverse-engineering/vendor-stock-refresh*"
       ]
     },
@@ -201,7 +199,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Port Vendor Stock Refresh into plugin-misc.dll under misc.vendorStockRefresh while preserving its gameplay-validated standalone witness; keep prior regressions as separate matrices.",
+      "nextGate": "Port Prevent Merc Death in Town into plugin-misc.dll under misc.preventMercDeathInTown while preserving its standalone witness; keep prior regressions as separate matrices.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
         "Mission/bulk-skill-point-allocation-3.2.md",

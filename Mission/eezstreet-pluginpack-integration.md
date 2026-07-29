@@ -601,8 +601,38 @@ restaures byte-exact, sans processus restant. Le rapport est conserve sous
 Le JSON et la DLL standalone gouvernes sont retires de BKVince apres cette
 validation integree; les sources, l'archive et la preuve gameplay standalone
 restent les oracles de comparaison. La regression gameplay MOUSE4 dans le pack
-reste une matrice independante et ne bloque pas le prochain port canonique :
-`VendorStockRefresh` sous `misc.vendorStockRefresh` dans `plugin-misc.dll`.
+reste une matrice independante et ne bloque pas les ports suivants.
+
+Vendor Stock Refresh / `VendorStockRefresh 0.1.5` est maintenant integre dans
+`plugin-misc.dll` sous `misc.vendorStockRefresh`. Le bloc strict livre
+`enabled=false`; aucun hook n'est installe par defaut et le stock vendeur reste
+vanilla. Active, la fonctionnalite conserve le bouton natif, son paquet neuf
+octets et l'autorite serveur du chemin autonome valide.
+
+Le port possede les quatre hooks `0x2411E0`, `0x502F60`, `0x4B0470` et
+`0x10F520`. L'audit a durci le premier guard : son prologue autonome de 32
+octets apparaissait 36 fois, tandis que le prefixe minimal de 36 octets est
+unique dans l'image canonique. Les trois autres hooks et les cinq helpers non
+possedes sont eux aussi uniques. Le vendor overhaul de `plugin-items` demeure
+proprietaire de son remplissage et de ses structures de cache; aucune plage ne
+se chevauche avec l'action UI de `plugin-misc`.
+
+Les cinq DLL Release compilent, 18/18 CTest passent et le manifeste atteint 131
+sites sans chevauchement. `plugin-misc.dll` mesure 175104 octets et porte le
+SHA-256 `189115496962912D6B781E4B89A3F4926882513B429830663B3DCD9ADC04CA4F`.
+Les cold starts vanilla et actif atteignent `24/24` avec
+`scanned=26 active=24 disabled=2 rejected=0 failed=0`; le cas vanilla ne pose
+aucun hook Vendor et la lecture memoire active confirme les quatre detours.
+Le runtime et les standalones sont restaures byte-exact, sans processus restant.
+Le rapport est conserve sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260729-vendor-stock-refresh/report.json`.
+
+Le checkpoint pack `2748167` (`Integrate Vendor Stock Refresh prototype`) est
+pousse sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le JSON et la
+DLL standalone gouvernes sont retires de BKVince; sources, archive et preuve
+gameplay Charsi restent l'oracle. La regression gameplay integree demeure une
+matrice independante. Le prochain et dernier port canonique est
+`PreventMercDeathInTown` sous `misc.preventMercDeathInTown`.
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est

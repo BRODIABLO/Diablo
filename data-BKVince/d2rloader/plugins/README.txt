@@ -214,6 +214,13 @@ then dispatches the visible Cube Transmute action on the UI thread. It calls
 through the current `0x843D90` dispatcher without owning that hook, so it
 composes with RemoteStash or the optional Bulk confirmation broker.
 
+Vendor Stock Refresh 0.1.5 is integrated in `plugin-misc.dll` under
+`misc.vendorStockRefresh`. The shipped block is disabled and preserves vanilla
+vendor stock. When enabled, it dynamically positions the native refresh button
+under the loaded layout's gold display and keeps item generation authoritative
+on the server. Its UI and packet hooks do not overlap the vendor-overhaul hooks
+owned by `plugin-items.dll`.
+
 Item Durability 1.2.0 is integrated in `plugin-items.dll` under
 `items.itemDurability`. The shipped block is disabled and its resistance,
 ethereal maximum, forced maximum, ranged durability, and diagnostics values all

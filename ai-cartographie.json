@@ -13694,11 +13694,6 @@
                                                                                 "name":  "RepairCostsCap.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/RepairCostsCap.json",
                                                                                 "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "VendorStockRefresh.json",
-                                                                                "path":  "data-BKVince/BKVince.mpq/VendorStockRefresh.json",
-                                                                                "kind":  "file"
                                                                             }
                                                                         ]
                                                        },
@@ -15113,11 +15108,6 @@
                                                                                                  {
                                                                                                      "name":  "Transmogrify.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/Transmogrify.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "VendorStockRefresh.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/VendorStockRefresh.dll",
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
