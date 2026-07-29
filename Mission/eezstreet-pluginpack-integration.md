@@ -272,8 +272,7 @@ dans `analysis-cache/pluginpack-foundation-runtime-validation/20260728-191656701
 ### Tranche 1 — intégrations sans structure gameplay
 
 1. `GambleScreenLimit`, intégré comme option indépendante de `plugin-items`;
-2. `GroundItemLabelLimit`, à intégrer ensuite comme option indépendante de
-   `plugin-items`.
+2. `GroundItemLabelLimit`, intégré comme option indépendante de `plugin-items`.
 
 ### Tranche 2 — petits hooks à ABI opaque
 
@@ -292,6 +291,7 @@ par eezstreet sans modifier la fondation.
 | Plugin | Version validée | Propriétaire cible | Configuration | État |
 |---|---|---|---|---|
 | `GambleScreenLimit` | `1.2.0` | `plugin-items.dll` | `items.gambleScreenLimit` dans `D2RPlugins.json` | port intégré, Release et cold starts vanilla/actif validés; régression gameplay intégrée optionnelle |
+| `GroundItemLabelLimit` | `1.2.0` intégré | `plugin-items.dll` | `items.groundItemLabels` dans `D2RPlugins.json` | port intégré, Release et cold starts 32/64/128 validés; régression gameplay intégrée ouverte |
 | `BulkSkillPointAllocation` | `1.2.3` | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | prêt pour préparation du merge |
 | bloc unifié `EthItemRules` | témoin historique `EtherealItemRules 0.1.0` | `plugin-items.dll` | bloc unique `items.etherealItemRules` | contrat unifié compilé et cold-starté; équivalence gameplay ouverte |
 | `RepairCostsCap` | `1.4.0` | `plugin-items.dll` | `items.repairCostsCap` dans `D2RPlugins.json` | fonctionnalité indépendante intégrée et cold-startée; équivalence gameplay ouverte |
@@ -305,6 +305,32 @@ deux cold starts ciblés sont verts; la preuve est conservée sous
 La DLL et le JSON de développement portent respectivement les SHA-256
 `453F6D548B032104A6A8DF51C959A9215DAA6D08A183715E68281D03B38276D8` et
 le défaut joueur `enabled=false`. Le runtime a été restauré après la validation.
+
+Le port `GroundItemLabelLimit 1.2.0` conserve lui aussi une identité de
+fonctionnalité, pas de plugin supplémentaire. Son bloc unique
+`items.groundItemLabels` est livré avec `enabled=false` et `limit=64`, ce qui
+laisse la limite effective vanilla à 32. Lorsqu'il est activé, seuls 64 et 128
+sont acceptés. Les sept signatures complètes sont validées avant toute écriture,
+et les sept plages synchronisées `0x1516EBE..0x1519AF9` portent un propriétaire
+unique dans le manifeste commun.
+
+Le pack complet valide maintenant 74 sites sans chevauchement, les cinq DLL
+Release et 6/6 CTest. Le `plugin-items.dll` testé puis copié dans la source
+BKVince porte le SHA-256
+`E4EB70FB62D01D144CF4AE5F4DB52DFFB069F7F938032CA3280459C37E6F01A5`.
+Trois cold starts isolés prouvent les limites effectives 32, 64 et 128 avec
+`scanned=30 active=28 disabled=2 rejected=0 failed=0` et startup `24/24`.
+Chaque test restaure ensuite le runtime byte-exact et laisse zéro processus.
+La preuve consolidée réside dans
+`analysis-cache/pluginpack-foundation-runtime-validation/20260728-194227633-ground-label-final/report.json`.
+Le JSON autonome et la DLL standalone désactivée ont été retirés de la source
+BKVince après fusion; les sources et presets autonomes restent seulement des
+témoins de développement. La régression gameplay du port reste une matrice
+indépendante et non bloquante.
+
+La tranche 1 est donc techniquement terminée. Le prochain port séquencé est
+`EnhancedDamageMinMaxFix` sous `items.enhancedDamageMinMaxFix`, premier petit
+hook opaque de la tranche 2.
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est
@@ -435,11 +461,12 @@ Le cold start du 27 juillet à 07:49 charge `plugin-misc` 2.0.1 avec son drapeau
 Les résultats sont `20/20` patchsets, 24 plugins actifs, zéro rejet, zéro échec
 et démarrage `24/24` en 4,062 secondes. Le processus de test est ensuite fermé.
 
-L’incubation reprend dans la DLL autonome hybride RuffnecKk 1.1.0. Son JSON
+L’incubation a repris dans la DLL autonome hybride RuffnecKk 1.1.0. Son JSON
 autonome accepte uniquement `enabled` et `limit`, avec exactement 64 ou 128;
 il cherche la configuration mod-locale avant le repli global, ne crée aucun
-TOML et n’est pas déployé dans le profil actif. Cette isolation doit rester en
-place jusqu’au futur merge explicitement autorisé dans `plugin-items.dll`.
+TOML et n’était pas déployé dans le profil actif. Cette isolation historique a
+pris fin avec le port 1.2.0 autorisé dans `plugin-items.dll` le 28 juillet; le
+JSON et le binaire standalone gouvernés ont alors été retirés.
 
 ## Contribution SDK prête à envoyer
 

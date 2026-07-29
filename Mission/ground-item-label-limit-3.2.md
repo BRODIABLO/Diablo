@@ -33,7 +33,7 @@ On 2026-07-27, Vincent confirmed `items` as the future PluginPack category,
 `plugin-items.dll` as the owner and `items.groundItemLabels` as the future key.
 The earlier experimental merge into `plugin-misc.dll` was therefore reverted.
 
-During incubation, `GroundItemLabelLimit` remains an autonomous hybrid DLL by
+During incubation, `GroundItemLabelLimit` remained an autonomous hybrid DLL by
 `RuffnecKk`; it neither links nor redistributes an eezstreet DLL. Version 1.1.0
 reads the commentable `GroundItemLabelLimit.json` from the active mod first and
 the game directory second. Its contract is deliberately narrow:
@@ -48,6 +48,18 @@ write. The 64 path changes the existing immediates. The 128 path re-encodes the
 three register comparisons with 16-bit immediates, uses the exact `0xA200`
 record endpoint and preserves the proven bounded-byte treatment of the layout
 list. No TOML is used.
+
+On 2026-07-28, the same policy was merged as version 1.2.0 into the existing
+`plugin-items.dll`. It is an internal component, not another runtime plugin:
+
+- the only public block is `items.groundItemLabels` in `D2RPlugins.json`;
+- the shipped values are `enabled=false` and `limit=64`, so the effective
+  player default remains the vanilla limit of 32;
+- enabling the block selects exactly 64 or 128;
+- the seven writes are owned only by `plugin-items.dll` in the common hook
+  manifest and are preflighted together before the first write;
+- eezstreet remains the owner and author of `plugin-items.dll`, while the
+  feature source and logs credit `RuffnecKk`.
 
 ## Static validation
 
@@ -79,6 +91,25 @@ open compatibility and product checks rather than inferred passes.
 | Loading | Global DLL and configuration fallback | Same plugin ID and behavior | not run |
 | Gameplay | 64/128 rendering and input comparison | Stable labels with acceptable usability | not run for 1.1.0 |
 
+### Integrated 1.2.0 validation — 2026-07-28
+
+- The complete PluginPack builds all five Release DLLs and passes 6/6 CTest.
+- The hook manifest validates 74 uniquely owned sites, including the seven
+  synchronized ground-label writes between `0x1516EBE` and `0x1519AF9`.
+- `plugin-items.dll` exports the three D2RLoader entry points and has SHA-256
+  `E4EB70FB62D01D144CF4AE5F4DB52DFFB069F7F938032CA3280459C37E6F01A5`
+  in both the Release output and governed BKVince source.
+- Three isolated mod-local cold starts prove effective limits 32, 64 and 128.
+  Every case reaches startup `24/24` with
+  `scanned=30 active=28 disabled=2 rejected=0 failed=0`.
+- The runtime DLL and configuration were restored byte-exactly after every
+  case and no owned process remained. Consolidated evidence is stored at
+  `analysis-cache/pluginpack-foundation-runtime-validation/20260728-194227633-ground-label-final/report.json`.
+- The integrated gameplay regression remains open. The earlier standalone 64
+  and 128 witnesses were already confirmed in game by Vincent, but their
+  detailed rendering, input, dense-pile, frame-cost and long-session conditions
+  were not recorded and are not inferred from the cold starts.
+
 ## Fixed 64/128 memory-patch presets — 2026-07-26
 
 Vincent requested a fixed 128-label witness to decide whether the larger cap is
@@ -105,10 +136,12 @@ Vanilla 32 means loading neither preset. Exactly one of the two JSONs may be
 loaded for 64 or 128, and any PluginPack or standalone plugin that owns the same
 seven sites must be disabled first.
 
-The standalone 1.1.0 DLL remains stored with the non-loadable
-`.standalone-disabled` extension and its JSON has not been copied to the active
-runtime. D2RLoader patch JSON has no variables, so the separate memory-patch
-bundle still offers exact 64 and 128 presets rather than a numeric field.
+After the integrated port passed, the governed standalone JSON and disabled DLL
+were removed so `plugin-items.dll` is the only shipped owner. The autonomous
+source and the separate 64/128 memory-patch presets remain as development
+witnesses outside every active runtime patch directory. D2RLoader patch JSON
+has no variables, so that witness bundle still offers two exact presets rather
+than a numeric field.
 
 ### Fixed-preset validation matrix
 
@@ -146,7 +179,7 @@ reported memory patches `20/20`, plugins `active=24`, `rejected=0`, `failed=0`
 and startup `24/24` in 4.062 seconds. The test instance was then closed. With no
 standalone DLL or memory preset loaded, active BKVince is currently vanilla 32.
 
-Next gate: only when Vincent requests a new test window, deploy the autonomous
-1.1.0 witness and validate both JSON choices 64 and 128, invalid-value refusal,
-mod-local/global configuration priority and the rendering/input matrix. The
-future merge belongs in `plugin-items.dll`, never `plugin-misc.dll`.
+Next gate: keep the integrated gameplay regression independent and non-blocking:
+compare 64 and 128 in dense piles under remastered/legacy rendering, mouse and
+controller, then record readability, frame cost and long-session stability.
+The owner is now `plugin-items.dll`, never `plugin-misc.dll`.

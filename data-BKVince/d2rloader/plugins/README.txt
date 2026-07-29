@@ -179,9 +179,18 @@ when either monster player-count cap is enabled, but declares no native-hook
 capability; D2RLoader 1.0.1-beta correctly rejects it. The local one-line patch
 declares `PluginFlags::NativeHooks` so the signature-checked hook can load.
 
-Ground Item Label Limit is not part of `plugin-misc.dll`. Its RuffnecKk 1.1.0
-incubation build remains disabled and autonomous, with a future owner of
-`plugin-items.dll` and planned configuration key `items.groundItemLabels`.
+`plugin-items.dll` is rebuilt from the pinned commit with
+`plugin-items-repair-costs-cap.patch`. The internal Repair Costs Cap 1.4.0
+feature is credited to RuffnecKk and reads `items.repairCostsCap` from the same
+`D2RPlugins.json`. It caps individual repairs and the final Repair All total,
+and can apply permanent durability wear per physically repaired item. Both the
+price policy and durability wear are disabled in the shipped configuration, so
+vanilla repair behavior remains the default.
+
+Ground Item Label Limit 1.2.0 is an internal RuffnecKk feature of
+`plugin-items.dll` under `items.groundItemLabels`. The shipped block is disabled,
+so vanilla 32 remains effective; enabling it selects exactly 64 or 128. The
+standalone JSON and disabled DLL were removed after the integrated cold starts.
 
 ## TCP hybrid and mod-local plugins
 

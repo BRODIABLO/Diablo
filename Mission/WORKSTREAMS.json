@@ -50,10 +50,10 @@
     {
       "id": "ground-item-label-limit",
       "name": "Ground Item Label Limit",
-      "status": "paused",
+      "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/ground-item-label-limit-3.2.md",
-      "nextGate": "On Vincent's explicit request for a test window, deploy standalone 1.1.0 at 64 and 128, validate invalid-value refusal plus mod-local/global configuration priority, then keep plugin-items.dll as the only future PluginPack owner.",
+      "nextGate": "Keep the integrated 64/128 gameplay regression as an independent non-blocking matrix while plugin-items.dll remains the only shipped owner.",
       "include": [
         "Mission/ground-item-label-limit-3.2.md",
         "addons/GroundItemLabelLimitMemoryPatches/**",
@@ -61,7 +61,7 @@
         "data-BKVince/BKVince.mpq/D2RPlugins.json",
         "data-BKVince/d2rloader/plugins/GroundItemLabelLimit-src/**",
         "data-BKVince/d2rloader/plugins/GroundItemLabelLimit.dll*",
-        "data-BKVince/d2rloader/plugins/plugin-misc.dll",
+        "data-BKVince/d2rloader/plugins/plugin-items.dll",
         "data-BKVince/d2rloader/plugins/README.txt"
       ]
     },
@@ -71,7 +71,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/gamble-screen-limit-3.2.md",
-      "nextGate": "Keep the integrated gameplay regression at fixed 32 as an independent non-blocking check while the PluginPack sequence continues with GroundItemLabelLimit.",
+      "nextGate": "Keep the integrated gameplay regression at fixed 32 as an independent non-blocking check while the PluginPack sequence continues with EnhancedDamageMinMaxFix.",
       "include": [
         "Mission/gamble-screen-limit-3.2.md",
         "addons/GambleScreenLimit/**",
@@ -201,7 +201,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Port GroundItemLabelLimit as the independent items.groundItemLabels feature after the technically validated GambleScreenLimit port; keep each remaining gameplay regression as a separate matrix.",
+      "nextGate": "Port EnhancedDamageMinMaxFix as the independent items.enhancedDamageMinMaxFix feature after the technically validated GroundItemLabelLimit port; keep each remaining gameplay regression as a separate matrix.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
         "data-BKVince/BKVince.mpq/D2RPlugins.json",

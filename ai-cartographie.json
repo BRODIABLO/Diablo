@@ -13698,11 +13698,6 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
-                                                                                "name":  "GroundItemLabelLimit.json",
-                                                                                "path":  "data-BKVince/BKVince.mpq/GroundItemLabelLimit.json",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
                                                                                 "name":  "modinfo.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/modinfo.json",
                                                                                 "kind":  "file"
@@ -15085,11 +15080,6 @@
                                                                                                  {
                                                                                                      "name":  "GambleScreenLimit.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/GambleScreenLimit.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "GroundItemLabelLimit.dll.standalone-disabled",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/GroundItemLabelLimit.dll.standalone-disabled",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

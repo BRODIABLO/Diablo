@@ -12,65 +12,46 @@ exact `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`; la référence officielle
 gouvernée demeure intacte. Le checkpoint de fondation `2a23212` est poussé sur
 `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
 
-Le checkpoint `a51c865` a porté conjointement les hooks ethereal dans
-`plugin-items.dll` comme une fonctionnalité ordinaire du pack, sans nouvelle
-DLL, nouvel identifiant de plugin ni chargeur autonome. Son manifeste passe de
-57 à 62 sites à propriétaire unique; les cinq DLL compilent en Release x64 et
-les trois CTest réussissent. `plugin-items.dll` porte le SHA-256
-`FB4AD6015DFCEE02FFECEFBF2056155F4EB1E7E8CAB9A54AE13DC0B0BBBC823D`.
+Les checkpoints poussés `a51c865`, `387dff8`, `8d41581` et `a4d8dbb` ont
+successivement porté le bloc unique `items.etherealItemRules`, puis les
+fonctionnalités indépendantes `items.repairCostsCap`,
+`items.gambleScreenLimit` et `items.groundItemLabels` dans `plugin-items.dll`.
+Les configurations, hooks et tests restent indépendants; leur présence dans la
+même DLL ne crée aucun bloc fonctionnel commun.
 
-Vincent clarifie toutefois que le découpage JSON de ce checkpoint est incorrect.
-`Exclude ItemTypes from Rolling Ethereal` et `Ethereal Item Rules` forment un
-seul composant `EthItemRules`, dans un seul bloc
-`items.etherealItemRules`. L’exclusion d’ItemTypes est un champ interne de ce
-bloc; la clé sœur `items.etherealExclusions` doit disparaître.
+`GroundItemLabelLimit 1.2.0` est maintenant intégré dans le même module sous
+`items.groundItemLabels`, sans nouvelle DLL ni nouvel identifiant runtime. Le
+template joueur livre `enabled=false` et `limit=64`, donc la limite effective
+reste vanilla à 32. L’activation accepte exactement 64 ou 128. Les sept
+signatures sont vérifiées ensemble avant toute écriture et le manifeste commun
+porte maintenant 74 sites à propriétaire unique.
 
-Le `D2RPlugins.json` testé conservait vanilla par défaut : les anciennes
-sections ethereal étaient désactivées, le taux visible valait 5 %, les exceptions
-set/indestructible valaient `false`, et `skills.selfHealParams` était également
-désactivé. Le cold start de ce fichier n'installait aucun hook ethereal;
-les cinq plugins eezstreet chargent, avec
-`scanned=28 active=26 disabled=2 rejected=0 failed=0` et startup `24/24`.
-
-Un second cold start historique active ensemble les exclusions `belt`/`armo`, le taux 6 %,
-les sets et les objets indestructibles. Les anciens propriétaires autonomes et
-le patch JSON sont neutralisés pendant le test : seul
-`eezstreet-plugin-items` installe le hook gouverné `0x373890`; les appels de
-patch réussissent, les cinq plugins du pack restent actifs, aucun plugin
-ethereal autonome n'est chargé, le résumé reste à zéro rejet/échec et le
-démarrage atteint `24/24`. Les neuf fichiers runtime d'origine ont ensuite été
-restaurés et vérifiés par SHA-256 après un retry de verrou tardif; aucun processus
-D2R/D2RLoader ne reste actif. Les preuves locales sont sous
-`analysis-cache/pluginpack-foundation-runtime-validation/20260728-170819582/`.
-
-Le checkpoint `387dff8` porte maintenant le contrat final d’`EthItemRules` en
-un seul bloc `items.etherealItemRules`. Il ajoute séparément
-`items.repairCostsCap` comme une autre fonctionnalité de `plugin-items.dll`.
-Ces deux fonctionnalités ont chacune leur configuration, leur activation, leur
-code, leurs hooks et leurs tests; elles ne forment aucun bloc commun. Le
-manifeste valide 66 sites sans chevauchement, les
-cinq targets Release et 4/4 CTest sont verts. Les cold starts vanilla exact et
-conjoint actif atteignent `24/24` avec zéro rejet/échec; le runtime a été restauré
-par SHA-256. Les prototypes autonomes restent seulement des témoins. Cube Quick
-Move 0.1.3 demeure en pause et Transmogrify reste exclu de ce lot.
+Les cinq DLL Release compilent, 6/6 CTest passent et `plugin-items.dll` porte le
+SHA-256 `E4EB70FB62D01D144CF4AE5F4DB52DFFB069F7F938032CA3280459C37E6F01A5`
+dans le build et la source BKVince. Trois cold starts isolés prouvent les limites
+effectives 32, 64 et 128, chacun avec
+`scanned=30 active=28 disabled=2 rejected=0 failed=0` et startup `24/24`.
+Le runtime est restauré byte-exact après chaque cas et aucun processus ne reste.
+Le JSON autonome et la DLL standalone désactivée ont été retirés de la source;
+les sources et presets autonomes demeurent seulement des témoins de
+développement. Les régressions gameplay restent des matrices indépendantes et
+non bloquantes. Transmogrify demeure exclu de ce lot.
 
 ## Prochain gate
 
-Porter ensuite `GroundItemLabelLimit` sous l’option indépendante
-`items.groundItemLabels` de `plugin-items.dll`. `GambleScreenLimit` est maintenant
-intégré sous `items.gambleScreenLimit`, désactivé par défaut, avec 5/5 tests et
-les cold starts 14/32 verts. Les régressions gameplay encore ouvertes pour
-`EthItemRules`, `Repair Costs Cap` et le port Gamble restent des matrices
-indépendantes et ne bloquent pas les autres ports acceptés.
+Porter ensuite `EnhancedDamageMinMaxFix` sous l’option indépendante
+`items.enhancedDamageMinMaxFix` de `plugin-items.dll`, premier petit hook opaque
+de la tranche 2. Les régressions gameplay ouvertes pour `EthItemRules`, Repair
+Costs Cap, Gamble Screen Limit et Ground Item Label Limit restent séparées et
+ne bloquent pas ce prochain port.
 
 ## Frontière Git
 
 Le code du pack vit dans le clone séparé
-`analysis-cache/pluginpack-foundation`. Le checkpoint unifié `387dff8`
-(`Unify EthItemRules and integrate Repair Costs Cap prototype`) est poussé et
-synchronisé à `0/0` sur
-`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le dépôt principal
-conserve les témoins autonomes et les preuves gouvernées de mission/ROADMAP. Les
-autres changements actifs du workspace restent préservés. Le runtime BKVince a
-été restauré exactement à son état
-antérieur au test; le pack de travail n'y est donc pas laissé déployé.
+`analysis-cache/pluginpack-foundation`. Le dernier checkpoint poussé est
+`a4d8dbb` (`Integrate Ground Item Label Limit prototype`), synchronisé à `0/0`
+sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le clone de fondation
+est propre.
+Le dépôt principal conserve la DLL gouvernée, la configuration vanilla et les
+preuves de mission/ROADMAP. Le runtime BKVince a été restauré exactement à son
+état antérieur aux tests; le pack de travail n’y est donc pas laissé déployé.
