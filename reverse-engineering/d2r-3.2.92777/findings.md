@@ -209,6 +209,66 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   mais la propriete exacte de cette table et son dispatch indirect restent un
   gate distinct avant installation d'un hook de production.
 
+## ExtendedMerc
+
+- Une trace runtime 92777 sur `QtyTester` a capturé l'équipement et le retrait
+  vanilla via le paquet client `0x51` de 17 octets. Le layout observé est
+  `{opcode, cursorItemId, mercId, equippedItemId, bodyLoc}`; les callsites
+  clients sont `0x15C599` et `0x161875` vers le constructeur `0xEC7D0`.
+- Le callback serveur est `0x4C0E20`, ABI
+  `(game, player, packet, packetSize) -> int32`. Il exige 17 octets, valide le
+  mercenaire par son identifiant, lit les deux identifiants d'objet et accepte
+  au gate initial un `bodyLoc < 11`. Le succès d'équipement atteint
+  `SUNIT_AttachSound` depuis `0x4C1364` avec le son `0x5E`.
+- `0x34A330` retourne en réalité le `UnitId` à `unit+0x08`; le nom gouverné a
+  été corrigé en `UNITS_GetUnitId`.
+- Une instance ouverte de `HirelingInventoryPanel` contient 42 enfants à
+  `panel+0x58/+0x60`; les slots partagent le vtable `0x1CF3F20`, leur BodyLoc
+  runtime est à `+0x5D8`, leur rectangle à `+0x70` et `isHireable` à `+0x638`.
+  Les rings et l'amulet existent avec le drapeau à zéro; gloves et boots sont
+  absents. Le passage à un de `slot_right_hand+0x638` a permis à Vincent
+  d'équiper un ring qui est resté équipé.
+- `0x2C9850` est la factory `InventorySlotWidget`, ABI effective
+  `(descriptor ignoré, name, parent) -> widget*`. Elle alloue `0x640` octets,
+  appelle le constructeur de base, pose le vtable `0x1CF3F20` et initialise les
+  champs directs jusqu'à `isHireable+0x638`. La signature de 37 octets incluant
+  la taille d'allocation est unique dans le `.text` 92777.
+- Le vtable runtime place le finalizer `0x2CA970` à `+0x08`. Il charge le fond
+  configuré par `0x858990` puis délègue au finalizer de base `0x2A8E60`. Les
+  constructeurs natifs appellent ce vtable `+0x08` avant
+  `UI_Widget_AddChild 0x854DE0`.
+- `0x854DE0` a l'ABI `(parent, child) -> void`, ajoute le pointeur au tableau
+  d'enfants à `parent+0x58/+0x60/+0x68` et en gère la croissance/ownership. Son
+  prologue strict de 18 octets n'apparaît qu'une fois dans le `.text` 92777.
+- Le constructeur `InventoryItemWidget 0x2A6FE0` remet le couple `cellSize` à
+  zéro à `+0x5B8/+0x5BC`. Les chemins de rendu `0x2A7574/0x2A75A3` et
+  `0x2A7969/0x2A7971` consomment respectivement sa largeur et sa hauteur; les
+  layouts 92777 assignent ce champ à chaque `InventorySlotWidget`. Le probe
+  reprend donc le couple d'un slot existant sain et refuse la création s'il ne
+  peut pas l'obtenir.
+- Le toggle d'interface appelle `UI_DispatchMessage 0x843D90` à `0xCE3B1` et
+  reprend à `0xCE3B6`. La séquence de 23 octets à partir de `0xCE3A9` est
+  unique; ce callsite étroit permet d'agir après la création du panneau sans
+  prendre un second hook sur l'entrée globale du dispatcher.
+- Le probe jetable Release 0.0.1 construit sous `analysis-cache` vérifie toutes
+  ces signatures et le vtable avant de tenter la création de `slot_gloves`.
+  Une première copie sans ressource-manifeste a été rejetée par D2RLoader avant
+  son point de chargement et n'a installé aucun hook. Le build corrigé avec
+  manifeste v2, `cellSize` hérité du layout hôte et sprite de socket natif est
+  compilé mais non exécuté, à la demande de Vincent. Il remplace désormais le
+  seul call `0xCE3B1` par un relais proche géré via `PatchCallRel32`, appelle le
+  dispatcher vivant puis agit après son retour; son SHA-256 est
+  `ECB258B6129816B09380272187F67228A0F2406693FFADA1DF526DBB97ADF668`.
+- Le manifeste PluginPack exact des checkpoints `4f8b276` et `5b56690`
+  contient 132 écritures. Aucune ne chevauche `0xCE3B1..0xCE3B5`, l'entrée
+  jetable `0xCDE00`, ni les plages témoins des helpers `0x2C9850`, `0x2CA970`
+  et `0x854DE0`. Le clone de travail a depuis évolué; il n'est pas utilisé pour
+  reformuler rétroactivement cette preuve de coexistence.
+- Le réseau, l'autorité serveur et l'adoption d'un widget existant sont donc
+  prouvés. Restent ouverts le premier slot absent créé et attaché au runtime,
+  son rendu/hit-test, la navigation controller et un placement réel dans les
+  BodyLocs gloves/boots.
+
 ## Discipline de promotion
 
 Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de

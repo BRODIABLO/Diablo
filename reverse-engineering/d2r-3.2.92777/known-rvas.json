@@ -261,11 +261,19 @@
     },
     {
       "rva": "0x34A330",
-      "name": "UNITS_GetItemCell",
+      "name": "UNITS_GetUnitId",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/transmogrify-restoration-3.2.md",
-      "notes": "Returns the item's current inventory cell. Transmogrify preserves this value while temporarily detaching a source and uses the output cell when calling the native placement routine."
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Returns the 32-bit unit id stored at unit+0x08, or 0xFFFFFFFF for a null unit. The 92777 merc-equipment callback calls it on the resolved hireling and compares the result with packet+0x05; the runtime 0x51 witness carried merc id 1 and item id 43. This corrects the former misleading UNITS_GetItemCell label."
+    },
+    {
+      "rva": "0x4C0E20",
+      "name": "D2GAME_PACKETCALLBACK_MercEquipment",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Authoritative callback with ABI (game, player, packet, packetSize) -> int32 for the 17-byte client opcode 0x51. Packet layout proven by paired equip/unequip traces is {opcode:u8, cursorItemId:u32, mercId:u32, equippedItemId:u32, bodyLoc:u32}. It requires size 17, resolves relation 7, validates the merc id through UNITS_GetUnitId, maps bodyLoc only below 11, and performs the native transactional placement and item updates. A successful torso equip reached SUNIT_AttachSound at 0x4C1364 with sound 0x5E. Its exact 29-byte entry signature beginning 40 55 53 57 48 8D 6C 24 B9 is unique in build 92777."
     },
     {
       "rva": "0x34A360",
@@ -938,6 +946,46 @@
       "confidence": "high",
       "source": "Mission/bulk-skill-point-allocation-3.2.md",
       "notes": "Common UI message dispatcher receiving a message object whose optional payload pointer is stored at +0x110. ConfirmationModal dispatches its selected callback through this entry. BulkSkillPointAllocation 1.2.1 consumes only the callback carrying its private stat-index sentinel and forwards every other message unchanged."
+    },
+    {
+      "rva": "0xCE3B1",
+      "name": "UI_InterfaceToggle_DispatchCall",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Five-byte rel32 call to UI_DispatchMessage inside the native interface-toggle path; execution resumes at 0xCE3B6 after the synchronous dispatch that lazily creates panels such as HirelingInventoryPanel. The 23-byte witness beginning at 0xCE3A9 is unique in the 92777 .text. ExtendedMerc reserves this narrow post-dispatch candidate instead of taking a second hook on the common dispatcher entry; the production owner remains gated on the first runtime-created missing slot."
+    },
+    {
+      "rva": "0x2A6FE0",
+      "name": "UI_InventoryItemWidget_Constructor",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "InventoryItemWidget base constructor with effective x64 ABI (widget, const char* name, Widget* parent) -> widget. InventorySlotWidget_Factory calls it directly before installing the derived vtable. It initializes the inherited strings and item-render state, including a zero cellSize pair at +0x5B8/+0x5BC; the render paths at 0x2A7574/0x2A75A3 and 0x2A7969/0x2A7971 consume those components. Its strict 32-byte entry signature is unique in build 92777."
+    },
+    {
+      "rva": "0x2C9850",
+      "name": "UI_InventorySlotWidget_Factory",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "InventorySlotWidget factory with effective x64 ABI (ignoredTypeDescriptor, const char* name, Widget* parent) -> Widget*. It allocates exactly 0x640 bytes through the UI allocator, calls the InventoryItemWidget base constructor, installs vtable 0x1CF3F20, initializes the direct fields and sets isHireable at +0x638 to false. Its 37-byte signature through the 0x640 allocation is unique in build 92777."
+    },
+    {
+      "rva": "0x2CA970",
+      "name": "UI_InventorySlotWidget_Finalize",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Runtime InventorySlotWidget vtable slot +0x08. If backgroundFilename at +0x5F8 is non-empty, it loads that asset into +0x628 through 0x858990, then tail-calls the InventoryItemWidget finalizer at 0x2A8E60. Native widget constructors call this virtual finalizer before UI_Widget_AddChild; identity is pinned by the live vtable plus the exact body because the short prologue alone has two .text matches."
+    },
+    {
+      "rva": "0x854DE0",
+      "name": "UI_Widget_AddChild",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Adds one child widget with x64 ABI (Widget* parent, Widget* child) -> void. It appends to the parent vector at +0x58/+0x60/+0x68, grows and transfers the allocation through the native UI allocator when required, and preserves ownership semantics. Twenty-eight direct callsites use the same parent/child order after the child's vtable +0x08 finalizer. Its strict 18-byte entry is unique in build 92777."
     },
     {
       "rva": "0x847C40",

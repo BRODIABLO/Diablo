@@ -295,6 +295,23 @@
       ]
     },
     {
+      "id": "extended-merc",
+      "name": "ExtendedMerc",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/extended-merc-3.2.md",
+      "nextGate": "When Vincent frees a runtime window, deploy the corrected disposable probe already built in analysis-cache and validate its created gloves slot for placement, render, equip/remove and controller navigation without writing TXT or layout files before defining the production hook or configuration.",
+      "include": [
+        "Mission/extended-merc-3.2.md",
+        "addons/ExtendedMerc/**",
+        "data-BKVince/BKVince.mpq/ExtendedMerc.*",
+        "data-BKVince/d2rloader/config/extended-merc*",
+        "data-BKVince/d2rloader/plugins/ExtendedMerc-src/**",
+        "data-BKVince/d2rloader/plugins/ExtendedMerc.dll*",
+        "scripts/reverse-engineering/extended-merc*"
+      ]
+    },
+    {
       "id": "configurable-charsi-reward",
       "name": "Configurable Charsi Reward",
       "status": "paused",
@@ -454,6 +471,7 @@
         "transmute-hotkey",
         "equipped-item-to-cube",
         "cube-quick-move-bottom-right",
+        "extended-merc",
         "book-of-lore"
       ],
       "reason": "Governed native evidence registry shared by native plugin missions."
@@ -473,6 +491,7 @@
         "vendor-stock-refresh",
         "transmute-hotkey",
         "equipped-item-to-cube",
+        "extended-merc",
         "book-of-lore"
       ],
       "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."

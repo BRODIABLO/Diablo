@@ -30975,6 +30975,16 @@
                                                                     }
                                                        },
                                                        {
+                                                           "name":  "extended-merc-3.2.md",
+                                                           "path":  "Mission/extended-merc-3.2.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-mission-native-plugin",
+                                                                        "summary":  "Décisions, preuves initiales et gates du plugin autonome ExtendedMerc pour l’équipement configurable des mercenaires.",
+                                                                        "agentAccess":  "read-write"
+                                                                    }
+                                                       },
+                                                       {
                                                            "name":  "floating-damage-portage-3.2.md",
                                                            "path":  "Mission/floating-damage-portage-3.2.md",
                                                            "kind":  "file"
