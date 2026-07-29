@@ -987,6 +987,57 @@ réussi des DLL; elle n'est pas causée par le pack et ne masque aucun rejet de
 plugin. Les observations gameplay intégrées restent ouvertes et ne sont pas
 déduites de ces cold starts techniques.
 
+## Validation finale de la configuration et du chargement — 29 juillet 2026
+
+Le parseur commun distingue maintenant explicitement une configuration absente
+d'une configuration présente mais invalide. L'absence du JSON mod-local permet
+le repli global prévu par eezstreet; un fichier présent mais illisible,
+malformé, doté d'une racine non objet, d'une section nommée non objet ou d'une
+valeur sensible hors limites refuse plutôt la DLL concernée avec le chemin et la
+raison exacte dans son log. Les modes de récompense et de gamble, les caps
+`/players`, les seuils et probabilités vendeur, les récompenses de quête et le
+stat de drainage des charges sont désormais validés strictement. La politique
+vendeur corrige aussi la sémantique de `rareItemChance` : la valeur représente
+bien un dénominateur 1-sur-N, comme l'annonce la configuration historique.
+
+Un probe runtime isolé a démontré que D2RLoader 1.0.1-beta ne restaure pas une
+écriture `PatchBytes` réussie lorsqu'une DLL retourne ensuite un échec de
+chargement : l'octet témoin est demeuré modifié après le rejet. Le PluginPack ne
+s'appuie donc plus sur un rollback implicite. Chaque DLL prévalide ses signatures,
+met en file ses hooks, patches et commandes console, puis les applique dans une
+transaction différée. Une erreur déterministe avant commit n'écrit rien; un
+refus pendant le commit arrête les opérations requises suivantes et conserve la
+DLL chargée afin qu'aucun callback déjà installé ne pointe vers un module
+déchargé. Les tests unitaires couvrent l'abandon, le commit ordonné, la poursuite
+après une opération optionnelle et l'arrêt après une opération requise.
+
+Le build Release final valide `135/135` écritures gouvernées et `25/25` CTest.
+Deux cold starts isolés utilisent exactement les artefacts finaux, d'abord les
+cinq DLL et le JSON en portée mod-locale, puis les cinq DLL et le repli JSON en
+portée globale. Dans les deux cas, D2RLoader rapporte
+`scanned=5 active=5 disabled=0 rejected=0 failed=0`. Les journaux confirment les
+commits différés `24/24` pour items, `0/0` pour levels, `6/6` pour misc, `0/0`
+pour quests et `2/2` pour skills. Les caps lus dans le processus restent aux
+valeurs vanilla `40`, `50` et `95`; le runtime est restauré `36/36` byte-exact
+et aucun processus ne reste actif.
+
+Les artefacts finaux portent les SHA-256 suivants :
+
+- `D2RPlugins.json` : `660664986598F076A45843C2712672EA933375E726388F057192BD35F71F8D5F`;
+- `plugin-items.dll` : `0E4F6C72CADBEC9DB2370D3A82470C8EC11D084BC68F465E9D06FDB9D3CB2B48`;
+- `plugin-levels.dll` : `1090581AE6D90B22BD190DAD379E62F03D34F973CB52F26CB2D40425618A880A`;
+- `plugin-misc.dll` : `7866C802AE88AB189D44C25ABBDD4336E8F130922E818AAE7CBF7ED5783225E7`;
+- `plugin-quests.dll` : `9944E221E06E97AD1313FC80909A62A04FAAFFC4BD028B457425B3B047BA8AEB`;
+- `plugin-skills.dll` : `D531C00C30829FB6435886E96169212F1C07F2546F3D5585ECA84168BD9D3F2B`.
+
+Les preuves fraîches sont conservées sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260729-145223514-final-transaction-mod-local/`
+et
+`analysis-cache/pluginpack-foundation-runtime-validation/20260729-145251801-final-transaction-global/`.
+Le JSON public conserve donc exactement son contenu et son hash précédents; ces
+gates techniques autorisent le début des observations gameplay sans les
+remplacer.
+
 ## Correction du premier pilote — 27 juillet 2026
 
 Vincent confirme que `GroundItemLabelLimit` appartient à la catégorie `items`,
