@@ -1,4 +1,4 @@
-REMOTE STASH 0.1.5
+REMOTE STASH 0.1.6
 INTER-MOD DEVELOPER KIT
 
 Author: RuffnecKk
@@ -23,7 +23,9 @@ Controller layouts are not supported yet.
 
 IMPORTANT
 
-Version 0.1.5 opens the stash panel on the client.
+Version 0.1.6 opens the stash panel on the client and can share the UI
+dispatcher with either `plugin-skills.dll` or the standalone Bulk Skill Point
+Allocation witness.
 Remote item moves, gold transactions, and persistence are not fully validated.
 Use a disposable test character and do not test with valuable items.
 
@@ -114,7 +116,7 @@ The button is placed below the inventory grid and beside the gold controls.
 The original gold button is never moved.
 
 The x and y values in the JSON are only starting values. The DLL replaces them
-at runtime. Custom position offsets are not available in version 0.1.5.
+at runtime. Custom position offsets are not available in version 0.1.6.
 
 If there is no safe space, the button is hidden.
 

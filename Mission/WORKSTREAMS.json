@@ -71,7 +71,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/gamble-screen-limit-3.2.md",
-      "nextGate": "Keep the integrated gameplay regression at fixed 32 as an independent non-blocking check while the PluginPack sequence continues with BulkSkillPointAllocation.",
+      "nextGate": "Keep the integrated gameplay regression at fixed 32 as an independent non-blocking check while the PluginPack sequence continues with Item Durability.",
       "include": [
         "Mission/gamble-screen-limit-3.2.md",
         "addons/GambleScreenLimit/**",
@@ -201,12 +201,13 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Port BulkSkillPointAllocation as the independent skills.bulkSkillPointAllocation feature in plugin-skills.dll after the technically validated EnhancedDamageMinMaxFix port; keep each remaining gameplay regression as a separate matrix.",
+      "nextGate": "Port Item Durability and DurabilityResistance as the independent items.itemDurability feature in plugin-items.dll after the technically validated BulkSkillPointAllocation port; keep each remaining gameplay regression as a separate matrix.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
+        "Mission/bulk-skill-point-allocation-3.2.md",
         "data-BKVince/BKVince.mpq/D2RPlugins.json",
         "data-BKVince/d2rloader/plugins/plugin-items.dll",
-        "addons/ConfigurableCharsiReward/**"
+        "data-BKVince/d2rloader/plugins/plugin-skills.dll"
       ]
     },
     {

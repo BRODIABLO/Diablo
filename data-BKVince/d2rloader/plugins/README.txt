@@ -198,6 +198,13 @@ disabled and therefore preserves vanilla behavior without installing its hook.
 The standalone DLL remains only as a gameplay witness until integrated
 equivalence is confirmed; never enable both owners at the same time.
 
+Bulk Skill Point Allocation 1.2.4 is integrated in `plugin-skills.dll` under
+`skills.bulkSkillPointAllocation`. The shipped block is disabled and installs
+no Bulk hooks, preserving vanilla clicks. When enabled, Ctrl uses the configured
+native batch and Shift uses native assign-all. Its UI dispatcher broker composes
+with RemoteStash 0.1.6 so exactly one module owns `0x843D90`. Keep the standalone
+Bulk DLL only as a gameplay witness and never enable both implementations.
+
 ## TCP hybrid and mod-local plugins
 
 * `CubeQuickMove.dll` 0.1.3 is hybrid (global or mod-local) and places every

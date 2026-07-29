@@ -80,7 +80,7 @@ Les getters strictement signés utilisés pour observer la progression sont
 
 ## Implantation livrée
 
-`BulkSkillPointAllocation 1.2.3` est un plugin D2RLoader hybride, attribué à
+`BulkSkillPointAllocation 1.2.4` est un plugin D2RLoader hybride, attribué à
 `RuffnecKk`, sans `ModScopedOnly`. Il peut être installé globalement ou sous un
 mod. Il intercepte le builder à `0x000EC700` avec son prologue strict de 29
 octets et ne modifie que l'opcode `0x3B`; tous les autres paquets traversent le
@@ -403,3 +403,51 @@ La matrice élargie reste utile après le port dans le pack : lots 1/10, plafond
 hôte/joiner et sauvegarde/rechargement. Ces cas ne remettent pas en cause la
 validation du flux final observé; ils restent les gates de non-régression du
 futur merge.
+
+## Port intégré au PluginPack — 28 juillet 2026
+
+La logique autonome `1.2.4` est maintenant une fonctionnalité interne ordinaire
+de `plugin-skills.dll` sous `skills.bulkSkillPointAllocation`. Son bloc unique
+contient `enabled`, le lot Ctrl, le modal Shift optionnel, les diagnostics et la
+clé/fallback de localisation. Le template joueur livre `enabled=false`,
+`skillPointsPerCtrlClick=5`, `confirmShiftAllocation=false` et
+`diagnostics=false`; le défaut reste donc entièrement vanilla et ne pose aucun
+hook Bulk.
+
+Les trois signatures complètes de 29 octets à `0x0EC700`, `0x5F4B90` et
+`0x843D90` sont uniques dans l'image 92777. Le constructeur modal
+`0x14EF670` et le lecteur de touche `0x120A100` restent des appels natifs sans
+écriture. Le manifeste commun atteint 78 sites à propriétaire unique, les cinq
+DLL Release compilent et 8/8 CTest passent. Le `plugin-skills.dll` intégré et sa
+copie gouvernée BKVince portent le SHA-256
+`8C07EBA4D589F6DA05E9CED51EA5C8338AAFD8EF410BDB5EDF1FB30CF1B231B0`.
+
+Le dispatcher UI est également arbitré avec RemoteStash. `RemoteStash 0.1.6`
+et `plugin-skills.dll` exposent le même contrat de broker : le premier module
+chargé possède `0x843D90`, puis l'autre s'enregistre comme consommateur. Avec
+les deux plugins actifs, RemoteStash possède donc seul `0x843D90` et
+`plugin-skills` possède seul `0x5F4B90` et `0x0EC700`. Sans RemoteStash,
+`plugin-skills` possède seul les trois sites. Aucun chaînage de trampolines
+inconnu n'est accepté.
+
+Trois cold starts isolés, avec la DLL Bulk autonome neutralisée, atteignent
+`24/24` :
+
+- défaut vanilla avec RemoteStash :
+  `scanned=29 active=27 disabled=2 rejected=0 failed=0`, zéro hook Bulk;
+- Bulk actif avec RemoteStash : mêmes compteurs, un seul propriétaire par site;
+- Bulk actif sans RemoteStash :
+  `scanned=28 active=26 disabled=2 rejected=0 failed=0`, les trois hooks détenus
+  par `plugin-skills`.
+
+Le runtime, ses cinq DLL du pack, son JSON, RemoteStash et le témoin Bulk ont été
+restaurés byte-exact après chaque scénario; aucun processus ne reste. Le rapport
+local réside sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260728-210500-bulk-skill-point-allocation/report.json`.
+Le checkpoint code `78d6290`
+(`Integrate Bulk Skill Point Allocation prototype`) est poussé sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation` et synchronisé à `0/0`.
+
+Le gameplay Ctrl/Shift de l'autonome demeure validé en jeu. L'équivalence du
+code intégré n'a pas été rejouée; la DLL autonome reste donc un témoin et ne doit
+jamais être chargée lorsque l'option intégrée est active.

@@ -76,7 +76,10 @@ using UiMessageInterceptorFn = bool(__fastcall*)(void* message) noexcept;
 using RegisterUiMessageInterceptorFn = bool(__cdecl*)(UiMessageInterceptorFn) noexcept;
 using UnregisterUiMessageInterceptorFn = void(__cdecl*)(UiMessageInterceptorFn) noexcept;
 
-constexpr wchar_t UiMessageBrokerModule[] = L"BulkSkillPointAllocation.dll";
+constexpr std::array<const wchar_t*, 2> UiMessageBrokerModules{
+    L"plugin-skills.dll",
+    L"BulkSkillPointAllocation.dll",
+};
 constexpr char RegisterUiMessageInterceptorExport[] =
     "RuffneckkRegisterUiMessageInterceptor";
 constexpr char UnregisterUiMessageInterceptorExport[] =
@@ -99,13 +102,15 @@ std::atomic<void*> DiagnosticPanel{};
 std::atomic<void*> DiagnosticButton{};
 std::atomic_bool UsingUiMessageBroker{};
 UnregisterUiMessageInterceptorFn BrokerUnregister{};
+std::atomic<UiMessageInterceptorFn> ExternalUiMessageInterceptor{};
+std::atomic_bool BrokerReady{};
 
 constexpr D2RL::PluginInfo Info{
     .infoSize = D2RL::PluginInfoSize,
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "remote-stash",
     .name = "Remote Stash",
-    .version = "0.1.5",
+    .version = "0.1.6",
     .author = "RuffnecKk",
     .description = "Opens the player stash from the inventory screen.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -322,8 +327,22 @@ bool __fastcall InterceptUiMessage(void* message) noexcept {
     return true;
 }
 
+bool TryExternalUiMessageInterceptor(void* message) noexcept {
+    const auto interceptor = ExternalUiMessageInterceptor.load(std::memory_order_acquire);
+    if (!interceptor) return false;
+    __try {
+        return interceptor(message);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+bool __fastcall InterceptUiMessageChain(void* message) noexcept {
+    return TryExternalUiMessageInterceptor(message) || InterceptUiMessage(message);
+}
+
 void __fastcall HookDispatchUiMessage(void* message) noexcept {
-    if (InterceptUiMessage(message)) return;
+    if (InterceptUiMessageChain(message)) return;
     OriginalDispatchUiMessage(message);
 }
 
@@ -334,7 +353,7 @@ auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void
     std::snprintf(
         message,
         sizeof(message),
-        "RemoteStash 0.1.5: placements=%llu; placementFailures=%llu; clientOpenRequests=%llu; serverBankSession=false (diagnostic prototype).",
+        "RemoteStash 0.1.6: placements=%llu; placementFailures=%llu; clientOpenRequests=%llu; serverBankSession=false (diagnostic prototype).",
         static_cast<unsigned long long>(DynamicPlacements.load(std::memory_order_relaxed)),
         static_cast<unsigned long long>(PlacementFailures.load(std::memory_order_relaxed)),
         static_cast<unsigned long long>(OpenRequests.load(std::memory_order_relaxed))
@@ -343,6 +362,32 @@ auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void
     return D2RL::ConsoleCommandResult::Handled;
 }
 } // namespace
+
+extern "C" __declspec(dllexport) bool __cdecl RuffneckkRegisterUiMessageInterceptor(
+    UiMessageInterceptorFn interceptor
+) noexcept {
+    if (!interceptor || !BrokerReady.load(std::memory_order_acquire)) return false;
+    UiMessageInterceptorFn expected{};
+    return ExternalUiMessageInterceptor.compare_exchange_strong(
+        expected,
+        interceptor,
+        std::memory_order_acq_rel,
+        std::memory_order_acquire
+    );
+}
+
+extern "C" __declspec(dllexport) void __cdecl RuffneckkUnregisterUiMessageInterceptor(
+    UiMessageInterceptorFn interceptor
+) noexcept {
+    if (!interceptor) return;
+    auto expected = interceptor;
+    ExternalUiMessageInterceptor.compare_exchange_strong(
+        expected,
+        nullptr,
+        std::memory_order_acq_rel,
+        std::memory_order_acquire
+    );
+}
 
 D2RL_PLUGIN_EXPORT auto D2RLoaderGetPluginInfo() noexcept -> const D2RL::PluginInfo* {
     return &Info;
@@ -362,6 +407,8 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     DiagnosticButton.store(nullptr, std::memory_order_relaxed);
     UsingUiMessageBroker.store(false, std::memory_order_relaxed);
     BrokerUnregister = nullptr;
+    ExternalUiMessageInterceptor.store(nullptr, std::memory_order_relaxed);
+    BrokerReady.store(false, std::memory_order_relaxed);
 
     if (!Base) return false;
     if (context->modDataVersionBuild != 0
@@ -378,21 +425,23 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     GetWidgetRect = At<GetWidgetRectFn>(GetWidgetRectRva);
     ClientUiPacket77 = At<ClientUiPacket77Fn>(ClientUiPacket77Rva);
 
-    const auto brokerModule = GetModuleHandleW(UiMessageBrokerModule);
-    const auto registerBroker = brokerModule
-        ? reinterpret_cast<RegisterUiMessageInterceptorFn>(
+    for (const auto* brokerName : UiMessageBrokerModules) {
+        const auto brokerModule = GetModuleHandleW(brokerName);
+        if (!brokerModule) continue;
+        const auto registerBroker = reinterpret_cast<RegisterUiMessageInterceptorFn>(
             GetProcAddress(brokerModule, RegisterUiMessageInterceptorExport)
-        )
-        : nullptr;
-    const auto unregisterBroker = brokerModule
-        ? reinterpret_cast<UnregisterUiMessageInterceptorFn>(
+        );
+        const auto unregisterBroker = reinterpret_cast<UnregisterUiMessageInterceptorFn>(
             GetProcAddress(brokerModule, UnregisterUiMessageInterceptorExport)
-        )
-        : nullptr;
-    if (registerBroker && unregisterBroker && registerBroker(InterceptUiMessage)) {
-        BrokerUnregister = unregisterBroker;
-        UsingUiMessageBroker.store(true, std::memory_order_release);
-    } else if (!Matches(DispatchUiMessageRva, DispatchUiMessageExpected)) {
+        );
+        if (registerBroker && unregisterBroker && registerBroker(InterceptUiMessageChain)) {
+            BrokerUnregister = unregisterBroker;
+            UsingUiMessageBroker.store(true, std::memory_order_release);
+            break;
+        }
+    }
+    if (!UsingUiMessageBroker.load(std::memory_order_acquire)
+        && !Matches(DispatchUiMessageRva, DispatchUiMessageExpected)) {
         context->LogError(
             "RemoteStash: UI-message dispatcher is already owned and exposes no "
             "compatible broker; plugin refused."
@@ -407,7 +456,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
             HookConfigurePlayerInventory,
             &OriginalConfigurePlayerInventory
         )) {
-        if (BrokerUnregister) BrokerUnregister(InterceptUiMessage);
+        if (BrokerUnregister) BrokerUnregister(InterceptUiMessageChain);
         BrokerUnregister = nullptr;
         UsingUiMessageBroker.store(false, std::memory_order_release);
         context->LogError("RemoteStash: inventory-panel hook failed.");
@@ -424,6 +473,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         context->LogError("RemoteStash: UI-message dispatch hook failed.");
         return false;
     }
+    BrokerReady.store(true, std::memory_order_release);
 
     if (!context->RegisterConsoleCommand(
             "remote-stash",
@@ -435,10 +485,10 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
 
     context->LogInfo(
         UsingUiMessageBroker.load(std::memory_order_acquire)
-            ? "RemoteStash 0.1.5 active for D2R 3.2.92777; dynamic desktop placement "
-              "and local native open-stash UI action use the shared plugin-misc UI "
+            ? "RemoteStash 0.1.6 active for D2R 3.2.92777; dynamic desktop placement "
+              "and local native open-stash UI action use the shared PluginPack UI "
               "dispatcher (no server bank session yet)."
-            : "RemoteStash 0.1.5 active for D2R 3.2.92777; dynamic desktop placement "
+            : "RemoteStash 0.1.6 active for D2R 3.2.92777; dynamic desktop placement "
               "and local native open-stash UI action use the standalone UI dispatcher "
               "(no server bank session yet)."
     );
@@ -446,10 +496,11 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
 }
 
 D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
+    BrokerReady.store(false, std::memory_order_release);
+    ExternalUiMessageInterceptor.store(nullptr, std::memory_order_release);
     if (UsingUiMessageBroker.exchange(false, std::memory_order_acq_rel)) {
-        const auto brokerModule = GetModuleHandleW(UiMessageBrokerModule);
-        if (brokerModule && BrokerUnregister) {
-            BrokerUnregister(InterceptUiMessage);
+        if (BrokerUnregister) {
+            BrokerUnregister(InterceptUiMessageChain);
         }
     }
     BrokerUnregister = nullptr;

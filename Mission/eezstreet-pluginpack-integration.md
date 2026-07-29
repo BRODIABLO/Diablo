@@ -293,7 +293,7 @@ par eezstreet sans modifier la fondation.
 | `GambleScreenLimit` | `1.2.0` | `plugin-items.dll` | `items.gambleScreenLimit` dans `D2RPlugins.json` | port intégré, Release et cold starts vanilla/actif validés; régression gameplay intégrée optionnelle |
 | `GroundItemLabelLimit` | `1.2.0` intégré | `plugin-items.dll` | `items.groundItemLabels` dans `D2RPlugins.json` | port intégré, Release et cold starts 32/64/128 validés; régression gameplay intégrée ouverte |
 | `EnhancedDamageMinMaxFix` | `1.2.0` intégré | `plugin-items.dll` | `items.enhancedDamageMinMaxFix` dans `D2RPlugins.json` | port intégré, Release et cold starts vanilla/actif validés; équivalence gameplay intégrée ouverte |
-| `BulkSkillPointAllocation` | `1.2.3` | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | prêt pour préparation du merge |
+| `BulkSkillPointAllocation` | `1.2.4` intégré | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | port intégré, Release et trois cold starts validés; équivalence gameplay intégrée ouverte |
 | bloc unifié `EthItemRules` | témoin historique `EtherealItemRules 0.1.0` | `plugin-items.dll` | bloc unique `items.etherealItemRules` | contrat unifié compilé et cold-starté; équivalence gameplay ouverte |
 | `RepairCostsCap` | `1.4.0` | `plugin-items.dll` | `items.repairCostsCap` dans `D2RPlugins.json` | fonctionnalité indépendante intégrée et cold-startée; équivalence gameplay ouverte |
 
@@ -350,10 +350,27 @@ Le checkpoint code `5ef599f`
 (`Integrate Enhanced Damage Min/Max Fix prototype`) est poussé sur
 `RuffDood/D2RL-Plugins:codex/pluginpack-foundation` et synchronisé à `0/0`.
 
-La tranche 1 est terminée et le premier port de la tranche 2 est validé
-techniquement. Le prochain port séquencé est `BulkSkillPointAllocation` sous
-`skills.bulkSkillPointAllocation` dans `plugin-skills.dll`; le composant
-ethereal, déjà intégré, ne constitue pas une étape séparée.
+`BulkSkillPointAllocation 1.2.4` est maintenant une option indépendante de
+`plugin-skills.dll`. Le bloc `skills.bulkSkillPointAllocation` livre
+`enabled=false`; aucun de ses trois hooks n'est donc posé avec le JSON joueur.
+Le manifeste atteint 78 sites uniques, les cinq DLL Release compilent et 8/8
+CTest passent. `plugin-skills.dll` porte le SHA-256
+`8C07EBA4D589F6DA05E9CED51EA5C8338AAFD8EF410BDB5EDF1FB30CF1B231B0`.
+
+Le port arbitre aussi le dispatcher partagé `0x843D90` avec
+`RemoteStash 0.1.6`. Le premier module chargé en reste l'unique propriétaire et
+l'autre utilise un broker exporté; sans RemoteStash, `plugin-skills` possède
+seul le site. Les cold starts vanilla, actif conjoint et actif sans RemoteStash
+atteignent tous `24/24`, sans rejet ni échec. Le checkpoint code `78d6290`
+(`Integrate Bulk Skill Point Allocation prototype`) est poussé sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation` et synchronisé à `0/0`.
+L'équivalence gameplay intégrée reste une matrice indépendante; le témoin
+autonome n'est jamais chargé en même temps que l'option.
+
+La tranche 1 et les deux petits hooks opaques déjà sélectionnés sont validés
+techniquement. Le prochain port séquencé du lot canonique est Item Durability /
+`DurabilityResistance` sous `items.itemDurability` dans `plugin-items.dll`; le
+composant ethereal, déjà intégré, ne constitue pas une étape séparée.
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est

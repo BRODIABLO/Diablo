@@ -2,11 +2,12 @@
 
 Dernière mise à jour : 28 juillet 2026
 
-Statut : prototype technique autonome `RemoteStash 0.1.5` compilé et déployé
+Statut : prototype technique autonome `RemoteStash 0.1.6` compilé et déployé
 pour BKVince le 27 juillet 2026. Vincent confirme que le bouton desktop ouvre
 désormais le panneau stash natif. Le clic passe par le broker partagé du
-dispatcher UI de `plugin-misc`, sans conflit de hook avec Bulk Skill Point
-Allocation. Un sprite coffre personnalisé à quatre états est maintenant déployé
+dispatcher UI, détenu soit par l'autonome Bulk Skill Point Allocation, soit par
+`plugin-skills.dll`, sans conflit de hook. Un sprite coffre personnalisé à
+quatre états est maintenant déployé
 en `176 × 112` avec un placement dynamique qui préserve intégralement le bouton
 d’or. Vincent confirme son rendu, son hit-test, l’ouverture au clic et le tooltip
 natif `YOUR PRIVATE STASH` résolu par la clé `remoteStashTooltip`. Le bouton d’or
@@ -409,3 +410,21 @@ En parallèle, confirmer qu’une interaction physique normale entre dans
 autoritaire exécuté dans le contexte serveur valide. Le jalon final devra faire
 passer ville/hors ville, solo/hôte/joiner, souris/manette et au moins un inventaire
 tiers redimensionné sans perte, duplication, corruption ni désynchronisation.
+
+## Compatibilité PluginPack 0.1.6 — 28 juillet 2026
+
+RemoteStash recherche désormais `plugin-skills.dll` puis le témoin autonome
+`BulkSkillPointAllocation.dll` comme brokers possibles de `0x843D90`. Il expose
+aussi le même contrat d'enregistrement afin que `plugin-skills.dll`, chargé plus
+tard par D2RLoader, puisse s'enregistrer lorsque RemoteStash possède déjà le
+dispatcher. La chaîne appelle d'abord son consommateur, puis l'identité stricte
+du bouton Remote Stash, et transmet tout autre message au trampoline original.
+
+Le build Release et 1/1 test passent. La DLL 0.1.6 porte le SHA-256
+`1447DAE2FE0D7424B76D0ED7C6BBC4DA500BC3C9E7EFA70B4D5464D07ABB102A`.
+Le cold start conjoint avec `skills.bulkSkillPointAllocation` actif atteint
+`24/24`, `scanned=29 active=27 disabled=2 rejected=0 failed=0` : RemoteStash
+possède seul `0x843D90`, tandis que `plugin-skills` possède `0x5F4B90` et
+`0x0EC700`. Le runtime est ensuite restauré byte-exact. Cette validation ferme
+le conflit de chargement technique; elle ne remplace pas les gates serveur,
+items, or et persistance de RemoteStash.
