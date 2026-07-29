@@ -30925,6 +30925,11 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "d2r-character-model-remodeling.md",
+                                                           "path":  "Mission/d2r-character-model-remodeling.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "D2RMM-D2RLoader-integration.md",
                                                            "path":  "Mission/D2RMM-D2RLoader-integration.md",
                                                            "kind":  "file"
@@ -31566,6 +31571,23 @@
                                                                             {
                                                                                 "name":  "checkpoint.test.mjs",
                                                                                 "path":  "scripts/checkpoint/checkpoint.test.mjs",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "d2r-assets",
+                                                           "path":  "scripts/d2r-assets",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-d2r-model-asset-tooling",
+                                                                        "summary":  "Outillage reproductible pour inspecter, transformer et valider les modèles D2R sans versionner les binaires tiers locaux.",
+                                                                        "agentAccess":  "read-write"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "THIRD_PARTY_TOOLS.md",
+                                                                                "path":  "scripts/d2r-assets/THIRD_PARTY_TOOLS.md",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]

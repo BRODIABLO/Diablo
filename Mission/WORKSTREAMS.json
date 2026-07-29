@@ -306,6 +306,18 @@
       ]
     },
     {
+      "id": "d2r-model-remodeling",
+      "name": "D2R Character Model Remodeling",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/d2r-character-model-remodeling.md",
+      "nextGate": "Produce one no-op and one localized player-head LOD0 morph while preserving topology, vertex identity, UVs, weights, skeleton and metadata; then compare MoPaH/d2rpp and D2R GPS output before runtime validation.",
+      "include": [
+        "Mission/d2r-character-model-remodeling.md",
+        "scripts/d2r-assets/**"
+      ]
+    },
+    {
       "id": "workstream-registry",
       "name": "Workstream Registry",
       "status": "maintenance",
