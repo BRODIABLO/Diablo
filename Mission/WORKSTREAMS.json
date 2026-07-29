@@ -201,7 +201,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Port Equipped Item to Cube into plugin-misc.dll under misc.equippedItemToCube while preserving its standalone witness as the gameplay oracle; keep prior regressions as separate matrices.",
+      "nextGate": "Port Assign Transmute Hotkey into plugin-misc.dll under misc.transmuteHotkey while preserving its gameplay-validated standalone witness; keep prior regressions as separate matrices.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
         "Mission/bulk-skill-point-allocation-3.2.md",

@@ -544,8 +544,36 @@ gameplay de l'épée `1x3` placée à `4,3` sont conservés. Le checkpoint
 `9835aa8` (`Integrate Cube Quick Move prototype`) est poussé sur
 `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
 
-Le prochain port séquencé du lot canonique est Equipped Item to Cube sous
-`misc.equippedItemToCube` dans `plugin-misc.dll`.
+Equipped Item to Cube `0.2.0` est maintenant intégré dans `plugin-misc.dll`
+sous `misc.equippedItemToCube`. Le bloc strict accepte uniquement `enabled` et
+livre `false`, de sorte que le comportement vanilla reste inchangé et qu'aucun
+hook ne soit installé par défaut.
+
+Le module possède les deux sites uniques `0x0EE2A0` (file de paquets sortants)
+et `0x2CACF0` (clic réel dans un emplacement équipé). Les six signatures des
+helpers non possédés ont été revérifiées dans l'image canonique 92777. L'appel
+à `ResolveHoveredUnit` à `0x2A7810` traverse volontairement le hook composable
+d'ExtendedItemStats : `plugin-items` en est le propriétaire unique, donc le
+module Equipped ne revalide pas les octets originaux de cette entrée après son
+chargement.
+
+Les cinq DLL Release compilent, 16/16 CTest passent et le manifeste commun
+atteint 125 sites sans chevauchement. `plugin-misc.dll` mesure 129024 octets et
+porte le SHA-256
+`D286CF6D7B74372CC9BFB299F6F8871021297BF18E506E296B486D6FB534E0C3`.
+Le cold start vanilla atteint `24/24` sans hook Equipped. Le cold start actif,
+avec Cube Quick Move et Equipped Item to Cube simultanément activés, atteint
+`24/24` et `scanned=28 active=26 disabled=2 rejected=0 failed=0`. La lecture
+mémoire confirme les deux hooks et les 27 appels Cube vers l'unique relais
+`0x3E80000`; le hook ExtendedItemStats `0x2A7810` était déjà installé avant le
+chargement de `plugin-misc`, sans conflit. Aucun crash frais n'est créé et le
+runtime est restauré byte-exact. Le rapport est conservé sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260729-equipped-item-to-cube/report.json`.
+Le checkpoint `bc3ea0d` (`Integrate Equipped Item to Cube prototype`) est poussé
+sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
+
+Le prochain port séquencé du lot canonique est Assign Transmute Hotkey sous
+`misc.transmuteHotkey` dans `plugin-misc.dll`.
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est
