@@ -201,11 +201,12 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Port Charm Aura Trigger Fix as the independent items.charmAuraTriggerFix feature in plugin-items.dll after the technically validated Item Durability port; keep each remaining gameplay regression as a separate matrix.",
+      "nextGate": "Port ExtendedItemStats as internal plugin-items.dll infrastructure with no public JSON key after the technically validated Charm Aura Trigger Fix port; keep gameplay regressions as separate matrices.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
         "Mission/bulk-skill-point-allocation-3.2.md",
         "Mission/durability-loss-resistance-3.2.md",
+        "Mission/charm-inventory-auras-3.2.md",
         "data-BKVince/BKVince.mpq/D2RPlugins.json",
         "data-BKVince/d2rloader/plugins/plugin-items.dll",
         "data-BKVince/d2rloader/plugins/plugin-skills.dll"

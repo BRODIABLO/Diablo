@@ -228,3 +228,22 @@ ville, avant toute reprise de cadavre.
    et `native town refreshes` exactement une fois.
 5. Confirmer qu'une mort Hardcore conserve le comportement vanilla et ne peut
    pas atteindre ce refresh.
+
+## Intégration au PluginPack (28 juillet 2026)
+
+Le correctif 1.6.0 est porté sans changement de frontière fonctionnelle dans
+`plugin-items.dll` sous le bloc strict `items.charmAuraTriggerFix`. Le template
+joueur livre `enabled=false` et `diagnostics=false`, donc aucun hook n'est posé
+par défaut. L'activation installe exactement les trois hooks historiques à
+`0x502D00`, `0x491960` et `0x42D2C0`; le manifeste commun confirme 84 sites à
+propriétaire unique. Les cinq DLL Release et 10/10 CTest sont verts.
+
+Deux cold starts isolés atteignent `24/24`, avec
+`scanned=29 active=27 disabled=2 rejected=0 failed=0`. Le scénario vanilla ne
+pose aucun hook du correctif; le scénario actif attribue les trois RVA à
+`eezstreet-plugin-items`. Le témoin autonome est neutralisé uniquement pendant
+les tests, puis la DLL, le JSON et le runtime sont restaurés byte-exact. Le
+checkpoint code `25811d8` est poussé sur la branche de fondation. Les preuves
+gameplay autonomes transition/oskill et récupération du cadavre restent
+valables; la réapparition en ville et l'équivalence gameplay du port intégré
+restent ouvertes.

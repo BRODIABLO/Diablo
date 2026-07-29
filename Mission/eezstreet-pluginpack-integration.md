@@ -297,6 +297,7 @@ par eezstreet sans modifier la fondation.
 | `GambleScreenLimit` | `1.2.0` | `plugin-items.dll` | `items.gambleScreenLimit` dans `D2RPlugins.json` | port intégré, Release et cold starts vanilla/actif validés; régression gameplay intégrée optionnelle |
 | `GroundItemLabelLimit` | `1.2.0` intégré | `plugin-items.dll` | `items.groundItemLabels` dans `D2RPlugins.json` | port intégré, Release et cold starts 32/64/128 validés; régression gameplay intégrée ouverte |
 | Item Durability / `DurabilityResistance` | `1.2.0` intégré | `plugin-items.dll` | `items.itemDurability` dans `D2RPlugins.json` | port intégré, Release et trois cold starts validés; compatibilité ranged avec Transmogrify externe ouverte |
+| Charm Aura Trigger Fix / `CharmInventoryAuras` | `1.6.0` intégré | `plugin-items.dll` | `items.charmAuraTriggerFix` dans `D2RPlugins.json` | port intégré, Release et cold starts vanilla/actif validés; équivalence gameplay town-respawn ouverte |
 | `EnhancedDamageMinMaxFix` | `1.2.0` intégré | `plugin-items.dll` | `items.enhancedDamageMinMaxFix` dans `D2RPlugins.json` | port intégré, Release et cold starts vanilla/actif validés; équivalence gameplay intégrée ouverte |
 | `BulkSkillPointAllocation` | `1.2.4` intégré | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | port intégré, Release et trois cold starts validés; équivalence gameplay intégrée ouverte |
 | bloc unifié `EthItemRules` | témoin historique `EtherealItemRules 0.1.0` | `plugin-items.dll` | bloc unique `items.etherealItemRules` | contrat unifié compilé et cold-starté; équivalence gameplay ouverte |
@@ -395,9 +396,33 @@ Transmogrify reste hors du lot. Il coexiste avec les résistances et le maximum
 unique pour une activation simultanée. L'équivalence gameplay intégrée reste
 ouverte et indépendante de la preuve autonome.
 
-Le prochain port séquencé du lot canonique est Charm Aura Trigger Fix sous
-`items.charmAuraTriggerFix` dans `plugin-items.dll`; le composant ethereal,
-déjà intégré, ne constitue pas une étape séparée.
+Charm Aura Trigger Fix / `CharmInventoryAuras 1.6.0` est maintenant une option
+indépendante de `plugin-items.dll`. Le bloc strict
+`items.charmAuraTriggerFix` livre `enabled=false` et `diagnostics=false`; le
+JSON joueur ne pose donc aucun de ses hooks et conserve le comportement
+vanilla. L'activation attribue exactement `0x502D00`, `0x491960` et `0x42D2C0`
+à cette fonctionnalité. Les retours uniques `0x486AE5`, `0x4B35A6` et
+`0x4B6650` filtrent respectivement transition, récupération du cadavre et
+réapparition en ville. Son appel de `CheckItemType` à `0x373890` ne revendique
+pas ce hook : il traverse le propriétaire actuel et compose donc avec
+`EthItemRules`.
+
+Le manifeste atteint 84 sites uniques, les cinq DLL Release compilent et 10/10
+CTest passent. `plugin-items.dll` porte le SHA-256
+`4C59668F0011256DFFD19B695CCA053D8A4000397BDF57D36B6F9A08181A210F`.
+Les cold starts vanilla et actif atteignent `24/24` avec
+`scanned=29 active=27 disabled=2 rejected=0 failed=0`; le premier ne pose aucun
+hook Charm Aura et le second en pose exactement trois après neutralisation du
+témoin autonome. Le runtime, le JSON et `CharmInventoryAuras.dll` sont ensuite
+restaurés byte-exact, sans processus résiduel. Le checkpoint code `25811d8`
+(`Integrate Charm Aura Trigger Fix prototype`) est poussé sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation` et synchronisé à `0/0`.
+Les preuves gameplay transition/oskill et récupération du cadavre du témoin
+autonome restent acquises; la réapparition en ville et l'équivalence intégrée
+restent des matrices séparées ouvertes.
+
+Le prochain port séquencé du lot canonique est `ExtendedItemStats`, intégré
+comme infrastructure de `plugin-items.dll` sans clé JSON publique.
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est
