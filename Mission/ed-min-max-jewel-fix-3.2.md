@@ -109,10 +109,10 @@ console `enhanced-damage-min-max-fix` affiche :
 
 ## Validation technique
 
-La validation locale autorisée est limitée à l'analyse statique, aux signatures
-byte-exactes, à la compilation, aux tests unitaires et aux contrôles du binaire.
-Vincent a explicitement demandé de ne pas lancer D2R localement : la validation
-fonctionnelle appartient à son testeur personnel.
+La validation locale initialement autorisée pour la DLL autonome était limitée à
+l'analyse statique, aux signatures byte-exactes, à la compilation, aux tests
+unitaires et aux contrôles du binaire. La validation fonctionnelle de cette
+version appartenait au testeur personnel de Vincent.
 
 La matrice de référence demandait au minimum :
 
@@ -137,6 +137,42 @@ version finale `1.2.0`. Aucun lancement local de D2R n'a été effectué.
 Le gate fonctionnel principal est fermé. Les variantes supplémentaires de la
 matrice demeurent des tests de non-régression facultatifs et ne bloquent plus la
 livraison.
+
+## Port intégré au PluginPack — 28 juillet 2026
+
+La logique `1.2.0` est maintenant une fonctionnalité interne ordinaire de
+`plugin-items.dll` sous `items.enhancedDamageMinMaxFix`. Le template joueur
+livre `enabled=false`; le comportement vanilla reste donc inchangé et aucun hook
+de cette fonctionnalité n'est installé avec la configuration par défaut.
+
+Le manifeste commun attribue uniquement à cette fonctionnalité le hook
+`STATLIST_EvaluateAndUpdateStat` à `0x2FA430`, avec sa signature complète de
+15 octets. Les RVA `0x2F9B10`, `0x2F9DB0`, `0x34B9D0` et `0x373890` restent des
+appels natifs et non des écritures supplémentaires. L'appel à `0x373890` est
+compatible avec le hook déjà détenu par `EthItemRules` : les retours propres à
+la génération éthérée sont les seuls interceptés et ce nouveau consommateur est
+délégué au comportement original. Le manifeste atteint 75 sites à propriétaire
+unique, sans chevauchement.
+
+Les cinq DLL Release compilent et 7/7 CTest passent. Le `plugin-items.dll`
+intégré et sa copie gouvernée BKVince portent le SHA-256
+`73FB7D9597BC42C997726FB7FE99623A5A4CB079A1BE050DBE667760E651CF11`.
+Deux cold starts isolés ont neutralisé temporairement la DLL autonome :
+
+- défaut vanilla : startup `24/24`, aucun hook `0x2FA430`,
+  `scanned=29 active=27 disabled=2 rejected=0 failed=0` ;
+- option active : startup `24/24`, exactement un hook `0x2FA430`, mêmes
+  compteurs sans rejet ni échec.
+
+La DLL, le JSON et le témoin autonome du runtime ont ensuite été restaurés
+byte-exact, et aucun processus Diablo ne reste actif. Le rapport local réside
+sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260728-200820550-enhanced-damage-min-max-fix/report.json`.
+
+La validation gameplay melee/throwable de la DLL autonome reste la preuve
+fonctionnelle de référence. L'équivalence gameplay du code intégré n'a pas été
+rejouée; la DLL autonome est donc conservée comme témoin jusqu'à ce contrôle,
+sans être chargée en même temps que l'option intégrée.
 
 ## Livrables
 

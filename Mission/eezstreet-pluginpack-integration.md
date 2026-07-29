@@ -292,6 +292,7 @@ par eezstreet sans modifier la fondation.
 |---|---|---|---|---|
 | `GambleScreenLimit` | `1.2.0` | `plugin-items.dll` | `items.gambleScreenLimit` dans `D2RPlugins.json` | port intégré, Release et cold starts vanilla/actif validés; régression gameplay intégrée optionnelle |
 | `GroundItemLabelLimit` | `1.2.0` intégré | `plugin-items.dll` | `items.groundItemLabels` dans `D2RPlugins.json` | port intégré, Release et cold starts 32/64/128 validés; régression gameplay intégrée ouverte |
+| `EnhancedDamageMinMaxFix` | `1.2.0` intégré | `plugin-items.dll` | `items.enhancedDamageMinMaxFix` dans `D2RPlugins.json` | port intégré, Release et cold starts vanilla/actif validés; équivalence gameplay intégrée ouverte |
 | `BulkSkillPointAllocation` | `1.2.3` | `plugin-skills.dll` | `skills.bulkSkillPointAllocation` dans `D2RPlugins.json` | prêt pour préparation du merge |
 | bloc unifié `EthItemRules` | témoin historique `EtherealItemRules 0.1.0` | `plugin-items.dll` | bloc unique `items.etherealItemRules` | contrat unifié compilé et cold-starté; équivalence gameplay ouverte |
 | `RepairCostsCap` | `1.4.0` | `plugin-items.dll` | `items.repairCostsCap` dans `D2RPlugins.json` | fonctionnalité indépendante intégrée et cold-startée; équivalence gameplay ouverte |
@@ -328,9 +329,31 @@ BKVince après fusion; les sources et presets autonomes restent seulement des
 témoins de développement. La régression gameplay du port reste une matrice
 indépendante et non bloquante.
 
-La tranche 1 est donc techniquement terminée. Le prochain port séquencé est
-`EnhancedDamageMinMaxFix` sous `items.enhancedDamageMinMaxFix`, premier petit
-hook opaque de la tranche 2.
+Le port `EnhancedDamageMinMaxFix 1.2.0` est maintenant une option indépendante
+de `plugin-items.dll`. Le défaut `enabled=false` ne pose aucun hook. L'activation
+attribue uniquement `STATLIST_EvaluateAndUpdateStat` à `0x2FA430` à cette
+fonctionnalité; ses quatre autres RVA sont des appels natifs. L'appel à
+`0x373890` demeure compatible avec le hook d'`EthItemRules`, qui délègue ce
+retour non éthéré au chemin original. Le manifeste atteint 75 sites sans
+chevauchement, les cinq DLL Release compilent et 7/7 CTest passent.
+
+Le `plugin-items.dll` intégré porte le SHA-256
+`73FB7D9597BC42C997726FB7FE99623A5A4CB079A1BE050DBE667760E651CF11`.
+Les cold starts vanilla et actif atteignent `24/24` avec
+`scanned=29 active=27 disabled=2 rejected=0 failed=0`; le premier ne pose aucun
+hook `0x2FA430` et le second en pose exactement un, après neutralisation du
+témoin autonome. Le runtime est ensuite restauré byte-exact. L'équivalence
+gameplay intégrée reste ouverte et indépendante de la preuve melee/throwable
+déjà obtenue avec l'autonome.
+
+Le checkpoint code `5ef599f`
+(`Integrate Enhanced Damage Min/Max Fix prototype`) est poussé sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation` et synchronisé à `0/0`.
+
+La tranche 1 est terminée et le premier port de la tranche 2 est validé
+techniquement. Le prochain port séquencé est `BulkSkillPointAllocation` sous
+`skills.bulkSkillPointAllocation` dans `plugin-skills.dll`; le composant
+ethereal, déjà intégré, ne constitue pas une étape séparée.
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est

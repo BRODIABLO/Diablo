@@ -192,6 +192,12 @@ Ground Item Label Limit 1.2.0 is an internal RuffnecKk feature of
 so vanilla 32 remains effective; enabling it selects exactly 64 or 128. The
 standalone JSON and disabled DLL were removed after the integrated cold starts.
 
+Enhanced Damage Min/Max Fix 1.2.0 is also available internally in
+`plugin-items.dll` under `items.enhancedDamageMinMaxFix`. The shipped block is
+disabled and therefore preserves vanilla behavior without installing its hook.
+The standalone DLL remains only as a gameplay witness until integrated
+equivalence is confirmed; never enable both owners at the same time.
+
 ## TCP hybrid and mod-local plugins
 
 * `CubeQuickMove.dll` 0.1.3 is hybrid (global or mod-local) and places every

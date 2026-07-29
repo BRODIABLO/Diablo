@@ -71,7 +71,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/gamble-screen-limit-3.2.md",
-      "nextGate": "Keep the integrated gameplay regression at fixed 32 as an independent non-blocking check while the PluginPack sequence continues with EnhancedDamageMinMaxFix.",
+      "nextGate": "Keep the integrated gameplay regression at fixed 32 as an independent non-blocking check while the PluginPack sequence continues with BulkSkillPointAllocation.",
       "include": [
         "Mission/gamble-screen-limit-3.2.md",
         "addons/GambleScreenLimit/**",
@@ -201,7 +201,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Port EnhancedDamageMinMaxFix as the independent items.enhancedDamageMinMaxFix feature after the technically validated GroundItemLabelLimit port; keep each remaining gameplay regression as a separate matrix.",
+      "nextGate": "Port BulkSkillPointAllocation as the independent skills.bulkSkillPointAllocation feature in plugin-skills.dll after the technically validated EnhancedDamageMinMaxFix port; keep each remaining gameplay regression as a separate matrix.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
         "data-BKVince/BKVince.mpq/D2RPlugins.json",
@@ -222,6 +222,7 @@
         "data-BKVince/BKVince.mpq/CubeQuickMove.json",
         "data-BKVince/d2rloader/plugins/CubeQuickMove-src/**",
         "data-BKVince/d2rloader/plugins/CubeQuickMove.dll*",
+        "Mission/ed-min-max-jewel-fix-3.2.md",
         "scripts/reverse-engineering/cube-quick-move*"
       ]
     },
