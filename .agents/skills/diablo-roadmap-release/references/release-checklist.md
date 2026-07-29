@@ -13,7 +13,7 @@
 - Une allowlist exacte a été définie avant création.
 - Les fichiers proviennent du build et de la configuration réellement validés.
 - La liste des entrées du ZIP a été inspectée après création.
-- Aucun README, source, TOML, log ou fichier de preuve interdit n'est inclus pour un plugin incubé.
+- Aucun README, source, symbole, log ou fichier de preuve interdit n'est inclus pour un plugin incubé; seul le fichier de configuration indépendant confirmé, JSON ou TOML, accompagne la DLL.
 - Aucune DLL tierce n'est redistribuée sans autorisation et crédits appropriés.
 - Le SHA-256 du ZIP et des artefacts distribués est consigné dans la mission.
 

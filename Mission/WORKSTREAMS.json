@@ -288,6 +288,10 @@
       "include": [
         "Mission/WORKSTREAMS.json",
         ".agents/skills/diablo-git-checkpoint/SKILL.md",
+        ".agents/skills/d2rloader-plugin-incubation/SKILL.md",
+        ".agents/skills/d2rloader-plugin-incubation/agents/openai.yaml",
+        ".agents/skills/d2rloader-plugin-incubation/references/incubation-checklist.md",
+        ".agents/skills/diablo-roadmap-release/references/release-checklist.md",
         ".agents/skills/diablo-git-checkpoint/scripts/inspect-checkpoint.mjs",
         "reverse-engineering/cheat-spawn.md",
         "scripts/checkpoint/**",
