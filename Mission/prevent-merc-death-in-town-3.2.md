@@ -128,17 +128,16 @@ serviteurs ou rester active après la sortie de ville.
   `D49166D33B2DEA7BCECE0F972692802AE8BC4D48A1B15FF811FA2A10329C8980`.
   Les trois exports requis, la section ressource, le binaire x64 et les
   métadonnées RuffnecKk 0.1.0 sont contrôlés sur l’artefact synchronisé.
-- Le paquet de test externe
-  `addons/PreventMercDeathInTown/PreventMercDeathInTown-0.1.0-test.zip` contient
-  uniquement `PreventMercDeathInTown.dll` et `PreventMercDeathInTown.json` à sa
-  racine. SHA-256 du ZIP :
-  `152C54B88360A2B655837F8D88714CBB443ADD9D4DC3A4F3EA1DB48202EE636F`.
-  La DLL distribuée est byte-identique au build Release et au dépôt, SHA-256
+- Le ZIP de test externe a été retiré du dépôt comme obsolète par décision de
+  Vincent le 29 juillet 2026. Sa composition (DLL + JSON) et son SHA-256
+  `152C54B88360A2B655837F8D88714CBB443ADD9D4DC3A4F3EA1DB48202EE636F`
+  restent une preuve historique, mais ne décrivent plus un artefact distribuable.
+  La DLL validée est byte-identique au build Release et au dépôt, SHA-256
   `D49166D33B2DEA7BCECE0F972692802AE8BC4D48A1B15FF811FA2A10329C8980`;
   le JSON porte `27358CD08B39917A924115EF6BA3F5D34C14EC2F6E53A1D204C01BCE7C3F7D8C`.
   README, sources, symboles, TOML, logs, preuves et DLL eezstreet sont exclus.
-- Vincent confirme le 27 juillet 2026 que le test externe fonctionne. Cette
-  preuve ferme le gate fonctionnel du prototype distribué et autorise la
+- Vincent confirme le 27 juillet 2026 que le test externe fonctionnait. Cette
+  preuve historique ferme le gate fonctionnel du prototype et autorise la
   préparation du merge PluginPack; elle ne remplace pas les contrôles de build,
   configuration et coexistence propres à la future DLL fusionnée.
 

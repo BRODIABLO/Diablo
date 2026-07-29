@@ -633,18 +633,6 @@
                                                                         ]
                                                        },
                                                        {
-                                                           "name":  "PreventMercDeathInTown",
-                                                           "path":  "addons/PreventMercDeathInTown",
-                                                           "kind":  "directory",
-                                                           "children":  [
-                                                                            {
-                                                                                "name":  "PreventMercDeathInTown-0.1.0-test.zip",
-                                                                                "path":  "addons/PreventMercDeathInTown/PreventMercDeathInTown-0.1.0-test.zip",
-                                                                                "kind":  "file"
-                                                                            }
-                                                                        ]
-                                                       },
-                                                       {
                                                            "name":  "QtyDisplayIssue",
                                                            "path":  "addons/QtyDisplayIssue",
                                                            "kind":  "directory",
