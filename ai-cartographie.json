@@ -1,8 +1,8 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-28T20:15:53.9055472+00:00",
+    "generatedAt":  "2026-07-29T14:07:51.1287402+00:00",
     "root":  {
-                 "name":  "snapshot-pre-ai",
+                 "name":  "Diablo",
                  "path":  ".",
                  "kind":  "directory",
                  "meta":  {
@@ -13646,6 +13646,11 @@
                                                                                              ]
                                                                             },
                                                                             {
+                                                                                "name":  "BookOfLore.toml",
+                                                                                "path":  "data-BKVince/BKVince.mpq/BookOfLore.toml",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "BulkSkillPointAllocation.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/BulkSkillPointAllocation.json",
                                                                                 "kind":  "file"
@@ -13930,6 +13935,63 @@
                                                                                                                       {
                                                                                                                           "name":  "tooltip_ranges_tests.cpp",
                                                                                                                           "path":  "data-BKVince/d2rloader/plugins/AdvancedItemTooltips-src/tooltip_ranges_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "BookOfLore-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/BookOfLore-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "meta":  {
+                                                                                                                  "role":  "x-plugin-incubation-source",
+                                                                                                                   "summary":  "Sources du plugin autonome Book of Lore, avec configuration TOML stricte, politique testable et témoin client natif 92777.",
+                                                                                                                  "agentAccess":  "read-write",
+                                                                                                                  "status":  "experimental",
+                                                                                                                  "notes":  [
+                                                                                                                                "Plugin autonome permanent RuffnecKk, sans propriétaire ni merge PluginPack.",
+                                                                                                                                    "Le jalon 0.2.0 implante un témoin client Tower Tome fail-closed; la sélection serveur autoritaire et la validation runtime restent à prouver."
+                                                                                                                            ]
+                                                                                                              },
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "book_of_lore_config.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/BookOfLore-src/book_of_lore_config.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "book_of_lore_state.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/BookOfLore-src/book_of_lore_state.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/BookOfLore-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "config_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/BookOfLore-src/config_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/BookOfLore-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/BookOfLore-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "README.md",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/BookOfLore-src/README.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "state_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/BookOfLore-src/state_tests.cpp",
                                                                                                                           "kind":  "file"
                                                                                                                       }
                                                                                                                   ]
@@ -30816,6 +30878,16 @@
                                                            "name":  "advanced-item-tooltips-3.2.md",
                                                            "path":  "Mission/advanced-item-tooltips-3.2.md",
                                                            "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "book-of-lore-3.2.md",
+                                                           "path":  "Mission/book-of-lore-3.2.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-mission-native-plugin",
+                                                                        "summary":  "Décision autonome, spécification historique, preuves 92777 et gates du plugin Book of Lore.",
+                                                                        "agentAccess":  "read-write"
+                                                                    }
                                                        },
                                                        {
                                                            "name":  "bulk-skill-point-allocation-3.2.md",

@@ -164,6 +164,51 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   ne trouve aucune clé Cube ni hook d'inventaire dans `plugin-misc`; les sites
   existants `0x18885B`, `0x18887F` et `0x542F40` sont distincts.
 
+## Book of Lore
+
+- `objects.txt` 3.2 associe `TowerTome` (`*ID=8`) a `OperateFn=6`. Cette
+  donnee compilee est confirmee dans BKVince et dans l'extraction vanilla 3.2;
+  elle ne fournit toutefois aucun pointeur natif a elle seule.
+- `OBJECTS_OperateFunction06_TowerTome` est identifie a `0x5DC570`. Son ABI
+  observee est `(operation, operateMode) -> int32`, avec le second argument
+  inutilise et `operation+0x00/+0x08/+0x10/+0x20` correspondant au jeu, a
+  l'objet, au joueur et a l'identifiant de classe objet.
+- Le handler refuse les modes d'animation superieurs a 2, resout la quete 5 par
+  `QUESTS_GetQuestData 0x518220`, exige son gate d'introduction, demarre le mode
+  operating et l'evenement ENDANIM, puis envoie l'identifiant de chaine 127 et
+  avance l'etat A1Q5. Cette structure de controle est l'equivalent exact du
+  Tower Tome D2MOO 1.10f, sans transposer son adresse ni ses structures 32 bits.
+- La signature etendue de `0x5DC570`, depuis le prologue jusqu'aux appels mode
+  d'animation et quete, est unique. Le prologue court seul ne l'est pas : il a
+  egalement un temoin a `0x58EFA0` et ne doit jamais etre utilise comme gate.
+- `QUESTS_SendScrollMessage 0x517E90` recoit `(game, player, unit, uint16
+  stringId)`, resout le client et construit le paquet serveur `0x27` de 0x28
+  octets. Le layout observe est header `+0x00`, unit type `+0x01`, GUID `+0x02`,
+  compteur de messages `+0x06` et premier string id `+0x0A`. Ses trois callers
+  directs incluent Tower Tome a `0x5DC61E`.
+- `CLIENT_HandleScrollMessagePacket27 0x19A630` ferme le trajet reseau. Pour un
+  objet (`unitType=2`) et le menu ordinaire du Tower Tome, il conserve le GUID
+  et transmet le string id de `packet+0x0A` a
+  `CLIENT_ShowScrollMessageById 0x197BF0`.
+- `CLIENT_ShowScrollMessageById` appelle `LANG_GetStringById 0x5F4A50`, cree le
+  panneau natif de texte defilant et reconnait explicitement l'id 127. Son seul
+  caller direct est le handler `0x27`; leurs signatures strictes sont uniques.
+- Le callsite `0x197C5F` est l'appel direct de
+  `CLIENT_ShowScrollMessageById` vers `LANG_GetStringById`. Ses cinq octets
+  `E8 EC CD 45 00` sont verifies et Book of Lore `0.2.0` redirige uniquement ce
+  site vers un relais proche; la fonction globale de langue reste intacte pour
+  AdvancedItemTooltips, Transmogrify et les autres consommateurs.
+- Le temoin client `0.2.0` hooke le handler `0x27`, arme une portee thread-local
+  seulement pour `unitType=2`, menu `0` et id 127, puis substitue le premier
+  texte configure au callsite `0x197C5F`. Il est compile mais non deploye et la
+  configuration livree reste desactivee. La selection autoritaire Tower Tome,
+  les identifiants prives, les filtres et l'historique ne sont pas implantes au
+  runtime.
+- La table runtime `OperateFn` n'expose aucun xref ou pointeur brut vers
+  `0x5DC570` dans l'image hydratee. L'identite du handler est haute confiance,
+  mais la propriete exacte de cette table et son dispatch indirect restent un
+  gate distinct avant installation d'un hook de production.
+
 ## Discipline de promotion
 
 Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de

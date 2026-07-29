@@ -1,0 +1,31 @@
+# Keep disabled until the controlled Tower Tome client witness is runtime-tested.
+enabled = false
+
+[[messages]]
+id = "example.forgotten-road"
+title = "The Forgotten Road"
+text = """
+The road beneath the old tower remembers every traveler who came before you.
+"""
+scroll_speed = 18
+all_same = false
+
+[messages.filters]
+difficulty = 1
+act = 1
+min_level = 1
+town = false
+
+[[messages]]
+id = "example.town-warning"
+title = "A Weathered Notice"
+text = """
+##01, prepare well before leaving ##05. ##03 shows no mercy.
+"""
+scroll_speed = 18
+all_same = true
+
+[messages.filters]
+difficulty = 1
+act = 1
+town = true

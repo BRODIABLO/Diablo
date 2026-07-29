@@ -178,6 +178,22 @@
       ]
     },
     {
+      "id": "book-of-lore",
+      "name": "Book of Lore",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/book-of-lore-3.2.md",
+      "nextGate": "Runtime-test the disabled-by-default 0.2.0 Tower Tome client witness, prove that only packet-0x27 object/menu-0 string 127 is substituted in the native scroll UI, then resolve OperateFn table ownership for authoritative server selection.",
+      "include": [
+        "Mission/book-of-lore-3.2.md",
+        "addons/BookOfLore/**",
+        "data-BKVince/BKVince.mpq/BookOfLore.toml",
+        "data-BKVince/d2rloader/plugins/BookOfLore-src/**",
+        "data-BKVince/d2rloader/plugins/BookOfLore.dll*",
+        "scripts/reverse-engineering/book-of-lore*"
+      ]
+    },
+    {
       "id": "vendor-stock-refresh",
       "name": "Vendor Stock Refresh",
       "status": "paused",
@@ -327,12 +343,21 @@
     },
     {
       "pattern": "data-BKVince/BKVince.mpq/D2RPlugins.json",
-      "workstreams": ["ground-item-label-limit", "gamble-screen-limit", "repair-costs-cap", "eezstreet-pluginpack-integration"],
+      "workstreams": [
+        "ground-item-label-limit",
+        "gamble-screen-limit",
+        "repair-costs-cap",
+        "eezstreet-pluginpack-integration"
+      ],
       "reason": "The single PluginPack configuration contains independent feature blocks owned by concurrent integration workstreams."
     },
     {
       "pattern": "data-BKVince/d2rloader/plugins/plugin-items.dll",
-      "workstreams": ["gamble-screen-limit", "repair-costs-cap", "eezstreet-pluginpack-integration"],
+      "workstreams": [
+        "gamble-screen-limit",
+        "repair-costs-cap",
+        "eezstreet-pluginpack-integration"
+      ],
       "reason": "The common plugin-items binary packages multiple independently tracked feature ports."
     },
     {
@@ -401,7 +426,8 @@
         "vendor-stock-refresh",
         "transmute-hotkey",
         "equipped-item-to-cube",
-        "cube-quick-move-bottom-right"
+        "cube-quick-move-bottom-right",
+        "book-of-lore"
       ],
       "reason": "Governed native evidence registry shared by native plugin missions."
     },
@@ -419,7 +445,8 @@
         "prevent-merc-death-in-town",
         "vendor-stock-refresh",
         "transmute-hotkey",
-        "equipped-item-to-cube"
+        "equipped-item-to-cube",
+        "book-of-lore"
       ],
       "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."
     },

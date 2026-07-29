@@ -1450,6 +1450,62 @@
       "confidence": "high",
       "source": "Mission/equipped-item-to-cube-3.2.md",
       "notes": "Exact six-byte 0F 84 55 01 00 00 conditional exit introduced before the native Ctrl test in build 92777. EquippedItemToCube owns only 0x228B98..0x228B9D and replaces this branch with six NOPs after validating the 47-byte context at 0x228B81."
+    },
+    {
+      "rva": "0x5DC570",
+      "name": "OBJECTS_OperateFunction06_TowerTome",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/book-of-lore-3.2.md",
+      "notes": "Build-92777 Tower Tome server handler with ABI (operation, operateMode) -> int32; the second argument is unused. The operation structure is observed at +0x00 game, +0x08 object, +0x10 player and +0x20 object class id. It rejects animation modes above 2, resolves quest 5, requires the quest intro gate, starts the operating animation and ENDANIM event, sends scroll string id 127 through QUESTS_SendScrollMessage, then advances the A1Q5 quest state. Its extended entry signature through both the animation-mode and quest-data calls is unique. D2MOO 1.10f is semantic evidence only; the 92777 control flow and data accesses independently prove the identity."
+    },
+    {
+      "rva": "0x517E90",
+      "name": "QUESTS_SendScrollMessage",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/book-of-lore-3.2.md",
+      "notes": "Authoritative server helper with ABI (game, player, unit, uint16 stringId) -> void. It resolves the player's client, builds the 0x28-byte server packet 0x27 as {header 0x27, unitType 2, unitGuid, one-message list, stringId}, and queues it through 0x47E340. Direct callers are 0x547DA6, 0x59EF50 and Tower Tome at 0x5DC61E. Its strict 30-byte prologue is unique in build 92777."
+    },
+    {
+      "rva": "0x518220",
+      "name": "QUESTS_GetQuestData",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/book-of-lore-3.2.md",
+      "notes": "Resolves a server quest record with ABI (game, questId) -> questData*. It walks the quest chain rooted at game+0x21D8 and compares the requested id. Tower Tome calls it with quest id 5. Its strict 41-byte signature is unique in build 92777."
+    },
+    {
+      "rva": "0x38FD00",
+      "name": "DATATBLS_GetObjectsTxtRecord",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/book-of-lore-3.2.md",
+      "notes": "Returns the compiled ObjectsTxt record with ABI (dataContext, objectClassId) -> ObjectsTxt*. It resolves the context data tables through 0x300A90, bounds the id against dataTables+0x1530, uses the record base at +0x1528 and a record size of 0x168. Tower Tome reads frame count at record+0x9C. Its strict 36-byte signature is unique in build 92777."
+    },
+    {
+      "rva": "0x19A630",
+      "name": "CLIENT_HandleScrollMessagePacket27",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/book-of-lore-3.2.md",
+      "notes": "Client handler for the server 0x27 message-list packet with ABI (packet) -> void. For unit type 2 and ordinary menu 0 it stores the object GUID from +0x02, reads the 16-bit string id from +0x0A and calls CLIENT_ShowScrollMessageById at 0x197BF0. The alternate menu-3 branch performs the direct LANG_GetStringById lookup. Its strict 32-byte entry signature is unique in build 92777."
+    },
+    {
+      "rva": "0x197BF0",
+      "name": "CLIENT_ShowScrollMessageById",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/book-of-lore-3.2.md",
+      "notes": "Creates the native scrolling-lore UI with ABI (uint16 stringId) -> void. It resolves the active-language UTF-8 text through LANG_GetStringById 0x5F4A50, builds the scroll widgets and marks the known lore ids including Tower Tome id 127. Its sole direct caller is CLIENT_HandleScrollMessagePacket27 at 0x19A801. A strict 64-byte signature including cookie setup, local context and initialization calls is unique in build 92777."
+    },
+    {
+      "rva": "0x197C5F",
+      "name": "ScrollMessageLocalizationCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/book-of-lore-3.2.md",
+      "notes": "The sole LANG_GetStringById call inside CLIENT_ShowScrollMessageById. Exact bytes E8 EC CD 45 00 target 0x5F4A50 in build 92777. BookOfLore 0.2.0 validates the enclosing scroll function, the language resolver entry and this call before redirecting only this site through a near relay; it deliberately leaves the global localization prologue unhooked for PluginPack coexistence."
     }
   ]
 }
