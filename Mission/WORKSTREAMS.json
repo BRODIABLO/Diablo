@@ -201,7 +201,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Port Qty Display Fix / QtyDisplayIssue into plugin-items.dll under items.qtyDisplayIssue with vanilla defaults; keep prior gameplay regressions as separate matrices.",
+      "nextGate": "Port ForceLarzukSockets into plugin-quests.dll under quests.larzukSockets with all fifteen shipped values matching vanilla; keep prior gameplay regressions as separate matrices.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
         "Mission/bulk-skill-point-allocation-3.2.md",

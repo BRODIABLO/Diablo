@@ -3,7 +3,7 @@
     "items": {
         // Spawn magic/rare items pre-identified.
         "magicItemsSpawnIdentified": false,
-        "rareItemsSpawnIdentified": false,
+		"rareItemsSpawnIdentified": false,
 
 		// Control durability loss, ethereal maximum durability, and optional
 		// bow/crossbow durability. These shipped values preserve vanilla behavior.
@@ -80,6 +80,12 @@
 
 		// Restore the off-weapon Enhanced Damage component when flat min/max damage is present.
 		"enhancedDamageMinMaxFix": {
+			"enabled": false
+		},
+
+		// Restore D2R's native quantity line on socketed stackable items.
+		// Disabled preserves the vanilla tooltip omission.
+		"qtyDisplayIssue": {
 			"enabled": false
 		},
 
@@ -210,7 +216,7 @@
         // (vanilla behaviour: scales with the real /players value, up to 8).
         // Set to 1 to remove that stat's /players scaling entirely. The two
         // caps are independent of each other and of the real /players value.
-        "monsterHpPlayerCountCap": 8,
+        "monsterHpPlayerCountCap": 0,
         "monsterExperiencePlayerCountCap": 0
     },
 

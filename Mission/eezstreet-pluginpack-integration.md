@@ -303,6 +303,7 @@ par eezstreet sans modifier la fondation.
 | bloc unifié `EthItemRules` | témoin historique `EtherealItemRules 0.1.0` | `plugin-items.dll` | bloc unique `items.etherealItemRules` | contrat unifié compilé et cold-starté; équivalence gameplay ouverte |
 | `RepairCostsCap` | `1.4.0` | `plugin-items.dll` | `items.repairCostsCap` dans `D2RPlugins.json` | fonctionnalité indépendante intégrée et cold-startée; équivalence gameplay ouverte |
 | `ExtendedItemStats` | `0.3.17` intégré | `plugin-items.dll` | aucune clé publique | transport 4096 octets et tooltip défilable intégrés; deux cold starts et broker externe validés; équivalence gameplay intégrée ouverte |
+| Qty Display Fix / `QtyDisplayIssue` | `1.1.0` intégré | `plugin-items.dll` | `items.qtyDisplayIssue` | patch natif intégré, Release et cold starts vanilla/actif validés; preuve gameplay autonome conservée |
 
 Le port `GambleScreenLimit` ajouté après le checkpoint `387dff8` conserve le
 contrat autonome 1.2.0 sans créer de nouveau plugin runtime : un bloc
@@ -464,9 +465,35 @@ poussé sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation` et synchronisé 
 survol intégré, le cycle de vie d'un objet de 4096 octets et les cas
 solo/hôte/joiner demeurent des régressions indépendantes et non bloquantes.
 
-Le prochain port séquencé du lot canonique est Qty Display Fix /
-`QtyDisplayIssue`, sous `items.qtyDisplayIssue` dans `plugin-items.dll` avec
-des valeurs livrées vanilla.
+Qty Display Fix / `QtyDisplayIssue 1.1.0` est maintenant une option indépendante
+de `plugin-items.dll` sous `items.qtyDisplayIssue`. Le bloc strict accepte
+uniquement `enabled` et livre `false`; le JSON joueur conserve donc les octets
+vanilla `75 0F` à `0x2BE118`. Lorsqu'il est activé, l'unique signature de 33
+octets à `0x2BE103` est vérifiée puis seul ce branchement devient `90 90`, ce
+qui rétablit l'appel au formateur natif de quantité sans texte personnalisé.
+
+Le manifeste commun atteint 95 sites à propriétaire unique. Les cinq DLL
+Release compilent et 13/13 CTest passent. `plugin-items.dll` mesure `626688`
+octets et porte le SHA-256
+`44D9992D67D1F1E02A5E2050DB7C461FD1D6E8DD8DD00204859EDBC075EEC006`.
+Les cold starts actif et vanilla atteignent `24/24` avec
+`scanned=26 active=25 disabled=1 rejected=0 failed=0`; la lecture mémoire du
+processus confirme respectivement `90 90` et `75 0F`. Le témoin autonome et
+son JSON sont retirés de la source BKVince après fusion, tandis que les sources,
+le ZIP et la preuve gameplay autonome restent disponibles. Le runtime est
+restauré byte-exact, sans processus ni crash frais. Le checkpoint code
+`d6562d4` (`Integrate Qty Display Fix prototype`) est poussé sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation` et synchronisé à `0/0`.
+
+Les deux refus de commandes console observés pendant ces démarrages proviennent
+de vieux témoins autonomes Gamble et Enhanced Damage encore déployés dans le
+profil de test; ils ne touchent pas le patch Qty et devront être retirés avec
+tous les DLL autonomes remplacés avant le cold start final du lot complet.
+L'équivalence visuelle intégrée reste une régression indépendante; le témoin
+1.1.0 a déjà validé en jeu le cas central du stackable socketé.
+
+Le prochain port séquencé du lot canonique est `ForceLarzukSockets` sous
+`quests.larzukSockets` dans `plugin-quests.dll`, avec ses quinze valeurs vanilla.
 
 Le 28 juillet 2026, Vincent précise que le témoin autonome
 `EtherealItemRules 0.1.0` ne fait pas partie du pack final : le propriétaire est

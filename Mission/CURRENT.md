@@ -13,45 +13,44 @@ gouvernée demeure intacte. Le checkpoint de fondation `2a23212` est poussé sur
 `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`.
 
 Les checkpoints poussés `a51c865`, `387dff8`, `8d41581`, `a4d8dbb`,
-`5ef599f`, `78d6290`, `ab5fd53`, `25811d8` et `c4566d4` ont successivement porté le bloc unique
+`5ef599f`, `78d6290`, `ab5fd53`, `25811d8`, `c4566d4` et `d6562d4` ont successivement porté le bloc unique
 `items.etherealItemRules`, puis les fonctionnalités indépendantes
 `items.repairCostsCap`, `items.gambleScreenLimit`, `items.groundItemLabels` et
 `items.enhancedDamageMinMaxFix`, `items.itemDurability` et
-`items.charmAuraTriggerFix` et l'infrastructure `ExtendedItemStats` dans
+`items.charmAuraTriggerFix`, l'infrastructure `ExtendedItemStats` et
+`items.qtyDisplayIssue` dans
 `plugin-items.dll`, puis `skills.bulkSkillPointAllocation` dans
 `plugin-skills.dll`. Les configurations, hooks et tests restent indépendants;
 leur présence dans les DLL du pack ne crée aucun bloc fonctionnel commun.
 
-`ExtendedItemStats 0.3.17` est maintenant compilé directement dans
-`plugin-items.dll` sans clé JSON publique. Le transport fixe `4096` octets, le
-réassemblage borné et le tooltip défilable conservent le contrat autonome;
-les objets et tooltips vanilla ordinaires restent inchangés. Les deux exports
-de broker historiques rejoignent les trois exports D2RLoader de la DLL.
+Qty Display Fix / `QtyDisplayIssue 1.1.0` est maintenant intégré sous
+`items.qtyDisplayIssue`. Le template livre `enabled=false` : aucune écriture
+n'est faite et les octets vanilla `75 0F` restent à `0x2BE118`. L'activation
+vérifie l'unique signature de 33 octets puis écrit seulement `90 90`, laissant
+D2R produire la ligne de quantité native.
 
-Les cinq DLL Release compilent, 12/12 CTest passent et le manifeste porte 94
+Les cinq DLL Release compilent, 13/13 CTest passent et le manifeste porte 95
 sites à propriétaire unique. `plugin-items.dll` porte le SHA-256
-`C63DB14DD3715009DB4044B39FFB470543BCCA01A1F454C45DDC737266F52161`.
-Le cold start sans Transmogrify pose les dix hooks et atteint `24/24` avec le
-JSON vanilla. Le cold start conjoint laisse l'unique hook tooltip à
-Transmogrify et pose les neuf autres dans le pack; le pont externe recherche
-désormais aussi les exports de `plugin-items.dll`, sans faire entrer
-Transmogrify dans le lot. Les deux démarrages terminent sans rejet ni échec.
-Le runtime et sa configuration sont restaurés byte-exact; aucun processus ne
-reste. Le témoin DLL autonome est retiré de la source, ses sources et preuves
-gameplay demeurent disponibles.
+`44D9992D67D1F1E02A5E2050DB7C461FD1D6E8DD8DD00204859EDBC075EEC006`.
+Les cold starts actif et vanilla atteignent `24/24`, sans rejet ni échec; la
+lecture mémoire confirme `90 90` puis `75 0F`. Le runtime est restauré
+byte-exact et aucun processus ne reste. Le DLL et le JSON autonomes Qty sont
+retirés de BKVince; leurs sources, ZIP et preuve gameplay restent disponibles.
+Les doublons de commandes Gamble/Enhanced encore présents dans le profil de
+test sont consignés pour le nettoyage final des témoins remplacés.
 
 ## Prochain gate
 
-Porter ensuite Qty Display Fix / `QtyDisplayIssue` dans `plugin-items.dll` sous
-`items.qtyDisplayIssue`, avec un template vanilla. Les régressions gameplay
-ouvertes des ports précédents restent des matrices indépendantes et ne bloquent
-pas ce prochain port.
+Porter ensuite `ForceLarzukSockets` dans `plugin-quests.dll` sous
+`quests.larzukSockets`, avec les quinze valeurs vanilla déjà validées dans le
+témoin autonome. Les régressions gameplay ouvertes des ports précédents restent
+des matrices indépendantes et ne bloquent pas ce prochain port.
 
 ## Frontière Git
 
 Le code du pack vit dans le clone séparé
 `analysis-cache/pluginpack-foundation`. Le dernier checkpoint poussé est
-`c4566d4` (`Integrate Extended Item Stats prototype`), synchronisé à `0/0`
+`d6562d4` (`Integrate Qty Display Fix prototype`), synchronisé à `0/0`
 sur `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le clone de fondation
 est propre.
 Le dépôt principal conserve la DLL gouvernée, la configuration vanilla et les

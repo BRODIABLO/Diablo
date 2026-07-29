@@ -123,3 +123,33 @@ cold start reached frontend step 24/24 with the governed hook installed. A
 later visual attempt launched Diablo, but automation stopped immediately when
 user input was detected, as required; no visual result is inferred from that
 session.
+
+## Promotion dans le PluginPack — 28 juillet 2026
+
+Le contrat `QtyDisplayIssue 1.1.0` est maintenant compilé directement dans
+`plugin-items.dll` sous le bloc strict `items.qtyDisplayIssue`. Le template
+joueur livre `enabled=false`; l'absence de clé suit le même défaut, de sorte que
+les octets vanilla `75 0F` restent inchangés à `0x2BE118`. Une activation
+vérifie l'unique signature de 33 octets à `0x2BE103`, puis remplace seulement le
+branchement par `90 90` afin de laisser D2R afficher sa ligne native.
+
+Le manifeste commun atteint 95 sites sans chevauchement. Les cinq DLL Release
+compilent, 13/13 CTest passent et `plugin-items.dll` mesure `626688` octets avec
+le SHA-256
+`44D9992D67D1F1E02A5E2050DB7C461FD1D6E8DD8DD00204859EDBC075EEC006`.
+Les cold starts actif et vanilla terminent à `24/24` avec
+`scanned=26 active=25 disabled=1 rejected=0 failed=0`; une lecture mémoire du
+processus prouve respectivement `90 90` et `75 0F`. Aucun crash frais n'est
+apparu, le runtime est restauré byte-exact et aucun processus ne demeure.
+
+Le checkpoint `d6562d4` (`Integrate Qty Display Fix prototype`) est poussé sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Le DLL et le JSON
+autonomes sont retirés du profil gouverné BKVince pour préserver un propriétaire
+unique; les sources et l'archive autonome conservent la preuve gameplay déjà
+obtenue. Les deux collisions de commandes console observées concernent de vieux
+témoins Gamble et Enhanced Damage, pas le site Qty; le nettoyage final du lot
+devra retirer tous les témoins remplacés avant le cold start global. Le visuel
+intégré inventory/stash/Cube/vendor/ground et la manette restent `not run`.
+
+Les preuves techniques sont conservées sous
+`analysis-cache/pluginpack-foundation-runtime-validation/20260729-qty-display-issue/report.json`.

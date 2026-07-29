@@ -13708,11 +13708,6 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
-                                                                                "name":  "QtyDisplayIssue.json",
-                                                                                "path":  "data-BKVince/BKVince.mpq/QtyDisplayIssue.json",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
                                                                                 "name":  "ReadableItems.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/ReadableItems.json",
                                                                                 "kind":  "file"
@@ -15125,11 +15120,6 @@
                                                                                                  {
                                                                                                      "name":  "PreventMercDeathInTown.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/PreventMercDeathInTown.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "QtyDisplayIssue.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/QtyDisplayIssue.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
