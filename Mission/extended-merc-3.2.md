@@ -6,8 +6,10 @@ Statut : incubation native active. Vincent a choisi le nom `ExtendedMerc`, la
 voie du plugin autonome permanent et le séquencement A. Le trajet réseau, le
 callback serveur, l'adoption d'un slot existant et les primitives natives de
 création/attachement UI sont maintenant prouvés. Un premier `slot_gloves`
-absent a été créé, affiché et cliqué sans crash au runtime; l'équipement réel,
-le retrait et la persistance restent le gate avant l'implantation de production.
+absent a été créé, affiché et manipulé sans crash au runtime. Le test avec un
+glove réel prouve toutefois que le contrôleur natif refuse encore la transaction
+vers ce nouveau widget; son extension ciblée est désormais le gate avant
+l'implantation de production.
 
 ## Décisions confirmées
 
@@ -182,6 +184,20 @@ Un layout déjà personnalisé pourra être adopté au runtime plutôt qu'écras
   L'instance a ensuite été sauvegardée et fermée proprement, et la DLL probe a
   été retirée du runtime. Aucun glove libre n'était disponible dans l'inventaire,
   donc l'équipement réel n'a pas été simulé.
+- Un second passage complet avec le même probe 0.0.2 et `QtyTester` en difficulté
+  Pain a acheté chez Charsi `Strong Leather Gloves of Self-Repair (12)` pour
+  124 gold. Le widget `slot_gloves` a bien accepté le ciblage et affiché son état
+  rouge, mais la transaction native a été refusée : le glove est resté sur le
+  curseur au lieu d'être équipé. Il a été remis dans l'inventaire sans perte.
+  Le ring droit du mercenaire est resté équipé et inchangé. Après save/exit et
+  reload, le glove persistait dans l'inventaire joueur, le slot mercenaire était
+  vide et le ring toujours présent. Aucun gel ni nouveau rapport de crash n'a été
+  produit. La sauvegarde finale mesure 2857 octets
+  (`A7BEB417EB7311F6433629233FE6CFD80336D6804CD4CDACC97B7AF2C4D29270`),
+  contre 2818 octets pour le backup préalable
+  (`C56CB58751A00252AC7C33A0A9D70422E5C6A1B4C75D6DD4D4349A27ADC888DE`).
+  Le probe testé a été retiré du runtime puis archivé localement avec son hash
+  inchangé `52A8F23343EC2958FA0A0112D0E13EB75FF7A3B76DC0E7DA00A91273BBB658EA`.
 
 ### Conclusion d'audit
 
@@ -191,14 +207,17 @@ serveur, l'adoption runtime d'un `ring` existant et la création visible d'un
 huit slots déjà observés; D2MOO épinglé et les layouts 92777 corroborent
 `feet=9` et `gloves=10`, sans transférer aucune adresse legacy. Le contexte de
 widget requis par le hit-test est maintenant prouvé par le crash 0.0.1 et le
-succès 0.0.2. Cela ne prouve pas encore qu'un objet glove peut être équipé,
-retiré et restauré après sauvegarde dans ce slot. Il ne faut créer ni DLL de
-production, ni configuration, ni archive ExtendedMerc avant cette preuve.
+succès 0.0.2. Le test avec un objet réel démontre que la création UI seule ne
+suffit pas : le contrôleur de transaction rejette actuellement le BodyLoc 10 du
+nouveau widget. Il faut donc identifier puis étendre fail-closed ce chemin natif
+avant de pouvoir prouver équipement, retrait et restauration après sauvegarde.
+Il ne faut créer ni DLL de production, ni configuration, ni archive ExtendedMerc
+avant cette preuve.
 
 ## Hypothèses à tester
 
-- La transaction native peut accepter les BodyLocs supplémentaires sans
-  modifier la hiérarchie globale des ItemTypes.
+- Une extension ciblée du contrôleur de transaction peut accepter les BodyLocs
+  supplémentaires activés sans modifier la hiérarchie globale des ItemTypes.
 - Le panneau Hireling peut créer dynamiquement les slots absents avec la
   séquence native factory/finalizer/AddChild et reconstruire la navigation
   controller sans remplacer de fichier layout.
@@ -221,8 +240,10 @@ production, ni configuration, ni archive ExtendedMerc avant cette preuve.
 
 - Le paquet client `0x51`, le callback serveur `0x4C0E20`, son ABI, sa taille de
   17 octets et sa signature unique sont prouvés. La factory, le finalizer et
-  l'attachement UI sont prouvés statiquement et au runtime; il reste à valider
-  une transaction d'équipement complète dans le slot créé.
+  l'attachement UI sont prouvés statiquement et au runtime. La transaction avec
+  un glove réel est refusée sans crash; il reste à identifier le contrôleur qui
+  décide ce refus, à étendre seulement les slots activés, puis à valider une
+  transaction d'équipement complète dans le slot créé.
 - Auditer le commit PluginPack épinglé, les cinq DLL et chaque plage de hook ou
   structure partagée. Toute collision doit avoir un propriétaire unique avant
   l'écriture de code.
@@ -243,8 +264,11 @@ production, ni configuration, ni archive ExtendedMerc avant cette preuve.
 
 ## Prochain gate
 
-Préparer dans `QtyTester` un glove sacrifiable, redéployer explicitement le probe
-0.0.2 et valider la transaction complète : équipement, retrait, fermeture et
-réouverture du panneau, sauvegarde/rechargement puis navigation controller. Ne
-pas modifier de table ni de layout. Une fois ce témoin vert, figer le hook
-fail-closed, la navigation adaptative et la configuration autonome de production.
+Tracer le refus observé entre le drop sur `slot_gloves` et la construction ou
+l'émission de la transaction native, identifier le contrôleur/validateur exact
+sur le build 92777, puis étendre fail-closed uniquement les BodyLocs activés.
+Redéployer ensuite le probe et valider la transaction complète : équipement,
+retrait, fermeture et réouverture du panneau, sauvegarde/rechargement puis
+navigation controller. Ne modifier aucune table, aucun layout ni le format de
+sauvegarde. Une fois ce témoin vert, figer le hook, la navigation adaptative et
+la configuration autonome de production.
