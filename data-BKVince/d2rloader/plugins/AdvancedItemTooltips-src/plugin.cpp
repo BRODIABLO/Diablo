@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
+#include <limits>
 #include <mutex>
 #include <string>
 #include <string_view>
@@ -18,8 +19,27 @@
 #include <unordered_set>
 #include <vector>
 
+extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsEnhanceTooltip(
+    void* item,
+    const char* tooltip,
+    std::size_t tooltipLength,
+    char* output,
+    std::size_t outputCapacity
+) noexcept;
+extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsBuildSocketLine(
+    void* item,
+    char* output,
+    std::size_t outputCapacity
+) noexcept;
+extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsFindSocketLineInsertion(
+    const char* tooltip,
+    std::size_t tooltipLength
+) noexcept;
+
 namespace {
 constexpr std::uint32_t SupportedBuild = 92777;
+constexpr std::uintptr_t BuildItemTooltipRva = 0x2BD480;
+constexpr std::uintptr_t EnsureStringCapacityRva = 0x076210;
 constexpr std::uintptr_t GetMaxSocketsRva = 0x36EAD0;
 constexpr std::uintptr_t GetUnitStatRva = 0x2F5020;
 constexpr std::uintptr_t GetItemDataContextRva = 0x34A0E0;
@@ -62,6 +82,25 @@ using GetItemsTxtRecordFn = std::uint8_t*(__fastcall*)(std::uint8_t, std::int32_
 using GetRunesTxtRecordFromItemFn = std::uint8_t*(__fastcall*)(void*) noexcept;
 using GetLocalizedStringFn = const char*(__fastcall*)(std::uint16_t) noexcept;
 using GetLocalizedStringByKeyFn = const char*(__fastcall*)(const GameStringView*) noexcept;
+using BuildItemTooltipFn = void*(__fastcall*)(
+    void*, void*, void*, void*, std::uint64_t, std::uint64_t, std::uint64_t,
+    std::uint64_t, std::uint64_t) noexcept;
+using EnsureStringCapacityFn = void(__fastcall*)(void*, std::size_t) noexcept;
+
+struct TooltipCallSite {
+    std::uintptr_t rva{};
+    std::array<std::uint8_t, 5> expected{};
+};
+
+constexpr std::array TooltipCallSites{
+    TooltipCallSite{0x2291DC, {0xE8,0x9F,0x42,0x09,0x00}},
+    TooltipCallSite{0x2BCEE9, {0xE8,0x92,0x05,0x00,0x00}},
+    TooltipCallSite{0x2C8C02, {0xE8,0x79,0x48,0xFF,0xFF}},
+    TooltipCallSite{0x2CB32E, {0xE8,0x4D,0x21,0xFF,0xFF}},
+    TooltipCallSite{0x2CE716, {0xE8,0x65,0xED,0xFE,0xFF}},
+    TooltipCallSite{0x87E882, {0xE8,0xF9,0xEB,0xA3,0xFF}},
+    TooltipCallSite{0x150C377, {0xE8,0x04,0x11,0xDB,0xFE}},
+};
 
 const D2RL::PluginContext* Context{};
 std::uint8_t* Base{};
@@ -76,6 +115,9 @@ GetItemsTxtRecordFn GetItemsTxtRecord{};
 GetRunesTxtRecordFromItemFn GetRunesTxtRecordFromItem{};
 GetLocalizedStringFn GetLocalizedString{};
 GetLocalizedStringByKeyFn GetLocalizedStringByKey{};
+BuildItemTooltipFn BuildItemTooltip{};
+EnsureStringCapacityFn EnsureStringCapacity{};
+void* TooltipRelay{};
 tcp::tooltips::RangeCatalog Catalog;
 bool CatalogLoaded{};
 std::mutex RunewordNamesMutex;
@@ -87,7 +129,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "advanced-item-tooltips",
     .name = "Advanced Item Tooltips",
-    .version = "2.1.12",
+    .version = "2.2.0",
     .author = "RuffnecKk",
     .description = "Shows maximum sockets and exact item roll ranges.",
     .flags = D2RL::PluginFlags::None,
@@ -103,6 +145,17 @@ T Read(const std::uint8_t* address, std::size_t offset) noexcept {
     T value{};
     std::memcpy(&value, address + offset, sizeof(value));
     return value;
+}
+
+bool IsReadable(const void* address, std::size_t size) noexcept {
+    if (!address || size == 0) return false;
+    MEMORY_BASIC_INFORMATION memory{};
+    if (VirtualQuery(address, &memory, sizeof(memory)) != sizeof(memory)
+        || memory.State != MEM_COMMIT
+        || (memory.Protect & (PAGE_GUARD | PAGE_NOACCESS)) != 0) return false;
+    const auto begin = reinterpret_cast<std::uintptr_t>(address);
+    const auto regionEnd = reinterpret_cast<std::uintptr_t>(memory.BaseAddress) + memory.RegionSize;
+    return begin <= regionEnd && size <= regionEnd - begin;
 }
 
 tcp::tooltips::ItemAffixIds ReadAffixIds(const std::uint8_t* data) noexcept {
@@ -269,6 +322,110 @@ std::string InsertBaseDefense(std::string tooltip, void* item, const std::uint8_
     return tooltip;
 }
 
+std::string InsertMaxSocketsBelowPrimaryStat(std::string tooltip, void* item) {
+    std::array<char, 64> line{};
+    const auto length = AdvancedItemTooltipsBuildSocketLine(item, line.data(), line.size());
+    if (length == 0 || length >= line.size()) return tooltip;
+    const std::string_view text(line.data(), length);
+    if (tooltip.find(text) != std::string::npos) return tooltip;
+    const auto insertion = AdvancedItemTooltipsFindSocketLineInsertion(
+        tooltip.data(), tooltip.size());
+    if (insertion > tooltip.size()) return tooltip;
+    tooltip.insert(insertion, std::string(text) + "\n");
+    return tooltip;
+}
+
+void* TransformOwnedTooltip(void* result, void* item) noexcept {
+    if (!result || !item || !EnsureStringCapacity || !IsReadable(result, 24)) return result;
+    try {
+        const auto* object = static_cast<const std::uint8_t*>(result);
+        const auto* data = *reinterpret_cast<char* const*>(object);
+        const auto length = *reinterpret_cast<const std::size_t*>(object + 8);
+        if (length == 0 || length > 16 * 1024 || !IsReadable(data, length + 1)) return result;
+
+        const std::string original(data, length);
+        auto enhanced = original;
+        std::array<char, 64 * 1024> buffer{};
+        const auto enhancedLength = AdvancedItemTooltipsEnhanceTooltip(
+            item, enhanced.data(), enhanced.size(), buffer.data(), buffer.size());
+        if (enhancedLength > 0 && enhancedLength < buffer.size()) {
+            enhanced.assign(buffer.data(), enhancedLength);
+        }
+        enhanced = InsertMaxSocketsBelowPrimaryStat(std::move(enhanced), item);
+        if (enhanced == original) return result;
+
+        EnsureStringCapacity(result, enhanced.size());
+        auto* destination = *reinterpret_cast<char**>(result);
+        if (!IsReadable(destination, enhanced.size() + 1)) return result;
+        std::memcpy(destination, enhanced.c_str(), enhanced.size() + 1);
+        const auto size = enhanced.size();
+        std::memcpy(static_cast<std::uint8_t*>(result) + 8, &size, sizeof(size));
+    } catch (...) {
+        if (Context) Context->LogError(
+            "AdvancedItemTooltips: autonomous tooltip transform failed safely.");
+    }
+    return result;
+}
+
+void* __fastcall HookBuildItemTooltip(
+    void* output,
+    void* a2,
+    void* a3,
+    void* item,
+    std::uint64_t a5,
+    std::uint64_t a6,
+    std::uint64_t a7,
+    std::uint64_t a8,
+    std::uint64_t a9) noexcept {
+    auto* result = BuildItemTooltip(output, a2, a3, item, a5, a6, a7, a8, a9);
+    return TransformOwnedTooltip(result, item);
+}
+
+void* AllocateNear(void* hint, std::size_t size) noexcept {
+    SYSTEM_INFO systemInfo{};
+    GetSystemInfo(&systemInfo);
+    const auto granularity = static_cast<std::uintptr_t>(systemInfo.dwAllocationGranularity);
+    const auto base = reinterpret_cast<std::uintptr_t>(hint) & ~(granularity - 1);
+    for (std::uintptr_t delta = granularity; delta < 0x70000000ULL; delta += granularity) {
+        if (base > std::numeric_limits<std::uintptr_t>::max() - delta) break;
+        if (auto* memory = VirtualAlloc(
+                reinterpret_cast<void*>(base + delta), size,
+                MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE)) return memory;
+    }
+    return nullptr;
+}
+
+bool InstallTooltipCallSites() noexcept {
+    constexpr std::size_t RelaySize = 14;
+    TooltipRelay = AllocateNear(Base + TooltipCallSites.front().rva, RelaySize);
+    if (!TooltipRelay) return false;
+    auto* relay = static_cast<std::uint8_t*>(TooltipRelay);
+    relay[0] = 0xFF;
+    relay[1] = 0x25;
+    relay[2] = relay[3] = relay[4] = relay[5] = 0x00;
+    const auto target = reinterpret_cast<std::uint64_t>(&HookBuildItemTooltip);
+    std::memcpy(relay + 6, &target, sizeof(target));
+    FlushInstructionCache(GetCurrentProcess(), relay, RelaySize);
+    DWORD previousProtection{};
+    if (!VirtualProtect(relay, RelaySize, PAGE_EXECUTE_READ, &previousProtection)) return false;
+
+    const auto relayAddress = reinterpret_cast<std::uintptr_t>(TooltipRelay);
+    const auto baseAddress = reinterpret_cast<std::uintptr_t>(Base);
+    if (relayAddress < baseAddress) return false;
+    const auto relayRva = static_cast<std::uint64_t>(relayAddress - baseAddress);
+    for (const auto& site : TooltipCallSites) {
+        const auto nextInstruction = reinterpret_cast<std::uintptr_t>(Base + site.rva + 5);
+        const auto displacement = static_cast<std::int64_t>(relayAddress)
+            - static_cast<std::int64_t>(nextInstruction);
+        if (displacement < std::numeric_limits<std::int32_t>::min()
+            || displacement > std::numeric_limits<std::int32_t>::max()
+            || !Context->PatchCallRel32(
+                site.rva, site.expected.data(), static_cast<std::uint32_t>(site.expected.size()),
+                relayRva, static_cast<std::uint32_t>(site.expected.size()))) return false;
+    }
+    return true;
+}
+
 auto Status(
     D2R::Game::Client*,
     const D2RL::ConsoleCommandContext* command,
@@ -276,7 +433,7 @@ auto Status(
 ) noexcept -> D2RL::ConsoleCommandResult {
     if (!command || !command->plugin) return D2RL::ConsoleCommandResult::Failed;
     command->plugin->WriteConsoleMessage(
-        "AdvancedItemTooltips 2.1.12: affix, runeword, defense, and socket ranges are available."
+        "AdvancedItemTooltips 2.2.0: autonomous affix, defense, and socket ranges are available."
     );
     return D2RL::ConsoleCommandResult::Handled;
 }
@@ -408,6 +565,10 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     constexpr std::array<std::uint8_t, 14> getNextInventoryItemExpected{
         0x40,0x53,0x48,0x83,0xEC,0x20,0x48,0x8B,
         0xD9,0x48,0x85,0xC9,0x75,0x10};
+    constexpr std::array<std::uint8_t, 24> ensureStringCapacityExpected{
+        0x4C,0x8B,0xDC,0x49,0x89,0x5B,0x08,0x49,
+        0x89,0x6B,0x18,0x49,0x89,0x73,0x20,0x49,
+        0x89,0x53,0x10,0x57,0x48,0x83,0xEC,0x30};
     if (!context->CheckExpectedBytes(GetRunesTxtRecordFromItemRva,
             runewordResolverExpected.data(), runewordResolverExpected.size())
         || !context->CheckExpectedBytes(GetLocalizedStringRva,
@@ -426,6 +587,13 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         context->LogError("AdvancedItemTooltips: socket inventory ABI signature mismatch for build 92777.");
         return false;
     }
+    if (!context->CheckExpectedBytes(EnsureStringCapacityRva,
+            ensureStringCapacityExpected.data(), ensureStringCapacityExpected.size())) {
+        context->LogError("AdvancedItemTooltips: native string ABI signature mismatch for build 92777.");
+        return false;
+    }
+    BuildItemTooltip = At<BuildItemTooltipFn>(BuildItemTooltipRva);
+    EnsureStringCapacity = At<EnsureStringCapacityFn>(EnsureStringCapacityRva);
     GetRunesTxtRecordFromItem = At<GetRunesTxtRecordFromItemFn>(GetRunesTxtRecordFromItemRva);
     GetLocalizedString = At<GetLocalizedStringFn>(GetLocalizedStringRva);
     GetLocalizedStringByKey = At<GetLocalizedStringByKeyFn>(GetLocalizedStringByKeyRva);
@@ -458,7 +626,13 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         )) {
         context->LogWarn("AdvancedItemTooltips: status command could not be registered.");
     }
-    context->LogInfo("AdvancedItemTooltips 2.1.12 integration active for D2R 3.2.92777." );
+    if (!InstallTooltipCallSites()) {
+        context->LogError(
+            "AdvancedItemTooltips: autonomous tooltip call-sites are unavailable; plugin refused.");
+        return false;
+    }
+    context->LogInfo(
+        "AdvancedItemTooltips 2.2.0 autonomous pipeline active for D2R 3.2.92777 (7/7 call-sites)." );
     return true;
 }
 
@@ -471,6 +645,8 @@ D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
     GetRunesTxtRecordFromItem = nullptr;
     GetLocalizedString = nullptr;
     GetLocalizedStringByKey = nullptr;
+    BuildItemTooltip = nullptr;
+    EnsureStringCapacity = nullptr;
     {
         std::scoped_lock lock(RunewordNamesMutex);
         RunewordKeyByLocalizedName.clear();

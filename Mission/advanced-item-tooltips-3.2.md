@@ -583,3 +583,40 @@ chaînes, atteint `24/24` et termine avec
 `scanned=29 active=27 disabled=2 rejected=0 failed=0` ainsi que
 `scanned=20 applied=20 disabled=0 failed=0` pour les patches. Le témoin visuel
 Ohm en blanc reste à confirmer en jeu.
+
+## Pipeline autonome 2.2.0 du 30 juillet 2026
+
+Advanced Item Tooltips ne dépend plus de Transmogrify ni d'une DLL du
+PluginPack pour atteindre le tooltip final. L'atelier persistant 92777 confirme
+sept xrefs directs vers `ITEMS_BuildItemTooltip` (`0x2BD480`) aux call-sites
+`0x2291DC`, `0x2BCEE9`, `0x2C8C02`, `0x2CB32E`, `0x2CE716`, `0x87E882` et
+`0x150C377`. La 2.2.0 valide les cinq octets exacts de chaque `CALL rel32`, les
+redirige vers un relais privé proche et appelle d'abord le constructeur vivant
+de D2R avant d'appliquer la transformation idempotente des ranges et de
+`Max Sockets`. Le prologue strict du constructeur reste intact : un autre
+plugin peut donc le hooker sans collision avec Advanced Item Tooltips.
+
+Le binaire n'importe et ne résout ni Transmogrify, ni ExtendedItemStats, ni
+`plugin-items.dll`, ni aucune autre DLL du pack. `dumpbin /dependents` ne montre
+que les runtimes Windows/MSVC; les six exports publics historiques demeurent
+présents. Les builds Release et Debug passent chacun les deux suites de tests.
+Le SHA-256 Release autonome est
+`8970908514F62B98F41205FDD3601B2B305B1D363AB1FCD32C6044751036863B`.
+
+Un cold start avec Advanced Item Tooltips comme seule DLL active charge la
+2.2.0 avec `7/7 call-sites`. Un second cold start avec seulement
+AdvancedItemTooltips et Transmogrify conserve les deux propriétaires sans
+collision : Advanced Item Tooltips possède ses call-sites et Transmogrify
+possède le prologue natif. Avant cette isolation, Vincent a aussi confirmé en
+jeu les ranges et `Max Sockets` avec Transmogrify absent et la DLL PluginPack de
+travail encore présente. La matrice prouve donc l'autonomie fonctionnelle et la
+coexistence sans transformer le PluginPack en dépendance.
+
+Le build `plugin-items.dll` alors en cours de test tentait indépendamment de
+reprendre le prologue déjà possédé par Transmogrify. Ce témoin a été exclu de la
+matrice finale, puis les cinq DLL de travail ont été sauvegardées byte-exact
+avant l'isolation. Ce conflit appartient au chantier PluginPack en cours et
+n'est ni causé ni masqué par Advanced Item Tooltips.
+Après l'isolation, les cinq DLL PluginPack ont été restaurées byte-identiques
+dans le profil BKVince et le jeu a été laissé fermé pour la reprise de leurs
+propres tests.
