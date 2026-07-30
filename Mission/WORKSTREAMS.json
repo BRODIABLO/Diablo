@@ -195,6 +195,22 @@
       ]
     },
     {
+      "id": "char-start",
+      "name": "CharStart",
+      "status": "paused",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/char-start-3.2.md",
+      "nextGate": "After the PluginPack review and stabilization of Readable Items, Transmogrify, Book of Lore and ExtendedMerc, verify the governed workbench and promote the complete 0x52D770 identity before any implementation.",
+      "include": [
+        "Mission/char-start-3.2.md",
+        "addons/CharStart/**",
+        "data-BKVince/BKVince.mpq/CharStart.toml",
+        "data-BKVince/d2rloader/plugins/CharStart-src/**",
+        "data-BKVince/d2rloader/plugins/CharStart.dll*",
+        "scripts/reverse-engineering/char-start*"
+      ]
+    },
+    {
       "id": "book-of-lore",
       "name": "Book of Lore",
       "status": "active",
@@ -489,7 +505,8 @@
         "equipped-item-to-cube",
         "cube-quick-move-bottom-right",
         "extended-merc",
-        "book-of-lore"
+        "book-of-lore",
+        "char-start"
       ],
       "reason": "Governed native evidence registry shared by native plugin missions."
     },
@@ -509,7 +526,8 @@
         "transmute-hotkey",
         "equipped-item-to-cube",
         "extended-merc",
-        "book-of-lore"
+        "book-of-lore",
+        "char-start"
       ],
       "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."
     },

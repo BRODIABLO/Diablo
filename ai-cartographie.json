@@ -31062,6 +31062,16 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "char-start-3.2.md",
+                                                           "path":  "Mission/char-start-3.2.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-mission-native-plugin",
+                                                                        "summary":  "Décisions produit, séquencement différé, preuves préliminaires et gates du plugin autonome CharStart.",
+                                                                        "agentAccess":  "read-write"
+                                                                    }
+                                                       },
+                                                       {
                                                            "name":  "configurable-larzuk-sockets-3.2.md",
                                                            "path":  "Mission/configurable-larzuk-sockets-3.2.md",
                                                            "kind":  "file",
