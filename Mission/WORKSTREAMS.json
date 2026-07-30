@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-28",
+  "updatedAt": "2026-07-30",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -176,6 +176,22 @@
         "Mission/prevent-merc-death-in-town-3.2.md",
         "addons/PreventMercDeathInTown/**",
         "data-BKVince/d2rloader/plugins/PreventMercDeathInTown-src/**"
+      ]
+    },
+    {
+      "id": "pspell-spawn",
+      "name": "PSpell Spawn",
+      "status": "paused",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/pspell-spawn-3.2.md",
+      "nextGate": "After the PluginPack gameplay review, Readable Items hook stabilization and D2RedPortal incubation, verify the governed workbench and PluginPack reference, then prove an unused positive pSpell route, the high-level monster-spawn ABI, success-based item consumption and unique hook ownership before any implementation.",
+      "include": [
+        "Mission/pspell-spawn-3.2.md",
+        "addons/PSpellSpawn/**",
+        "data-BKVince/BKVince.mpq/PSpellSpawn.*",
+        "data-BKVince/d2rloader/plugins/PSpellSpawn-src/**",
+        "data-BKVince/d2rloader/plugins/PSpellSpawn.dll*",
+        "scripts/reverse-engineering/pspell-spawn*"
       ]
     },
     {

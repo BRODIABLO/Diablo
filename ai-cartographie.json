@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-29T23:10:46.0934555+00:00",
+    "generatedAt":  "2026-07-30T10:50:21.8188005+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -31183,6 +31183,11 @@
                                                        {
                                                            "name":  "prevent-merc-death-in-town-3.2.md",
                                                            "path":  "Mission/prevent-merc-death-in-town-3.2.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pspell-spawn-3.2.md",
+                                                           "path":  "Mission/pspell-spawn-3.2.md",
                                                            "kind":  "file"
                                                        },
                                                        {
