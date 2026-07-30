@@ -280,6 +280,22 @@
       ]
     },
     {
+      "id": "fourth-skill-tree",
+      "name": "FourthSkillTree",
+      "status": "paused",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/fourth-skill-tree-3.2.md",
+      "nextGate": "After the five PluginPack gameplay batches and eezstreet review, verify the governed 92777 workbench and prove the SkillPage 4 compiler path, fourth-tab controller path, mouse/controller navigation and collision-free hook ownership before any implementation.",
+      "include": [
+        "Mission/fourth-skill-tree-3.2.md",
+        "addons/FourthSkillTree/**",
+        "data-BKVince/d2rloader/config/fourth-skill-tree.toml",
+        "data-BKVince/d2rloader/plugins/FourthSkillTree-src/**",
+        "data-BKVince/d2rloader/plugins/FourthSkillTree.dll*",
+        "scripts/reverse-engineering/fourth-skill-tree*"
+      ]
+    },
+    {
       "id": "cube-quick-move-bottom-right",
       "name": "Cube Quick Move Bottom-Right",
       "status": "paused",

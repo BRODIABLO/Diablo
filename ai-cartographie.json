@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-30T10:50:21.8188005+00:00",
+    "generatedAt":  "2026-07-30T12:03:56.5407816+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -31154,6 +31154,11 @@
                                                        {
                                                            "name":  "floating-damage-portage-3.2.md",
                                                            "path":  "Mission/floating-damage-portage-3.2.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "fourth-skill-tree-3.2.md",
+                                                           "path":  "Mission/fourth-skill-tree-3.2.md",
                                                            "kind":  "file"
                                                        },
                                                        {
