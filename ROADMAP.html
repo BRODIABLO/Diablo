@@ -454,9 +454,32 @@
 <script>
 (function(){
   const CLE = "diablo-roadmap-v1";
+  const JALONS_FERMES = new Set([
+    "i7-unified-ethereal-item-rules",
+    "i9-prevent-merc-death-in-town-32",
+    "i7-extended-item-serialization",
+    "i7-scrollable-huge-tooltips",
+    "i7-bulk-skill-point-allocation",
+    "i7-bkvince-d2rlint-differential-validation",
+    "i7-equipped-item-to-cube",
+    "i7-transmute-hotkey",
+    "i8-bkvince-macabre-atmosphere",
+    "i10-bkvince-yupgoolg-hd-assets",
+    "i6-larzuk-magic-two-sockets",
+    "i6-cube-transmute-button-position"
+  ]);
   let etat = {};
   try { etat = JSON.parse(localStorage.getItem(CLE) || "{}"); } catch(e) {}
-  const interactives = document.querySelectorAll(".tache[data-id]");
+  document.querySelectorAll(".tache[data-id]").forEach(t => {
+    if (!JALONS_FERMES.has(t.dataset.id)) return;
+    const cb = t.querySelector("input");
+    t.classList.add("faite");
+    cb.checked = true;
+    cb.disabled = true;
+    delete etat[t.dataset.id];
+  });
+  localStorage.setItem(CLE, JSON.stringify(etat));
+  const interactives = document.querySelectorAll(".tache[data-id]:not(.faite)");
   const consignees = document.querySelectorAll(".tache.faite").length;
   function sauver(){ localStorage.setItem(CLE, JSON.stringify(etat)); rafraichir(); }
   function rafraichir(){
