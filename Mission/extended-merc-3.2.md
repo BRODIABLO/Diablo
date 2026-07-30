@@ -5,15 +5,15 @@ Dernière mise à jour : 30 juillet 2026
 Statut : incubation native active. Vincent a choisi le nom `ExtendedMerc`, la
 voie du plugin autonome permanent et le séquencement A. Le trajet réseau, le
 callback serveur, l'adoption d'un slot existant et les primitives natives de
-création/attachement UI sont maintenant prouvés. Un premier `slot_gloves`
-absent a été créé, affiché et manipulé sans crash au runtime. Les probes 0.0.18
-et 0.0.19 identifient maintenant la cause commune des refus client et serveur :
-la Rogue n'admet nativement que les ItemTypes `47` et `56`, tandis qu'un glove
-est l'ItemType `16`. Le probe 0.0.20 étend uniquement le dernier contrôle de ce
-couple pour le BodyLoc `10` déjà validé; le glove réel a alors été équipé,
-retiré et remis dans l'inventaire sans crash. Cette preuve ferme le gate de
-transaction témoin; la généralisation configurée et les cycles de persistance
-restent à prouver avant l'implantation de production.
+création/attachement UI sont prouvés. Le probe 0.0.22 remplace la condition
+expérimentale sur la classe d'objet par un masque fail-closed de BodyLocs : seul
+`gloves=10` était activé pendant la matrice, et le BodyLoc natif de l'objet
+restait exigé. L'équipement et le retrait ont réussi sans crash sur les
+mercenaires des Actes I, II, III et V; l'Acte II a aussi conservé le glove et le
+mercenaire après `Save and Exit` puis rechargement. La politique générique et la
+persistance témoin sont donc démontrées. Restent à implanter la configuration
+autonome des six slots, `boots=9`, la désactivation sûre, la navigation manette
+et les matrices de portée et de multijoueur avant une release publique.
 
 ## Décisions confirmées
 
@@ -301,6 +301,28 @@ Un layout déjà personnalisé pourra être adopté au runtime plutôt qu'écras
   La DLL et le journal ont été retirés du runtime; les huit fichiers protégés de
   `QtyTester` ont été restaurés byte-exact, zéro mismatch, et le `.d2s` retrouve
   `A7BEB417EB7311F6433629233FE6CFD80336D6804CD4CDACC97B7AF2C4D29270`.
+- Le probe 0.0.22 généralise l'admission aux seuls bits d'un masque de BodyLocs,
+  sans classe d'objet hardcodée. La matrice utilisait `0x00000400`, soit
+  uniquement `gloves=10`, et conservait le contrôle
+  `ITEMS_CanEquipAtBodyLocation`. Son build Release de 27 648 octets porte le
+  SHA-256
+  `4127B1A917B4D5C815712A814F0447391BA21285B7BCCB6F629F3AE26C15B725`.
+  Le cold start a chargé 20/20 patchsets, 17 plugins scannés, 15 actifs, deux
+  désactivés, zéro rejet, zéro échec et un démarrage 24/24.
+- La matrice runtime 0.0.22 couvre tous les actes possédant un mercenaire :
+  Amplisa (Acte I), Alhizeer (Acte II), Barani (Acte III) et Klisk (Acte V) ont
+  chacun équipé puis retiré le glove du slot dynamique sans crash. Avec
+  Alhizeer, `Save and Exit` puis rechargement en Pain ont conservé le mercenaire
+  et le glove équipé avant son retrait. Il n'existe pas de mercenaire d'Acte IV.
+  Cette matrice démontre la politique commune; elle ne justifie pas de répéter
+  chaque futur slot sur chacun des quatre actes.
+- La DLL, le journal et les sources exactes sont archivés localement sous
+  `analysis-cache` avec un manifeste SHA-256; ils ont été retirés du runtime.
+  Le journal porte
+  `4F353432E5667D7BC574941CBA13177457E2A33CC38C72F6BEBE5318D1AD4D5A`.
+  Le ring et l'armure protégés sont restés intacts, puis les huit fichiers de
+  `QtyTester` ont été restaurés byte-exact à leurs hashes de départ, dont le
+  `.d2s` `A7BEB417EB7311F6433629233FE6CFD80336D6804CD4CDACC97B7AF2C4D29270`.
 
 ### Conclusion d'audit
 
@@ -309,29 +331,28 @@ serveur, l'adoption runtime d'un `ring` existant et la création visible d'un
 `slot_gloves` absent sont prouvés. Les BodyLocs vanilla 1 à 8 correspondent aux
 huit slots déjà observés; D2MOO épinglé et les layouts 92777 corroborent
 `feet=9` et `gloves=10`, sans transférer aucune adresse legacy. Le contexte de
-widget requis par le hit-test est maintenant prouvé par le crash 0.0.1 et le
-succès 0.0.2. Le test avec un objet réel démontre que la création UI seule ne
-suffit pas : client et serveur comparent encore l'objet au couple d'ItemTypes
-compilé de la classe mercenaire. Pour la Rogue témoin, ce couple vaut
-`{47, 56}` et le glove de type `16` échoue aux deux tests. La preuve 0.0.20
-montre qu'une admission tardive, bornée par le BodyLoc `10` et le contrôle
-BodyLoc natif de l'objet, suffit des deux côtés sans court-circuiter les autres
-gardes : toute la transaction passe, le glove s'équipe et se retire. La cause et
-le point d'extension minimal sont donc démontrés. Il ne faut toutefois créer ni
-DLL de production, ni configuration, ni archive ExtendedMerc avant d'avoir
-généralisé cette politique aux seuls slots configurés et validé la persistance,
-la désactivation sûre, la manette et la coexistence finale.
+widget requis par le hit-test est prouvé par le crash 0.0.1 et le succès 0.0.2.
+Les probes 0.0.18 à 0.0.20 isolent la comparaison au couple d'ItemTypes compilé
+de la classe mercenaire et démontrent le point d'extension minimal. Le probe
+0.0.22 généralise ensuite ce point à un masque de BodyLocs sans classe d'objet
+hardcodée. Toutes les autres gardes restent natives; le glove s'équipe et se
+retire sur les quatre actes de mercenaires, et la sauvegarde/rechargement est
+confirmée avec l'Acte II. La prochaine implantation peut donc devenir un
+prototype versionné configurable. Une release publique reste toutefois bloquée
+par les six interrupteurs autonomes, la désactivation sûre, la manette, les deux
+portées, le multijoueur et la coexistence finale.
 
 ## Hypothèses à tester
 
-- La politique démontrée pour `gloves=10` peut être généralisée aux seuls
-  BodyLocs configurés sans modifier la hiérarchie globale des ItemTypes ni
-  accepter un objet dont le BodyLoc natif ne correspond pas.
+- La politique générique prouvée avec `gloves=10` peut piloter les six BodyLocs
+  configurés sans modifier la hiérarchie globale des ItemTypes ni accepter un
+  objet dont le BodyLoc natif ne correspond pas.
 - Le panneau Hireling peut créer dynamiquement les slots absents avec la
   séquence native factory/finalizer/AddChild et reconstruire la navigation
   controller sans remplacer de fichier layout.
-- La sérialisation native des objets équipés du mercenaire suffit tant que le
-  plugin n'introduit aucun format de sauvegarde parallèle.
+- La sérialisation native a conservé le glove équipé sur l'Acte II. Elle doit
+  encore être vérifiée avec plusieurs slots occupés, en multijoueur et pendant
+  le cycle de désactivation, sans format de sauvegarde parallèle.
 
 ## Architecture visée
 
@@ -356,8 +377,9 @@ la désactivation sûre, la manette et la coexistence finale.
   callsites client `0x159FC8` et serveur `0x472CED` lorsque le BodyLoc `10` est
   demandé et validé. `0x472B10`, `0x472D20`, `0x473ED0` et
   `ITEMS_PlaceItemForPlayer 0x471500` retournent alors tous `1`; équipement et
-  retrait sont confirmés. Il reste à généraliser cette règle fail-closed aux
-  seuls slots activés, sans aucune condition hardcodée sur la classe d'objet.
+  retrait sont confirmés. Le probe 0.0.22 généralise cette règle à un masque de
+  BodyLocs sans condition hardcodée sur la classe d'objet; la matrice A1/A2/A3/A5
+  et la sauvegarde/rechargement A2 sont vertes.
 - Auditer le commit PluginPack épinglé, les cinq DLL et chaque plage de hook ou
   structure partagée. Toute collision doit avoir un propriétaire unique avant
   l'écriture de code.
@@ -367,9 +389,10 @@ la désactivation sûre, la manette et la coexistence finale.
   reconstruction répétée du panneau. L'adoption d'un `ring` existant est déjà
   confirmée; `belt` est déjà exposé dans le fixture BKVince et n'est plus un
   témoin suffisant de la factory.
-- Prouver la sauvegarde/rechargement, la désactivation avec slot occupé, la
-  désinstallation après vidage, solo, hôte/joiner et l'absence de perte,
-  duplication, objet fantôme, crash ou désynchronisation.
+- La sauvegarde/rechargement avec le glove équipé est prouvée sur l'Acte II. Il
+  reste à tester plusieurs slots occupés, la désactivation avec récupération
+  seulement, la désinstallation après vidage, solo, hôte/joiner et l'absence de
+  perte, duplication, objet fantôme, crash ou désynchronisation.
 - Valider séparément les portées globale et mod-locale, le repli de
   configuration, la configuration absente ou invalide, le cold start et les
   hashes.
@@ -379,14 +402,16 @@ la désactivation sûre, la manette et la coexistence finale.
 
 ## Prochain gate
 
-Généraliser le mécanisme 0.0.20 en politique fail-closed pilotée par les seuls
-BodyLocs activés, sans classe d'objet hardcodée : conserver les callsites étroits
-`0x159FC8` et `0x472CED`, exiger que le BodyLoc demandé soit configuré et que
-`ITEMS_CanEquipAtBodyLocation` accepte l'objet, puis laisser toutes les autres
-gardes natives décider. Auditer cette ownership contre les cinq DLL du
-PluginPack avant de figer les hooks.
-Redéployer ensuite le probe et valider fermeture/réouverture du panneau,
-sauvegarde/rechargement avec le glove équipé, désactivation avec slot occupé,
-vidage puis disparition, navigation controller, solo et hôte/joiner. Ne modifier
-aucune table, aucun layout ni le format de sauvegarde. Une fois cette matrice
-verte, figer la navigation adaptative et la configuration autonome de production.
+Versionner le prototype autonome et figer une configuration indépendante avec
+six booléens : `amulet`, `rightRing`, `leftRing`, `belt`, `boots` et `gloves`.
+Construire le masque fail-closed uniquement depuis ces valeurs, adopter les
+widgets existants et créer seulement les slots absents, dont `boots=9` et
+`gloves=10`, sans table ni layout. Une configuration présente mais invalide doit
+faire refuser le plugin; l'absence de configuration doit conserver le vanilla.
+
+Valider ensuite les six slots dans une seule session préparée, puis la
+fermeture/réouverture du panneau, plusieurs slots occupés au rechargement, la
+désactivation en récupération seulement, le vidage puis la disparition et la
+navigation controller. La couverture A1/A2/A3/A5 déjà verte ne sera pas répétée
+pour chaque slot. Fermer enfin les portées globale/mod-locale, le solo et
+hôte/joiner et la coexistence PluginPack avant de produire le ZIP public.
