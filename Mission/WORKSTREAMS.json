@@ -418,6 +418,7 @@
         ".agents/skills/diablo-git-checkpoint/scripts/inspect-checkpoint.mjs",
         "reverse-engineering/cheat-spawn.md",
         "scripts/checkpoint/**",
+        "scripts/runtime/**",
         "scripts/workstreams/**"
       ]
     }

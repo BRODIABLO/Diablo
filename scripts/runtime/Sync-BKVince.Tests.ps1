@@ -1,6 +1,25 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+function Get-Sha256 {
+    param([Parameter(Mandatory)][string]$LiteralPath)
+    $stream = [IO.File]::OpenRead($LiteralPath)
+    try {
+        $algorithm = [Security.Cryptography.SHA256]::Create()
+        try {
+            return ([BitConverter]::ToString($algorithm.ComputeHash($stream))).Replace('-', '')
+        } finally {
+            $algorithm.Dispose()
+        }
+    } finally {
+        $stream.Dispose()
+    }
+}
+
+function Get-FileHash {
+    throw 'Runtime synchronization must not depend on PowerShell module auto-loading.'
+}
+
 $scriptPath = Join-Path $PSScriptRoot 'Sync-BKVince.ps1'
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('diablo-bkvince-sync-' + [guid]::NewGuid().ToString('N'))
 $repo = Join-Path $testRoot 'repo'
@@ -21,7 +40,7 @@ try {
 
     & $scriptPath -Mode Apply -RepositoryRoot $repo -GameRoot $game -SourcePath 'data-BKVince/d2rloader/config/sample.toml' | Out-Null
     if ([IO.File]::ReadAllText($target) -ne 'value = 2') { throw 'Apply mode did not synchronize the runtime.' }
-    if ((Get-FileHash $source -Algorithm SHA256).Hash -ne (Get-FileHash $target -Algorithm SHA256).Hash) {
+    if ((Get-Sha256 -LiteralPath $source) -ne (Get-Sha256 -LiteralPath $target)) {
         throw 'Source/runtime hashes differ after Apply.'
     }
 

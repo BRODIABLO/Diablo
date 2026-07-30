@@ -28,6 +28,21 @@ function Test-ChildPath {
     return $Child.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)
 }
 
+function Get-Sha256 {
+    param([Parameter(Mandatory)][string]$LiteralPath)
+    $stream = [IO.File]::OpenRead($LiteralPath)
+    try {
+        $algorithm = [Security.Cryptography.SHA256]::Create()
+        try {
+            return ([BitConverter]::ToString($algorithm.ComputeHash($stream))).Replace('-', '')
+        } finally {
+            $algorithm.Dispose()
+        }
+    } finally {
+        $stream.Dispose()
+    }
+}
+
 function Find-GameRoot {
     param([string]$ExplicitRoot)
     $resolved = Resolve-Root -Value $ExplicitRoot -Fallback $env:D2R_GAME_ROOT
@@ -123,9 +138,9 @@ $entries = @(foreach ($item in $requested) {
     if (-not (Test-ChildPath -Child $target -Parent $runtimeRoot)) {
         throw "Runtime target escaped BKVince: $relative"
     }
-    $sourceHash = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
+    $sourceHash = Get-Sha256 -LiteralPath $source
     $targetHash = if (Test-Path -LiteralPath $target -PathType Leaf) {
-        (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash
+        Get-Sha256 -LiteralPath $target
     } else { $null }
     [pscustomobject]@{
         relative = $relative.Replace('\', '/')
@@ -155,7 +170,7 @@ if ($Mode -eq 'Apply' -and @($entries | Where-Object changed).Count -gt 0) {
         }
         New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($entry.target)) -Force | Out-Null
         Copy-Item -LiteralPath $entry.source -Destination $entry.target -Force
-        $runtimeHash = (Get-FileHash -LiteralPath $entry.target -Algorithm SHA256).Hash
+        $runtimeHash = Get-Sha256 -LiteralPath $entry.target
         if ($runtimeHash -ne $entry.sourceSha256) {
             throw "Hash mismatch after copy: $($entry.relative)"
         }
