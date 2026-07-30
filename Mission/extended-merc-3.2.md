@@ -1,15 +1,19 @@
 # ExtendedMerc — D2R 3.2.92777
 
-Dernière mise à jour : 29 juillet 2026
+Dernière mise à jour : 30 juillet 2026
 
 Statut : incubation native active. Vincent a choisi le nom `ExtendedMerc`, la
 voie du plugin autonome permanent et le séquencement A. Le trajet réseau, le
 callback serveur, l'adoption d'un slot existant et les primitives natives de
 création/attachement UI sont maintenant prouvés. Un premier `slot_gloves`
-absent a été créé, affiché et manipulé sans crash au runtime. Le test avec un
-glove réel prouve toutefois que le contrôleur natif refuse encore la transaction
-vers ce nouveau widget; son extension ciblée est désormais le gate avant
-l'implantation de production.
+absent a été créé, affiché et manipulé sans crash au runtime. Les probes 0.0.18
+et 0.0.19 identifient maintenant la cause commune des refus client et serveur :
+la Rogue n'admet nativement que les ItemTypes `47` et `56`, tandis qu'un glove
+est l'ItemType `16`. Le probe 0.0.20 étend uniquement le dernier contrôle de ce
+couple pour le BodyLoc `10` déjà validé; le glove réel a alors été équipé,
+retiré et remis dans l'inventaire sans crash. Cette preuve ferme le gate de
+transaction témoin; la généralisation configurée et les cycles de persistance
+restent à prouver avant l'implantation de production.
 
 ## Décisions confirmées
 
@@ -198,6 +202,105 @@ Un layout déjà personnalisé pourra être adopté au runtime plutôt qu'écras
   (`C56CB58751A00252AC7C33A0A9D70422E5C6A1B4C75D6DD4D4349A27ADC888DE`).
   Le probe testé a été retiré du runtime puis archivé localement avec son hash
   inchangé `52A8F23343EC2958FA0A0112D0E13EB75FF7A3B76DC0E7DA00A91273BBB658EA`.
+- La branche mercenaire de `UI_HandleEquippedItemClick 0x2CACF0` est maintenant
+  délimitée sans réclamer l'entrée déjà possédée par EquippedItemToCube. Elle
+  appelle successivement le contrôle BodyLoc `0x36BB10` au callsite unique
+  `0x2CB0D9`, la compatibilité mercenaire `0x159E60` à `0x2CB0E8`, puis le
+  contrôle commun des exigences `0x36BC50` à `0x2CB10D`. Le succès construit
+  ensuite la commande avec `{bodyLoc, true}` par `0x15C220`; chaque refus
+  rejoint l'avertissement UI sans émettre cette commande.
+- `0x36BB10` lit les deux BodyLoc compilés du type d'objet et accepte l'un ou
+  l'autre. La table vanilla 3.2, lue en round-trip byte-exact, confirme que la
+  ligne `Gloves` est l'ItemType `16`, hérite de `Armor` et porte `glov` dans
+  `BodyLoc1/BodyLoc2`; le BodyLoc `10` du widget créé est donc cohérent. Le probe
+  0.0.7 le confirme au runtime pour le glove témoin : le callsite `0x2CB0D9`
+  reçoit `bodyLoc=10` et retourne `1`. Le contrôle suivant `0x159E60` retourne
+  toutefois `0` nativement pour ce même objet de classe `334` — comme pour le
+  Leather Armor de classe `314` observé séparément — et rejoint le refus UI.
+- Le callback serveur mercenaire `0x4C0E20` rappelle le même validateur
+  `0x36BC50` au callsite `0x4C1031` après avoir résolu l'objet du paquet et le
+  mercenaire. Son témoin de 18 octets
+  `E8 1A AC EA FF 85 C0 75 37 4C 8B 45 9F 8D 50 5D 48 8B` est unique dans le
+  `.text` 92777. Un correctif limité au client serait donc insuffisant si ce
+  contrôle commun est celui qui refuse le glove; les deux côtés doivent être
+  observés avant toute extension.
+- Le probe 0.0.6 a instrumenté les trois appels client. Plusieurs instances D2R
+  ont cependant été fermées puis recréées par une autre session pendant les
+  gestes de contrôle : les PID et heures de démarrage ont changé, aucun
+  événement de crash ni aucune ligne de validation n'a été produit. Ce passage
+  est invalide et ne doit pas être attribué au plugin. Le probe 0.0.7 corrigé
+  expose exactement les trois exports v2, porte les métadonnées `0.0.7` et le
+  SHA-256
+  `2A8B170B400863A914F499E7EB7FEC158CFBF23952BBF1FDD3F0E86ECA6DAA3`.
+- Le probe 0.0.8 a remplacé temporairement et uniquement le résultat du callsite
+  `0x2CB0E8` pour la classe exacte `334`. La compatibilité est alors passée à
+  `1`; les contrôles d'exigences client `0x2CB10D` et serveur `0x4C1031` ont tous
+  deux retourné `1`. Le serveur a néanmoins refusé la transaction sans crash ni
+  perte, ce qui exclut ces exigences comme cause immédiate du refus témoin. Ce
+  contournement expérimental n'est pas une politique de production.
+- Les probes 0.0.9 à 0.0.13 ont ensuite suivi la même transaction côté serveur.
+  Le builder appelé à `0x4716A7` produit un état valide. Dans le validateur
+  `0x473ED0` appelé à `0x471757`, les quatre contrôles initiaux `0x36E240`,
+  `0x36E2D0`, `0x34FC20` et `0x34FC60` retournent `0`, les gardes `0x385550` et
+  `0x474700` retournent `1`, et `0x46E2B0` renvoie un record dont le premier
+  pointeur est nul. Le chemin exact atteint ensuite `0x472D20`.
+- Les journaux 0.0.14 à 0.0.17 contiennent plusieurs états de placement pour le
+  même objet de classe `334`. La corrélation stricte entre l'entrée et la sortie
+  de `placement-server-first` distingue la transaction autoritaire refusée :
+  ses quatre valeurs 32 bits sont `{1, 255, 10, 10}` aux offsets
+  `+0x00/+0x04/+0x08/+0x0C`. L'état `{4, 255, 0, 0}` apparaît plus tard hors de
+  cette enveloppe et ne doit pas être attribué au refus serveur. La synthèse
+  antérieure `{1, -1, 10, 10}` avait également interprété `255` comme `-1`.
+- Le probe 0.0.16 filtrait déjà exactement `{1, 255, 10, 10}`. Dans l'enveloppe
+  autoritaire du glove, il observe `0x472B10=0`, puis `0x472D20=0`,
+  `0x473ED0=0` et `ITEMS_PlaceItemForPlayer 0x471500=0`; `0x46E450`,
+  `0x4730E0`, `0x4734F0` et le validateur final `0x46E050` ne sont pas atteints.
+  `0x472B10` est donc le premier prédicat négatif exact maintenant prouvé.
+- Le probe 0.0.17 a filtré `{4, 255, 0, 0}` et confirme que cet autre état passe
+  `0x472D20`, `0x4734F0`, `0x473ED0` et `0x46E050`. Cette passe négative est
+  conservée pour expliquer la distinction, mais elle ne remplace pas la preuve
+  autoritaire 0.0.16. Son build Release porte le SHA-256
+  `6BA96501241772514B38787754ED996329B35157CBD3626F4035918B5C8F92B7`.
+- Le probe 0.0.18 décompose `0x472B10` sans en modifier le résultat. Pour la
+  transaction autoritaire `{1, 255, 10, 10}`, le glove est identifié
+  (`flag 16 -> 16`), sa classe est valide (`0`), il n'est pas brisé
+  (`flag 256 -> 0`), la restriction spéciale retourne `0`, la politique de
+  classe cible retourne `1`, puis les tests génériques `Armor` (`3`) et `Helm`
+  (`37`) retournent tous deux `0`. Le refus survient donc après ces sept gardes.
+  Le build Release porte le SHA-256
+  `723E7D78C61B8686797986A4223DEEC9CE49607E5AD85BC6746F6AF5D9499B94`.
+- Le probe 0.0.19 instrumente ensuite les appels uniques `0x472C61`,
+  `0x472CBA`, `0x472CD4` et `0x472CED`. `0x3AEB70` résout sur la Rogue le couple
+  autorisé `{47, 56}`; les deux appels `ITEMS_CheckItemTypeId` retournent `0`
+  pour le glove. La table vanilla 3.2 `itemtypes.txt`, lue byte-exact, identifie
+  `47` comme `Missile Weapon`, `56` comme `Missile` et `16` comme `Gloves` avec
+  BodyLoc `glov`. Le couple compilé de la cible, et non le BodyLoc du widget ni
+  les exigences du glove, est donc la cause directe et partagée du refus. Le
+  build Release porte le SHA-256
+  `EB2CF688D99D465356979CCC58D44BF1A4DFBA3F0A4B809A927464EFDC4255D7`.
+- Le probe 0.0.20 remplace uniquement le résultat négatif du dernier test de ce
+  couple : callsite client `0x159FC8` dans `0x159E60`, puis callsite serveur
+  `0x472CED` dans `0x472B10`. L'admission est armée seulement pendant une
+  transaction dont le BodyLoc demandé vaut `10` et seulement si
+  `ITEMS_CanEquipAtBodyLocation(item, 10)` réussit; toutes les gardes natives
+  précédentes, les exigences et les validateurs de placement restent actifs.
+  Le build Release de 32 768 octets porte le SHA-256
+  `7F93D0A67C42FD635DD175BECEF071A3A0BA7A39F8D7CB68E7481B58692287AA`.
+- La transaction runtime 0.0.20 prouve le chemin complet. Le client journalise
+  `client-equip-target-type-b-override=1`, puis la compatibilité vaut `1`. Pour
+  l'état serveur exact `{1, 255, 10, 10}`, les événements `#11639` à `#11670`
+  montrent le couple `{47, 56}`, l'override final à `1`, puis
+  `0x472B10=1`, `0x46E450=1`, `0x4730E0=1`, `0x472D20=1`, `0x4734F0=1`, le
+  validateur d'objet `=1`, le validateur final `=1` et
+  `placement-server-first=1`. Visuellement, le glove quitte l'inventaire,
+  apparaît dans le slot d'Amplisa et applique son effet; le clic de retrait le
+  remet ensuite dans sa cellule d'origine et restaure l'état précédent.
+- D2R a été fermé proprement après `Save and Exit`. Le journal 0.0.20 archivé
+  localement porte le SHA-256
+  `98BB099CF1E62DFF578CC6D11AB886716C3025CA8E3F8F108D6C865B716083D0`.
+  La DLL et le journal ont été retirés du runtime; les huit fichiers protégés de
+  `QtyTester` ont été restaurés byte-exact, zéro mismatch, et le `.d2s` retrouve
+  `A7BEB417EB7311F6433629233FE6CFD80336D6804CD4CDACC97B7AF2C4D29270`.
 
 ### Conclusion d'audit
 
@@ -208,16 +311,22 @@ huit slots déjà observés; D2MOO épinglé et les layouts 92777 corroborent
 `feet=9` et `gloves=10`, sans transférer aucune adresse legacy. Le contexte de
 widget requis par le hit-test est maintenant prouvé par le crash 0.0.1 et le
 succès 0.0.2. Le test avec un objet réel démontre que la création UI seule ne
-suffit pas : le contrôleur de transaction rejette actuellement le BodyLoc 10 du
-nouveau widget. Il faut donc identifier puis étendre fail-closed ce chemin natif
-avant de pouvoir prouver équipement, retrait et restauration après sauvegarde.
-Il ne faut créer ni DLL de production, ni configuration, ni archive ExtendedMerc
-avant cette preuve.
+suffit pas : client et serveur comparent encore l'objet au couple d'ItemTypes
+compilé de la classe mercenaire. Pour la Rogue témoin, ce couple vaut
+`{47, 56}` et le glove de type `16` échoue aux deux tests. La preuve 0.0.20
+montre qu'une admission tardive, bornée par le BodyLoc `10` et le contrôle
+BodyLoc natif de l'objet, suffit des deux côtés sans court-circuiter les autres
+gardes : toute la transaction passe, le glove s'équipe et se retire. La cause et
+le point d'extension minimal sont donc démontrés. Il ne faut toutefois créer ni
+DLL de production, ni configuration, ni archive ExtendedMerc avant d'avoir
+généralisé cette politique aux seuls slots configurés et validé la persistance,
+la désactivation sûre, la manette et la coexistence finale.
 
 ## Hypothèses à tester
 
-- Une extension ciblée du contrôleur de transaction peut accepter les BodyLocs
-  supplémentaires activés sans modifier la hiérarchie globale des ItemTypes.
+- La politique démontrée pour `gloves=10` peut être généralisée aux seuls
+  BodyLocs configurés sans modifier la hiérarchie globale des ItemTypes ni
+  accepter un objet dont le BodyLoc natif ne correspond pas.
 - Le panneau Hireling peut créer dynamiquement les slots absents avec la
   séquence native factory/finalizer/AddChild et reconstruire la navigation
   controller sans remplacer de fichier layout.
@@ -241,17 +350,23 @@ avant cette preuve.
 - Le paquet client `0x51`, le callback serveur `0x4C0E20`, son ABI, sa taille de
   17 octets et sa signature unique sont prouvés. La factory, le finalizer et
   l'attachement UI sont prouvés statiquement et au runtime. La transaction avec
-  un glove réel est refusée sans crash; il reste à identifier le contrôleur qui
-  décide ce refus, à étendre seulement les slots activés, puis à valider une
-  transaction d'équipement complète dans le slot créé.
+  un glove réel est maintenant acceptée par le prototype ciblé. Les preuves
+  0.0.18/0.0.19 identifient le couple natif Rogue `{47, 56}` comme cause du
+  refus, et 0.0.20 fait passer uniquement le dernier test d'ItemType aux
+  callsites client `0x159FC8` et serveur `0x472CED` lorsque le BodyLoc `10` est
+  demandé et validé. `0x472B10`, `0x472D20`, `0x473ED0` et
+  `ITEMS_PlaceItemForPlayer 0x471500` retournent alors tous `1`; équipement et
+  retrait sont confirmés. Il reste à généraliser cette règle fail-closed aux
+  seuls slots activés, sans aucune condition hardcodée sur la classe d'objet.
 - Auditer le commit PluginPack épinglé, les cinq DLL et chaque plage de hook ou
   structure partagée. Toute collision doit avoir un propriétaire unique avant
   l'écriture de code.
 - Le slot absent témoin `gloves` est maintenant créé sans table ni layout,
-  visible et cliquable à vide à la souris. Il reste à prouver équipement/retrait,
-  navigation manette et reconstruction répétée du panneau. L'adoption d'un
-  `ring` existant est déjà confirmée; `belt` est déjà exposé dans le fixture
-  BKVince et n'est plus un témoin suffisant de la factory.
+  visible et cliquable à la souris; équipement et retrait sont prouvés avec un
+  glove réel. Il reste à prouver navigation manette, fermeture/réouverture et
+  reconstruction répétée du panneau. L'adoption d'un `ring` existant est déjà
+  confirmée; `belt` est déjà exposé dans le fixture BKVince et n'est plus un
+  témoin suffisant de la factory.
 - Prouver la sauvegarde/rechargement, la désactivation avec slot occupé, la
   désinstallation après vidage, solo, hôte/joiner et l'absence de perte,
   duplication, objet fantôme, crash ou désynchronisation.
@@ -264,11 +379,14 @@ avant cette preuve.
 
 ## Prochain gate
 
-Tracer le refus observé entre le drop sur `slot_gloves` et la construction ou
-l'émission de la transaction native, identifier le contrôleur/validateur exact
-sur le build 92777, puis étendre fail-closed uniquement les BodyLocs activés.
-Redéployer ensuite le probe et valider la transaction complète : équipement,
-retrait, fermeture et réouverture du panneau, sauvegarde/rechargement puis
-navigation controller. Ne modifier aucune table, aucun layout ni le format de
-sauvegarde. Une fois ce témoin vert, figer le hook, la navigation adaptative et
-la configuration autonome de production.
+Généraliser le mécanisme 0.0.20 en politique fail-closed pilotée par les seuls
+BodyLocs activés, sans classe d'objet hardcodée : conserver les callsites étroits
+`0x159FC8` et `0x472CED`, exiger que le BodyLoc demandé soit configuré et que
+`ITEMS_CanEquipAtBodyLocation` accepte l'objet, puis laisser toutes les autres
+gardes natives décider. Auditer cette ownership contre les cinq DLL du
+PluginPack avant de figer les hooks.
+Redéployer ensuite le probe et valider fermeture/réouverture du panneau,
+sauvegarde/rechargement avec le glove équipé, désactivation avec slot occupé,
+vidage puis disparition, navigation controller, solo et hôte/joiner. Ne modifier
+aucune table, aucun layout ni le format de sauvegarde. Une fois cette matrice
+verte, figer la navigation adaptative et la configuration autonome de production.

@@ -988,6 +988,166 @@
       "notes": "Adds one child widget with x64 ABI (Widget* parent, Widget* child) -> void. It appends to the parent vector at +0x58/+0x60/+0x68, grows and transfers the allocation through the native UI allocator when required, and preserves ownership semantics. Twenty-eight direct callsites use the same parent/child order after the child's vtable +0x08 finalizer. Its strict 18-byte entry is unique in build 92777."
     },
     {
+      "rva": "0x36BB10",
+      "name": "ITEMS_CanEquipAtBodyLocation",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Validates an item and requested BodyLoc with x64 ABI (item, bodyLoc) -> int32. It resolves the compiled ItemTypes row, compares both BodyLoc bytes at +0x0A/+0x0B, and preserves the paired weapon-location exception for BodyLocs 11 and 12. The ExtendedMerc client path calls it narrowly at 0x2CB0D9."
+    },
+    {
+      "rva": "0x3AEB70",
+      "name": "UNITS_GetAllowedEquipmentItemTypes",
+      "kind": "function",
+      "confidence": "medium",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Provisional name for the target equipment-type resolver with observed x64 ABI (targetUnit, typeAOut, typeBOut) -> void. Static flow requires unit type 1, resolves the compiled target class record through 0x0976E0 and writes the signed 16-bit values at record offsets +0x80/+0x82. ExtendedMerc 0.0.19 observed the QtyTester Rogue target return type A 47 and type B 56, which vanilla itemtypes.txt identifies as Missile Weapon and Missile."
+    },
+    {
+      "rva": "0x159E60",
+      "name": "CLIENT_CheckMercenaryItemCompatibility",
+      "kind": "function",
+      "confidence": "medium",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Client-side mercenary/item compatibility predicate with observed x64 ABI (mercenary, item) -> bool. The equipped-slot handler calls it at 0x2CB0E8 after BodyLoc validation. Static flow preserves class-specific restrictions, recognizes Armor and Helm through ITEMS_CheckItemTypeId, and otherwise compares the item against the mercenary-specific type pair resolved by 0x3AEB70. Runtime tracing returned zero natively for Leather Armor class 314 and for the exact Strong Leather Gloves of Self-Repair class 334; ExtendedMerc 0.0.19 proved that the Rogue pair is {47, 56} while Gloves is type 16. The 0.0.20 prototype admitted only the final type-B call at 0x159FC8 for a requested BodyLoc 10 already accepted by ITEMS_CanEquipAtBodyLocation, producing compatibility result one without replacing this whole function."
+    },
+    {
+      "rva": "0x159FC8",
+      "name": "CLIENT_MercenaryTargetTypeBValidationCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Unique 18-byte witness E8 C3 98 21 00 85 C0 74 24 48 8B 6C 24 30 B0 01 48 8B inside CLIENT_CheckMercenaryItemCompatibility. It is the final ITEMS_CheckItemTypeId call for the target's type-B value after the type-A test failed. ExtendedMerc 0.0.19 observed native result zero for the class-334 glove against Rogue type B 56. Prototype 0.0.20 changed only this callsite result to one while the requested BodyLoc was 10 and ITEMS_CanEquipAtBodyLocation(item, 10) returned nonzero; the enclosing compatibility predicate then returned one."
+    },
+    {
+      "rva": "0x36BC50",
+      "name": "ITEMS_CheckItemRequirementsForUnit",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Shared client/server item requirement predicate with observed x64 ABI (item, targetUnit, option, strengthOut, dexterityOut, levelOut, finalOption) -> int32. It resolves ItemsTxt, evaluates identified state and effective strength, dexterity, level and class restrictions, and returns zero when any required gate fails. With the exact class-334 compatibility result temporarily admitted at its dedicated client callsite, ExtendedMerc observed this predicate return one at both mercenary callsites 0x2CB10D and 0x4C1031. The plugin does not own this broadly shared function."
+    },
+    {
+      "rva": "0x2CB0D9",
+      "name": "UI_MercenaryBodyLocValidationCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Unique 18-byte witness E8 32 0A 0A 00 85 C0 74 77 48 8B D5 48 8B CF E8 73 ED inside UI_HandleEquippedItemClick. It calls ITEMS_CanEquipAtBodyLocation for the cursor item and widget BodyLoc, then joins the UI refusal branch on zero. Runtime tracing of the exact class-334 glove against the created BodyLoc 10 returned one."
+    },
+    {
+      "rva": "0x2CB0E8",
+      "name": "UI_MercenaryCompatibilityValidationCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Unique 18-byte witness E8 73 ED E8 FF 84 C0 74 68 33 C9 45 33 C9 89 4C 24 30 inside UI_HandleEquippedItemClick. It calls CLIENT_CheckMercenaryItemCompatibility and joins the UI refusal branch when the boolean result is false. Runtime tracing returned zero natively for the exact class-334 glove; the temporary ExtendedMerc 0.0.8 override returned one only at this callsite so the later authoritative path could be observed."
+    },
+    {
+      "rva": "0x2CB10D",
+      "name": "UI_MercenaryRequirementsValidationCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Unique 18-byte witness E8 3E 0B 0A 00 85 C0 74 36 8B 83 D8 05 00 00 89 84 24 inside UI_HandleEquippedItemClick. It calls ITEMS_CheckItemRequirementsForUnit for the cursor item and mercenary immediately before the successful path builds the equip command through 0x15C220. Runtime tracing returned one for the exact class-334 glove once only the preceding compatibility callsite was admitted experimentally."
+    },
+    {
+      "rva": "0x4C1031",
+      "name": "SERVER_MercenaryRequirementsValidationCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Unique 18-byte witness E8 1A AC EA FF 85 C0 75 37 4C 8B 45 9F 8D 50 5D 48 8B in SERVER_HandleMercEquipmentPacket51. It calls the same ITEMS_CheckItemRequirementsForUnit predicate after resolving the packet item and mercenary; a zero result enters the authoritative refusal branch. Runtime tracing returned one for the exact class-334 glove after the narrow client compatibility experiment, proving the later server placement path is responsible for the remaining refusal."
+    },
+    {
+      "rva": "0x4C1084",
+      "name": "SERVER_MercenaryFirstPlacementCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Unique 18-byte witness E8 77 04 FB FF 84 C0 75 36 4C 8B 45 9F BA 5C 00 00 00 in SERVER_HandleMercEquipmentPacket51. It calls the common server item-placement routine at 0x471500 after mercenary requirements pass. Native ExtendedMerc tracing of the exact class-334 glove returned zero here; prototype 0.0.20 admitted only the target type-B decision deeper at 0x472CED, after which the same placement envelope returned one."
+    },
+    {
+      "rva": "0x4716A7",
+      "name": "SERVER_ItemPlacementStateBuilderCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Unique 18-byte witness E8 64 1B 00 00 80 BD F8 96 00 00 00 0F 84 64 02 00 00 inside the common item-placement routine. It calls the provisional placement-state builder at 0x473210. Runtime tracing showed a valid builder result for the rejected class-334 mercenary-glove transaction."
+    },
+    {
+      "rva": "0x471757",
+      "name": "SERVER_ItemPlacementValidationCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Unique 18-byte witness E8 74 27 00 00 84 C0 0F 84 B9 01 00 00 48 83 C7 04 49 inside the common item-placement routine. It calls 0x473ED0 for the built item-placement state. Correlated ExtendedMerc 0.0.16 runtime tracing returned zero for the native class-334 server glove transaction; with only the late target type-B decision admitted, 0.0.20 observed the same authoritative placement envelope return one."
+    },
+    {
+      "rva": "0x471787",
+      "name": "SERVER_PlacementFinalValidationCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Unique 18-byte witness E8 C4 C8 FF FF 84 C0 0F 84 89 01 00 00 4C 8B 74 24 48 inside ITEMS_PlaceItemForPlayer 0x471500. It calls the provisional final validator at 0x46E050 after every 0x473ED0 item-state validation succeeds. The native class-334 server glove transaction did not reach this call because 0x473ED0 returned zero first; a later {4, 255, 0, 0} state observed by ExtendedMerc 0.0.17 reached it and returned one. Prototype 0.0.20 also reached the call for the authoritative {1, 255, 10, 10} glove transaction after the narrow 0x472CED admission and observed final-validator result one."
+    },
+    {
+      "rva": "0x473ED0",
+      "name": "SERVER_ValidateItemPlacementState",
+      "kind": "function",
+      "confidence": "medium",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Provisional name for the server predicate reached from callsite 0x471757 with observed ABI (state, item, placement, flag) -> bool. For the exact class-334 mercenary-glove server transaction, runtime tracing observed 0x36E240, 0x36E2D0, 0x34FC20 and 0x34FC60 all return zero; 0x385550 and D2GAME_ValidateItemPacketState 0x474700 return one; and 0x46E2B0 returns a record whose first pointer is null. Correlated ExtendedMerc 0.0.16 tracing then observed 0x472D20 return zero and this enclosing function return zero. A later {4, 255, 0, 0} state succeeds here but lies outside the rejected placement-server-first envelope. Prototype 0.0.20 admitted only the final target type-B test at 0x472CED for BodyLoc 10; 0x472D20, the following validators and this enclosing predicate then all returned one for the authoritative {1, 255, 10, 10} state. These results establish control flow only; helper semantics remain provisional."
+    },
+    {
+      "rva": "0x474024",
+      "name": "SERVER_PlacementDestinationValidationCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Unique 18-byte witness E8 F7 EC FF FF 84 C0 74 C6 48 8B D5 48 8B CB E8 B8 F4 inside 0x473ED0. It calls the provisional destination validator at 0x472D20 and returns to the enclosing rejection branch on zero. Correlated ExtendedMerc 0.0.16 runtime tracing observed zero for the native class-334 server glove transaction and did not reach 0x4734F0. Prototype 0.0.20 admitted only the late type-B check at 0x472CED; this call and the following 0x4734F0 validation then returned one."
+    },
+    {
+      "rva": "0x472D20",
+      "name": "SERVER_ValidatePlacementDestination",
+      "kind": "function",
+      "confidence": "medium",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Provisional name for the predicate called at 0x474024 with observed ABI (state, item, placement) -> bool. Correlating the archived ExtendedMerc logs with the placement-server-first entry and exit proves that the exact rejected server placement has four int32 fields {1, 255, 10, 10} at offsets +0x00/+0x04/+0x08/+0x0C; the previous {1, -1, 10, 10} transcription treated 255 as signed, while {4, 255, 0, 0} belongs to a later state outside that server envelope. ExtendedMerc 0.0.16 observed 0x472B10 return zero, after which this function returned zero without reaching 0x46E450, 0x4730E0 or 0x4734F0. With only the final target type-B callsite 0x472CED admitted for BodyLoc 10, prototype 0.0.20 observed 0x472B10=1, 0x46E450=1, 0x4730E0=1, this function=1 and the following 0x4734F0=1."
+    },
+    {
+      "rva": "0x472F74",
+      "name": "SERVER_PlacementEquippableItemValidationCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Unique 18-byte witness E8 97 FB FF FF 44 0F B6 F0 84 C0 74 29 8B 53 0C 48 8B inside 0x472D20. It calls the provisional equippable-item predicate at 0x472B10 for placement states whose field +0x0C is below 11. ExtendedMerc 0.0.16 observed this exact call return zero for the native class-334 server glove state {1, 255, 10, 10}; the following 0x46E450 and 0x4730E0 calls were not reached. Prototype 0.0.20 changed only the final type-B subcall at 0x472CED under a BodyLoc-10 guard, after which this call returned one and both following validators were reached successfully."
+    },
+    {
+      "rva": "0x472B10",
+      "name": "SERVER_ValidateEquippableItemForTarget",
+      "kind": "function",
+      "confidence": "medium",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Provisional name for the predicate called from 0x472F74 with observed ABI (placementState, item) -> bool. ExtendedMerc 0.0.18 observed the exact {1, 255, 10, 10} glove transaction pass its identified flag, class-validity, broken flag, special-restriction and target-class-policy guards before both generic Armor type 3 and Helm type 37 tests returned zero. ExtendedMerc 0.0.19 then observed 0x3AEB70 return the Rogue target pair {47, 56}; the class-334 glove matched neither type, proving the first negative cause. Prototype 0.0.20 preserved every preceding guard and changed only the final type-B callsite 0x472CED to one while BodyLoc 10 was requested and ITEMS_CanEquipAtBodyLocation(item, 10) succeeded; this predicate then returned one and the complete authoritative placement succeeded. D2MOO's legacy body-item placement routine is semantic evidence only; no legacy address or ABI is transferred."
+    },
+    {
+      "rva": "0x472CBA",
+      "name": "SERVER_TargetAllowedEquipmentTypesCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Unique 18-byte witness E8 B1 BE F3 FF 40 84 ED 74 36 84 DB 74 32 8B 54 24 68 inside SERVER_ValidateEquippableItemForTarget. It calls 0x3AEB70 to build the target-specific item-type pair after the generic Armor and Helm tests fail. ExtendedMerc 0.0.19 observed the QtyTester Rogue target produce type A 47 and type B 56."
+    },
+    {
+      "rva": "0x472CED",
+      "name": "SERVER_EquippableTargetTypeBValidationCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/extended-merc-3.2.md",
+      "notes": "Unique 18-byte witness E8 9E 0B F0 FF 85 C0 0F 85 A9 FE FF FF 48 8B 5C 24 58 inside SERVER_ValidateEquippableItemForTarget. It is the final ITEMS_CheckItemTypeId call for the target's type-B value after the type-A test at 0x472CD4 failed. ExtendedMerc 0.0.19 observed native result zero for the class-334 glove against Rogue type B 56. Prototype 0.0.20 changed only this result to one while the authoritative placement requested BodyLoc 10 and ITEMS_CanEquipAtBodyLocation(item, 10) returned nonzero; 0x472B10, 0x472D20, 0x473ED0, the final validator and ITEMS_PlaceItemForPlayer then all returned one."
+    },
+    {
       "rva": "0x847C40",
       "name": "UI_ShowConfirmationModal",
       "kind": "function",
