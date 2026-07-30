@@ -5,8 +5,9 @@ Dernière mise à jour : 29 juillet 2026
 Statut : incubation native active. Vincent a choisi le nom `ExtendedMerc`, la
 voie du plugin autonome permanent et le séquencement A. Le trajet réseau, le
 callback serveur, l'adoption d'un slot existant et les primitives natives de
-création/attachement UI sont maintenant prouvés; le premier slot absent créé au
-runtime reste le gate avant l'implantation de production.
+création/attachement UI sont maintenant prouvés. Un premier `slot_gloves`
+absent a été créé, affiché et cliqué sans crash au runtime; l'équipement réel,
+le retrait et la persistance restent le gate avant l'implantation de production.
 
 ## Décisions confirmées
 
@@ -154,24 +155,45 @@ Un layout déjà personnalisé pourra être adopté au runtime plutôt qu'écras
   un autre plugin possède déjà les cinq octets.
   Le premier démarrage l'a rejeté avant `D2RLoaderLoadPlugin` parce que la
   ressource-manifeste v2 manquait : aucun hook du probe n'a été installé. La
-  ressource a été ajoutée et le build local corrigé porte le SHA-256
+  ressource a été ajoutée et le build local corrigé portait le SHA-256
   `ECB258B6129816B09380272187F67228A0F2406693FFADA1DF526DBB97ADF668`.
-  À la demande de Vincent, la copie runtime a été supprimée et aucun nouveau
-  lancement n'a eu lieu pendant ses autres tests; le test fonctionnel du build
-  corrigé reste `not run`.
+- Le premier déploiement fonctionnel a ensuite échoué fail-closed :
+  `PatchCallRel32` ne pouvait pas encoder le relais alloué hors de la portée
+  signée de 32 bits du callsite `0xCE3B1`. Le probe a donc encodé lui-même les
+  cinq octets `E8 rel32`, après validation stricte de portée, puis les a confiés
+  à `PatchBytes` afin que D2RLoader demeure propriétaire de l'écriture. Le build
+  0.0.1 résultant (`6A635750D6C2ABBE5A391CD97E16301DAEA7D39A6ADFEF300C2832049C1983AF`)
+  a passé le cold start avec 20/20 patches et
+  `active=15 disabled=2 rejected=0 failed=0`.
+- Ce build a créé `slot_gloves bodyLoc=10 rect=110,564,196,196 cell=98,98`,
+  mais le widget demeurait invisible parce que ses méthodes virtuelles
+  d'activation et d'affichage n'avaient pas été appelées. Un clic à son
+  emplacement a ensuite reproduit un crash : `UI_HandleEquippedItemClick
+  0x2CACF0` a appelé `UI_TOOLTIP_ResolveHoveredUnit 0x2A7810`, lequel a lu les
+  valeurs par défaut `unitId=-1` et `unitType=6` laissées par la factory et a
+  retourné une unité nulle avant `UNITS_GetInventory`.
+- Le probe 0.0.2 copie maintenant un contexte mercenaire sain depuis un slot
+  hôte (`unitType=1`, `unitId>=0`) dans `+0x5C4/+0x5C8`, puis appelle les entrées
+  virtuelles 9 et 10 pour activer et afficher le widget. Son build Release
+  (`52A8F23343EC2958FA0A0112D0E13EB75FF7A3B76DC0E7DA00A91273BBB658EA`)
+  a passé le même cold start. Sur `QtyTester`, le slot a été visuellement
+  confirmé et le clic vide exact qui faisait planter le jeu n'a produit ni gel,
+  ni nouveau rapport de crash; le PID 45596 répondait toujours après le clic.
+  L'instance a ensuite été sauvegardée et fermée proprement, et la DLL probe a
+  été retirée du runtime. Aucun glove libre n'était disponible dans l'inventaire,
+  donc l'équipement réel n'a pas été simulé.
 
 ### Conclusion d'audit
 
 Le modèle « cases à cocher par slot » reste retenu. Le trajet réseau, le callback
-serveur et l'adoption runtime d'un `ring` existant sont prouvés. Les BodyLocs
-vanilla 1 à 8 correspondent aux huit slots déjà observés; D2MOO épinglé et les
-layouts 92777 corroborent `feet=9` et `gloves=10`, sans transférer aucune adresse
-legacy. Cela ne prouve pas encore qu'un widget absent créé par la factory peut
-afficher, équiper et retirer ces deux catégories. Le prochain travail est donc
-un témoin `slot_gloves` ou `slot_feet` réellement créé puis attaché au panneau,
-avec placement adaptatif et refus si aucun rectangle sûr n'existe. Il ne faut
-créer ni DLL de production, ni configuration, ni archive ExtendedMerc avant ce
-témoin.
+serveur, l'adoption runtime d'un `ring` existant et la création visible d'un
+`slot_gloves` absent sont prouvés. Les BodyLocs vanilla 1 à 8 correspondent aux
+huit slots déjà observés; D2MOO épinglé et les layouts 92777 corroborent
+`feet=9` et `gloves=10`, sans transférer aucune adresse legacy. Le contexte de
+widget requis par le hit-test est maintenant prouvé par le crash 0.0.1 et le
+succès 0.0.2. Cela ne prouve pas encore qu'un objet glove peut être équipé,
+retiré et restauré après sauvegarde dans ce slot. Il ne faut créer ni DLL de
+production, ni configuration, ni archive ExtendedMerc avant cette preuve.
 
 ## Hypothèses à tester
 
@@ -199,15 +221,16 @@ témoin.
 
 - Le paquet client `0x51`, le callback serveur `0x4C0E20`, son ABI, sa taille de
   17 octets et sa signature unique sont prouvés. La factory, le finalizer et
-  l'attachement UI sont maintenant prouvés statiquement; il reste à valider la
-  création d'un slot absent dans une vraie instance du panneau.
+  l'attachement UI sont prouvés statiquement et au runtime; il reste à valider
+  une transaction d'équipement complète dans le slot créé.
 - Auditer le commit PluginPack épinglé, les cinq DLL et chaque plage de hook ou
   structure partagée. Toute collision doit avoir un propriétaire unique avant
   l'écriture de code.
-- Prouver un slot absent témoin `gloves` ou `boots` sans modification de tables
-  ni de layouts, d'abord à la souris puis à la manette. L'adoption d'un `ring`
-  existant est déjà confirmée; `belt` est déjà exposé dans le fixture BKVince et
-  n'est plus un témoin suffisant de la factory.
+- Le slot absent témoin `gloves` est maintenant créé sans table ni layout,
+  visible et cliquable à vide à la souris. Il reste à prouver équipement/retrait,
+  navigation manette et reconstruction répétée du panneau. L'adoption d'un
+  `ring` existant est déjà confirmée; `belt` est déjà exposé dans le fixture
+  BKVince et n'est plus un témoin suffisant de la factory.
 - Prouver la sauvegarde/rechargement, la désactivation avec slot occupé, la
   désinstallation après vidage, solo, hôte/joiner et l'absence de perte,
   duplication, objet fantôme, crash ou désynchronisation.
@@ -220,9 +243,8 @@ témoin.
 
 ## Prochain gate
 
-Quand Vincent libérera une fenêtre runtime, déployer explicitement le probe
-corrigé déjà compilé, effectuer un cold start unique puis ouvrir le panneau
-mercenaire. Valider `slot_gloves` : placement, rendu, hit-test,
-équipement/retrait et controller, sans écrire de table ni de layout. Une fois ce
-témoin vert, figer le hook fail-closed, la navigation adaptative et la
-configuration autonome de production.
+Préparer dans `QtyTester` un glove sacrifiable, redéployer explicitement le probe
+0.0.2 et valider la transaction complète : équipement, retrait, fermeture et
+réouverture du panneau, sauvegarde/rechargement puis navigation controller. Ne
+pas modifier de table ni de layout. Une fois ce témoin vert, figer le hook
+fail-closed, la navigation adaptative et la configuration autonome de production.
