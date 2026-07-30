@@ -22,11 +22,15 @@ Vincent retient l'**Option A** le 30 juillet 2026. Le chantier commencera après
 1. les cinq lots de smoke tests gameplay et la revue eezstreet du PluginPack;
 2. la stabilisation du fallback autonome et du propriétaire de hook de
    Readable Items;
-3. l'incubation D2RedPortal déjà planifiée, qui doit produire en premier les
-   preuves communes sur le trajet `pSpell`, la consommation et `0x4F40C0`.
+3. la preuve puis le gel de l'ABI du PSpell Framework / UseSkill, propriétaire
+   unique du dispatcher `pSpell` et du registre partagé;
+4. l'incubation D2RedPortal déjà planifiée, premier consommateur externe qui
+   doit éprouver l'inscription, la consommation et l'absence de collision.
 
-PSpell Spawn précède ensuite Book of Lore. La mission active demeure
-`Mission/eezstreet-pluginpack-integration.md` jusqu'à fermeture de son gate.
+PSpell Spawn précède ensuite toute future façade inventaire `pSpell` de Book of
+Lore; le noyau Tower Tome actuel conserve son trajet distinct. La mission active
+demeure `Mission/eezstreet-pluginpack-integration.md` jusqu'à fermeture de son
+gate.
 
 ## Besoin fonctionnel
 
@@ -67,12 +71,13 @@ d'initialisation, règles de quête, drops et unicité par partie.
 
 ## Hypothèses à tester
 
-- Un emplacement positif inutilisé, prioritairement `pSpell=16`, pourrait
-  franchir le client et émettre le paquet sans détourner une fonction vanilla.
+- Le PSpell Framework pourrait transporter ce consommateur sans exiger un
+  emplacement positif exclusif; `pSpell=16` reste toutefois un témoin utile à
+  tester et non une réservation acquise.
 - Un helper serveur de haut niveau devrait pouvoir créer un monstre avec ses
   statistiques, son IA et sa synchronisation réseau sans appel direct fragile
   à un allocateur d'unité bas niveau.
-- Le routeur propriétaire de l'utilisation d'item peut accueillir un nouveau
+- L'ABI versionnée du PSpell Framework peut accueillir PSpell Spawn comme
   consommateur délégué sans modifier ni lier une DLL d'eezstreet.
 - Une consommation après succès peut être rendue atomique ou, à défaut,
   gouvernée par un seuil explicite de spawns réussis.
@@ -82,7 +87,9 @@ implantation.
 
 ## Inconnues bloquantes
 
-- acceptation client et paquet réellement émis pour `pSpell=16`;
+- mode de transport final attribué par le registre; acceptation client et paquet
+  de `pSpell=16` encore inconnus mais non requis si le registre virtualise un
+  transporteur déjà prouvé;
 - RVA, signature, ABI et contrat du helper de spawn de monstres 92777;
 - recherche de cellule libre, initialisation de niveau, IA, drops et réseau;
 - helpers distincts requis pour un pack champion/unique ou un SuperUnique;
@@ -95,7 +102,8 @@ implantation.
 
 ## Architecture recommandée à prouver
 
-1. Recevoir l'utilisation via un propriétaire unique du trajet serveur.
+1. Enregistrer le consommateur auprès de l'ABI versionnée du PSpell Framework,
+   sans poser un second hook sur le dispatcher ni sur `0x4F40C0`.
 2. Résoudre l'item par code et exiger une entrée de configuration exacte.
 3. Valider côté serveur propriétaire, difficulté, niveau, zone, plafond par
    activation et plafond par partie.
@@ -116,13 +124,15 @@ les clients doivent charger des données de mod compatibles.
 
 1. Exécuter `npm.cmd run re:d2r32 -- status` et refuser toute image non vérifiée.
 2. Vérifier la référence PluginPack épinglée et inventorier les cinq DLL.
-3. Prouver le trajet client/serveur d'un `pSpell` positif inutilisé; si `16`
-   échoue, documenter le repli exact sans réutilisation silencieuse de `14`.
+3. Vérifier l'ABI PSpell Framework gelée et prouver l'inscription du sélecteur
+   PSpell Spawn; tester `pSpell=16` comme témoin sans en faire une dépendance
+   silencieuse ni réutiliser `14` hors du contrat du registre.
 4. Identifier le helper de spawn, ses callers, ses octets attendus, son ABI et
    toutes les structures lues ou écrites.
 5. Prouver séparément placement libre, initialisation et consommation.
-6. Désigner un propriétaire unique pour `0x4F40C0` et documenter la délégation
-   avec les plugins autonomes existants.
+6. Conserver Transmogrify comme propriétaire unique de `0x4F40C0`, le PSpell
+   Framework comme propriétaire du dispatcher plus étroit et PSpell Spawn comme
+   simple consommateur enregistré.
 7. Définir le contrat minimal et comparer concrètement JSON et TOML avant de
    choisir le format permanent.
 
@@ -136,14 +146,15 @@ les clients doivent charger des données de mod compatibles.
 - consommation réussie, échec total, succès partiel et répétitions;
 - non-régression de tous les `pSpell` vanilla et des items non configurés;
 - solo, hôte, joiner, sauvegarde/rechargement et absence de duplication;
-- portées globale et mod-locale, coexistence avec Transmogrify, Readable Items,
-  D2RedPortal et les cinq DLL du PluginPack;
+- portées globale et mod-locale, coexistence avec PSpell Framework,
+  Transmogrify, Readable Items, D2RedPortal et les cinq DLL du PluginPack;
 - hashes identiques build/dépôt/runtime et cold starts sans rejet ni échec;
 - ZIP public limité à `PSpellSpawn.dll` et son unique configuration indépendante.
 
 ## Prochain gate
 
 Attendre la fermeture de la revue PluginPack, la stabilisation de Readable
-Items et l'incubation D2RedPortal. Reprendre ensuite par les statuts gouvernés
-du workbench et de la référence PluginPack, puis prouver `pSpell=16`, le helper
-de spawn et la consommation avant toute création de DLL ou configuration.
+Items, le gel de l'ABI PSpell Framework et l'incubation D2RedPortal. Reprendre
+ensuite par les statuts gouvernés du workbench et de la référence PluginPack,
+puis prouver l'inscription, le helper de spawn et la consommation avant toute
+création de DLL ou configuration.

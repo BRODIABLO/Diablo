@@ -179,12 +179,28 @@
       ]
     },
     {
+      "id": "pspell-framework",
+      "name": "PSpell Framework / UseSkill",
+      "status": "paused",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/pspell-framework-3.2.md",
+      "nextGate": "After the PluginPack gameplay review and Readable Items standalone-hook stabilization, verify the governed workbench and PluginPack reference, then prove the 92777 pSpell dispatcher, book-skill cast path, success-based quantity consumption and a versioned conflict-rejecting registration ABI before any implementation.",
+      "include": [
+        "Mission/pspell-framework-3.2.md",
+        "addons/PSpellFramework/**",
+        "data-BKVince/BKVince.mpq/PSpellFramework.toml",
+        "data-BKVince/d2rloader/plugins/PSpellFramework-src/**",
+        "data-BKVince/d2rloader/plugins/PSpellFramework.dll*",
+        "scripts/reverse-engineering/pspell-framework*"
+      ]
+    },
+    {
       "id": "pspell-spawn",
       "name": "PSpell Spawn",
       "status": "paused",
       "owner": "Vincent + Codex",
       "mission": "Mission/pspell-spawn-3.2.md",
-      "nextGate": "After the PluginPack gameplay review, Readable Items hook stabilization and D2RedPortal incubation, verify the governed workbench and PluginPack reference, then prove an unused positive pSpell route, the high-level monster-spawn ABI, success-based item consumption and unique hook ownership before any implementation.",
+      "nextGate": "After the PluginPack gameplay review, Readable Items hook stabilization, the PSpell Framework ABI and D2RedPortal incubation, verify the governed workbench and PluginPack reference, then prove the high-level monster-spawn ABI, success-based item consumption and conflict-free registration before any implementation.",
       "include": [
         "Mission/pspell-spawn-3.2.md",
         "addons/PSpellSpawn/**",
@@ -506,6 +522,7 @@
         "cube-quick-move-bottom-right",
         "extended-merc",
         "book-of-lore",
+        "pspell-framework",
         "char-start"
       ],
       "reason": "Governed native evidence registry shared by native plugin missions."
@@ -527,6 +544,7 @@
         "equipped-item-to-cube",
         "extended-merc",
         "book-of-lore",
+        "pspell-framework",
         "char-start"
       ],
       "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."

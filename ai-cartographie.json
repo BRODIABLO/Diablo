@@ -31196,6 +31196,16 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "pspell-framework-3.2.md",
+                                                           "path":  "Mission/pspell-framework-3.2.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-mission-native-plugin",
+                                                                        "summary":  "Décisions produit, architecture du registre partagé, preuves initiales et gates du plugin autonome PSpell Framework / UseSkill.",
+                                                                        "agentAccess":  "read-write"
+                                                                    }
+                                                       },
+                                                       {
                                                            "name":  "pspell-spawn-3.2.md",
                                                            "path":  "Mission/pspell-spawn-3.2.md",
                                                            "kind":  "file"
