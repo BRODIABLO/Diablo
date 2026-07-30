@@ -534,3 +534,43 @@ items, or et persistance de RemoteStash.
   DLL tierce n’est inclus. L’archive
   `RemoteStash-0.2.25-InterMod.zip` porte le SHA-256
   `375679E22AF3CAB8BE4B2CF1DA560A1D495F6AD4D1410BCD5A4FD0A726B87E5B`.
+
+## Coexistence PluginPack — 0.2.26 — 30 juillet 2026
+
+- Les variantes publique et BKVince ne possèdent plus les prologues partagés
+  `UI_DispatchMessage` `0x843D90`, `DUNGEON_IsRoomInTown` `0x2F0750` et
+  `CLIENT_TransferItemToInventoryPage` `0x15F8B0`. RemoteStash redirige plutôt
+  ses treize callsites D2R.exe strictement validés vers trois relais proches,
+  puis appelle les entrées natives vivantes. Le PluginPack peut donc conserver
+  ses hooks pour Bulk Skill Point Allocation, Prevent Merc Death in Town et
+  Equipped Item to Cube, sans ordre de chargement imposé.
+- La variante publique demeure entièrement contrôlée par le layout du moddeur.
+  La variante BKVince conserve exactement son placement dynamique, son sprite,
+  son tooltip et la position vanilla du bouton d’or. Aucun fichier de layout ou
+  d’asset BKVince n’a été modifié pour cette compatibilité.
+- Les builds Release x64 et leurs tests CTest passent `1/1`. La DLL publique
+  porte le SHA-256
+  `94EA3B54BA5246DDE99854BC4846496DFE817AE0EAE623419CA308BE6378102B`;
+  la DLL BKVince porte le SHA-256
+  `2649DC8816509BF41BD3A0A85E6BB828DF58BB96486B263B2E6BAF4E9CBA8D92`.
+- Le cold start BKVince avec les cinq DLL courantes du PluginPack et les trois
+  fonctions conflictuelles activées atteint `24/24` et
+  `scanned=17 active=15 disabled=2 rejected=0 failed=0`. Le log de
+  `plugin-skills` annonce `UI broker=RemoteStash`; `plugin-misc` active à la
+  fois Equipped Item to Cube et Prevent Merc Death in Town. Le profil public
+  isolé répète le test avec ses six DLL actives et atteint
+  `scanned=6 active=6 disabled=0 rejected=0 failed=0`, puis `24/24`.
+- Les deux plugins globaux sans rapport qui perturbaient le premier témoin
+  retail ont été écartés uniquement pendant le test puis restaurés avec leurs
+  hashes d’origine. Le JSON et les anciennes DLL `plugin-misc` et
+  `plugin-skills` de l’installation BKVince ont également été restaurés
+  byte-exactement; seule la nouvelle DLL RemoteStash BKVince reste déployée.
+- L’archive publique allowlistée `RemoteStash-0.2.26-InterMod.zip` contient
+  seulement la DLL, le README, deux fragments JSON et les deux sprites. Elle ne
+  contient ni source, PDB, log, configuration ni DLL tierce et porte le SHA-256
+  `CAC44BDD70A837DFE6E7372EFEAEABEFF6291B752643DD5FCFFDECD4A43D2293`.
+- Cette preuve ferme la coexistence technique au chargement. Les parcours
+  gameplay de RemoteStash hors ville ont été validés par Vincent en 0.2.24;
+  après le changement d’interception 0.2.26, un témoin manuel doit encore
+  reconfirmer le bouton, le dépôt/retrait, le quick move et la persistance avec
+  les trois fonctions PluginPack activées simultanément.

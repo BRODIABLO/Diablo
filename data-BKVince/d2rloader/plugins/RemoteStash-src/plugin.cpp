@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstring>
 #include <intrin.h>
+#include <limits>
 #include <mutex>
 #include <unordered_map>
 
@@ -23,6 +24,7 @@ constexpr std::uint32_t SupportedBuild = 92777;
 
 constexpr std::uintptr_t ConfigurePlayerInventoryRva = 0x22BA70;
 constexpr std::uintptr_t DispatchUiMessageRva = 0x843D90;
+constexpr std::uintptr_t ButtonDispatchUiMessageCallRva = 0x8F1069;
 constexpr std::uintptr_t QueueOutgoingPacketRva = 0xEE2A0;
 constexpr std::uintptr_t RemoveItemHandlerRva = 0x4AA100;
 constexpr std::uintptr_t InsertItemHandlerRva = 0x4BFF30;
@@ -59,18 +61,6 @@ constexpr std::array<std::uint8_t, 32> ConfigurePlayerInventoryExpected{
     0x56, 0x57, 0x41, 0x55, 0x41, 0x56, 0x48, 0x8D,
     0x6C, 0x24, 0x90, 0x48, 0x81, 0xEC, 0x70, 0x01,
     0x00, 0x00, 0x48, 0x8B, 0x05, 0x37, 0xF8, 0x79
-};
-constexpr std::array<std::uint8_t, 32> DispatchUiMessageExpected{
-    0x40, 0x53, 0x56, 0x57, 0x48, 0x83, 0xEC, 0x20,
-    0x4C, 0x89, 0x7C, 0x24, 0x58, 0x4C, 0x8B, 0xF9,
-    0xE8, 0x7B, 0x1C, 0xA6, 0x00, 0x0F, 0xB6, 0x90,
-    0x18, 0x01, 0x00, 0x00, 0x84, 0xD2, 0x74, 0x6F
-};
-constexpr std::array<std::uint8_t, 32> QueueOutgoingPacketExpected{
-    0x48, 0x89, 0x5C, 0x24, 0x18, 0x55, 0x56, 0x57,
-    0x48, 0x81, 0xEC, 0x30, 0x02, 0x00, 0x00, 0x48,
-    0x8B, 0x05, 0x12, 0xD0, 0x8D, 0x02, 0x48, 0x33,
-    0xC4, 0x48, 0x89, 0x84, 0x24, 0x20, 0x02, 0x00
 };
 constexpr std::array<std::uint8_t, 32> InsertItemHandlerExpected{
     0x40, 0x55, 0x53, 0x56, 0x57, 0x41, 0x56, 0x48,
@@ -144,6 +134,31 @@ constexpr std::array<std::uint8_t, 32> GetWidgetRectExpected{
     0x8B, 0x49, 0x30, 0x48, 0x8D, 0x54, 0x24, 0x20,
     0xE8, 0xE3, 0xFF, 0xFF, 0xFF, 0x33, 0xC0, 0x48
 };
+
+struct RelativeCallSite {
+    std::uintptr_t rva{};
+    std::array<std::uint8_t, 5> expected{};
+};
+
+constexpr std::array<RelativeCallSite, 1> ButtonDispatchUiMessageCallSites{{
+    {ButtonDispatchUiMessageCallRva, {0xE8, 0x22, 0x2D, 0xF5, 0xFF}},
+}};
+constexpr std::array<RelativeCallSite, 4> IsRoomInTownCallSites{{
+    {0x259132, {0xE8, 0x19, 0x76, 0x09, 0x00}},
+    {0x25A11D, {0xE8, 0x2E, 0x66, 0x09, 0x00}},
+    {0x0FEE36, {0xE8, 0x15, 0x19, 0x1F, 0x00}},
+    {0x0FF1D7, {0xE8, 0x74, 0x15, 0x1F, 0x00}},
+}};
+constexpr std::array<RelativeCallSite, 8> TransferItemToInventoryPageCallSites{{
+    {0x15E382, {0xE8, 0x29, 0x15, 0x00, 0x00}},
+    {0x1F6674, {0xE8, 0x37, 0x92, 0xF6, 0xFF}},
+    {0x2A9D68, {0xE8, 0x43, 0x5B, 0xEB, 0xFF}},
+    {0x2AAB0D, {0xE8, 0x9E, 0x4D, 0xEB, 0xFF}},
+    {0x2ABB09, {0xE8, 0xA2, 0x3D, 0xEB, 0xFF}},
+    {0x2C6055, {0xE8, 0x56, 0x98, 0xE9, 0xFF}},
+    {0x2C6265, {0xE8, 0x46, 0x96, 0xE9, 0xFF}},
+    {0x2C7479, {0xE8, 0x32, 0x84, 0xE9, 0xFF}},
+}};
 
 using ConfigurePlayerInventoryFn = void(__fastcall*)(void* panel) noexcept;
 using DispatchUiMessageFn = void(__fastcall*)(void* message) noexcept;
@@ -245,6 +260,7 @@ thread_local bool RemoteItemScope{};
 thread_local bool RemoteGoldScope{};
 void* GoldRangeStub{};
 void* GoldRangeTrampoline{};
+void* CallSiteRelayPage{};
 
 constexpr std::array<std::uint8_t, 17> RemoteOpenRequest{
     0x18,
@@ -263,7 +279,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "remote-stash",
     .name = "Remote Stash",
-    .version = "0.2.24",
+    .version = "0.2.26",
     .author = "RuffnecKk",
     .description = "Opens the player stash from the inventory screen.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -296,9 +312,21 @@ bool IsExecutableAddress(const void* address) noexcept {
         || protection == PAGE_EXECUTE_WRITECOPY;
 }
 
+template<std::size_t Count>
+bool MatchesAll(const std::array<RelativeCallSite, Count>& sites) noexcept {
+    for (const auto& site : sites) {
+        if (std::memcmp(Base + site.rva, site.expected.data(), site.expected.size()) != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool ValidateRuntime() noexcept {
     return Matches(ConfigurePlayerInventoryRva, ConfigurePlayerInventoryExpected)
-        && Matches(QueueOutgoingPacketRva, QueueOutgoingPacketExpected)
+        // QueueOutgoingPacket is a composable live entry. PluginPack's Equipped
+        // Item to Cube may own its prologue, while RemoteStash calls through it.
+        && IsExecutableAddress(Base + QueueOutgoingPacketRva)
         && Matches(RemoveItemHandlerRva, RemoveItemHandlerExpected)
         && Matches(InsertItemHandlerRva, InsertItemHandlerExpected)
         && Matches(SharedDepositHandlerRva, SharedDepositHandlerExpected)
@@ -315,7 +343,10 @@ bool ValidateRuntime() noexcept {
         )
         && Matches(GetUiStateRva, GetUiStateExpected)
         && Matches(FindWidgetRva, FindWidgetExpected)
-        && Matches(GetWidgetRectRva, GetWidgetRectExpected);
+        && Matches(GetWidgetRectRva, GetWidgetRectExpected)
+        && MatchesAll(ButtonDispatchUiMessageCallSites)
+        && MatchesAll(IsRoomInTownCallSites)
+        && MatchesAll(TransferItemToInventoryPageCallSites);
 }
 
 bool IsRemoteOpenRequest(
@@ -1131,6 +1162,115 @@ void __fastcall HookDispatchUiMessage(void* message) noexcept {
     OriginalDispatchUiMessage(message);
 }
 
+void* AllocateCallSiteRelayPageNear(void* hint) noexcept {
+    SYSTEM_INFO systemInfo{};
+    GetSystemInfo(&systemInfo);
+    const auto granularity = static_cast<std::uintptr_t>(
+        systemInfo.dwAllocationGranularity
+    );
+    const auto base = reinterpret_cast<std::uintptr_t>(hint) & ~(granularity - 1);
+
+    for (std::uintptr_t delta = granularity;
+         delta < 0x70000000ULL;
+         delta += granularity) {
+        if (base > std::numeric_limits<std::uintptr_t>::max() - delta) break;
+        if (auto* memory = VirtualAlloc(
+                reinterpret_cast<void*>(base + delta),
+                systemInfo.dwPageSize,
+                MEM_COMMIT | MEM_RESERVE,
+                PAGE_READWRITE
+            )) {
+            return memory;
+        }
+    }
+    return nullptr;
+}
+
+bool WriteAbsoluteJumpRelay(
+    std::uint8_t* destination,
+    const void* target
+) noexcept {
+    if (!destination || !target) return false;
+    constexpr std::size_t RelaySize = 14;
+    std::array<std::uint8_t, RelaySize> relay{
+        0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    };
+    const auto targetAddress = reinterpret_cast<std::uintptr_t>(target);
+    std::memcpy(relay.data() + 6, &targetAddress, sizeof(targetAddress));
+    std::memcpy(destination, relay.data(), relay.size());
+    return true;
+}
+
+template<std::size_t Count>
+bool PatchCallSites(
+    const std::array<RelativeCallSite, Count>& sites,
+    std::uintptr_t relayRva
+) noexcept {
+    for (const auto& site : sites) {
+        if (!Context->PatchCallRel32(
+                site.rva,
+                site.expected.data(),
+                static_cast<std::uint32_t>(site.expected.size()),
+                relayRva,
+                static_cast<std::uint32_t>(site.expected.size())
+            )) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool InstallComposableCallSiteRedirects() noexcept {
+    constexpr std::size_t RelayStride = 16;
+    constexpr std::size_t RelayCount = 3;
+    constexpr std::size_t RelayBytes = RelayStride * RelayCount;
+
+    CallSiteRelayPage = AllocateCallSiteRelayPageNear(
+        Base + ButtonDispatchUiMessageCallRva
+    );
+    if (!CallSiteRelayPage) return false;
+
+    auto* relays = static_cast<std::uint8_t*>(CallSiteRelayPage);
+    if (!WriteAbsoluteJumpRelay(relays, reinterpret_cast<const void*>(&HookDispatchUiMessage))
+        || !WriteAbsoluteJumpRelay(
+            relays + RelayStride,
+            reinterpret_cast<const void*>(&HookIsRoomInTown)
+        )
+        || !WriteAbsoluteJumpRelay(
+            relays + RelayStride * 2,
+            reinterpret_cast<const void*>(&HookTransferItemToInventoryPage)
+        )) {
+        VirtualFree(CallSiteRelayPage, 0, MEM_RELEASE);
+        CallSiteRelayPage = nullptr;
+        return false;
+    }
+
+    DWORD previousProtection{};
+    if (!VirtualProtect(
+            CallSiteRelayPage,
+            RelayBytes,
+            PAGE_EXECUTE_READ,
+            &previousProtection
+        )) {
+        VirtualFree(CallSiteRelayPage, 0, MEM_RELEASE);
+        CallSiteRelayPage = nullptr;
+        return false;
+    }
+    FlushInstructionCache(GetCurrentProcess(), CallSiteRelayPage, RelayBytes);
+
+    const auto relayAddress = reinterpret_cast<std::uintptr_t>(CallSiteRelayPage);
+    const auto baseAddress = reinterpret_cast<std::uintptr_t>(Base);
+    if (relayAddress < baseAddress) return false;
+    const auto relayRva = relayAddress - baseAddress;
+    return PatchCallSites(ButtonDispatchUiMessageCallSites, relayRva)
+        && PatchCallSites(IsRoomInTownCallSites, relayRva + RelayStride)
+        && PatchCallSites(
+            TransferItemToInventoryPageCallSites,
+            relayRva + RelayStride * 2
+        );
+}
+
 auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void*) noexcept
     -> D2RL::ConsoleCommandResult {
     if (!command || !command->plugin) return D2RL::ConsoleCommandResult::Failed;
@@ -1138,7 +1278,7 @@ auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void
     std::snprintf(
         message,
         sizeof(message),
-        "RemoteStash 0.2.24: placements=%llu; placementFailures=%llu; "
+        "RemoteStash 0.2.26: placements=%llu; placementFailures=%llu; "
         "clientOpenRequests=%llu; sessionsOpened=%llu; activeSessions=%llu; "
         "remoteItemOps=%llu; remoteItemFailures=%llu; remoteGoldOps=%llu; "
         "remoteGoldFailures=%llu; stashProximityBypasses=%llu; "
@@ -1236,6 +1376,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     RemoteGoldScope = false;
     GoldRangeStub = nullptr;
     GoldRangeTrampoline = nullptr;
+    CallSiteRelayPage = nullptr;
     try {
         const std::lock_guard lock(RemoteSessionsMutex);
         RemoteSessions.clear();
@@ -1259,6 +1400,11 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     SendServerUi = At<SendServerUiFn>(SendServerUiRva);
     GetClientFromPlayer = At<GetClientFromPlayerFn>(GetClientFromPlayerRva);
     QueueOutgoingPacket = At<QueueOutgoingPacketFn>(QueueOutgoingPacketRva);
+    OriginalDispatchUiMessage = At<DispatchUiMessageFn>(DispatchUiMessageRva);
+    OriginalIsRoomInTown = At<IsRoomInTownFn>(IsRoomInTownRva);
+    OriginalTransferItemToInventoryPage = At<TransferItemToInventoryPageFn>(
+        TransferItemToInventoryPageRva
+    );
     for (const auto* brokerName : UiMessageBrokerModules) {
         const auto brokerModule = GetModuleHandleW(brokerName);
         if (!brokerModule) continue;
@@ -1274,15 +1420,6 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
             break;
         }
     }
-    if (!UsingUiMessageBroker.load(std::memory_order_acquire)
-        && !Matches(DispatchUiMessageRva, DispatchUiMessageExpected)) {
-        context->LogError(
-            "RemoteStash: UI-message dispatcher is already owned and exposes no "
-            "compatible broker; plugin refused."
-        );
-        return false;
-    }
-
     if (!context->InstallInlineHook(
             ConfigurePlayerInventoryRva,
             ConfigurePlayerInventoryExpected.data(),
@@ -1296,41 +1433,16 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         context->LogError("RemoteStash: inventory-panel hook failed.");
         return false;
     }
-    if (!UsingUiMessageBroker.load(std::memory_order_acquire)
-        && !context->InstallInlineHook(
-            DispatchUiMessageRva,
-            DispatchUiMessageExpected.data(),
-            static_cast<std::uint32_t>(DispatchUiMessageExpected.size()),
-            HookDispatchUiMessage,
-            &OriginalDispatchUiMessage
-        )) {
-        context->LogError("RemoteStash: UI-message dispatch hook failed.");
+    if (!InstallComposableCallSiteRedirects()) {
+        context->LogError(
+            "RemoteStash: composable UI, town-state, or quick-move call-site redirect failed."
+        );
         return false;
     }
     BrokerReady.store(true, std::memory_order_release);
 
     if (!CreateGoldRangeStub()) {
         context->LogError("RemoteStash: scoped stash-range hook failed.");
-        return false;
-    }
-    if (!context->InstallInlineHook(
-            IsRoomInTownRva,
-            IsRoomInTownExpected.data(),
-            static_cast<std::uint32_t>(IsRoomInTownExpected.size()),
-            HookIsRoomInTown,
-            &OriginalIsRoomInTown
-        )) {
-        context->LogError("RemoteStash: scoped town-state hook failed.");
-        return false;
-    }
-    if (!context->InstallInlineHook(
-            TransferItemToInventoryPageRva,
-            TransferItemToInventoryPageExpected.data(),
-            static_cast<std::uint32_t>(TransferItemToInventoryPageExpected.size()),
-            HookTransferItemToInventoryPage,
-            &OriginalTransferItemToInventoryPage
-        )) {
-        context->LogError("RemoteStash: quick-move transfer probe hook failed.");
         return false;
     }
     if (!context->InstallInlineHook(
@@ -1414,12 +1526,11 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
 
     context->LogInfo(
         UsingUiMessageBroker.load(std::memory_order_acquire)
-            ? "RemoteStash 0.2.24 diagnostic active for D2R 3.2.92777; the existing dynamic "
-              "desktop placement uses the shared PluginPack UI dispatcher and remote "
-              "stash sessions bypass native proximity checks."
-            : "RemoteStash 0.2.24 diagnostic active for D2R 3.2.92777; the existing dynamic "
-              "desktop placement uses the standalone UI dispatcher and remote stash "
-              "sessions bypass native proximity checks."
+            ? "RemoteStash 0.2.26 BKVince active for D2R 3.2.92777; the existing dynamic "
+              "desktop placement shares PluginPack's UI dispatcher through composable "
+              "call sites."
+            : "RemoteStash 0.2.26 BKVince active for D2R 3.2.92777; the existing dynamic "
+              "desktop placement uses composable UI, town-state, and quick-move call sites."
     );
     return true;
 }

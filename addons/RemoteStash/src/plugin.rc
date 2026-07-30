@@ -4,8 +4,8 @@
 D2RL_PLUGIN_MANIFEST_RESOURCE_ID RCDATA { D2RL_PLUGIN_RESOURCE_DWORD(D2RL_PLUGIN_API_VERSION) }
 
 1 VERSIONINFO
-FILEVERSION 0,2,25,0
-PRODUCTVERSION 0,2,25,0
+FILEVERSION 0,2,26,0
+PRODUCTVERSION 0,2,26,0
 BEGIN
   BLOCK "StringFileInfo"
   BEGIN
@@ -13,11 +13,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "RuffnecKk"
       VALUE "FileDescription", "Opens the player stash from the inventory screen."
-      VALUE "FileVersion", "0.2.25"
+      VALUE "FileVersion", "0.2.26"
       VALUE "InternalName", "RemoteStash"
       VALUE "OriginalFilename", "RemoteStash.dll"
       VALUE "ProductName", "Remote Stash"
-      VALUE "ProductVersion", "0.2.25"
+      VALUE "ProductVersion", "0.2.26"
     END
   END
   BLOCK "VarFileInfo"

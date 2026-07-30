@@ -1,4 +1,4 @@
-REMOTE STASH 0.2.25
+REMOTE STASH 0.2.26
 INTER-MOD PUBLIC RELEASE
 
 Author: RuffnecKk
@@ -20,6 +20,17 @@ REQUIREMENTS
 - A desktop inventory layout owned by your mod
 
 Controller layouts are not included.
+
+
+PLUGINPACK COMPATIBILITY
+
+Remote Stash 0.2.26 can run with these PluginPack features enabled:
+
+- Equipped Item to Cube
+- Bulk Skill Point Allocation in plugin-skills.dll
+- Prevent Merc Death in Town
+
+No load order is required for these features.
 
 
 INSTALL THE DLL

@@ -76,6 +76,17 @@
         "QtyDisplayIssue.json"
       ]
     },
+    "addons/RemoteStash/RemoteStash-0.2.26-InterMod.zip": {
+      "kind": "integration-kit",
+      "entries": [
+        "README.txt",
+        "d2rloader/plugins/RemoteStash.dll",
+        "merge-snippets/playerinventory-button.json",
+        "merge-snippets/playerinventory-expansion-child.json",
+        "mod-data/data/hd/global/ui/panel/inventory/remotestashbutton.lowend.sprite",
+        "mod-data/data/hd/global/ui/panel/inventory/remotestashbutton.sprite"
+      ]
+    },
     "addons/NoEtherealItemTypes/NoEtherealItemTypes.zip": {
       "kind": "plugin",
       "legacy": true,
