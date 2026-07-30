@@ -510,3 +510,27 @@ items, or et persistance de RemoteStash.
   BKVince restent inchangés. Les messages transitoires `CASC container locked`
   du loader se réparent par la résolution résidente/fichier suivante et ne
   correspondent pas à un crash observé.
+
+## Variante publique intermod — 0.2.25 — 29 juillet 2026
+
+- La variante publique est isolée sous `addons/RemoteStash`; elle ne modifie ni
+  le source, ni la DLL, ni les layouts, ni les sprites de BKVince 0.2.24. La DLL
+  BKVince conserve le SHA-256
+  `A7E4A1C98F68DF432E1DCF2D39C8E78F1607E772895F38F17E44F2B4FE524FF8`.
+- Cette variante n’a aucun fichier de configuration. Le moddeur fournit le
+  widget `remote_stash` dans son propre layout desktop et possède entièrement
+  son rectangle, son sprite, ses frames et son tooltip. Le plugin vérifie
+  seulement que le rectangle possède une largeur et une hauteur positives; il
+  ne contient plus de fonction qui écrit la position du widget.
+- Le build Release x64 et le test `remote-stash-intermod-layout-contract` passent
+  `1/1`. La DLL 0.2.25 exporte les trois entrées D2RLoader attendues et porte le
+  SHA-256 `0DF7A436DD4DEDCD83B4811AD1A185935E1603818B1F1B589A5AC79476F70C2D`.
+- Le cold start mod-local du profil isolé `RemoteStashRetail` accepte les douze
+  hooks, charge `Remote Stash 0.2.25 by RuffnecKk`, atteint `24/24` avec
+  `scanned=3 active=3 disabled=0 rejected=0 failed=0`, puis la session frontend
+  se termine sans validation gameplay supplémentaire.
+- Le kit public contient la DLL, un `README.txt`, deux fragments JSON et les
+  sprites HD/low-end prêts à l’emploi. Aucun source, PDB, log, configuration ou
+  DLL tierce n’est inclus. L’archive
+  `RemoteStash-0.2.25-InterMod.zip` porte le SHA-256
+  `375679E22AF3CAB8BE4B2CF1DA560A1D495F6AD4D1410BCD5A4FD0A726B87E5B`.

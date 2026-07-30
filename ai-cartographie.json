@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-29T14:07:51.1287402+00:00",
+    "generatedAt":  "2026-07-29T23:10:46.0934555+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -640,6 +640,163 @@
                                                                             {
                                                                                 "name":  "QtyDisplayIssue.zip",
                                                                                 "path":  "addons/QtyDisplayIssue/QtyDisplayIssue.zip",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "RemoteStash",
+                                                           "path":  "addons/RemoteStash",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-public-intermod-d2rloader-addon",
+                                                                        "summary":  "Variante publique intermod de Remote Stash 0.2.25 dont le bouton desktop est entièrement placé et stylé par le layout du moddeur, sans modifier la version BKVince.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "active"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "package",
+                                                                                "path":  "addons/RemoteStash/package",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "d2rloader",
+                                                                                                     "path":  "addons/RemoteStash/package/d2rloader",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "plugins",
+                                                                                                                          "path":  "addons/RemoteStash/package/d2rloader/plugins",
+                                                                                                                          "kind":  "directory",
+                                                                                                                          "children":  [
+                                                                                                                                           {
+                                                                                                                                               "name":  "RemoteStash.dll",
+                                                                                                                                               "path":  "addons/RemoteStash/package/d2rloader/plugins/RemoteStash.dll",
+                                                                                                                                               "kind":  "file"
+                                                                                                                                           }
+                                                                                                                                       ]
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "merge-snippets",
+                                                                                                     "path":  "addons/RemoteStash/package/merge-snippets",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "playerinventory-button.json",
+                                                                                                                          "path":  "addons/RemoteStash/package/merge-snippets/playerinventory-button.json",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "playerinventory-expansion-child.json",
+                                                                                                                          "path":  "addons/RemoteStash/package/merge-snippets/playerinventory-expansion-child.json",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "mod-data",
+                                                                                                     "path":  "addons/RemoteStash/package/mod-data",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "data",
+                                                                                                                          "path":  "addons/RemoteStash/package/mod-data/data",
+                                                                                                                          "kind":  "directory",
+                                                                                                                          "children":  [
+                                                                                                                                           {
+                                                                                                                                               "name":  "hd",
+                                                                                                                                               "path":  "addons/RemoteStash/package/mod-data/data/hd",
+                                                                                                                                               "kind":  "directory",
+                                                                                                                                               "children":  [
+                                                                                                                                                                {
+                                                                                                                                                                    "name":  "global",
+                                                                                                                                                                    "path":  "addons/RemoteStash/package/mod-data/data/hd/global",
+                                                                                                                                                                    "kind":  "directory",
+                                                                                                                                                                    "children":  [
+                                                                                                                                                                                     {
+                                                                                                                                                                                         "name":  "ui",
+                                                                                                                                                                                         "path":  "addons/RemoteStash/package/mod-data/data/hd/global/ui",
+                                                                                                                                                                                         "kind":  "directory",
+                                                                                                                                                                                         "children":  [
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "name":  "panel",
+                                                                                                                                                                                                              "path":  "addons/RemoteStash/package/mod-data/data/hd/global/ui/panel",
+                                                                                                                                                                                                              "kind":  "directory",
+                                                                                                                                                                                                              "children":  [
+                                                                                                                                                                                                                               {
+                                                                                                                                                                                                                                   "name":  "inventory",
+                                                                                                                                                                                                                                   "path":  "addons/RemoteStash/package/mod-data/data/hd/global/ui/panel/inventory",
+                                                                                                                                                                                                                                   "kind":  "directory",
+                                                                                                                                                                                                                                   "children":  [
+                                                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                                                        "name":  "remotestashbutton.lowend.sprite",
+                                                                                                                                                                                                                                                        "path":  "addons/RemoteStash/package/mod-data/data/hd/global/ui/panel/inventory/remotestashbutton.lowend.sprite",
+                                                                                                                                                                                                                                                        "kind":  "file"
+                                                                                                                                                                                                                                                    },
+                                                                                                                                                                                                                                                    {
+                                                                                                                                                                                                                                                        "name":  "remotestashbutton.sprite",
+                                                                                                                                                                                                                                                        "path":  "addons/RemoteStash/package/mod-data/data/hd/global/ui/panel/inventory/remotestashbutton.sprite",
+                                                                                                                                                                                                                                                        "kind":  "file"
+                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                ]
+                                                                                                                                                                                                                               }
+                                                                                                                                                                                                                           ]
+                                                                                                                                                                                                          }
+                                                                                                                                                                                                      ]
+                                                                                                                                                                                     }
+                                                                                                                                                                                 ]
+                                                                                                                                                                }
+                                                                                                                                                            ]
+                                                                                                                                           }
+                                                                                                                                       ]
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "README.txt",
+                                                                                                     "path":  "addons/RemoteStash/package/README.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/RemoteStash/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/RemoteStash/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "layout_owned_button.hpp",
+                                                                                                     "path":  "addons/RemoteStash/src/layout_owned_button.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "layout_owned_button_tests.cpp",
+                                                                                                     "path":  "addons/RemoteStash/src/layout_owned_button_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/RemoteStash/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/RemoteStash/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "RemoteStash-0.2.25-InterMod.zip",
+                                                                                "path":  "addons/RemoteStash/RemoteStash-0.2.25-InterMod.zip",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]

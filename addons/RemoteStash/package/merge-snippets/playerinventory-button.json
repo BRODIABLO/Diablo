@@ -1,0 +1,11 @@
+{
+  "type": "ButtonWidget",
+  "name": "remote_stash",
+  "fields": {
+    "rect": { "x": 95, "y": 1656 },
+    "filename": "PANEL\\Inventory\\RemoteStashButton",
+    "hoveredFrame": 3,
+    "tooltipString": "@OpenCurrentStashLegend",
+    "onClickMessage": "PlayerInventoryPanelMessage:DropGold"
+  }
+}

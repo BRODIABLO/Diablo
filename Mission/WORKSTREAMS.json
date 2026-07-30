@@ -102,9 +102,10 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/remote-stash-3.2.md",
-      "nextGate": "Plan and implement a configurable hotkey that reuses the validated RemoteStash action with conflict and UI-state guards; then establish an authoritative server bank session before item, gold, persistence and third-party layout validation.",
+      "nextGate": "Have an external modder integrate the configuration-free 0.2.25 inter-mod kit into a third-party desktop inventory layout and validate exact layout-owned placement, item and gold transfers, quick move, and persistence; then cover controller and multiplayer host/join behavior.",
       "include": [
         "Mission/remote-stash-3.2.md",
+        "addons/RemoteStash/**",
         "data-BKVince/BKVince.mpq/RemoteStash.json",
         "data-BKVince/BKVince.mpq/data/hd/global/ui/panel/inventory/remotestashbutton*",
         "data-BKVince/BKVince.mpq/data/global/ui/layouts/playerinventoryexpansionlayouthd.json",
