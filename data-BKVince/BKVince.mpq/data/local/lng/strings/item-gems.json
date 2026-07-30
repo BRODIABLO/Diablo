@@ -138,7 +138,7 @@
   {
     "id": 11073,
     "Key": "GemXp1",
-    "enUS": "ÿc0Helms:ÿc3",
+    "enUS": "ÿc0Helms:ÿc0",
     "zhTW": "ÿc0頭盔：ÿc3",
     "deDE": "ÿc0Helme:ÿc3",
     "esES": "ÿc0Yelmos:ÿc3",
@@ -155,7 +155,7 @@
   {
     "id": 11074,
     "Key": "GemXp2",
-    "enUS": "ÿc0Shields:ÿc3",
+    "enUS": "ÿc0Shields:ÿc0",
     "zhTW": "ÿc0盾牌：ÿc3",
     "deDE": "ÿc0Schilde:ÿc3",
     "esES": "ÿc0Escudos:ÿc3",
@@ -172,7 +172,7 @@
   {
     "id": 11075,
     "Key": "GemXp3",
-    "enUS": "ÿc0Weapons:ÿc3",
+    "enUS": "ÿc0Weapons:ÿc0",
     "zhTW": "ÿc0武器：ÿc3",
     "deDE": "ÿc0Waffen:ÿc3",
     "esES": "ÿc0Armas:ÿc3",
@@ -189,7 +189,7 @@
   {
     "id": 11076,
     "Key": "GemXp4",
-    "enUS": "ÿc0Armor:ÿc3",
+    "enUS": "ÿc0Armor:ÿc0",
     "zhTW": "ÿc0護甲：ÿc3",
     "deDE": "ÿc0Rüstung:ÿc3",
     "esES": "ÿc0Armadura:ÿc3",

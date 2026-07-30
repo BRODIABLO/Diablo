@@ -25,8 +25,8 @@ bool IsPrimaryItemStatLine(std::string_view line) {
 
 } // namespace
 
-std::string FormatMaxSocketsLine(unsigned maximumSockets, int currentSockets) {
-    if (maximumSockets == 0 || currentSockets > 0) return {};
+std::string FormatMaxSocketsLine(unsigned maximumSockets, int) {
+    if (maximumSockets == 0) return {};
 
     std::string result;
     result.reserve(32);

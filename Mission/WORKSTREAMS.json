@@ -26,9 +26,11 @@
       "status": "active",
       "owner": "Guillaume + Codex",
       "mission": "Mission/advanced-item-tooltips-3.2.md",
-      "nextGate": "Prove the 92777 loaded-mod compiled table access and item contribution sources before implementing exact fail-closed affix and defense ranges.",
+      "nextGate": "Confirm the white Ohm rune property block in game, then keep public cross-mod compatibility as a separate publication gate.",
       "include": [
         "Mission/advanced-item-tooltips-3.2.md",
+        "data-BKVince/BKVince.mpq/data/local/lng/strings/item-gems.json",
+        "data-BKVince/BKVince.mpq/data/local/lng/strings-legacy/item-gems.json",
         "data-BKVince/d2rloader/plugins/AdvancedItemTooltips-src/**",
         "data-BKVince/d2rloader/plugins/AdvancedItemTooltips.dll*"
       ]

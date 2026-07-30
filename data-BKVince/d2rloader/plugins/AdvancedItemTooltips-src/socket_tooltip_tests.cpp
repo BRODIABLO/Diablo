@@ -8,7 +8,11 @@ int main() {
     CHECK(tcp::tooltips::FormatMaxSocketsLine(6, 0) == white + "Max Sockets: 6");
     CHECK(tcp::tooltips::FormatMaxSocketsLine(3, 0) == white + "Max Sockets: 3");
     CHECK(tcp::tooltips::FormatMaxSocketsLine(0, 0).empty());
-    CHECK(tcp::tooltips::FormatMaxSocketsLine(3, 3).empty());
+
+    // Socketing an item must not suppress this line. Besides keeping the
+    // information useful, this guarantees that socket handling cannot short-
+    // circuit the rest of the final-tooltip enhancement pipeline.
+    CHECK(tcp::tooltips::FormatMaxSocketsLine(3, 3) == white + "Max Sockets: 3");
 
     const std::string weaponTooltip =
         "Required Dexterity: 25\n"
