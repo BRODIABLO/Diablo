@@ -63,5 +63,36 @@
         "Preserve eezstreet's MIT attribution and distinguish upstream code from independently implemented RuffnecKk features."
       ]
     }
+  ],
+  "webReferences": [
+    {
+      "id": "phrozen-keep-events-itemevents-auraevents",
+      "name": "Guide to Events, Itemevents and Auraevents",
+      "webUrl": "https://d2mods.info/forum/viewtopic.php?t=67954",
+      "author": "Cypress",
+      "publishedAt": "2025-05-17",
+      "inspectedAt": "2026-07-31",
+      "upstreamTarget": "Diablo II Legacy softcoded event, itemevent and auraevent behavior",
+      "role": "legacy-gameplay-event-behavior-reference-only",
+      "scope": [
+        "events.txt trigger semantics and edge cases",
+        "ItemStatCost itemevent function behavior",
+        "skills.txt auraevent function behavior",
+        "event and function compatibility test matrices"
+      ],
+      "threadNotes": [
+        "The guide marks several observations and unanswered questions as uncertain; preserve that status until reproduced.",
+        "Necrolis states in a follow-up that item events and aura events use the same underlying table, while Cypress notes that their softcoded inputs remain distinct and asks whether they can be crossed; the thread does not resolve that follow-up question."
+      ],
+      "provenance": "community-authored empirical guide with credited prior sources",
+      "license": "not-declared",
+      "policy": [
+        "Use the guide as a semantic inventory and as candidate test cases for event triggers, ItemStatCost itemevent functions and skills auraevent functions.",
+        "Distinguish confirmed observations from the author's brace-marked hypotheses, untested cases and open questions.",
+        "Reproduce relevant behavior against BKVince data and the targeted installed D2R build before relying on it for an implementation.",
+        "Do not use this legacy guide as evidence for a D2R build, RVA, signature, structure layout, ABI or unchanged native behavior.",
+        "Cite Cypress and the Phrozen Keep thread when derived behavior or test matrices materially rely on this guide; retain the guide's upstream credits where applicable."
+      ]
+    }
   ]
 }
