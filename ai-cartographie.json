@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-30T12:03:56.5407816+00:00",
+    "generatedAt":  "2026-07-31T11:47:56.1656072+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -616,6 +616,41 @@
                                                                             {
                                                                                 "name":  "README.md",
                                                                                 "path":  "addons/GroundItemLabelLimitMemoryPatches/README.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "MassID",
+                                                           "path":  "addons/MassID",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-d2rloader-package-candidate",
+                                                                        "summary":  "Archive publique candidate DLL + JSON du plugin hybride MassID 0.1.0, destiné au futur merge items.massIdentify; les gates techniques sont verts et la matrice gameplay reste ouverte.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "experimental"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "package",
+                                                                                "path":  "addons/MassID/package",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "MassID.dll",
+                                                                                                     "path":  "addons/MassID/package/MassID.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "MassID.json",
+                                                                                                     "path":  "addons/MassID/package/MassID.json",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "MassID.zip",
+                                                                                "path":  "addons/MassID/MassID.zip",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
@@ -13838,6 +13873,11 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
+                                                                                "name":  "MassID.json",
+                                                                                "path":  "data-BKVince/BKVince.mpq/MassID.json",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "modinfo.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/modinfo.json",
                                                                                 "kind":  "file"
@@ -14721,6 +14761,43 @@
                                                                                                                   ]
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "MassID-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/MassID-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/MassID-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "mass_id_policy.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/MassID-src/mass_id_policy.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/MassID-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/MassID-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "policy_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/MassID-src/policy_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "README.md",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/MassID-src/README.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "NoEtherealItemTypes-src",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/NoEtherealItemTypes-src",
                                                                                                      "kind":  "directory",
@@ -15242,6 +15319,11 @@
                                                                                                  {
                                                                                                      "name":  "GambleScreenLimit.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/GambleScreenLimit.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "MassID.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/MassID.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -31184,6 +31266,11 @@
                                                                         "role":  "x-itemstatcost-migration-test-plan",
                                                                         "summary":  "Audit de la migration des limites de sauvegarde BK vers TCP et matrice de validation en jeu sur sauvegarde neuve."
                                                                     }
+                                                       },
+                                                       {
+                                                           "name":  "mass-id-3.2.md",
+                                                           "path":  "Mission/mass-id-3.2.md",
+                                                           "kind":  "file"
                                                        },
                                                        {
                                                            "name":  "memory-patches-portage-3.2.json",

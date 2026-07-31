@@ -1,34 +1,23 @@
 # Mission courante
 
-Dernière mise à jour : 30 juillet 2026
+Dernière mise à jour : 31 juillet 2026
 
 ## Priorité active
 
-[Intégration sélective au PluginPack d’eezstreet — clôturée](eezstreet-pluginpack-integration.md)
+[MassID — D2R 3.2](mass-id-3.2.md)
 
-État : Vincent déclare cette mission terminée et demande de la rayer de la
-ROADMAP. Les cinq DLL compilent en Debug et Release, le manifeste et le code
-couvrent `136/136` écritures, et `25/25` CTest passent dans les deux
-configurations. Les chemins gameplay nominaux réellement observés sont consignés
-dans la mission; Force Larzuk Sockets et Item Durability restent honnêtement
-qualifiés par confiance technique sans nouveau témoin intégré exact.
-
-Le checkpoint final `378463b` (`Finalize Extended Item Stats integration
-prototype`) est poussé et synchronisé sur
-`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Cette clôture n'infère ni
-acceptation amont, ni réponse de revue, ni fusion par eezstreet sans preuve
-gouvernée correspondante.
+État : Vincent demande explicitement l’implantation du premier candidat du
+prochain lot PluginPack. L’incubation autonome vise `plugin-items.dll` sous
+`items.massIdentify`, sans rouvrir ni modifier le PR déjà soumis à eezstreet.
 
 ## Prochain gate
 
-Choisir explicitement avec Vincent la prochaine mission active, puis remplacer
-ce pointeur transitoire. `RightClickSkillPoint` demeure le candidat déjà
-séquencé avant `FourthSkillTree`; aucun nouveau chantier n'est ouvert par
-inférence.
+Observer en jeu la matrice MassID tome vide/partiel/suffisant dans les modes
+gratuit et non gratuit, puis fermer sauvegarde/relecture et solo/hôte/joiner.
+Le build, les deux portées, la coexistence PluginPack et le ZIP strict sont verts.
 
 ## Frontière Git
 
-Le code du pack reste dans le clone séparé gitignoré
-`analysis-cache/pluginpack-foundation`. Le dépôt principal conserve la mission,
-la ROADMAP et les preuves gouvernées; cette clôture ne constitue pas une demande
-de commit ou de push du dépôt principal.
+Limiter le chantier à la mission, aux preuves RE gouvernées, au source MassID,
+à son JSON autonome, à son binaire BKVince et à son futur package public. Les
+travaux Advanced Item Tooltips et les autres missions actives restent séparés.

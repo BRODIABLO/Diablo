@@ -1850,6 +1850,38 @@
       "confidence": "high",
       "source": "Mission/remote-stash-3.2.md",
       "notes": "Exact E8 32 84 E9 FF direct call to CLIENT_TransferItemToInventoryPage. One of eight build-92777 D2R.exe call sites redirected by RemoteStash 0.2.26 through a shared near relay."
+    },
+    {
+      "rva": "0xEC820",
+      "name": "CLIENT_SendTwentyOneByteCommandPacket",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Builds a packed 21-byte client command from (opcode byte, five uint32 fields) and submits it through CLIENT_QueueOutgoingPacket. The native client path at 0x1141AB calls it with opcode 0x34 after computing the Cain identify-all transaction. Its strict 32-byte entry signature is unique in build 92777."
+    },
+    {
+      "rva": "0x2C7540",
+      "name": "UI_InventorySlotWidget_HandleClick",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Generic inventory-slot click handler with observed ABI (widget, eventState) -> void. It validates the slot at 0x2C756B, resolves the local owner and cursor item, obtains the clicked unit through vtable slot +0xC8, and separates mouse state 5 from the right-click branch. MassID filters only Shift plus the non-5 branch on a locally owned ibk item and delegates every other click."
+    },
+    {
+      "rva": "0x46EA70",
+      "name": "D2GAME_ITEMS_IdentifyStoredItem",
+      "kind": "function",
+      "confidence": "medium",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Observed ABI (game, item, player) -> void. The function sets IFLAG_IDENTIFIED through ITEMS_SetItemFlag, performs the stored-item attach/stat-list path when applicable and refreshes the player inventory. Its control flow is the 92777 structural counterpart of the semantic D2MOO identify helper, but MassID gameplay validation remains required before raising confidence to high."
+    },
+    {
+      "rva": "0x4AE280",
+      "name": "D2GAME_PACKETCALLBACK_Rcv0x34_IdentifyItemsWithNpc",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Authoritative server callback with ABI (game, player, packet, packetSize) -> int32. It requires exactly 0x15 bytes, deserializes the same five-field payload produced by CLIENT_SendTwentyOneByteCommandPacket for native opcode 0x34, and forwards the validated Cain transaction into the server action flow. MassID recognizes two private payload markers before this vanilla path and delegates every normal Cain request unchanged."
     }
   ]
 }

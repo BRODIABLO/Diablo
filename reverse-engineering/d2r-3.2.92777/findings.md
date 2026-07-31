@@ -269,6 +269,41 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   son rendu/hit-test, la navigation controller et un placement réel dans les
   BodyLocs gloves/boots.
 
+## MassID — clic de tome et identification autoritaire
+
+- Le handler générique des slots d’inventaire commence à `0x2C7540`. Son ABI
+  observée est `(widget, eventState) -> void`; il valide d’abord le slot par
+  `0x2C74D0`, résout le propriétaire local, lit l’objet sous le slot par le
+  vtable `+0xC8` et sépare l’état souris `5` de la branche clic droit. Le
+  prologue strict de 32 octets est unique dans le `.text` 92777.
+- Le client Cain à `0x1141AB` appelle `0xEC820` avec l’opcode `0x34`.
+  `0xEC820` sérialise exactement un opcode et cinq `uint32`, soit 21 octets,
+  avant la queue sortante. Le paquet classique D2MOO de cinq octets n’est donc
+  pas transposé au build 92777.
+- Le seul callback serveur 92777 correspondant à cette taille et à ce flux
+  commence à `0x4AE280`. Il possède l’ABI
+  `(game, player, packet, packetSize) -> int32`, exige `packetSize == 0x15`,
+  désérialise les cinq champs et rejoint le traitement serveur Cain. Le chemin
+  privé MassID peut ainsi être multiplexé avant le flux vanilla sans accrocher
+  `D2GAME_PACKETCALLBACK_EntityAction 0x4B0470`, déjà possédé par Vendor Stock
+  Refresh dans `plugin-items.dll`.
+- `0x46EA70` accepte `(game, item, player)`, pose `IFLAG_IDENTIFIED`, exécute le
+  chemin d’item stocké et rafraîchit l’inventaire. Sa structure correspond au
+  helper sémantique D2MOO, mais sa confiance reste moyenne jusqu’au témoin
+  gameplay MassID.
+- `SynchronizeItemAndBoundSkillQuantity 0x46F090` reçoit
+  `(game, player, book, delta)`. Le caller tome à `0x5817BD` passe `-1` en `r9d`
+  puis le tome en `r8`; la routine lit `STAT_QUANTITY`, calcule la nouvelle
+  valeur et synchronise le skill lié. MassID peut donc consommer le nombre exact
+  d’identifications réussies sans écrire directement la statistique.
+- L’architecture retenue n’accroche ni le callback EntityAction partagé, ni
+  `D2GAME_HandleUseItemPacket 0x4F40C0` possédé par Transmogrify, ni
+  `CLIENT_QueueOutgoingPacket 0xEE2A0` déjà utilisé par EquippedItemToCube.
+- La portée globale a prouvé que `plugin-items.dll` peut accrocher auparavant
+  `UI_TOOLTIP_ResolveHoveredUnit 0x2A7810`. MassID compose avec cet owner sans
+  écrire ce RVA et valide la plage interne unique `0x2A7820` (16 octets,
+  une occurrence `.text`) afin de rester strict sans refuser le chaînage.
+
 ## Discipline de promotion
 
 Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de

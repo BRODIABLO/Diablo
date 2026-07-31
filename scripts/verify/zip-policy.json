@@ -69,6 +69,13 @@
         "GambleScreenLimit.json"
       ]
     },
+    "addons/MassID/MassID.zip": {
+      "kind": "plugin",
+      "entries": [
+        "MassID.dll",
+        "MassID.json"
+      ]
+    },
     "addons/QtyDisplayIssue/QtyDisplayIssue.zip": {
       "kind": "plugin",
       "entries": [

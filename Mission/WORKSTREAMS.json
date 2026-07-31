@@ -415,6 +415,21 @@
       ]
     },
     {
+      "id": "mass-id",
+      "name": "MassID",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/mass-id-3.2.md",
+      "nextGate": "Observe empty, partial, and sufficient Tome behavior in paid and free modes, then validate save/reload and solo-host-joiner behavior before the future PluginPack merge.",
+      "include": [
+        "Mission/mass-id-3.2.md",
+        "addons/MassID/**",
+        "data-BKVince/BKVince.mpq/MassID.json",
+        "data-BKVince/d2rloader/plugins/MassID-src/**",
+        "data-BKVince/d2rloader/plugins/MassID.dll*"
+      ]
+    },
+    {
       "id": "workstream-registry",
       "name": "Workstream Registry",
       "status": "maintenance",
@@ -525,7 +540,8 @@
     {
       "pattern": "scripts/verify/zip-policy.json",
       "workstreams": [
-        "workstream-registry"
+        "workstream-registry",
+        "mass-id"
       ],
       "reason": "Shared allowlist for public plugin archive contents."
     },
@@ -556,7 +572,8 @@
         "extended-merc",
         "book-of-lore",
         "pspell-framework",
-        "char-start"
+        "char-start",
+        "mass-id"
       ],
       "reason": "Governed native evidence registry shared by native plugin missions."
     },
@@ -579,7 +596,8 @@
         "extended-merc",
         "book-of-lore",
         "pspell-framework",
-        "char-start"
+        "char-start",
+        "mass-id"
       ],
       "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."
     },
