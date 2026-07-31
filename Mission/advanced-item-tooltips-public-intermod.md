@@ -85,6 +85,87 @@ compatibilité publique avec les tables d'un autre mod.
    Damage, dégâts minimum/maximum, résistances, stats individuelles plus
    `All Attributes`/`All Resistances`, crafts et runewords.
 
+## Premier audit reproductible du 31 juillet 2026
+
+Le gate natif est vert sans nouvelle recherche d'adresse : l'image canonique
+92777 (`CC59119D…14715`), l'image d'analyse (`673E8C0B…E63AB`) et l'index de
+105 850 fonctions sont vérifiés. `ITEMS_BuildItemTooltip` demeure identifié à
+haute confiance à `0x2BD480`, avec les sept call-sites déjà gouvernés. La
+référence PluginPack est propre et épinglée à
+`eezstreet/D2RL-Plugins@dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`;
+ses sources ne contiennent ni ce RVA ni les sept call-sites. Cela ferme le gate
+statique de collision connu, mais pas encore la matrice runtime avec les cinq
+DLL.
+
+L'auditeur
+`scripts/reverse-engineering/advanced-item-tooltips-public-compatibility.mjs`
+formalise les headers réellement consommés et applique une politique par
+fonctionnalité : ordre des headers et colonnes supplémentaires acceptés;
+header requis absent, header normalisé dupliqué ou clé stable dupliquée = seule
+la table concernée est rejetée; le nombre de lignes reste informatif. Ses 12
+tests synthétiques prouvent notamment qu'une absence de `gems.txt` désactive
+les contributions de sockets et les plages combinées de runewords sans toucher
+à `Max Sockets`, Base Defense, aux affixes ni aux propriétés intrinsèques de
+runeword.
+
+Les quinze tables de BKVince et de vanilla 3.2 satisfont actuellement tous ces
+contrats, avec round-trip byte-exact et CRLF. Leurs quantités diffèrent pourtant
+fortement — par exemple 502 contre 433 uniques explicites, 113 contre 99
+runewords actifs et 2321 contre 227 recettes Cube — ce qui confirme qu'aucun
+nombre de records BKVince ne peut devenir un invariant public. Les quatre
+headers BKVince supplémentaires de `misc.txt` ne sont pas consommés.
+
+L'audit du source personnel 2.2.0 révèle trois adaptations obligatoires avant
+de créer le source public :
+
+1. `RangeCatalog::Load` charge aujourd'hui les quinze tables en transaction
+   unique; une seule table absente retire toutes les plages. Le loader public
+   devra produire des catalogues/capacités indépendants et un diagnostic par
+   source.
+2. `Number` confond actuellement cellule absente, texte invalide et zéro valide.
+   Le loader public devra conserver ces trois états et omettre seulement le
+   record ou la propriété non démontrable.
+3. Les tests d'intégration personnels imposent volontairement les comptes
+   BKVince et des IDs/codes BKVince. Ils restent des preuves de non-régression
+   du produit personnel, mais ne seront ni copiés ni transformés en hypothèses
+   du produit public.
+
+Le mode public par défaut
+`includeSocketedContributionsInRanges=false` possède un gate supplémentaire :
+ignorer simplement les fillers ferait échouer la validation d'une ligne finale
+qui contient déjà leur valeur. Les bonus fixes de rune/gem peuvent être
+soustraits exactement à partir de `gems.txt`; une jewel à roll variable exige
+en revanche la valeur réellement roulée de l'unité enfant, pas seulement sa
+plage d'affixe. Il faut donc prouver un accès natif exact à cette contribution
+ou omettre uniquement la ligne chevauchée. Aucune plage intrinsèque ne sera
+inventée à partir d'une décomposition ambiguë.
+
+La meilleure voie statique actuelle est `STATLIST_GetUnitStat` à `0x2F5020`,
+déjà gouverné à haute confiance avec l'ABI
+`(unit, statId, layer) -> int32`. Le plugin sait aussi énumérer les unités
+fillers du parent. Il reste à démontrer en runtime que l'appel sur une jewel
+socketée retourne bien son roll propre pour les statistiques scalaires visées;
+la preuve voisine sur une autre unité ou une autre stat ne suffit pas.
+
+Enfin, la 2.2.0 valide déjà les signatures du résolveur de runeword, des deux
+résolveurs de langue, des trois routines d'inventaire utilisées et de
+l'agrandissement de chaîne, puis les cinq octets de chacun des sept call-sites.
+Elle ne vérifie pas encore à l'installation les entrées de tous les autres
+helpers directement appelés (`ITEMS_GetMaxSockets`, `STATLIST_GetUnitStat`,
+`GetItemDataContext`, `UNITS_GetItemData` et `GetItemsTxtRecord`). Le public
+devra refuser le chargement si une de ces signatures indispensables ne
+correspond pas, même lorsqu'elle possède déjà une identification gouvernée.
+
+Commande de reprise :
+
+```powershell
+node scripts/reverse-engineering/advanced-item-tooltips-public-compatibility.mjs
+```
+
+Prochain lot de phase 1 : convertir les cas synthétiques en fixtures de tables
+déterministes, puis prouver l'extraction de la contribution réellement roulée
+d'une jewel avant d'implanter le loader public à capacités indépendantes.
+
 ## Gates d'implantation et de livraison
 
 - Créer seulement après la phase 1 le source et le package public sous

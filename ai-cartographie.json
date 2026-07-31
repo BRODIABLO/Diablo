@@ -31929,6 +31929,11 @@
                                                                                              ]
                                                                             },
                                                                             {
+                                                                                "name":  "advanced-item-tooltips-public-compatibility.mjs",
+                                                                                "path":  "scripts/reverse-engineering/advanced-item-tooltips-public-compatibility.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "Build-D2RLoaderSdkContribution.ps1",
                                                                                 "path":  "scripts/reverse-engineering/Build-D2RLoaderSdkContribution.ps1",
                                                                                 "kind":  "file"
