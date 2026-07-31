@@ -1279,3 +1279,93 @@ réutilisable.
 - matrice de coexistence par paire pour les plugins touchant un même
   sous-système;
 - validations fonctionnelles en jeu sur `D2R.exe 3.2.92777`.
+
+## Gameplay intégré, lot 1 — 30 juillet 2026
+
+Vincent confirme dans le PluginPack intégré les cas suivants : Gamble Screen
+Limit à 32, Ground Item Labels à 64 puis 128, Qty Display Fix sur le témoin
+préparé, génération éthérée à 100 % et objets de set éthérés. Extended Item
+Stats est également utilisable avec son tooltip unique, sa largeur stable, sa
+scrollbar et la molette selon les observations précédentes du même lot.
+
+Enhanced Damage Min/Max Fix et Charm Aura Trigger Fix étaient actifs, mais les
+objets témoins nécessaires n'ont pas pu être générés. Ils restent `not run` en
+gameplay intégré, avec confiance technique seulement; les preuves autonomes,
+tests Release et cold starts ne sont pas transformés en succès gameplay.
+
+Un test global vanilla ultérieur ferme ces deux cas nominaux. Enhanced Damage
+Min/Max Fix passe de `24–60` à `27–120` avec une War Sword `8–20` inchangée et
+le joyau `+40% ED / +15 max` serti hors arme dans un casque. Vincent confirme
+également Charm Aura Trigger Fix en jeu. Les deux fonctionnalités sont donc
+`passed` en gameplay intégré. Ground Item Labels 128 était déjà `passed` avec
+sa capture dense dédiée.
+
+## Gameplay intégré, lot 2 — 30 juillet 2026
+
+Vincent confirme `passed` pour les sept chemins nominaux suivants dans le pack :
+Cube Quick Move Bottom Right, Equipped Item to Cube, Transmute Hotkey, Vendor
+Stock Refresh, Repair Costs Cap avec usure, Prevent Merc Death in Town et Bulk
+Skill Point Allocation.
+
+Force Larzuk Sockets et Item Durability restent explicitement `not run` en
+gameplay intégré avec confiance technique. Larzuk conserve ses preuves autonomes,
+ses hooks actifs et ses cold starts; Item Durability conserve ses tests et son
+audit technique. Cette qualification évite de transformer une confiance élevée
+en observation gameplay inexistante.
+
+Extended Item Stats demeure la seule fonctionnalité ayant révélé une régression
+fonctionnelle pendant les essais gameplay du merge : doublon de tooltip, largeur
+instable, état résiduel de scrollbar, molette/drag et crash. Ces défauts ont été
+corrigés puis le chemin nominal a été retesté avec succès. Le chantier avait aussi
+détecté auparavant un défaut technique distinct dans le wrapper partagé `call
+rel32` lors du cold start toutes fonctions actives; il avait été corrigé et
+revalidé avant ces essais gameplay.
+
+## Checkpoint final candidat — 30 juillet 2026
+
+Le fork `analysis-cache/pluginpack-foundation`, branche
+`codex/pluginpack-foundation`, produit les cinq DLL en Debug et Release et passe
+`25/25` CTest dans chaque configuration. Le manifeste et le code source couvrent
+`136/136` écritures exécutables, chacune avec un propriétaire unique et aucune
+plage chevauchante. `git diff --check` est propre.
+
+Un audit automatisé de `D2RPlugins.json` confirme les 15 defaults RuffnecKk,
+l'absence de clé publique `items.extendedItemStats`,
+`skills.selfHealParams: true` et la conservation de chaque valeur JSON originale
+d'eezstreet. Les SHA-256 finaux sont consignés dans
+`analysis-cache/pluginpack-final-checkpoint/20260730-1537-public-default/hashes.json`.
+
+Deux déploiements hash-identiques aux sources Release ferment le cold start du
+JSON joueur final. La portée mod-locale BKVince charge `5/5` DLL, zéro rejet,
+zéro échec et atteint `24/24`. La portée globale vanilla isolée charge également
+`5/5`, zéro rejet, zéro échec et atteint `24/24`, sans erreur ni assertion; ses
+preuves sont sous
+`analysis-cache/pluginpack-final-checkpoint/20260730-1542-global-vanilla/`.
+Le déploiement global temporaire est retiré, `default_mod = "BKVince"` est
+restauré, le runtime BKVince conserve les cinq DLL et le JSON public finaux, et
+aucun processus de jeu ne reste après la validation.
+
+Le checkpoint source contient uniquement le correctif final Extended Item Stats,
+son site de hook manifesté, ses tests et la documentation de revue. Vincent a
+autorisé son commit et son push : `378463b` (`Finalize Extended Item Stats
+integration prototype`) est poussé sur
+`RuffDood/D2RL-Plugins:codex/pluginpack-foundation`, synchronisé à `0/0`. Le
+prochain gate est la proposition de revue à eezstreet.
+
+L'index exact est exporté sous
+`analysis-cache/pluginpack-staged-checkpoint-20260730-1550/` dans un dépôt Git
+temporaire indépendant : il reconstruit les cinq DLL et repasse `25/25` tests en
+Debug ainsi qu'en Release. Aucun contenu hors index n'est requis.
+
+## Clôture — 30 juillet 2026
+
+Vincent déclare la mission terminée et demande de la rayer de la ROADMAP. Elle
+est donc clôturée comme livrée techniquement et validée sur les chemins gameplay
+nominaux réellement consignés ci-dessus. Le checkpoint final demeure `378463b`,
+poussé et synchronisé sur `codex/pluginpack-foundation`.
+
+Force Larzuk Sockets et Item Durability conservent leur qualification explicite
+de confiance technique sans nouveau témoin intégré exact. La clôture ne transforme
+pas ces cas `not run` en succès gameplay et n'infère aucune acceptation amont,
+réponse de revue ou fusion par eezstreet qui ne serait pas documentée dans les
+preuves gouvernées.

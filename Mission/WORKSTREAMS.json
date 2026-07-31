@@ -261,19 +261,19 @@
     {
       "id": "eezstreet-pluginpack-integration",
       "name": "eezstreet PluginPack Integration",
-      "status": "active",
+      "status": "maintenance",
       "owner": "Vincent + Codex",
       "mission": "Mission/eezstreet-pluginpack-integration.md",
-      "nextGate": "Run the five documented integrated gameplay batches, record only observed results, then submit the validated five-DLL branch and vanilla-default JSON for eezstreet's upstream review.",
+      "nextGate": "Mission closed on Vincent's instruction on 2026-07-30; preserve the governed evidence and select the next active mission without inferring an upstream acceptance from eezstreet.",
       "include": [
         "Mission/eezstreet-pluginpack-integration.md",
+        "Mission/ed-min-max-jewel-fix-3.2.md",
         "Mission/bulk-skill-point-allocation-3.2.md",
         "Mission/durability-loss-resistance-3.2.md",
         "Mission/charm-inventory-auras-3.2.md",
-        "Mission/configurable-larzuk-sockets-3.2.md",
-        "Mission/cube-quick-move-bottom-right-3.2.md",
         "data-BKVince/BKVince.mpq/D2RPlugins.json",
         "data-BKVince/d2rloader/plugins/plugin-items.dll",
+        "data-BKVince/d2rloader/plugins/plugin-levels.dll",
         "data-BKVince/d2rloader/plugins/plugin-misc.dll",
         "data-BKVince/d2rloader/plugins/plugin-quests.dll",
         "data-BKVince/d2rloader/plugins/plugin-skills.dll"
