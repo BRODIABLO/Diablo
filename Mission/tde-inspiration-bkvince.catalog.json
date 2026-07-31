@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "tde-inspiration-bkvince",
+  "status": "study",
+  "source": {
+    "name": "MOD_T.D.E.",
+    "version": "3.1d",
+    "archiveFile": "TDE_D2SE_3.1d.1.7z",
+    "archiveSha256": "671D0636EF96FF59D94192C3FF0DD73AB69CAAE1D41FC4563F796149AFBC9356",
+    "readmePath": "TDE_3.1d_Readme.docx",
+    "paragraphCount": 2038,
+    "tableCount": 91,
+    "reviewedAt": "2026-07-31"
+  },
+  "method": {
+    "scope": [
+      "Reformulate documented gameplay ideas for BKVince instead of copying TDE implementation data.",
+      "Use the 91 loose tables only as structural evidence.",
+      "Consider data-only, native plugin, memory-patch, and hybrid routes.",
+      "Exclude candidates that require new visual or audio assets."
+    ],
+    "scoringFormula": "playerValue*6 + bkvinceFit*5 + technicalConfidence*4 + isolation*3 + maintenance*2",
+    "copyrightBoundary": "The catalog stores references, hashes, short reformulations, and credits; it does not reproduce TDE prose, tables, assets, or binaries.",
+    "implementationBoundary": "This study changes no BKVince gameplay or runtime file. Every future native candidate requires its own incubation destination gate and governed 92777 evidence before implementation."
+  },
+  "coverage": {
+    "readmeChunks": [
+      { "start": 1, "end": 100, "sha256": "98951BC50DD61F8BBF355AE4B295FC4D82DBCA7041A705DA9B684FC9B85D80CF" },
+      { "start": 101, "end": 200, "sha256": "CE46A8C9B13E30EC9FC9CEBD26986DFAEB85BAF327C01988882234C5FCB2473A" },
+      { "start": 201, "end": 300, "sha256": "E931F923300149739709855A25DC809518D685743A86D56A1597B77D6B947784" },
+      { "start": 301, "end": 400, "sha256": "3F45F20B22F4F7E6FF95F39EA4E6955CE813E6D4FB7EA14BA3A07014C77FE578" },
+      { "start": 401, "end": 500, "sha256": "70BFC0FF314C2D1BCAF625A38D218D64F4FCE0B731BC62828E353DA1727605A4" },
+      { "start": 501, "end": 600, "sha256": "3F064AD398C177B2E49CEF0A2F240207DCFEF96296723D49D40CB153CFB1EE64" },
+      { "start": 601, "end": 700, "sha256": "663DB2FBEFD2624D0C75468049ED001EA37B1F721DC84B5A992B10815583CD56" },
+      { "start": 701, "end": 800, "sha256": "9DE3746D9579A90602E68ACE9C7F28A62757511307E1DF3CCBA18440275668F2" },
+      { "start": 801, "end": 900, "sha256": "1BBD4EA3E12FAA3F5D1CDF1A8E6E37D9217B19D22DA38817DA79D125F31601F9" },
+      { "start": 901, "end": 1000, "sha256": "6DDE6851BC43A3F981E9252AE2A6404060429EF05F7D4C6AA55825A4620B4581" },
+      { "start": 1001, "end": 1100, "sha256": "3C5E2A97BACAA79F3F58075A464D3D4C7052935F7D00BDA7BBD0603D1FAC1176" },
+      { "start": 1101, "end": 1200, "sha256": "0F17A63ABCDE34ECC053CD51BE87331FD4323A4D4CE04E42561B09854A56C826" },
+      { "start": 1201, "end": 1300, "sha256": "C6906325622664310F2497F0D1F5C4FD90B135D48ABAA48CDA23D9AE8BB1EF97" },
+      { "start": 1301, "end": 1400, "sha256": "33A0C70A19642CBF13A49D5222F32F1586046E12AA7B5F00E34E6403F481AB37" },
+      { "start": 1401, "end": 1500, "sha256": "0C84543118FFEF7640673EE56C5CCD9769719A4998F6C20D077B1F3963E1A806" },
+      { "start": 1501, "end": 1600, "sha256": "A01FBD402D69A7DED09FA7FBC57F3119941C0D89B02EB1AF6B75B9354D3BDD46" },
+      { "start": 1601, "end": 1700, "sha256": "56D1CA31ED56B0B896B0E24AE24F4BB2CC79DB08FAE130D27DBB53F76228D53F" },
+      { "start": 1701, "end": 1800, "sha256": "F218A6F44402DD784252492742E01717803F52FA2C78B499F998AA9E8DD6561F" },
+      { "start": 1801, "end": 1900, "sha256": "6F1ADCF239FA0BDCA92E20C3966D2F603A93C5F08B259A04065AE885C4D6D03E" },
+      { "start": 1901, "end": 2000, "sha256": "8F93F27BC5BB59647CB10B031956DF6E5E9180DB9E7427FD9679F4CA381BCAB0" },
+      { "start": 2001, "end": 2038, "sha256": "6C1C2071D0FB049E88CFC06F5BE75C8DFC03778481E6F80579B5974131A7F0A6" }
+    ],
+    "tables": {
+      "files": [
+        "aiparms.txt", "arena.txt", "armor.txt", "automagic.txt", "automap.txt", "belts.txt", "bodylocs.txt", "books.txt", "charstats.txt", "chartemplate.txt",
+        "colors.txt", "compcode.txt", "composit.txt", "cubemain.txt", "cubemod.txt", "cubetype.txt", "difficultylevels.txt", "elemtypes.txt", "events.txt", "experience.txt",
+        "gamble.txt", "gems.txt", "hiredesc.txt", "hireling.txt", "hitclass.txt", "inventory.txt", "itemratio.txt", "itemstatcost.txt", "itemtypes.txt", "levels.txt",
+        "lowqualityitems.txt", "lvlmaze.txt", "lvlprest.txt", "lvlsub.txt", "lvltypes.txt", "lvlwarp.txt", "magicprefix.txt", "magicsuffix.txt", "misc.txt", "misscalc.txt",
+        "missiles.txt", "monai.txt", "monequip.txt", "monitempercent.txt", "monlvl.txt", "monmode.txt", "monname.txt", "monplace.txt", "monpreset.txt", "monprop.txt",
+        "monseq.txt", "monsounds.txt", "monstats.txt", "monstats2.txt", "montype.txt", "monumod.txt", "npc.txt", "objects.txt", "objgroup.txt", "objmode.txt",
+        "objtype.txt", "overlay.txt", "pettype.txt", "playerclass.txt", "plrmode.txt", "plrtype.txt", "properties.txt", "qualityitems.txt", "rareprefix.txt", "raresuffix.txt",
+        "runes.txt", "setitems.txt", "sets.txt", "shrines.txt", "skillcalc.txt", "skilldesc.txt", "skills.txt", "soundenviron.txt", "sounds.txt", "states.txt",
+        "storepage.txt", "superuniques.txt", "treasureclass.txt", "treasureclassex.txt", "uniqueappellation.txt", "uniqueitems.txt", "uniqueprefix.txt", "uniquesuffix.txt", "uniquetitle.txt", "weaponclass.txt", "weapons.txt"
+      ],
+      "manifestSha256": "B7FC512541B1902AC800F88746E1A2176427EF77FD7B9CBC1ADE572D9DAC1B72",
+      "allCrlf": true,
+      "roundTripByteExact": true
+    },
+    "compatibilityAudit": {
+      "commonTables": 81,
+      "exactHeaders": 18,
+      "schemaDifferences": 63,
+      "tdeOnly": 10,
+      "bkvinceOnly": 10
+    }
+  },
+  "credits": [
+    { "name": "Nagahaku", "role": "TDE document author metadata", "source": "TDE_3.1d_Readme.docx core properties" },
+    { "name": "Kureharu Lonegirl", "role": "TDE document last-modified metadata", "source": "TDE_3.1d_Readme.docx core properties" },
+    { "name": "The Phrozen Keep contributors, including Cypress", "role": "Upstream bug-fix ideas credited by TDE", "source": "readme:p5" },
+    { "name": "RuffnecKk", "role": "BKVince adaptation study and governed catalog", "source": "Workspace RuffnecKk" }
+  ],
+  "entries": [
+    {
+      "id": "cube-preserve-socketables", "title": "Preserve socketables when clearing an item", "lane": "data", "domain": "cube",
+      "playerEffect": "Let the player empty a socketed item while recovering the inserted components at an explicit high cost.",
+      "sourceRefs": ["readme:p30", "readme:p1610"], "tableEvidence": ["cubemain.txt", "gems.txt"], "existingCoverage": [],
+      "route": "data_only", "disposition": "shortlisted", "scores": { "playerValue": 5, "bkvinceFit": 5, "technicalConfidence": 5, "isolation": 5, "maintenance": 5, "priority": 100 },
+      "effort": "low", "requiresNewAssets": false, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "High-value reversible recipe that can be designed against BKVince item economy without importing TDE rows.", "dependencies": ["BKVince cube economy review"]
+    },
+    {
+      "id": "split-larger-gems", "title": "Split larger gems", "lane": "data", "domain": "cube",
+      "playerEffect": "Convert one higher-grade gem into three gems of the preceding grade.",
+      "sourceRefs": ["readme:p1611", "readme:p1612", "readme:p1952"], "tableEvidence": ["cubemain.txt", "gems.txt", "misc.txt"], "existingCoverage": ["gem-storage"],
+      "route": "data_only", "disposition": "shortlisted", "scores": { "playerValue": 4, "bkvinceFit": 5, "technicalConfidence": 5, "isolation": 5, "maintenance": 5, "priority": 94 },
+      "effort": "low", "requiresNewAssets": false, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "Complements the governed gem economy and is easy to make idempotent and testable.", "dependencies": ["Storage Bag and gem point-value compatibility"]
+    },
+    {
+      "id": "rotate-charms", "title": "Rotate large and grand charms", "lane": "data", "domain": "cube",
+      "playerEffect": "Offer alternate charm footprints through a cube conversion using existing item art and identities.",
+      "sourceRefs": ["readme:p1613", "readme:p1614"], "tableEvidence": ["cubemain.txt", "misc.txt", "inventory.txt"], "existingCoverage": [],
+      "route": "data_only", "disposition": "shortlisted", "scores": { "playerValue": 4, "bkvinceFit": 5, "technicalConfidence": 5, "isolation": 5, "maintenance": 4, "priority": 92 },
+      "effort": "low", "requiresNewAssets": false, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "Adds inventory choices without changing serialization if separate BKVince base rows are used.", "dependencies": ["Inventory footprint and Storage Bag collision audit"]
+    },
+    {
+      "id": "socket-drilling-floor", "title": "Guarantee a useful socket-drilling floor", "lane": "data", "domain": "cube",
+      "playerEffect": "Make selected common-item socket recipes guarantee at least two sockets, with costly recipes allowed to reach three.",
+      "sourceRefs": ["readme:p1623", "readme:p1643", "readme:p1652"], "tableEvidence": ["cubemain.txt", "armor.txt", "weapons.txt"], "existingCoverage": ["configurable-larzuk-sockets"],
+      "route": "data_only", "disposition": "shortlisted", "scores": { "playerValue": 4, "bkvinceFit": 4, "technicalConfidence": 5, "isolation": 5, "maintenance": 4, "priority": 87 },
+      "effort": "low", "requiresNewAssets": false, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "A cube-only variant avoids conflating the idea with the governed Larzuk service.", "dependencies": ["Socket cap and runeword economy audit"]
+    },
+    {
+      "id": "difficulty-immunity-curve", "title": "Progress monster immunities by difficulty", "lane": "data", "domain": "monster",
+      "playerEffect": "Keep Normal broadly build-friendly and reserve most non-boss immunities for later difficulties under explicit rules.",
+      "sourceRefs": ["readme:p461", "readme:p462", "readme:p463"], "tableEvidence": ["monstats.txt", "monumod.txt", "difficultylevels.txt"], "existingCoverage": ["bkvince-pierce-res", "bkvince-vnp-monster-safety"],
+      "route": "data_only", "disposition": "shortlisted", "scores": { "playerValue": 5, "bkvinceFit": 5, "technicalConfidence": 4, "isolation": 3, "maintenance": 3, "priority": 86 },
+      "effort": "high", "requiresNewAssets": false, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "Strong build-diversity value, but it must be derived from BKVince monsters and pierce rules rather than copied values.", "dependencies": ["Three-way resistance audit", "Sunder and pierce-res behavior"]
+    },
+    {
+      "id": "rare-item-creation", "title": "Add deterministic rare-item creation recipes", "lane": "data", "domain": "cube",
+      "playerEffect": "Turn selected superior bases and components into rare items through clearly priced recipes.",
+      "sourceRefs": ["readme:p1691", "readme:p1692"], "tableEvidence": ["cubemain.txt", "itemratio.txt", "magicprefix.txt", "magicsuffix.txt"], "existingCoverage": [],
+      "route": "data_only", "disposition": "shortlisted", "scores": { "playerValue": 4, "bkvinceFit": 5, "technicalConfidence": 4, "isolation": 4, "maintenance": 3, "priority": 83 },
+      "effort": "medium", "requiresNewAssets": false, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "Useful material sink if outputs and affix levels are redesigned around BKVince progression.", "dependencies": ["Affix and crafting economy audit"]
+    },
+    {
+      "id": "rare-item-refresh", "title": "Refresh rare items with tiered costs", "lane": "data", "domain": "cube",
+      "playerEffect": "Reroll rare items with costs that distinguish lower- and higher-level outputs.",
+      "sourceRefs": ["readme:p1654", "readme:p1655"], "tableEvidence": ["cubemain.txt", "itemratio.txt"], "existingCoverage": [],
+      "route": "data_only", "disposition": "shortlisted", "scores": { "playerValue": 4, "bkvinceFit": 4, "technicalConfidence": 5, "isolation": 5, "maintenance": 4, "priority": 87 },
+      "effort": "medium", "requiresNewAssets": false, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "A focused sink with predictable implementation, provided ilvl and component costs are specified independently.", "dependencies": ["Rare ilvl policy", "Charm and skull economy review"]
+    },
+    {
+      "id": "elemental-difficulty-pressure", "title": "Scale elemental pressure by difficulty", "lane": "data", "domain": "system",
+      "playerEffect": "Offset reduced immunity friction with a transparent elemental damage pressure increase in Nightmare and Hell.",
+      "sourceRefs": ["readme:p477"], "tableEvidence": ["difficultylevels.txt", "skills.txt"], "existingCoverage": [],
+      "route": "data_only", "disposition": "shortlisted", "scores": { "playerValue": 3, "bkvinceFit": 4, "technicalConfidence": 5, "isolation": 4, "maintenance": 4, "priority": 78 },
+      "effort": "medium", "requiresNewAssets": false, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "Only justified as a paired balance lever if the immunity curve is actually relaxed.", "dependencies": ["difficulty-immunity-curve", "Damage telemetry"]
+    },
+    {
+      "id": "guest-monster-redistribution", "title": "Redistribute guest monsters across progression", "lane": "data", "domain": "monster",
+      "playerEffect": "Move guest monster variety out of a single late-game concentration and stage it across higher difficulties.",
+      "sourceRefs": ["readme:p478"], "tableEvidence": ["levels.txt", "monstats.txt", "monpreset.txt"], "existingCoverage": ["bkvince-rift-levelgroups"],
+      "route": "data_only", "disposition": "shortlisted", "scores": { "playerValue": 4, "bkvinceFit": 4, "technicalConfidence": 4, "isolation": 3, "maintenance": 3, "priority": 75 },
+      "effort": "high", "requiresNewAssets": false, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "Could improve replay variety, but must preserve BKVince Rift, Herald, quest, and terror-zone populations.", "dependencies": ["Level population differential audit"]
+    },
+    {
+      "id": "friendly-level-85-areas", "title": "Create friendlier level-85 areas", "lane": "data", "domain": "world",
+      "playerEffect": "Designate selected high-level areas with narrower common monster variety while retaining elite danger.",
+      "sourceRefs": ["readme:p1985"], "tableEvidence": ["levels.txt", "monstats.txt", "superuniques.txt"], "existingCoverage": [],
+      "route": "data_only", "disposition": "shortlisted", "scores": { "playerValue": 3, "bkvinceFit": 4, "technicalConfidence": 4, "isolation": 5, "maintenance": 2, "priority": 73 },
+      "effort": "medium", "requiresNewAssets": false, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "Offers accessible farming routes without lowering all endgame zones equally.", "dependencies": ["Area-level and terror-zone audit"]
+    },
+    {
+      "id": "paid-repeatable-quest-services", "title": "Convert one-time quest rewards into paid repeatable services", "lane": "native", "domain": "npc",
+      "playerEffect": "After the original quest use, allow paid repeat uses of Charsi imbue, Larzuk sockets, and Anya personalization.",
+      "sourceRefs": ["readme:p2023", "readme:p2024", "readme:p2025"], "tableEvidence": ["npc.txt", "cubemain.txt"], "existingCoverage": ["configurable-larzuk-sockets", "infinite-charsi", "infinite-larzuk", "infinite-anya"],
+      "route": "plugin", "disposition": "shortlisted", "scores": { "playerValue": 4, "bkvinceFit": 5, "technicalConfidence": 5, "isolation": 4, "maintenance": 4, "priority": 89 },
+      "effort": "medium", "requiresNewAssets": false, "nativeProofStatus": "partial", "futureDestinationGateRequired": true,
+      "rationale": "Existing governed reward paths lower discovery risk; price, authority, quest consumption, and save behavior remain distinct design work.", "dependencies": ["Plugin destination gate", "Host-authoritative gold transaction", "Quest-state regression matrix"]
+    },
+    {
+      "id": "alt-required-ground-pickup", "title": "Require the show-items key for ground pickup", "lane": "native", "domain": "ui",
+      "playerEffect": "Prevent accidental ground pickup unless the player is actively showing item labels.",
+      "sourceRefs": ["readme:p47"], "tableEvidence": [], "existingCoverage": ["base-mod-features"],
+      "route": "plugin", "disposition": "shortlisted", "scores": { "playerValue": 5, "bkvinceFit": 5, "technicalConfidence": 3, "isolation": 4, "maintenance": 4, "priority": 87 },
+      "effort": "medium", "requiresNewAssets": false, "nativeProofStatus": "missing", "futureDestinationGateRequired": true,
+      "rationale": "Clear quality-of-life value, but controller behavior and the actual 92777 item-interaction path need proof.", "dependencies": ["Plugin destination gate", "Mouse/controller input policy", "Host/joiner authority audit"]
+    },
+    {
+      "id": "telekinesis-general-pickup", "title": "Extend Telekinesis to eligible pickups", "lane": "native", "domain": "skill",
+      "playerEffect": "Let Telekinesis collect a configurable safe subset of ground objects at range.",
+      "sourceRefs": ["readme:p104"], "tableEvidence": ["skills.txt", "missiles.txt", "objects.txt"], "existingCoverage": ["bkvince-super-tk"],
+      "route": "data_native", "disposition": "shortlisted", "scores": { "playerValue": 4, "bkvinceFit": 5, "technicalConfidence": 3, "isolation": 4, "maintenance": 4, "priority": 81 },
+      "effort": "medium", "requiresNewAssets": false, "nativeProofStatus": "partial", "futureDestinationGateRequired": true,
+      "rationale": "BKVince already has governed Super TK data, but unrestricted pickup is unsafe for multiplayer and should become an allowlist.", "dependencies": ["Plugin destination gate", "Super TK differential", "Item ownership and quest-object rules"]
+    },
+    {
+      "id": "multiple-shot-event-parity", "title": "Remove Multiple Shot event asymmetry", "lane": "native", "domain": "skill",
+      "playerEffect": "Allow every valid Multiple Shot projectile to participate consistently in hit events under a configurable cap.",
+      "sourceRefs": ["readme:p64"], "tableEvidence": ["skills.txt", "missiles.txt"], "existingCoverage": [],
+      "route": "data_native", "disposition": "shortlisted", "scores": { "playerValue": 4, "bkvinceFit": 4, "technicalConfidence": 4, "isolation": 4, "maintenance": 3, "priority": 78 },
+      "effort": "medium", "requiresNewAssets": false, "nativeProofStatus": "partial", "futureDestinationGateRequired": true,
+      "rationale": "Player-visible consistency is attractive, but proc amplification, next-hit delay, and network authority require explicit limits.", "dependencies": ["Plugin destination gate", "Projectile event-loop proof", "Proc-rate balance fixtures"]
+    },
+    {
+      "id": "act-four-support-mercenary", "title": "Add an Act IV support mercenary", "lane": "native", "domain": "hireling",
+      "playerEffect": "Offer an Act IV hireling archetype focused on healing, cleansing, and ranged holy attacks.",
+      "sourceRefs": ["readme:p437", "readme:p438", "readme:p440", "readme:p444", "readme:p445"], "tableEvidence": ["hireling.txt", "hiredesc.txt", "monstats.txt", "skills.txt"], "existingCoverage": ["extended-merc"],
+      "route": "data_native", "disposition": "shortlisted", "scores": { "playerValue": 5, "bkvinceFit": 5, "technicalConfidence": 3, "isolation": 2, "maintenance": 2, "priority": 77 },
+      "effort": "high", "requiresNewAssets": false, "nativeProofStatus": "partial", "futureDestinationGateRequired": true,
+      "rationale": "ExtendedMerc proves adjacent UI and equipment surfaces, but a new hire source, roster identity, save/network behavior, and original BKVince skill kit remain substantial work.", "dependencies": ["Plugin destination gate", "ExtendedMerc ABI evidence", "Act IV hire UI proof", "Save compatibility design"]
+    },
+    {
+      "id": "cloak-of-shadows-cooldown", "title": "Make Cloak of Shadows cooldown configurable", "lane": "native", "domain": "skill",
+      "playerEffect": "Replace the hardcoded recast restriction with a controlled, testable cooldown policy.",
+      "sourceRefs": ["readme:p357"], "tableEvidence": ["skills.txt", "states.txt"], "existingCoverage": [],
+      "route": "memory_patch", "disposition": "shortlisted", "scores": { "playerValue": 3, "bkvinceFit": 4, "technicalConfidence": 3, "isolation": 5, "maintenance": 4, "priority": 73 },
+      "effort": "medium", "requiresNewAssets": false, "nativeProofStatus": "missing", "futureDestinationGateRequired": true,
+      "rationale": "Potentially small native surface, but no 92777 RVA or signature is yet governed for this behavior.", "dependencies": ["Plugin destination gate", "92777 cooldown-path evidence", "AI and state overlap regression"]
+    },
+    {
+      "id": "guided-arrow-targeting", "title": "Modernize Guided Arrow target selection", "lane": "native", "domain": "skill",
+      "playerEffect": "Guide arrows toward the clicked target or the closest target to the cursor, with predictable reacquisition rules.",
+      "sourceRefs": ["readme:p67"], "tableEvidence": ["skills.txt", "missiles.txt"], "existingCoverage": [],
+      "route": "plugin", "disposition": "shortlisted", "scores": { "playerValue": 5, "bkvinceFit": 4, "technicalConfidence": 2, "isolation": 3, "maintenance": 2, "priority": 71 },
+      "effort": "high", "requiresNewAssets": false, "nativeProofStatus": "missing", "futureDestinationGateRequired": true,
+      "rationale": "High gameplay value, but cursor intent, projectile ownership, reacquisition, and host/joiner determinism are unproven.", "dependencies": ["Plugin destination gate", "Projectile target ABI", "Network determinism proof"]
+    },
+    {
+      "id": "independent-cooldown-groups", "title": "Introduce independent cooldown groups", "lane": "native", "domain": "system",
+      "playerEffect": "Assign selected skills to explicit cooldown groups instead of the universal delay.",
+      "sourceRefs": ["readme:p49", "readme:p50", "readme:p51", "readme:p52"], "tableEvidence": ["skills.txt", "states.txt"], "existingCoverage": ["skill-cooldown-itemstat"],
+      "route": "data_native", "disposition": "shortlisted", "scores": { "playerValue": 4, "bkvinceFit": 4, "technicalConfidence": 2, "isolation": 3, "maintenance": 3, "priority": 67 },
+      "effort": "high", "requiresNewAssets": false, "nativeProofStatus": "missing", "futureDestinationGateRequired": true,
+      "rationale": "Could unlock better skill rotations, but UI feedback, charges, state allocation, serialization, and authority need a new design.", "dependencies": ["Plugin destination gate", "Cooldown state budget", "Client UI feedback"]
+    },
+    {
+      "id": "realtime-passive-updater", "title": "Refresh equipment-driven passives in real time", "lane": "native", "domain": "system",
+      "playerEffect": "Recalculate selected equipment-driven passive effects immediately when relevant gear changes.",
+      "sourceRefs": ["readme:p37"], "tableEvidence": ["skills.txt", "states.txt", "itemstatcost.txt"], "existingCoverage": [],
+      "route": "plugin", "disposition": "shortlisted", "scores": { "playerValue": 4, "bkvinceFit": 4, "technicalConfidence": 2, "isolation": 3, "maintenance": 2, "priority": 65 },
+      "effort": "high", "requiresNewAssets": false, "nativeProofStatus": "missing", "futureDestinationGateRequired": true,
+      "rationale": "The concept is reusable, but BKVince needs event-driven stat ownership rather than TDE's belt/charm carrier convention.", "dependencies": ["Plugin destination gate", "Equipment-change event proof", "Authoritative stat-list ownership"]
+    },
+    {
+      "id": "corrupt-area-events", "title": "Add occasional corrupt-area events", "lane": "native", "domain": "world",
+      "playerEffect": "Occasionally promote a Hell area into a temporary higher-pressure variant using existing BKVince monsters and effects.",
+      "sourceRefs": ["readme:p1995"], "tableEvidence": ["levels.txt", "monstats.txt", "treasureclassex.txt"], "existingCoverage": ["bkvince-rift-levelgroups"],
+      "route": "data_native", "disposition": "shortlisted", "scores": { "playerValue": 4, "bkvinceFit": 4, "technicalConfidence": 2, "isolation": 2, "maintenance": 2, "priority": 62 },
+      "effort": "high", "requiresNewAssets": false, "nativeProofStatus": "missing", "futureDestinationGateRequired": true,
+      "rationale": "Adapt only the event concept using existing assets; level promotion, drops, save scope, host authority, and overlap with Rifts/Terror Zones are unknown.", "dependencies": ["Plugin destination gate", "Area lifecycle proof", "Rift and Terror Zone coexistence"]
+    },
+    {
+      "id": "automatic-pickup-categories", "title": "Automatically pick up selected item categories", "lane": "native", "domain": "system",
+      "playerEffect": "Collect selected currency and component categories automatically.",
+      "sourceRefs": ["readme:p46"], "tableEvidence": ["itemtypes.txt", "misc.txt"], "existingCoverage": ["potion-auto-pickup", "autogold-memory-patches"],
+      "route": "plugin", "disposition": "duplicate", "scores": { "playerValue": 4, "bkvinceFit": 4, "technicalConfidence": 5, "isolation": 4, "maintenance": 4, "priority": 84 },
+      "effort": "medium", "requiresNewAssets": false, "nativeProofStatus": "existing", "futureDestinationGateRequired": true,
+      "rationale": "Substantially overlaps existing PluginPack and memory-patch coverage; any expansion should be handled there, not as a fresh TDE port.", "dependencies": ["Existing pickup ownership audit"]
+    },
+    {
+      "id": "vendor-stock-refresh", "title": "Refresh vendor and gamble stock", "lane": "native", "domain": "npc",
+      "playerEffect": "Expose a deliberate way to reroll merchant and gamble inventories.",
+      "sourceRefs": ["readme:p1960"], "tableEvidence": ["npc.txt", "gamble.txt"], "existingCoverage": ["vendor-stock-refresh"],
+      "route": "plugin", "disposition": "duplicate", "scores": { "playerValue": 4, "bkvinceFit": 5, "technicalConfidence": 5, "isolation": 5, "maintenance": 5, "priority": 94 },
+      "effort": "low", "requiresNewAssets": false, "nativeProofStatus": "existing", "futureDestinationGateRequired": true,
+      "rationale": "Already governed and integrated as items.vendorStockRefresh; the TDE note adds no new implementation scope.", "dependencies": ["vendor-stock-refresh"]
+    },
+    {
+      "id": "dynamic-monster-life-bar", "title": "Color a monster life bar dynamically", "lane": "native", "domain": "ui",
+      "playerEffect": "Change monster life-bar presentation according to combat state.",
+      "sourceRefs": ["readme:p2021"], "tableEvidence": [], "existingCoverage": ["caleb-loot-filter-health-bar"],
+      "route": "plugin", "disposition": "duplicate", "scores": { "playerValue": 3, "bkvinceFit": 3, "technicalConfidence": 4, "isolation": 3, "maintenance": 3, "priority": 64 },
+      "effort": "medium", "requiresNewAssets": false, "nativeProofStatus": "partial", "futureDestinationGateRequired": true,
+      "rationale": "BKVince already ships a Caleb-derived monster health-bar presentation; no additional player friction is demonstrated.", "dependencies": ["Current HUD visual review"]
+    },
+    {
+      "id": "wolves-and-grizzly-coexist", "title": "Allow wolves and a grizzly together", "lane": "data", "domain": "skill",
+      "playerEffect": "Permit the Druid's wolf packs and grizzly to remain summoned together.",
+      "sourceRefs": ["readme:p295"], "tableEvidence": ["skills.txt", "pettype.txt"], "existingCoverage": [],
+      "route": "data_only", "disposition": "needs_evidence", "scores": { "playerValue": 4, "bkvinceFit": 4, "technicalConfidence": 3, "isolation": 4, "maintenance": 3, "priority": 74 },
+      "effort": "medium", "requiresNewAssets": false, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "Promising summon fantasy, but current D2R 3.2 and BKVince pet coexistence must be tested before claiming a gap.", "dependencies": ["Current summon coexistence fixture"]
+    },
+    {
+      "id": "class-initial-skills", "title": "Give each class an initial signature skill", "lane": "data", "domain": "character",
+      "playerEffect": "Start each class with one reusable identity-defining skill outside the normal point allocation.",
+      "sourceRefs": ["readme:p39", "readme:p57", "readme:p92", "readme:p161", "readme:p200", "readme:p256", "readme:p336"], "tableEvidence": ["charstats.txt", "skills.txt", "skilldesc.txt"], "existingCoverage": ["char-start"],
+      "route": "data_only", "disposition": "candidate", "scores": { "playerValue": 4, "bkvinceFit": 4, "technicalConfidence": 3, "isolation": 3, "maintenance": 3, "priority": 71 },
+      "effort": "high", "requiresNewAssets": false, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "Adapt the design principle only; TDE's skills, IDs, formulas, and class assignments are not portable wholesale.", "dependencies": ["CharStart roadmap", "Seven-class balance design"]
+    },
+    {
+      "id": "exceptional-elite-vendor-stock", "title": "Expand late-difficulty vendor base items", "lane": "native", "domain": "npc",
+      "playerEffect": "Allow Nightmare and Hell merchants to offer a controlled selection of exceptional and elite bases.",
+      "sourceRefs": ["readme:p1961"], "tableEvidence": ["npc.txt", "armor.txt", "weapons.txt"], "existingCoverage": ["eezstreet-vendor-overhaul"],
+      "route": "data_native", "disposition": "candidate", "scores": { "playerValue": 3, "bkvinceFit": 4, "technicalConfidence": 4, "isolation": 4, "maintenance": 4, "priority": 74 },
+      "effort": "medium", "requiresNewAssets": false, "nativeProofStatus": "partial", "futureDestinationGateRequired": true,
+      "rationale": "Could be expressed through the existing vendor owner, but only after measuring an actual base-item availability gap.", "dependencies": ["Plugin destination gate", "VendorOverhaul ownership", "Economy measurement"]
+    },
+    {
+      "id": "goblin-portals", "title": "Spawn destructible goblin portals", "lane": "native", "domain": "world",
+      "playerEffect": "Occasionally spawn a small encounter source that releases treasure-oriented enemies.",
+      "sourceRefs": ["readme:p599"], "tableEvidence": ["objects.txt", "monstats.txt", "treasureclassex.txt"], "existingCoverage": [],
+      "route": "data_native", "disposition": "candidate", "scores": { "playerValue": 4, "bkvinceFit": 3, "technicalConfidence": 2, "isolation": 2, "maintenance": 2, "priority": 57 },
+      "effort": "high", "requiresNewAssets": false, "nativeProofStatus": "missing", "futureDestinationGateRequired": true,
+      "rationale": "Only the encounter pattern is reusable with existing BKVince assets; TDE-specific objects, monsters, and art are excluded.", "dependencies": ["Plugin destination gate", "Object spawn lifecycle", "Existing-asset concept approval"]
+    },
+    {
+      "id": "tde-table-wholesale-port", "title": "Copy TDE tables wholesale", "lane": "excluded", "domain": "compatibility",
+      "playerEffect": "Replace BKVince tables with TDE data.",
+      "sourceRefs": ["readme:p4", "readme:p2036"], "tableEvidence": ["skills.txt", "missiles.txt", "states.txt", "itemstatcost.txt"], "existingCoverage": [],
+      "route": "none", "disposition": "rejected", "scores": { "playerValue": 0, "bkvinceFit": 0, "technicalConfidence": 0, "isolation": 0, "maintenance": 0, "priority": 0 },
+      "effort": "unknown", "requiresNewAssets": true, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "Rejected: version, schema, ID, save, multiplayer, and HD-asset incompatibilities make a wholesale port unsafe and contrary to the adaptation goal.", "dependencies": []
+    },
+    {
+      "id": "tde-multiplayer-assumptions", "title": "Reuse TDE single-player authority assumptions", "lane": "excluded", "domain": "compatibility",
+      "playerEffect": "Apply features designed without multiplayer authority constraints.",
+      "sourceRefs": ["readme:p4", "readme:p33", "readme:p104", "readme:p330"], "tableEvidence": [], "existingCoverage": [],
+      "route": "none", "disposition": "rejected", "scores": { "playerValue": 0, "bkvinceFit": 0, "technicalConfidence": 0, "isolation": 0, "maintenance": 0, "priority": 0 },
+      "effort": "unknown", "requiresNewAssets": false, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "Rejected: every BKVince adaptation must separately prove solo, host, and joiner behavior where gameplay authority is involved.", "dependencies": []
+    },
+    {
+      "id": "missing-hd-art-features", "title": "Port features that depend on missing HD art", "lane": "excluded", "domain": "compatibility",
+      "playerEffect": "Recreate TDE features whose required classic artwork has no D2R HD equivalent.",
+      "sourceRefs": ["readme:p2036"], "tableEvidence": [], "existingCoverage": [],
+      "route": "none", "disposition": "excluded_asset", "scores": { "playerValue": 0, "bkvinceFit": 0, "technicalConfidence": 0, "isolation": 0, "maintenance": 0, "priority": 0 },
+      "effort": "unknown", "requiresNewAssets": true, "nativeProofStatus": "not_applicable", "futureDestinationGateRequired": false,
+      "rationale": "Excluded by Vincent's scope decision; existing BKVince assets may support a separately redesigned concept, but no new TDE-derived art is imported.", "dependencies": []
+    }
+  ],
+  "shortlists": {
+    "dataFirst": [
+      "cube-preserve-socketables", "split-larger-gems", "rotate-charms", "socket-drilling-floor", "rare-item-refresh",
+      "difficulty-immunity-curve", "rare-item-creation", "elemental-difficulty-pressure", "guest-monster-redistribution", "friendly-level-85-areas"
+    ],
+    "native": [
+      "paid-repeatable-quest-services", "alt-required-ground-pickup", "telekinesis-general-pickup", "multiple-shot-event-parity", "act-four-support-mercenary",
+      "cloak-of-shadows-cooldown", "guided-arrow-targeting", "independent-cooldown-groups", "realtime-passive-updater", "corrupt-area-events"
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-31T11:47:56.1656072+00:00",
+    "generatedAt":  "2026-07-31T16:19:00.9247719+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -31363,6 +31363,21 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "tde-inspiration-bkvince.catalog.json",
+                                                           "path":  "Mission/tde-inspiration-bkvince.catalog.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "tde-inspiration-bkvince.md",
+                                                           "path":  "Mission/tde-inspiration-bkvince.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "tde-inspiration-bkvince.schema.json",
+                                                           "path":  "Mission/tde-inspiration-bkvince.schema.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "transmogrify-restoration-3.2.md",
                                                            "path":  "Mission/transmogrify-restoration-3.2.md",
                                                            "kind":  "file"
@@ -32154,6 +32169,23 @@
                                                                             {
                                                                                 "name":  "validate.test.mjs",
                                                                                 "path":  "scripts/validate-current-mission/validate.test.mjs",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "validate-tde-catalog",
+                                                           "path":  "scripts/validate-tde-catalog",
+                                                           "kind":  "directory",
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "validate.mjs",
+                                                                                "path":  "scripts/validate-tde-catalog/validate.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "validate.test.mjs",
+                                                                                "path":  "scripts/validate-tde-catalog/validate.test.mjs",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]

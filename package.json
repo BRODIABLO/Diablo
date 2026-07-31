@@ -7,6 +7,7 @@
   ],
   "scripts": {
     "verify": "node scripts/verify/verify.mjs",
+    "validate:tde-catalog": "node scripts/validate-tde-catalog/validate.mjs",
     "workstreams": "node scripts/workstreams/workstreams.mjs",
     "checkpoint": "node scripts/checkpoint/checkpoint.mjs",
     "dev": "concurrently -n api,web -c blue,green \"node scripts/dev-server.js\" \"npm run dev -w apps/admin\"",

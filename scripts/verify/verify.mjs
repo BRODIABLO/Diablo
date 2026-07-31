@@ -46,6 +46,9 @@ try {
   heading('workstream ownership');
   run(process.execPath, ['scripts/workstreams/workstreams.mjs', '--check'], 'Mission/WORKSTREAMS.json');
 
+  heading('TDE inspiration catalog');
+  run(process.execPath, ['scripts/validate-tde-catalog/validate.mjs'], 'Mission/tde-inspiration-bkvince.catalog.json');
+
   heading('automatic checkpoint state');
   run(process.execPath, ['scripts/checkpoint/checkpoint.mjs', '--check'], 'automatic checkpoint');
 
@@ -62,6 +65,7 @@ try {
     'scripts/verify/repo-policy.test.mjs',
     'scripts/validate-current-mission/validate.test.mjs',
     'scripts/workstreams/workstreams.test.mjs',
+    'scripts/validate-tde-catalog/validate.test.mjs',
     'scripts/checkpoint/checkpoint.test.mjs',
     '.codex/hooks/diablo-guard.test.mjs',
   ], 'repository guardrail tests');

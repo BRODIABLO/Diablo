@@ -430,6 +430,20 @@
       ]
     },
     {
+      "id": "tde-inspiration-bkvince",
+      "name": "TDE Inspiration for BKVince",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/tde-inspiration-bkvince.md",
+      "nextGate": "Vincent selects one catalog candidate; native candidates must then pass their own standalone-or-PluginPack destination gate before implementation.",
+      "include": [
+        "Mission/tde-inspiration-bkvince.md",
+        "Mission/tde-inspiration-bkvince.catalog.json",
+        "Mission/tde-inspiration-bkvince.schema.json",
+        "scripts/validate-tde-catalog/**"
+      ]
+    },
+    {
       "id": "workstream-registry",
       "name": "Workstream Registry",
       "status": "maintenance",
@@ -519,6 +533,7 @@
       "workstreams": [
         "extended-item-stats",
         "rift-terror-zone-group",
+        "tde-inspiration-bkvince",
         "workstream-registry"
       ],
       "reason": "Root commands currently serve both the active plugin tests and repository organization."
@@ -533,6 +548,7 @@
     {
       "pattern": "scripts/verify/verify.mjs",
       "workstreams": [
+        "tde-inspiration-bkvince",
         "workstream-registry"
       ],
       "reason": "Repository verification orchestrator."
