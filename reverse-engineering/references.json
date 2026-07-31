@@ -66,6 +66,27 @@
   ],
   "webReferences": [
     {
+      "id": "dimentio-d2r-ui-assets",
+      "name": "Dimentio D2R UI Asset Browser",
+      "webUrl": "https://i.dimentio.dev/d2r/",
+      "indexUrl": "https://i.dimentio.dev/d2r/assets.json",
+      "inspectedAt": "2026-07-26",
+      "role": "visual-ui-asset-reference-only",
+      "observedMetadata": {
+        "schema": 1,
+        "assetCount": 3028,
+        "sourceRoot": "../ui"
+      },
+      "provenance": "not-declared",
+      "license": "not-declared",
+      "policy": [
+        "Use the browser only to identify and preview D2R UI asset paths, dimensions and visual variants.",
+        "Treat BKVince layouts, local sprite files and the targeted installed build as the authoritative runtime sources.",
+        "Do not use this reference as evidence for a D2R build, RVA, signature, ABI or native behavior.",
+        "Do not mirror or redistribute the remote asset collection without separately establishing provenance and permission."
+      ]
+    },
+    {
       "id": "phrozen-keep-events-itemevents-auraevents",
       "name": "Guide to Events, Itemevents and Auraevents",
       "webUrl": "https://d2mods.info/forum/viewtopic.php?t=67954",
