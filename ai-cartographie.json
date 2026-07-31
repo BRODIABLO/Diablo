@@ -31037,6 +31037,11 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "advanced-item-tooltips-public-intermod.md",
+                                                           "path":  "Mission/advanced-item-tooltips-public-intermod.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "book-of-lore-3.2.md",
                                                            "path":  "Mission/book-of-lore-3.2.md",
                                                            "kind":  "file",

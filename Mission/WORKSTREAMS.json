@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-30",
+  "updatedAt": "2026-07-31",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -23,16 +23,29 @@
     {
       "id": "advanced-item-tooltips",
       "name": "Advanced Item Tooltips",
-      "status": "active",
+      "status": "maintenance",
       "owner": "Guillaume + Codex",
       "mission": "Mission/advanced-item-tooltips-3.2.md",
-      "nextGate": "Confirm the white Ohm rune property block in game, then keep public cross-mod compatibility as a separate publication gate.",
+      "nextGate": "Keep the validated personal BKVince 2.2.0 build frozen while public cross-mod compatibility proceeds in its separate workstream.",
       "include": [
         "Mission/advanced-item-tooltips-3.2.md",
         "data-BKVince/BKVince.mpq/data/local/lng/strings/item-gems.json",
         "data-BKVince/BKVince.mpq/data/local/lng/strings-legacy/item-gems.json",
         "data-BKVince/d2rloader/plugins/AdvancedItemTooltips-src/**",
         "data-BKVince/d2rloader/plugins/AdvancedItemTooltips.dll*"
+      ]
+    },
+    {
+      "id": "advanced-item-tooltips-public-intermod",
+      "name": "Advanced Item Tooltips Public Intermod",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/advanced-item-tooltips-public-intermod.md",
+      "nextGate": "Audit the current table loader and formalize deterministic vanilla, BKVince and synthetic cross-mod fixtures before creating public source, configuration or archive files.",
+      "include": [
+        "Mission/advanced-item-tooltips-public-intermod.md",
+        "addons/AdvancedItemTooltips/**",
+        "scripts/reverse-engineering/advanced-item-tooltips-public*"
       ]
     },
     {
@@ -528,6 +541,7 @@
       "workstreams": [
         "extended-item-stats",
         "advanced-item-tooltips",
+        "advanced-item-tooltips-public-intermod",
         "ground-item-label-limit",
         "configurable-larzuk-sockets",
         "remote-stash",
@@ -551,6 +565,7 @@
       "workstreams": [
         "extended-item-stats",
         "advanced-item-tooltips",
+        "advanced-item-tooltips-public-intermod",
         "ground-item-label-limit",
         "configurable-larzuk-sockets",
         "remote-stash",
