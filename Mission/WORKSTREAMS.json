@@ -450,7 +450,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/base-mod-features-3.2.md",
-      "nextGate": "Map post-quest server menu offers, the authoritative Akara respec path, and a post-validation/pre-mutation payment seam before implementing quests.repeatableServices.",
+      "nextGate": "Map a post-validation/pre-mutation payment seam for Charsi, Larzuk and Anya, then prove localized level-based price rendering before implementing quests.repeatableServices.",
       "include": [
         "Mission/base-mod-features-3.2.md",
         "addons/CharmZone/**",

@@ -365,20 +365,48 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   appels pour chacun de ces trois services et ne couvre pas Akara. Il remplace
   donc la consommation des charges gratuites; il ne constitue ni un paiement,
   ni une nouvelle offre NPC après la quête.
-- Le client possède déjà les actions et panneaux natifs nécessaires : respec
-  combiné à `0x109200` avec le texte 11168, socketing à `0x109300`,
-  personalization à `0x109400` et imbue à `0x109500`. Les labels localisés
-  D2R existent déjà; BaseMod 1.13 proposait séparément Reset Stats et Reset
-  Skills, mais cette séparation ne correspond pas au service natif D2R 3.2.
+- Le client possède déjà les actions et panneaux natifs nécessaires : imbue à
+  `0x109100`, respec combiné à `0x109200` avec le texte 11168, socketing à
+  `0x109300` et personalization à `0x109400`. Les labels localisés D2R existent
+  déjà; BaseMod 1.13 proposait séparément Reset Stats et Reset Skills, mais
+  cette séparation ne correspond pas au service natif D2R 3.2. La précédente
+  attribution de l'imbue à `0x109500` était erronée : ce bloc enregistre Hire.
+- `CLIENT_BuildNpcInteractionMenu 0x1147A0` construit le menu à partir du
+  registre natif de 72 octets par NPC. Pour l'entrée texte 11168, le bloc
+  `0x114C14..0x114C79` lit les flags `RewardGranted=0` et `RewardPending=1` de
+  la quête `0x29` dans la difficulté courante : une charge consommée saute
+  l'ajout, une charge pending conserve l'entrée et son callback. L'« émission
+  serveur du menu » supposée précédemment est donc corrigée : la visibilité est
+  filtrée côté client à partir des quest flags synchronisés; le clic reste
+  validé côté serveur.
+- Le callback affirmatif `0x1130D0` envoie exactement cinq octets, opcode
+  `0x39` suivi du GUID NPC. Une lecture runtime contrôlée du build 92777 prouve
+  que la case `0x39` du tableau serveur à `D2R+0x1D2A790` pointe vers
+  `D2GAME_PACKETCALLBACK_Rcv0x39_ResetStatsAndSkillsWithNpc 0x4B2530`; les
+  cases voisines `0x38`, `0x41` et `0x51` concordent avec leurs callbacks déjà
+  gouvernés. Le handler exige la taille 5, valide l'interaction/NPC et exige
+  `RewardPending` pour la quête désignée par le service Akara.
+- La dernière validation Akara précède immédiatement l'appel à
+  `D2GAME_PLAYER_ResetStatsAndSkills 0x580F20` à `0x4B2A23`. Cette transaction
+  combinée appelle `D2GAME_PLAYER_ResetSkills 0x4360F0`, qui rembourse les
+  ranks dans le stat 5, puis `D2GAME_PLAYER_ResetBaseStats 0x52DDF0`, qui remet
+  Strength/Energy/Dexterity/Vitality aux bases de classe et rembourse le stat 4.
+  Aucune mutation de stats ou skills ne précède cette couture.
+- Après le respec gratuit, `QUESTS_ConsumeAkaraRespecReward 0x5D9AE0` pose
+  `RewardGranted` et efface `RewardPending` pour la quête `0x29`. Un repeat paid
+  doit donc débiter l'or après la validation finale et avant `0x580F20`, puis
+  sauter `0x5D9AE0`; la première récompense native doit garder ce bookkeeping
+  strictement inchangé.
 - Le moteur serveur partagé de transaction NPC/item commence à `0x4FC230`. Il
   résout l'item demandé et contient les chemins Charsi, Larzuk et Anya, mais sa
   sélection d'opération et son ABI complet ne sont pas encore assez prouvés
   pour en faire un hook. Le chemin opcode `0x34` est aussi partagé avec MassID.
-- La couture sûre reste à identifier après validation de l'objet mais avant sa
-  mutation : débiter plus tôt pourrait facturer un objet refusé, et débiter
-  plus tard permettrait une mutation gratuite en cas d'échec. L'offre serveur
-  des entrées NPC après consommation, le chemin Akara autoritaire et l'affichage
-  dynamique du prix restent également ouverts.
+- La couture Akara est désormais prouvée, mais celle des trois services d'objet
+  reste à identifier après validation de l'objet et avant sa mutation : débiter
+  plus tôt pourrait facturer un objet refusé, et débiter plus tard permettrait
+  une mutation gratuite en cas d'échec. L'affichage dynamique et localisé du
+  prix reste aussi ouvert; modifier le string id global ne suffit pas, car le
+  prix dépend du niveau du joueur qui ouvre le menu.
 
 ## Discipline de promotion
 

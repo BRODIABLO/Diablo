@@ -1,6 +1,6 @@
 # Mission courante
 
-Dernière mise à jour : 31 juillet 2026
+Dernière mise à jour : 1 août 2026
 
 ## Priorité active
 
@@ -13,14 +13,16 @@ le réglage natif BKVince persiste déjà Players 8 et `uniqueitems.txt` porte d
 `quests.repeatableServices`; PotionAutoPickup reste un audit de mesure.
 Le premier relevé natif prouve le débit atomique de l'or, les consommations
 gratuites Charsi/Larzuk/Anya par difficulté et la présence des quatre panneaux
-client 3.2; aucun code n'est encore implanté.
+client 3.2. Le chemin Akara est maintenant prouvé de bout en bout : filtre du
+menu par quest flags, paquet client 0x39, callback serveur, transaction combinée
+stats/skills et bookkeeping de la charge gratuite. Aucun code n'est implanté.
 
 ## Prochain gate
 
-Identifier sous le build 92777 l'émission serveur des menus après consommation,
-le chemin autoritaire Akara/respec et une couture de paiement située après la
-validation de l'objet mais avant sa mutation. Prouver ensuite l'affichage du prix
-et la coexistence avec les owners PluginPack avant toute implantation.
+Identifier sous le build 92777 une couture de paiement après validation mais
+avant mutation pour Charsi, Larzuk et Anya. Prouver ensuite le formatage localisé
+du prix dépendant du niveau et la coexistence avec les owners PluginPack avant
+toute implantation.
 
 ## Frontière Git
 

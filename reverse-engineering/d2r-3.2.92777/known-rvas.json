@@ -325,11 +325,11 @@
     },
     {
       "rva": "0x36AE00",
-      "name": "ITEMS_AttachPlacedItem",
+      "name": "ITEMS_IsCharmUsable",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/transmogrify-restoration-3.2.md",
-      "notes": "Performs the native post-placement attachment step for an item and its player. Transmogrify follows the same finalize, attach and conditional refresh sequence as the proven 92777 item-grant path."
+      "source": "Mission/base-mod-features-3.2.md",
+      "notes": "Returns whether a charm can contribute its effects, with proven x64 ABI (item, player) -> int32. It rejects broken/disabled items, requires ITEMTYPE_CHARM 13, requires inventory page byte ItemData+0x55 to be zero and delegates attribute/level requirements to 0x36BC50. The item-grant path calls it after placement and refreshes the player inventory only when it returns nonzero. BaseMod 1.13d replaces the corresponding legacy D2Common ordinal 10415 at RVA 0x47090 for CharmZone; CharmZone 0.3.1 calls the native predicate first and then filters it by full configured-zone containment without mutating stat-list ownership. Runtime validation proved +20 fire resistance outside/inside/outside as 0/20/0."
     },
     {
       "rva": "0x36CC80",
@@ -1892,14 +1892,6 @@
       "notes": "Central item-icon renderer with proven x64 ABI (item, packedScreenXY, scale, renderParams) -> void; packedScreenXY stores the screen-space top-left x in the low dword and y in the high dword. It has four direct callers, including the inventory loop call at 0x2A776C, and its 19-byte prologue is unique in build 92777. D2RLoader's inline trampoline prevents reliable _ReturnAddress filtering, so CharmZone leaves the native renderer unchanged and accepts only item pointers previously classified as inactive by its native charm-eligibility hook."
     },
     {
-      "rva": "0x36AE00",
-      "name": "ITEMS_IsCharmUsable",
-      "kind": "function",
-      "confidence": "high",
-      "source": "Mission/base-mod-features-3.2.md",
-      "notes": "Returns whether a charm can contribute its effects, with proven x64 ABI (item, player) -> int32. It rejects broken/disabled items, requires ITEMTYPE_CHARM 13, requires inventory page byte ItemData+0x55 to be zero and delegates attribute/level requirements to 0x36BC50. The item-grant path calls it after placement and refreshes the player inventory only when it returns nonzero. BaseMod 1.13d replaces the corresponding legacy D2Common ordinal 10415 at RVA 0x47090 for CharmZone; CharmZone 0.3.1 calls the native predicate first and then filters it by full configured-zone containment without mutating stat-list ownership. Runtime validation proved +20 fire resistance outside/inside/outside as 0/20/0."
-    },
-    {
       "rva": "0x5416D0",
       "name": "D2GAME_NPC_TryDeductGold",
       "kind": "function",
@@ -1930,6 +1922,62 @@
       "confidence": "high",
       "source": "Mission/base-mod-features-3.2.md",
       "notes": "Consumes Larzuk's native socket reward for the current difficulty with observed ABI (game, player) -> void. It resolves quest id 0x23 and uses the governed quest-flag set, clear and check helpers; BKVince's current infinite-reward patch suppresses its two authoritative callers. Its strict 32-byte entry signature is unique in build 92777."
+    },
+    {
+      "rva": "0x1147A0",
+      "name": "CLIENT_BuildNpcInteractionMenu",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/base-mod-features-3.2.md",
+      "notes": "Builds the active NPC interaction menu from the native 72-byte-per-NPC action registry. For the Reset Stat/Skill Points entry identified by localized string id 11168, the branch at 0x114C14 reads current-difficulty quest 0x29 RewardGranted and RewardPending flags: a consumed reward is omitted, while a pending reward is added with the registered callback. This is a client visibility gate only; opcode 0x39 remains server-authoritative."
+    },
+    {
+      "rva": "0x1130D0",
+      "name": "CLIENT_NpcMenuAction_ResetStatsAndSkills",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/base-mod-features-3.2.md",
+      "notes": "Affirmative callback for the native Reset Stat/Skill Points confirmation. It closes the modal, reads the current NPC GUID, and calls CLIENT_SendFiveByteNpcCommandPacket at 0x11311A with opcode 0x39 and that GUID. The action is registered for Akara by the 0x109200 initializer under localized string id 11168."
+    },
+    {
+      "rva": "0x4B2530",
+      "name": "D2GAME_PACKETCALLBACK_Rcv0x39_ResetStatsAndSkillsWithNpc",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/base-mod-features-3.2.md",
+      "notes": "Authoritative server callback with observed ABI (game, player, packet, packetSize) -> int32. A controlled 92777 runtime read proved slot 0x39 of the server callback table at D2R+0x1D2A790 points here. It requires exactly five bytes, decodes the NPC GUID at +1, validates the interaction and NPC service record, and for Akara requires current-difficulty quest 0x29 RewardPending before calling D2GAME_PLAYER_ResetStatsAndSkills at 0x4B2A23. Native first-use bookkeeping follows through QUESTS_ConsumeAkaraRespecReward."
+    },
+    {
+      "rva": "0x580F20",
+      "name": "D2GAME_PLAYER_ResetStatsAndSkills",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/base-mod-features-3.2.md",
+      "notes": "Native combined respec transaction with observed ABI (game, player) -> int32. Its only direct caller is the authoritative opcode 0x39 callback at 0x4B2A23. It resets and refunds invested skills through D2GAME_PLAYER_ResetSkills, resets base Strength/Energy/Dexterity/Vitality through D2GAME_PLAYER_ResetBaseStats, refreshes inventory and derived state, attaches the native sound, and returns one."
+    },
+    {
+      "rva": "0x4360F0",
+      "name": "D2GAME_PLAYER_ResetSkills",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/base-mod-features-3.2.md",
+      "notes": "Iterates the player's class skill list, reads each invested base level, removes the skill ranks through the native reset/update path, sums the refunded ranks, and adds that total to stat id 5 (unspent skill points). D2GAME_PLAYER_ResetStatsAndSkills calls it first at 0x580F30."
+    },
+    {
+      "rva": "0x52DDF0",
+      "name": "D2GAME_PLAYER_ResetBaseStats",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/base-mod-features-3.2.md",
+      "notes": "Resets player base stat ids 0 through 3 to the class starting Strength, Energy, Dexterity and Vitality values, refunds the removed points into stat id 4, and routes the dependent life, mana and stamina recalculations through native helpers. D2GAME_PLAYER_ResetStatsAndSkills calls it at 0x580F3B."
+    },
+    {
+      "rva": "0x5D9AE0",
+      "name": "QUESTS_ConsumeAkaraRespecReward",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/base-mod-features-3.2.md",
+      "notes": "Performs native post-respec bookkeeping for current-difficulty quest 0x29 with observed ABI (game, player) -> void. It sets RewardGranted, clears RewardPending and then evaluates an additional quest flag before the remaining quest-event path. The opcode 0x39 callback is its only direct caller and invokes it only when the NPC service record carries a nonzero quest field. Paid repeats must bypass this routine to preserve quest flags bit-exactly."
     }
   ]
 }

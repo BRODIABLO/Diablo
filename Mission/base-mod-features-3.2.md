@@ -1,6 +1,6 @@
 # BaseMod 3.2 — Charm Zone, services répétables et démarrage Players
 
-Dernière mise à jour : 31 juillet 2026
+Dernière mise à jour : 1 août 2026
 
 ## Décisions produit
 
@@ -88,6 +88,26 @@ n'est pas reproduite.
   socketing, personalization et imbue. Le service Akara natif réinitialise
   ensemble stats et skills; les deux commandes séparées de BaseMod 1.13 ne sont
   donc pas retenues sans nouveau besoin produit explicite.
+- `CLIENT_BuildNpcInteractionMenu 0x1147A0` filtre l'entrée Akara texte 11168 à
+  partir des flags `RewardGranted` et `RewardPending` de la quête `0x29` dans la
+  difficulté courante. Une récompense consommée masque l'entrée; la disponibilité
+  du menu est donc une construction client fondée sur les flags synchronisés,
+  pas une entrée réémise dynamiquement par le serveur.
+- Le callback client `0x1130D0` envoie un paquet de cinq octets `{0x39, npcGuid}`.
+  Une lecture runtime contrôlée du tableau des callbacks serveur 92777 prouve que
+  sa case `0x39` pointe sur `0x4B2530`; les cases témoins `0x38`, `0x41` et
+  `0x51` concordent avec leurs handlers déjà gouvernés. Ce handler revalide la
+  taille, le NPC, l'interaction et `RewardPending` avant toute mutation.
+- La transaction combinée `D2GAME_PLAYER_ResetStatsAndSkills 0x580F20` est
+  appelée à `0x4B2A23`, immédiatement après la dernière validation serveur. Elle
+  rembourse les skills via `0x4360F0` et les quatre stats de base via `0x52DDF0`.
+  Le bookkeeping gratuit `0x5D9AE0` vient seulement après et pose
+  `RewardGranted`/efface `RewardPending` pour la quête `0x29`.
+- Pour Akara, la couture payante est donc prouvée : conserver le premier usage
+  vanilla, autoriser explicitement un repeat déjà consommé, débiter avec
+  `D2GAME_NPC_TryDeductGold` après validation et avant `0x580F20`, puis ne pas
+  appeler `0x5D9AE0` sur ce repeat. Un hook de `0x580F20` seul est insuffisant :
+  il ne peut ni réafficher l'entrée, ni distinguer l'usage gratuit du repeat.
 - Le moteur de transaction NPC/item `0x4FC230` contient les chemins Charsi,
   Larzuk et Anya, mais il est partagé et son point post-validation/pré-mutation
   n'est pas encore prouvé. Le hooker maintenant risquerait une facturation sur
@@ -148,10 +168,13 @@ n'est pas reproduite.
 - [x] Prouver un débit d'or atomique excluant le coffre partagé.
 - [x] Identifier la consommation gratuite Charsi, Larzuk et Anya par difficulté.
 - [x] Confirmer la disponibilité des quatre actions/panneaux natifs côté client.
-- [ ] Identifier l'émission serveur des menus après consommation et le chemin
+- [x] Identifier le filtre client post-consommation et le chemin serveur
   autoritaire Akara/respec.
-- [ ] Localiser une couture de paiement après validation mais avant mutation de
-  l'objet, puis prouver l'affichage localisé du prix.
+- [x] Localiser pour Akara une couture de paiement après validation et avant la
+  transaction combinée de reset, sans réécriture des quest flags.
+- [ ] Localiser la couture équivalente après validation mais avant mutation pour
+  Charsi, Larzuk et Anya.
+- [ ] Prouver l'affichage dynamique et localisé du prix calculé au niveau.
 - [ ] Intégrer `quests.repeatableServices` sans collision avec les chemins
   Charsi/Larzuk existants ni avec ConfigurableCharsiReward.
 - [ ] Remplacer le patch de récompenses infinies seulement après matrice complète.
@@ -162,6 +185,21 @@ n'est pas reproduite.
   prérequis d'architecture.
 - [ ] Mesurer PotionAutoPickup avec 0, 100 et 500 objets au sol; n'ouvrir une
   optimisation que si le coût dépasse 1 % CPU processus ou 0,5 ms au p99.
+
+## Architecture Akara retenue pour l'incubation
+
+1. `disabled` laisse entièrement passer le comportement vanilla : une récompense
+   gratuite pending, puis aucune nouvelle offre après consommation.
+2. `free` et `paid` ne changent jamais la première charge native. Après
+   `RewardGranted`, ils autorisent une entrée répétable côté client et la même
+   transaction serveur 0x39; seul `paid` exige le débit atomique.
+3. Le serveur recalcule le prix au clic. Sur fonds insuffisants, il retourne avant
+   `0x580F20`; aucune stat, aucun skill et aucun quest flag ne changent.
+4. Un repeat réussi appelle `0x580F20` mais pas `0x5D9AE0`. Les flags de la quête
+   `0x29` restent donc bit-exacts, par difficulté, tandis que l'usage vanilla
+   conserve tout son bookkeeping natif.
+5. Le libellé prix doit être construit au moment où `0x1147A0` ajoute l'entrée;
+   le string id 11168 global reste intact pour le mode vanilla.
 
 ## Architecture CharmZone retenue
 
@@ -179,10 +217,10 @@ n'est pas reproduite.
 
 ## Prochain gate
 
-Cartographier l'émission serveur des entrées NPC après consommation, le chemin
-autoritaire Akara/respec et la couture post-validation/pré-mutation des trois
-services d'objet. Le débit atomique et les consommations gratuites sont prouvés;
-aucun code `quests.repeatableServices` ne sera écrit avant d'avoir aussi prouvé
-que le paiement ne peut ni facturer un objet refusé, ni laisser une mutation
-gratuite, et qu'il coexiste avec ConfigurableCharsiReward, ForceLarzukSockets,
-MassID et le patch infini actuel.
+Cartographier la couture post-validation/pré-mutation des trois services d'objet,
+puis le point de formatage localisé d'un prix dépendant du niveau. Le chemin
+Akara est désormais prouvé de bout en bout, mais aucun code
+`quests.repeatableServices` ne sera écrit avant d'avoir aussi démontré que
+Charsi, Larzuk et Anya ne peuvent ni facturer un objet refusé, ni laisser une
+mutation gratuite, et que l'ensemble coexiste avec ConfigurableCharsiReward,
+ForceLarzukSockets, MassID et le patch infini actuel.
