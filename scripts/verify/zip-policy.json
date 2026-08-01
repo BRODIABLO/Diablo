@@ -113,6 +113,15 @@
         "transmogrify-outputs.txt",
         "transmogrify.toml"
       ]
+    },
+    "addons/CharmZone/CharmZone.zip": {
+      "kind": "plugin",
+      "legacy": true,
+      "reason": "The incubated standalone plugin intentionally uses TOML for its rectangular-zone configuration.",
+      "entries": [
+        "CharmZone.dll",
+        "charm-zone.toml"
+      ]
     }
   }
 }

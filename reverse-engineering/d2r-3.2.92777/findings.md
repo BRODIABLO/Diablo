@@ -304,6 +304,82 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   écrire ce RVA et valide la plage interne unique `0x2A7820` (16 octets,
   une occurrence `.text`) afin de rester strict sans refuser le chaînage.
 
+## CharmZone — zone de charmes autoritaire et rendu coopératif
+
+- `ITEMS_CapturePacketState 0x382D20` expose l'ABI
+  `(stateOut, item) -> stateOut`. La sortie de 16 octets contient le mode à
+  `+0`, la page d'inventaire à `+4`, `x/y` en deux words à `+8/+10` et la page
+  de noeud à `+12`. L'ordre des arguments est prouvé par les mouvements d'entrée
+  `RCX -> RSI` pour la sortie et `RDX -> RBX` pour l'item. L'ancien ordre inversé
+  écrivait 16 octets dans l'unité item; il a été corrigé avant la version 0.3.1.
+- `ITEMS_GetDimensions 0x371850` complète cette position par la largeur et la
+  hauteur sur un octet. La règle BKVince peut donc exiger le containment complet
+  dans `x=0..10, y=4..7` sans lire de champ privé d'`ItemData`.
+- `ITEMS_IsCharmUsable 0x36AE00` est l'équivalent 92777 exact du prédicat que
+  BaseMod remplaçait dans D2Common 1.13d, ordinal 10415/RVA `0x47090`. Son ABI
+  est `(item, player) -> int32` et sa signature stricte de 32 octets est unique.
+  CharmZone appelle d'abord l'original puis refuse seulement les charms qui ne
+  tiennent pas entièrement dans la zone. Il ne modifie ni owner ni statlist.
+- `STATLIST_MergeStatLists 0x2F81A0`, `STATLIST_GetOwner 0x2F8120` et
+  `STATLIST_ExpireUnitStatlist 0x2F8290` restent gouvernés, mais ne sont plus
+  possédés par CharmZone. Le prédicat natif offre une surface plus étroite et
+  reproduit directement l'architecture BaseMod sans toucher au cycle de vie
+  partagé des statlists.
+- `UI_RenderItemIcon 0x15BB80` possède l'ABI
+  `(item, packedScreenXY, scale, renderParams) -> void`, avec `x` dans le dword
+  bas et `y` dans le dword haut; ces valeurs sont le coin supérieur gauche en
+  coordonnées écran. Ses quatre callers directs sont `0x2267E9`, `0x2A739B`,
+  `0x2A776C` et `0x2CE636`. Le trampoline inline D2RLoader masque le callsite à
+  `_ReturnAddress()`: CharmZone filtre donc par un cache lock-free borné des
+  pointeurs refusés par `ITEMS_IsCharmUsable`, puis déduplique chaque objet dans
+  la file visuelle de la frame.
+- Le constructeur de tooltip item `0x2BD480` reste volontairement intact : il
+  appartient déjà à la chaîne Transmogrify, AdvancedItemTooltips et
+  ExtendedItemStats. FloatingDamage demeure aussi l'unique propriétaire du
+  hook D3D12/ImGui. Son callback historique reste réservé à ExtendedItemStats;
+  une API de registre multi-overlay rétrocompatible fournit à CharmZone la
+  teinte rouge et le message de survol sans second renderer.
+- Le manifeste PluginPack épinglé au commit
+  `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` ne hooke ni `0x36AE00`, ni
+  `0x382D20`, ni `0x15BB80`. Le cold start mod-local 92777 charge huit plugins,
+  zéro échec; un charm synthétique de résistance feu +20 produit exactement
+  `0 -> 20 -> 0` hors zone, dans la zone, puis hors zone. La version 0.3.1
+  affiche le masque rouge aligné, le message au survol, et finit avec
+  `classification failures=0`, `placement failures=0`, `drops=0`.
+
+## Services de quête répétables — paiement et charges natives
+
+- `D2GAME_NPC_TryDeductGold 0x5416D0` reçoit `(game, player, amount)` et
+  retourne un booléen. Il additionne l'or porté (`STAT_GOLD=14`) et le coffre
+  personnel (`STAT_GOLDBANK=15`), refuse sans aucune mutation si le total est
+  insuffisant, puis débite l'or porté avant le reliquat du coffre. Le coffre
+  partagé n'est jamais lu. Son prologue strict de 32 octets est unique et le
+  handler Repair All l'appelle à `0x53FF7B`.
+- Les consommations gratuites sont des routines serveur distinctes par service
+  et difficulté : Charsi `0x5DA1C0` utilise la quête 3, Anya `0x547C60` la
+  quête `0x26`, et Larzuk `0x548B60` la quête `0x23`. Leur ABI observée est
+  `(game, player) -> void`; chacune emploie les mêmes helpers gouvernés de
+  lecture, pose et effacement des quest flags. Leurs signatures strictes de 32
+  octets sont toutes uniques dans le `.text` 92777.
+- Le patch BKVince `infinite-quest-rewards.json` neutralise actuellement deux
+  appels pour chacun de ces trois services et ne couvre pas Akara. Il remplace
+  donc la consommation des charges gratuites; il ne constitue ni un paiement,
+  ni une nouvelle offre NPC après la quête.
+- Le client possède déjà les actions et panneaux natifs nécessaires : respec
+  combiné à `0x109200` avec le texte 11168, socketing à `0x109300`,
+  personalization à `0x109400` et imbue à `0x109500`. Les labels localisés
+  D2R existent déjà; BaseMod 1.13 proposait séparément Reset Stats et Reset
+  Skills, mais cette séparation ne correspond pas au service natif D2R 3.2.
+- Le moteur serveur partagé de transaction NPC/item commence à `0x4FC230`. Il
+  résout l'item demandé et contient les chemins Charsi, Larzuk et Anya, mais sa
+  sélection d'opération et son ABI complet ne sont pas encore assez prouvés
+  pour en faire un hook. Le chemin opcode `0x34` est aussi partagé avec MassID.
+- La couture sûre reste à identifier après validation de l'objet mais avant sa
+  mutation : débiter plus tôt pourrait facturer un objet refusé, et débiter
+  plus tard permettrait une mutation gratuite en cas d'échec. L'offre serveur
+  des entrées NPC après consommation, le chemin Akara autoritaire et l'affichage
+  dynamique du prix restent également ouverts.
+
 ## Discipline de promotion
 
 Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de

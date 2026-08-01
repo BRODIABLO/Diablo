@@ -430,6 +430,22 @@
       ]
     },
     {
+      "id": "base-mod-features",
+      "name": "BaseMod 3.2 Features",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/base-mod-features-3.2.md",
+      "nextGate": "Map post-quest server menu offers, the authoritative Akara respec path, and a post-validation/pre-mutation payment seam before implementing quests.repeatableServices.",
+      "include": [
+        "Mission/base-mod-features-3.2.md",
+        "addons/CharmZone/**",
+        "addons/FloatingDamage/**",
+        "data-BKVince/d2rloader/config/charm-zone.toml",
+        "data-BKVince/d2rloader/plugins/CharmZone-src/**",
+        "data-BKVince/d2rloader/plugins/CharmZone.dll*"
+      ]
+    },
+    {
       "id": "tde-inspiration-bkvince",
       "name": "TDE Inspiration for BKVince",
       "status": "active",
@@ -468,17 +484,23 @@
   "sharedPaths": [
     {
       "pattern": ".gitignore",
-      "workstreams": ["*"],
+      "workstreams": [
+        "*"
+      ],
       "reason": "Repository-wide local and generated file exclusions shared by every workstream."
     },
     {
       "pattern": "README.md",
-      "workstreams": ["*"],
+      "workstreams": [
+        "*"
+      ],
       "reason": "Repository-wide workspace orientation shared by every workstream."
     },
     {
       "pattern": "tools/**",
-      "workstreams": ["*"],
+      "workstreams": [
+        "*"
+      ],
       "reason": "Cross-workspace local modding utilities and their governed provenance documentation."
     },
     {
@@ -501,7 +523,8 @@
         "ground-item-label-limit",
         "gamble-screen-limit",
         "repair-costs-cap",
-        "eezstreet-pluginpack-integration"
+        "eezstreet-pluginpack-integration",
+        "base-mod-features"
       ],
       "reason": "The single PluginPack configuration contains independent feature blocks owned by concurrent integration workstreams."
     },
@@ -557,9 +580,10 @@
       "pattern": "scripts/verify/zip-policy.json",
       "workstreams": [
         "workstream-registry",
-        "mass-id"
+        "mass-id",
+        "base-mod-features"
       ],
-      "reason": "Shared allowlist for public plugin archive contents."
+      "reason": "Shared allowlist for public plugin archive contents, including the CharmZone package."
     },
     {
       "pattern": "scripts/verify/repo-policy.mjs",
@@ -589,7 +613,8 @@
         "book-of-lore",
         "pspell-framework",
         "char-start",
-        "mass-id"
+        "mass-id",
+        "base-mod-features"
       ],
       "reason": "Governed native evidence registry shared by native plugin missions."
     },
@@ -613,7 +638,8 @@
         "book-of-lore",
         "pspell-framework",
         "char-start",
-        "mass-id"
+        "mass-id",
+        "base-mod-features"
       ],
       "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."
     },
@@ -646,6 +672,31 @@
         "remote-stash"
       ],
       "reason": "The deployed Bulk Skill binary exports the UI message broker consumed by RemoteStash."
+    },
+    {
+      "pattern": "data-BKVince/d2rloader/plugins/plugin-quests.dll",
+      "workstreams": [
+        "configurable-larzuk-sockets",
+        "eezstreet-pluginpack-integration",
+        "base-mod-features"
+      ],
+      "reason": "The common plugin-quests binary packages Larzuk rules and the independent repeatable-services feature."
+    },
+    {
+      "pattern": "data-BKVince/d2rloader/plugins/FloatingDamage-src/**",
+      "workstreams": [
+        "extended-item-stats",
+        "base-mod-features"
+      ],
+      "reason": "FloatingDamage owns the single D3D12/ImGui host and exposes a backward-compatible multi-overlay registry for CharmZone."
+    },
+    {
+      "pattern": "data-BKVince/d2rloader/plugins/FloatingDamage.dll",
+      "workstreams": [
+        "extended-item-stats",
+        "base-mod-features"
+      ],
+      "reason": "The deployed render host packages both the legacy ExtendedItemStats callback and the independent CharmZone overlay registry."
     }
   ]
 }

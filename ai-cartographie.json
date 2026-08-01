@@ -1,8 +1,8 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-07-31T16:19:00.9247719+00:00",
+    "generatedAt":  "2026-08-01T08:05:04.7896919+00:00",
     "root":  {
-                 "name":  "Diablo",
+                 "name":  "base-mod-cadastre-82393821aa644d0bb1f7fdf91094ed44",
                  "path":  ".",
                  "kind":  "directory",
                  "meta":  {
@@ -384,6 +384,46 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "CharmZone",
+                                                           "path":  "addons/CharmZone",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-standalone-d2rloader-addon",
+                                                                        "summary":  "Plugin hybride RuffnecKk pour D2RLoader 3.2.92777 qui désactive les effets des charms placés hors de la zone BKVince et les signale visuellement.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "experimental"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "package",
+                                                                                "path":  "addons/CharmZone/package",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "CharmZone.dll",
+                                                                                                     "path":  "addons/CharmZone/package/CharmZone.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "charm-zone.toml",
+                                                                                                     "path":  "addons/CharmZone/package/charm-zone.toml",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "CharmZone.zip",
+                                                                                "path":  "addons/CharmZone/CharmZone.zip",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/CharmZone/README.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "ConfigurableCharsiReward",
                                                            "path":  "addons/ConfigurableCharsiReward",
                                                            "kind":  "directory",
@@ -552,10 +592,21 @@
                                                            "name":  "FloatingDamage",
                                                            "path":  "addons/FloatingDamage",
                                                            "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-standalone-d2rloader-addon",
+                                                                        "summary":  "Archive publique du plugin hybride FloatingDamage, hôte graphique partagé par les overlays RuffnecKk dont CharmZone.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "active"
+                                                                    },
                                                            "children":  [
                                                                             {
                                                                                 "name":  "FloatingDamage.zip",
                                                                                 "path":  "addons/FloatingDamage/FloatingDamage.zip",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/FloatingDamage/README.md",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
@@ -13911,6 +13962,11 @@
                                                                                 "kind":  "directory",
                                                                                 "children":  [
                                                                                                  {
+                                                                                                     "name":  "charm-zone.toml",
+                                                                                                     "path":  "data-BKVince/d2rloader/config/charm-zone.toml",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "d2rloader.toml",
                                                                                                      "path":  "data-BKVince/d2rloader/config/d2rloader.toml",
                                                                                                      "kind":  "file"
@@ -14142,12 +14198,12 @@
                                                                                                      "kind":  "directory",
                                                                                                      "meta":  {
                                                                                                                   "role":  "x-plugin-incubation-source",
-                                                                                                                   "summary":  "Sources du plugin autonome Book of Lore, avec configuration TOML stricte, politique testable et témoin client natif 92777.",
+                                                                                                                  "summary":  "Sources du plugin autonome Book of Lore, avec configuration TOML stricte, politique testable et témoin client natif 92777.",
                                                                                                                   "agentAccess":  "read-write",
                                                                                                                   "status":  "experimental",
                                                                                                                   "notes":  [
                                                                                                                                 "Plugin autonome permanent RuffnecKk, sans propriétaire ni merge PluginPack.",
-                                                                                                                                    "Le jalon 0.2.0 implante un témoin client Tower Tome fail-closed; la sélection serveur autoritaire et la validation runtime restent à prouver."
+                                                                                                                                "Le jalon 0.2.0 implante un témoin client Tower Tome fail-closed; la sélection serveur autoritaire et la validation runtime restent à prouver."
                                                                                                                             ]
                                                                                                               },
                                                                                                      "children":  [
@@ -14268,6 +14324,48 @@
                                                                                                                       {
                                                                                                                           "name":  "README.md",
                                                                                                                           "path":  "data-BKVince/d2rloader/plugins/CharmInventoryAuras-src/README.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "CharmZone-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/CharmZone-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "charm_zone_config.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/CharmZone-src/charm_zone_config.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "charm_zone_policy.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/CharmZone-src/charm_zone_policy.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/CharmZone-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/CharmZone-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/CharmZone-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "policy_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/CharmZone-src/policy_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "README.md",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/CharmZone-src/README.md",
                                                                                                                           "kind":  "file"
                                                                                                                       }
                                                                                                                   ]
@@ -15289,6 +15387,11 @@
                                                                                                  {
                                                                                                      "name":  "CharmInventoryAuras.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/CharmInventoryAuras.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "CharmZone.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/CharmZone.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -31122,6 +31225,16 @@
                                                            "name":  "advanced-item-tooltips-public-intermod.md",
                                                            "path":  "Mission/advanced-item-tooltips-public-intermod.md",
                                                            "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "base-mod-features-3.2.md",
+                                                           "path":  "Mission/base-mod-features-3.2.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-mission-native-plugin",
+                                                                        "summary":  "Décisions produit, preuves 92777 et gates de Charm Zone, des services répétables, du démarrage Players et des audits BaseMod 3.2.",
+                                                                        "agentAccess":  "read-write"
+                                                                    }
                                                        },
                                                        {
                                                            "name":  "book-of-lore-3.2.md",

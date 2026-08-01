@@ -61,7 +61,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "floating-damage",
     .name = "Floating Damage",
-    .version = "1.0.0",
+    .version = "1.1.0",
     .author = "RuffnecKk",
     .description = "Shows floating combat numbers and rolling damage per second.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -438,7 +438,7 @@ auto ConsoleCommand(
         std::snprintf(
             message,
             sizeof(message),
-            "FloatingDamage 1.0.0: enabled=%s; overlay=%s; captured=%llu; displayed=%llu; active=%zu; pending=%zu; font=%d.",
+            "FloatingDamage 1.1.0: enabled=%s; overlay=%s; captured=%llu; displayed=%llu; active=%zu; pending=%zu; font=%d.",
             config.enabled ? "true" : "false",
             OverlayReady.load(std::memory_order_acquire) ? "ready" : "waiting",
             static_cast<unsigned long long>(CapturedEvents.load(std::memory_order_relaxed)),
@@ -485,6 +485,58 @@ FloatingDamageRegisterExternalOverlay(
     return true;
 }
 
+extern "C" __declspec(dllexport) bool __cdecl
+FloatingDamageRegisterNamedExternalOverlay(
+    const char* owner,
+    D3D12::ExternalOverlayCallback callback) noexcept {
+    return D3D12::RegisterNamedExternalOverlay(owner, callback);
+}
+
+extern "C" __declspec(dllexport) void __cdecl
+FloatingDamageOverlayAddRect(
+    void* drawList,
+    float left,
+    float top,
+    float right,
+    float bottom,
+    float red,
+    float green,
+    float blue,
+    float alpha,
+    float thickness) noexcept {
+    D3D12::OverlayAddRect(
+        drawList, left, top, right, bottom,
+        red, green, blue, alpha, thickness);
+}
+
+extern "C" __declspec(dllexport) void __cdecl
+FloatingDamageOverlayAddRectFilled(
+    void* drawList,
+    float left,
+    float top,
+    float right,
+    float bottom,
+    float red,
+    float green,
+    float blue,
+    float alpha) noexcept {
+    D3D12::OverlayAddRectFilled(
+        drawList, left, top, right, bottom,
+        red, green, blue, alpha);
+}
+
+extern "C" __declspec(dllexport) void __cdecl
+FloatingDamageOverlayAddTooltip(
+    void* drawList,
+    float x,
+    float y,
+    float displayWidth,
+    float displayHeight,
+    const char* text) noexcept {
+    D3D12::OverlayAddTooltip(
+        drawList, x, y, displayWidth, displayHeight, text);
+}
+
 D2RL_PLUGIN_EXPORT auto D2RLoaderGetPluginInfo() noexcept -> const D2RL::PluginInfo* {
     return &Info;
 }
@@ -519,12 +571,13 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     if (!context->RegisterConsoleCommand(registration)) {
         context->LogWarn("FloatingDamage: console command could not be registered.");
     }
-    context->LogInfo("FloatingDamage 1.0.0 active for D2R 3.2.92777 with D2RLAN defaults.");
+    context->LogInfo("FloatingDamage 1.1.0 active for D2R 3.2.92777 with the multi-overlay host.");
     return true;
 }
 
 D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
     D3D12::SetExternalOverlayCallback(nullptr);
+    D3D12::ClearNamedExternalOverlays();
     if (Context) {
         char message[192]{};
         std::snprintf(

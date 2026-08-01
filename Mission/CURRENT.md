@@ -4,20 +4,26 @@ Dernière mise à jour : 31 juillet 2026
 
 ## Priorité active
 
-[MassID — D2R 3.2](mass-id-3.2.md)
+[BaseMod 3.2 — Charm Zone, services répétables et démarrage Players](base-mod-features-3.2.md)
 
-État : Vincent demande explicitement l’implantation du premier candidat du
-prochain lot PluginPack. L’incubation autonome vise `plugin-items.dll` sous
-`items.massIdentify`, sans rouvrir ni modifier le PR déjà soumis à eezstreet.
+État : `CharmZone.dll` 0.3.1 est compilé, empaqueté et prouvé sur le chemin
+gameplay central en runtime mod-local. L'audit ferme deux candidats sans code :
+le réglage natif BKVince persiste déjà Players 8 et `uniqueitems.txt` porte déjà
+`nolimit=1` sur les uniques ordinaires. Le prochain développement possible est
+`quests.repeatableServices`; PotionAutoPickup reste un audit de mesure.
+Le premier relevé natif prouve le débit atomique de l'or, les consommations
+gratuites Charsi/Larzuk/Anya par difficulté et la présence des quatre panneaux
+client 3.2; aucun code n'est encore implanté.
 
 ## Prochain gate
 
-Observer en jeu la matrice MassID tome vide/partiel/suffisant dans les modes
-gratuit et non gratuit, puis fermer sauvegarde/relecture et solo/hôte/joiner.
-Le build, les deux portées, la coexistence PluginPack et le ZIP strict sont verts.
+Identifier sous le build 92777 l'émission serveur des menus après consommation,
+le chemin autoritaire Akara/respec et une couture de paiement située après la
+validation de l'objet mais avant sa mutation. Prouver ensuite l'affichage du prix
+et la coexistence avec les owners PluginPack avant toute implantation.
 
 ## Frontière Git
 
-Limiter le chantier à la mission, aux preuves RE gouvernées, au source MassID,
-à son JSON autonome, à son binaire BKVince et à son futur package public. Les
-travaux Advanced Item Tooltips et les autres missions actives restent séparés.
+Limiter le premier lot à la mission, aux preuves RE gouvernées, au source
+CharmZone, à son TOML, à son binaire BKVince et à son package candidat public.
+MassID reste actif à son gate gameplay sans mélanger ses fichiers à ce chantier.

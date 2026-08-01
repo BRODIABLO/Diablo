@@ -1,0 +1,21 @@
+# CharmZone configuration for BKVince.
+# Changes take effect after a cold start.
+
+[general]
+enabled = true
+
+[zone]
+# Inventory grid dimensions and the fully active rectangle, in item cells.
+grid_width = 11
+grid_height = 8
+left = 0
+top = 4
+width = 11
+height = 4
+
+[visual]
+enabled = true
+overlay_alpha = 0.45
+# Base BKVince inventory cell size before the runtime UI scale is applied.
+cell_size = 98.0
+tooltip = "Inactive outside Charm Zone"

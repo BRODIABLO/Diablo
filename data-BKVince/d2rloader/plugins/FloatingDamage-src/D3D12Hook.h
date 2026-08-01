@@ -2,6 +2,8 @@
 
 #include <Windows.h>
 
+#include <cstdint>
+
 struct ImFont;
 
 namespace D3D12 {
@@ -12,6 +14,38 @@ using ExternalOverlayCallback = void(__cdecl*)(
 
 void SetDllModule(HMODULE module) noexcept;
 void SetExternalOverlayCallback(ExternalOverlayCallback callback) noexcept;
+bool RegisterNamedExternalOverlay(
+    const char* owner,
+    ExternalOverlayCallback callback) noexcept;
+void ClearNamedExternalOverlays() noexcept;
+void OverlayAddRect(
+    void* drawList,
+    float left,
+    float top,
+    float right,
+    float bottom,
+    float red,
+    float green,
+    float blue,
+    float alpha,
+    float thickness) noexcept;
+void OverlayAddRectFilled(
+    void* drawList,
+    float left,
+    float top,
+    float right,
+    float bottom,
+    float red,
+    float green,
+    float blue,
+    float alpha) noexcept;
+void OverlayAddTooltip(
+    void* drawList,
+    float x,
+    float y,
+    float displayWidth,
+    float displayHeight,
+    const char* text) noexcept;
 bool InstallHooks() noexcept;
 void RemoveHooks() noexcept;
 ImFont* GetFloatingDamageFont(int index) noexcept;

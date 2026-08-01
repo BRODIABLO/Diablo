@@ -70,6 +70,15 @@ std::chrono::steady_clock::time_point LastFrameTime{};
 std::atomic<float> DisplayWidth{1920.0f};
 std::atomic<float> DisplayHeight{1080.0f};
 std::atomic<ExternalOverlayCallback> ExternalOverlay{};
+constexpr std::size_t MaximumNamedOverlays = 8;
+
+struct NamedOverlayEntry {
+    std::array<char, 64> owner{};
+    ExternalOverlayCallback callback{};
+};
+
+std::mutex NamedOverlayMutex;
+std::array<NamedOverlayEntry, MaximumNamedOverlays> NamedOverlays{};
 
 std::vector<std::vector<unsigned char>> EmbeddedFontData;
 std::array<ImFont*, kFloatingDamageFontCount> FloatingFonts{};
@@ -216,6 +225,21 @@ HRESULT STDMETHODCALLTYPE HookPresent(IDXGISwapChain3* swapChain, UINT syncInter
             io.DisplaySize.y,
             Window);
     }
+    std::array<ExternalOverlayCallback, MaximumNamedOverlays> namedCallbacks{};
+    {
+        std::scoped_lock registryLock(NamedOverlayMutex);
+        for (std::size_t index = 0; index < NamedOverlays.size(); ++index) {
+            namedCallbacks[index] = NamedOverlays[index].callback;
+        }
+    }
+    for (const auto overlay : namedCallbacks) {
+        if (!overlay) continue;
+        overlay(
+            ImGui::GetForegroundDrawList(),
+            io.DisplaySize.x,
+            io.DisplaySize.y,
+            Window);
+    }
     ImGui::Render();
 
     if (FAILED(frame.allocator->Reset())) return OriginalPresent(swapChain, syncInterval, flags);
@@ -346,6 +370,116 @@ void SetDllModule(HMODULE module) noexcept {
 
 void SetExternalOverlayCallback(ExternalOverlayCallback callback) noexcept {
     ExternalOverlay.store(callback, std::memory_order_release);
+}
+
+bool RegisterNamedExternalOverlay(
+    const char* owner,
+    ExternalOverlayCallback callback) noexcept {
+    if (!owner || owner[0] == '\0') return false;
+
+    // Present owns RenderMutex while invoking callbacks. Taking it here makes
+    // unregister a synchronization point so a callback DLL may safely unload.
+    std::scoped_lock renderLock(RenderMutex);
+    std::scoped_lock registryLock(NamedOverlayMutex);
+
+    NamedOverlayEntry* empty{};
+    for (auto& entry : NamedOverlays) {
+        if (entry.callback && std::strcmp(entry.owner.data(), owner) == 0) {
+            if (callback) entry.callback = callback;
+            else entry = {};
+            return true;
+        }
+        if (!entry.callback && !empty) empty = &entry;
+    }
+    if (!callback) return true;
+    if (!empty) return false;
+
+    strncpy_s(empty->owner.data(), empty->owner.size(), owner, _TRUNCATE);
+    empty->callback = callback;
+    return true;
+}
+
+void ClearNamedExternalOverlays() noexcept {
+    std::scoped_lock renderLock(RenderMutex);
+    std::scoped_lock registryLock(NamedOverlayMutex);
+    NamedOverlays = {};
+}
+
+namespace {
+ImU32 OverlayColor(
+    float red,
+    float green,
+    float blue,
+    float alpha) noexcept {
+    return ImGui::ColorConvertFloat4ToU32(ImVec4(
+        std::clamp(red, 0.0f, 1.0f),
+        std::clamp(green, 0.0f, 1.0f),
+        std::clamp(blue, 0.0f, 1.0f),
+        std::clamp(alpha, 0.0f, 1.0f)));
+}
+} // namespace
+
+void OverlayAddRect(
+    void* drawList,
+    float left,
+    float top,
+    float right,
+    float bottom,
+    float red,
+    float green,
+    float blue,
+    float alpha,
+    float thickness) noexcept {
+    if (!drawList || right <= left || bottom <= top) return;
+    static_cast<ImDrawList*>(drawList)->AddRect(
+        ImVec2(left, top), ImVec2(right, bottom),
+        OverlayColor(red, green, blue, alpha),
+        0.0f, 0, std::max(thickness, 1.0f));
+}
+
+void OverlayAddRectFilled(
+    void* drawList,
+    float left,
+    float top,
+    float right,
+    float bottom,
+    float red,
+    float green,
+    float blue,
+    float alpha) noexcept {
+    if (!drawList || right <= left || bottom <= top) return;
+    static_cast<ImDrawList*>(drawList)->AddRectFilled(
+        ImVec2(left, top), ImVec2(right, bottom),
+        OverlayColor(red, green, blue, alpha));
+}
+
+void OverlayAddTooltip(
+    void* drawList,
+    float x,
+    float y,
+    float displayWidth,
+    float displayHeight,
+    const char* text) noexcept {
+    if (!drawList || !text || text[0] == '\0') return;
+    constexpr float Padding = 7.0f;
+    constexpr float CursorOffset = 18.0f;
+    const ImVec2 size = ImGui::CalcTextSize(text);
+    const float width = size.x + Padding * 2.0f;
+    const float height = size.y + Padding * 2.0f;
+    const float left = std::clamp(
+        x + CursorOffset, 0.0f, std::max(0.0f, displayWidth - width));
+    const float top = std::clamp(
+        y + CursorOffset, 0.0f, std::max(0.0f, displayHeight - height));
+    auto* list = static_cast<ImDrawList*>(drawList);
+    list->AddRectFilled(
+        ImVec2(left, top), ImVec2(left + width, top + height),
+        OverlayColor(0.08f, 0.02f, 0.02f, 0.94f), 4.0f);
+    list->AddRect(
+        ImVec2(left, top), ImVec2(left + width, top + height),
+        OverlayColor(1.0f, 0.2f, 0.2f, 0.95f), 4.0f);
+    list->AddText(
+        ImVec2(left + Padding, top + Padding),
+        OverlayColor(1.0f, 0.74f, 0.74f, 1.0f), text);
 }
 
 bool InstallHooks() noexcept {
