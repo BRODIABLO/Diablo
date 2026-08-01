@@ -430,6 +430,21 @@
       ]
     },
     {
+      "id": "require-item-display-for-pickup",
+      "name": "Require Item Display for Pickup",
+      "status": "paused",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/require-item-display-for-pickup-3.2.md",
+      "nextGate": "When the next plugin-items batch is explicitly opened, verify the governed 92777 workbench and prove the manual ground-pickup path, native Show Items state, controller policy, and unique hook ownership before implementation.",
+      "include": [
+        "Mission/require-item-display-for-pickup-3.2.md",
+        "addons/RequireItemDisplayForPickup/**",
+        "data-BKVince/BKVince.mpq/RequireItemDisplayForPickup.json",
+        "data-BKVince/d2rloader/plugins/RequireItemDisplayForPickup-src/**",
+        "data-BKVince/d2rloader/plugins/RequireItemDisplayForPickup.dll*"
+      ]
+    },
+    {
       "id": "base-mod-features",
       "name": "BaseMod 3.2 Features",
       "status": "active",
@@ -451,7 +466,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/tde-inspiration-bkvince.md",
-      "nextGate": "Vincent selects one catalog candidate; native candidates must then pass their own standalone-or-PluginPack destination gate before implementation.",
+      "nextGate": "Continue the sequential TDE candidate review; alt-required-ground-pickup is separately scheduled with MassID for the next plugin-items batch and remains unimplemented until its governed gates are opened.",
       "include": [
         "Mission/tde-inspiration-bkvince.md",
         "Mission/tde-inspiration-bkvince.catalog.json",
@@ -614,6 +629,7 @@
         "pspell-framework",
         "char-start",
         "mass-id",
+        "require-item-display-for-pickup",
         "base-mod-features"
       ],
       "reason": "Governed native evidence registry shared by native plugin missions."
@@ -639,6 +655,7 @@
         "pspell-framework",
         "char-start",
         "mass-id",
+        "require-item-display-for-pickup",
         "base-mod-features"
       ],
       "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."

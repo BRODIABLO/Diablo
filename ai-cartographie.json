@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-01T08:05:04.7896919+00:00",
+    "generatedAt":  "2026-08-01T08:34:25.4324711+00:00",
     "root":  {
                  "name":  "base-mod-cadastre-82393821aa644d0bb1f7fdf91094ed44",
                  "path":  ".",
@@ -31444,6 +31444,11 @@
                                                                         "summary":  "Décisions produit, audit initial et gates du plugin configurable de plafonnement des coûts de réparation chez les PNJ.",
                                                                         "agentAccess":  "read-write"
                                                                     }
+                                                       },
+                                                       {
+                                                           "name":  "require-item-display-for-pickup-3.2.md",
+                                                           "path":  "Mission/require-item-display-for-pickup-3.2.md",
+                                                           "kind":  "file"
                                                        },
                                                        {
                                                            "name":  "reverse-engineering-runtime-tooling.md",

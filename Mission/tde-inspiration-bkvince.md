@@ -99,4 +99,12 @@ Le premier chantier natif recommandé est ensuite **les services payants Charsi/
 
 ## Prochain gate du workstream
 
-Vincent choisit éventuellement un candidat précis. Le catalogue reste sinon une réserve d’inspiration parallèle, validée et sans effet sur le jeu.
+Le 1 août 2026, Vincent retient `alt-required-ground-pickup` pour un futur merge
+dans `plugin-items.dll` sous `items.requireItemDisplayForPickup`, selon l’Option A :
+le candidat rejoint MassID dans la réserve du prochain lot PluginPack sans
+remplacer la mission courante. Sa conception gouvernée est consignée dans
+`Mission/require-item-display-for-pickup-3.2.md`.
+
+Poursuivre la revue séquentielle des autres candidats TDE. Le candidat retenu
+reste sans effet sur le jeu jusqu’à l’ouverture explicite de son lot et au
+franchissement de ses gates RE, hooks, périphériques et réseau.
