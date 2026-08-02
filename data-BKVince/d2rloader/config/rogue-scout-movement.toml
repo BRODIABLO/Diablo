@@ -1,0 +1,25 @@
+# Rogue Scout Movement configuration for D2R 3.2.92777.
+# Mod-local configuration takes priority over the global fallback.
+
+enabled = true
+
+[movement]
+# Force Act I Rogue Scouts to walk during owner-follow and catch-up movement in town.
+walk_in_town = true
+
+# Force Act I Rogue Scouts to run during owner-follow and catch-up movement outside town.
+run_outside_town = true
+
+# Absolute movement velocity while the town rule applies. BKVince uses 11 in monstats.txt.
+# Valid range: 3 to 24.
+town_velocity = 11
+
+# Absolute movement velocity while the outside-town rule applies. BKVince uses 11 as its
+# movement baseline; the plugin converts this value to the engine's velocity-percent override.
+# Valid range: 3 to 24.
+outside_velocity = 11
+
+[diagnostics]
+# Enable the detailed activation log. Runtime counters remain available through the
+# rogue-scout-movement console command regardless of this setting.
+enabled = false

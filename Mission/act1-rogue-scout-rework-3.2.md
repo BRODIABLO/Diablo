@@ -8,6 +8,11 @@ Chantier actif en parallèle de la mission courante BaseMod. Vincent a confirmé
 le 1 août 2026 l’adaptation originale des idées de TDE 3.1d pour les Rogue
 Scouts de BKVince, sans branche Holy dans ce premier lot.
 
+Vincent a retenu le 2 août 2026 un plugin autonome permanent pour le mouvement
+walk/run. `RogueScoutMovement` demeure une DLL RuffnecKk hybride, installable
+globalement ou sous un mod, avec une configuration TOML indépendante; aucune
+DLL d'eezstreet n'est modifiée, liée ou redistribuée.
+
 ## Contrat joueur confirmé
 
 - Les Rogues doivent utiliser la course pour leurs déplacements significatifs.
@@ -50,7 +55,19 @@ Scouts de BKVince, sans branche Holy dans ce premier lot.
   distinct, warp vers le propriétaire, attaque physique et élémentaire, lumière
   blanche de rayon 7.
 - Le workbench D2R 3.2.92777 est vérifié. Les six patches IA ranged existants
-  sont gouvernés, mais aucun site ne prouve encore une course forcée permanente.
+  sont gouvernés. `D2GAME_PETAI_PetMove` est maintenant identifié à `0x5C1460`
+  avec quatre xrefs, une signature unique et l'ABI
+  `(game, owner, unit, motionType, run, velocityPercent, steps) -> int32`.
+- Les motion types `0` et `1` couvrent respectivement le suivi proche et le
+  rattrapage du propriétaire. Les autres valeurs servent notamment à
+  l'errance, au warp et à l'espacement et ne doivent pas être modifiées.
+- `Velocity=11` est la base de déplacement de `roguehire`; l'argument natif
+  `60` est un `velocitypercent` temporaire. Dans le chemin de rattrapage, zéro
+  est remplacé par un bonus aléatoire de 50 à 64, de sorte qu'un simple patch de
+  l'argument ne peut pas garantir une vitesse absolue de 11.
+- `D2GAME_MONSTERMODE_SetVelocityParams 0x4473F0` écrit le pourcentage non nul
+  à `aiParam+0x24`; zéro signifie « conserver ». Un override nul exact exige
+  donc un clear borné de ce champ pendant le seul appel Rogue concerné.
 
 ## Architecture retenue
 
@@ -67,8 +84,17 @@ Scouts de BKVince, sans branche Holy dans ce premier lot.
    maîtrise fait partie du budget total de DPS.
 6. Déployer uniquement les tables allowlistées, comparer leurs hashes et
    valider cold start puis gameplay.
-7. Observer la marche/course réelle. Ne rechercher ou implanter un complément
-   natif qu’en présence d’un écart reproductible.
+7. Implanter `RogueScoutMovement` comme plugin autonome hybride. Hooker
+   `D2GAME_PETAI_PetMove` seulement pour `roguehire=271`, les motion types `0/1`
+   et une room valide; marcher en ville, courir ailleurs et préserver tous les
+   mouvements de combat.
+8. Convertir `town_velocity` et `outside_velocity` depuis les unités absolues de
+   `monstats.txt` vers `velocitypercent`. Armer un second hook à `0x4473F0`
+   uniquement par scope thread-local et pointeur `aiParam` correspondant afin
+   que la valeur 11 efface l'override temporaire au lieu de déclencher le bonus
+   aléatoire natif.
+9. Refuser un build, une signature, une ABI ou une configuration présente mais
+   invalide; prioriser la configuration mod-locale sur le repli global.
 
 ## Matrice de validation
 
@@ -81,8 +107,11 @@ Scouts de BKVince, sans branche Holy dans ce premier lot.
 | Raven | Fire/Cold | un familier correct, dégâts et lumière cohérents | PASS statique; combat runtime requis |
 | Cycle de vie | portail/waypoint/mort/résurrection | aucun doublon ni familier orphelin | not run |
 | Coexistence | Druide Raven | pools indépendants | not run |
-| Déplacement | suivi/recul/rattrapage | course sur les déplacements significatifs | suivi en ville observé; combat requis |
-| Runtime | cold start BKVince | table chargée et frontend atteint | PARTIAL : 24/24; assertions item post-frontend à isoler |
+| Déplacement | suivi/recul/rattrapage | walk ville, run ailleurs sur les déplacements de suivi | PASS solo : campement puis Cold Plains; combat requis |
+| Plugin | build, manifeste et tests | DLL hybride RuffnecKk, signatures strictes, politique ciblée | PASS build + runtime |
+| Config | défauts et invalides | walk ville, run ailleurs, vitesses 11; invalides refusées | PASS runtime : mod-local, repli global et invalide |
+| Coexistence native | cinq DLL eezstreet + ReviveOverhaul | aucun hook owner en collision | PASS source + cold start |
+| Runtime | cold start BKVince | table chargée et frontend atteint | PARTIAL global : 24/24 et plugin 9/9; assertions BKVince préexistantes |
 | Runtime | roster et Rogue existante | lignes version 100 visibles; niveau 98 et icônes cohérentes | PASS |
 | Réseau | solo/hôte/joiner | propriété et comportement synchronisés | not run |
 
@@ -188,10 +217,54 @@ byte-exact.
   cette validation. Les dégâts réels, les trois paliers et la branche Cold
   corrigée restent à observer en combat.
 
+## Implantation native autonome — 2 août 2026
+
+- Destination confirmée par Vincent : plugin autonome permanent, sans future
+  clé de merge PluginPack.
+- `RogueScoutMovement 0.1.0` cible D2R `3.2.92777`, porte l'auteur exact
+  `RuffnecKk`, ne déclare pas `ModScopedOnly` et conserve uniquement le flag
+  `NativeHooks`. Sa description visible est : « Makes Act I Rogue Scouts walk
+  in town and run while following elsewhere. »
+- Le TOML indépendant expose `walk_in_town`, `run_outside_town`,
+  `town_velocity=11`, `outside_velocity=11` et les diagnostics. Les vitesses
+  valides vont de 3 à 24; les sections, clés, doublons, booléens et entiers
+  inconnus ou invalides provoquent un refus de chargement.
+- La résolution cherche d'abord
+  `<D2R>/mods/<mod>/d2rloader/config/rogue-scout-movement.toml`, puis le chemin
+  de configuration du scope chargé, puis le repli global
+  `<D2R>/d2rloader/config/rogue-scout-movement.toml`.
+- Le build Release MSVC 19.44 réussit. Le test de politique
+  `rogue-scout-movement-policy` passe `1/1`; il couvre la classe Rogue, les deux
+  motion types, la ville, l'extérieur, les opt-outs, les autres mercenaires,
+  les mouvements de combat et la conversion 11/12/10.
+- DLL finale construite : SHA-256
+  `F94340D3CD82E528B2EBDD727744A6EED1D2FCB7A14712BFD9048BE3A1997F01`,
+  86 016 octets. Le binaire du dépôt et celui déployé sont identiques.
+- Le rapport gouverné
+  `analysis-cache/runtime-sync/20260802-194340534-apply.json` confirme le
+  déploiement du binaire final et du TOML dans le profil BKVince, l'arrêt d'une
+  instance verrouillante, la relance d'une seule instance et un résultat
+  `PASS`.
+- Le cold start final installe les deux hooks à `0x4473F0` et `0x5C1460`,
+  applique `19/19` patchsets, charge `9/9` plugins sans rejet ni échec et atteint
+  `24/24`. Les assertions observées après le frontend concernent les incidents
+  BKVince déjà connus dans Items, la zone `Act5-Rifts` dupliquée et un level ID;
+  aucune assertion, erreur ou exception ne désigne le plugin Rogue.
+- La matrice de configuration passe en portée mod-locale, en repli global et
+  avec une configuration présente mais invalide. Cette dernière est refusée
+  avant l'installation des hooks (`8` plugins actifs, `1` échec attendu), puis
+  le TOML mod-local valide est restauré et le repli global temporaire supprimé.
+- En solo avec Amplisa, le suivi a été exercé dans le Rogue Encampment, puis
+  après waypoint dans les Cold Plains. La Rogue rejoint le joueur dans les deux
+  zones, la partie demeure stable et la sortie sauvegardée revient au frontend.
+  La sélection walk/run et la vitesse absolue 11 sont imposées par les branches
+  natives testées; une capture fixe ne permet toutefois pas de mesurer la
+  cadence d'animation image par image.
+
 ## Gate immédiat
 
-Isoler les quatre assertions item post-frontend, puis valider en combat les
-deux factions, les trois paliers, le proc `Terror`, le cycle de vie des Ravens
-et leur coexistence avec un Druide. La course littérale demeure un gate
-d’observation séparé; aucune nouvelle DLL n’est autorisée implicitement par
-cette mission.
+Le plugin autonome et sa configuration sont implantés, déployés et validés en
+solo pour les transitions ville/hors-ville. Il reste à confirmer que les modes
+de combat, recul, warp et résurrection demeurent inchangés, puis à exécuter la
+matrice hôte/joiner. Les assertions BKVince post-frontend et les gates de combat
+Fire/Cold, `Terror`, Ravens et coexistence Druide restent ouverts et distincts.

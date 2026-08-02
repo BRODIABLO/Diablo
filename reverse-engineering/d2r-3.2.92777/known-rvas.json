@@ -1978,6 +1978,38 @@
       "confidence": "high",
       "source": "Mission/base-mod-features-3.2.md",
       "notes": "Performs native post-respec bookkeeping for current-difficulty quest 0x29 with observed ABI (game, player) -> void. It sets RewardGranted, clears RewardPending and then evaluates an additional quest flag before the remaining quest-event path. The opcode 0x39 callback is its only direct caller and invokes it only when the NPC service record carries a nonzero quest field. Paid repeats must bypass this routine to preserve quest flags bit-exactly."
+    },
+    {
+      "rva": "0x34B9D0",
+      "name": "UNITS_GetUnitType",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/act1-rogue-scout-rework-3.2.md",
+      "notes": "Null-checked unit-type getter with observed ABI (unit) -> int32. The non-null path returns dword [unit+0x00]; AITACTICS_SetVelocity calls it twice before resolving monster AI parameters. RogueScoutMovement uses it only after a non-null guard and requires its strict build-92777 prologue."
+    },
+    {
+      "rva": "0x349860",
+      "name": "UNITS_GetClassId",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/act1-rogue-scout-rework-3.2.md",
+      "notes": "Null-checked class-id getter with observed ABI (unit) -> int32. The non-null path returns dword [unit+0x04]. RogueScoutMovement uses class id 271 to isolate roguehire and requires its strict build-92777 prologue."
+    },
+    {
+      "rva": "0x4473F0",
+      "name": "D2GAME_MONSTERMODE_SetVelocityParams",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/act1-rogue-scout-rework-3.2.md",
+      "notes": "Observed ABI (aiParam, pathType, velocityPercent, distance) -> void. It writes nonzero path type at aiParam+0x20, nonzero velocity percent at +0x24 and a clamped nonzero distance byte at +0x28. A zero velocity argument is a sentinel that normally preserves the previous field; RogueScoutMovement clears +0x24 explicitly only inside a thread-local, aiParam-matched Act I Rogue follow scope so an absolute configured velocity of 11 remains the exact BKVince baseline."
+    },
+    {
+      "rva": "0x5C1460",
+      "name": "D2GAME_PETAI_PetMove",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/act1-rogue-scout-rework-3.2.md",
+      "notes": "Authoritative pet movement helper with observed x64 ABI (game, owner, unit, motionType, run, velocityPercent, steps) -> int32. The 49-byte wildcard signature is unique in build 92777 and its four direct callers are 0x5BEC72, 0x5BECA1, 0x5BEFCD and 0x5BF00A. D2MOO provides semantic ancestry: Hireable uses motion 0 for near following and motion 1 for catch-up, while later motion values cover wander, warp and spacing. RogueScoutMovement hooks only motion 0/1 after unit type, class 271 and room-town checks."
     }
   ]
 }

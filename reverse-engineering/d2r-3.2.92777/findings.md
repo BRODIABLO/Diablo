@@ -408,6 +408,41 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   prix reste aussi ouvert; modifier le string id global ne suffit pas, car le
   prix dépend du niveau du joueur qui ouvre le menu.
 
+## RogueScoutMovement — suivi walk/run et vélocité absolue
+
+- `AITHINK_Fn061_Hireable` est confirmé autour de `0x5BEC20`. Ses appels à
+  `D2GAME_PETAI_PetMove 0x5C1460` utilisent le motion type `0` pour le suivi
+  proche et `1` pour le rattrapage. Les quatre xrefs directes de la fonction
+  sont `0x5BEC72`, `0x5BECA1`, `0x5BEFCD` et `0x5BF00A`; la signature
+  `48 89 5C 24 08 48 89 74 24 10 48 89 7C 24 18 55 41 54 41 55 41 56 41 57 48 8B EC 48 83 EC 70 48 8B F1 4D 63 F1 49 8B C8 49 8B F8 4C 8B EA E8 ?? ?? ?? ??`
+  ne correspond qu'à l'entrée `0x5C1460` dans le build 92777.
+- L'ABI x64 observée est `(game, owner, unit, motionType, run,
+  velocityPercent, steps) -> int32`. La fonction appelle
+  `AITACTICS_SetVelocity 0x4A7270`; D2MOO confirme que le paramètre de vitesse
+  devient le stat temporaire `velocitypercent`, tandis que `Velocity=11` dans
+  `monstats.txt` demeure la base de déplacement. Le chemin de rattrapage remplace
+  un argument nul par une valeur aléatoire de 50 à 64 : transmettre simplement
+  zéro ne suffit donc pas à garantir la base 11.
+- `D2GAME_MONSTERMODE_SetVelocityParams 0x4473F0` reçoit
+  `(aiParam, pathType, velocityPercent, distance)`. Il écrit les arguments
+  non nuls aux offsets `+0x20`, `+0x24` et `+0x28`; zéro signifie « conserver ».
+  Le prototype autonome retient par conséquent un second hook à cette entrée,
+  armé seulement pendant un appel `PetMove` motion `0/1`, avec correspondance
+  thread-local du pointeur `aiParam`. Une vitesse configurée à 11 efface alors
+  explicitement `aiParam+0x24`, sans toucher un autre monstre, un autre chemin
+  de mouvement ou un autre thread.
+- `UNITS_GetUnitType 0x34B9D0` retourne `[unit+0x00]`,
+  `UNITS_GetClassId 0x349860` retourne `[unit+0x04]`,
+  `UNITS_GetRoom 0x34B440` et `DUNGEON_IsRoomInTown 0x2F0750` fournissent les
+  filtres restants. Le plugin cible seulement le type monstre, la classe
+  `roguehire=271`, et préserve tous les motion types autres que `0/1`; combat,
+  recul, errance, warp et espacement demeurent natifs.
+- L'audit du PluginPack eezstreet épinglé à
+  `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` ne trouve aucun owner de
+  `0x5C1460` ou `0x4473F0`. `ReviveOverhaul` hooke `AITACTICS_SetVelocity`
+  `0x4A7270`, une entrée distincte en amont; le nouveau hook aval reste inerte
+  hors de son scope Rogue et conserve donc la chaîne existante.
+
 ## Discipline de promotion
 
 Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de

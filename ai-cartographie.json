@@ -1,8 +1,8 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-01T18:43:28.5710453+00:00",
+    "generatedAt":  "2026-08-02T20:51:34.6103844+00:00",
     "root":  {
-                 "name":  "base-mod-cadastre-82393821aa644d0bb1f7fdf91094ed44",
+                 "name":  "staged-checkpoint-rogue-scout-movement-20260802T2048",
                  "path":  ".",
                  "kind":  "directory",
                  "meta":  {
@@ -14007,6 +14007,11 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "rogue-scout-movement.toml",
+                                                                                                     "path":  "data-BKVince/d2rloader/config/rogue-scout-movement.toml",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "transmogrify.toml",
                                                                                                      "path":  "data-BKVince/d2rloader/config/transmogrify.toml",
                                                                                                      "kind":  "file"
@@ -15268,6 +15273,44 @@
                                                                                                                   ]
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "RogueScoutMovement-src",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/RogueScoutMovement-src",
+                                                                                                     "kind":  "directory",
+                                                                                                     "meta":  {
+                                                                                                                  "role":  "x-native-rogue-scout-movement-plugin-source",
+                                                                                                                  "summary":  "Sources, tests et recette reproductible du plugin autonome hybride RogueScoutMovement ciblant D2R 3.2.92777.",
+                                                                                                                  "agentAccess":  "read-write",
+                                                                                                                  "status":  "active"
+                                                                                                              },
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "CMakeLists.txt",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RogueScoutMovement-src/CMakeLists.txt",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RogueScoutMovement-src/plugin.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "plugin.rc",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RogueScoutMovement-src/plugin.rc",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "policy_tests.cpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RogueScoutMovement-src/policy_tests.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "rogue_movement_policy.hpp",
+                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/RogueScoutMovement-src/rogue_movement_policy.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "Transmogrify-src",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/Transmogrify-src",
                                                                                                      "kind":  "directory",
@@ -15502,6 +15545,11 @@
                                                                                                  {
                                                                                                      "name":  "ReviveOverhaul.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/ReviveOverhaul.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "RogueScoutMovement.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/RogueScoutMovement.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

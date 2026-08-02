@@ -480,9 +480,12 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/act1-rogue-scout-rework-3.2.md",
-      "nextGate": "Isolate the four post-frontend item assertions, then runtime-prove the full level-36 Fire/Cold arsenal, Terror, Raven lifecycle, Druid coexistence, and movement behavior.",
+      "nextGate": "Validate unchanged combat, recoil, warp and resurrection movement for RogueScoutMovement, then prove host/joiner behavior; keep the separate Fire/Cold, Terror, Raven and Druid coexistence gameplay gates open.",
       "include": [
         "Mission/act1-rogue-scout-rework-3.2.md",
+        "data-BKVince/d2rloader/config/rogue-scout-movement.toml",
+        "data-BKVince/d2rloader/plugins/RogueScoutMovement.dll",
+        "data-BKVince/d2rloader/plugins/RogueScoutMovement-src/**",
         "scripts/migrate-bkvince/apply-act1-rogue-scout-rework.js",
         "data-BKVince/BKVince.mpq/data/global/excel/hireling.txt",
         "data-BKVince/BKVince.mpq/data/global/excel/itemstatcost.txt",
