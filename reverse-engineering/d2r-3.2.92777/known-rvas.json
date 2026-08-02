@@ -2010,6 +2010,38 @@
       "confidence": "high",
       "source": "Mission/act1-rogue-scout-rework-3.2.md",
       "notes": "Authoritative pet movement helper with observed x64 ABI (game, owner, unit, motionType, run, velocityPercent, steps) -> int32. The 49-byte wildcard signature is unique in build 92777 and its four direct callers are 0x5BEC72, 0x5BECA1, 0x5BEFCD and 0x5BF00A. D2MOO provides semantic ancestry: Hireable uses motion 0 for near following and motion 1 for catch-up, while later motion values cover wander, warp and spacing. RogueScoutMovement hooks only motion 0/1 after unit type, class 271 and room-town checks."
+    },
+    {
+      "rva": "0x4421B0",
+      "name": "D2GAME_ITEMS_RollItemQuality",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/base-mod-features-3.2.md",
+      "notes": "Authoritative server item-quality roll with observed x64 ABI (game, monsterOrSeedUnit, playerOrKiller, itemLevel, itemId, tcQualityMods) -> int32 quality and one direct caller at 0x440FD9. It reads stat 80 from the player or monster and adds the minion owner's value, preserves a separate MF<=-100 gate, applies diminishing returns to unique/set/rare, leaves magic linear, then applies ItemRatio minima, Treasure Class modifiers and native RNG. Its strict 38-byte prologue is unique in build 92777."
+    },
+    {
+      "rva": "0x4423CD",
+      "name": "MagicFindUniqueDiminishingGate",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/base-mod-features-3.2.md",
+      "notes": "Two-byte JG +4 (7F 04) selecting the positive unique-quality diminishing formula after CMP (MF+100),110. The 15-byte witness at 0x4423CA is unique and includes constant 250. Replacing only this branch with two NOPs selects the existing linear ECX=MF+100 path without changing negative MF, ItemRatio, Treasure Class or RNG behavior."
+    },
+    {
+      "rva": "0x44246A",
+      "name": "MagicFindSetDiminishingGate",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/base-mod-features-3.2.md",
+      "notes": "Two-byte JG +4 (7F 04) selecting the positive set-quality diminishing formula after CMP (MF+100),110. The 15-byte witness at 0x442467 is unique and includes constant 500. Replacing only this branch with two NOPs selects the existing linear ECX=MF+100 path while preserving all surrounding quality-roll policy."
+    },
+    {
+      "rva": "0x4424F7",
+      "name": "MagicFindRareDiminishingGate",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/base-mod-features-3.2.md",
+      "notes": "Two-byte JG +4 (7F 04) selecting the positive rare-quality diminishing formula after CMP (MF+100),110. The 15-byte witness at 0x4424F4 is unique and includes constant 600. Replacing only this branch with two NOPs selects the existing linear ECX=MF+100 path; the magic-quality block at 0x442576 remains native and already linear."
     }
   ]
 }

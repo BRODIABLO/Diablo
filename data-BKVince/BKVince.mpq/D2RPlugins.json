@@ -5,6 +5,12 @@
         "magicItemsSpawnIdentified": false,
         "rareItemsSpawnIdentified": false,
 
+        // Keep positive Magic Find linear for Unique, Set, and Rare quality rolls.
+        // Magic quality and non-positive Magic Find retain their native behavior.
+        "magicFindFormula": {
+            "mode": "linear"
+        },
+
         // Reduce durability loss, change ethereal maximum durability, or give
         // bows and crossbows durability. Disabled values preserve vanilla behavior.
         "itemDurability": {

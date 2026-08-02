@@ -450,7 +450,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/base-mod-features-3.2.md",
-      "nextGate": "Map a post-validation/pre-mutation payment seam for Charsi, Larzuk and Anya, then prove localized level-based price rendering before implementing quests.repeatableServices.",
+      "nextGate": "Map the remaining repeatable-service seams before implementation. In parallel, sample the merged items.magicFindFormula at MF boundaries, minion ownership, and host/joiner after its vanilla/linear/absent/fail-closed matrix passed.",
       "include": [
         "Mission/base-mod-features-3.2.md",
         "addons/CharmZone/**",

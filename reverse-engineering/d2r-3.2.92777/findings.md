@@ -209,6 +209,41 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   mais la propriete exacte de cette table et son dispatch indirect restent un
   gate distinct avant installation d'un hook de production.
 
+## Magic Find Formula — linéarisation positive
+
+- `D2GAME_ITEMS_RollItemQuality 0x4421B0` est la fonction serveur qui choisit
+  la qualité d'un drop; son prologue strict de 38 octets est unique et son seul
+  caller direct est `0x440FD9`. L'ABI observée est `(game, seedUnit,
+  playerOrKiller, itemLevel, itemId, tcQualityMods) -> itemQuality`.
+- La fonction lit la stat 80 sur le joueur ou monstre à `0x44236C`, ajoute celle
+  du propriétaire d'un minion à `0x44238F`, traite `MF == 0` séparément puis
+  rejette les qualités MF pour `MF <= -100` à `0x4423AA..0x4423AD`. Le registre
+  `EBP` reçoit ensuite `MF + 100`.
+- Les trois gates de diminishing returns comparent `MF + 100` à `110` et portent
+  chacun `7F 04` : unique `0x4423CD` avec constante 250, set `0x44246A` avec
+  500 et rare `0x4424F7` avec 600. Leurs témoins étendus de 15 octets sont
+  individuellement uniques sous 92777.
+- Le bloc magic à `0x442576` divise déjà directement par `MF + 100`; il est donc
+  linéaire et ne doit pas être patché.
+- Le mode `linear` peut remplacer seulement les trois `7F 04` par `90 90`.
+  L'exécution tombe alors sur le chemin natif `ECX = MF + 100`, en conservant
+  le gate négatif, les bases et minima ItemRatio, les modificateurs Treasure
+  Class, le seuil 128, le RNG et la cascade des qualités. `vanilla` n'écrit rien.
+- Aucun patch gouverné BKVince, addon ou PluginPack n'occupe ces six octets. Le
+  manifeste du clone PluginPack `db420481` ne chevauche ni la fonction ni les
+  sites; ses voisins les plus proches restent `0x441B10`, `0x442D2A` et
+  `0x4432F4`. Le propriétaire canonique est `plugin-items.dll` sous
+  `items.magicFindFormula`.
+- Le module RuffnecKk a d'abord passé son incubation hybride, puis a été fusionné
+  dans `plugin-items.dll`. Le manifeste/écritures passe à `139/139`, les tests
+  Release à `26/26`, et le témoin autonome a été retiré après validation.
+- La matrice runtime intégrée prouve `linear` (`90 90` aux trois sites),
+  `vanilla` explicite ou clé absente (`7F 04`) et le refus fail-closed d'une
+  valeur inconnue. Le cold start
+  final BKVince charge `9/9` plugins, applique `19/19` patches et atteint `24/24`.
+  Restent les témoins de drops `MF=-199/-100/-99/0/10/11`, MF positif élevé,
+  minion/propriétaire et hôte/joiner.
+
 ## ExtendedMerc
 
 - Une trace runtime 92777 sur `QtyTester` a capturé l'équipement et le retrait
