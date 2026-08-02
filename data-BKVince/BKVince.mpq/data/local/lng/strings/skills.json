@@ -39795,5 +39795,22 @@
     "ptBR": "moves your mercenary\n to the targeted location",
     "ruRU": "moves your mercenary\n to the targeted location",
     "zhCN": "moves your mercenary\n to the targeted location"
+  },
+  {
+    "id": 28108,
+    "Key": "BKV_A2_COMBAT",
+    "enUS": "Combat",
+    "zhTW": "Combat",
+    "deDE": "Combat",
+    "esES": "Combat",
+    "frFR": "Combat",
+    "itIT": "Combat",
+    "koKR": "Combat",
+    "plPL": "Combat",
+    "esMX": "Combat",
+    "jaJP": "Combat",
+    "ptBR": "Combat",
+    "ruRU": "Combat",
+    "zhCN": "Combat"
   }
 ]
