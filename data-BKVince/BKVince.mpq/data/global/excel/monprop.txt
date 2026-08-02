@@ -13,3 +13,4 @@ quillrat7																															thorns			15	20																										
 quillrat8																															thorns			15	20																										thorns			30	40																										0
 druidhawk	stupidity			-1	-1																										stupidity			-1	-1																										stupidity			-1	-1																										0
 invis	state		146	1	1																										state		146	1	1																										state		146	1	1																										0
+roguehire	bkv-gethitmelee-skill		77	25	5																										bkv-gethitmelee-skill		77	33	10																										bkv-gethitmelee-skill		77	50	15																										0

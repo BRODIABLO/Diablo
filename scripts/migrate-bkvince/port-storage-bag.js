@@ -212,6 +212,7 @@ function prepareStatRows(source, target, changed) {
     (row) => STAT_NAMES.includes(row[targetIndexes.Stat]),
     'itemstatcost.txt',
     changed,
+    true,
   );
   return ids;
 }
@@ -506,6 +507,7 @@ function prepare() {
     (row) => PROPERTY_CODES.includes(row[propertyIndex]),
     'properties.txt',
     changed,
+    true,
   );
 
   const typeIndex = indexHeaders(target.itemTypes.table.headers).Code;

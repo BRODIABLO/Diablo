@@ -475,6 +475,28 @@
       ]
     },
     {
+      "id": "act1-rogue-scout-rework",
+      "name": "Act I Rogue Scout Rework",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/act1-rogue-scout-rework-3.2.md",
+      "nextGate": "Isolate the four post-frontend item assertions, then runtime-prove corrected Fire/Cold progression, Terror, Raven lifecycle, Druid coexistence, and movement behavior.",
+      "include": [
+        "Mission/act1-rogue-scout-rework-3.2.md",
+        "scripts/migrate-bkvince/apply-act1-rogue-scout-rework.js",
+        "data-BKVince/BKVince.mpq/data/global/excel/hireling.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/itemstatcost.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/monprop.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/monstats.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/monstats2.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/pettype.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/properties.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/skills.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/states.txt",
+        "scripts/migrate-bkvince/port-storage-bag.js"
+      ]
+    },
+    {
       "id": "workstream-registry",
       "name": "Workstream Registry",
       "status": "maintenance",
@@ -572,9 +594,10 @@
         "extended-item-stats",
         "rift-terror-zone-group",
         "tde-inspiration-bkvince",
+        "act1-rogue-scout-rework",
         "workstream-registry"
       ],
-      "reason": "Root commands currently serve both the active plugin tests and repository organization."
+      "reason": "Root commands serve governed data/plugin tests and repository organization."
     },
     {
       "pattern": "AGENTS.md",
@@ -714,6 +737,30 @@
         "base-mod-features"
       ],
       "reason": "The deployed render host packages both the legacy ExtendedItemStats callback and the independent CharmZone overlay registry."
+    },
+    {
+      "pattern": "data-BKVince/BKVince.mpq/data/global/excel/itemstatcost.txt",
+      "workstreams": [
+        "readable-items-clue-scrolls",
+        "act1-rogue-scout-rework"
+      ],
+      "reason": "Readable Items and the Act I Rogue rework append independent custom runtime stats to the shared table."
+    },
+    {
+      "pattern": "data-BKVince/BKVince.mpq/data/global/excel/properties.txt",
+      "workstreams": [
+        "readable-items-clue-scrolls",
+        "act1-rogue-scout-rework"
+      ],
+      "reason": "Readable Items and the Act I Rogue rework append independent properties backed by separate custom stats."
+    },
+    {
+      "pattern": "scripts/migrate-bkvince/port-storage-bag.js",
+      "workstreams": [
+        "readable-items-clue-scrolls",
+        "act1-rogue-scout-rework"
+      ],
+      "reason": "Storage Bag validates its contiguous governed block while permitting independent custom stats and properties after it."
     }
   ]
 }
