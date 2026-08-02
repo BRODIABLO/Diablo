@@ -1,6 +1,6 @@
 # Rework des Rogue Scouts de l’Acte I — BKVince 3.2
 
-Dernière mise à jour : 1 août 2026
+Dernière mise à jour : 2 août 2026
 
 ## Statut
 
@@ -20,8 +20,9 @@ Scouts de BKVince, sans branche Holy dans ce premier lot.
   `Immolation Arrow`.
 - La Rogue Cold progresse de `Cold Arrow` vers `Ice Arrow`, puis
   `Freezing Arrow`.
-- Les compétences avancées se débloquent aux paliers BKVince 36 et 67 au lieu
-  d’être toutes actives dès le niveau 3 comme dans TDE.
+- Les deux compétences avancées de chaque branche se débloquent ensemble au
+  palier BKVince 36, au lieu d’être toutes actives dès le niveau 3 comme dans
+  TDE; le palier 67 devient uniquement un rééquilibrage de puissance.
 - Chaque Rogue invoque au maximum un familier distinct : `Fire Raven` ou
   `Cold Raven`. Le familier réutilise le modèle HD Raven existant, suit son
   propriétaire, fournit un rayon lumineux et ne doit pas entrer en collision
@@ -40,9 +41,9 @@ Scouts de BKVince, sans branche Holy dans ce premier lot.
 - Les lignes Expansion de `hireling.txt` possèdent déjà les paliers 3, 36 et 67
   nécessaires à la progression retenue.
 - TDE met les six compétences à disposition dès le niveau 3. BKVince utilise
-  une progression réelle : une compétence verrouillée porte `Chance=0`,
-  `Level=0` et `LvlPerLvl=0`, donc elle ne peut ni être choisie ni fournir une
-  synergie avant son palier.
+  une progression réelle : les deux flèches avancées portent `Chance=0`,
+  `Level=0` et `LvlPerLvl=0` au palier 3, puis deviennent toutes deux actives au
+  palier 36; elles ne peuvent ni être choisies ni fournir une synergie avant.
 - Le proc TDE repose sur un stat événementiel `damagedinmelee`, distinct du
   `gethit-skill` vanilla qui accepte aussi les missiles.
 - Le Raven TDE est un vrai summon limité à un, et non un projectile : pet type
@@ -59,7 +60,7 @@ Scouts de BKVince, sans branche Holy dans ce premier lot.
    `Cold Raven` et leur pet type sans copier les identifiants numériques TDE.
 3. Ajouter un proc mêlée-only de `Terror` sans modifier la compétence joueur.
 4. Réaffecter les six slots de compétence des Rogues et conserver une vraie
-   progression 3/36/67.
+   progression 3/36, avec un palier de puissance distinct à 67.
 5. Équilibrer les dégâts sur la puissance BKVince actuelle aux niveaux 3, 36,
    67 et 90 avec la formule gouvernée de `hireling.txt`, le `HitShift` propre à
    chaque compétence et uniquement les synergies réellement apprises; la
@@ -75,7 +76,7 @@ Scouts de BKVince, sans branche Holy dans ce premier lot.
 |---|---|---|---|
 | TSV | Round-trip et CRLF | byte-exact avant/après migration | PASS statique |
 | Données | Références et IDs | aucune collision ou référence absente | PASS statique |
-| Progression | Niveaux 3/36/67 | attaques avancées niveau/croissance 0, puis actives | PASS statique |
+| Progression | Niveaux 3/36/67 | avancées verrouillées à 3, toutes actives à 36, puissance rééquilibrée à 67 | PASS statique |
 | Terror | Normal/Nightmare/Hell | 25/33/50 %, mêlée seulement | PASS statique; combat runtime requis |
 | Raven | Fire/Cold | un familier correct, dégâts et lumière cohérents | PASS statique; combat runtime requis |
 | Cycle de vie | portail/waypoint/mort/résurrection | aucun doublon ni familier orphelin | not run |
@@ -89,9 +90,10 @@ Scouts de BKVince, sans branche Holy dans ce premier lot.
 
 - `Terror` est injecté par `monprop.txt` avec une propriété et un stat
   `damagedinmelee` propres à BKVince : 25/5, 33/10 et 50/15 selon la difficulté.
-- Les paliers 3/36/67 sont conservés. Fire reçoit successivement `Fire Arrow`,
-  `Exploding Arrow`, `Immolation Arrow`; Cold reçoit `Cold Arrow`, `Ice Arrow`,
-  `Freezing Arrow`.
+- Les paliers 3/36/67 sont conservés. Fire commence avec `Fire Arrow`, puis
+  reçoit ensemble `Exploding Arrow` et `Immolation Arrow` au niveau 36; Cold
+  commence avec `Cold Arrow`, puis reçoit ensemble `Ice Arrow` et
+  `Freezing Arrow`. Le niveau 67 rééquilibre leurs niveaux sans nouvel unlock.
 - `BKV Bow Mastery` reprend exactement la courbe TDE : à slvl 1/12/22/50,
   +28/116/196/420 % d’AR et +28/83/133/273 % de dégâts physiques.
 - `BKV Fire Raven` et `BKV Cold Raven` utilisent deux monstres distincts et le
@@ -114,7 +116,7 @@ résistances, la cadence réelle de l’IA et le sol brûlant d’Immolation Arr
 | Niveau | Fire — attaques apprises | Cold — attaques apprises |
 |---:|---|---|
 | 3 | `Fire Arrow` 1–4 | `Cold Arrow` 3–4 |
-| 36 | `Fire Arrow` 50–55; `Exploding` 66–88 | `Cold Arrow` 50–52; `Ice` 82–90 |
+| 36 | `Fire Arrow` 50–55; `Exploding` 74–99; `Immolation` 23–27 | `Cold Arrow` 50–52; `Ice` 82–90; `Freezing` 86–118 |
 | 67 | `Fire Arrow` 183–205; `Exploding` 233–279; `Immolation` 57–62 | `Cold Arrow` 72–74; `Ice` 132–143; `Freezing` 163–198 |
 | 90 | `Fire Arrow` 479–546; `Exploding` 380–444; `Immolation` 93–99 | `Cold Arrow` 149–159; `Ice` 265–287; `Freezing` 242–283 |
 
@@ -161,8 +163,10 @@ byte-exact.
 ### 2 août 2026 — progression et dégâts corrigés
 
 - `hireling.txt` source et runtime portent tous deux le SHA-256
-  `93B0196A…E4C1`; le rapport gouverné est
-  `analysis-cache/runtime-sync/20260802-102852977-apply.json`.
+  `B0AC97C7…1652`; le rapport gouverné le plus récent est
+  `analysis-cache/runtime-sync/20260802-111739858-apply.json`. Cette version
+  déverrouille ensemble les deux flèches avancées au niveau 36; le niveau 67
+  ne déverrouille plus aucune compétence.
 - Le cold start charge `19/19` memory patches, `8/8` plugins, zéro rejet et
   atteint les étapes `24/24`; le frontend et la liste des personnages sont
   visibles et fonctionnels.
@@ -176,6 +180,10 @@ byte-exact.
   quatre mêmes assertions après sélection de `QtyTester` au lieu de la
   sauvegarde invalide `BerserkBarb`; l’hypothèse d’un incident propre au
   personnage sélectionné est donc écartée.
+- Le cold start du nouveau palier 36 reproduit encore exactement ces quatre
+  assertions item après `24/24`, sans nouvelle erreur liée à `hireling.txt` ou
+  aux compétences. Le chargement de la nouvelle table est donc prouvé, mais
+  son comportement en combat demeure à observer.
 - Aucun personnage n’a été ouvert et aucune sauvegarde n’a été modifiée durant
   cette validation. Les dégâts réels, les trois paliers et la branche Cold
   corrigée restent à observer en combat.

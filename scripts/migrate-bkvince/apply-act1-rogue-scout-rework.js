@@ -478,7 +478,8 @@ function applyHirelings(table) {
       fireMidLevel: 0,
       coldMidLevel: 0,
       midLevelGrowth: 0,
-      topLevel: 0,
+      fireTopLevel: 0,
+      coldTopLevel: 0,
       topLevelGrowth: 0,
       ravenLevel: 1,
       masteryLevel: 1,
@@ -491,8 +492,9 @@ function applyHirelings(table) {
       fireMidLevel: 7,
       coldMidLevel: 7,
       midLevelGrowth: 5,
-      topLevel: 0,
-      topLevelGrowth: 0,
+      fireTopLevel: 4,
+      coldTopLevel: 3,
+      topLevelGrowth: 3,
       ravenLevel: 7,
       masteryLevel: 12,
     },
@@ -504,7 +506,8 @@ function applyHirelings(table) {
       fireMidLevel: 12,
       coldMidLevel: 9,
       midLevelGrowth: 5,
-      topLevel: 7,
+      fireTopLevel: 7,
+      coldTopLevel: 7,
       topLevelGrowth: 3,
       ravenLevel: 12,
       masteryLevel: 22,
@@ -521,6 +524,7 @@ function applyHirelings(table) {
     assert(fire || cold, `hireling: unexpected Rogue subtype ${subtype}`);
     const baseLevel = fire ? tier.fireBaseLevel : tier.coldBaseLevel;
     const midLevel = fire ? tier.fireMidLevel : tier.coldMidLevel;
+    const topLevel = fire ? tier.fireTopLevel : tier.coldTopLevel;
 
     setCell(table, row, 'DefaultChance', tier.defaultChance);
     assignSkill(table, row, 1, {
@@ -538,8 +542,8 @@ function applyHirelings(table) {
     });
     assignSkill(table, row, 4, {
       Skill: fire ? 'Immolation Arrow' : 'Freezing Arrow', Mode: '4',
-      Chance: level === 67 ? (fire ? '50' : '75') : '0', ChancePerLvl: '0',
-      Level: tier.topLevel, LvlPerLvl: tier.topLevelGrowth,
+      Chance: level === 3 ? '0' : (fire ? '50' : '75'), ChancePerLvl: '0',
+      Level: topLevel, LvlPerLvl: tier.topLevelGrowth,
     });
     assignSkill(table, row, 5, {
       Skill: fire ? NAMES.fireRavenSkill : NAMES.coldRavenSkill, Mode: '4',
@@ -662,8 +666,8 @@ function validateDamageBudget(tables) {
   const expected = [
     { 'Fire Arrow': [1, 4] },
     { 'Cold Arrow': [3, 4] },
-    { 'Fire Arrow': [50, 55], 'Exploding Arrow': [66, 88] },
-    { 'Cold Arrow': [50, 52], 'Ice Arrow': [82, 90] },
+    { 'Fire Arrow': [50, 55], 'Exploding Arrow': [74, 99], 'Immolation Arrow': [23, 27] },
+    { 'Cold Arrow': [50, 52], 'Ice Arrow': [82, 90], 'Freezing Arrow': [86, 118] },
     { 'Fire Arrow': [183, 205], 'Exploding Arrow': [233, 279], 'Immolation Arrow': [57, 62] },
     { 'Cold Arrow': [72, 74], 'Ice Arrow': [132, 143], 'Freezing Arrow': [163, 198] },
     { 'Fire Arrow': [479, 546], 'Exploding Arrow': [380, 444], 'Immolation Arrow': [93, 99] },
@@ -684,9 +688,10 @@ function validateDamageBudget(tables) {
       }
     }
     if (rowLevel === 36) {
-      assert(cell(tables.hireling, row, 'Chance4') === '0', 'hireling: level 36 top skill must be locked');
-      assert(cell(tables.hireling, row, 'Level4') === '0', 'hireling: level 36 top skill must be level 0');
-      assert(cell(tables.hireling, row, 'LvlPerLvl4') === '0', 'hireling: level 36 top skill must not grow');
+      const fire = cell(tables.hireling, row, '*SubType').startsWith('Fire -');
+      assert(cell(tables.hireling, row, 'Chance4') === (fire ? '50' : '75'), 'hireling: level 36 top skill chance mismatch');
+      assert(cell(tables.hireling, row, 'Level4') === (fire ? '4' : '3'), 'hireling: level 36 top skill level mismatch');
+      assert(cell(tables.hireling, row, 'LvlPerLvl4') === '3', 'hireling: level 36 top skill growth mismatch');
     }
   }
   return snapshots;

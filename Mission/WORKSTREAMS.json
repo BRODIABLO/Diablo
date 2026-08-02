@@ -480,7 +480,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/act1-rogue-scout-rework-3.2.md",
-      "nextGate": "Isolate the four post-frontend item assertions, then runtime-prove corrected Fire/Cold progression, Terror, Raven lifecycle, Druid coexistence, and movement behavior.",
+      "nextGate": "Isolate the four post-frontend item assertions, then runtime-prove the full level-36 Fire/Cold arsenal, Terror, Raven lifecycle, Druid coexistence, and movement behavior.",
       "include": [
         "Mission/act1-rogue-scout-rework-3.2.md",
         "scripts/migrate-bkvince/apply-act1-rogue-scout-rework.js",
