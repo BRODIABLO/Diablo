@@ -1369,3 +1369,19 @@ de confiance technique sans nouveau témoin intégré exact. La clôture ne tran
 pas ces cas `not run` en succès gameplay et n'infère aucune acceptation amont,
 réponse de revue ou fusion par eezstreet qui ne serait pas documentée dans les
 preuves gouvernées.
+
+## Nettoyage du profil source BKVince — 3 août 2026
+
+Vincent demande de retirer de BKVince les artefacts autonomes devenus redondants
+après l'intégration au PluginPack. L'allowlist supprimée comprend les neuf DLL
+`BulkSkillPointAllocation`, `CharmInventoryAuras`, `DurabilityResistance`,
+`EnhancedDamageMinMaxFix`, `EquippedItemToCube`, `EtherealItemRules`,
+`GambleScreenLimit`, `NoEtherealItemTypes` et `RepairCostsCap`, leurs six JSON
+autonomes présents à la racine de `BKVince.mpq`, ainsi que les TOML dédiés à
+`DurabilityResistance` et `NoEtherealItemTypes`.
+
+Les cinq DLL du PluginPack et l'unique `D2RPlugins.json` restent les propriétaires
+runtime. Les dossiers `*-src` sont conservés comme témoins de développement et
+les plugins autonomes hors du lot restent inchangés. Ce nettoyage du dépôt ne
+constitue pas une nouvelle validation runtime et n'infère toujours aucune
+acceptation amont par eezstreet.

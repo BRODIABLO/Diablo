@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-03T12:04:30.5035284+00:00",
+    "generatedAt":  "2026-08-03T16:36:16.5252896+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -14157,33 +14157,8 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
-                                                                                "name":  "BulkSkillPointAllocation.json",
-                                                                                "path":  "data-BKVince/BKVince.mpq/BulkSkillPointAllocation.json",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "BulkSkillPointAllocation.strings.json",
-                                                                                "path":  "data-BKVince/BKVince.mpq/BulkSkillPointAllocation.strings.json",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
                                                                                 "name":  "D2RPlugins.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/D2RPlugins.json",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "EquippedItemToCube.json",
-                                                                                "path":  "data-BKVince/BKVince.mpq/EquippedItemToCube.json",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "EtherealItemRules.json",
-                                                                                "path":  "data-BKVince/BKVince.mpq/EtherealItemRules.json",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "GambleScreenLimit.json",
-                                                                                "path":  "data-BKVince/BKVince.mpq/GambleScreenLimit.json",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
@@ -14199,11 +14174,6 @@
                                                                             {
                                                                                 "name":  "ReadableItems.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/ReadableItems.json",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "RepairCostsCap.json",
-                                                                                "path":  "data-BKVince/BKVince.mpq/RepairCostsCap.json",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
@@ -14235,11 +14205,6 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
-                                                                                                     "name":  "durability-resistance.toml",
-                                                                                                     "path":  "data-BKVince/d2rloader/config/durability-resistance.toml",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
                                                                                                      "name":  "floating-damage.toml",
                                                                                                      "path":  "data-BKVince/d2rloader/config/floating-damage.toml",
                                                                                                      "kind":  "file"
@@ -14247,11 +14212,6 @@
                                                                                                  {
                                                                                                      "name":  "monsterdisplay.toml",
                                                                                                      "path":  "data-BKVince/d2rloader/config/monsterdisplay.toml",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "no-ethereal-item-types.toml",
-                                                                                                     "path":  "data-BKVince/d2rloader/config/no-ethereal-item-types.toml",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -15686,48 +15646,13 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
-                                                                                                     "name":  "BulkSkillPointAllocation.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/BulkSkillPointAllocation.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "CharmInventoryAuras.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/CharmInventoryAuras.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
                                                                                                      "name":  "CharmZone.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/CharmZone.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
-                                                                                                     "name":  "DurabilityResistance.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/DurabilityResistance.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "EnhancedDamageMinMaxFix.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/EnhancedDamageMinMaxFix.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "EquippedItemToCube.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/EquippedItemToCube.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "EtherealItemRules.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/EtherealItemRules.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
                                                                                                      "name":  "FloatingDamage.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/FloatingDamage.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "GambleScreenLimit.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/GambleScreenLimit.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -15738,11 +15663,6 @@
                                                                                                  {
                                                                                                      "name":  "monsterdisplay.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/monsterdisplay.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "NoEtherealItemTypes.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/NoEtherealItemTypes.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -15793,11 +15713,6 @@
                                                                                                  {
                                                                                                      "name":  "RemoteStash.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/RemoteStash.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "RepairCostsCap.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/RepairCostsCap.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

@@ -171,7 +171,7 @@ Its code is embedded in the five plugin DLLs, so there is no separate
 `plugin-shared.dll` to install with D2RLoader 1.0.x.
 
 The pack reads its feature configuration from
-`BKVince.mpq/D2RPlugins.json`. All optional behavior starts disabled.
+`BKVince.mpq/D2RPlugins.json`.
 
 `plugin-misc.dll` is rebuilt from the same pinned commit with
 `plugin-misc-native-hooks.patch`. The upstream plugin installs an inline hook
@@ -193,10 +193,8 @@ so vanilla 32 remains effective; enabling it selects exactly 64 or 128. The
 standalone JSON and disabled DLL were removed after the integrated cold starts.
 
 Enhanced Damage Min/Max Fix 1.2.0 is also available internally in
-`plugin-items.dll` under `items.enhancedDamageMinMaxFix`. The shipped block is
-disabled and therefore preserves vanilla behavior without installing its hook.
-The standalone DLL remains only as a gameplay witness until integrated
-equivalence is confirmed; never enable both owners at the same time.
+`plugin-items.dll` under `items.enhancedDamageMinMaxFix`. The BKVince block is
+enabled and the standalone DLL is no longer installed.
 
 Bulk Skill Point Allocation 1.2.4 is integrated in `plugin-skills.dll` under
 `skills.bulkSkillPointAllocation`. The shipped block is disabled and installs
@@ -204,8 +202,6 @@ no Bulk hooks, preserving vanilla clicks. When enabled, Ctrl uses the configured
 native batch and Shift uses native assign-all. Its UI dispatcher broker composes
 with RemoteStash 0.1.6 so exactly one module owns `0x843D90`; when Shift
 confirmation is disabled, Bulk does not inspect or hook that dispatcher at all.
-Keep the standalone Bulk DLL only as a gameplay witness and never enable both
-implementations.
 
 Transmute Hotkey 0.2.0 is integrated in `plugin-misc.dll` under
 `misc.transmuteHotkey`. The shipped block is disabled and preserves vanilla
@@ -214,8 +210,8 @@ then dispatches the visible Cube Transmute action on the UI thread. It calls
 through the current `0x843D90` dispatcher without owning that hook, so it
 composes with RemoteStash or the optional Bulk confirmation broker.
 
-Vendor Stock Refresh 0.1.5 is integrated in `plugin-misc.dll` under
-`misc.vendorStockRefresh`. The shipped block is disabled and preserves vanilla
+Vendor Stock Refresh 0.1.5 is integrated in `plugin-items.dll` under
+`items.vendorStockRefresh`. The shipped block is disabled and preserves vanilla
 vendor stock. When enabled, it dynamically positions the native refresh button
 under the loaded layout's gold display and keeps item generation authoritative
 on the server. Its UI and packet hooks do not overlap the vendor-overhaul hooks
@@ -233,34 +229,16 @@ ethereal maximum, forced maximum, ranged durability, and diagnostics values all
 preserve vanilla behavior. The normal feature composes with Repair Costs Cap and
 with standalone Transmogrify. The optional bow/crossbow extension shares
 `0x314110` with standalone Transmogrify, so only one may own that site until an
-external broker is implemented. Keep DurabilityResistance.dll only as a
-gameplay witness and never load it with the integrated option enabled.
+external broker is implemented.
 
-## TCP hybrid and mod-local plugins
+The former BKVince DLL and dedicated configuration files for all merged
+features have been removed. Their `*-src` directories remain only as development
+witnesses and must not be deployed alongside the integrated PluginPack options.
 
-* `CubeQuickMove.dll` 0.1.3 is hybrid (global or mod-local) and places every
-  quick-moved Cube item with a bounded bottom-right grid scan. Its JSON
-  is loaded from the active mod first, then the game directory; the command
-  `cube-quick-move` reports runtime placement counters.
+## BKVince standalone hybrid and mod-local plugins
+
 * `PotionAutoPickup.dll` routes configured potion families through the vanilla
   server pickup path.
-* `DurabilityResistance.dll` 1.2.0 is hybrid (global or mod-local) and applies separate normal and ethereal resistance to
-  the native durability-loss check, and exposes the ethereal maximum-durability
-  percentage. Version 1.1.0 can also enable durability and merchant repair for
-  bow, crossbow, and Amazon bow families. Its config is
-  `d2rloader/config/durability-resistance.toml`.
-* `NoEtherealItemTypes.dll` 1.1.0 is hybrid (global or mod-local) and prevents configured `itemtypes.txt` families from
-  ever entering the ethereal creation path. Its config is
-  `d2rloader/config/no-ethereal-item-types.toml`.
-* `CharmInventoryAuras.dll` 1.2.0 is hybrid (global or mod-local) and re-registers only identified inventory charms
-  that actually contain `item_aura`. Non-aura charms are left untouched, and
-  aura charms containing `item_nonclassskill` are skipped to preserve selected
-  oskills across the matching zone-transition path. The command
-  `charm-inventory-auras` reports runtime counters.
-* `EnhancedDamageMinMaxFix.dll` restores the missing off-weapon Enhanced Damage
-  component when flat minimum or maximum damage triggers ItemStatCost operation
-  13. Weapons retain vanilla local ED behavior. The command
-  `enhanced-damage-min-max-fix` reports runtime correction counters.
 * `AdvancedItemTooltips.dll` 1.0.1 is hybrid (global or mod-local). It shows the
   native maximum socket count in vanilla gray and, for identified items only,
   appends variable affix and base-defense ranges in green. It reads the active
