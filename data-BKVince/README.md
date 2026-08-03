@@ -51,6 +51,14 @@ extrait temporairement les données de référence embarquées par D2RLoader dan
 Le README original de BKDiablo est conservé ci-dessous pour la provenance et
 les crédits.
 
+## Apports tiers intégrés à BKVince
+
+- **Hide helmet 1.0** — créé par **deadjack** et publié sur
+  [Nexus Mods](https://www.nexusmods.com/diablo2resurrected/mods/6). Les 24 JSON
+  originaux de l'archive `Hide helmet-6-1-0-1632934137.rar` sont conservés sans
+  modification sous `BKVince.mpq/data/hd/items/armor/`. SHA-256 de l'archive :
+  `3ABC7AE037C7316CD42089A480243B4794143A449FC4229BEB962900D50C4BF1`.
+
 ---
 
 # BKDiablo
