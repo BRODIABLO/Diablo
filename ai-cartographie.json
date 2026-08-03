@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-03T01:36:43.9285774+00:00",
+    "generatedAt":  "2026-08-03T11:25:18.8774637+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -31440,6 +31440,17 @@
                                                                         "role":  "x-mission-native-plugin",
                                                                         "summary":  "Décisions produit, preuves 92777 et gates de Charm Zone, des services répétables, du démarrage Players et des audits BaseMod 3.2.",
                                                                         "agentAccess":  "read-write"
+                                                                    }
+                                                       },
+                                                       {
+                                                           "name":  "bkvince-hero-editor.md",
+                                                           "path":  "Mission/bkvince-hero-editor.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-mission-bkvince-web-tool",
+                                                                        "summary":  "Décision Option A, matrice de parité RuneWizard et gates fonctionnels, visuels et D2S du BKVince Hero Editor.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "active"
                                                                     }
                                                        },
                                                        {

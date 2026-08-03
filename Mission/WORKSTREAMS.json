@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-02",
+  "updatedAt": "2026-08-03",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -527,6 +527,18 @@
         "data-BKVince/BKVince.mpq/data/hd/texture_desc_cache.json",
         "data-BKVince/BKVince.mpq/data/hd/nickname/**",
         "scripts/validate-bkvince-loading/**"
+      ]
+    },
+    {
+      "id": "bkvince-hero-editor",
+      "name": "BKVince Hero Editor",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/bkvince-hero-editor.md",
+      "nextGate": "Deliver the first vertical slice: open or create a hero, edit General and Stats, undo or redo, and download a reparsable D2S through the RuneWizard-inspired shell with governed byte-preservation evidence.",
+      "include": [
+        "Mission/bkvince-hero-editor.md",
+        "apps/hero-editor/**"
       ]
     },
     {
