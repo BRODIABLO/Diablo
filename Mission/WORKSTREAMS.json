@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-31",
+  "updatedAt": "2026-08-02",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -513,6 +513,20 @@
         "data-BKVince/BKVince.mpq/data/global/excel/monstats.txt",
         "data-BKVince/BKVince.mpq/data/global/excel/monsounds.txt",
         "data-BKVince/BKVince.mpq/data/global/excel/sounds.txt"
+      ]
+    },
+    {
+      "id": "bkvince-loading-times",
+      "name": "BKVince Loading Times",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/bkvince-loading-times.md",
+      "nextGate": "Capture a reproducible five-cold/five-warm baseline for startup, game entry, and Act transitions, then audit all 210 mod-local textures against texture_desc_cache.json before modifying assets while BaseMod remains current.",
+      "include": [
+        "Mission/bkvince-loading-times.md",
+        "data-BKVince/BKVince.mpq/data/hd/texture_desc_cache.json",
+        "data-BKVince/BKVince.mpq/data/hd/nickname/**",
+        "scripts/validate-bkvince-loading/**"
       ]
     },
     {
