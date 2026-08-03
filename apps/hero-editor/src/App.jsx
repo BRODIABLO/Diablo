@@ -2,9 +2,13 @@ import { useMemo, useReducer, useRef, useState } from 'react';
 
 import {
   attributeFields,
+  containerForPlacement,
   createBlankCharacter,
+  describeItem,
   editableSnapshot,
   exportCharacter,
+  itemContainers,
+  moveItemPlacement,
   openCharacter,
   snapshotsEqual,
   suggestedFileName,
@@ -15,12 +19,46 @@ import { createHistory, historyReducer } from './lib/history.js';
 const navigation = [
   { id: 'general', label: 'General', enabled: true },
   { id: 'stats', label: 'Stats', enabled: true },
-  { id: 'equipment', label: 'Equipment' },
-  { id: 'inventory', label: 'Inventory' },
+  { id: 'equipment', label: 'Equipment', enabled: true },
+  { id: 'inventory', label: 'Inventory', enabled: true },
   { id: 'skills', label: 'Skills' },
   { id: 'quests', label: 'Quests' },
   { id: 'waypoints', label: 'Waypoints' },
   { id: 'mercenary', label: 'Mercenary' },
+];
+
+const pageContent = {
+  general: {
+    title: 'General',
+    description: 'Edit identity, save seed, and character state flags.',
+  },
+  stats: {
+    title: 'Stats',
+    description: 'Edit stored attributes within the limits declared by BKVince ItemStatCost.',
+  },
+  equipment: {
+    title: 'Equipment',
+    description: 'Inspect the real body slots and belt positions stored in the D2S.',
+  },
+  inventory: {
+    title: 'Inventory',
+    description: 'Select an existing item, then place it in a free Inventory, Cube, or personal-stash cell.',
+  },
+};
+
+const equipmentSlots = [
+  [1, 'Head'],
+  [2, 'Neck'],
+  [3, 'Torso'],
+  [4, 'Right hand'],
+  [5, 'Left hand'],
+  [6, 'Right ring'],
+  [7, 'Left ring'],
+  [8, 'Belt'],
+  [9, 'Feet'],
+  [10, 'Gloves'],
+  [11, 'Right swap'],
+  [12, 'Left swap'],
 ];
 
 const statGroups = [
@@ -47,6 +85,7 @@ export default function App() {
   const [document, setDocument] = useState(null);
   const [history, dispatch] = useReducer(historyReducer, createHistory(null));
   const [activeTab, setActiveTab] = useState('general');
+  const [selectedItemIndex, setSelectedItemIndex] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [draft, setDraft] = useState({
     name: 'NewHero',
@@ -68,6 +107,7 @@ export default function App() {
       setDocument(nextDocument);
       dispatch({ type: 'replace', value: editableSnapshot(nextDocument.model) });
       setActiveTab('general');
+      setSelectedItemIndex(null);
       setNotice({
         tone: 'success',
         text: `${nextDocument.model.header.name} opened locally. Source bytes remain untouched.`,
@@ -88,6 +128,7 @@ export default function App() {
       setDocument(nextDocument);
       dispatch({ type: 'replace', value: editableSnapshot(nextDocument.model) });
       setActiveTab('general');
+      setSelectedItemIndex(null);
       setCreateOpen(false);
       setNotice({
         tone: 'success',
@@ -127,6 +168,38 @@ export default function App() {
 
   function edit(update) {
     dispatch({ type: 'edit', update });
+  }
+
+  function selectItem(index) {
+    setSelectedItemIndex((current) => (current === index ? null : index));
+  }
+
+  function moveSelectedItem(containerId, x, y) {
+    if (!document || !editable) return;
+    if (selectedItemIndex === null) {
+      setNotice({ tone: 'neutral', text: 'Select an existing item before choosing its destination cell.' });
+      return;
+    }
+    try {
+      const nextPlacements = moveItemPlacement(
+        editable.itemPlacements,
+        document.model.items,
+        selectedItemIndex,
+        containerId,
+        x,
+        y,
+      );
+      edit((current) => ({ ...current, itemPlacements: nextPlacements }));
+      const item = describeItem(document.model.items[selectedItemIndex], selectedItemIndex);
+      const container = itemContainers[containerId];
+      setNotice({
+        tone: 'success',
+        text: `${item.name} moved to ${container.label} ${x + 1},${y + 1}. Export will verify the placement by reparsing.`,
+      });
+      setSelectedItemIndex(null);
+    } catch (error) {
+      setNotice({ tone: 'error', text: error.message });
+    }
   }
 
   return (
@@ -225,22 +298,33 @@ export default function App() {
               <div className="page-heading">
                 <div>
                   <p className="eyebrow">{editable.className} · D2R save v105</p>
-                  <h1>{activeTab === 'general' ? 'General' : 'Stats'}</h1>
-                  <p>
-                    {activeTab === 'general'
-                      ? 'Edit identity, save seed, and character state flags.'
-                      : 'Edit stored attributes within the limits declared by BKVince ItemStatCost.'}
-                  </p>
+                  <h1>{pageContent[activeTab].title}</h1>
+                  <p>{pageContent[activeTab].description}</p>
                 </div>
                 <span className={`dirty-badge ${isDirty ? 'changed' : ''}`}>
                   {isDirty ? 'Unsaved changes' : 'Source preserved'}
                 </span>
               </div>
 
-              {activeTab === 'general' ? (
-                <GeneralEditor editable={editable} edit={edit} />
-              ) : (
-                <StatsEditor editable={editable} edit={edit} />
+              {activeTab === 'general' && <GeneralEditor editable={editable} edit={edit} />}
+              {activeTab === 'stats' && <StatsEditor editable={editable} edit={edit} />}
+              {activeTab === 'equipment' && (
+                <EquipmentEditor
+                  items={document.model.items}
+                  placements={editable.itemPlacements}
+                  selectedItemIndex={selectedItemIndex}
+                  onSelectItem={selectItem}
+                  onOpenInventory={() => setActiveTab('inventory')}
+                />
+              )}
+              {activeTab === 'inventory' && (
+                <InventoryEditor
+                  items={document.model.items}
+                  placements={editable.itemPlacements}
+                  selectedItemIndex={selectedItemIndex}
+                  onSelectItem={selectItem}
+                  onMoveItem={moveSelectedItem}
+                />
               )}
             </>
           )}
@@ -257,14 +341,13 @@ export default function App() {
             <SummaryRow label="Skills" value={document ? String(document.model.skills.length) : '—'} />
           </dl>
           <div className="gate-card">
-            <p className="eyebrow">Slice 1</p>
-            <h2>Safe foundation</h2>
+            <p className="eyebrow">Slice 2</p>
+            <h2>Container editing</h2>
             <ul>
-              <li className="done">Open or create</li>
-              <li className="done">General & stats</li>
-              <li className="done">Undo & redo</li>
-              <li className="done">Validated download</li>
-              <li>Runtime proof pending</li>
+              <li className="done">Runtime-proven base</li>
+              <li className="done">Real BKVince grids</li>
+              <li className="done">Bounds & overlap gates</li>
+              <li>Item runtime proof next</li>
             </ul>
           </div>
         </aside>
@@ -472,6 +555,259 @@ function StatsEditor({ editable, edit }) {
           </div>
         </section>
       ))}
+    </div>
+  );
+}
+
+function InventoryEditor({
+  items,
+  placements,
+  selectedItemIndex,
+  onSelectItem,
+  onMoveItem,
+}) {
+  return (
+    <div className="item-workspace">
+      <ItemSelectionBar
+        items={items}
+        selectedItemIndex={selectedItemIndex}
+        emptyText="Select an item in any grid, then choose a free destination cell."
+      />
+      {Object.values(itemContainers).map((container) => (
+        <ContainerGrid
+          key={container.id}
+          container={container}
+          items={items}
+          placements={placements}
+          selectedItemIndex={selectedItemIndex}
+          onSelectItem={onSelectItem}
+          onMoveItem={onMoveItem}
+        />
+      ))}
+    </div>
+  );
+}
+
+function EquipmentEditor({
+  items,
+  placements,
+  selectedItemIndex,
+  onSelectItem,
+  onOpenInventory,
+}) {
+  const equipped = placements.filter((placement) => containerForPlacement(placement) === 'equipment');
+  const belt = placements.filter((placement) => containerForPlacement(placement) === 'belt');
+  const knownSlots = new Set(equipmentSlots.map(([slot]) => slot));
+  const otherEquipped = equipped.filter((placement) => !knownSlots.has(placement.equippedId));
+
+  return (
+    <div className="item-workspace">
+      <ItemSelectionBar
+        items={items}
+        selectedItemIndex={selectedItemIndex}
+        emptyText="Select equipped or belted gear to prepare a safe move into a stored container."
+        action={selectedItemIndex !== null ? (
+          <button className="button ghost compact" type="button" onClick={onOpenInventory}>
+            Choose destination
+          </button>
+        ) : null}
+      />
+      <section className="panel">
+        <PanelHeading
+          title="Equipment slots"
+          description="Body-location IDs are rendered exactly as stored. Equipping into a slot stays read-only until item-type compatibility is proven."
+        />
+        <div className="equipment-layout">
+          {equipmentSlots.map(([slot, label]) => {
+            const placement = equipped.find((candidate) => candidate.equippedId === slot);
+            return (
+              <div className={`equipment-slot slot-${slot}`} key={slot}>
+                <span>{label}</span>
+                {placement ? (
+                  <ItemToken
+                    item={items[placement.index]}
+                    placement={placement}
+                    selected={selectedItemIndex === placement.index}
+                    onSelect={() => onSelectItem(placement.index)}
+                  />
+                ) : <small>Empty</small>}
+              </div>
+            );
+          })}
+        </div>
+        {otherEquipped.length > 0 && (
+          <div className="unmapped-items">
+            <strong>Other equipped records</strong>
+            {otherEquipped.map((placement) => (
+              <ItemToken
+                key={placement.index}
+                item={items[placement.index]}
+                placement={placement}
+                selected={selectedItemIndex === placement.index}
+                onSelect={() => onSelectItem(placement.index)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+      <section className="panel">
+        <PanelHeading
+          title="Belt"
+          description="D2S stores belt slots as one flattened 0–15 index. The 4×4 view is accurate; placement remains read-only until the equipped belt capacity is derived."
+        />
+        <DisplayGrid
+          columns={4}
+          rows={4}
+          items={items}
+          placements={belt}
+          selectedItemIndex={selectedItemIndex}
+          onSelectItem={onSelectItem}
+          coordinateFor={(placement) => ({
+            x: placement.x % 4,
+            y: Math.floor(placement.x / 4),
+          })}
+          emptyLabel="Empty belt"
+        />
+      </section>
+    </div>
+  );
+}
+
+function ContainerGrid({
+  container,
+  items,
+  placements,
+  selectedItemIndex,
+  onSelectItem,
+  onMoveItem,
+}) {
+  const visible = placements.filter((placement) => containerForPlacement(placement) === container.id);
+  const cells = Array.from({ length: container.width * container.height }, (_, index) => ({
+    x: index % container.width,
+    y: Math.floor(index / container.width),
+  }));
+  return (
+    <section className="panel container-panel">
+      <PanelHeading
+        title={container.label}
+        description={`${container.width}×${container.height} cells from BKVince inventory.txt · ${visible.length} stored item${visible.length === 1 ? '' : 's'}`}
+      />
+      <div className="item-grid-scroll">
+        <div
+          className="item-grid"
+          style={{ '--grid-columns': container.width, '--grid-rows': container.height }}
+          aria-label={`${container.label} grid`}
+        >
+          {cells.map(({ x, y }) => (
+            <button
+              className="grid-cell"
+              type="button"
+              key={`${x}-${y}`}
+              style={{ gridColumn: x + 1, gridRow: y + 1 }}
+              aria-label={`Place selected item at ${container.label} column ${x + 1}, row ${y + 1}`}
+              onClick={() => onMoveItem(container.id, x, y)}
+            />
+          ))}
+          {visible.map((placement) => (
+            <GridItem
+              key={placement.index}
+              item={items[placement.index]}
+              placement={placement}
+              selected={selectedItemIndex === placement.index}
+              onSelect={() => onSelectItem(placement.index)}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DisplayGrid({
+  columns,
+  rows,
+  items,
+  placements,
+  selectedItemIndex,
+  onSelectItem,
+  coordinateFor,
+  emptyLabel,
+}) {
+  const cells = Array.from({ length: columns * rows });
+  return (
+    <div className="display-grid-wrap">
+      <div
+        className="item-grid display-only"
+        style={{ '--grid-columns': columns, '--grid-rows': rows }}
+        aria-label={emptyLabel}
+      >
+        {cells.map((_, index) => (
+          <span
+            className="grid-cell"
+            key={index}
+            style={{ gridColumn: (index % columns) + 1, gridRow: Math.floor(index / columns) + 1 }}
+          />
+        ))}
+        {placements.map((placement) => {
+          const coordinate = coordinateFor(placement);
+          return (
+            <GridItem
+              key={placement.index}
+              item={items[placement.index]}
+              placement={{ ...placement, ...coordinate }}
+              selected={selectedItemIndex === placement.index}
+              onSelect={() => onSelectItem(placement.index)}
+              forceUnitSize
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function GridItem({ item, placement, selected, onSelect, forceUnitSize = false }) {
+  const descriptor = describeItem(item, placement.index);
+  const width = forceUnitSize ? 1 : descriptor.width;
+  const height = forceUnitSize ? 1 : descriptor.height;
+  return (
+    <button
+      className={`grid-item ${selected ? 'selected' : ''}`}
+      type="button"
+      style={{
+        gridColumn: `${placement.x + 1} / span ${width}`,
+        gridRow: `${placement.y + 1} / span ${height}`,
+      }}
+      title={`${descriptor.name} · ${descriptor.type} · ${descriptor.width}×${descriptor.height}`}
+      onClick={onSelect}
+    >
+      <strong>{descriptor.type.toUpperCase()}</strong>
+      <span>{descriptor.name}</span>
+    </button>
+  );
+}
+
+function ItemToken({ item, placement, selected, onSelect }) {
+  const descriptor = describeItem(item, placement.index);
+  return (
+    <button className={`item-token ${selected ? 'selected' : ''}`} type="button" onClick={onSelect}>
+      <strong>{descriptor.type.toUpperCase()}</strong>
+      <span>{descriptor.name}</span>
+    </button>
+  );
+}
+
+function ItemSelectionBar({ items, selectedItemIndex, emptyText, action = null }) {
+  const item = selectedItemIndex === null ? null : describeItem(items[selectedItemIndex], selectedItemIndex);
+  return (
+    <div className={`selection-bar ${item ? 'active' : ''}`}>
+      <div>
+        <p className="eyebrow">Selected item</p>
+        {item ? (
+          <strong>{item.name} <span>{item.type.toUpperCase()} · {item.width}×{item.height}</span></strong>
+        ) : <span>{emptyText}</span>}
+      </div>
+      {action}
     </div>
   );
 }

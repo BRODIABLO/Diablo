@@ -1,0 +1,67 @@
+diff --git a/node_modules/@d2runewizard/d2s/lib/d2/items.js b/node_modules/@d2runewizard/d2s/lib/d2/items.js
+index 7a56f26..604a3a4 100644
+--- a/node_modules/@d2runewizard/d2s/lib/d2/items.js
++++ b/node_modules/@d2runewizard/d2s/lib/d2/items.js
+@@ -336,8 +336,16 @@ async function readItem(reader, version, originalConstants, config, parent) {
+         if (item.type === "tbk" || item.type == "ibk") {
+             reader.ReadUInt8(5);
+         }
+-        //realm data
++        // Realm data. D2R save format 105 stores four uint32 values when the
++        // presence bit is set. Older versions use fewer values.
+         item.timestamp = reader.ReadUInt8(1);
++        if (item.timestamp) {
++            const realmDataCount = version > 0x60 ? 4 : version > 0x5d ? 3 : 2;
++            item._unknown_data.realm_data = [];
++            for (let i = 0; i < realmDataCount; i++) {
++                item._unknown_data.realm_data.push(reader.ReadUInt32());
++            }
++        }
+         if (item.type_id === ItemType.Armor) {
+             item.defense_rating = reader.ReadUInt16(constants.magical_properties[31].sB) - constants.magical_properties[31].sA;
+         }
+@@ -347,10 +355,11 @@ async function readItem(reader, version, originalConstants, config, parent) {
+                 item.current_durability = reader.ReadUInt16(constants.magical_properties[72].sB) - constants.magical_properties[72].sA;
+             }
+         }
++        let hasQuantity = constants.stackables[item.type] ? 1 : 0;
+         if (version === 0x69) {
+-            reader.SkipBits(1); //unknown bit in RotW
++            hasQuantity = reader.ReadUInt8(1);
+         }
+-        if (constants.stackables[item.type]) {
++        if (hasQuantity) {
+             item.quantity = reader.ReadUInt16(9);
+         }
+         if (item.socketed === 1) {
+@@ -507,7 +516,15 @@ async function writeItem(item, version, constants, config) {
+         else if (item.type === "ibk") {
+             writer.WriteUInt8(1, 5);
+         }
+-        writer.WriteUInt8(item.timestamp, 1);
++        const realmData = item._unknown_data.realm_data;
++        const hasRealmData = Array.isArray(realmData) && realmData.length > 0;
++        writer.WriteUInt8(hasRealmData ? 1 : 0, 1);
++        if (hasRealmData) {
++            const realmDataCount = version > 0x60 ? 4 : version > 0x5d ? 3 : 2;
++            for (let i = 0; i < realmDataCount; i++) {
++                writer.WriteUInt32(realmData[i] || 0);
++            }
++        }
+         if (item.type_id === ItemType.Armor || item.type_id === ItemType.Shield) {
+             writer.WriteUInt16(item.defense_rating + constants.magical_properties[31].sA, constants.magical_properties[31].sB);
+         }
+@@ -517,10 +534,11 @@ async function writeItem(item, version, constants, config) {
+                 writer.WriteUInt16(item.current_durability, constants.magical_properties[72].sB);
+             }
+         }
++        const hasQuantity = item.quantity !== undefined && item.quantity !== null;
+         if (version === 0x69) {
+-            writer.WriteUInt8(constants.stackables[item.type] ? 1 : 0, 1); //unknown bit in RotW
++            writer.WriteUInt8(hasQuantity ? 1 : 0, 1);
+         }
+-        if (constants.stackables[item.type]) {
++        if (hasQuantity || (version !== 0x69 && constants.stackables[item.type])) {
+             writer.WriteUInt16(item.quantity, 9);
+         }
+         if (item.socketed === 1) {

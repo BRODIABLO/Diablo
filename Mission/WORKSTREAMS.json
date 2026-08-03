@@ -535,10 +535,13 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/bkvince-hero-editor.md",
-      "nextGate": "Runtime-validate one blank v105 hero and one General/Stats edit in D2R 3.2.92777 through Save and Exit, then freeze anonymized witnesses before starting inventory work.",
+      "nextGate": "Export the portable DummyTester-Annihilus witness with its Town Portal Scroll moved from inventory to Cube, then prove load/edit/save/reload in D2R 3.2.92777 without item loss or bad inventory.",
       "include": [
         "Mission/bkvince-hero-editor.md",
-        "apps/hero-editor/**"
+        "apps/hero-editor/**",
+        "package.json",
+        "package-lock.json",
+        "patches/@d2runewizard+d2s+2.0.132.patch"
       ]
     },
     {

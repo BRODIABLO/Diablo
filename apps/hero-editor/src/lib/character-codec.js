@@ -38,6 +38,59 @@ const ATTRIBUTE_FIELDS = Object.freeze([
   ['stashed_gold', 'Stashed gold', 15],
 ]);
 
+export const BK_STARTER_CHARM_LAYOUT = Object.freeze([
+  Object.freeze({ type: 'mff', uniqueId: 439, x: 10, y: 0 }),
+  Object.freeze({ type: 'mfc', uniqueId: 438, x: 10, y: 1 }),
+  ...Array.from({ length: 6 }, (_, index) => Object.freeze({
+    type: 'mfd',
+    uniqueId: 440,
+    x: 10,
+    y: index + 2,
+  })),
+]);
+
+const BK_STARTER_CHARM_ATTRIBUTES = Object.freeze({
+  mfd: Object.freeze([]),
+  mfc: Object.freeze([
+    Object.freeze({ id: 39, values: Object.freeze([-30]), name: 'fireresist' }),
+    Object.freeze({ id: 41, values: Object.freeze([-30]), name: 'lightresist' }),
+    Object.freeze({ id: 43, values: Object.freeze([-30]), name: 'coldresist' }),
+    Object.freeze({ id: 45, values: Object.freeze([-30]), name: 'poisonresist' }),
+    Object.freeze({ id: 80, values: Object.freeze([-199]), name: 'item_magicbonus' }),
+    Object.freeze({ id: 240, values: Object.freeze([4]), name: 'item_find_magic_perlevel' }),
+  ]),
+  mff: Object.freeze([
+    Object.freeze({ id: 80, values: Object.freeze([35]), name: 'item_magicbonus' }),
+  ]),
+});
+
+export const itemContainers = Object.freeze({
+  inventory: Object.freeze({
+    id: 'inventory',
+    label: 'Inventory',
+    width: 11,
+    height: 8,
+    locationId: 0,
+    altPositionId: 1,
+  }),
+  cube: Object.freeze({
+    id: 'cube',
+    label: 'Horadric Cube',
+    width: 6,
+    height: 6,
+    locationId: 0,
+    altPositionId: 4,
+  }),
+  stash: Object.freeze({
+    id: 'stash',
+    label: 'Personal stash',
+    width: 16,
+    height: 13,
+    locationId: 0,
+    altPositionId: 5,
+  }),
+});
+
 export const attributeFields = Object.freeze(ATTRIBUTE_FIELDS.map(([key, label, statId]) => {
   const bits = constants.magical_properties[statId]?.cB;
   if (!Number.isInteger(bits)) {
@@ -72,7 +125,57 @@ export function editableSnapshot(model) {
     attributes: Object.fromEntries(
       attributeFields.map(({ key }) => [key, Number(model.attributes[key] ?? 0)]),
     ),
+    itemPlacements: model.items.map((item, index) => itemPlacementSnapshot(item, index)),
   };
+}
+
+export function describeItem(item, index) {
+  const details = itemDefinition(item?.type);
+  const rawName = details?.n || item?.type_name || item?.categories?.[0] || item?.type || 'Unknown item';
+  const name = cleanItemName(rawName);
+  return {
+    index,
+    type: item?.type || '????',
+    name,
+    width: positiveDimension(details?.iw),
+    height: positiveDimension(details?.ih),
+    icon: details?.i || null,
+    categories: Array.isArray(item?.categories) ? [...item.categories] : [],
+  };
+}
+
+export function containerForPlacement(placement) {
+  if (placement.locationId === 1) return 'equipment';
+  if (placement.locationId === 2) return 'belt';
+  if (placement.locationId !== 0) return 'other';
+  return Object.values(itemContainers).find(
+    ({ altPositionId }) => altPositionId === placement.altPositionId,
+  )?.id || 'other';
+}
+
+export function moveItemPlacement(placements, items, itemIndex, containerId, x, y) {
+  if (!Array.isArray(placements) || !Array.isArray(items) || placements.length !== items.length) {
+    throw new Error('Item placements no longer match the parsed D2S item list.');
+  }
+  const container = itemContainers[containerId];
+  if (!container) throw new Error(`Unsupported target container: ${containerId}.`);
+  validateInteger('Item index', itemIndex, 0, placements.length - 1);
+  validateInteger('Item column', x, 0, container.width - 1);
+  validateInteger('Item row', y, 0, container.height - 1);
+
+  const descriptor = describeItem(items[itemIndex], itemIndex);
+  validateItemBounds(descriptor, container, x, y);
+  const candidate = {
+    ...placements[itemIndex],
+    locationId: container.locationId,
+    equippedId: 0,
+    x,
+    y,
+    altPositionId: container.altPositionId,
+  };
+  validateCollision(candidate, descriptor, placements, items, itemIndex, container);
+
+  return placements.map((placement, index) => (index === itemIndex ? candidate : placement));
 }
 
 export function snapshotsEqual(left, right) {
@@ -121,7 +224,6 @@ export async function createBlankCharacter({
 }
 
 export async function exportCharacter(document, editable) {
-  validateEditable(editable);
   if (snapshotsEqual(document.initial, editable)) {
     return {
       bytes: cloneBytes(document.sourceBytes),
@@ -129,17 +231,18 @@ export async function exportCharacter(document, editable) {
       byteExact: true,
     };
   }
+  validateEditable(editable, document.model.items);
 
   const nextModel = structuredClone(document.model);
   applyEditable(nextModel, editable);
   const bytes = cloneBytes(await write(nextModel, constants, CODEC_OPTIONS));
   validateSaveEnvelope(bytes);
   const reparsed = await read(bytes, constants, CODEC_OPTIONS);
-  validateRoundTrip(reparsed, editable, bytes.length);
+  validateRoundTrip(reparsed, editable, bytes.length, nextModel);
   return { bytes, reparsed, byteExact: false };
 }
 
-export function validateEditable(editable) {
+export function validateEditable(editable, items = []) {
   validateName(editable.name);
   if (!supportedClasses().some(({ name }) => name === editable.className)) {
     throw new Error(`Unsupported BKVince class: ${editable.className}.`);
@@ -151,6 +254,7 @@ export function validateEditable(editable) {
   if (editable.attributes.level < 1 || editable.attributes.level > 99) {
     throw new RangeError('Level must be between 1 and 99.');
   }
+  validateItemPlacements(editable.itemPlacements, items);
 }
 
 export function suggestedFileName(editable) {
@@ -221,16 +325,132 @@ function applyEditable(model, editable) {
   if (!Array.isArray(model.skills) || model.skills.length !== 30) {
     model.skills = blankSkills(model.header.class);
   }
+  editable.itemPlacements.forEach((placement, index) => {
+    const item = model.items[index];
+    if (!item || item.type !== placement.type) {
+      throw new Error(`Item ${index} no longer matches its parsed D2S record.`);
+    }
+    item.location_id = placement.locationId;
+    item.equipped_id = placement.equippedId;
+    item.position_x = placement.x;
+    item.position_y = placement.y;
+    item.alt_position_id = placement.altPositionId;
+  });
 }
 
-function validateRoundTrip(model, editable, byteLength) {
+function validateRoundTrip(model, editable, byteLength, writtenModel) {
   if (model.header.filesize !== byteLength) {
     throw new Error(`Export size mismatch: header=${model.header.filesize}, bytes=${byteLength}.`);
   }
   const actual = editableSnapshot(model);
   if (!snapshotsEqual(actual, editable)) {
-    throw new Error('The exported D2S did not preserve all edited General/Stats values.');
+    throw new Error('The exported D2S did not preserve all edited values and item placements.');
   }
+  if (model.items.length !== writtenModel.items.length) {
+    throw new Error('The exported D2S changed the number of root item records.');
+  }
+  model.items.forEach((item, index) => {
+    if (JSON.stringify(itemPayloadSnapshot(item)) !== JSON.stringify(itemPayloadSnapshot(writtenModel.items[index]))) {
+      throw new Error(`The exported D2S changed item ${index} outside its placement fields.`);
+    }
+  });
+}
+
+function itemPlacementSnapshot(item, index) {
+  return {
+    index,
+    type: item.type,
+    locationId: Number(item.location_id),
+    equippedId: Number(item.equipped_id),
+    x: Number(item.position_x),
+    y: Number(item.position_y),
+    altPositionId: Number(item.alt_position_id),
+  };
+}
+
+function itemPayloadSnapshot(item) {
+  const payload = structuredClone(item);
+  delete payload.location_id;
+  delete payload.equipped_id;
+  delete payload.position_x;
+  delete payload.position_y;
+  delete payload.alt_position_id;
+  return payload;
+}
+
+function validateItemPlacements(placements, items) {
+  if (!Array.isArray(placements) || placements.length !== items.length) {
+    throw new Error('Item placements no longer match the parsed D2S item list.');
+  }
+  placements.forEach((placement, index) => {
+    const item = items[index];
+    if (!item || placement.index !== index || placement.type !== item.type) {
+      throw new Error(`Item ${index} no longer matches its parsed D2S record.`);
+    }
+    validateInteger(`Item ${index} location`, placement.locationId, 0, 7);
+    validateInteger(`Item ${index} equipped slot`, placement.equippedId, 0, 15);
+    validateInteger(`Item ${index} column`, placement.x, 0, 15);
+    validateInteger(`Item ${index} row`, placement.y, 0, 15);
+    validateInteger(`Item ${index} stored page`, placement.altPositionId, 0, 7);
+
+    const containerId = containerForPlacement(placement);
+    const container = itemContainers[containerId];
+    if (!container) return;
+    const descriptor = describeItem(item, index);
+    validateItemBounds(descriptor, container, placement.x, placement.y);
+    validateCollision(placement, descriptor, placements, items, index, container);
+  });
+}
+
+function validateItemBounds(descriptor, container, x, y) {
+  if (x + descriptor.width > container.width || y + descriptor.height > container.height) {
+    throw new RangeError(
+      `${descriptor.name} (${descriptor.width}×${descriptor.height}) does not fit at `
+      + `${container.label} ${x + 1},${y + 1}.`,
+    );
+  }
+}
+
+function validateCollision(candidate, descriptor, placements, items, ignoredIndex, container) {
+  for (let index = 0; index < placements.length; index += 1) {
+    if (index === ignoredIndex) continue;
+    const other = placements[index];
+    if (containerForPlacement(other) !== container.id) continue;
+    const otherDescriptor = describeItem(items[index], index);
+    if (rectanglesOverlap(
+      candidate.x,
+      candidate.y,
+      descriptor.width,
+      descriptor.height,
+      other.x,
+      other.y,
+      otherDescriptor.width,
+      otherDescriptor.height,
+    )) {
+      throw new Error(`${descriptor.name} overlaps ${otherDescriptor.name} in ${container.label}.`);
+    }
+  }
+}
+
+function rectanglesOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+  return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+}
+
+function itemDefinition(type) {
+  return constants.armor_items[type]
+    || constants.weapon_items[type]
+    || constants.other_items[type]
+    || null;
+}
+
+function cleanItemName(value) {
+  const text = String(value);
+  const visible = text.includes('}') ? text.slice(text.lastIndexOf('}') + 1) : text;
+  return visible.replace(/ÿc./g, '').trim() || 'Unknown item';
+}
+
+function positiveDimension(value) {
+  return Number.isInteger(value) && value > 0 ? value : 1;
 }
 
 function blankModel({ name, classData, hardcore, ladder }) {
@@ -303,13 +523,55 @@ function blankModel({ name, classData, hardcore, ladder }) {
     },
     item_bonuses: [],
     skills,
-    items: [],
+    items: bkStarterCharms(),
     corpse_items: [],
     merc_items: [],
     golem_item: null,
     demon: null,
     is_dead: 0,
   };
+}
+
+function bkStarterCharms() {
+  return BK_STARTER_CHARM_LAYOUT.map(({ type, uniqueId, x, y }) => ({
+    _unknown_data: {
+      realm_data: Array.from({ length: 4 }, cryptoSafeUint32),
+      chest_stackable: type === 'mfd' ? 1 : 0,
+    },
+    identified: 1,
+    socketed: 0,
+    new: 0,
+    is_ear: 0,
+    starter_item: 1,
+    simple_item: 0,
+    ethereal: 0,
+    personalized: 0,
+    given_runeword: 0,
+    version: '101',
+    location_id: itemContainers.inventory.locationId,
+    equipped_id: 0,
+    position_x: x,
+    position_y: y,
+    alt_position_id: itemContainers.inventory.altPositionId,
+    type,
+    type_id: 3,
+    max_durability: 0,
+    current_durability: 0,
+    nr_of_items_in_sockets: 0,
+    socketed_items: [],
+    id: cryptoSafeUint32(),
+    level: 1,
+    quality: 7,
+    multiple_pictures: 0,
+    class_specific: 0,
+    unique_id: uniqueId,
+    timestamp: 1,
+    amount_in_shared_stash: type === 'mfd' ? 0 : undefined,
+    magic_attributes: BK_STARTER_CHARM_ATTRIBUTES[type].map((attribute) => ({
+      ...attribute,
+      values: [...attribute.values],
+    })),
+  }));
 }
 
 function blankSkills(className) {
@@ -434,7 +696,7 @@ function emptyMenuAppearance() {
   return Object.fromEntries([
     'head', 'torso', 'legs', 'right_arm', 'left_arm', 'right_hand', 'left_hand', 'shield',
     'special1', 'special2', 'special3', 'special4', 'special5', 'special6', 'special7', 'special8',
-  ].map((key) => [key, { graphic: 0, tint: 0 }]));
+  ].map((key) => [key, { graphic: 0xff, tint: 0xff }]));
 }
 
 function fromKeys(keys) {

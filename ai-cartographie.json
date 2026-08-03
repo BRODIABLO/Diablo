@@ -31901,6 +31901,23 @@
                                                    ]
                                   },
                                   {
+                                      "name":  "patches",
+                                      "path":  "patches",
+                                      "kind":  "directory",
+                                      "meta":  {
+                                                   "role":  "x-dependency-patches",
+                                                   "summary":  "Correctifs reproductibles appliqués aux dépendances npm du workspace.",
+                                                   "agentAccess":  "read-write"
+                                               },
+                                      "children":  [
+                                                       {
+                                                           "name":  "@d2runewizard+d2s+2.0.132.patch",
+                                                           "path":  "patches/@d2runewizard+d2s+2.0.132.patch",
+                                                           "kind":  "file"
+                                                       }
+                                                   ]
+                                  },
+                                  {
                                       "name":  "reverse-engineering",
                                       "path":  "reverse-engineering",
                                       "kind":  "directory",

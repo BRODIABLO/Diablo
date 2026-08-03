@@ -6,6 +6,7 @@
     "apps/*"
   ],
   "scripts": {
+    "postinstall": "patch-package",
     "verify": "node scripts/verify/verify.mjs",
     "validate:tde-catalog": "node scripts/validate-tde-catalog/validate.mjs",
     "workstreams": "node scripts/workstreams/workstreams.mjs",
@@ -60,6 +61,7 @@
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "concurrently": "^9.1.2",
+    "patch-package": "^8.0.1",
     "turbo": "^2.10.5"
   }
 }

@@ -5,6 +5,9 @@
 The BKVince Hero Editor uses `@d2runewizard/d2s` version 2.0.132 as its D2S
 codec. The package is distributed under the ISC License.
 
+The workspace applies a small source patch for D2R v105 realm data and quantity
+presence bits. The modified package remains covered by the same ISC License.
+
 Copyright (c) the `@d2runewizard/d2s` contributors.
 
 Permission to use, copy, modify, and/or distribute this software for any

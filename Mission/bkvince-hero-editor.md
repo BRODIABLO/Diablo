@@ -158,9 +158,9 @@ automatique de stats ou de skills. Cette exclusion ne bloque pas la parité des
 
 ## Gates observables
 
-- [ ] Le parcours Tranche 1 ouvre ou crée un héros, modifie Général/Stats,
+- [x] Le parcours Tranche 1 ouvre ou crée un héros, modifie Général/Stats,
   undo/redo et exporte un D2S reparseable dans l'UI cible.
-- [ ] Les fixtures no-op possèdent une politique byte-exact ou une allowlist
+- [x] Les fixtures no-op possèdent une politique byte-exact ou une allowlist
   documentée octet par octet, avec checksum et champs recalculés exclus de
   toute fausse alerte.
 - [ ] Les catalogues sont régénérables depuis les TXT BKVince courants et leurs
@@ -179,9 +179,9 @@ automatique de stats ou de skills. Cette exclusion ne bloque pas la parité des
   chacun une matrice load/edit/save/reload.
 - [ ] La matrice visuelle couvre desktop et responsive : navigation, grille,
   tabs, panneaux spatiaux, modals, focus, erreurs et états vides.
-- [ ] D2R 3.2.92777 accepte les exports BKVince témoins, puis les recharge après
+- [x] D2R 3.2.92777 accepte les exports BKVince témoins, puis les recharge après
   `Save and Exit` sans rollback, perte d'objet, bad inventory ou bad dead body.
-- [ ] Les sauvegardes sources restent inchangées et aucun octet de personnage
+- [x] Les sauvegardes sources restent inchangées et aucun octet de personnage
   n'est envoyé hors du navigateur.
 - [ ] La matrice de parité RuneWizard est documentée ligne par ligne et ne
   contient plus de fonction cible non couverte ou explicitement déclarée non
@@ -211,17 +211,89 @@ La première tranche existe maintenant sous `apps/hero-editor/` :
   sombre inspiré de la hiérarchie RuneWizard ;
 - export no-op depuis les octets source exacts et export modifié reparsé après
   recalcul de la taille et du checksum ;
-- build Vite et six tests unitaires verts, plus parcours local vérifié dans le
+- build Vite et neuf tests unitaires verts, plus parcours local vérifié dans le
   navigateur pour création Warlock, modification de niveau, undo/redo et écran
   Stats sans erreur console.
 
-Le gate n'est pas fermé tant qu'un héros vierge puis un héros modifié n'ont pas
-été acceptés et resauvegardés par D2R 3.2.92777. L'inventory reste donc interdit.
+Le gate runtime de la tranche 1 est fermé le 3 août 2026 sur D2R
+`3.2.92777` :
+
+- le témoin vierge `HEBlank.d2s` (Warlock niveau 1, Force 15, 0 point libre,
+  0 or) et le témoin modifié `HEEdited.d2s` (Force 42, 7 points libres,
+  12 345 or) ont été reconnus dans la sélection, chargés dans le camp des
+  Rogues, vérifiés dans l'écran Character, puis resauvegardés par
+  `Save and Exit` ;
+- les exports testés avant D2R portent respectivement les SHA-256
+  `AA6DC8298CFDD2CADC77F76E680AC9236D59E987D45A00F219199AACBF355771`
+  (922 octets) et
+  `9D970CC4D71C211E412F384C533278C18FE0CFB7580655B85E77DBE90F598597`
+  (928 octets) ;
+- après resauvegarde, les deux enveloppes conservent leur taille, possèdent un
+  checksum valide et se rouvrent dans l'adaptateur local. Les valeurs métier
+  sont intactes; D2R a seulement renouvelé la seed de carte et marqué Normal
+  comme difficulté active. Leurs SHA-256 runtime deviennent
+  `738C944CB1C7C686B40531089B59DDDE1E824230AB925A6A0D5F083D72CAB901`
+  et `9D1CA7C562842ACC15C9C56D8B1811A640FCCB9F2602DE3B2BDD08195C324701` ;
+- le correctif requis encode chaque emplacement visuel vide avec `0xFF`
+  (`no item`) plutôt qu'avec l'identifiant `0`; les neuf tests du Hero Editor
+  restent verts ;
+- les quatre assertions `Items.cpp` observées au frontend sont reproduites à
+  l'identique après retrait complet des deux témoins du dossier de sauvegarde :
+  elles sont préexistantes et ne sont pas causées par ces exports ;
+- le cold start gouverné est consigné dans
+  `analysis-cache/runtime-sync/20260803-122005135-apply.json` : démarrage 24/24,
+  18 patchsets appliqués sur 18, 11 plugins actifs sur 11, zéro échec ou rejet.
+
+La tranche 1 est donc **validée en jeu**. L'inventory n'est plus interdit par ce
+gate, mais chaque nouvelle opération d'objet devra obtenir sa propre preuve
+load/edit/save/reload avant d'élargir le périmètre.
+
+Le premier parcours vertical de la tranche 2 est implanté et validé hors jeu :
+
+- l'UI affiche les grilles BKVince réelles — inventory `11 × 8`, Cube `6 × 6`,
+  stash personnelle `16 × 13` — ainsi que les douze BodyLoc d'équipement et la
+  ceinture `4 × 4` dérivée de son index aplati ;
+- un objet existant peut être sélectionné puis déplacé vers inventory, Cube ou
+  stash personnelle. Les débordements et chevauchements sont refusés avant
+  toute mutation; l'équipement et le belt restent volontairement en lecture
+  seule comme destinations tant que leur compatibilité et leur capacité ne
+  sont pas prouvées ;
+- l'écriture ne modifie que `location_id`, `equipped_id`, `position_x`,
+  `position_y` et `alt_position_id` sur le record existant. Une validation
+  supplémentaire refuse l'export si tout autre champ d'objet change au
+  write/reparse ;
+- le test portable `DummyTester-Annihilus` couvre neuf objets racine : quatre
+  potions de belt, deux objets équipés et trois objets d'inventory. Le scroll
+  de portail est déplacé vers le Cube, l'Annihilus conserve ses dix propriétés
+  magiques et le no-op reste byte-exact ;
+- `npm.cmd --workspace apps/hero-editor test` passe `9/9` et la build Vite de
+  production est verte. La preuve D2R de ce déplacement reste ouverte.
+
+La création des personnages couvre maintenant les huit charms de départ BK et
+son gate runtime est fermé :
+
+- chaque classe encodable reçoit automatiquement `mff` en `(10, 0)`, `mfc` en
+  `(10, 1)`, puis les six `mfd` en `(10, 2..7)`, soit la colonne verticale
+  réservée à droite de l'inventory `11 × 8` ;
+- les qualités uniques, IDs `438..440`, propriétés de `mfc`/`mff`, flags de
+  départ, données realm v105 et champ Advanced Stash des `mfd` reproduisent le
+  témoin BK natif `ama.d2s`. Un patch reproductible de `@d2runewizard/d2s`
+  préserve les quatre `uint32` realm et le bit de présence de quantité v105 ;
+- le témoin `HEBKCharm.d2s` avant D2R fait 1 225 octets et porte le SHA-256
+  `B96785486F59295C79B949303F9601A98E8D800CC930B1245C76BA7DFCC696A5` ;
+- D2R `3.2.92777` charge le personnage, affiche les huit charms dans la colonne
+  gelée, le sauvegarde, puis le recharge une seconde fois avec la même
+  disposition. Le fichier final reste à 1 225 octets, se reparcourt dans
+  l'éditeur avec les huit records et toutes leurs propriétés, et porte le
+  SHA-256
+  `150C3898723BD3DD81B1E6873C17B90F9A51F39E8ADFBAB88AF31547B099F0B7` ;
+- aucune assertion `Items.cpp` ne survient pendant les deux chargements. Les
+  quatre assertions du frontend précèdent la sélection du témoin et restent
+  celles déjà reproduites sans les exports du Hero Editor.
 
 ## Prochain gate
 
-Valider dans D2R 3.2.92777 un héros vierge exporté, puis le même héros après une
-modification General/Stats, un `Save and Exit` et une nouvelle relecture. Figer
-ensuite ces témoins sous une forme anonymisée et fermer le parcours **ouvrir ou
-créer → Général/Stats → undo/redo → télécharger**. Ne pas commencer l'inventory
-tant que ce gate runtime n'est pas vert.
+Exporter le témoin `DummyTester-Annihilus` avec son scroll déplacé de
+l'inventory vers le Cube, puis prouver load/edit/save/reload dans D2R
+3.2.92777 sans perte ni `bad inventory`. Le catalogue et l'éditeur d'objet
+avancé restent séquencés derrière cette première preuve runtime de placement.
