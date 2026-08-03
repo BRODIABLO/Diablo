@@ -535,7 +535,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/bkvince-hero-editor.md",
-      "nextGate": "Deliver the first vertical slice: open or create a hero, edit General and Stats, undo or redo, and download a reparsable D2S through the RuneWizard-inspired shell with governed byte-preservation evidence.",
+      "nextGate": "Runtime-validate one blank v105 hero and one General/Stats edit in D2R 3.2.92777 through Save and Exit, then freeze anonymized witnesses before starting inventory work.",
       "include": [
         "Mission/bkvince-hero-editor.md",
         "apps/hero-editor/**"
@@ -570,6 +570,13 @@
         "*"
       ],
       "reason": "Repository-wide local and generated file exclusions shared by every workstream."
+    },
+    {
+      "pattern": "package-lock.json",
+      "workstreams": [
+        "*"
+      ],
+      "reason": "The npm workspace lock records dependencies for every web application and shared tool."
     },
     {
       "pattern": "README.md",

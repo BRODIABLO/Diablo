@@ -45,6 +45,10 @@ export est téléchargé comme un nouveau fichier.
 - `@d2runewizard/d2s` `2.0.132` est déjà une dépendance du workspace et peut
   servir de codec derrière un adaptateur local, sans dépendre du site
   RuneWizard ;
+- les constantes BKVince actuelles exposent huit classes que le codec sait
+  sérialiser avec trente skills chacune : Amazon, Sorceress, Necromancer,
+  Paladin, Barbarian, Druid, Assassin et Warlock ; aucune preuve actuelle ne
+  justifie d'annoncer onze classes encodables ;
 - la suite locale actuelle passe `8/9` : l'unique échec est une assertion de
   quantité de propriétés devenue obsolète après l'évolution des tables
   BKVince (`391` au lieu de `389`) ;
@@ -166,9 +170,11 @@ automatique de stats ou de skills. Cette exclusion ne bloque pas la parité des
   illégaux sans corrompre le document ni perdre un objet.
 - [ ] Les qualités, affixes, propriétés, sockets et quantités exportées sont
   relues avec les mêmes valeurs et validées sur des objets BKVince réels.
-- [ ] Les onze classes prises en charge par BKVince, leurs skills et leurs
-  données custom sont découvertes depuis les sources actuelles plutôt que
-  codées selon le roster vanilla.
+- [ ] Toutes les classes réellement prises en charge par BKVince, leurs skills
+  et leurs données custom sont découvertes depuis les sources actuelles plutôt
+  que codées selon le roster vanilla. Le snapshot courant en découvre huit ;
+  toute classe supplémentaire exige d'abord une preuve dans les tables et le
+  format de sauvegarde.
 - [ ] Quests, waypoints, mercenaire, stashes et fichiers auxiliaires passent
   chacun une matrice load/edit/save/reload.
 - [ ] La matrice visuelle couvre desktop et responsive : navigation, grille,
@@ -192,10 +198,30 @@ automatique de stats ou de skills. Cette exclusion ne bloque pas la parité des
 - la ressemblance visuelle doit rester une réimplémentation indépendante avec
   des assets redistribuables et des crédits propres.
 
+## État d'implantation — 3 août 2026
+
+La première tranche existe maintenant sous `apps/hero-editor/` :
+
+- génération déterministe des constantes depuis les TXT/JSON BKVince, avec
+  round-trip TSV byte-exact avant consommation ;
+- création vierge et relecture validées automatiquement pour les huit classes
+  actuellement encodables ;
+- import v105 avec refus d'une taille déclarée ou d'un checksum invalide ;
+- écrans General/Stats, limites dérivées d'ItemStatCost, undo/redo et shell
+  sombre inspiré de la hiérarchie RuneWizard ;
+- export no-op depuis les octets source exacts et export modifié reparsé après
+  recalcul de la taille et du checksum ;
+- build Vite et six tests unitaires verts, plus parcours local vérifié dans le
+  navigateur pour création Warlock, modification de niveau, undo/redo et écran
+  Stats sans erreur console.
+
+Le gate n'est pas fermé tant qu'un héros vierge puis un héros modifié n'ont pas
+été acceptés et resauvegardés par D2R 3.2.92777. L'inventory reste donc interdit.
+
 ## Prochain gate
 
-Restaurer l'ancien workspace dans une tranche bornée, figer des fixtures D2S
-anonymisées et livrer le premier parcours complet : **ouvrir ou créer →
-Général/Stats → undo/redo → télécharger**, avec le shell visuel cible et une
-preuve de préservation byte/checksum/reparse. Ne pas commencer l'inventory tant
-que ce gate n'est pas vert.
+Valider dans D2R 3.2.92777 un héros vierge exporté, puis le même héros après une
+modification General/Stats, un `Save and Exit` et une nouvelle relecture. Figer
+ensuite ces témoins sous une forme anonymisée et fermer le parcours **ouvrir ou
+créer → Général/Stats → undo/redo → télécharger**. Ne pas commencer l'inventory
+tant que ce gate runtime n'est pas vert.

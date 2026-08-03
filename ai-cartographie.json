@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-03T11:25:18.8774637+00:00",
+    "generatedAt":  "2026-08-03T12:04:30.5035284+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -954,6 +954,116 @@
                                                                             {
                                                                                 "name":  "vite.config.js",
                                                                                 "path":  "apps/admin/vite.config.js",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "hero-editor",
+                                                           "path":  "apps/hero-editor",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-bkvince-hero-editor",
+                                                                        "summary":  "Éditeur web local de sauvegardes D2S BKVince, fondé sur les tables gouvernées et une validation checksum/reparse.",
+                                                                        "agentAccess":  "read-write"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "scripts",
+                                                                                "path":  "apps/hero-editor/scripts",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "generate-constants.mjs",
+                                                                                                     "path":  "apps/hero-editor/scripts/generate-constants.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "apps/hero-editor/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "data",
+                                                                                                     "path":  "apps/hero-editor/src/data",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "bkvince-constants.generated.js",
+                                                                                                                          "path":  "apps/hero-editor/src/data/bkvince-constants.generated.js",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "lib",
+                                                                                                     "path":  "apps/hero-editor/src/lib",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "character-codec.js",
+                                                                                                                          "path":  "apps/hero-editor/src/lib/character-codec.js",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "character-codec.test.js",
+                                                                                                                          "path":  "apps/hero-editor/src/lib/character-codec.test.js",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "history.js",
+                                                                                                                          "path":  "apps/hero-editor/src/lib/history.js",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "history.test.js",
+                                                                                                                          "path":  "apps/hero-editor/src/lib/history.test.js",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "App.jsx",
+                                                                                                     "path":  "apps/hero-editor/src/App.jsx",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "main.jsx",
+                                                                                                     "path":  "apps/hero-editor/src/main.jsx",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "styles.css",
+                                                                                                     "path":  "apps/hero-editor/src/styles.css",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "index.html",
+                                                                                "path":  "apps/hero-editor/index.html",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "package.json",
+                                                                                "path":  "apps/hero-editor/package.json",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "apps/hero-editor/README.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "THIRD_PARTY_NOTICES.md",
+                                                                                "path":  "apps/hero-editor/THIRD_PARTY_NOTICES.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "vite.config.js",
+                                                                                "path":  "apps/hero-editor/vite.config.js",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
