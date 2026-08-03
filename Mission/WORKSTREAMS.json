@@ -500,6 +500,22 @@
       ]
     },
     {
+      "id": "sounds-of-variation-bkvince",
+      "name": "Sounds of Variation for BKVince",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/sounds-of-variation-bkvince.md",
+      "nextGate": "Audibly validate the 38 sound families in game, then cover save/reload and solo/host/joiner behavior; keep public FLAC redistribution blocked without WyRuZzaH's written permission.",
+      "include": [
+        "Mission/sounds-of-variation-bkvince.md",
+        "scripts/migrate-bkvince/integrate-sounds-of-variation.js",
+        "scripts/migrate-bkvince/install-sounds-of-variation-local.ps1",
+        "data-BKVince/BKVince.mpq/data/global/excel/monstats.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/monsounds.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/sounds.txt"
+      ]
+    },
+    {
       "id": "workstream-registry",
       "name": "Workstream Registry",
       "status": "maintenance",
@@ -756,6 +772,14 @@
         "act1-rogue-scout-rework"
       ],
       "reason": "Readable Items and the Act I Rogue rework append independent properties backed by separate custom stats."
+    },
+    {
+      "pattern": "data-BKVince/BKVince.mpq/data/global/excel/monstats.txt",
+      "workstreams": [
+        "act1-rogue-scout-rework",
+        "sounds-of-variation-bkvince"
+      ],
+      "reason": "The Act I Rogue rework owns independent combat fields while Sounds of Variation changes only MonSound and UMonSound on 27 skeleton-mage rows."
     },
     {
       "pattern": "scripts/migrate-bkvince/port-storage-bag.js",

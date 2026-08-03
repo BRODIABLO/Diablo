@@ -1,8 +1,8 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-02T20:51:34.6103844+00:00",
+    "generatedAt":  "2026-08-03T01:36:43.9285774+00:00",
     "root":  {
-                 "name":  "staged-checkpoint-rogue-scout-movement-20260802T2048",
+                 "name":  "Diablo",
                  "path":  ".",
                  "kind":  "directory",
                  "meta":  {
@@ -4434,6 +4434,11 @@
                                                                                                                                            {
                                                                                                                                                "name":  "monseq.txt",
                                                                                                                                                "path":  "data-BKVince/BKVince.mpq/data/global/excel/monseq.txt",
+                                                                                                                                               "kind":  "file"
+                                                                                                                                           },
+                                                                                                                                           {
+                                                                                                                                               "name":  "monsounds.txt",
+                                                                                                                                               "path":  "data-BKVince/BKVince.mpq/data/global/excel/monsounds.txt",
                                                                                                                                                "kind":  "file"
                                                                                                                                            },
                                                                                                                                            {
@@ -31682,6 +31687,11 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "sounds-of-variation-bkvince.md",
+                                                           "path":  "Mission/sounds-of-variation-bkvince.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "staffmod-skill-pools.reference.json",
                                                            "path":  "Mission/staffmod-skill-pools.reference.json",
                                                            "kind":  "file"
@@ -32273,6 +32283,16 @@
                                                                             {
                                                                                 "name":  "import-enhanced-effects.js",
                                                                                 "path":  "scripts/migrate-bkvince/import-enhanced-effects.js",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "install-sounds-of-variation-local.ps1",
+                                                                                "path":  "scripts/migrate-bkvince/install-sounds-of-variation-local.ps1",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "integrate-sounds-of-variation.js",
+                                                                                "path":  "scripts/migrate-bkvince/integrate-sounds-of-variation.js",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
