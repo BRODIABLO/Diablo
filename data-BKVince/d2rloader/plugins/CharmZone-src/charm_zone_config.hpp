@@ -17,12 +17,12 @@ struct VisualConfig {
     bool enabled{true};
     float overlayAlpha{0.45f};
     float cellSize{98.0f};
-    std::string tooltip{"Inactive outside Charm Zone"};
 };
 
 struct Config {
     bool enabled{true};
     Zone zone{};
+    ExceptionConfig exceptions{};
     VisualConfig visual{};
 };
 
@@ -82,8 +82,59 @@ inline std::uint16_t CheckedU16(std::int64_t value, std::string_view key) {
     return static_cast<std::uint16_t>(value);
 }
 
+inline std::uint32_t PackItemCode(std::string_view code) {
+    if (code.empty() || code.size() > 4) {
+        throw std::runtime_error(
+            "CharmZone exception item code must contain 1 to 4 bytes");
+    }
+    std::uint32_t packed{PackItemCodeBytes(' ', ' ', ' ', ' ')};
+    for (std::size_t index = 0; index < code.size(); ++index) {
+        const auto character = static_cast<unsigned char>(code[index]);
+        if (character < 0x21 || character > 0x7E) {
+            throw std::runtime_error(
+                "CharmZone exception item codes must contain visible ASCII characters only");
+        }
+        const auto shift = static_cast<std::uint32_t>(index * 8);
+        packed &= ~(0xFFU << shift);
+        packed |= static_cast<std::uint32_t>(character) << shift;
+    }
+    return packed;
+}
+
+inline void ParseExceptionItemCodes(
+    const toml::table& table,
+    ExceptionConfig& exceptions) {
+    const auto* node = table.get("item_codes");
+    if (!node) return;
+    const auto* values = node->as_array();
+    if (!values) {
+        throw std::runtime_error(
+            "CharmZone exceptions.item_codes must be an array of strings");
+    }
+    if (values->size() > MaximumExceptionItemCodes) {
+        throw std::runtime_error(
+            "CharmZone exceptions.item_codes exceeds the entry limit");
+    }
+
+    exceptions.itemCodes.fill(0);
+    exceptions.itemCodeCount = 0;
+    for (const auto& valueNode : *values) {
+        const auto value = valueNode.value<std::string>();
+        if (!value) {
+            throw std::runtime_error(
+                "CharmZone exceptions.item_codes must contain strings only");
+        }
+        const auto packed = PackItemCode(*value);
+        if (IsExceptionItemCode(exceptions, packed)) {
+            throw std::runtime_error(
+                "Duplicate CharmZone exception item code: " + *value);
+        }
+        exceptions.itemCodes[exceptions.itemCodeCount++] = packed;
+    }
+}
+
 inline Config ParseConfig(const toml::table& root) {
-    RejectUnknownKeys(root, {"general", "zone", "visual"}, "root");
+    RejectUnknownKeys(root, {"general", "zone", "exceptions", "visual"}, "root");
     Config config{};
 
     if (const auto* general = ReadOptionalTable(root, "general")) {
@@ -112,6 +163,11 @@ inline Config ParseConfig(const toml::table& root) {
             ReadOptional<std::int64_t>(*zone, "height", config.zone.height), "height");
     }
 
+    if (const auto* exceptions = ReadOptionalTable(root, "exceptions")) {
+        RejectUnknownKeys(*exceptions, {"item_codes"}, "exceptions");
+        ParseExceptionItemCodes(*exceptions, config.exceptions);
+    }
+
     if (const auto* visual = ReadOptionalTable(root, "visual")) {
         RejectUnknownKeys(
             *visual,
@@ -123,8 +179,9 @@ inline Config ParseConfig(const toml::table& root) {
             *visual, "overlay_alpha", config.visual.overlayAlpha));
         config.visual.cellSize = static_cast<float>(ReadOptional<double>(
             *visual, "cell_size", config.visual.cellSize));
-        config.visual.tooltip = ReadOptional(
-            *visual, "tooltip", config.visual.tooltip);
+        // Accept the retired string so older configurations still load, but
+        // CharmZone no longer renders a hover tooltip.
+        (void)ReadOptional(*visual, "tooltip", std::string{});
     }
 
     if (!IsZoneValid(config.zone)) {
@@ -135,9 +192,6 @@ inline Config ParseConfig(const toml::table& root) {
     }
     if (config.visual.cellSize < 1.0f || config.visual.cellSize > 512.0f) {
         throw std::runtime_error("CharmZone cell_size must be between 1 and 512");
-    }
-    if (config.visual.tooltip.empty() || config.visual.tooltip.size() > 127) {
-        throw std::runtime_error("CharmZone tooltip must contain 1 to 127 bytes");
     }
     return config;
 }

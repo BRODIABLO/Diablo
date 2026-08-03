@@ -20,6 +20,7 @@ constexpr std::uintptr_t RenderItemIconRva = 0x15BB80;
 constexpr std::uintptr_t CapturePacketStateRva = 0x382D20;
 constexpr std::uintptr_t GetDimensionsRva = 0x371850;
 constexpr std::uintptr_t CheckItemTypeRva = 0x373890;
+constexpr std::uintptr_t GetItemCodeRva = 0x36EF50;
 constexpr std::size_t MaximumVisualItems = 128;
 constexpr std::size_t MaximumInactiveCharms = 64;
 constexpr char OverlayOwner[] = "CharmZone";
@@ -39,12 +40,15 @@ top = 4
 width = 11
 height = 4
 
+[exceptions]
+# These BK starter charms remain active anywhere in the player inventory.
+item_codes = ["mfd", "mfc", "mff"]
+
 [visual]
 enabled = true
 overlay_alpha = 0.45
 # Base BKVince inventory cell size before the runtime UI scale is applied.
 cell_size = 98.0
-tooltip = "Inactive outside Charm Zone"
 )toml";
 
 constexpr std::array<std::uint8_t, 32> IsCharmUsableExpected{
@@ -76,6 +80,12 @@ constexpr std::array<std::uint8_t, 32> CheckItemTypeExpected{
     0x41, 0x56, 0x41, 0x57, 0x48, 0x83, 0xEC, 0x20,
     0x48, 0x63, 0xF2, 0x48, 0x8B, 0xF9, 0x48, 0x85
 };
+constexpr std::array<std::uint8_t, 32> GetItemCodeExpected{
+    0x48, 0x89, 0x5C, 0x24, 0x10, 0x57, 0x48, 0x83,
+    0xEC, 0x20, 0x48, 0x8B, 0xF9, 0x48, 0x85, 0xC9,
+    0x75, 0x13, 0x88, 0x4C, 0x24, 0x30, 0x48, 0x8D,
+    0x4C, 0x24, 0x30, 0xE8, 0x80, 0x83, 0xFF, 0xFF
+};
 
 struct PacketState {
     std::uint32_t mode{};
@@ -103,6 +113,7 @@ using CapturePacketStateFn = PacketState*(__fastcall*)(
 using GetDimensionsFn = void(__fastcall*)(
     void*, std::uint8_t*, std::uint8_t*, const char*, std::int32_t) noexcept;
 using CheckItemTypeFn = std::int32_t(__fastcall*)(void*, std::int32_t) noexcept;
+using GetItemCodeFn = std::uint32_t(__fastcall*)(void*) noexcept;
 using OverlayCallback = void(__cdecl*)(
     void*, float, float, HWND) noexcept;
 using RegisterOverlayFn = bool(__cdecl*)(
@@ -113,8 +124,6 @@ using AddRectFn = void(__cdecl*)(
 using AddRectFilledFn = void(__cdecl*)(
     void*, float, float, float, float,
     float, float, float, float) noexcept;
-using AddTooltipFn = void(__cdecl*)(
-    void*, float, float, float, float, const char*) noexcept;
 
 const D2RL::PluginContext* Context{};
 std::uint8_t* Base{};
@@ -124,6 +133,7 @@ RenderItemIconFn OriginalRenderItemIcon{};
 CapturePacketStateFn CapturePacketState{};
 GetDimensionsFn GetDimensions{};
 CheckItemTypeFn CheckItemType{};
+GetItemCodeFn GetItemCode{};
 
 std::mutex VisualMutex;
 std::array<VisualItem, MaximumVisualItems> VisualItems{};
@@ -134,12 +144,12 @@ bool VisualHookInstalled{};
 RegisterOverlayFn RegisterOverlay{};
 AddRectFn AddRect{};
 AddRectFilledFn AddRectFilled{};
-AddTooltipFn AddTooltip{};
 HANDLE OverlayStopEvent{};
 HANDLE OverlayWorker{};
 
 std::atomic<std::uint64_t> NativeCharmChecks{};
 std::atomic<std::uint64_t> AllowedCharms{};
+std::atomic<std::uint64_t> ExceptionCharms{};
 std::atomic<std::uint64_t> SuppressedCharms{};
 std::atomic<std::uint64_t> ClassificationFailures{};
 std::atomic<std::uint64_t> VisualHookCalls{};
@@ -155,9 +165,9 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "charm-zone",
     .name = "CharmZone",
-    .version = "0.3.1",
+    .version = "0.3.2",
     .author = "RuffnecKk",
-    .description = "Disables charms placed outside the configured inventory zone.",
+    .description = "Restricts non-exempt charms to the configured inventory zone.",
     .flags = D2RL::PluginFlags::NativeHooks,
 };
 
@@ -213,6 +223,15 @@ bool TryReadPlacement(void* item, ItemPlacement& output) noexcept {
     }
 }
 
+bool IsConfiguredException(void* item) noexcept {
+    if (!item || Settings.exceptions.itemCodeCount == 0) return false;
+    __try {
+        return IsExceptionItemCode(Settings.exceptions, GetItemCode(item));
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
 bool IsTrackedInactiveCharm(void* item) noexcept {
     if (!item) return false;
     for (const auto& slot : InactiveCharms) {
@@ -255,6 +274,11 @@ std::int32_t __fastcall HookIsCharmUsable(
     }
 
     NativeCharmChecks.fetch_add(1, std::memory_order_relaxed);
+    if (IsConfiguredException(item)) {
+        ForgetInactiveCharm(item);
+        ExceptionCharms.fetch_add(1, std::memory_order_relaxed);
+        return nativeResult;
+    }
     ItemPlacement placement{};
     if (!TryReadPlacement(item, placement)) {
         ClassificationFailures.fetch_add(1, std::memory_order_relaxed);
@@ -334,9 +358,9 @@ void __fastcall HookRenderItemIcon(
 
 void __cdecl RenderOverlay(
     void* drawList,
-    float displayWidth,
+    float,
     float displayHeight,
-    HWND window) noexcept {
+    HWND) noexcept {
     std::array<VisualItem, MaximumVisualItems> items{};
     std::size_t count{};
     {
@@ -348,11 +372,6 @@ void __cdecl RenderOverlay(
         VisualItemCount = 0;
     }
 
-    POINT cursor{};
-    const bool hasCursor = window
-        && GetCursorPos(&cursor)
-        && ScreenToClient(window, &cursor);
-    bool tooltipDrawn{};
     for (std::size_t index = 0; index < count; ++index) {
         ScreenRect rect{};
         const auto& item = items[index];
@@ -367,19 +386,6 @@ void __cdecl RenderOverlay(
         AddRect(
             drawList, rect.left, rect.top, rect.right, rect.bottom,
             1.0f, 0.12f, 0.12f, 0.95f, 2.0f);
-        if (!tooltipDrawn
-            && hasCursor
-            && ContainsPoint(
-                rect, static_cast<float>(cursor.x), static_cast<float>(cursor.y))) {
-            AddTooltip(
-                drawList,
-                static_cast<float>(cursor.x),
-                static_cast<float>(cursor.y),
-                displayWidth,
-                displayHeight,
-                Settings.visual.tooltip.c_str());
-            tooltipDrawn = true;
-        }
     }
 }
 
@@ -392,13 +398,10 @@ bool RegisterWithOverlayHost() noexcept {
         GetProcAddress(host, "FloatingDamageOverlayAddRect"));
     const auto addRectFilled = reinterpret_cast<AddRectFilledFn>(
         GetProcAddress(host, "FloatingDamageOverlayAddRectFilled"));
-    const auto addTooltip = reinterpret_cast<AddTooltipFn>(
-        GetProcAddress(host, "FloatingDamageOverlayAddTooltip"));
-    if (!registerOverlay || !addRect || !addRectFilled || !addTooltip) return false;
+    if (!registerOverlay || !addRect || !addRectFilled) return false;
 
     AddRect = addRect;
     AddRectFilled = addRectFilled;
-    AddTooltip = addTooltip;
     RegisterOverlay = registerOverlay;
     if (!RegisterOverlay(OverlayOwner, RenderOverlay)) return false;
     OverlayHosted.store(true, std::memory_order_release);
@@ -473,6 +476,8 @@ bool ValidateRuntime() noexcept {
         && check(CapturePacketStateRva, CapturePacketStateExpected)
         && check(GetDimensionsRva, GetDimensionsExpected)
         && check(CheckItemTypeRva, CheckItemTypeExpected)
+        && (Settings.exceptions.itemCodeCount == 0
+            || check(GetItemCodeRva, GetItemCodeExpected))
         && (!Settings.visual.enabled
             || check(RenderItemIconRva, RenderItemIconExpected));
 }
@@ -512,7 +517,7 @@ auto Status(
     std::snprintf(
         message,
         sizeof(message),
-        "CharmZone 0.3.1: enabled=%s; zone=(%u,%u %ux%u) grid=%ux%u; overlay=%s; native checks=%llu; allowed=%llu; suppressed=%llu; classification failures=%llu; visual calls=%llu; tracked=%llu; host waits=%llu; placement failures=%llu; inside=%llu; captures=%llu; drops=%llu.",
+        "CharmZone 0.3.2: enabled=%s; zone=(%u,%u %ux%u) grid=%ux%u; exceptions=%zu; overlay=%s; native checks=%llu; allowed=%llu; exempted=%llu; suppressed=%llu; classification failures=%llu; visual calls=%llu; tracked=%llu; host waits=%llu; placement failures=%llu; inside=%llu; captures=%llu; drops=%llu.",
         Settings.enabled ? "true" : "false",
         Settings.zone.left,
         Settings.zone.top,
@@ -520,9 +525,11 @@ auto Status(
         Settings.zone.height,
         Settings.zone.gridWidth,
         Settings.zone.gridHeight,
+        Settings.exceptions.itemCodeCount,
         OverlayHosted.load(std::memory_order_acquire) ? "ready" : "waiting",
         static_cast<unsigned long long>(NativeCharmChecks.load()),
         static_cast<unsigned long long>(AllowedCharms.load()),
+        static_cast<unsigned long long>(ExceptionCharms.load()),
         static_cast<unsigned long long>(SuppressedCharms.load()),
         static_cast<unsigned long long>(ClassificationFailures.load()),
         static_cast<unsigned long long>(VisualHookCalls.load()),
@@ -556,13 +563,14 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         return false;
     }
     if (!Settings.enabled) {
-        context->LogInfo("CharmZone 0.3.1 is disabled; no hooks were installed.");
+        context->LogInfo("CharmZone 0.3.2 is disabled; no hooks were installed.");
         return true;
     }
 
     CapturePacketState = At<CapturePacketStateFn>(CapturePacketStateRva);
     GetDimensions = At<GetDimensionsFn>(GetDimensionsRva);
     CheckItemType = At<CheckItemTypeFn>(CheckItemTypeRva);
+    GetItemCode = At<GetItemCodeFn>(GetItemCodeRva);
     if (!ValidateRuntime()) {
         context->LogError(
             "CharmZone: a required D2R 3.2.92777 signature changed; plugin refused.");
@@ -580,7 +588,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         context->LogWarn("CharmZone: status command could not be registered.");
     }
     context->LogInfo(
-        "CharmZone 0.3.1 filters the native charm-eligibility predicate by full zone containment (global/mod-local hybrid)." );
+        "CharmZone 0.3.2 preserves configured exception item codes and filters other native-eligible charms by full zone containment (global/mod-local hybrid)." );
     return true;
 }
 

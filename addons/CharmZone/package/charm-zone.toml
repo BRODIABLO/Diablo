@@ -13,9 +13,12 @@ top = 4
 width = 11
 height = 4
 
+[exceptions]
+# These BK starter charms remain active anywhere in the player inventory.
+item_codes = ["mfd", "mfc", "mff"]
+
 [visual]
 enabled = true
 overlay_alpha = 0.45
 # Base BKVince inventory cell size before the runtime UI scale is applied.
 cell_size = 98.0
-tooltip = "Inactive outside Charm Zone"

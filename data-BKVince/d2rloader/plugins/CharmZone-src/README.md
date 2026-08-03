@@ -1,11 +1,10 @@
-# CharmZone 0.3.1
+# CharmZone 0.3.2
 
 Standalone D2RLoader add-on for **Diablo II: Resurrected 3.2.92777**.
 
 CharmZone keeps charms movable everywhere in the player inventory but only
 applies their gameplay effects when the complete item fits inside a configured
-rectangle. Inactive charms are covered by a red overlay and display an
-explanatory message on hover.
+rectangle. Inactive charms are covered by a red overlay.
 
 ## Requirements
 
@@ -44,10 +43,16 @@ BKVince uses an 11 by 8 inventory. The active charm zone is the complete lower
 half: columns `0..10`, rows `4..7`. A multi-cell charm crossing the boundary is
 fully inactive.
 
+The BK starter charm codes `mfd`, `mfc` and `mff` are configured as exceptions.
+They remain active anywhere in the player inventory and never receive the red
+overlay.
+
 ## Behaviour and compatibility
 
 - Native charm eligibility is evaluated first; CharmZone only adds the spatial
   restriction.
+- Configured exception item codes bypass only the spatial restriction; native
+  eligibility remains authoritative.
 - The rule applies to all charm properties handled by the native eligibility
   path, including attributes, resistances, skills, oskills, auras and triggers.
 - Items outside the player inventory do not become active.

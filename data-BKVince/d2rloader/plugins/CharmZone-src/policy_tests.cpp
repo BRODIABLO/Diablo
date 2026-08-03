@@ -36,20 +36,52 @@ left = 0
 top = 4
 width = 11
 height = 4
+[exceptions]
+item_codes = ["mfd", "mfc", "mff"]
 [visual]
 enabled = true
 overlay_alpha = 0.5
 cell_size = 98.0
-tooltip = "Inactive outside Charm Zone"
 )toml");
     assert(parsed.enabled);
     assert(parsed.zone.top == 4);
     assert(parsed.zone.height == 4);
+    assert(parsed.exceptions.itemCodeCount == 3);
+    assert(IsExceptionItemCode(parsed.exceptions, PackItemCode("mfd")));
+    assert(IsExceptionItemCode(parsed.exceptions, PackItemCode("mfc")));
+    assert(IsExceptionItemCode(parsed.exceptions, PackItemCode("mff")));
+    assert(!IsExceptionItemCode(parsed.exceptions, PackItemCode("cm1")));
     assert(std::fabs(parsed.visual.overlayAlpha - 0.5f) < 0.001f);
+
+    const auto noExceptions = ParseConfig(
+        "[exceptions]\nitem_codes = []\n");
+    assert(noExceptions.exceptions.itemCodeCount == 0);
+
+    const auto legacyTooltip = ParseConfig(
+        "[visual]\ntooltip = \"Inactive outside Charm Zone\"\n");
+    assert(legacyTooltip.visual.enabled);
 
     bool rejected{};
     try {
         (void)ParseConfig("[zone]\nheight = 5\n");
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    assert(rejected);
+
+    rejected = false;
+    try {
+        (void)ParseConfig(
+            "[exceptions]\nitem_codes = [\"mfd\", \"mfd\"]\n");
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    assert(rejected);
+
+    rejected = false;
+    try {
+        (void)ParseConfig(
+            "[exceptions]\nitem_codes = [\"abcde\"]\n");
     } catch (const std::runtime_error&) {
         rejected = true;
     }

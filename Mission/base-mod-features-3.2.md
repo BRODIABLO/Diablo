@@ -33,8 +33,8 @@ Les destinations PluginPack confirmées sont :
   entièrement inactif.
 - Tous les effets sont désactivés côté serveur : stats, résistances, skills,
   oskills, auras et déclencheurs.
-- L'icône inactive est teintée rouge et son tooltip explique qu'elle est hors
-  Charm Zone; l'objet reste déplaçable.
+- L'icône inactive est teintée rouge sans ajouter de tooltip CharmZone;
+  l'objet reste déplaçable.
 - Le plugin ne doit ni modifier la sauvegarde ni faire confiance au rendu client.
 
 ## Contrat des services répétables
