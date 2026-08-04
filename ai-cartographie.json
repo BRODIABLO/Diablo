@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-04T13:13:21.4998931+00:00",
+    "generatedAt":  "2026-08-04T13:30:12.4394053+00:00",
     "root":  {
                  "name":  "snapshot",
                  "path":  ".",
@@ -7907,6 +7907,21 @@
                                                                                                                                                                                                           {
                                                                                                                                                                                                               "name":  "firearrow_hd3.flac",
                                                                                                                                                                                                               "path":  "data-BKVince/BKVince.mpq/data/hd/global/sfx/skill/amazon/firearrow_hd3.flac",
+                                                                                                                                                                                                              "kind":  "file"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "name":  "magic_guided_arrow_cast_01.flac",
+                                                                                                                                                                                                              "path":  "data-BKVince/BKVince.mpq/data/hd/global/sfx/skill/amazon/magic_guided_arrow_cast_01.flac",
+                                                                                                                                                                                                              "kind":  "file"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "name":  "magic_guided_arrow_cast_02.flac",
+                                                                                                                                                                                                              "path":  "data-BKVince/BKVince.mpq/data/hd/global/sfx/skill/amazon/magic_guided_arrow_cast_02.flac",
+                                                                                                                                                                                                              "kind":  "file"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "name":  "magic_guided_arrow_cast_03.flac",
+                                                                                                                                                                                                              "path":  "data-BKVince/BKVince.mpq/data/hd/global/sfx/skill/amazon/magic_guided_arrow_cast_03.flac",
                                                                                                                                                                                                               "kind":  "file"
                                                                                                                                                                                                           },
                                                                                                                                                                                                           {

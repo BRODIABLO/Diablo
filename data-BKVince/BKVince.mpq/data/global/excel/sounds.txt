@@ -13238,3 +13238,6 @@ custom_d2pack_impact_double_4	101288		sfx/combat/impacts_sd	combat\impact\critic
 custom_d2pack_paladin_smite_1	101289		sfx/player-skills_sd	skill\paladin\smite.flac	0	0	0	0	0	224	224	100	100	2	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 custom_d2pack_paladin_smite_2	101290		sfx/player-skills_sd	skill\paladin\smiteB.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 custom_d2pack_amazon_hurl	101291		sfx/player-skills_sd	skill\amazon\hurl.flac	0	0	0	0	0	180	180	100	100	0	0	0	8	8	0	0	0	-1	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+custom_bkvince_magic_guided_arrow_cast_1	101292		sfx/player-skills_hd	skill\amazon\magic_guided_arrow_cast_01.flac	0	0	0	0	0	201	255	90	120	3	0	0	0	6	0	0	0	4	1	0	120	80	0	0	1	0	0	-1	-1	-1	0	0	
+custom_bkvince_magic_guided_arrow_cast_2	101293		sfx/player-skills_hd	skill\amazon\magic_guided_arrow_cast_02.flac	0	0	0	0	0	201	255	90	120	0	0	0	0	6	0	0	0	4	1	0	120	80	0	0	1	0	0	-1	-1	-1	0	0	
+custom_bkvince_magic_guided_arrow_cast_3	101294		sfx/player-skills_hd	skill\amazon\magic_guided_arrow_cast_03.flac	0	0	0	0	0	201	255	90	120	0	0	0	0	6	0	0	0	4	1	0	120	80	0	0	1	0	0	-1	-1	-1	0	0	
