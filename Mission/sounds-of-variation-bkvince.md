@@ -89,6 +89,153 @@ audio. Le second cold start a franchi 24/24 étapes avec 18/18 patches appliqué
 12 plugins actifs, zéro rejet/échec et aucune erreur `D2Sound` ou `rain2`.
 L'audition du retour au son de pluie précédent reste à confirmer par Vincent.
 
+## Exceptions audio vanilla personnalisées — 4 août 2026
+
+Vincent demande de conserver les sons vanilla pour les interactions d'interface,
+les boutons du menu principal, le cube, les waypoints et les petits pas de course
+des monstres de type Fallen. La correction reste ciblée dans `sounds.txt` et ne
+retire aucun son d'objet ou d'inventaire précédemment rétabli.
+
+- Les cinq routes `cursor_pass`, `cursor_select`, `cursor_error`,
+  `cursor_button_click` et `cursor_switch` retrouvent leurs redirects HD vanilla.
+- Les deux événements de cube `cursor_convert_ready` et `cursor_convert_item`
+  retrouvent leurs priorités vanilla; leurs redirects et fichiers étaient déjà
+  ceux de D2R 3.2.
+- L'ouverture et les trois boucles de waypoint retrouvent leurs valeurs vanilla
+  de `LFEMix` et de priorité.
+- `light_run_dirt_1` retrouve le redirect `light_run_dirt_hd1`, ce qui restaure
+  les petits pas de course vanilla utilisés notamment par les Fallen sans
+  désactiver leurs variations vocales de combat.
+
+Le changement porte sur 15 cellules réparties sur 13 lignes. Le round-trip reste
+byte-exact en CRLF; `sounds.txt` passe de
+`FCD6E738855602EE51E8A07C85F4A16DDAE3A1824F88DF83DC04E3FE2D287D8E` à
+`37DEF08860C3F304E110932CDA7201CA880ADE91230CD087CBB5DB8C05023ED9`.
+Le déploiement runtime est volontairement limité à ces 15 cellules afin de ne
+pas embarquer le prototype Magic/Guided Arrow encore source-only. Le candidat et
+le runtime partagent le SHA-256
+`8A8EB4F7A8210EC95EAB4431AEBF169A22045AD30C8858DC42C6D7C99700D114`; la
+sauvegarde et le rapport récupérables sont sous
+`analysis-cache/runtime-sync/audio-preferences-20260804-133247/`.
+
+Le cold start exact `D2RLoader.exe -mod BKVince -txt` franchit 24/24 étapes,
+charge la table audio, applique 18/18 patches et active 12 plugins sur 13, avec
+zéro rejet, zéro échec et aucune erreur `D2Sound`, son ou audio. Les assertions
+capturées après le frontend concernent les tables d'items et de zones, pas cette
+correction. L'audition en jeu reste à confirmer par Vincent sur le menu principal,
+le cube, les waypoints, les pas des Fallen et la non-régression des sons d'items.
+
+### Voyage au waypoint, amulets et rings vanilla — 4 août 2026
+
+Vincent précise que les nouveaux sons de voyage au waypoint, d'amulet et de ring
+ne lui conviennent pas. L'audit confirme que ces routes avaient été intégrées
+comme remplacements : leurs redirects vanilla avaient été supprimés, au lieu
+de conserver l'original dans un groupe de variantes.
+
+- `item_amulet` et `item_ring` retrouvent leurs redirects HD et leurs priorités
+  vanilla; `item_amulet_hd` et `item_ring_hd` retrouvent aussi leur priorité
+  vanilla.
+- La route d'entrée/transition `player_townportal_enter` retrouve le redirect,
+  le `LFEMix` et la priorité vanilla; `player_townportal_enter_hd` retrouve son
+  `LFEMix` vanilla.
+- Les autres familles d'items et les autres variantes audio restent inchangées.
+
+Ce second affinage modifie 10 cellules sur 6 lignes. Le `sounds.txt` gouverné
+reste byte-exact en CRLF et passe au SHA-256
+`EAB0E6F9C47283AC9FCF495896E2E44AA60B22418A808026E4C58A1C66588C2C`.
+Le déploiement runtime ciblé conserve les prototypes source-only et porte le
+SHA-256 `2B4C4F262626427167E44EF3F9EB6BEB36BD7F0B1B98BDBD8332E6C360D3987B`;
+la sauvegarde et le rapport sont sous
+`analysis-cache/runtime-sync/audio-vanilla-exclusions-20260804-134627/`.
+Conformément à la demande de Vincent, aucun redémarrage n'est effectué. Le cold
+start et l'audition du voyage au waypoint, des amulets et des rings restent
+`not run` jusqu'à son autorisation explicite.
+
+### Horadric Cube : son d'item vanilla ciblé — 4 août 2026
+
+Le retour utilisateur montre que les routes `cursor_convert_*` corrigées plus
+haut couvrent la transmutation, mais pas le son propre au Horadric Cube. La ligne
+`box` de `misc.txt` utilisait encore `dropsound=item_rare`; cette route reste
+volontairement personnalisée pour les autres rare items et charge le fichier
+mod-local `item/rare.flac`.
+
+Le Cube reçoit donc directement `dropsound=item_rare_hd`. Cette exception
+réutilise le son HD vanilla depuis les archives du jeu sans retirer les variantes
+des autres rare items. Une seule cellule change dans `misc.txt`, dont le SHA-256
+passe de `CFC3E004B43F587578BC7EB4E8B4BB8B43FE5FD88AA7B03E5439D198BC1A112F`
+à `63CA8FD1B608804AF6BCDA92C632C005B3BDF0FA903E2D738967441CAEE0C5EF`.
+
+Le candidat runtime byte-exact est prêt sous
+`analysis-cache/runtime-sync/audio-cube-vanilla-20260804-141054/` avec le même
+SHA-256 que la source. Le jeu étant actif pendant les tests de Vincent, ni le
+déploiement runtime ni le redémarrage ne sont effectués. Ces deux gates ainsi que
+l'audition restent `not run` jusqu'à son autorisation explicite.
+
+### Identification d'objet vanilla — 4 août 2026
+
+Vincent refuse également les nouveaux sons joués lors de l'identification. Les
+routes `cursor_identify_ready` et `cursor_identify_item` chargeaient directement
+les fichiers mod-locaux `identifyready.flac` et `identify.flac` parce que leurs
+redirects avaient été supprimés.
+
+Les deux routes retrouvent leurs redirects et priorités exacts de D2R 3.2 : le
+curseur d'identification et l'application sur l'objet utilisent de nouveau leurs
+groupes HD vanilla, dont les dix lignes membres étaient déjà intactes. Quatre
+cellules changent sur deux lignes; le SHA-256 gouverné de `sounds.txt` devient
+`4527BA4A91A99810727CBCCDABD7B230BF891094E8C4388CFFC6EE359C504563`.
+
+Le paquet runtime combiné Cube + identification est prêt sous
+`analysis-cache/runtime-sync/audio-pending-cube-identify-20260804-141425/`.
+Le jeu reste actif et aucun déploiement ni redémarrage n'est effectué sans
+l'autorisation explicite de Vincent; le cold start et l'audition restent `not run`.
+
+### Town Portals vanilla — 4 août 2026
+
+Vincent demande ensuite le retour vanilla de toute la famille des Town Portals.
+La route d'entrée `player_townportal_enter` et sa variante HD avaient déjà été
+restaurées. Les routes restantes retrouvent maintenant leurs valeurs D2R 3.2 :
+
+- `player_townportal_cast` retrouve son redirect, son `LFEMix` et sa priorité;
+- `object_townportal` et `object_townportal_hd` retrouvent leur mix et leur
+  priorité;
+- `player_townportal_loop_hd` retrouve son mix et sa priorité;
+- les trois membres `player_townportal_cast_hd1..3` retrouvent leur `LFEMix`.
+
+Cette correction porte sur 12 cellules de 7 lignes et n'affecte ni les portails
+de quête/Baal ni la compétence Teleport de la Sorceress. Le SHA-256 gouverné de
+`sounds.txt` devient
+`B107AEC50592A215CB769516007C2061547DB34416451E560C8D3E1FE540DE5E`.
+
+Le nouveau paquet runtime combiné Cube + identification + Town Portals est prêt
+sous
+`analysis-cache/runtime-sync/audio-pending-cube-identify-townportal-20260804-141637/`.
+Le jeu reste actif : déploiement, redémarrage, cold start et audition demeurent
+`not run` jusqu'à l'autorisation explicite de Vincent.
+
+### Déploiement combiné autorisé — 4 août 2026, 14:21
+
+Après le `go` explicite de Vincent, les candidats combinés Cube + identification
++ Town Portals sont copiés dans le runtime BKVince, puis une seule instance est
+relancée avec `D2RLoader.exe -mod BKVince -txt`.
+
+- `sounds.txt` runtime correspond exactement au candidat, SHA-256
+  `78B5752B363615E165A7DE651736B6C62D12E90D8EEA144A68AE9F14F79C1B1E`.
+- `misc.txt` runtime correspond exactement au candidat, SHA-256
+  `63CA8FD1B608804AF6BCDA92C632C005B3BDF0FA903E2D738967441CAEE0C5EF`.
+- Le build `3.2.92777` franchit 24/24 étapes, applique 18/18 patches, charge la
+  table audio et ne produit aucune erreur `D2Sound`, son ou audio.
+- `plugin-items.dll` refuse indépendamment son chargement après un mismatch
+  `check-expected` au RVA `0x2BD480`; le bilan est donc 11 plugins actifs,
+  1 désactivé, 0 rejeté et 1 en échec. Cet incident précède le chargement audio
+  et ne modifie pas les deux tables déployées.
+
+Le jeu reste ouvert au frontend. L'audition du Cube, de l'identification et des
+Town Portals est `not run` jusqu'au retour de Vincent.
+
+Retour en jeu de Vincent : le son vanilla d'identification et le son original du
+Horadric Cube sont confirmés `passed`. L'audition des Town Portals n'est pas
+explicitement confirmée et reste `not run`.
+
 ## Prototype séparé — Magic Arrow et Guided Arrow
 
 Ce petit lot du 4 août 2026 est distinct de **The Sounds of Variation**. Les

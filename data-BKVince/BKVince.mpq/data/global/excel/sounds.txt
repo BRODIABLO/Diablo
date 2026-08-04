@@ -1,18 +1,18 @@
 Sound	*Index	Redirect	Channel	FileName	IsLocal	IsMusic	IsAmbientScene	IsAmbientEvent	IsUI	Volume Min	Volume Max	Pitch Min	Pitch Max	Group Size	Group Weight	Loop	Fade In	Fade Out	Defer Inst	Stop Inst	Duration	Compound	Falloff	LFEMix	3dSpread	Priority	Stream	Is2D	Tracking	Solo	Music Vol	Block 1	Block 2	Block 3	HDOptOut	Delay	4841
 	0			none.flac	0	0	0	0	0	0	0	100	100	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_pass	1		sfx/cursor-ui_sd	cursor\pass.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_select	2		sfx/cursor-ui_sd	cursor\select.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_error	3		sfx/cursor-ui_sd	cursor\windowopen.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_button_click	4		sfx/cursor-ui_sd	cursor\button.flac	0	0	0	0	1	142	160	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	1	0	0	0	-1	-1	-1	0	0	
+cursor_pass	1	cursor_pass_hd_4	sfx/cursor-ui_sd	cursor\pass.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_select	2	cursor_select_hd	sfx/cursor-ui_sd	cursor\select.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_error	3	cursor_error_hd	sfx/cursor-ui_sd	cursor\windowopen.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_button_click	4	cursor_button_hd_1	sfx/cursor-ui_sd	cursor\button.flac	0	0	0	0	1	142	160	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	1	0	0	0	-1	-1	-1	0	0	
 cursor_point_drop	5	cursor_point_drop_hd_1	sfx/cursor-ui_sd	cursor\pointdrop.flac	0	0	0	0	1	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_switch	6		sfx/cursor-ui_sd	cursor\windowopen.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_switch	6	cursor_error_hd	sfx/cursor-ui_sd	cursor\windowopen.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
 cursor_level_up	7		sfx/eax/player-skills_shouts	cursor\levelup.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
 cursor_level_up_hireling	8		sfx/eax/player-skills_shouts	cursor\leveluphireling.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
 cursor_durability_break	9		sfx/cursor-ui_sd	cursor\itembroken.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_convert_ready	10	cursor_convert_ready_hd_4	sfx/cursor-ui_sd	cursor\convertready.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	1	0	0	0	-1	-1	-1	0	0	
-cursor_convert_item	11	cursor_convert_item_hd_1	sfx/cursor-ui_sd	cursor\convert.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_identify_ready	12		sfx/cursor-ui_sd	cursor\identifyready.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_identify_item	13		sfx/cursor-ui_sd	cursor\identify.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_convert_ready	10	cursor_convert_ready_hd_4	sfx/cursor-ui_sd	cursor\convertready.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	100	0	1	0	0	0	-1	-1	-1	0	0	
+cursor_convert_item	11	cursor_convert_item_hd_1	sfx/cursor-ui_sd	cursor\convert.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	255	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_identify_ready	12	cursor_identify_ready_hd_1	sfx/cursor-ui_sd	cursor\identifyready.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	100	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_identify_item	13	cursor_identify_item_hd_1	sfx/cursor-ui_sd	cursor\identify.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	120	255	0	0	0	0	0	-1	-1	-1	0	0	
 cursor_questdone	14	cursor_questdone_hd_1	sfx/cursor-ui_sd	cursor\questdone.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	0	0	12	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
 cursor_repair_item	15	cursor_repair_item_hd_1	sfx/cursor-ui_sd	cursor\repair.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
 cursor_hostile	16	cursor_hostile_hd_1	sfx/cursor-ui_sd	cursor\hostile.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -204,7 +204,7 @@ event_wild_night_5	201		sfx/ambient/event-3d_sd	ambient\event\birdienight5.flac	
 event_thunder_1	202	event_thunder_hd_1	sfx/ambient/event-3d_sd	ambient\event\thunder_norm_1.flac	0	0	0	0	0	180	180	100	100	3	0	0	0	0	0	0	0	0	3	0	0	0	0	0	0	0	0	-1	-1	-1	0	0	
 event_thunder_2	203		sfx/ambient/event-3d_sd	ambient\event\thunder_norm_2.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	3	0	0	0	0	0	0	0	0	-1	-1	-1	0	0	
 event_thunder_3	204		sfx/ambient/event-3d_sd	ambient\event\thunder_norm_5.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	3	0	0	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_amulet	205		sfx/items_sd	item\amulet.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_amulet	205	item_amulet_hd	sfx/items_sd	item\amulet.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	100	0	0	0	0	0	-1	-1	-1	0	0	
 item_belt	206	item_belt_hd	sfx/items_sd	item\belt.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_book	207	item_book_hd1	sfx/items_sd	item\book.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_boots	208	item_boots_hd	sfx/items_sd	item\boots.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -240,7 +240,7 @@ item_potion	237	custom_d2pack_item_potion_1	sfx/items_sd	item\potionui.flac	0	0	
 item_potion_drink	238		sfx/items_sd	item\potiondrink.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_quiver	239		sfx/items_sd	item\quiver.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_rare	240		sfx/items_sd	item\rare.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_ring	241		sfx/items_sd	item\ring.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_ring	241	item_ring_hd	sfx/items_sd	item\ring.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	100	0	0	0	0	0	-1	-1	-1	0	0	
 item_rune	242	item_rune_hd	sfx/items_sd	item\rune.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_scroll	243		sfx/items_sd	item\scroll.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_smallmetalweapon	244		sfx/items_sd	item\smallmetalweapon.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -2229,8 +2229,8 @@ zombie_unique_neutral_3	2226		sfx/eax/monster_neutral_sd	monster\zombie\neutral3
 zombie_raise_1	2227	zombie_raise_hd1	sfx/monster_sd	monster\zombie\raise1.flac	0	0	0	0	0	180	180	100	100	3	0	0	0	0	1	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 zombie_raise_2	2228		sfx/monster_sd	monster\zombie\raise4.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	1	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 zombie_raise_3	2229		sfx/monster_sd	monster\zombie\raise5.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	1	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
-player_townportal_cast	2230		sfx/player-skills_sd	skill\misc\portalcast.flac	0	0	0	0	0	140	140	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-player_townportal_enter	2231		sfx/player-skills_sd	skill\misc\portalenter.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+player_townportal_cast	2230	player_townportal_cast_hd1	sfx/player-skills_sd	skill\misc\portalcast.flac	0	0	0	0	0	140	140	100	100	0	0	0	0	0	1	0	0	0	1	15	90	100	0	0	1	0	0	-1	-1	-1	0	0	
+player_townportal_enter	2231	player_townportal_enter_hd	sfx/player-skills_sd	skill\misc\portalenter.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	15	90	100	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_cast_poison	2232	amazon_cast_poison_hd1	sfx/player-skills_sd	skill\amazon\poisoncast.flac	0	0	0	0	0	180	180	100	100	0	0	0	8	8	0	0	0	-1	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_coldarrow_1	2233		sfx/player-skills_sd	skill\amazon\coldarrow1.flac	0	0	0	0	0	255	255	100	100	3	0	1	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	26302	-1	-1	0	0	
 amazon_coldarrow_2	2234		sfx/player-skills_sd	skill\amazon\coldarrow2.flac	0	0	0	0	0	255	255	100	100	0	0	1	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	22230	-1	-1	0	0	
@@ -2632,7 +2632,7 @@ object_stone_large	2629	object_stone_large_hd1	sfx/ambient/environment-objects_s
 object_taintedsunaltar	2630	object_taintedsunaltar_hd	sfx/ambient/environment-objects_sd	object\taintedsunaltar.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 object_teleportpad	2631	object_teleportpad_hd	sfx/ambient/environment-objects_sd	object\teleportationpad.flac	0	0	0	0	0	160	160	100	100	0	0	1	4	4	0	0	0	-1	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 object_tome	2632	object_tome_hd	sfx/ambient/environment-objects_sd	object\towertome.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
-object_townportal	2633	object_townportal_hd	sfx/ambient/environment-objects_sd	object\portalopen.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
+object_townportal	2633	object_townportal_hd	sfx/ambient/environment-objects_sd	object\portalopen.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	15	60	100	0	0	1	0	0	-1	-1	-1	0	0	
 object_trap_trigger	2634	object_trap_trigger_hd	sfx/ambient/environment-objects_sd	object\traptick.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 object_trap_release	2635	object_trap_release_hd	sfx/ambient/environment-objects_sd	object\traprelease.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 object_urn_break_1	2636	object_urn_break_hd1	sfx/ambient/environment-objects_sd	object\jarbreak2.flac	0	0	0	0	0	255	255	100	100	5	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
@@ -2641,7 +2641,7 @@ object_urn_break_3	2638		sfx/ambient/environment-objects_sd	object\jarbreak6.fla
 object_urn_break_4	2639		sfx/ambient/environment-objects_sd	object\jarbreak7.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 object_urn_break_5	2640		sfx/ambient/environment-objects_sd	object\jarbreak9.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 object_wanderer_fissure	2641	object_wanderer_fissure_hd1	sfx/ambient/environment-objects_sd	object\fissure2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
-object_waypoint_open	2642	object_waypoint_open_hd	sfx/ambient/environment-objects_sd	object\waypointignite2.flac	0	0	0	0	0	230	230	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
+object_waypoint_open	2642	object_waypoint_open_hd	sfx/ambient/environment-objects_sd	object\waypointignite2.flac	0	0	0	0	0	230	230	100	100	0	0	0	0	0	0	0	0	0	1	15	60	100	0	0	1	0	0	-1	-1	-1	0	0	
 object_weaponrack	2643	object_weaponrack_hd1	sfx/ambient/environment-objects_sd	object\weaponrack.flac	0	0	0	0	0	160	160	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 object_well	2644	object_well_hd	sfx/ambient/environment-objects_sd	object\fountain.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 object_wood_break_1	2645	object_wood_break_hd1	sfx/ambient/environment-objects_sd	object\woodbreak1.flac	0	0	0	0	0	140	140	100	100	5	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
@@ -2743,7 +2743,7 @@ light_walk_wood_1	2740	light_walk_wood_hd1	sfx/ambient/footsteps_sd	ambient\foot
 light_walk_wood_2	2741		sfx/ambient/footsteps_sd	ambient\footstep\LightWood2.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_walk_wood_3	2742		sfx/ambient/footsteps_sd	ambient\footstep\LightWood3.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_walk_wood_4	2743		sfx/ambient/footsteps_sd	ambient\footstep\LightWood4.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-light_run_dirt_1	2744		sfx/ambient/footsteps_sd	ambient\footstep\LightDirtRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+light_run_dirt_1	2744	light_run_dirt_hd1	sfx/ambient/footsteps_sd	ambient\footstep\LightDirtRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_dirt_2	2745		sfx/ambient/footsteps_sd	ambient\footstep\LightDirtRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_dirt_3	2746		sfx/ambient/footsteps_sd	ambient\footstep\LightDirtRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_dirt_4	2747		sfx/ambient/footsteps_sd	ambient\footstep\LightDirtRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -4967,7 +4967,7 @@ shrine_ofenirhs_hd	4964		sfx/ambient/shrines_hd	object\shrine\shrineofenirhs_hd.
 shrine_skill_hd	4965		sfx/ambient/shrines_hd	object\shrine\skill_hd.flac	0	0	0	0	0	127	127	100	100	0	0	0	0	0	0	0	0	0	1	0	90	100	0	0	1	0	0	-1	-1	-1	0	0	
 shrine_storm_hd	4966		sfx/ambient/shrines_hd	object\shrine\storm_hd.flac	0	0	0	0	0	127	127	100	100	0	0	0	0	0	0	0	0	0	1	0	90	100	0	0	1	0	0	-1	-1	-1	0	0	
 shrine_warping_hd	4967		sfx/ambient/shrines_hd	object\shrine\warping_hd.flac	0	0	0	0	0	127	127	100	100	0	0	0	0	0	0	0	0	0	1	0	90	100	0	0	1	0	0	-1	-1	-1	0	0	
-item_amulet_hd	4968		sfx/items_hd	item\item_amulet_hd.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	50	0	0	0	0	0	-1	-1	-1	0	0	
+item_amulet_hd	4968		sfx/items_hd	item\item_amulet_hd.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	100	0	0	0	0	0	-1	-1	-1	0	0	
 item_belt_hd	4969		sfx/items_hd	item\item_belt_hd.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	50	0	0	0	0	0	-1	-1	-1	0	0	
 item_boots_hd	4970		sfx/items_hd	item\item_boots_hd.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	50	0	0	0	0	0	-1	-1	-1	0	0	
 item_bootschain_hd	4971		sfx/items_hd	item\item_bootschain_hd.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	50	0	0	0	0	0	-1	-1	-1	0	0	
@@ -5004,7 +5004,7 @@ item_platearmor_hd	5001		sfx/items_hd	item\item_platearmor_hd.flac	0	0	0	0	0	179
 item_orb_hd	5002		sfx/items_hd	item\item_wand_hd.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	50	0	0	0	0	0	-1	-1	-1	0	0	
 item_quiver_hd	5003		sfx/items_hd	item\item_quiver_hd.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	50	0	0	0	0	0	-1	-1	-1	0	0	
 item_rare_hd	5004		sfx/items_hd	item\item_rare_hd.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	50	0	0	0	0	0	-1	-1	-1	0	0	
-item_ring_hd	5005		sfx/items_hd	item\item_ring_hd.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	50	0	0	0	0	0	-1	-1	-1	0	0	
+item_ring_hd	5005		sfx/items_hd	item\item_ring_hd.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	100	0	0	0	0	0	-1	-1	-1	0	0	
 item_rune_hd	5006		sfx/items_hd	item\item_rune_hd.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	50	0	0	0	0	0	-1	-1	-1	0	0	
 item_scroll_hd	5007		sfx/items_hd	item\item_scroll_hd.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	50	0	0	0	0	0	-1	-1	-1	0	0	
 item_smallmetalweapon_hd	5008		sfx/items_hd	item\item_smallmetalweapon_hd.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	50	0	0	0	0	0	-1	-1	-1	0	0	
@@ -5066,10 +5066,10 @@ object_summitdoor_hd	5063		sfx/ambient/environment-objects_hd	object\object_summ
 object_taintedsunaltar_hd	5064		sfx/ambient/environment-objects_hd	object\object_taintedsunaltar_hd.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	60	60	0	0	1	0	0	-1	-1	-1	0	0	
 object_teleportpad_hd	5065		sfx/ambient/environment-objects_hd	object\object_teleportationpad_hd.flac	0	0	0	0	0	160	160	100	100	0	0	1	4	4	0	0	0	-1	1	0	60	60	0	0	1	0	0	-1	-1	-1	0	0	
 object_tome_hd	5066		sfx/ambient/environment-objects_hd	object\object_towertome_hd.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	60	60	0	0	1	0	0	-1	-1	-1	0	0	
-object_townportal_hd	5067		sfx/ambient/environment-objects_hd	object\object_portalopen_hd.flac	0	0	0	0	0	127	160	99	101	0	0	0	0	0	0	0	0	0	1	0	120	60	0	0	1	0	0	-1	-1	-1	0	0	
+object_townportal_hd	5067		sfx/ambient/environment-objects_hd	object\object_portalopen_hd.flac	0	0	0	0	0	127	160	99	101	0	0	0	0	0	0	0	0	0	1	15	120	100	0	0	1	0	0	-1	-1	-1	0	0	
 object_trap_release_hd	5068		sfx/ambient/environment-objects_hd	object\object_traprelease_hd.flac	0	0	0	0	0	160	160	99	101	0	0	0	0	0	0	0	0	0	1	0	60	60	0	0	1	0	0	-1	-1	-1	0	0	
 object_trap_trigger_hd	5069		sfx/ambient/environment-objects_hd	object\object_traptick_hd.flac	0	0	0	0	0	160	160	100	100	0	0	0	0	0	0	0	0	0	1	0	60	60	0	0	1	0	0	-1	-1	-1	0	0	
-object_waypoint_open_hd	5070		sfx/ambient/environment-objects_hd	object\object_waypointignite_hd.flac	0	0	0	0	0	127	127	100	100	0	0	0	0	0	0	0	0	0	1	0	120	60	0	0	1	0	0	-1	-1	-1	0	0	
+object_waypoint_open_hd	5070		sfx/ambient/environment-objects_hd	object\object_waypointignite_hd.flac	0	0	0	0	0	127	127	100	100	0	0	0	0	0	0	0	0	0	1	15	120	100	0	0	1	0	0	-1	-1	-1	0	0	
 object_well_hd	5071		sfx/ambient/environment-objects_hd	object\object_fountain_hd.flac	0	0	0	0	0	160	160	100	100	0	0	0	0	0	0	0	0	0	1	0	60	60	0	0	1	0	0	-1	-1	-1	0	0	
 object_xbarrel_hd	5072		sfx/ambient/environment-objects_hd	object\object_xbarrel_hd.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	60	60	0	0	1	0	0	-1	-1	-1	0	0	
 object_xbody1_hd	5073		sfx/ambient/environment-objects_hd	object\object_xperson_1_hd.flac	0	0	0	0	0	214	217	100	100	0	0	0	0	0	0	0	0	0	1	0	60	60	0	0	1	0	0	-1	-1	-1	0	0	
@@ -5149,8 +5149,8 @@ izual_death_hd	5126		sfx/monster_hd	monster\izual\death_hd.flac	0	0	0	0	0	255	25
 izual_mist_loop_hd	5127		sfx/monster_hd	monster\izual\izualeffectloop_hd.flac	0	0	0	0	0	200	200	100	100	0	0	1	8	8	1	0	0	-1	1	0	90	100	0	0	1	0	0	-1	-1	-1	0	0	
 izual_spirit_appear_hd	5128		sfx/monster_hd	monster\izual\fadein_hd.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	100	0	0	1	0	0	-1	-1	-1	0	0	
 izual_spirit_disappear_hd	5129		sfx/monster_hd	monster\izual\fadeout_hd.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	100	0	0	1	0	0	-1	-1	-1	0	13	
-player_townportal_enter_hd	5130		sfx/eax/player-skills_shouts	skill\misc\portalenter_hd.flac	0	0	0	0	0	142	179	100	100	0	0	0	0	0	0	0	0	0	1	0	120	100	0	0	1	0	0	-1	-1	-1	0	0	
-player_townportal_loop_hd	5131		sfx/player-skills_hd	skill\misc\townportal_loop_hd.flac	0	0	0	0	0	50	63	90	90	0	0	1	25	25	0	1	0	-1	6	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+player_townportal_enter_hd	5130		sfx/eax/player-skills_shouts	skill\misc\portalenter_hd.flac	0	0	0	0	0	142	179	100	100	0	0	0	0	0	0	0	0	0	1	25	120	100	0	0	1	0	0	-1	-1	-1	0	0	
+player_townportal_loop_hd	5131		sfx/player-skills_hd	skill\misc\townportal_loop_hd.flac	0	0	0	0	0	50	63	90	90	0	0	1	25	25	0	1	0	-1	6	10	90	100	0	0	1	0	0	-1	-1	-1	0	0	
 summoner_death_hd	5132		sfx/monster_hd	monster\summoner\monster_summoner_death_hd.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 necromancer_bonearmor_hd	5133		sfx/player-skills_hd	skill\necromancer\necromancer_bonearmor_2_hd.flac	0	0	0	0	0	112	142	99	101	0	0	0	0	0	0	0	0	0	1	0	90	80	0	0	1	0	0	-1	-1	-1	0	0	
 necromancer_poison_cast_hd	5134		sfx/player-skills_hd	skill\necromancer\necromancer_poisoncast_hd.flac	0	0	0	0	0	160	202	99	101	0	0	0	0	0	0	0	0	0	1	0	90	80	0	0	1	0	0	-1	-1	-1	0	0	
@@ -6609,8 +6609,8 @@ compellingorb_mist_loop_hd	6586		sfx/monster_hd	monster\countess\monster_countes
 emitter_object_river_hd	6587		sfx/ambient/environment-objects_hd	object\object_riverloop_hd.flac	0	0	0	0	0	20	20	90	110	0	0	1	50	50	0	0	0	0	3	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 event_town_ship_docked_loop	6588		sfx/ambient/event-3d_hd	ambient\event\ship_docked_loop.flac	0	0	0	1	0	50	50	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 water_sewer_loop_hd	6589		sfx/ambient/event-3d_hd	ambient\event\water_sewer_loop.flac	0	0	0	1	0	14	14	90	110	0	0	0	50	50	0	0	0	0	1	0	120	0	0	0	1	0	0	-1	-1	-1	0	0	
-object_waypoint_fire_left_loop	6590		sfx/ambient/environment-objects_hd	object\waypoint_fire_left.flac	0	0	0	0	0	56	56	100	100	0	0	0	12	25	0	0	0	-1	0	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
-object_waypoint_fire_right_loop	6591		sfx/ambient/environment-objects_hd	object\waypoint_fire_right.flac	0	0	0	0	0	56	56	100	100	0	0	0	12	25	0	0	0	-1	0	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
+object_waypoint_fire_left_loop	6590		sfx/ambient/environment-objects_hd	object\waypoint_fire_left.flac	0	0	0	0	0	56	56	100	100	0	0	0	12	25	0	0	0	-1	0	0	60	100	0	0	1	0	0	-1	-1	-1	0	0	
+object_waypoint_fire_right_loop	6591		sfx/ambient/environment-objects_hd	object\waypoint_fire_right.flac	0	0	0	0	0	56	56	100	100	0	0	0	12	25	0	0	0	-1	0	0	60	100	0	0	1	0	0	-1	-1	-1	0	0	
 npc_heal_hd	6592		sfx/ambient/shrines_hd	object\shrine\npc_heal_refill_hd.flac	0	0	0	0	0	179	179	100	100	0	0	0	0	0	0	0	0	0	1	0	90	100	0	0	1	0	0	-1	-1	-1	0	0	
 andariel_quake_loop_hd	6593		sfx/act-boss_sd	monster\andariel\quakeloop_hd.flac	0	0	0	0	0	180	180	100	100	0	0	1	0	0	0	0	0	-1	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
 scene_arcane_hd	6594		sfx/ambient/scene-2d_hd	ambient\scene\scene_arcane_hd.flac	0	0	1	0	0	63	63	100	100	0	0	1	12	12	0	0	0	0	1	0	0	100	1	1	0	0	0	-1	-1	-1	0	0	
@@ -6627,7 +6627,7 @@ item_auto_gold_small_pickup_hd	6604		sfx/items_hd	item\Item_auto_gold_small_pile
 item_auto_gold_tiny_pickup_hd	6605		sfx/items_hd	item\Item_auto_gold_tiny_pile.flac	0	0	0	0	0	255	255	100	101	0	0	0	0	0	0	1	0	4	1	0	70	30	0	0	0	0	0	-1	-1	-1	0	0	
 event_cave_ent_howl_loop_hd	6606		sfx/ambient/event-3d_hd	ambient\event\cave_ent_howl_loop_hd.flac	0	0	0	1	0	32	32	100	100	0	100	0	0	0	0	0	0	0	6	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 event_cave_exit_howl_loop_hd	6607		sfx/ambient/event-3d_hd	ambient\event\cave_exit_howl_loop_hd.flac	0	0	0	1	0	100	100	100	100	0	100	0	0	0	0	0	0	0	6	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-object_waypoint_fire_loop	6608		sfx/ambient/environment-objects_hd	object\waypoint_fire_left.flac	0	0	0	0	0	63	63	100	100	0	0	1	0	0	0	0	0	-1	6	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+object_waypoint_fire_loop	6608		sfx/ambient/environment-objects_hd	object\waypoint_fire_left.flac	0	0	0	0	0	63	63	100	100	0	0	1	0	0	0	0	0	-1	6	0	90	100	0	0	1	0	0	-1	-1	-1	0	0	
 event_wind_act2_tree_loop_hd	6609		sfx/ambient/event-3d_hd	ambient\event\foliage_act2_tree_loop_hd1.flac	0	0	0	1	0	28	31	100	120	0	100	0	0	0	0	0	0	0	0	0	100	0	0	0	1	0	0	-1	-1	-1	0	0	
 event_wind_bush_loop_hd	6610		sfx/ambient/event-3d_hd	ambient\event\foliage_bushes_loop_hd1.flac	0	0	0	1	0	38	40	100	100	0	100	0	0	0	0	0	0	0	0	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 event_wind_deadtree_loop_hd	6611		sfx/ambient/event-3d_hd	ambient\event\foliage_deadtree_loop_hd1.flac	0	0	0	1	0	33	33	100	100	0	100	0	0	0	0	0	0	0	6	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
@@ -11113,9 +11113,9 @@ object_door_stone_hd2	9954		sfx/ambient/environment-objects_hd	object\object_tom
 object_door_stone_hd3	9955		sfx/ambient/environment-objects_hd	object\object_tombdoor_3_hd.flac	0	0	0	0	0	100	114	95	106	0	0	0	0	0	0	0	0	0	1	0	60	60	0	0	1	0	0	-1	-1	-1	0	0	
 object_door_stone_hd4	9956		sfx/ambient/environment-objects_hd	object\object_tombdoor_4_hd.flac	0	0	0	0	0	100	114	95	106	0	0	0	0	0	0	0	0	0	1	0	60	60	0	0	1	0	0	-1	-1	-1	0	0	
 object_door_stone_hd5	9957		sfx/ambient/environment-objects_hd	object\object_tombdoor_5_hd.flac	0	0	0	0	0	100	114	95	106	0	0	0	0	0	0	0	0	0	1	0	60	60	0	0	1	0	0	-1	-1	-1	0	0	
-player_townportal_cast_hd1	9958		sfx/player-skills_hd	skill\misc\portalcast_hd.flac	0	0	0	0	0	180	255	98	102	3	0	0	0	0	1	0	0	0	1	0	90	100	0	0	1	0	0	-1	-1	-1	0	0	
-player_townportal_cast_hd2	9959		sfx/player-skills_hd	skill\misc\portalcast2_hd.flac	0	0	0	0	0	180	255	110	120	0	0	0	0	0	1	0	0	0	1	0	90	100	0	0	1	0	0	-1	-1	-1	0	0	
-player_townportal_cast_hd3	9960		sfx/player-skills_hd	skill\misc\portalcast3_hd.flac	0	0	0	0	0	180	255	98	102	0	0	0	0	0	1	0	0	0	1	0	90	100	0	0	1	0	0	-1	-1	-1	0	0	
+player_townportal_cast_hd1	9958		sfx/player-skills_hd	skill\misc\portalcast_hd.flac	0	0	0	0	0	180	255	98	102	3	0	0	0	0	1	0	0	0	1	25	90	100	0	0	1	0	0	-1	-1	-1	0	0	
+player_townportal_cast_hd2	9959		sfx/player-skills_hd	skill\misc\portalcast2_hd.flac	0	0	0	0	0	180	255	110	120	0	0	0	0	0	1	0	0	0	1	25	90	100	0	0	1	0	0	-1	-1	-1	0	0	
+player_townportal_cast_hd3	9960		sfx/player-skills_hd	skill\misc\portalcast3_hd.flac	0	0	0	0	0	180	255	98	102	0	0	0	0	0	1	0	0	0	1	25	90	100	0	0	1	0	0	-1	-1	-1	0	0	
 summoner_hit_hd1	9961		sfx/monster_hd	monster\summoner\monster_summoner_gethit_1_hd.flac	0	0	0	0	0	255	255	95	105	4	0	0	0	0	1	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 summoner_hit_hd2	9962		sfx/monster_hd	monster\summoner\monster_summoner_gethit_2_hd.flac	0	0	0	0	0	255	255	95	105	0	0	0	0	0	1	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 summoner_hit_hd3	9963		sfx/monster_hd	monster\summoner\monster_summoner_gethit_3_hd.flac	0	0	0	0	0	255	255	95	105	0	0	0	0	0	1	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
