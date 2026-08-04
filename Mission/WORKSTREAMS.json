@@ -518,6 +518,7 @@
         "Mission/sounds-of-variation-bkvince.md",
         "scripts/migrate-bkvince/integrate-sounds-of-variation.js",
         "scripts/migrate-bkvince/install-sounds-of-variation-local.ps1",
+        "data-BKVince/BKVince.mpq/data/hd/global/sfx/**",
         "data-BKVince/BKVince.mpq/data/global/excel/monstats.txt",
         "data-BKVince/BKVince.mpq/data/global/excel/monsounds.txt",
         "data-BKVince/BKVince.mpq/data/global/excel/sounds.txt"

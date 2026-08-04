@@ -56,6 +56,39 @@ toute autre divergence de contenu des assets Mercenary Command demeure refusée.
 aucune donnée Mercenary Command ou Sounds of Variation n'a été modifiée par ce
 correctif de maintenance.
 
+## Correctif permanent du miroir HD — 4 août 2026
+
+Après l'installation cumulative des mods de sons, Vincent a observé des sons
+d'objets, de monstres et d'interface coupés ou silencieux. Le diagnostic a
+montré que ce n'était pas une saturation du nombre de voix : 372 FLAC étaient
+présents sous `data/global/sfx`, tandis que le moteur HD tentait notamment de
+résoudre `data/hd/global/SFX/cursor/button.flac`.
+
+Le correctif runtime a copié uniquement les 371 cibles HD absentes, conservé
+une cible déjà byte-identique et refusé tout écrasement divergent. Les 372
+paires ont ensuite été validées par SHA-256, avec zéro fichier manquant et zéro
+divergence. Le cold start D2RLoader a franchi 24/24 étapes sans nouvelle erreur
+`D2Sound`, puis Vincent a confirmé en jeu que le correctif fonctionnait.
+
+Pour rendre ce comportement durable, 370 des 371 FLAC initialement manquants
+sont intégrés à la source gouvernée sous
+`data-BKVince/BKVince.mpq/data/hd/global/sfx/` et restent gérés par Git LFS. Ce
+lot duplique seulement le placement HD des sons déjà sélectionnés par le pack
+runtime; il n'écrase aucun asset HD existant et ne modifie aucune table TSV ni
+le budget de voix audio.
+
+Vincent a demandé le 4 août 2026 de conserver l'ancien son de pluie. L'override
+`ambient/scene/rain2.flac` du miroir, SHA-256
+`AA7B9C77B3DC7028BFF0744235B5C9AFAA3E75E65DC0F5D3AA564D4EC97A7328`, a donc
+été retiré uniquement des chemins HD source et runtime. Le fichier global du
+pack reste intact et le fallback retrouve l'asset vanilla 3.2, SHA-256
+`C07E9A35A3608B026510A0D1E25B76DC8C2172A46D3D4641DC74DCB17EB0EE27`.
+Le premier cold start de contrôle s'est interrompu à 15/24 sur une exception
+graphique dans `dxgi.dll`, appelée depuis `plugin-items.dll`, avant le chargement
+audio. Le second cold start a franchi 24/24 étapes avec 18/18 patches appliqués,
+12 plugins actifs, zéro rejet/échec et aucune erreur `D2Sound` ou `rain2`.
+L'audition du retour au son de pluie précédent reste à confirmer par Vincent.
+
 ## Prototype séparé — Magic Arrow et Guided Arrow
 
 Ce petit lot du 4 août 2026 est distinct de **The Sounds of Variation**. Les
