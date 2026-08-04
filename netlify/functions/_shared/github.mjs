@@ -10,7 +10,7 @@ const REPO = process.env.GITHUB_REPO || 'Diablo';
 const BRANCH = process.env.GITHUB_BRANCH || 'main';
 const TOKEN = process.env.GITHUB_DIABLO_TOKEN || '';
 const API = 'https://api.github.com';
-const EXCEL_DIR = 'data-TCP/global/excel';
+const EXCEL_DIR = 'data-BKVince/BKVince.mpq/data/global/excel';
 
 function ghHeaders(extra = {}) {
   const h = {
@@ -27,9 +27,8 @@ export const paths = {
   table: (name) => `${EXCEL_DIR}/${name}.txt`,
   schema: (name) => `schemas/${name}.json`,
   // Sources de reference pour le Comparateur (lecture seule, jamais ecrites).
-  vanilla: (name) => `excel-vanilla2.4/${name}.txt`,
+  vanilla: (name) => `data-vanilla3.2/data/data/global/excel/${name}.txt`,
   BK: (name) => `data-BK/global/excel/${name}.txt`,
-  BT: (name) => `data-BT/global/excel/${name}.txt`,
 };
 
 export function hasToken() {

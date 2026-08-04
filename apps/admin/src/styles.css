@@ -19,6 +19,21 @@ header h1 small { color: #8a8a99; font-weight: normal; }
 .bar { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
 
 .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.toolbar-sep { width: 1px; height: 26px; background: #3a3a48; }
+.outil-secondaire { background: #30303b; color: #d8d8de; border: 1px solid #484856; padding: 5px 10px; }
+.outil-secondaire:hover:not(:disabled) { background: #3b3b48; }
+.transform-select { max-width: 190px; }
+.transform-editor { display: inline-flex; align-items: stretch; }
+.transform-editor input { width: 110px; min-width: 80px; border-radius: 6px 0 0 6px; outline: 1px solid #3a9d5d; }
+.transform-editor button { border-radius: 0; padding: 5px 9px; }
+.transform-editor button:last-child { border-radius: 0 6px 6px 0; }
+.zoom-controls { display: inline-flex; align-items: center; }
+.zoom-controls button { border-radius: 0; min-width: 34px; }
+.zoom-controls button:first-child { border-radius: 6px 0 0 6px; }
+.zoom-controls button:last-child { border-radius: 0 6px 6px 0; }
+.zoom-controls .zoom-value { background: #24242d; color: #c8ccd6; border: 1px solid #484856; border-left: 0; border-right: 0; padding: 5px 8px; min-width: 54px; }
+.problemes-toggle { background: #30303b; color: #c8ccd6; border: 1px solid #484856; padding: 5px 10px; }
+.problemes-toggle.actif { background: #4b3828; border-color: #8a6239; color: #f0c17d; }
 .toolbar input[type="text"], .toolbar select {
   background: #2b2b3a; border: 1px solid #3a3a48; color: #fff;
   padding: 6px 10px; border-radius: 6px; font: inherit; min-width: 0; outline: none;
@@ -45,6 +60,9 @@ header h1 small { color: #8a8a99; font-weight: normal; }
 .cols-presets select { flex: 1; min-width: 0; }
 .cols-presets button { padding: 4px 8px; }
 .cols-presets button:disabled { opacity: 0.4; }
+.preset-editor { display: flex; gap: 4px; margin-bottom: 8px; }
+.preset-editor input { flex: 1; min-width: 0; border-radius: 5px; }
+.preset-editor button { padding: 4px 8px; }
 .cols-item { display: flex; align-items: center; gap: 8px; padding: 3px 4px; font-size: 12px; cursor: pointer; white-space: nowrap; color: #d8d8de; }
 .cols-item:hover { background: #2b2b3a; }
 .cols-item input { width: auto; min-width: 0; outline: none; }
@@ -57,32 +75,32 @@ td.vide, p.chargement-compare { text-align: center; color: #6a6a77; padding: 20p
 .toggle-vue button:not(:first-child) { border-left: 1px solid #3a3a48; }
 .toggle-vue button.actif { background: #3a9d5d; color: #fff; }
 
-/* Grille du Comparateur : en-tête groupé + 4 valeurs par colonne */
+/* Grille du Comparateur : en-tête groupé + 3 valeurs par colonne */
 th.grp { text-align: center; background: #22222c; }
 th.sub { font-weight: 400; color: #6a6a77; font-size: 11px; padding: 3px 8px; }
-th.sub.tcp { background: rgba(58, 157, 93, 0.18); color: #8fd1a8; font-weight: 600; }
+th.sub.bkvince { background: rgba(58, 157, 93, 0.18); color: #8fd1a8; font-weight: 600; }
 td.ref-cell { color: #6a6a77; padding: 3px 8px; cursor: default; }
-td.tcp-cell { background: rgba(58, 157, 93, 0.06); }
-td.tcp-cell.num { text-align: right; }
+td.bkvince-cell { background: rgba(58, 157, 93, 0.06); }
+td.bkvince-cell.num { text-align: right; }
 
-/* Comparateur : au moins une valeur differe entre vanilla/BK/BT/TCP sur cette cellule/ligne */
+/* Comparateur : au moins une valeur differe entre vanilla/BK standard/BKVince sur cette cellule/ligne */
 td.rownum.row-diff { color: #d9a441; font-weight: 600; }
 td.diff { box-shadow: inset 0 0 0 1px rgba(217, 164, 65, 0.55); background: rgba(217, 164, 65, 0.1); }
 
-td.tcp-cell.err { background: rgba(224, 113, 90, 0.16); box-shadow: inset 0 0 0 1px #b8503c; }
+td.bkvince-cell.err { background: rgba(224, 113, 90, 0.16); box-shadow: inset 0 0 0 1px #b8503c; }
 
-/* Comparateur : ligne presente chez vanilla/BK/BT au-dela de la derniere ligne TCP */
-td.tcp-cell.absent { cursor: default; }
-td.tcp-cell.absent .cell { color: #5a5a66; }
+/* Comparateur : ligne presente chez vanilla/BK au-dela de la derniere ligne BKVince */
+td.bkvince-cell.absent { cursor: default; }
+td.bkvince-cell.absent .cell { color: #5a5a66; }
 
 /* Comparateur : en-tête à 2 étages figé au défilement vertical (groupe + sous-colonnes) */
 th.grp, th.sub { position: sticky; z-index: 2; }
 th.grp { top: 0; }
 th.sub { top: 27px; }
 
-/* Comparateur : les 4 sous-colonnes du premier champ visible figées au défilement horizontal,
+/* Comparateur : les 3 sous-colonnes du premier champ visible figées au défilement horizontal,
    même principe que .cle-col en mode Éditeur — largeur fixe pour un décalage "left" prévisible. */
-.cle-col-vanilla, .cle-col-bk, .cle-col-bt, .cle-col-tcp {
+.cle-col-vanilla, .cle-col-bk, .cle-col-bkvince {
   position: sticky;
   width: 90px;
   min-width: 90px;
@@ -92,18 +110,25 @@ th.sub { top: 27px; }
 }
 .cle-col-vanilla { left: 52px; }
 .cle-col-bk { left: 142px; }
-.cle-col-bt { left: 232px; }
-.cle-col-tcp { left: 322px; }
-th.cle-col-grp { position: sticky; left: 52px; width: 360px; min-width: 360px; max-width: 360px; }
+.cle-col-bkvince { left: 232px; }
+th.cle-col-grp { position: sticky; left: 52px; width: 270px; min-width: 270px; max-width: 270px; }
 
-td.cle-col-vanilla, td.cle-col-bk, td.cle-col-bt, td.cle-col-tcp { z-index: 1; }
-td.cle-col-vanilla, td.cle-col-bk, td.cle-col-bt { background: #16161a; }
-td.tcp-cell.cle-col-tcp:not(.err) { background: #181e1e; }
+td.cle-col-vanilla, td.cle-col-bk, td.cle-col-bkvince { z-index: 1; }
+td.cle-col-vanilla, td.cle-col-bk { background: #16161a; }
+td.bkvince-cell.cle-col-bkvince:not(.err) { background: #181e1e; }
 /* Fond opaque de la colonne figee, teinte pour rester coherent quand elle diverge aussi */
-td.cle-col-vanilla.diff, td.cle-col-bk.diff, td.cle-col-bt.diff { background: #2a241e; }
-td.tcp-cell.cle-col-tcp.diff:not(.err) { background: #2b2b22; }
-th.sub.tcp.cle-col-tcp { background: #263835; }
+td.cle-col-vanilla.diff, td.cle-col-bk.diff { background: #2a241e; }
+td.bkvince-cell.cle-col-bkvince.diff:not(.err) { background: #2b2b22; }
+th.sub.bkvince.cle-col-bkvince { background: #263835; }
 .status { color: #9aa0ad; }
+.selection-count {
+  color: #cfe5f7;
+  background: #29445f;
+  border: 1px solid #4f7599;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
 .desc { color: #8a8a99; margin: 4px 0 10px; }
 .desc em { color: #6a6a77; }
 
@@ -126,10 +151,45 @@ button:disabled { background: #3a3a44; color: #8a8a99; cursor: default; }
   max-height: calc(100vh - 130px);
   border: 1px solid #2a2a34;
   border-radius: 6px;
+  outline: none;
 }
+.grid:focus-visible { border-color: #557c9f; box-shadow: 0 0 0 1px #557c9f; }
+
+.problems-panel {
+  margin: 0 0 10px;
+  border: 1px solid #4a3a2a;
+  background: #201d1b;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.problems-title { display: flex; gap: 12px; align-items: center; padding: 7px 10px; color: #c8ccd6; }
+.problems-title strong { color: #f0c17d; }
+.problems-title span { color: #9a8d80; }
+.problems-list { max-height: 180px; overflow: auto; border-top: 1px solid #4a3a2a; }
+.problems-list button {
+  width: 100%; display: grid; grid-template-columns: 90px minmax(120px, 220px) minmax(80px, 1fr) 180px;
+  gap: 10px; align-items: center; text-align: left; border: 0; border-radius: 0; padding: 6px 10px;
+  background: transparent; color: #c8ccd6; border-bottom: 1px solid #332d29;
+}
+.problems-list button:hover { background: #302820; }
+.problems-list button span { color: #9aa0ad; }
+.problems-list button strong { color: #e7ad68; }
+.problems-list button code { overflow: hidden; text-overflow: ellipsis; color: #f0917f; }
+.problems-list button em { color: #baafa5; }
 
 table { border-collapse: collapse; }
-th, td { border: 1px solid #26262e; padding: 0; white-space: nowrap; }
+th, td {
+  border: 1px solid #2c2c35;
+  border-left-color: #464655;
+  border-right-color: #464655;
+  padding: 0;
+  white-space: nowrap;
+}
+
+/* Séparateur renforcé après chaque triplet vanilla / BK standard / BKVince. */
+.compare-grid th.grp { border-left-color: #5b5b6e; border-right-color: #5b5b6e; }
+.compare-grid thead tr:nth-child(2) th.sub:nth-child(3n),
+.compare-grid tbody tr > td:nth-child(3n+1) { border-right: 2px solid #5b5b6e; }
 
 th {
   position: sticky;
@@ -142,6 +202,8 @@ th {
 }
 th.num { color: #7bb8e8; }
 th.comment { color: #d0965a; font-style: italic; }
+th.col-selected { box-shadow: inset 0 -2px 0 #62a7df; color: #b9ddf7; }
+td.col-selected:not(.err) { box-shadow: inset 1px 0 rgba(98, 167, 223, 0.35), inset -1px 0 rgba(98, 167, 223, 0.35); }
 
 /* Aide contextuelle au survol d'un header (mode Éditeur) — remplace le tooltip natif du navigateur */
 .col-tooltip {
@@ -214,6 +276,19 @@ td.rownum, th.rownum {
   cursor: default;
 }
 th.rownum { z-index: 2; }
+
+/* Sélection de lignes façon Windows via le numéro de ligne. */
+.grid tbody td.rownum { cursor: pointer; user-select: none; }
+.grid tbody tr.row-selected > td {
+  border-top-color: #6c97bd;
+  border-bottom-color: #6c97bd;
+}
+.grid tbody tr.row-selected > td:not(.err) { background: #263546; }
+.grid tbody tr.row-selected > td.rownum {
+  background: #3b6288;
+  color: #fff;
+  font-weight: 700;
+}
 
 /* Colonne d'identification (1re colonne visible) figee au scroll horizontal,
    a cote du numero de ligne — pour garder le repere en naviguant les tables larges. */

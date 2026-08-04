@@ -1,5 +1,5 @@
 'use strict';
-// Serveur de developpement LOCAL : lit/ecrit les tables .txt du mod TCP.
+// Serveur de developpement LOCAL : lit/ecrit les tables .txt de BKVince.
 //
 //   GET  /api/table/:name  -> { name, schema, headers, rows, eol, hasFinalEol }
 //   PUT  /api/table/:name  -> reecrit le .txt (round-trip byte-exact hors valeurs editees)
@@ -13,14 +13,13 @@ const fs = require('fs');
 const { parseTable, writeTable } = require('./build-data/tsv');
 
 const PORT = process.env.DEV_SERVER_PORT || 4000;
-const EXCEL_DIR = path.join(__dirname, '..', 'data-TCP', 'global', 'excel');
+const EXCEL_DIR = path.join(__dirname, '..', 'data-BKVince', 'BKVince.mpq', 'data', 'global', 'excel');
 const SCHEMAS_DIR = path.join(__dirname, '..', 'schemas');
 
 // Sources de reference pour le Comparateur (lecture seule, jamais ecrites).
 const REF_DIRS = {
-  vanilla: path.join(__dirname, '..', 'excel-vanilla2.4'),
+  vanilla: path.join(__dirname, '..', 'data-vanilla3.2', 'data', 'data', 'global', 'excel'),
   BK: path.join(__dirname, '..', 'data-BK', 'global', 'excel'),
-  BT: path.join(__dirname, '..', 'data-BT', 'global', 'excel'),
 };
 
 function send(res, status, body) {
@@ -70,7 +69,7 @@ const server = http.createServer((req, res) => {
     return send(res, 200, { tables });
   }
 
-  // Comparateur : lit la meme table dans vanilla/BK/BT (lecture seule).
+  // Comparateur : lit la meme table dans vanilla/BK standard (lecture seule).
   const cmpMatch = url.pathname.match(/^\/api\/compare\/([^/]+)$/);
   if (cmpMatch && req.method === 'GET') {
     const name = decodeURIComponent(cmpMatch[1]);

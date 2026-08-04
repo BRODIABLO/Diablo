@@ -52,13 +52,13 @@ export default async (request) => {
       return json({ tables: await listTables() });
     }
 
-    // Comparateur : lit la meme table dans vanilla/BK/BT (lecture seule).
+    // Comparateur : lit la meme table dans vanilla/BK standard (lecture seule).
     const cm = path.match(/^\/api\/compare\/([^/]+)$/);
     if (cm && request.method === 'GET') {
       const name = decodeURIComponent(cm[1]);
       if (!NAME_RE.test(name)) return json({ error: 'nom de table invalide' }, 400);
       const out = { name };
-      for (const src of ['vanilla', 'BK', 'BT']) {
+      for (const src of ['vanilla', 'BK']) {
         const f = await readFile(paths[src](name), 'latin1');
         out[src] = f ? parseTsv(f.content) : null;
         if (out[src]) { delete out[src].eol; delete out[src].hasFinalEol; }
