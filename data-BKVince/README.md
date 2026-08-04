@@ -59,6 +59,15 @@ les crédits.
   modification sous `BKVince.mpq/data/hd/items/armor/`. SHA-256 de l'archive :
   `3ABC7AE037C7316CD42089A480243B4794143A449FC4229BEB962900D50C4BF1`.
 
+- **SpecialNavi 1.1** — créé par **Porory** et **HeoHeo**, puis publié sur
+  [Diablo II Inven](https://www.inven.co.kr/board/diablo2/5842/4283). BKVince
+  conserve sélectivement ses balises de navigation, ses prefabs, ses flèches
+  directionnelles et les textures réellement utilisées. Les fichiers JSON
+  hérités de 2022 sont portés sur la référence D2R 3.2 plutôt que recopiés en
+  bloc, et la banque de presets de textures inutilisés reste exclue. SHA-256 de
+  l'archive officielle :
+  `DD9EA26B07379227DFE2AF003D4F7753202C5B49412362BE67154A936919057C`.
+
 ---
 
 # BKDiablo

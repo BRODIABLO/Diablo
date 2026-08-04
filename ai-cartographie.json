@@ -13615,6 +13615,16 @@
                                                                                                                                                "kind":  "file"
                                                                                                                                            },
                                                                                                                                            {
+                                                                                                                                               "name":  "act_2_town_to_harem.json",
+                                                                                                                                               "path":  "data-BKVince/BKVince.mpq/data/hd/roomtiles/act_2_town_to_harem.json",
+                                                                                                                                               "kind":  "file"
+                                                                                                                                           },
+                                                                                                                                           {
+                                                                                                                                               "name":  "act_2_town_to_sewer_trap.json",
+                                                                                                                                               "path":  "data-BKVince/BKVince.mpq/data/hd/roomtiles/act_2_town_to_sewer_trap.json",
+                                                                                                                                               "kind":  "file"
+                                                                                                                                           },
+                                                                                                                                           {
                                                                                                                                                "name":  "act_3_dungeon_down.json",
                                                                                                                                                "path":  "data-BKVince/BKVince.mpq/data/hd/roomtiles/act_3_dungeon_down.json",
                                                                                                                                                "kind":  "file"
@@ -13657,6 +13667,11 @@
                                                                                                                                            {
                                                                                                                                                "name":  "act_3_sewer_down.json",
                                                                                                                                                "path":  "data-BKVince/BKVince.mpq/data/hd/roomtiles/act_3_sewer_down.json",
+                                                                                                                                               "kind":  "file"
+                                                                                                                                           },
+                                                                                                                                           {
+                                                                                                                                               "name":  "act_3_travincal_to_mephisto.json",
+                                                                                                                                               "path":  "data-BKVince/BKVince.mpq/data/hd/roomtiles/act_3_travincal_to_mephisto.json",
                                                                                                                                                "kind":  "file"
                                                                                                                                            },
                                                                                                                                            {
