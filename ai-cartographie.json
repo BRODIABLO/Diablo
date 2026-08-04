@@ -12475,16 +12475,6 @@
                                                                                                                                                                                                               "kind":  "file"
                                                                                                                                                                                                           }
                                                                                                                                                                                                       ]
-                                                                                                                                                                                     },
-                                                                                                                                                                                     {
-                                                                                                                                                                                         "name":  "gemsocket.lowend.sprite",
-                                                                                                                                                                                         "path":  "data-BKVince/BKVince.mpq/data/hd/global/ui/panel/gemsocket.lowend.sprite",
-                                                                                                                                                                                         "kind":  "file"
-                                                                                                                                                                                     },
-                                                                                                                                                                                     {
-                                                                                                                                                                                         "name":  "gemsocket.sprite",
-                                                                                                                                                                                         "path":  "data-BKVince/BKVince.mpq/data/hd/global/ui/panel/gemsocket.sprite",
-                                                                                                                                                                                         "kind":  "file"
                                                                                                                                                                                      }
                                                                                                                                                                                  ]
                                                                                                                                                                 },
