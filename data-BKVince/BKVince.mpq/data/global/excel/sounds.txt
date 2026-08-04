@@ -1,18 +1,18 @@
 Sound	*Index	Redirect	Channel	FileName	IsLocal	IsMusic	IsAmbientScene	IsAmbientEvent	IsUI	Volume Min	Volume Max	Pitch Min	Pitch Max	Group Size	Group Weight	Loop	Fade In	Fade Out	Defer Inst	Stop Inst	Duration	Compound	Falloff	LFEMix	3dSpread	Priority	Stream	Is2D	Tracking	Solo	Music Vol	Block 1	Block 2	Block 3	HDOptOut	Delay	4841
 	0			none.flac	0	0	0	0	0	0	0	100	100	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_pass	1	cursor_pass_hd_4	sfx/cursor-ui_sd	cursor\pass.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_select	2	cursor_select_hd	sfx/cursor-ui_sd	cursor\select.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_error	3	cursor_error_hd	sfx/cursor-ui_sd	cursor\windowopen.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_button_click	4	cursor_button_hd_1	sfx/cursor-ui_sd	cursor\button.flac	0	0	0	0	1	142	160	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	1	0	0	0	-1	-1	-1	0	0	
+cursor_pass	1		sfx/cursor-ui_sd	cursor\pass.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_select	2		sfx/cursor-ui_sd	cursor\select.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_error	3		sfx/cursor-ui_sd	cursor\windowopen.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_button_click	4		sfx/cursor-ui_sd	cursor\button.flac	0	0	0	0	1	142	160	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	1	0	0	0	-1	-1	-1	0	0	
 cursor_point_drop	5	cursor_point_drop_hd_1	sfx/cursor-ui_sd	cursor\pointdrop.flac	0	0	0	0	1	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_switch	6	cursor_error_hd	sfx/cursor-ui_sd	cursor\windowopen.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_level_up	7	cursor_level_up_hd_2	sfx/eax/player-skills_shouts	cursor\levelup.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_level_up_hireling	8	cursor_level_up_hireling_hd_3	sfx/eax/player-skills_shouts	cursor\leveluphireling.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_durability_break	9	cursor_durability_break_hd_4	sfx/cursor-ui_sd	cursor\itembroken.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_switch	6		sfx/cursor-ui_sd	cursor\windowopen.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_level_up	7		sfx/eax/player-skills_shouts	cursor\levelup.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_level_up_hireling	8		sfx/eax/player-skills_shouts	cursor\leveluphireling.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_durability_break	9		sfx/cursor-ui_sd	cursor\itembroken.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
 cursor_convert_ready	10	cursor_convert_ready_hd_4	sfx/cursor-ui_sd	cursor\convertready.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	1	0	0	0	-1	-1	-1	0	0	
 cursor_convert_item	11	cursor_convert_item_hd_1	sfx/cursor-ui_sd	cursor\convert.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_identify_ready	12	cursor_identify_ready_hd_1	sfx/cursor-ui_sd	cursor\identifyready.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-cursor_identify_item	13	cursor_identify_item_hd_1	sfx/cursor-ui_sd	cursor\identify.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_identify_ready	12		sfx/cursor-ui_sd	cursor\identifyready.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+cursor_identify_item	13		sfx/cursor-ui_sd	cursor\identify.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
 cursor_questdone	14	cursor_questdone_hd_1	sfx/cursor-ui_sd	cursor\questdone.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	0	0	12	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
 cursor_repair_item	15	cursor_repair_item_hd_1	sfx/cursor-ui_sd	cursor\repair.flac	0	0	0	0	1	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
 cursor_hostile	16	cursor_hostile_hd_1	sfx/cursor-ui_sd	cursor\hostile.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -51,26 +51,26 @@ quest_tainted_sun_flash_3	48		sfx/ambient/event-3d_sd	quest\flash3.flac	0	0	0	0	
 quest_tainted_sun_ball_1	49	quest_tainted_sun_ball_hd_1	sfx/ambient/event-3d_sd	quest\ball1.flac	0	0	0	0	0	255	255	100	100	3	0	1	4	12	0	0	0	24	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
 quest_tainted_sun_ball_2	50		sfx/ambient/event-3d_sd	quest\ball2.flac	0	0	0	0	0	255	255	100	100	0	0	1	4	12	0	0	0	24	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
 quest_tainted_sun_ball_3	51		sfx/ambient/event-3d_sd	quest\ball3.flac	0	0	0	0	0	255	255	100	100	0	0	1	4	12	0	0	0	24	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
-scene_catacombs	52	catacombs_hd	sfx/ambient/scene-2d_sd	ambient\scene\catacombs.flac	0	0	1	0	0	150	150	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_cathedral	53	cathedral_hd	sfx/ambient/scene-2d_sd	ambient\scene\cathedral.flac	0	0	1	0	0	180	180	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_cave	54	cave_hd	sfx/ambient/scene-2d_sd	ambient\scene\cave.flac	0	0	1	0	0	179	179	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_crypt	55	crypt_hd	sfx/ambient/scene-2d_sd	ambient\scene\crypt.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_desert_day	56	desertday_hd	sfx/ambient/scene-2d_sd	ambient\scene\desertday.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_desert_night	57	desertnight_hd	sfx/ambient/scene-2d_sd	ambient\scene\desertnight.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_harem	58	harem_hd	sfx/ambient/scene-2d_sd	ambient\scene\harem.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_jungle_day	59	jungleday_hd	sfx/ambient/scene-2d_sd	ambient\scene\jungleday.flac	0	0	1	0	0	200	200	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_jungle_night	60	junglenight_hd	sfx/ambient/scene-2d_sd	ambient\scene\junglenight.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_lava	61	lava_hd	sfx/ambient/scene-2d_sd	ambient\scene\lava.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_mesa	62	mesa_hd	sfx/ambient/scene-2d_sd	ambient\scene\hell1.flac	0	0	1	0	0	201	201	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_monastery	63	monastery_hd	sfx/ambient/scene-2d_sd	ambient\scene\creepywind.flac	0	0	1	0	0	200	200	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_rain	64	rain_hd	sfx/ambient/scene-2d_sd	ambient\scene\rain2.flac	0	0	1	0	0	119	119	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_sewer	65	sewer_hd	sfx/ambient/scene-2d_sd	ambient\scene\sewer.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_tavern_interior	66	tavern_interior_hd	sfx/ambient/scene-2d_sd	ambient\scene\cathedral.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_tomb	67	tomb_hd	sfx/ambient/scene-2d_sd	ambient\scene\tomb.flac	0	0	1	0	0	201	201	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_town_3_day	68	town3day_hd	sfx/ambient/scene-2d_sd	ambient\scene\town3day.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_town_3_night	69	town3night_hd	sfx/ambient/scene-2d_sd	ambient\scene\town3night.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_wilderness_day	70	wilderness_day_2_hd	sfx/ambient/scene-2d_sd	ambient\scene\wilderness_day_2.flac	0	0	1	0	0	80	80	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_wilderness_night	71	wilderness_night_hd	sfx/ambient/scene-2d_sd	ambient\scene\wilderness_night.flac	0	0	1	0	0	100	100	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_catacombs	52		sfx/ambient/scene-2d_sd	ambient\scene\catacombs.flac	0	0	1	0	0	150	150	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_cathedral	53		sfx/ambient/scene-2d_sd	ambient\scene\cathedral.flac	0	0	1	0	0	180	180	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_cave	54		sfx/ambient/scene-2d_sd	ambient\scene\cave.flac	0	0	1	0	0	179	179	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_crypt	55		sfx/ambient/scene-2d_sd	ambient\scene\crypt.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_desert_day	56		sfx/ambient/scene-2d_sd	ambient\scene\desertday.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_desert_night	57		sfx/ambient/scene-2d_sd	ambient\scene\desertnight.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_harem	58		sfx/ambient/scene-2d_sd	ambient\scene\harem.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_jungle_day	59		sfx/ambient/scene-2d_sd	ambient\scene\jungleday.flac	0	0	1	0	0	200	200	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_jungle_night	60		sfx/ambient/scene-2d_sd	ambient\scene\junglenight.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_lava	61		sfx/ambient/scene-2d_sd	ambient\scene\lava.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_mesa	62		sfx/ambient/scene-2d_sd	ambient\scene\hell1.flac	0	0	1	0	0	201	201	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_monastery	63		sfx/ambient/scene-2d_sd	ambient\scene\creepywind.flac	0	0	1	0	0	200	200	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_rain	64		sfx/ambient/scene-2d_sd	ambient\scene\rain2.flac	0	0	1	0	0	119	119	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_sewer	65		sfx/ambient/scene-2d_sd	ambient\scene\sewer.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_tavern_interior	66		sfx/ambient/scene-2d_sd	ambient\scene\cathedral.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_tomb	67		sfx/ambient/scene-2d_sd	ambient\scene\tomb.flac	0	0	1	0	0	201	201	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_town_3_day	68		sfx/ambient/scene-2d_sd	ambient\scene\town3day.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_town_3_night	69		sfx/ambient/scene-2d_sd	ambient\scene\town3night.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_wilderness_day	70		sfx/ambient/scene-2d_sd	ambient\scene\wilderness_day_2.flac	0	0	1	0	0	80	80	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_wilderness_night	71		sfx/ambient/scene-2d_sd	ambient\scene\wilderness_night.flac	0	0	1	0	0	100	100	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
 event_arcane_1	72	event_arcane_hd_9	sfx/ambient/event-3d_sd	ambient\event\wind6.flac	0	0	0	1	0	255	255	100	100	4	0	0	0	0	0	0	0	0	2	0	100	0	0	0	1	0	0	-1	-1	-1	0	0	
 event_arcane_2	73		sfx/ambient/event-3d_sd	ambient\event\wind7.flac	0	0	0	1	0	255	255	100	100	0	0	0	0	0	0	0	0	0	2	0	100	0	0	0	1	0	0	-1	-1	-1	0	0	
 event_arcane_3	74		sfx/ambient/event-3d_sd	ambient\event\wind8.flac	0	0	0	1	0	255	255	100	100	0	0	0	0	0	0	0	0	0	2	0	100	0	0	0	1	0	0	-1	-1	-1	0	0	
@@ -204,61 +204,61 @@ event_wild_night_5	201		sfx/ambient/event-3d_sd	ambient\event\birdienight5.flac	
 event_thunder_1	202	event_thunder_hd_1	sfx/ambient/event-3d_sd	ambient\event\thunder_norm_1.flac	0	0	0	0	0	180	180	100	100	3	0	0	0	0	0	0	0	0	3	0	0	0	0	0	0	0	0	-1	-1	-1	0	0	
 event_thunder_2	203		sfx/ambient/event-3d_sd	ambient\event\thunder_norm_2.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	3	0	0	0	0	0	0	0	0	-1	-1	-1	0	0	
 event_thunder_3	204		sfx/ambient/event-3d_sd	ambient\event\thunder_norm_5.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	3	0	0	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_amulet	205	item_amulet_hd	sfx/items_sd	item\amulet.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_amulet	205		sfx/items_sd	item\amulet.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_belt	206	item_belt_hd	sfx/items_sd	item\belt.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_book	207	item_book_hd1	sfx/items_sd	item\book.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_boots	208	item_boots_hd	sfx/items_sd	item\boots.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_bootschain	209	item_bootschain_hd	sfx/items_sd	item\bootschain.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_bootsmetal	210	item_bootsmetal_hd	sfx/items_sd	item\bootsmetal.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_bow	211	item_bow_hd	sfx/items_sd	item\bow.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_bow	211		sfx/items_sd	item\bow.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_cap	212	item_cap_hd	sfx/items_sd	item\cap.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_chainarmor	213	item_chainarmor_hd	sfx/items_sd	item\chainarmor.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_charm	214	item_charm_hd	sfx/items_sd	item\charm.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_chainarmor	213		sfx/items_sd	item\chainarmor.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_charm	214		sfx/items_sd	item\charm.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_crossbow	215	item_crossbow_hd	sfx/items_sd	item\xbow.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_flippy	216	item_flippy_hd1	sfx/items_sd	item\flippy.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_gem	217	item_gem_hd	sfx/items_sd	item\gem.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_gloves	218	item_gloves_hd	sfx/items_sd	item\gloves.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_gloveschain	219	item_gloveschain_hd	sfx/items_sd	item\gloveschain.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_glovesmetal	220	item_glovesmetal_hd	sfx/items_sd	item\glovesmetal.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_gold	221	item_gold_hd1	sfx/items_sd	item\gold.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_flippy	216		sfx/items_sd	item\flippy.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_gem	217		sfx/items_sd	item\gem.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_gloves	218		sfx/items_sd	item\gloves.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_gloveschain	219		sfx/items_sd	item\gloveschain.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_glovesmetal	220		sfx/items_sd	item\glovesmetal.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_gold	221		sfx/items_sd	item\gold.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_head	222	item_head_hd	sfx/items_sd	item\head.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_helm	223	item_helm_hd	sfx/items_sd	item\helm.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_helm	223		sfx/items_sd	item\helm.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_herb	224	item_herb_hd	sfx/items_sd	item\herb.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_javelins	225	item_javelins_hd	sfx/items_sd	item\javelins.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_jewel	226	item_jewel_hd	sfx/items_sd	item\jewel.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_key	227	item_key_hd	sfx/items_sd	item\key.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_javelins	225		sfx/items_sd	item\javelins.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_jewel	226		sfx/items_sd	item\jewel.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_key	227		sfx/items_sd	item\key.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_key_used	228	item_key_used_hd	sfx/items_sd	item\keyused.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_largemetalweapon	229	item_largemetalweapon_hd	sfx/items_sd	item\largemetalweapon.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_lightarmor	230	item_lightarmor_hd	sfx/items_sd	item\lightarmor.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_metalshield	231	item_metalshield_hd	sfx/items_sd	item\metalshield.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_largemetalweapon	229		sfx/items_sd	item\largemetalweapon.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_lightarmor	230		sfx/items_sd	item\lightarmor.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_metalshield	231		sfx/items_sd	item\metalshield.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_monsterbone	232	item_monsterbone_hd	sfx/items_sd	item\skull.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_monsterguts	233	item_monsterguts_hd	sfx/items_sd	item\monsterguts.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_orb	234	item_orb_hd	sfx/items_sd	item\wand.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_pickup	235	cursor_item_pickup_hd_1	sfx/items_sd	cursor\pickup.flac	0	0	0	0	0	160	160	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_platearmor	236	item_platearmor_hd	sfx/items_sd	item\platearmor.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_potion	237	item_potion_hd1	sfx/items_sd	item\potionui.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_potion_drink	238	item_potion_drink_hd1	sfx/items_sd	item\potiondrink.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_quiver	239	item_quiver_hd	sfx/items_sd	item\quiver.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_rare	240	item_rare_hd	sfx/items_sd	item\rare.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_ring	241	item_ring_hd	sfx/items_sd	item\ring.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_pickup	235	custom_d2pack_item_pickup_1	sfx/items_sd	cursor\pickup.flac	0	0	0	0	0	160	160	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_platearmor	236		sfx/items_sd	item\platearmor.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_potion	237	custom_d2pack_item_potion_1	sfx/items_sd	item\potionui.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_potion_drink	238		sfx/items_sd	item\potiondrink.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_quiver	239		sfx/items_sd	item\quiver.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_rare	240		sfx/items_sd	item\rare.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_ring	241		sfx/items_sd	item\ring.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_rune	242	item_rune_hd	sfx/items_sd	item\rune.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_scroll	243	item_scroll_hd	sfx/items_sd	item\scroll.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_smallmetalweapon	244	item_smallmetalweapon_hd	sfx/items_sd	item\smallmetalweapon.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_staff	245	item_staff_hd	sfx/items_sd	item\staff.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_sword	246	item_sword_hd	sfx/items_sd	item\sword.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_scroll	243		sfx/items_sd	item\scroll.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_smallmetalweapon	244		sfx/items_sd	item\smallmetalweapon.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_staff	245		sfx/items_sd	item\staff.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_sword	246		sfx/items_sd	item\sword.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_wand	247	item_wand_hd	sfx/items_sd	item\wand.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_whip	248	item_whip_hd	sfx/items_sd	item\whip.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_woodshield	249	item_woodshield_hd	sfx/items_sd	item\woodshield.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_woodweaponlarge	250	item_woodweaponlarge_hd	sfx/items_sd	item\woodweaponlarge.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_woodweaponlarge	250		sfx/items_sd	item\woodweaponlarge.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_punch_1	251	weapon_onehandthrust_hd_4	sfx/combat/weapon_sd	combat\weapon\one_hand_thrust01.flac	0	0	0	0	0	206	206	100	100	4	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_punch_2	252		sfx/combat/weapon_sd	combat\weapon\one_hand_thrust03.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_punch_3	253		sfx/combat/weapon_sd	combat\weapon\one_hand_thrust05.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_punch_4	254		sfx/combat/weapon_sd	combat\weapon\one_hand_thrust06.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
-weapon_kick_1	255	weapon_kicksmall_hd_1	sfx/combat/weapon_sd	combat\weapon\kick_small01.flac	0	0	0	0	0	206	206	100	100	4	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
+weapon_kick_1	255		sfx/combat/weapon_sd	combat\weapon\kick_small01.flac	0	0	0	0	0	206	206	100	100	4	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_kick_2	256		sfx/combat/weapon_sd	combat\weapon\kick_small02.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_kick_3	257		sfx/combat/weapon_sd	combat\weapon\kick_small04.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_kick_4	258		sfx/combat/weapon_sd	combat\weapon\kick_small05.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
-weapon_throw_1	259	weapon_twohandswingsmall_hd_5	sfx/combat/weapon_sd	combat\weapon\two_hand_swing_small01.flac	0	0	0	0	0	206	206	100	100	3	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
+weapon_throw_1	259		sfx/combat/weapon_sd	combat\weapon\two_hand_swing_small01.flac	0	0	0	0	0	206	206	100	100	3	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_throw_2	260		sfx/combat/weapon_sd	combat\weapon\two_hand_swing_small07.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_throw_3	261		sfx/combat/weapon_sd	combat\weapon\two_hand_swing_small08.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_1hs_small_1	262	weapon_onehandswingsmall_hd_1	sfx/combat/weapon_sd	combat\weapon\one_hand_swing_small01.flac	0	0	0	0	0	206	206	100	100	6	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -267,19 +267,19 @@ weapon_1hs_small_3	264		sfx/combat/weapon_sd	combat\weapon\one_hand_swing_small0
 weapon_1hs_small_4	265		sfx/combat/weapon_sd	combat\weapon\one_hand_swing_small04.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_1hs_small_5	266		sfx/combat/weapon_sd	combat\weapon\one_hand_swing_small05.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_1hs_small_6	267		sfx/combat/weapon_sd	combat\weapon\one_hand_swing_small06.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
-weapon_1hs_large_1	268	weapon_onehandswinglarge_hd_13	sfx/combat/weapon_sd	combat\weapon\one_hand_swing_large13.flac	0	0	0	0	0	206	206	100	100	6	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
+weapon_1hs_large_1	268		sfx/combat/weapon_sd	combat\weapon\one_hand_swing_large13.flac	0	0	0	0	0	206	206	100	100	6	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_1hs_large_2	269		sfx/combat/weapon_sd	combat\weapon\one_hand_swing_large14.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_1hs_large_3	270		sfx/combat/weapon_sd	combat\weapon\one_hand_swing_large15.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_1hs_large_4	271		sfx/combat/weapon_sd	combat\weapon\one_hand_swing_large16.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_1hs_large_5	272		sfx/combat/weapon_sd	combat\weapon\one_hand_swing_large17.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_1hs_large_6	273		sfx/combat/weapon_sd	combat\weapon\one_hand_swing_large18.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
-weapon_2hs_small_1	274	weapon_twohandswingsmall_hd_5	sfx/combat/weapon_sd	combat\weapon\two_hand_swing_small01.flac	0	0	0	0	0	206	206	100	100	6	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
+weapon_2hs_small_1	274		sfx/combat/weapon_sd	combat\weapon\two_hand_swing_small01.flac	0	0	0	0	0	206	206	100	100	6	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_2hs_small_2	275		sfx/combat/weapon_sd	combat\weapon\two_hand_swing_small02.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_2hs_small_3	276		sfx/combat/weapon_sd	combat\weapon\two_hand_swing_small03.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_2hs_small_4	277		sfx/combat/weapon_sd	combat\weapon\two_hand_swing_small04.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_2hs_small_5	278		sfx/combat/weapon_sd	combat\weapon\two_hand_swing_small05.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_2hs_small_6	279		sfx/combat/weapon_sd	combat\weapon\two_hand_swing_small06.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
-weapon_2hs_large_1	280	weapon_twohandswinglarge_hd_3	sfx/combat/weapon_sd	combat\weapon\two_hand_swing_large01.flac	0	0	0	0	0	206	206	100	100	6	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
+weapon_2hs_large_1	280		sfx/combat/weapon_sd	combat\weapon\two_hand_swing_large01.flac	0	0	0	0	0	206	206	100	100	6	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_2hs_large_2	281		sfx/combat/weapon_sd	combat\weapon\two_hand_swing_large02.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_2hs_large_3	282		sfx/combat/weapon_sd	combat\weapon\two_hand_swing_large03.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
 weapon_2hs_large_4	283		sfx/combat/weapon_sd	combat\weapon\two_hand_swing_large04.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -308,63 +308,63 @@ weapon_giant_2	305		sfx/combat/weapon_sd	combat\weapon\bigswish2.flac	0	0	0	0	0	
 weapon_giant_3	306		sfx/combat/weapon_sd	combat\weapon\bigswish3.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 weapon_giant_4	307		sfx/combat/weapon_sd	combat\weapon\bigswish4.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 weapon_giant_5	308		sfx/combat/weapon_sd	combat\weapon\bigswish5.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
-weapon_bow_1	309	weapon_bow_hd_1	sfx/combat/weapon_sd	combat\weapon\bow1.flac	0	0	0	0	0	206	206	100	100	5	0	0	0	0	0	0	0	4	2	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
+weapon_bow_1	309		sfx/combat/weapon_sd	combat\weapon\bow1.flac	0	0	0	0	0	206	206	100	100	5	0	0	0	0	0	0	0	4	2	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 weapon_bow_2	310		sfx/combat/weapon_sd	combat\weapon\bow2.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	4	2	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 weapon_bow_3	311		sfx/combat/weapon_sd	combat\weapon\bow3.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	4	2	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 weapon_bow_4	312		sfx/combat/weapon_sd	combat\weapon\bow4.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	4	2	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 weapon_bow_5	313		sfx/combat/weapon_sd	combat\weapon\bow5.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	4	2	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
-weapon_bow_draw_1	314	weapon_bow_draw_hd_1	sfx/combat/weapon_sd	combat\weapon\pull1.flac	0	0	0	0	0	206	206	100	100	3	0	0	0	0	0	1	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
+weapon_bow_draw_1	314		sfx/combat/weapon_sd	combat\weapon\pull1.flac	0	0	0	0	0	206	206	100	100	3	0	0	0	0	0	1	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 weapon_bow_draw_2	315		sfx/combat/weapon_sd	combat\weapon\pull2.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	1	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 weapon_bow_draw_3	316		sfx/combat/weapon_sd	combat\weapon\pull3.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	1	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
-weapon_xbow_1	317	weapon_xbow_hd_1	sfx/combat/weapon_sd	combat\weapon\xbow1.flac	0	0	0	0	0	206	206	100	100	4	0	0	0	0	0	0	0	4	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
+weapon_xbow_1	317		sfx/combat/weapon_sd	combat\weapon\xbow1.flac	0	0	0	0	0	206	206	100	100	4	0	0	0	0	0	0	0	4	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 weapon_xbow_2	318		sfx/combat/weapon_sd	combat\weapon\xbow2.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	4	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 weapon_xbow_3	319		sfx/combat/weapon_sd	combat\weapon\xbow3.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	4	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 weapon_xbow_4	320		sfx/combat/weapon_sd	combat\weapon\xbow4.flac	0	0	0	0	0	206	206	100	100	0	0	0	0	0	0	0	0	4	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
-impact_punch_1	321	impact_punch_hd_1	sfx/combat/impacts_sd	combat\impact\blow1.flac	0	0	0	0	0	200	200	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_punch_1	321	custom_d2pack_impact_punch_1	sfx/combat/impacts_sd	combat\impact\blow1.flac	0	0	0	0	0	200	200	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_punch_2	322		sfx/combat/impacts_sd	combat\impact\blow2.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_punch_3	323		sfx/combat/impacts_sd	combat\impact\blow3.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_punch_4	324		sfx/combat/impacts_sd	combat\impact\blow4.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_claw_1	325	impact_claw_hd_1	sfx/combat/impacts_sd	combat\impact\claw1.flac	0	0	0	0	0	200	200	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_claw_1	325		sfx/combat/impacts_sd	combat\impact\claw1.flac	0	0	0	0	0	200	200	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_claw_2	326		sfx/combat/impacts_sd	combat\impact\claw2.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_claw_3	327		sfx/combat/impacts_sd	combat\impact\claw3.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_claw_4	328		sfx/combat/impacts_sd	combat\impact\claw4.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_blunt_1	329	impact_blunt_hd_1	sfx/combat/impacts_sd	combat\impact\blunt3.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_blunt_1	329	custom_d2pack_impact_blunt_1	sfx/combat/impacts_sd	combat\impact\blunt3.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blunt_2	330		sfx/combat/impacts_sd	combat\impact\blunt5.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blunt_3	331		sfx/combat/impacts_sd	combat\impact\blunt6.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blunt_4	332		sfx/combat/impacts_sd	none.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blunt_5	333		sfx/combat/impacts_sd	none.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blunt_6	334		sfx/combat/impacts_sd	none.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_blade_thrust_1	335	impact_blade_thrust_hd_1	sfx/combat/impacts_sd	combat\impact\stab1.flac	0	0	0	0	0	180	180	100	100	5	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_blade_thrust_1	335		sfx/combat/impacts_sd	combat\impact\stab1.flac	0	0	0	0	0	180	180	100	100	5	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blade_thrust_2	336		sfx/combat/impacts_sd	combat\impact\stab2.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blade_thrust_3	337		sfx/combat/impacts_sd	combat\impact\stab3.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blade_thrust_4	338		sfx/combat/impacts_sd	combat\impact\stab4.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blade_thrust_5	339		sfx/combat/impacts_sd	combat\impact\stab5.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blade_thrust_6	340		sfx/combat/impacts_sd	none.flac	0	0	0	0	0	0	0	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_blade_swing_1	341	impact_blade_swing_hd_1	sfx/combat/impacts_sd	combat\impact\sword1.flac	0	0	0	0	0	180	180	100	100	6	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_blade_swing_1	341	custom_d2pack_impact_blade_swing_1	sfx/combat/impacts_sd	combat\impact\sword1.flac	0	0	0	0	0	180	180	100	100	6	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blade_swing_2	342		sfx/combat/impacts_sd	combat\impact\sword2.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blade_swing_3	343		sfx/combat/impacts_sd	combat\impact\sword3.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blade_swing_4	344		sfx/combat/impacts_sd	combat\impact\sword4.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blade_swing_5	345		sfx/combat/impacts_sd	combat\impact\sword5.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_blade_swing_6	346		sfx/combat/impacts_sd	combat\impact\sword6.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_arrow_1	347	impact_arrow_hd_1	sfx/combat/impacts_sd	combat\impact\arrow1.flac	0	0	0	0	0	224	224	100	100	6	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_arrow_1	347	custom_d2pack_impact_arrow_1	sfx/combat/impacts_sd	combat\impact\arrow1.flac	0	0	0	0	0	224	224	100	100	6	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_arrow_2	348		sfx/combat/impacts_sd	combat\impact\arrow3.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_arrow_3	349		sfx/combat/impacts_sd	combat\impact\arrow4.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_arrow_4	350		sfx/combat/impacts_sd	combat\impact\arrow5.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_arrow_5	351		sfx/combat/impacts_sd	combat\impact\arrow6.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_arrow_6	352		sfx/combat/impacts_sd	combat\impact\arrow8.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_fire_1	353	impact_fire_hd_1	sfx/combat/impacts_sd	combat\impact\sizzle1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	1	0	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_fire_1	353		sfx/combat/impacts_sd	combat\impact\sizzle1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	1	0	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_fire_2	354		sfx/combat/impacts_sd	combat\impact\sizzle2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_fire_3	355		sfx/combat/impacts_sd	combat\impact\sizzle3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_fire_layer_1	356	impact_fire_layer_hd_1	sfx/combat/impacts_sd	combat\impact\singe1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_fire_layer_1	356		sfx/combat/impacts_sd	combat\impact\singe1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_fire_layer_2	357		sfx/combat/impacts_sd	combat\impact\singe2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_fire_layer_3	358		sfx/combat/impacts_sd	combat\impact\singe3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_cold_1	359	impact_cold_hd_1	sfx/combat/impacts_sd	combat\impact\coldimpact1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_cold_1	359		sfx/combat/impacts_sd	combat\impact\coldimpact1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_cold_2	360		sfx/combat/impacts_sd	combat\impact\coldimpact2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_cold_3	361		sfx/combat/impacts_sd	combat\impact\coldimpact3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_cold_layer_1	362	impact_cold_layer_hd_1	sfx/combat/impacts_sd	combat\impact\cold1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_cold_layer_1	362	custom_d2pack_impact_cold_layer_1	sfx/combat/impacts_sd	combat\impact\cold1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_cold_layer_2	363		sfx/combat/impacts_sd	combat\impact\cold2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_cold_layer_3	364		sfx/combat/impacts_sd	combat\impact\cold3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_bluemotize_1	365	impact_blue_hd_1	sfx/combat/impacts_sd	combat\impact\blue1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_bluemotize_1	365		sfx/combat/impacts_sd	combat\impact\blue1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_bluemotize_2	366		sfx/combat/impacts_sd	combat\impact\blue2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_bluemotize_3	367		sfx/combat/impacts_sd	combat\impact\blue3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_lightning_1	368	impact_lightning_hd_1	sfx/combat/impacts_sd	combat\impact\zap1.flac	0	0	0	0	0	200	200	100	100	4	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -375,28 +375,28 @@ impact_lightning_layer_1	372	impact_lightning_layer_hd_1	sfx/combat/impacts_sd	c
 impact_lightning_layer_2	373		sfx/combat/impacts_sd	combat\impact\static2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_lightning_layer_3	374		sfx/combat/impacts_sd	combat\impact\static3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_lightning_layer_4	375		sfx/combat/impacts_sd	combat\impact\static4.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_poison_1	376	impact_poison_hd_1	sfx/combat/impacts_sd	combat\impact\green1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_poison_1	376	custom_d2pack_impact_poison_1	sfx/combat/impacts_sd	combat\impact\green1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_poison_2	377		sfx/combat/impacts_sd	combat\impact\green2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_poison_3	378		sfx/combat/impacts_sd	combat\impact\green3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_double_1	379	impact_double_hd_1	sfx/combat/impacts_sd	combat\impact\double1.flac	0	0	0	0	0	200	200	100	100	3	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_double_1	379		sfx/combat/impacts_sd	combat\impact\double1.flac	0	0	0	0	0	200	200	100	100	3	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_double_2	380		sfx/combat/impacts_sd	combat\impact\double2.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_double_3	381		sfx/combat/impacts_sd	combat\impact\double3.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_stun_1	382	impact_stun_hd_1	sfx/combat/impacts_sd	combat\impact\stun1.flac	0	0	0	0	0	200	200	100	100	3	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_stun_1	382		sfx/combat/impacts_sd	combat\impact\stun1.flac	0	0	0	0	0	200	200	100	100	3	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_stun_2	383		sfx/combat/impacts_sd	combat\impact\stun2.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_stun_3	384		sfx/combat/impacts_sd	combat\impact\stun3.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_shatter_1	385	impact_shatter_hd_1	sfx/combat/impacts_sd	combat\impact\shatter1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_shatter_1	385		sfx/combat/impacts_sd	combat\impact\shatter1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_shatter_2	386		sfx/combat/impacts_sd	combat\impact\shatter2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_shatter_3	387		sfx/combat/impacts_sd	combat\impact\shatter3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_stone_1	388	impact_stone_hd_1	sfx/combat/impacts_sd	combat\impact\stone1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_stone_1	388		sfx/combat/impacts_sd	combat\impact\stone1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_stone_2	389		sfx/combat/impacts_sd	combat\impact\stone2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_stone_3	390		sfx/combat/impacts_sd	combat\impact\stone3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_goo_1	391	impact_goohit_hd_1	sfx/combat/impacts_sd	combat\impact\goohit1.flac	0	0	0	0	0	200	200	100	100	4	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_goo_1	391	custom_d2pack_impact_goo_1	sfx/combat/impacts_sd	combat\impact\goohit1.flac	0	0	0	0	0	200	200	100	100	4	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_goo_2	392		sfx/combat/impacts_sd	combat\impact\goohit2.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_goo_3	393		sfx/combat/impacts_sd	combat\impact\goohit3.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_goo_4	394		sfx/combat/impacts_sd	combat\impact\goohit4.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_bash	395	impact_bash_hd	sfx/combat/impacts_sd	combat\impact\bash.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_steal_life	396	impact_steal_life_hd	sfx/combat/impacts_sd	combat\impact\leech.flac	0	0	0	0	0	0	0	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_steal_mana	397	impact_steal_life_hd	sfx/combat/impacts_sd	combat\impact\leech.flac	0	0	0	0	0	0	0	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_bash	395		sfx/combat/impacts_sd	combat\impact\bash.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_steal_life	396		sfx/combat/impacts_sd	combat\impact\leech.flac	0	0	0	0	0	0	0	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_steal_mana	397		sfx/combat/impacts_sd	combat\impact\leech.flac	0	0	0	0	0	0	0	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 block_weapon_1	398	impact_block_blade_hd_1	sfx/combat/impacts_sd	combat\impact\block_blade1.flac	0	0	0	0	0	200	200	100	100	3	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 block_weapon_2	399		sfx/combat/impacts_sd	combat\impact\block_blade4.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 block_weapon_3	400		sfx/combat/impacts_sd	combat\impact\block_blade5.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -409,7 +409,7 @@ explosion_small_3	406		sfx/combat/explosion_sd	combat\explosion\explosionsmall4.
 explosion_medium_1	407	explosionmed_hd_1	sfx/combat/explosion_sd	combat\explosion\explosionmed1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	0	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 explosion_medium_2	408		sfx/combat/explosion_sd	combat\explosion\explosionmed2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 explosion_medium_3	409		sfx/combat/explosion_sd	combat\explosion\explosionmed3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-explosion_large_1	410	explosionlarge_hd_1	sfx/combat/explosion_sd	combat\explosion\explosionlarge2.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	0	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+explosion_large_1	410		sfx/combat/explosion_sd	combat\explosion\explosionlarge2.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	0	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 explosion_large_2	411		sfx/combat/explosion_sd	combat\explosion\explosionlarge4.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 explosion_large_3	412		sfx/combat/explosion_sd	combat\explosion\explosionlarge5.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 cairn_stone_1	413	cairn_stone_1_hd	sfx/ambient/environment-objects_sd	object\cairnloop1.flac	0	0	0	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
@@ -432,11 +432,11 @@ monster_fireball	429	monster_fireball_hd	sfx/player-skills_sd	monster\fallensham
 monster_icebolt_1	430		sfx/player-skills_sd	skill\sorceress\icebolt1.flac	0	0	0	0	0	200	200	100	100	3	0	1	0	6	0	0	0	8	1	0	90	0	0	0	1	0	0	31512	-1	-1	0	0	
 monster_icebolt_2	431		sfx/player-skills_sd	skill\sorceress\icebolt2.flac	0	0	0	0	0	200	200	100	100	0	0	1	0	6	0	0	0	8	1	0	90	0	0	0	1	0	0	28611	-1	-1	0	0	
 monster_icebolt_3	432		sfx/player-skills_sd	skill\sorceress\icebolt3.flac	0	0	0	0	0	200	200	100	100	0	0	1	0	6	0	0	0	8	1	0	90	0	0	0	1	0	0	31347	-1	-1	0	0	
-monster_lightning_1	433	sorceress_lightning_hd_1	sfx/player-skills_sd	skill\sorceress\lightning1.flac	0	0	0	0	0	120	120	100	100	3	0	1	0	6	0	0	0	8	1	0	90	0	0	0	1	0	0	19263	-1	-1	0	0	
+monster_lightning_1	433		sfx/player-skills_sd	skill\sorceress\lightning1.flac	0	0	0	0	0	120	120	100	100	3	0	1	0	6	0	0	0	8	1	0	90	0	0	0	1	0	0	19263	-1	-1	0	0	
 monster_lightning_2	434		sfx/player-skills_sd	skill\sorceress\lightning2.flac	0	0	0	0	0	120	120	100	100	0	0	1	0	6	0	0	0	8	1	0	90	0	0	0	1	0	0	19455	-1	-1	0	0	
 monster_lightning_3	435		sfx/player-skills_sd	skill\sorceress\lightning3.flac	0	0	0	0	0	120	120	100	100	0	0	1	0	6	0	0	0	8	1	0	90	0	0	0	1	0	0	17599	-1	-1	0	0	
-monster_meteor	436	sorceress_meteorlaunch_hd	sfx/player-skills_sd	skill\sorceress\meteorlaunch.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	8	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-monster_meteor_impact	437	sorceress_meteorimpact_hd	sfx/player-skills_sd	skill\sorceress\meteorimpact.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	8	2	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+monster_meteor	436		sfx/player-skills_sd	skill\sorceress\meteorlaunch.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	8	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+monster_meteor_impact	437		sfx/player-skills_sd	skill\sorceress\meteorimpact.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	8	2	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 monster_poisonbolt	438	monster_poisonbolt_hd1	sfx/player-skills_sd	skill\necromancer\poisonnova.flac	0	0	0	0	0	80	80	100	100	0	0	0	0	6	0	0	0	8	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 andariel_attack_1	439	andariel_attack_hd1	sfx/act-boss_sd	monster\andariel\attack1.flac	0	0	0	0	0	255	255	100	100	4	0	0	0	0	0	1	0	8	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
 andariel_attack_2	440		sfx/act-boss_sd	monster\andariel\attack2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	8	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
@@ -1121,7 +1121,7 @@ greatermummy_unholybolt_cast	1118	greatermummy_unholybolt_cast_hd	sfx/monster_sd
 greatermummy_unholybolt_1	1119	greatermummy_unholybolt_hd1	sfx/monster_sd	monster\greatermummy\unholybolt1.flac	0	0	0	0	0	210	210	100	100	3	0	1	0	6	0	0	0	8	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 greatermummy_unholybolt_2	1120		sfx/monster_sd	monster\greatermummy\unholybolt2.flac	0	0	0	0	0	210	210	100	100	0	0	1	0	6	0	0	0	8	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 greatermummy_unholybolt_3	1121		sfx/monster_sd	monster\greatermummy\unholybolt3.flac	0	0	0	0	0	210	210	100	100	0	0	1	0	6	0	0	0	8	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
-greatermummy_bestow	1122	necromancer_bone_cast_hd1	sfx/monster_sd	skill\necromancer\bonecast.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	8	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
+greatermummy_bestow	1122		sfx/monster_sd	skill\necromancer\bonecast.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	8	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 greatermummy_resurrect_1	1123	greatermummy_resurrect_hd1	sfx/monster_sd	monster\greatermummy\spell1.flac	0	0	0	0	0	200	200	100	100	5	0	0	0	0	0	1	0	8	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 greatermummy_resurrect_2	1124		sfx/monster_sd	monster\greatermummy\spell2.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	8	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 greatermummy_resurrect_3	1125		sfx/monster_sd	monster\greatermummy\spell3.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	8	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
@@ -2229,53 +2229,53 @@ zombie_unique_neutral_3	2226		sfx/eax/monster_neutral_sd	monster\zombie\neutral3
 zombie_raise_1	2227	zombie_raise_hd1	sfx/monster_sd	monster\zombie\raise1.flac	0	0	0	0	0	180	180	100	100	3	0	0	0	0	1	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 zombie_raise_2	2228		sfx/monster_sd	monster\zombie\raise4.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	1	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 zombie_raise_3	2229		sfx/monster_sd	monster\zombie\raise5.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	1	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
-player_townportal_cast	2230	player_townportal_cast_hd1	sfx/player-skills_sd	skill\misc\portalcast.flac	0	0	0	0	0	140	140	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-player_townportal_enter	2231	player_townportal_enter_hd	sfx/player-skills_sd	skill\misc\portalenter.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+player_townportal_cast	2230		sfx/player-skills_sd	skill\misc\portalcast.flac	0	0	0	0	0	140	140	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+player_townportal_enter	2231		sfx/player-skills_sd	skill\misc\portalenter.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_cast_poison	2232	amazon_cast_poison_hd1	sfx/player-skills_sd	skill\amazon\poisoncast.flac	0	0	0	0	0	180	180	100	100	0	0	0	8	8	0	0	0	-1	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-amazon_coldarrow_1	2233	amazon_coldarrow_hd1	sfx/player-skills_sd	skill\amazon\coldarrow1.flac	0	0	0	0	0	255	255	100	100	3	0	1	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	26302	-1	-1	0	0	
+amazon_coldarrow_1	2233		sfx/player-skills_sd	skill\amazon\coldarrow1.flac	0	0	0	0	0	255	255	100	100	3	0	1	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	26302	-1	-1	0	0	
 amazon_coldarrow_2	2234		sfx/player-skills_sd	skill\amazon\coldarrow2.flac	0	0	0	0	0	255	255	100	100	0	0	1	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	22230	-1	-1	0	0	
 amazon_coldarrow_3	2235		sfx/player-skills_sd	skill\amazon\coldarrow3.flac	0	0	0	0	0	255	255	100	100	0	0	1	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	25722	-1	-1	0	0	
-amazon_dodge_1	2236	amazon_dodge_hd1	sfx/player-skills_sd	skill\amazon\dodge1.flac	0	0	0	0	0	255	255	100	100	5	0	0	0	0	1	0	0	0	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
+amazon_dodge_1	2236		sfx/player-skills_sd	skill\amazon\dodge1.flac	0	0	0	0	0	255	255	100	100	5	0	0	0	0	1	0	0	0	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_dodge_2	2237		sfx/player-skills_sd	skill\amazon\dodge2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_dodge_3	2238		sfx/player-skills_sd	skill\amazon\dodge3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_dodge_4	2239		sfx/player-skills_sd	skill\amazon\dodge4.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_dodge_5	2240		sfx/player-skills_sd	skill\amazon\dodge5.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
-amazon_eyeofzeus	2241	amazon_eyeofzeus_hd	sfx/player-skills_sd	skill\amazon\eyeofzeus.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-amazon_firearrow_1	2242	amazon_firearrow_hd1	sfx/player-skills_sd	skill\amazon\firearrow1.flac	0	0	0	0	0	113	160	100	100	3	0	1	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	22119	-1	-1	0	0	
+amazon_eyeofzeus	2241		sfx/player-skills_sd	skill\amazon\eyeofzeus.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+amazon_firearrow_1	2242		sfx/player-skills_sd	skill\amazon\firearrow1.flac	0	0	0	0	0	113	160	100	100	3	0	1	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	22119	-1	-1	0	0	
 amazon_firearrow_2	2243		sfx/player-skills_sd	skill\amazon\firearrow2.flac	0	0	0	0	0	112	160	100	100	0	0	1	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	19903	-1	-1	0	0	
 amazon_firearrow_3	2244		sfx/player-skills_sd	skill\amazon\firearrow3.flac	0	0	0	0	0	112	160	100	100	0	0	1	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	20415	-1	-1	0	0	
-amazon_fistofares	2245	amazon_fistofares_hd	sfx/player-skills_sd	skill\amazon\fistofares.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-amazon_handofathena	2246	amazon_handofathena_hd	sfx/player-skills_sd	skill\amazon\handofathena.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-amazon_impale_1	2247	amazon_impale_hd1	sfx/player-skills_sd	skill\amazon\impale1.flac	0	0	0	0	0	160	160	100	100	4	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+amazon_fistofares	2245		sfx/player-skills_sd	skill\amazon\fistofares.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+amazon_handofathena	2246		sfx/player-skills_sd	skill\amazon\handofathena.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+amazon_impale_1	2247		sfx/player-skills_sd	skill\amazon\impale1.flac	0	0	0	0	0	160	160	100	100	4	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_impale_2	2248		sfx/player-skills_sd	skill\amazon\impale2.flac	0	0	0	0	0	160	160	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_impale_3	2249		sfx/player-skills_sd	skill\amazon\impale3.flac	0	0	0	0	0	160	160	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_impale_4	2250		sfx/player-skills_sd	skill\amazon\impale4.flac	0	0	0	0	0	160	160	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-amazon_jab_1	2251	amazon_jab_hd1	sfx/player-skills_sd	skill\amazon\jab1.flac	0	0	0	0	0	160	160	100	100	4	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+amazon_jab_1	2251		sfx/player-skills_sd	skill\amazon\jab1.flac	0	0	0	0	0	160	160	100	100	4	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_jab_2	2252		sfx/player-skills_sd	skill\amazon\jab2.flac	0	0	0	0	0	160	160	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_jab_3	2253		sfx/player-skills_sd	skill\amazon\jab3.flac	0	0	0	0	0	160	160	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_jab_4	2254		sfx/player-skills_sd	skill\amazon\jab4.flac	0	0	0	0	0	160	160	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-amazon_lightning_1	2255	amazon_lightning_hd1	sfx/player-skills_sd	skill\amazon\zeus1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+amazon_lightning_1	2255		sfx/player-skills_sd	skill\amazon\zeus1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_lightning_2	2256		sfx/player-skills_sd	skill\amazon\zeus2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_lightning_3	2257		sfx/player-skills_sd	skill\amazon\zeus3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-amazon_magicarrow_1	2258	amazon_magicarrow_hd1	sfx/player-skills_sd	skill\amazon\magicarrow1.flac	0	0	0	0	0	160	200	100	100	3	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	7214	-1	-1	0	0	
+amazon_magicarrow_1	2258		sfx/player-skills_sd	skill\amazon\magicarrow1.flac	0	0	0	0	0	160	200	100	100	3	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	7214	-1	-1	0	0	
 amazon_magicarrow_2	2259		sfx/player-skills_sd	skill\amazon\magicarrow2.flac	0	0	0	0	0	160	200	100	100	0	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	8880	-1	-1	0	0	
 amazon_magicarrow_3	2260		sfx/player-skills_sd	skill\amazon\magicarrow3.flac	0	0	0	0	0	160	200	100	100	0	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	9084	-1	-1	0	0	
-amazon_multi_arrow_1	2261	amazon_multi_arrow_hd1	sfx/player-skills_sd	skill\amazon\multi1.flac	0	0	0	0	0	255	255	100	100	5	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+amazon_multi_arrow_1	2261		sfx/player-skills_sd	skill\amazon\multi1.flac	0	0	0	0	0	255	255	100	100	5	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_multi_arrow_2	2262		sfx/player-skills_sd	skill\amazon\multi2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_multi_arrow_3	2263		sfx/player-skills_sd	skill\amazon\multi3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_multi_arrow_4	2264		sfx/player-skills_sd	skill\amazon\multi4.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_multi_arrow_5	2265		sfx/player-skills_sd	skill\amazon\multi5.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-amazon_valkyrie_appear	2266	amazon_valkyrie_appear_hd	sfx/player-skills_sd	skill\amazon\valkyrieappear1.flac	0	0	0	0	0	142	179	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-amazon_valkyrie_attack_1	2267	amazon_valkyrie_attack_hd1	sfx/combat/weapon_sd	skill\amazon\valkyrieattack1.flac	0	0	0	0	0	50	80	100	100	4	0	0	0	1	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+amazon_valkyrie_appear	2266		sfx/player-skills_sd	skill\amazon\valkyrieappear1.flac	0	0	0	0	0	142	179	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+amazon_valkyrie_attack_1	2267		sfx/combat/weapon_sd	skill\amazon\valkyrieattack1.flac	0	0	0	0	0	50	80	100	100	4	0	0	0	1	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_valkyrie_attack_2	2268		sfx/combat/weapon_sd	skill\amazon\valkyrieattack2.flac	0	0	0	0	0	50	80	100	100	0	0	0	0	1	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_valkyrie_attack_3	2269		sfx/combat/weapon_sd	skill\amazon\valkyrieattack3.flac	0	0	0	0	0	50	80	100	100	0	0	0	0	1	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_valkyrie_attack_4	2270		sfx/combat/weapon_sd	skill\amazon\valkyrieattack4.flac	0	0	0	0	0	50	80	100	100	0	0	0	0	1	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-amazon_valkyrie_hit_1	2271	amazon_valkyrie_hit_hd1	sfx/combat/impacts_sd	skill\amazon\valkyriehit1.flac	0	0	0	0	0	50	80	100	100	4	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+amazon_valkyrie_hit_1	2271		sfx/combat/impacts_sd	skill\amazon\valkyriehit1.flac	0	0	0	0	0	50	80	100	100	4	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_valkyrie_hit_2	2272		sfx/combat/impacts_sd	skill\amazon\valkyriehit2.flac	0	0	0	0	0	50	80	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_valkyrie_hit_3	2273		sfx/combat/impacts_sd	skill\amazon\valkyriehit3.flac	0	0	0	0	0	50	80	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 amazon_valkyrie_hit_4	2274		sfx/combat/impacts_sd	skill\amazon\valkyriehit4.flac	0	0	0	0	0	50	80	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-amazon_valkyrie_cast	2275	amazon_valkyrie_cast_hd	sfx/player-skills_sd	skill\amazon\valkyriecast.flac	0	0	0	0	0	160	201	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-amazon_valkyrie_death	2276	amazon_valkyrie_death_hd_1	sfx/combat/impacts_sd	skill\amazon\valkyriedeath1.flac	0	0	0	0	0	63	100	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+amazon_valkyrie_cast	2275		sfx/player-skills_sd	skill\amazon\valkyriecast.flac	0	0	0	0	0	160	201	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+amazon_valkyrie_death	2276		sfx/combat/impacts_sd	skill\amazon\valkyriedeath1.flac	0	0	0	0	0	63	100	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 assassin_bladefury_hit	2277	assassin_bladefury_hit_hd	sfx/player-skills_sd	skill\assassin\bladefuryhit.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	-1	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 assassin_bladefury_throw_1	2278	assassin_bladefury_throw_hd_3	sfx/player-skills_sd	skill\assassin\bladefury1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	0	0	3	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 assassin_bladefury_throw_2	2279		sfx/player-skills_sd	skill\assassin\bladefury2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	3	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
@@ -2327,71 +2327,71 @@ assassin_summon	2324	assassin_summon_hd	sfx/player-skills_sd	skill\assassin\summ
 assassin_venom	2325	assassin_venom_hd	sfx/player-skills_sd	skill\necromancer\poisoncast.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_arcticblast	2326	druid_arcticblast_hd	sfx/player-skills_sd	skill\druid\arcticblast.flac	0	0	0	0	0	255	255	100	100	0	0	1	0	6	0	0	0	-1	1	0	30	0	0	0	1	0	0	23433	-1	-1	0	0	
 druid_bouldereremerge	2327	druid_bouldereremerge_hd	sfx/player-skills_sd	skill\druid\emerge1.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-druid_boulderexplode_1	2328	druid_boulderexplode_hd1	sfx/player-skills_sd	skill\druid\explode1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+druid_boulderexplode_1	2328		sfx/player-skills_sd	skill\druid\explode1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_boulderexplode_2	2329		sfx/player-skills_sd	skill\druid\explode2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_boulderexplode_3	2330		sfx/player-skills_sd	skill\druid\explode3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_boulderloop	2331	druid_boulderloop_hd	sfx/player-skills_sd	skill\druid\boulderloop2.flac	0	0	0	0	0	255	255	100	100	0	0	1	0	3	1	0	0	-1	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_cyclonearmor	2332	druid_cyclonearmor_hd	sfx/player-skills_sd	skill\druid\cyclonearmor.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-druid_firecast_a	2333	druid_firecast_a_hd	sfx/player-skills_sd	skill\druid\firecasta.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-druid_firecast_b	2334	druid_firecast_b_hd	sfx/player-skills_sd	skill\druid\firecastb.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+druid_firecast_a	2333		sfx/player-skills_sd	skill\druid\firecasta.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+druid_firecast_b	2334		sfx/player-skills_sd	skill\druid\firecastb.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_hurricane	2335	druid_hurricane_hd	sfx/player-skills_sd	skill\druid\hurricane.flac	0	0	0	0	0	150	150	100	100	0	0	1	3	15	0	0	0	-1	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_meteor_1	2336		sfx/player-skills_sd	none.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_meteor_2	2337		sfx/player-skills_sd	none.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_meteor_3	2338		sfx/player-skills_sd	none.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_meteor_4	2339		sfx/player-skills_sd	none.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-druid_meteor_explode_1	2340	druid_meteor_explode_hd6	sfx/player-skills_sd	skill\sorceress\largefireimpact1.flac	0	0	0	0	0	255	255	100	100	6	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+druid_meteor_explode_1	2340		sfx/player-skills_sd	skill\sorceress\largefireimpact1.flac	0	0	0	0	0	255	255	100	100	6	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_meteor_explode_2	2341		sfx/player-skills_sd	skill\sorceress\largefireimpact2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_meteor_explode_3	2342		sfx/player-skills_sd	skill\sorceress\largefireimpact3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_meteor_explode_4	2343		sfx/player-skills_sd	combat\explosion\explosionlarge2.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_meteor_explode_5	2344		sfx/player-skills_sd	combat\explosion\explosionlarge4.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_meteor_explode_6	2345		sfx/player-skills_sd	combat\explosion\explosionlarge5.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_morph	2346	druid_morph_hd	sfx/player-skills_sd	skill\druid\morph.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-druid_shockwave	2347	druid_shockwave_hd	sfx/player-skills_sd	skill\druid\shockwave.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-druid_summon	2348	druid_summon_hd	sfx/player-skills_sd	skill\druid\summon.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+druid_shockwave	2347		sfx/player-skills_sd	skill\druid\shockwave.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+druid_summon	2348		sfx/player-skills_sd	skill\druid\summon.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_tornado	2349	druid_tornado_hd	sfx/player-skills_sd	skill\druid\tornado.flac	0	0	0	0	0	120	120	100	100	0	0	1	8	9	0	0	0	-1	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_twister	2350	druid_twister_hd	sfx/player-skills_sd	monster\countess\mistloop.flac	0	0	0	0	0	120	120	100	100	0	0	1	8	9	0	0	0	-1	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 druid_volcano	2351	druid_volcano_hd	sfx/player-skills_sd	skill\druid\volcano.flac	0	0	0	0	0	255	255	100	100	0	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	20327	-1	-1	0	0	
 druid_windcast	2352	druid_windcast_hd	sfx/player-skills_sd	skill\druid\windcast.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_aura_blessedaim	2353	paladin_aura_blessedaim_hd	sfx/player-skills_sd	skill\paladin\blessedaim.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_aura_cleansing	2354	paladin_aura_cleansing_hd	sfx/player-skills_sd	skill\paladin\cleansing.flac	0	0	0	0	0	168	160	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_aura_concentration	2355	paladin_aura_concentration_hd	sfx/player-skills_sd	skill\paladin\concentration.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_aura_concentration	2355		sfx/player-skills_sd	skill\paladin\concentration.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_aura_defiance	2356	paladin_aura_defiance_hd	sfx/player-skills_sd	skill\paladin\defiance.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_aura_fanatacism	2357	paladin_aura_fanatacism_hd	sfx/player-skills_sd	skill\paladin\fanaticism.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_aura_holyfire	2358	paladin_aura_holyfire_hd	sfx/player-skills_sd	skill\paladin\holyfire.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_aura_holylight	2359	paladin_aura_holylight_hd	sfx/player-skills_sd	skill\paladin\holylight.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_aura_holyfire	2358		sfx/player-skills_sd	skill\paladin\holyfire.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_aura_holylight	2359		sfx/player-skills_sd	skill\paladin\holylight.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_aura_holywind	2360	paladin_aura_holywind_hd	sfx/player-skills_sd	skill\paladin\holywind.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_aura_meditation	2361	paladin_aura_meditation_hd	sfx/player-skills_sd	skill\paladin\meditation.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_aura_might	2362	paladin_aura_might_hd	sfx/player-skills_sd	skill\paladin\might.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_aura_might	2362		sfx/player-skills_sd	skill\paladin\might.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_aura_prayer	2363	paladin_aura_prayer_hd	sfx/player-skills_sd	skill\paladin\prayer.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_aura_purification	2364	paladin_aura_purification_hd	sfx/player-skills_sd	skill\paladin\purification.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_aura_purification	2364		sfx/player-skills_sd	skill\paladin\purification.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_aura_redemption	2365	paladin_aura_redemption_hd	sfx/player-skills_sd	skill\paladin\redemption.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_aura_resistcold	2366	paladin_aura_resistcold_hd	sfx/player-skills_sd	skill\paladin\resistcold.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_aura_resistfire	2367	paladin_aura_resistfire_hd	sfx/player-skills_sd	skill\paladin\resistfire.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_aura_resistlightning	2368	paladin_aura_resistlightning_hd	sfx/player-skills_sd	skill\paladin\resistlightning.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_aura_salvation	2369	paladin_aura_salvation_hd	sfx/player-skills_sd	skill\paladin\salvation.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_aura_sanctuary	2370	paladin_aura_sanctuary_hd	sfx/player-skills_sd	skill\paladin\sanctuary.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_aura_sanctuary	2370		sfx/player-skills_sd	skill\paladin\sanctuary.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_aura_stamina	2371	paladin_aura_stamina_hd	sfx/player-skills_sd	skill\paladin\stamina.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_aura_thorns	2372	paladin_aura_thorns_hd	sfx/player-skills_sd	skill\paladin\thorns.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_aura_thorns	2372		sfx/player-skills_sd	skill\paladin\thorns.flac	0	0	0	0	0	168	168	100	100	0	0	0	0	0	1	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_blessedhammer_1	2373	paladin_blessedhammer_hd_3	sfx/player-skills_sd	skill\paladin\hammerlaunch1.flac	0	0	0	0	0	224	224	100	100	3	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	20655	-1	-1	0	0	
 paladin_blessedhammer_2	2374		sfx/player-skills_sd	skill\paladin\hammerlaunch2.flac	0	0	0	0	0	224	224	100	100	0	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	20655	-1	-1	0	0	
 paladin_blessedhammer_3	2375		sfx/player-skills_sd	skill\paladin\hammerlaunch3.flac	0	0	0	0	0	224	224	100	100	0	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	20655	-1	-1	0	0	
-paladin_charge	2376	paladin_charge_hd	sfx/player-skills_sd	skill\paladin\charge.flac	0	0	0	0	0	127	127	99	101	0	0	0	0	1	0	1	0	7	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_conversion	2377	paladin_conversion_hd	sfx/player-skills_sd	skill\paladin\conversion.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_charge	2376		sfx/player-skills_sd	skill\paladin\charge.flac	0	0	0	0	0	127	127	99	101	0	0	0	0	1	0	1	0	7	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_conversion	2377		sfx/player-skills_sd	skill\paladin\conversion.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_handofgod_cast	2378	paladin_handofgod_cast_hd	sfx/player-skills_sd	skill\paladin\handofgod.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_handofgod_bolt	2379	paladin_handofgod_bolt_hd	sfx/player-skills_sd	skill\paladin\handofgodbolt.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_holybolt_cast	2380	paladin_holybolt_cast_hd	sfx/player-skills_sd	skill\paladin\bolthammercast.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_holybolt_1	2381	paladin_holybolt_hd_1	sfx/player-skills_sd	skill\paladin\holybolt1.flac	0	0	0	0	0	224	224	100	100	3	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	26537	-1	-1	0	0	
+paladin_handofgod_bolt	2379		sfx/player-skills_sd	skill\paladin\handofgodbolt.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_holybolt_cast	2380		sfx/player-skills_sd	skill\paladin\bolthammercast.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_holybolt_1	2381		sfx/player-skills_sd	skill\paladin\holybolt1.flac	0	0	0	0	0	224	224	100	100	3	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	26537	-1	-1	0	0	
 paladin_holybolt_2	2382		sfx/player-skills_sd	skill\paladin\holybolt2.flac	0	0	0	0	0	224	224	100	100	0	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	27948	-1	-1	0	0	
 paladin_holybolt_3	2383		sfx/player-skills_sd	skill\paladin\holybolt3.flac	0	0	0	0	0	224	224	100	100	0	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	25046	-1	-1	0	0	
-paladin_holybolt_impact_1	2384	paladin_holybolt_impact_hd_6	sfx/player-skills_sd	skill\paladin\vengeanceimpact1.flac	0	0	0	0	0	224	224	100	100	3	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_holybolt_impact_1	2384		sfx/player-skills_sd	skill\paladin\vengeanceimpact1.flac	0	0	0	0	0	224	224	100	100	3	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_holybolt_impact_2	2385		sfx/player-skills_sd	skill\paladin\vengeanceimpact2.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_holybolt_impact_3	2386		sfx/player-skills_sd	skill\paladin\vengeanceimpact3.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_holyshield	2387	paladin_holyshield_hd	sfx/player-skills_sd	skill\paladin\holyshield.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 paladin_redeemed_soul	2388	paladin_redeemed_soul_hd	sfx/player-skills_sd	skill\paladin\redemption.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_sacrifice	2389	paladin_sacrifice_hd	sfx/player-skills_sd	skill\paladin\sacrifice.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_thorns_hit	2390	paladin_thorns_hit_hd	sfx/player-skills_sd	skill\paladin\thornhit.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_vengeance	2391	paladin_vengeance_hd	sfx/player-skills_sd	skill\paladin\vengeance.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-paladin_zeal	2392	paladin_zeal_hd	sfx/player-skills_sd	skill\paladin\zeal.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_sacrifice	2389		sfx/player-skills_sd	skill\paladin\sacrifice.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_thorns_hit	2390		sfx/player-skills_sd	skill\paladin\thornhit.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_vengeance	2391		sfx/player-skills_sd	skill\paladin\vengeance.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+paladin_zeal	2392		sfx/player-skills_sd	skill\paladin\zeal.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_blizzard_loop	2393	sorceress_blizzard_oneshot_hd1	sfx/player-skills_sd	skill\sorceress\blizzloop.flac	0	0	0	0	0	180	162	100	100	0	0	1	18	18	0	0	0	-1	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_blizzard_impact_1	2394	sorceress_blizzard_impact_hd1	sfx/player-skills_sd	skill\sorceress\blizzboom1.flac	0	0	0	0	0	0	0	100	100	3	0	0	0	0	0	0	0	0	0	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_blizzard_impact_2	2395		sfx/player-skills_sd	skill\sorceress\blizzboom2.flac	0	0	0	0	0	0	0	100	100	0	0	0	0	0	0	0	0	0	0	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
@@ -2403,7 +2403,7 @@ sorceress_chargedbolt_1	2400	sorceress_chargedbolt_hd_6	sfx/player-skills_sd	ski
 sorceress_chargedbolt_2	2401		sfx/player-skills_sd	none.flac	0	0	0	0	0	0	0	100	100	0	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_chargedbolt_3	2402		sfx/player-skills_sd	none.flac	0	0	0	0	0	0	0	100	100	0	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_enchant	2403	sorceress_enchant_hd	sfx/player-skills_sd	skill\sorceress\enchant.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-sorceress_energyshield	2404	sorceress_energyshield_hd	sfx/player-skills_sd	skill\sorceress\energyshield.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+sorceress_energyshield	2404		sfx/player-skills_sd	skill\sorceress\energyshield.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_energyshield_hit_1	2405	sorceress_energyshield_hit_hd_1	sfx/player-skills_sd	skill\sorceress\energyshieldhit1.flac	0	0	0	0	0	255	255	100	100	5	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_energyshield_hit_2	2406		sfx/player-skills_sd	skill\sorceress\energyshieldhit2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_energyshield_hit_3	2407		sfx/player-skills_sd	skill\sorceress\energyshieldhit3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
@@ -2412,7 +2412,7 @@ sorceress_energyshield_hit_5	2409		sfx/player-skills_sd	skill\sorceress\energysh
 sorceress_firebolt_1	2410	sorceress_firebolt_hd_1	sfx/player-skills_sd	skill\sorceress\firebolt1.flac	0	0	0	0	0	255	255	100	100	3	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	29707	-1	-1	0	0	
 sorceress_firebolt_2	2411		sfx/player-skills_sd	skill\sorceress\firebolt2.flac	0	0	0	0	0	255	255	100	100	0	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	27256	-1	-1	0	0	
 sorceress_firebolt_3	2412		sfx/player-skills_sd	skill\sorceress\firebolt3.flac	0	0	0	0	0	255	255	100	100	0	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	33623	-1	-1	0	0	
-sorceress_firebolt_impact_1	2413	sorceress_firebolt_impact_hd1	sfx/player-skills_sd	skill\sorceress\largefireimpact1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+sorceress_firebolt_impact_1	2413		sfx/player-skills_sd	skill\sorceress\largefireimpact1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_firebolt_impact_2	2414		sfx/player-skills_sd	skill\sorceress\largefireimpact2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_firebolt_impact_3	2415		sfx/player-skills_sd	skill\sorceress\largefireimpact3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_fireball_1	2416	sorceress_fireball_hd_1	sfx/player-skills_sd	skill\sorceress\fireball1.flac	0	0	0	0	0	255	255	100	100	3	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	24309	-1	-1	0	0	
@@ -2421,7 +2421,7 @@ sorceress_fireball_3	2418		sfx/player-skills_sd	skill\sorceress\fireball3.flac	0
 sorceress_fireball_impact_1	2419	sorceress_fireball_impact_hd_1	sfx/player-skills_sd	skill\sorceress\boom1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_fireball_impact_2	2420		sfx/player-skills_sd	skill\sorceress\boom2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_fireball_impact_3	2421		sfx/player-skills_sd	skill\sorceress\boom3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-sorceress_frostnova	2422	sorceress_frostnova_hd1	sfx/player-skills_sd	skill\sorceress\novaice.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+sorceress_frostnova	2422		sfx/player-skills_sd	skill\sorceress\novaice.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_frozenarmor	2423	sorceress_frozenarmor_hd	sfx/player-skills_sd	skill\sorceress\frozenarmor.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_glacialspike_1	2424	sorceress_glacialspike_hd_1	sfx/player-skills_sd	skill\sorceress\icespike1.flac	0	0	0	0	0	255	255	100	100	3	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	24220	-1	-1	0	0	
 sorceress_glacialspike_2	2425		sfx/player-skills_sd	skill\sorceress\icespike2.flac	0	0	0	0	0	255	255	100	100	0	0	1	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	30578	-1	-1	0	0	
@@ -2433,31 +2433,31 @@ sorceress_iceblast_impact_1	2430	sorceress_iceblast_impact_hd_1	sfx/combat/impac
 sorceress_iceblast_impact_2	2431		sfx/combat/impacts_sd	skill\sorceress\blastimpact2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_iceblast_impact_3	2432		sfx/combat/impacts_sd	skill\sorceress\blastimpact3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_inferno	2433	sorceress_inferno_hd	sfx/player-skills_sd	skill\sorceress\infernoloop.flac	0	0	0	0	0	255	255	100	100	0	0	1	6	6	0	0	0	-1	1	0	90	0	0	0	1	0	0	22857	-1	-1	0	0	
-sorceress_lightning_1	2434	sorceress_lightning_hd_1	sfx/player-skills_sd	skill\sorceress\lightning1.flac	0	0	0	0	0	220	220	100	100	3	0	1	0	12	0	0	0	4	1	0	90	0	0	0	1	0	0	19263	-1	-1	0	0	
+sorceress_lightning_1	2434		sfx/player-skills_sd	skill\sorceress\lightning1.flac	0	0	0	0	0	220	220	100	100	3	0	1	0	12	0	0	0	4	1	0	90	0	0	0	1	0	0	19263	-1	-1	0	0	
 sorceress_lightning_2	2435		sfx/player-skills_sd	skill\sorceress\lightning2.flac	0	0	0	0	0	220	220	100	100	0	0	1	0	12	0	0	0	4	1	0	90	0	0	0	1	0	0	19455	-1	-1	0	0	
 sorceress_lightning_3	2436		sfx/player-skills_sd	skill\sorceress\lightning3.flac	0	0	0	0	0	220	220	100	100	0	0	1	0	12	0	0	0	4	1	0	90	0	0	0	1	0	0	17599	-1	-1	0	0	
-sorceress_meteor	2437	sorceress_meteorlaunch_hd	sfx/player-skills_sd	skill\sorceress\meteorlaunch.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-sorceress_meteor_impact	2438	sorceress_meteorimpact_hd	sfx/player-skills_sd	skill\sorceress\meteorimpact.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	2	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-sorceress_nova	2439	sorceress_nova_hd	sfx/player-skills_sd	skill\sorceress\novaelec.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+sorceress_meteor	2437		sfx/player-skills_sd	skill\sorceress\meteorlaunch.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+sorceress_meteor_impact	2438		sfx/player-skills_sd	skill\sorceress\meteorimpact.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	2	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+sorceress_nova	2439		sfx/player-skills_sd	skill\sorceress\novaelec.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_shiverarmor	2440	sorceress_shiverarmor_hd	sfx/player-skills_sd	skill\sorceress\shivers.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-sorceress_teleport	2441	sorceress_teleport_hd1	sfx/player-skills_sd	skill\sorceress\teleport.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+sorceress_teleport	2441		sfx/player-skills_sd	skill\sorceress\teleport.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 sorceress_telekinesis	2442	sorceress_telekinesis_hd	sfx/player-skills_sd	skill\sorceress\telekinesis.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-sorceress_thunder_cast	2443	sorceress_thunder_cast_hd1	sfx/player-skills_sd	skill\sorceress\thundercast.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-sorceress_thunder_bolt	2444	sorceress_thunder_bolt_hd1	sfx/player-skills_sd	skill\sorceress\thunderbolt.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+sorceress_thunder_cast	2443		sfx/player-skills_sd	skill\sorceress\thundercast.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+sorceress_thunder_bolt	2444		sfx/player-skills_sd	skill\sorceress\thunderbolt.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 necromancer_amplifydamage	2445	necromancer_amplifydamage_hd	sfx/player-skills_sd	skill\necromancer\amplifydamage.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 necromancer_attract	2446	necromancer_attract_hd	sfx/player-skills_sd	skill\necromancer\attract.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-necromancer_bone_cast	2447	necromancer_bone_cast_hd1	sfx/player-skills_sd	skill\necromancer\bonecast.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+necromancer_bone_cast	2447		sfx/player-skills_sd	skill\necromancer\bonecast.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 necromancer_bonearmor	2448	necromancer_bonearmor_hd	sfx/player-skills_sd	skill\necromancer\bonearmor2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-necromancer_bonespear_1	2449	necromancer_bonespear_1_hd1	sfx/player-skills_sd	skill\necromancer\bonespear1.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-necromancer_bonespear_2	2450	necromancer_bonespear_1_hd1	sfx/player-skills_sd	skill\necromancer\bonespear2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-necromancer_bonespear_3	2451	necromancer_bonespear_1_hd1	sfx/player-skills_sd	skill\necromancer\bonespear3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+necromancer_bonespear_1	2449		sfx/player-skills_sd	skill\necromancer\bonespear1.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+necromancer_bonespear_2	2450		sfx/player-skills_sd	skill\necromancer\bonespear2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+necromancer_bonespear_3	2451		sfx/player-skills_sd	skill\necromancer\bonespear3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	6	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 necromancer_bonespirit_1	2452	necromancer_bonespirit_hd1	sfx/player-skills_sd	skill\necromancer\bonespirit1.flac	0	0	0	0	0	255	255	100	100	3	0	1	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	27045	-1	-1	0	0	
 necromancer_bonespirit_2	2453		sfx/player-skills_sd	skill\necromancer\bonespirit2.flac	0	0	0	0	0	255	255	100	100	0	0	1	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	31828	-1	-1	0	0	
 necromancer_bonespirit_3	2454		sfx/player-skills_sd	skill\necromancer\bonespirit3.flac	0	0	0	0	0	255	255	100	100	0	0	1	0	6	0	0	0	0	1	0	90	0	0	0	1	0	0	22898	-1	-1	0	0	
 necromancer_bonewall_death	2455	necromancer_bonewall_death_hd1	sfx/player-skills_sd	skill\necromancer\bonewalldestroyed.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	12	0	0	0	12	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-necromancer_confuse	2456	necromancer_confuse_hd	sfx/player-skills_sd	skill\necromancer\confuse.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-necromancer_corpse_cast	2457	necromancer_corpse_cast_hd1	sfx/player-skills_sd	skill\necromancer\corpseexplodecast.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
-necromancer_corpseexp_1	2458	necromancer_corpseexp_hd7	sfx/player-skills_sd	skill\necromancer\corpse_explode_1.flac	0	0	0	0	0	255	255	100	100	6	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+necromancer_confuse	2456		sfx/player-skills_sd	skill\necromancer\confuse.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	4	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+necromancer_corpse_cast	2457		sfx/player-skills_sd	skill\necromancer\corpseexplodecast.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+necromancer_corpseexp_1	2458		sfx/player-skills_sd	skill\necromancer\corpse_explode_1.flac	0	0	0	0	0	255	255	100	100	6	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 necromancer_corpseexp_2	2459		sfx/player-skills_sd	skill\necromancer\corpse_explode_2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 necromancer_corpseexp_3	2460		sfx/player-skills_sd	skill\necromancer\corpse_explode_3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
 necromancer_corpseexp_4	2461		sfx/player-skills_sd	skill\necromancer\corpse_explode_4.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
@@ -2555,7 +2555,7 @@ object_corpse_drop	2552	object_corpse_drop_hd1	sfx/ambient/environment-objects_s
 object_corpse_loot	2553	object_corpse_loot_hd1	sfx/ambient/environment-objects_sd	object\corpseroll.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 object_corpse_roll	2554	object_corpse_roll_hd1	sfx/ambient/environment-objects_sd	object\corpseroll.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 object_diabloseal	2555	object_diabloseal_hd	sfx/ambient/environment-objects_sd	object\diabloseal.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
-object_door_arcane_open	2556	object_door_arcane_open_hd	sfx/ambient/environment-objects_sd	object\arcaneportal.flac	0	0	0	0	0	80	80	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
+object_door_arcane_open	2556		sfx/ambient/environment-objects_sd	object\arcaneportal.flac	0	0	0	0	0	80	80	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 object_door_arcane_loop	2557	object_door_arcane_loop_hd	sfx/ambient/environment-objects_sd	object\teleportationpad.flac	0	0	0	0	0	40	40	100	100	0	0	1	12	12	0	0	0	-1	0	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 object_door_duriel	2558	object_door_duriel_hd	sfx/ambient/environment-objects_sd	object\secretdoor.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
 object_door_gate_open	2559	object_door_gate_open_hd	sfx/ambient/environment-objects_sd	object\gateopen.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	60	0	0	0	1	0	0	-1	-1	-1	0	0	
@@ -2723,11 +2723,11 @@ light_walk_dirt_1	2720	light_walk_dirt_hd1	sfx/ambient/footsteps_sd	ambient\foot
 light_walk_dirt_2	2721		sfx/ambient/footsteps_sd	ambient\footstep\LightDirt2.flac	0	0	0	0	0	105	105	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_walk_dirt_3	2722		sfx/ambient/footsteps_sd	ambient\footstep\LightDirt3.flac	0	0	0	0	0	105	105	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_walk_dirt_4	2723		sfx/ambient/footsteps_sd	ambient\footstep\LightDirt4.flac	0	0	0	0	0	105	105	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-light_walk_istone_1	2724	light_walk_istone_hd1	sfx/ambient/footsteps_sd	ambient\footstep\LightIStone1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+light_walk_istone_1	2724		sfx/ambient/footsteps_sd	ambient\footstep\LightIStone1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_walk_istone_2	2725		sfx/ambient/footsteps_sd	ambient\footstep\LightIStone2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_walk_istone_3	2726		sfx/ambient/footsteps_sd	ambient\footstep\LightIStone3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_walk_istone_4	2727		sfx/ambient/footsteps_sd	ambient\footstep\LightIStone4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-light_walk_ostone_1	2728	light_walk_ostone_hd1	sfx/ambient/footsteps_sd	ambient\footstep\LightOStone1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+light_walk_ostone_1	2728		sfx/ambient/footsteps_sd	ambient\footstep\LightOStone1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_walk_ostone_2	2729		sfx/ambient/footsteps_sd	ambient\footstep\LightOStone2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_walk_ostone_3	2730		sfx/ambient/footsteps_sd	ambient\footstep\LightOStone3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_walk_ostone_4	2731		sfx/ambient/footsteps_sd	ambient\footstep\LightOStone4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -2743,27 +2743,27 @@ light_walk_wood_1	2740	light_walk_wood_hd1	sfx/ambient/footsteps_sd	ambient\foot
 light_walk_wood_2	2741		sfx/ambient/footsteps_sd	ambient\footstep\LightWood2.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_walk_wood_3	2742		sfx/ambient/footsteps_sd	ambient\footstep\LightWood3.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_walk_wood_4	2743		sfx/ambient/footsteps_sd	ambient\footstep\LightWood4.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-light_run_dirt_1	2744	light_run_dirt_hd1	sfx/ambient/footsteps_sd	ambient\footstep\LightDirtRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+light_run_dirt_1	2744		sfx/ambient/footsteps_sd	ambient\footstep\LightDirtRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_dirt_2	2745		sfx/ambient/footsteps_sd	ambient\footstep\LightDirtRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_dirt_3	2746		sfx/ambient/footsteps_sd	ambient\footstep\LightDirtRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_dirt_4	2747		sfx/ambient/footsteps_sd	ambient\footstep\LightDirtRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-light_run_istone_1	2748	light_run_istone_hd1	sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+light_run_istone_1	2748		sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_istone_2	2749		sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_istone_3	2750		sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_istone_4	2751		sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-light_run_ostone_1	2752	light_run_ostone_hd1	sfx/ambient/footsteps_sd	ambient\footstep\LightOStoneRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+light_run_ostone_1	2752		sfx/ambient/footsteps_sd	ambient\footstep\LightOStoneRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_ostone_2	2753		sfx/ambient/footsteps_sd	ambient\footstep\LightOStoneRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_ostone_3	2754		sfx/ambient/footsteps_sd	ambient\footstep\LightOStoneRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_ostone_4	2755		sfx/ambient/footsteps_sd	ambient\footstep\LightOStoneRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-light_run_sand_1	2756	light_run_sand_hd1	sfx/ambient/footsteps_sd	ambient\footstep\LightSandRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+light_run_sand_1	2756		sfx/ambient/footsteps_sd	ambient\footstep\LightSandRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_sand_2	2757		sfx/ambient/footsteps_sd	ambient\footstep\LightSandRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_sand_3	2758		sfx/ambient/footsteps_sd	ambient\footstep\LightSandRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_sand_4	2759		sfx/ambient/footsteps_sd	ambient\footstep\LightSandRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-light_run_snow_1	2760	light_run_snow_hd1	sfx/ambient/footsteps_sd	ambient\footstep\LightSnowRun1.flac	0	0	0	0	0	123	123	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+light_run_snow_1	2760		sfx/ambient/footsteps_sd	ambient\footstep\LightSnowRun1.flac	0	0	0	0	0	123	123	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_snow_2	2761		sfx/ambient/footsteps_sd	ambient\footstep\LightSnowRun2.flac	0	0	0	0	0	123	124	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_snow_3	2762		sfx/ambient/footsteps_sd	ambient\footstep\LightSnowRun3.flac	0	0	0	0	0	123	124	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_snow_4	2763		sfx/ambient/footsteps_sd	ambient\footstep\LightSnowRun4.flac	0	0	0	0	0	123	124	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-light_run_wood_1	2764	light_run_wood_hd1	sfx/ambient/footsteps_sd	ambient\footstep\LightWoodRun1.flac	0	0	0	0	0	54	54	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+light_run_wood_1	2764		sfx/ambient/footsteps_sd	ambient\footstep\LightWoodRun1.flac	0	0	0	0	0	54	54	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_wood_2	2765		sfx/ambient/footsteps_sd	ambient\footstep\LightWoodRun2.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_wood_3	2766		sfx/ambient/footsteps_sd	ambient\footstep\LightWoodRun3.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_wood_4	2767		sfx/ambient/footsteps_sd	ambient\footstep\LightWoodRun4.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -2771,7 +2771,7 @@ medium_walk_dirt_1	2768	medium_walk_dirt_hd1	sfx/ambient/footsteps_sd	ambient\fo
 medium_walk_dirt_2	2769		sfx/ambient/footsteps_sd	ambient\footstep\MedDirt2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_walk_dirt_3	2770		sfx/ambient/footsteps_sd	ambient\footstep\MedDirt3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_walk_dirt_4	2771		sfx/ambient/footsteps_sd	ambient\footstep\MedDirt4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-medium_walk_istone_1	2772	medium_walk_istone_hd1	sfx/ambient/footsteps_sd	ambient\footstep\MedIStone1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+medium_walk_istone_1	2772		sfx/ambient/footsteps_sd	ambient\footstep\MedIStone1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_walk_istone_2	2773		sfx/ambient/footsteps_sd	ambient\footstep\MedIStone2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_walk_istone_3	2774		sfx/ambient/footsteps_sd	ambient\footstep\MedIStone3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_walk_istone_4	2775		sfx/ambient/footsteps_sd	ambient\footstep\MedIStone4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -2791,27 +2791,27 @@ medium_walk_wood_1	2788	medium_walk_wood_hd1	sfx/ambient/footsteps_sd	ambient\fo
 medium_walk_wood_2	2789		sfx/ambient/footsteps_sd	ambient\footstep\MedWood2.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_walk_wood_3	2790		sfx/ambient/footsteps_sd	ambient\footstep\MedWood3.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_walk_wood_4	2791		sfx/ambient/footsteps_sd	ambient\footstep\MedWood4.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-medium_run_dirt_1	2792	medium_run_dirt_hd1	sfx/ambient/footsteps_sd	ambient\footstep\MedDirtRun1.flac	0	0	0	0	0	114	114	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+medium_run_dirt_1	2792		sfx/ambient/footsteps_sd	ambient\footstep\MedDirtRun1.flac	0	0	0	0	0	114	114	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_dirt_2	2793		sfx/ambient/footsteps_sd	ambient\footstep\MedDirtRun2.flac	0	0	0	0	0	114	114	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_dirt_3	2794		sfx/ambient/footsteps_sd	ambient\footstep\MedDirtRun3.flac	0	0	0	0	0	114	114	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_dirt_4	2795		sfx/ambient/footsteps_sd	ambient\footstep\MedDirtRun4.flac	0	0	0	0	0	114	114	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-medium_run_istone_1	2796	medium_run_istone_hd1	sfx/ambient/footsteps_sd	ambient\footstep\MedIStoneRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+medium_run_istone_1	2796		sfx/ambient/footsteps_sd	ambient\footstep\MedIStoneRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_istone_2	2797		sfx/ambient/footsteps_sd	ambient\footstep\MedIStoneRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_istone_3	2798		sfx/ambient/footsteps_sd	ambient\footstep\MedIStoneRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_istone_4	2799		sfx/ambient/footsteps_sd	ambient\footstep\MedIStoneRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-medium_run_ostone_1	2800	medium_run_ostone_hd1	sfx/ambient/footsteps_sd	ambient\footstep\MedOStoneRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+medium_run_ostone_1	2800		sfx/ambient/footsteps_sd	ambient\footstep\MedOStoneRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_ostone_2	2801		sfx/ambient/footsteps_sd	ambient\footstep\MedOStoneRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_ostone_3	2802		sfx/ambient/footsteps_sd	ambient\footstep\MedOStoneRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_ostone_4	2803		sfx/ambient/footsteps_sd	ambient\footstep\MedOStoneRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-medium_run_sand_1	2804	medium_run_sand_hd1	sfx/ambient/footsteps_sd	ambient\footstep\MedSandRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+medium_run_sand_1	2804		sfx/ambient/footsteps_sd	ambient\footstep\MedSandRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_sand_2	2805		sfx/ambient/footsteps_sd	ambient\footstep\MedSandRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_sand_3	2806		sfx/ambient/footsteps_sd	ambient\footstep\MedSandRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_sand_4	2807		sfx/ambient/footsteps_sd	ambient\footstep\MedSandRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-medium_run_snow_1	2808	medium_run_snow_hd1	sfx/ambient/footsteps_sd	ambient\footstep\MedSnowRun1.flac	0	0	0	0	0	129	129	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+medium_run_snow_1	2808		sfx/ambient/footsteps_sd	ambient\footstep\MedSnowRun1.flac	0	0	0	0	0	129	129	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_snow_2	2809		sfx/ambient/footsteps_sd	ambient\footstep\MedSnowRun2.flac	0	0	0	0	0	129	129	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_snow_3	2810		sfx/ambient/footsteps_sd	ambient\footstep\MedSnowRun3.flac	0	0	0	0	0	129	129	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_snow_4	2811		sfx/ambient/footsteps_sd	ambient\footstep\MedSnowRun4.flac	0	0	0	0	0	129	129	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-medium_run_wood_1	2812	medium_run_wood_hd1	sfx/ambient/footsteps_sd	ambient\footstep\MedWoodRun1.flac	0	0	0	0	0	54	54	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+medium_run_wood_1	2812		sfx/ambient/footsteps_sd	ambient\footstep\MedWoodRun1.flac	0	0	0	0	0	54	54	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_wood_2	2813		sfx/ambient/footsteps_sd	ambient\footstep\MedWoodRun2.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_wood_3	2814		sfx/ambient/footsteps_sd	ambient\footstep\MedWoodRun3.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 medium_run_wood_4	2815		sfx/ambient/footsteps_sd	ambient\footstep\MedWoodRun4.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -2839,27 +2839,27 @@ heavy_walk_wood_1	2836	heavy_walk_wood_hd1	sfx/ambient/footsteps_sd	ambient\foot
 heavy_walk_wood_2	2837		sfx/ambient/footsteps_sd	ambient\footstep\HeavyWood2.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_walk_wood_3	2838		sfx/ambient/footsteps_sd	ambient\footstep\HeavyWood3.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_walk_wood_4	2839		sfx/ambient/footsteps_sd	ambient\footstep\HeavyWood4.flac	0	0	0	0	0	54	54	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-heavy_run_dirt_1	2840	heavy_run_dirt_hd1	sfx/ambient/footsteps_sd	ambient\footstep\HeavyDirtRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+heavy_run_dirt_1	2840	custom_d2pack_heavy_run_dirt_1	sfx/ambient/footsteps_sd	ambient\footstep\HeavyDirtRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_dirt_2	2841		sfx/ambient/footsteps_sd	ambient\footstep\HeavyDirtRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_dirt_3	2842		sfx/ambient/footsteps_sd	ambient\footstep\HeavyDirtRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_dirt_4	2843		sfx/ambient/footsteps_sd	ambient\footstep\HeavyDirtRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-heavy_run_istone_1	2844	heavy_run_istone_hd1	sfx/ambient/footsteps_sd	ambient\footstep\HeavyIStoneRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+heavy_run_istone_1	2844		sfx/ambient/footsteps_sd	ambient\footstep\HeavyIStoneRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_istone_2	2845		sfx/ambient/footsteps_sd	ambient\footstep\HeavyIStoneRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_istone_3	2846		sfx/ambient/footsteps_sd	ambient\footstep\HeavyIStoneRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_istone_4	2847		sfx/ambient/footsteps_sd	ambient\footstep\HeavyIStoneRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-heavy_run_ostone_1	2848	heavy_run_ostone_hd1	sfx/ambient/footsteps_sd	ambient\footstep\HeavyOStoneRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+heavy_run_ostone_1	2848		sfx/ambient/footsteps_sd	ambient\footstep\HeavyOStoneRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_ostone_2	2849		sfx/ambient/footsteps_sd	ambient\footstep\HeavyOStoneRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_ostone_3	2850		sfx/ambient/footsteps_sd	ambient\footstep\HeavyOStoneRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_ostone_4	2851		sfx/ambient/footsteps_sd	ambient\footstep\HeavyOStoneRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-heavy_run_sand_1	2852	heavy_run_sand_hd1	sfx/ambient/footsteps_sd	ambient\footstep\HeavySandRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+heavy_run_sand_1	2852		sfx/ambient/footsteps_sd	ambient\footstep\HeavySandRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_sand_2	2853		sfx/ambient/footsteps_sd	ambient\footstep\HeavySandRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_sand_3	2854		sfx/ambient/footsteps_sd	ambient\footstep\HeavySandRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_sand_4	2855		sfx/ambient/footsteps_sd	ambient\footstep\HeavySandRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-heavy_run_snow_1	2856	heavy_run_snow_hd1	sfx/ambient/footsteps_sd	ambient\footstep\HeavySnowRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+heavy_run_snow_1	2856		sfx/ambient/footsteps_sd	ambient\footstep\HeavySnowRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_snow_2	2857		sfx/ambient/footsteps_sd	ambient\footstep\HeavySnowRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_snow_3	2858		sfx/ambient/footsteps_sd	ambient\footstep\HeavySnowRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_snow_4	2859		sfx/ambient/footsteps_sd	ambient\footstep\HeavySnowRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-heavy_run_wood_1	2860	heavy_run_wood_hd1	sfx/ambient/footsteps_sd	ambient\footstep\HeavyWoodRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+heavy_run_wood_1	2860		sfx/ambient/footsteps_sd	ambient\footstep\HeavyWoodRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_wood_2	2861		sfx/ambient/footsteps_sd	ambient\footstep\HeavyWoodRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_wood_3	2862		sfx/ambient/footsteps_sd	ambient\footstep\HeavyWoodRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 heavy_run_wood_4	2863		sfx/ambient/footsteps_sd	ambient\footstep\HeavyWoodRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -13168,3 +13168,60 @@ Cham_drop	99999		master	Cham.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	4	
 Zod_drop	99999		master	Zod.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	4	0	90	255	0	0	1	1	0	-1	-1	-1	0	0	
 item_rune_sfx	60000	item_rune_sfx_hd	sfx/items_sd	item\item_rune_sfx.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	100	0	0	0	0	0	-1	-1	-1	0	0	
 item_rune_sfx_hd	60001		sfx/items_hd	item\item_rune_sfx.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	100	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_heavy_run_dirt_1	101222		sfx/ambient/footsteps_sd	ambient\footstep\HeavyDirtRun1.flac	0	0	0	0	0	159	159	100	100	5	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_heavy_run_dirt_2	101223		sfx/ambient/footsteps_sd	ambient\footstep\HeavyDirtRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_heavy_run_dirt_3	101224		sfx/ambient/footsteps_sd	ambient\footstep\HeavyDirtRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_heavy_run_dirt_4	101225		sfx/ambient/footsteps_sd	ambient\footstep\HeavyDirtRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_heavy_run_dirt_5	101226		sfx/ambient/footsteps_sd	ambient\footstep\HeavyDirtRun5.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_arrow_1	101227		sfx/combat/impacts_sd	combat\impact\arrow1.flac	0	0	0	0	0	224	224	100	100	7	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_arrow_2	101228		sfx/combat/impacts_sd	combat\impact\arrow2.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_arrow_3	101229		sfx/combat/impacts_sd	combat\impact\arrow3.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_arrow_4	101230		sfx/combat/impacts_sd	combat\impact\arrow4.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_arrow_5	101231		sfx/combat/impacts_sd	combat\impact\arrow5.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_arrow_6	101232		sfx/combat/impacts_sd	combat\impact\arrow6.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_arrow_7	101233		sfx/combat/impacts_sd	combat\impact\arrow8.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blade_swing_1	101234		sfx/combat/impacts_sd	combat\impact\sword1.flac	0	0	0	0	0	180	180	100	100	12	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blade_swing_2	101235		sfx/combat/impacts_sd	combat\impact\sword2.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blade_swing_3	101236		sfx/combat/impacts_sd	combat\impact\sword3.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blade_swing_4	101237		sfx/combat/impacts_sd	combat\impact\sword4.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blade_swing_5	101238		sfx/combat/impacts_sd	combat\impact\sword5.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blade_swing_6	101239		sfx/combat/impacts_sd	combat\impact\sword6.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blade_swing_7	101240		sfx/combat/impacts_sd	combat\impact\blade1.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blade_swing_8	101241		sfx/combat/impacts_sd	combat\impact\blade2.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blade_swing_9	101242		sfx/combat/impacts_sd	combat\impact\blade3.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blade_swing_10	101243		sfx/combat/impacts_sd	combat\impact\blade4.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blade_swing_11	101244		sfx/combat/impacts_sd	combat\impact\blade5.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blade_swing_12	101245		sfx/combat/impacts_sd	combat\impact\blade6.flac	0	0	0	0	0	180	180	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_punch_1	101246		sfx/combat/impacts_sd	combat\impact\blow1.flac	0	0	0	0	0	200	200	100	100	8	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_punch_2	101247		sfx/combat/impacts_sd	combat\impact\blow2.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_punch_3	101248		sfx/combat/impacts_sd	combat\impact\blow3.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_punch_4	101249		sfx/combat/impacts_sd	combat\impact\blow4.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_punch_5	101250		sfx/combat/impacts_sd	combat\impact\blow_heavy1.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_punch_6	101251		sfx/combat/impacts_sd	combat\impact\blow_heavy2.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_punch_7	101252		sfx/combat/impacts_sd	combat\impact\blow_heavy3.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_punch_8	101253		sfx/combat/impacts_sd	combat\impact\blow_heavy4.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blunt_1	101254		sfx/combat/impacts_sd	combat\impact\blunt3.flac	0	0	0	0	0	255	255	100	100	8	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blunt_2	101255		sfx/combat/impacts_sd	combat\impact\blunt5.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blunt_3	101256		sfx/combat/impacts_sd	combat\impact\blunt6.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blunt_4	101257		sfx/combat/impacts_sd	combat\impact\blunt_heavy1.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blunt_5	101258		sfx/combat/impacts_sd	combat\impact\blunt_heavy2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blunt_6	101259		sfx/combat/impacts_sd	combat\impact\blunt_heavy3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blunt_7	101260		sfx/combat/impacts_sd	combat\impact\blunt_heavy4.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_blunt_8	101261		sfx/combat/impacts_sd	combat\impact\blunt_heavy5.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_cold_layer_1	101262		sfx/combat/impacts_sd	combat\impact\cold1.flac	0	0	0	0	0	255	255	100	100	4	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_cold_layer_2	101263		sfx/combat/impacts_sd	combat\impact\cold2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_cold_layer_3	101264		sfx/combat/impacts_sd	combat\impact\cold3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_cold_layer_4	101265		sfx/combat/impacts_sd	combat\impact\cold4.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	4	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_goo_1	101266		sfx/combat/impacts_sd	combat\impact\goohit1.flac	0	0	0	0	0	200	200	100	100	5	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_goo_2	101267		sfx/combat/impacts_sd	combat\impact\goohit2.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_goo_3	101268		sfx/combat/impacts_sd	combat\impact\goohit3.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_goo_4	101269		sfx/combat/impacts_sd	combat\impact\goohit4.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_goo_5	101270		sfx/combat/impacts_sd	combat\impact\goohit5.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_poison_1	101271		sfx/combat/impacts_sd	combat\impact\green1.flac	0	0	0	0	0	255	255	100	100	4	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_poison_2	101272		sfx/combat/impacts_sd	combat\impact\green2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_poison_3	101273		sfx/combat/impacts_sd	combat\impact\green3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_poison_4	101274		sfx/combat/impacts_sd	combat\impact\green4.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_item_pickup_1	101275		sfx/items_sd	cursor\pickup.flac	0	0	0	0	0	160	160	100	100	2	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_item_pickup_2	101276		sfx/items_sd	cursor\pickup2.flac	0	0	0	0	0	160	160	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_item_potion_1	101277		sfx/items_sd	item\potionui.flac	0	0	0	0	0	240	240	100	100	2	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_item_potion_2	101278		sfx/items_sd	item\potion.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
