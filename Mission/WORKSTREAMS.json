@@ -41,7 +41,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/advanced-item-tooltips-public-intermod.md",
-      "nextGate": "Audit the current table loader and formalize deterministic vanilla, BKVince and synthetic cross-mod fixtures before creating public source, configuration or archive files.",
+      "nextGate": "Generalize cubemain attribution for BKVince augments/corruptions and public markerless recipes using persistent-aware consensus that fails closed on ambiguous histories.",
       "include": [
         "Mission/advanced-item-tooltips-public-intermod.md",
         "addons/AdvancedItemTooltips/**",

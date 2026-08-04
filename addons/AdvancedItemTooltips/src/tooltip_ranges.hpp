@@ -1,0 +1,156 @@
+#pragma once
+
+#include <cstdint>
+#include <filesystem>
+#include <functional>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
+
+namespace tcp::tooltips {
+
+struct ModifierRange {
+    std::string key;
+    std::string anchor;
+    std::int32_t minimum{};
+    std::int32_t maximum{};
+    std::int32_t priority{};
+    std::string parameter;
+};
+
+struct ArmorRange {
+    std::int32_t minimum{};
+    std::int32_t maximum{};
+};
+
+struct ItemAffixIds {
+    std::uint32_t quality{};
+    std::uint32_t fileIndex{};
+    bool runeword{};
+    bool ethereal{};
+    std::uint32_t socketCount{};
+    std::uint16_t autoPrefix{};
+    std::uint16_t rarePrefix{};
+    std::uint16_t rareSuffix{};
+    std::uint16_t magicPrefix[3]{};
+    std::uint16_t magicSuffix[3]{};
+};
+
+class RangeCatalog {
+public:
+    using TableTextProvider = std::function<bool(
+        std::string_view tableName,
+        std::string& text,
+        std::string& error)>;
+    using StatReader = std::function<std::int32_t(
+        std::int32_t statId,
+        std::uint16_t layer)>;
+
+    struct PropertyInfo {
+        std::string key;
+        std::string anchor;
+        std::int32_t priority{};
+        std::int32_t function{};
+        bool parameterized{};
+    };
+
+    bool Load(const std::filesystem::path& excelDirectory, std::string& error);
+    bool Load(const TableTextProvider& provider, std::string& error);
+    [[nodiscard]] std::vector<std::vector<ModifierRange>> ResolveCandidates(
+        const ItemAffixIds& ids,
+        std::string_view itemCode,
+        std::string_view runewordKey = {},
+        bool includeSocketedContributions = true,
+        const StatReader& readStat = {}
+    ) const;
+    [[nodiscard]] std::vector<std::vector<ModifierRange>> ResolveSocketFillerCandidates(
+        const ItemAffixIds& ids,
+        std::string_view fillerCode,
+        std::string_view parentCode
+    ) const;
+    [[nodiscard]] std::optional<ArmorRange> FindArmor(std::string_view code) const;
+    [[nodiscard]] std::size_t PropertyCount() const noexcept { return properties_.size(); }
+    [[nodiscard]] const std::vector<std::string>& RunewordKeys() const noexcept {
+        return runewordKeys_;
+    }
+
+private:
+    std::unordered_map<std::string, PropertyInfo> properties_;
+    std::vector<std::vector<ModifierRange>> suffixes_;
+    std::vector<std::vector<ModifierRange>> prefixes_;
+    std::vector<std::vector<ModifierRange>> automagic_;
+    std::vector<std::vector<ModifierRange>> superiors_;
+    std::vector<std::vector<ModifierRange>> uniques_;
+    std::vector<std::vector<ModifierRange>> sets_;
+    std::unordered_map<std::string, ArmorRange> armor_;
+    std::unordered_map<std::string, std::vector<std::string>> itemTypes_;
+    std::unordered_map<std::string, std::vector<std::vector<ModifierRange>>> crafts_;
+    struct RecipeMarker {
+        std::string family;
+        std::int32_t statId{};
+        std::uint16_t layer{};
+        std::int32_t minimum{};
+        std::int32_t maximum{};
+    };
+    struct CubeRecipe {
+        std::string inputToken;
+        std::vector<std::string> inputQualifiers;
+        std::string outputToken;
+        std::vector<std::string> outputQualifiers;
+        std::vector<ModifierRange> modifiers;
+        std::vector<RecipeMarker> markers;
+    };
+    std::vector<CubeRecipe> cubeRecipes_;
+    std::vector<std::string> uniqueTokens_;
+    std::vector<std::string> setTokens_;
+    struct RuneModifiers {
+        std::vector<ModifierRange> weapon;
+        std::vector<ModifierRange> armor;
+        std::vector<ModifierRange> shield;
+    };
+    struct RunewordRecord {
+        std::vector<ModifierRange> modifiers;
+        std::vector<std::string> runes;
+    };
+    std::unordered_map<std::string, RuneModifiers> runes_;
+    std::unordered_map<std::string, RunewordRecord> runewords_;
+    std::vector<std::string> runewordKeys_;
+};
+
+[[nodiscard]] std::string AppendConsensusRanges(
+    std::string_view tooltip,
+    const std::vector<std::vector<ModifierRange>>& candidates,
+    bool allowExcludedSocketContributions = false
+);
+
+[[nodiscard]] std::vector<std::vector<ModifierRange>> MergeCandidateSources(
+    const std::vector<std::vector<ModifierRange>>& parent,
+    const std::vector<std::vector<ModifierRange>>& child
+);
+
+[[nodiscard]] std::string FormatPositiveRange(
+    std::int32_t minimum,
+    std::int32_t maximum,
+    char restoreColor = '0'
+);
+
+[[nodiscard]] std::optional<std::int32_t> FirstSignedInteger(std::string_view text);
+
+[[nodiscard]] std::optional<std::int32_t> ExactFlatDefenseTotal(std::string_view tooltip);
+
+[[nodiscard]] std::optional<std::int32_t> ExactEnhancedDefensePercent(
+    std::string_view tooltip
+);
+
+[[nodiscard]] std::optional<std::int32_t> ReconstructBaseDefense(
+    std::int32_t finalDefense,
+    std::int32_t enhancedDefensePercent,
+    std::int32_t flatDefense,
+    std::int32_t minimum,
+    std::int32_t maximum,
+    bool ethereal
+);
+
+} // namespace tcp::tooltips

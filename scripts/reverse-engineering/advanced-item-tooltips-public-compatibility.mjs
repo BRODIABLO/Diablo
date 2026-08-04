@@ -22,7 +22,7 @@ const normalizedMagicHeaders = ['name', ...Array.from({ length: 3 }, (_, index) 
 }).flat()];
 
 const contracts = {
-  'itemstatcost.txt': ['stat', 'descpriority'],
+  'itemstatcost.txt': ['stat', '*id', 'descpriority', 'save bits', 'send bits'],
   'properties.txt': ['code', '*tooltip', 'func1', 'stat1'],
   'magicsuffix.txt': normalizedMagicHeaders,
   'magicprefix.txt': normalizedMagicHeaders,
@@ -62,6 +62,9 @@ const featureDependencies = {
   itemCategories: ['itemtypes.txt', 'weapons.txt', 'armor.txt', 'misc.txt'],
   craftedProperties: ['itemstatcost.txt', 'properties.txt', 'cubemain.txt',
     'itemtypes.txt', 'weapons.txt', 'armor.txt', 'misc.txt'],
+  cubeRecipeAddedProperties: ['itemstatcost.txt', 'properties.txt', 'cubemain.txt',
+    'itemtypes.txt', 'weapons.txt', 'armor.txt', 'misc.txt', 'uniqueitems.txt',
+    'setitems.txt'],
   runewordIntrinsicProperties: ['itemstatcost.txt', 'properties.txt', 'runes.txt'],
   socketContributionMetadata: ['itemstatcost.txt', 'properties.txt', 'gems.txt',
     'itemtypes.txt', 'weapons.txt', 'armor.txt', 'misc.txt'],

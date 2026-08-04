@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "showMaxSockets": true,
+  "showMaxSocketsOnSocketedItems": false,
+  "showBaseDefenseRange": true,
+  "showPropertyRanges": true,
+  "includeSocketedContributionsInRanges": false
+}

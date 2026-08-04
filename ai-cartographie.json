@@ -349,6 +349,128 @@
                                                },
                                       "children":  [
                                                        {
+                                                           "name":  "AdvancedItemTooltips",
+                                                           "path":  "addons/AdvancedItemTooltips",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-standalone-d2rloader-addon",
+                                                                        "summary":  "Release publique autonome 3.0.0 d\u0027Advanced Item Tooltips avec plages intrinsèques ou combinées, tables du mod actif et repli vanilla embarqué.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "active"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "package",
+                                                                                "path":  "addons/AdvancedItemTooltips/package",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "AdvancedItemTooltips.dll",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/package/AdvancedItemTooltips.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "AdvancedItemTooltips.json",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/package/AdvancedItemTooltips.json",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "README.md",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/package/README.md",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/AdvancedItemTooltips/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  ".gitignore",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/.gitignore",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "advanced_item_tooltips_config.hpp",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/advanced_item_tooltips_config.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "config_tests.cpp",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/config_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "embedded_vanilla_resource_ids.h",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/embedded_vanilla_resource_ids.h",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "README.md",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/README.md",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "socket_tooltip.cpp",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/socket_tooltip.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "socket_tooltip.hpp",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/socket_tooltip.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "socket_tooltip_tests.cpp",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/socket_tooltip_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "tooltip_ranges.cpp",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/tooltip_ranges.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "tooltip_ranges.hpp",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/tooltip_ranges.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "tooltip_ranges_tests.cpp",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/tooltip_ranges_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "vanilla_tables.rc.in",
+                                                                                                     "path":  "addons/AdvancedItemTooltips/src/vanilla_tables.rc.in",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "AdvancedItemTooltips-3.0.0.zip",
+                                                                                "path":  "addons/AdvancedItemTooltips/AdvancedItemTooltips-3.0.0.zip",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "BulkSkillPointAllocation",
                                                            "path":  "addons/BulkSkillPointAllocation",
                                                            "kind":  "directory",
