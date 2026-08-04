@@ -362,6 +362,73 @@ int main(int argc, char** argv) {
     CHECK(!tcp::tooltips::ExactEnhancedDefensePercent(
         "+50% Enhanced Defense\n+20% Enhanced Defense"));
 
+    // Native localization must drive matching; no English tooltip label is
+    // required once D2R resolves the active language's format strings.
+    const std::unordered_map<std::string, std::vector<std::string>> koreanStatKeys{
+        {"item_fasterattackrate", {"ModStr4m"}},
+        {"strength", {"ModStr1a"}},
+        {"armorclass", {"ModStr1i"}},
+        {"item_armor_percent", {"Modstr2v"}},
+        {"firemindam", {"ModStr1p"}},
+        {"firemaxdam", {"ModStr1o"}}
+    };
+    const std::unordered_map<std::string, std::string> koreanStrings{
+        {"ItemStats1h", "방어력: %d"},
+        {"ItemStats1e", "필요 힘: %d"},
+        {"ModStr4m", "공격 속도 %+d%%"},
+        {"ModStr1a", "힘 %+d"},
+        {"ModStr1i", "방어력 %+d"},
+        {"Modstr2v", "방어력 %+d%% 증가"},
+        {"strModFireDamageRange", "화염 피해 %d - %d 추가"},
+        {"ItemStast1k", "-"}
+    };
+    const auto korean = tcp::tooltips::BuildTooltipLocalization(
+        koreanStatKeys,
+        [&](std::string_view key) {
+            const auto found = koreanStrings.find(std::string(key));
+            return found == koreanStrings.end() ? std::string{} : found->second;
+        });
+    const std::vector<std::vector<ModifierRange>> koreanIas{{
+        {"item_fasterattackrate", "+#% Increased Attack Speed", 3, 5, 145,
+            "", "item_fasterattackrate"}
+    }};
+    const auto koreanIasTooltip = blue + std::string("공격 속도 +4%");
+    CHECK(AppendConsensusRanges(koreanIasTooltip, koreanIas, false, &korean)
+        .find("[3 - 5]") != std::string::npos);
+    const std::vector<std::vector<ModifierRange>> koreanStrength{{
+        {"strength", "+# to Strength", 5, 10, 0, "", "strength"}
+    }};
+    CHECK(AppendConsensusRanges("필요 힘: 110", koreanStrength, false, &korean)
+        == "필요 힘: 110");
+    CHECK(tcp::tooltips::ExactFlatDefenseTotal(
+        blue + std::string("방어력 +180 ") + darkGreen + "[150 - 220]" + blue,
+        &korean) == 180);
+    CHECK(tcp::tooltips::ExactFlatDefenseTotal(
+        "방어력: 352\n방어력 +250 / 투사체", &korean) == 0);
+    CHECK(tcp::tooltips::ExactEnhancedDefensePercent(
+        blue + std::string("방어력 +120% 증가 ") + darkGreen + "[90 - 120]" + blue,
+        &korean) == 120);
+    const std::vector<std::vector<ModifierRange>> koreanFireDamage{{
+        {"firemindam", "Adds #-# Fire Damage", 11, 25, 0, "", "firemindam"},
+        {"firemaxdam", "Adds #-# Fire Damage", 31, 50, 0, "", "firemaxdam"}
+    }};
+    const auto koreanFireTooltip = AppendConsensusRanges(
+        blue + std::string("화염 피해 19 - 41 추가"), koreanFireDamage, false, &korean);
+    CHECK(koreanFireTooltip.find("[11 - 25]") != std::string::npos);
+    CHECK(koreanFireTooltip.find("[31 - 50]") != std::string::npos);
+
+    const auto simplifiedChinese = tcp::tooltips::BuildTooltipLocalization(
+        {{"item_fasterattackrate", {"ModStr4m"}}},
+        [](std::string_view key) {
+            if (key == "ItemStats1h") return std::string("防御: %d");
+            if (key == "ModStr4m") return std::string("%+d%% 提高攻击速度");
+            if (key == "ItemStast1k") return std::string("至");
+            return std::string{};
+        });
+    CHECK(AppendConsensusRanges(
+        blue + std::string("+4% 提高攻击速度"), koreanIas, false, &simplifiedChinese)
+        .find("[3 - 5]") != std::string::npos);
+
     // Ordinary, inherent-ED, flat-defense, runeword and ethereal-superior
     // armor all use the same reconstruction path. The inherent ED sentinel
     // (table max + 1) is mapped back into the visible table range.

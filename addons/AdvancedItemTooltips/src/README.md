@@ -33,6 +33,22 @@ restores the BKVince behavior. This switch is isolated from the range pipeline.
 Its autonomous final-tooltip pipeline inserts the line below the full weapon
 damage block or below an armor's defense line.
 
+## Languages
+
+The plugin follows D2R's active language automatically. Native property,
+damage, defense, requirement, skill-tab, and runeword text is matched through
+the localization keys referenced by the active mod's `itemstatcost.txt`, not
+through English tooltip text. The two labels created by the plugin itself,
+`Max Sockets` and `Base Defense`, are built in for all thirteen D2R locales:
+English, Traditional Chinese, German, European Spanish, French, Italian,
+Korean, Polish, Latin American Spanish, Japanese, Brazilian Portuguese,
+Russian, and Simplified Chinese. No language option is required in the JSON.
+
+Mods may provide their own translations for native stat keys and the plugin
+will use the strings resolved by D2R at runtime. The numeric dark-green range
+suffix remains language-neutral; its connector is read from D2R's active
+localization rather than hardcoded as English `to`.
+
 For identified items, the plugin also reads the loose TXT tables from the
 currently loaded mod and appends exact variable roll ranges using
 SlashDiablo's dark green (`:`), distinct from set-item green. The

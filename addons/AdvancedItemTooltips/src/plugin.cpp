@@ -7,6 +7,7 @@
 
 #include <Windows.h>
 
+#include <algorithm>
 #include <array>
 #include <cctype>
 #include <cstddef>
@@ -130,6 +131,9 @@ std::string CatalogSource{"unavailable"};
 std::mutex RunewordNamesMutex;
 bool RunewordNamesBuilt{};
 std::unordered_map<std::string, std::string> RunewordKeyByLocalizedName;
+std::mutex LocalizationMutex;
+bool LocalizationBuilt{};
+tcp::tooltips::TooltipLocalization Localization;
 ruffneckk::advanced_item_tooltips::Config Settings{};
 std::string LoadedConfigPath{"built-in defaults"};
 
@@ -138,7 +142,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "advanced-item-tooltips",
     .name = "Advanced Item Tooltips",
-    .version = "3.1.0-rc.1",
+    .version = "3.1.0-rc.2",
     .author = "RuffnecKk",
     .description = "Shows maximum sockets and exact item roll ranges.",
     .flags = D2RL::PluginFlags::None,
@@ -288,6 +292,23 @@ std::string ItemCode(void* item) noexcept {
     return result;
 }
 
+const tcp::tooltips::TooltipLocalization& CurrentLocalization() {
+    std::scoped_lock lock(LocalizationMutex);
+    if (!LocalizationBuilt) {
+        Localization = Catalog.BuildLocalization([](std::string_view key) {
+            if (!GetLocalizedStringByKey || key.empty()) return std::string{};
+            const GameStringView view{key.data(), key.size()};
+            const auto* text = GetLocalizedStringByKey(&view);
+            return text ? std::string(text) : std::string{};
+        });
+        // The native resolver is initialized before the first item tooltip.
+        // Cache the immutable profile so concurrent comparison tooltips cannot
+        // observe a partially rebuilt language map.
+        LocalizationBuilt = true;
+    }
+    return Localization;
+}
+
 bool HasRunewordTitle(std::string_view tooltip, std::string_view name) {
     std::size_t start{};
     while (start <= tooltip.size()) {
@@ -367,14 +388,25 @@ std::string ResolveRunewordKey(
     return {};
 }
 
-std::string InsertBaseDefense(std::string tooltip, void* item, const std::uint8_t* itemData) {
+std::string InsertBaseDefense(std::string tooltip, void* item, const std::uint8_t* itemData,
+    const tcp::tooltips::TooltipLocalization& localization) {
     if (!Settings.showBaseDefenseRange || !GetUnitStat) return tooltip;
     const auto armor = Catalog.FindArmor(ItemCode(item));
-    if (!armor || tooltip.find("Base Defense:") != std::string::npos) return tooltip;
+    if (!armor) return tooltip;
+    std::size_t duplicateStart{};
+    while (duplicateStart <= tooltip.size()) {
+        const auto end = tooltip.find('\n', duplicateStart);
+        if (tcp::tooltips::MatchesLocalizedTemplate(
+                tooltip.substr(duplicateStart, end - duplicateStart),
+                localization.baseDefenseFormat)) return tooltip;
+        if (end == std::string::npos) break;
+        duplicateStart = end + 1;
+    }
     const auto ethereal = (Read<std::uint32_t>(itemData, ItemDataFlagsOffset)
         & ItemFlagEthereal) != 0;
-    const auto flat = tcp::tooltips::ExactFlatDefenseTotal(tooltip);
-    const auto enhancedDefense = tcp::tooltips::ExactEnhancedDefensePercent(tooltip);
+    const auto flat = tcp::tooltips::ExactFlatDefenseTotal(tooltip, &localization);
+    const auto enhancedDefense = tcp::tooltips::ExactEnhancedDefensePercent(
+        tooltip, &localization);
     if (!flat || !enhancedDefense) return tooltip;
     const auto rolled = tcp::tooltips::ReconstructBaseDefense(
         GetUnitStat(item, ArmorClassStat, 0),
@@ -394,10 +426,13 @@ std::string InsertBaseDefense(std::string tooltip, void* item, const std::uint8_
     while (start < tooltip.size()) {
         const auto end = tooltip.find('\n', start);
         const auto line = tooltip.substr(start, end - start);
-        if (line.find("Defense:") != std::string_view::npos
-            && line.find("Enhanced Defense") == std::string_view::npos) {
-            const auto added = std::string("\xEE\x81\xBE" "0Base Defense: ")
-                + std::to_string(*rolled) + " "
+        if (std::any_of(localization.defenseTemplates.begin(),
+                localization.defenseTemplates.end(), [&](const auto& format) {
+                    return tcp::tooltips::MatchesLocalizedTemplate(line, format);
+                })) {
+            const auto added = std::string("\xEE\x81\xBE" "0")
+                + tcp::tooltips::FormatLocalizedInteger(
+                    localization.baseDefenseFormat, *rolled) + " "
                 + tcp::tooltips::FormatPositiveRange(minimum, maximum, '0') + "\n";
             tooltip.insert(start, added);
             break;
@@ -522,7 +557,7 @@ auto Status(
     std::snprintf(
         message,
         sizeof(message),
-        "AdvancedItemTooltips 3.1.0-rc.1: enabled=%s; maxSockets=%s; maxSocketsOnSocketed=%s; baseDefense=%s; propertyRanges=%s; socketContributions=%s; catalog=%s; config=%s.",
+        "AdvancedItemTooltips 3.1.0-rc.2: enabled=%s; maxSockets=%s; maxSocketsOnSocketed=%s; baseDefense=%s; propertyRanges=%s; socketContributions=%s; catalog=%s; config=%s.",
         Settings.enabled ? "yes" : "no",
         Settings.showMaxSockets ? "yes" : "no",
         Settings.showMaxSocketsOnSocketedItems ? "yes" : "no",
@@ -554,6 +589,7 @@ extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsEnhance
                 std::max<std::int32_t>(0, GetUnitStat(item, SocketCountStat, 0)));
         }
         const auto code = ItemCode(item);
+        const auto& localization = CurrentLocalization();
         const auto runewordKey = ResolveRunewordKey(
             item, itemData, std::string_view(tooltip, tooltipLength));
         auto candidates = Catalog.ResolveCandidates(
@@ -588,9 +624,11 @@ extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsEnhance
         const std::string original(tooltip, tooltipLength);
         auto enhanced = Settings.showPropertyRanges
             ? tcp::tooltips::AppendConsensusRanges(original, candidates,
-                !Settings.includeSocketedContributionsInRanges && hasSocketFillers)
+                !Settings.includeSocketedContributionsInRanges && hasSocketFillers,
+                &localization)
             : original;
-        enhanced = InsertBaseDefense(std::move(enhanced), item, itemData);
+        enhanced = InsertBaseDefense(
+            std::move(enhanced), item, itemData, localization);
         if (enhanced == original || enhanced.size() + 1 > outputCapacity) return 0;
         std::memcpy(output, enhanced.data(), enhanced.size());
         output[enhanced.size()] = '\0';
@@ -611,7 +649,8 @@ extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsBuildSo
         if (!Settings.showMaxSocketsOnSocketedItems && GetUnitStat
             && GetUnitStat(item, SocketCountStat, 0) > 0) return 0;
         const auto maximumSockets = static_cast<unsigned>(GetMaxSockets(item));
-        const auto line = tcp::tooltips::FormatMaxSocketsLine(maximumSockets, 0);
+        const auto line = tcp::tooltips::FormatMaxSocketsLine(
+            maximumSockets, 0, CurrentLocalization());
         if (line.empty() || line.size() + 1 > outputCapacity) return 0;
         std::memcpy(output, line.data(), line.size());
         output[line.size()] = '\0';
@@ -630,7 +669,7 @@ extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsFindSoc
     }
     try {
         return tcp::tooltips::FindMaxSocketsInsertion(
-            std::string_view(tooltip, tooltipLength)
+            std::string_view(tooltip, tooltipLength), CurrentLocalization()
         );
     } catch (...) {
         return tcp::tooltips::NoSocketLineInsertion;
@@ -663,7 +702,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         context->LogWarn("AdvancedItemTooltips: status command could not be registered.");
     }
     if (!Settings.enabled) {
-        context->LogInfo("AdvancedItemTooltips 3.1.0-rc.1 disabled by JSON config; no hooks installed.");
+        context->LogInfo("AdvancedItemTooltips 3.1.0-rc.2 disabled by JSON config; no hooks installed.");
         return true;
     }
 
@@ -795,7 +834,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         return false;
     }
     const auto activation = std::string(
-        "AdvancedItemTooltips 3.1.0-rc.1 active for D2R 3.2.92777 (7/7 call-sites); catalog=")
+        "AdvancedItemTooltips 3.1.0-rc.2 active for D2R 3.2.92777 (7/7 call-sites); catalog=")
         + CatalogSource
         + "; config="
         + LoadedConfigPath
@@ -823,6 +862,11 @@ D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
         std::scoped_lock lock(RunewordNamesMutex);
         RunewordKeyByLocalizedName.clear();
         RunewordNamesBuilt = false;
+    }
+    {
+        std::scoped_lock lock(LocalizationMutex);
+        Localization = {};
+        LocalizationBuilt = false;
     }
     CatalogLoaded = false;
     CatalogSource = "unavailable";

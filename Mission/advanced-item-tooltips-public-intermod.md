@@ -377,3 +377,33 @@ sources; conformément à la séquence A, aucun nouveau hook n'est requis par la
 RC. Le build Release x64 réussit sans avertissement et les quatre suites CTest
 passent. Le prochain gate est un déploiement BKVince contrôlé et un cold start,
 uniquement après l'accord explicite de Vincent pour redémarrer le runtime.
+
+## Extension multilingue confirmée — séquence 1 native d'abord
+
+Vincent confirme le 3 août 2026 la prise en charge des langues livrées avec
+D2R et retient la séquence **1 — résolution native avant les libellés créés par
+le plugin**. Les propriétés ne sont plus reconnues à partir de leurs phrases
+anglaises : le catalogue charge désormais `DescStrPos`, `DescStrNeg`,
+`DescStr2` et les clés de groupe de l'`itemstatcost.txt` du mod actif, puis
+demande à D2R leur texte dans la langue réellement sélectionnée. Les formats
+natifs de dégâts composés, skill tabs, métadonnées, dommages et défense sont
+résolus par le même chemin `LANG_GetStringByKey` déjà gouverné pour le build
+92777. Sur les 151 stats visibles modélisées, 149 exposent directement une clé
+localisable; les deux exceptions structurelles ne doivent pas recevoir de
+plage.
+
+Les deux seuls libellés inventés par Advanced Item Tooltips, `Max Sockets` et
+`Base Defense`, possèdent une traduction intégrée pour les treize locales D2R :
+enUS, zhTW, deDE, esES, frFR, itIT, koKR, plPL, esMX, jaJP, ptBR, ruRU et zhCN.
+La locale est reconnue à partir du format natif `ItemStats1h`; les empreintes
+ont été comparées à l'extraction vanilla 3.2 gouvernée
+`local/lng/strings/item-modifiers.json`. Le séparateur des doubles plages est
+lui aussi résolu nativement avec `ItemStast1k`, sans `to` anglais imposé.
+
+La RC publique `3.1.0-rc.2` compile en Release x64 avec `/utf-8`. Les quatre suites CTest passent,
+incluant les treize labels, les placeholders asiatiques positionnels `%0/%1`,
+un tooltip coréen avec IAS, métadonnée Strength, défense plate, Enhanced
+Defense et dégâts de feu min/max séparés. L'audit intermod reste vert sur les
+quinze tables et toutes les fonctionnalités BKVince/vanilla. Le gate restant
+est une matrice visuelle minimale en anglais, coréen et chinois, après accord
+explicite de Vincent pour déployer et redémarrer le runtime.

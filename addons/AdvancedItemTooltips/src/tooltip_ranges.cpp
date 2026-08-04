@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <set>
 #include <sstream>
@@ -119,6 +120,14 @@ std::string StripColors(std::string_view text) {
     return clean;
 }
 
+std::string StripTrailingRangeAnnotation(std::string_view text) {
+    auto clean = Trim(StripColors(text));
+    if (!clean.ends_with(']')) return clean;
+    const auto opening = clean.rfind(" [");
+    if (opening == std::string::npos) return clean;
+    return Trim(clean.substr(0, opening));
+}
+
 char LastColor(std::string_view line, char inheritedColor) {
     char result = inheritedColor;
     for (std::size_t index = 0; index < line.size();) {
@@ -180,8 +189,31 @@ std::vector<std::int32_t> SignedIntegers(std::string_view text) {
     return values;
 }
 
-std::optional<std::size_t> CompoundDamageSlot(std::string_view normalizedLine,
-    std::string_view key) {
+std::string_view RangeStatKey(const ModifierRange& range) {
+    if (!range.statKey.empty()) return range.statKey;
+    const auto separator = range.key.find(':');
+    return std::string_view(range.key).substr(0, separator);
+}
+
+std::optional<std::size_t> CompoundDamageSlot(std::string_view line,
+    const ModifierRange& range, const TooltipLocalization* localization) {
+    const auto key = RangeStatKey(range);
+    if (localization) {
+        if (const auto found = localization->compoundDamageTemplates.find(std::string(key));
+            found != localization->compoundDamageTemplates.end()
+            && std::any_of(found->second.begin(), found->second.end(),
+                [&](const auto& format) {
+                    return MatchesLocalizedTemplate(line, format);
+                })) {
+            if (key == "mindamage" || key == "secondary_mindamage"
+                || key == "firemindam" || key == "lightmindam"
+                || key == "magicmindam" || key == "coldmindam") return 0;
+            if (key == "maxdamage" || key == "secondary_maxdamage"
+                || key == "firemaxdam" || key == "lightmaxdam"
+                || key == "magicmaxdam" || key == "coldmaxdam") return 1;
+        }
+    }
+    const auto normalizedLine = NormalizeWords(line);
     if (!normalizedLine.starts_with("adds ") || !normalizedLine.ends_with(" damage"))
         return std::nullopt;
     constexpr std::array components{
@@ -204,17 +236,19 @@ struct VisibleRoll {
     std::size_t slot{};
 };
 
-std::optional<VisibleRoll> RollForRange(std::string_view line, const ModifierRange& range) {
+std::optional<VisibleRoll> RollForRange(std::string_view line, const ModifierRange& range,
+    const TooltipLocalization* localization) {
     const auto values = SignedIntegers(line);
     if (values.empty()) return std::nullopt;
-    if (const auto slot = CompoundDamageSlot(NormalizeWords(line), range.key)) {
+    if (const auto slot = CompoundDamageSlot(line, range, localization)) {
         if (*slot >= values.size()) return std::nullopt;
         return VisibleRoll{values[*slot], *slot};
     }
     return VisibleRoll{values.front(), 0};
 }
 
-bool DescriptionFits(std::string_view line, const ModifierRange& range) {
+bool DescriptionFits(std::string_view line, const ModifierRange& range,
+    const TooltipLocalization* localization) {
     const auto anchor = NormalizeAnchor(range.anchor);
     const auto normalizedLine = NormalizeWords(line);
     const auto cleanLine = StripColors(line);
@@ -222,6 +256,21 @@ bool DescriptionFits(std::string_view line, const ModifierRange& range) {
     const auto hasExplicitSign = firstVisible != std::string::npos
         && (cleanLine[firstVisible] == '+' || cleanLine[firstVisible] == '-');
     if (anchor.empty()) return false;
+    if (localization) {
+        if (std::any_of(localization->metadataTemplates.begin(),
+                localization->metadataTemplates.end(), [&](const auto& format) {
+                    return MatchesLocalizedTemplate(line, format);
+                })) return false;
+        if (CompoundDamageSlot(line, range, localization)) return true;
+        if (const auto found = localization->statTemplates.find(
+                std::string(RangeStatKey(range)));
+            found != localization->statTemplates.end()
+            && std::any_of(found->second.begin(), found->second.end(),
+                [&](const auto& format) {
+                    return MatchesLocalizedTemplate(line, format,
+                        !range.parameter.empty());
+                })) return true;
+    }
     // Structural item lines are metadata, not rolled modifiers. Without this
     // gate, "Required Strength: 110" can match a variable Strength affix and
     // reject the item's complete candidate. Keep the patterns specific so
@@ -239,7 +288,7 @@ bool DescriptionFits(std::string_view line, const ModifierRange& range) {
                         && normalizedLine == prefix.substr(0, prefix.size() - 1));
             }))
         return false;
-    if (CompoundDamageSlot(normalizedLine, range.key)) return true;
+    if (CompoundDamageSlot(line, range, nullptr)) return true;
     auto position = std::size_t{};
     auto start = std::size_t{};
     while (start < anchor.size()) {
@@ -324,7 +373,7 @@ ModifierRange MakeRange(const std::string& code, const RangeCatalog::PropertyInf
         parameter.clear();
     }
     return {std::move(key), property.anchor, minimum, maximum, property.priority,
-        std::move(parameter)};
+        std::move(parameter), property.key};
 }
 
 void AppendPropertyRanges(
@@ -497,7 +546,7 @@ bool RangeCatalog::Load(const TableTextProvider& provider, std::string& error) {
         return ParseTsv(tableName, text, rows, error);
     };
 
-    properties_.clear(); suffixes_.clear(); prefixes_.clear(); automagic_.clear();
+    properties_.clear(); statStringKeys_.clear(); suffixes_.clear(); prefixes_.clear(); automagic_.clear();
     superiors_.clear();
     uniques_.clear(); sets_.clear(); armor_.clear(); itemTypes_.clear(); crafts_.clear();
     cubeRecipes_.clear(); uniqueTokens_.clear(); setTokens_.clear();
@@ -514,8 +563,20 @@ bool RangeCatalog::Load(const TableTextProvider& provider, std::string& error) {
         if (stat.empty()) continue;
         priorities[stat] = Number(row, "descpriority");
         statIds[stat] = Number(row, "*id");
+        auto& stringKeys = statStringKeys_[stat];
+        for (const auto key : {"descstrpos", "descstrneg", "descstr2",
+                "dgrpstrpos", "dgrpstrneg", "dgrpstr2"}) {
+            const auto value = Trim(Get(row, key));
+            if (!value.empty()
+                && std::find(stringKeys.begin(), stringKeys.end(), value) == stringKeys.end())
+                stringKeys.push_back(value);
+        }
         if (Number(row, "save bits") > 0 && Number(row, "send bits") > 0)
             persistentStats.insert(stat);
+    }
+    if (const auto damage = statStringKeys_.find("damagepercent");
+        damage != statStringKeys_.end()) {
+        statStringKeys_["enhanced_damage"] = damage->second;
     }
     struct PropertyStatTarget {
         std::int32_t statId{};
@@ -752,6 +813,11 @@ bool RangeCatalog::Load(const TableTextProvider& provider, std::string& error) {
         }
     }
     return true;
+}
+
+TooltipLocalization RangeCatalog::BuildLocalization(
+    const LocalizedStringResolver& resolver) const {
+    return BuildTooltipLocalization(statStringKeys_, resolver);
 }
 
 std::vector<std::vector<ModifierRange>> RangeCatalog::ResolveCandidates(
@@ -991,7 +1057,34 @@ std::optional<std::int32_t> FirstSignedInteger(std::string_view text) {
     return values.empty() ? std::nullopt : std::optional(values.front());
 }
 
-std::optional<std::int32_t> ExactFlatDefenseTotal(std::string_view tooltip) {
+std::optional<std::int32_t> ExactFlatDefenseTotal(
+    std::string_view tooltip,
+    const TooltipLocalization* localization) {
+    if (localization) {
+        std::int64_t localizedTotal{};
+        const auto templates = localization->statTemplates.find("armorclass");
+        if (templates == localization->statTemplates.end()) return 0;
+        std::size_t localizedStart{};
+        while (localizedStart <= tooltip.size()) {
+            const auto end = tooltip.find('\n', localizedStart);
+            const auto line = tooltip.substr(localizedStart, end - localizedStart);
+            const auto cleanLine = StripTrailingRangeAnnotation(line);
+            if (std::any_of(templates->second.begin(), templates->second.end(),
+                    [&](const auto& format) {
+                        return MatchesLocalizedTemplate(cleanLine, format);
+                    })) {
+                const auto values = SignedIntegers(cleanLine);
+                if (values.size() != 1) return std::nullopt;
+                localizedTotal += values.front();
+                if (localizedTotal < std::numeric_limits<std::int32_t>::min()
+                    || localizedTotal > std::numeric_limits<std::int32_t>::max())
+                    return std::nullopt;
+            }
+            if (end == std::string_view::npos) break;
+            localizedStart = end + 1;
+        }
+        return static_cast<std::int32_t>(localizedTotal);
+    }
     std::int64_t total{};
     std::size_t start{};
     while (start <= tooltip.size()) {
@@ -1034,7 +1127,31 @@ std::optional<std::int32_t> ExactFlatDefenseTotal(std::string_view tooltip) {
     return static_cast<std::int32_t>(total);
 }
 
-std::optional<std::int32_t> ExactEnhancedDefensePercent(std::string_view tooltip) {
+std::optional<std::int32_t> ExactEnhancedDefensePercent(
+    std::string_view tooltip,
+    const TooltipLocalization* localization) {
+    if (localization) {
+        std::optional<std::int32_t> localizedResult;
+        const auto templates = localization->statTemplates.find("item_armor_percent");
+        if (templates == localization->statTemplates.end()) return 0;
+        std::size_t localizedStart{};
+        while (localizedStart <= tooltip.size()) {
+            const auto end = tooltip.find('\n', localizedStart);
+            const auto line = tooltip.substr(localizedStart, end - localizedStart);
+            const auto cleanLine = StripTrailingRangeAnnotation(line);
+            if (std::any_of(templates->second.begin(), templates->second.end(),
+                    [&](const auto& format) {
+                        return MatchesLocalizedTemplate(cleanLine, format);
+                    })) {
+                const auto values = SignedIntegers(cleanLine);
+                if (values.size() != 1 || localizedResult) return std::nullopt;
+                localizedResult = values.front();
+            }
+            if (end == std::string_view::npos) break;
+            localizedStart = end + 1;
+        }
+        return localizedResult.value_or(0);
+    }
     std::optional<std::int32_t> result;
     std::size_t start{};
     while (start <= tooltip.size()) {
@@ -1129,7 +1246,8 @@ std::string FormatPositiveRange(std::int32_t minimum, std::int32_t maximum, char
 
 std::string AppendConsensusRanges(std::string_view tooltip,
     const std::vector<std::vector<ModifierRange>>& candidates,
-    bool allowExcludedSocketContributions) {
+    bool allowExcludedSocketContributions,
+    const TooltipLocalization* localization) {
     if (candidates.empty()) return std::string(tooltip);
     std::vector<std::string> lines;
     std::size_t start{};
@@ -1159,8 +1277,8 @@ std::string AppendConsensusRanges(std::string_view tooltip,
             [&](const auto& candidate) {
                 return std::any_of(candidate.begin(), candidate.end(),
                     [&](const auto& range) {
-                        const auto roll = RollForRange(line, range);
-                        return DescriptionFits(line, range) && roll
+                        const auto roll = RollForRange(line, range, localization);
+                        return DescriptionFits(line, range, localization) && roll
                             && RollFits(roll->value, range);
                     });
             }));
@@ -1173,8 +1291,8 @@ std::string AppendConsensusRanges(std::string_view tooltip,
             if (!modeledLines[index]) continue;
             bool producesRoll{};
             for (const auto& range : candidate) {
-                const auto roll = RollForRange(lines[index], range);
-                if (DescriptionFits(lines[index], range)
+                const auto roll = RollForRange(lines[index], range, localization);
+                if (DescriptionFits(lines[index], range, localization)
                     && roll && RollFits(roll->value, range)) producesRoll = true;
             }
             // Once any candidate identifies a rendered line as a modeled
@@ -1204,8 +1322,9 @@ std::string AppendConsensusRanges(std::string_view tooltip,
         for (const auto* candidate : compatibleCandidates) {
             std::vector<ConsensusRange> matches;
             for (const auto& range : *candidate) {
-                if (range.minimum == range.maximum || !DescriptionFits(line, range)) continue;
-                const auto roll = RollForRange(line, range);
+                if (range.minimum == range.maximum
+                    || !DescriptionFits(line, range, localization)) continue;
+                const auto roll = RollForRange(line, range, localization);
                 // In intrinsic-only mode the rendered value can legitimately
                 // sit outside the parent range because D2R has already folded
                 // socket fillers into that line. The candidate still proves
@@ -1240,7 +1359,9 @@ std::string AppendConsensusRanges(std::string_view tooltip,
         if (!ambiguous && consensus) {
             line.push_back(' ');
             for (std::size_t index = 0; index < consensus->size(); ++index) {
-                if (index) line += " to ";
+                if (index) line += " "
+                    + (localization ? localization->rangeSeparator : std::string("to"))
+                    + " ";
                 line += FormatPositiveRange(std::get<2>((*consensus)[index]),
                     std::get<3>((*consensus)[index]), activeColor);
             }

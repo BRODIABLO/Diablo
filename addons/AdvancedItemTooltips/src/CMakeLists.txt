@@ -39,11 +39,21 @@ set_target_properties(AdvancedItemTooltipsPublic PROPERTIES OUTPUT_NAME "Advance
 
 add_executable(AdvancedItemTooltipsTests socket_tooltip_tests.cpp socket_tooltip.cpp)
 target_compile_features(AdvancedItemTooltipsTests PRIVATE cxx_std_20)
-add_executable(AdvancedItemTooltipsRangeTests tooltip_ranges_tests.cpp tooltip_ranges.cpp)
+add_executable(AdvancedItemTooltipsRangeTests
+    tooltip_ranges_tests.cpp
+    tooltip_ranges.cpp
+    socket_tooltip.cpp
+)
 target_compile_features(AdvancedItemTooltipsRangeTests PRIVATE cxx_std_20)
 add_executable(AdvancedItemTooltipsConfigTests config_tests.cpp)
 target_compile_features(AdvancedItemTooltipsConfigTests PRIVATE cxx_std_20)
 target_link_libraries(AdvancedItemTooltipsConfigTests PRIVATE nlohmann_json::nlohmann_json)
+if(MSVC)
+    target_compile_options(AdvancedItemTooltipsPublic PRIVATE /utf-8)
+    target_compile_options(AdvancedItemTooltipsTests PRIVATE /utf-8)
+    target_compile_options(AdvancedItemTooltipsRangeTests PRIVATE /utf-8)
+    target_compile_options(AdvancedItemTooltipsConfigTests PRIVATE /utf-8)
+endif()
 enable_testing()
 add_test(NAME advanced-item-tooltips-policy COMMAND AdvancedItemTooltipsTests)
 add_test(NAME advanced-item-tooltips-ranges COMMAND AdvancedItemTooltipsRangeTests)

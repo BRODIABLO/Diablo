@@ -1,5 +1,7 @@
 #pragma once
 
+#include "socket_tooltip.hpp"
+
 #include <cstdint>
 #include <filesystem>
 #include <functional>
@@ -18,6 +20,7 @@ struct ModifierRange {
     std::int32_t maximum{};
     std::int32_t priority{};
     std::string parameter;
+    std::string statKey;
 };
 
 struct ArmorRange {
@@ -71,6 +74,9 @@ public:
         std::string_view parentCode
     ) const;
     [[nodiscard]] std::optional<ArmorRange> FindArmor(std::string_view code) const;
+    [[nodiscard]] TooltipLocalization BuildLocalization(
+        const LocalizedStringResolver& resolver
+    ) const;
     [[nodiscard]] std::size_t PropertyCount() const noexcept { return properties_.size(); }
     [[nodiscard]] const std::vector<std::string>& RunewordKeys() const noexcept {
         return runewordKeys_;
@@ -78,6 +84,7 @@ public:
 
 private:
     std::unordered_map<std::string, PropertyInfo> properties_;
+    std::unordered_map<std::string, std::vector<std::string>> statStringKeys_;
     std::vector<std::vector<ModifierRange>> suffixes_;
     std::vector<std::vector<ModifierRange>> prefixes_;
     std::vector<std::vector<ModifierRange>> automagic_;
@@ -122,7 +129,8 @@ private:
 [[nodiscard]] std::string AppendConsensusRanges(
     std::string_view tooltip,
     const std::vector<std::vector<ModifierRange>>& candidates,
-    bool allowExcludedSocketContributions = false
+    bool allowExcludedSocketContributions = false,
+    const TooltipLocalization* localization = nullptr
 );
 
 [[nodiscard]] std::vector<std::vector<ModifierRange>> MergeCandidateSources(
@@ -138,10 +146,14 @@ private:
 
 [[nodiscard]] std::optional<std::int32_t> FirstSignedInteger(std::string_view text);
 
-[[nodiscard]] std::optional<std::int32_t> ExactFlatDefenseTotal(std::string_view tooltip);
+[[nodiscard]] std::optional<std::int32_t> ExactFlatDefenseTotal(
+    std::string_view tooltip,
+    const TooltipLocalization* localization = nullptr
+);
 
 [[nodiscard]] std::optional<std::int32_t> ExactEnhancedDefensePercent(
-    std::string_view tooltip
+    std::string_view tooltip,
+    const TooltipLocalization* localization = nullptr
 );
 
 [[nodiscard]] std::optional<std::int32_t> ReconstructBaseDefense(
