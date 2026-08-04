@@ -50,6 +50,10 @@ const ASSETS = Object.freeze([
   'hd/overlays/paladin/charge.json',
 ]);
 
+const PRESERVED_ASSET_OVERRIDES = Object.freeze([
+  'hd/overlays/common/commandbar.json',
+]);
+
 const FILES = Object.freeze({
   source: {
     overlay: path.join(SOURCE_EXCEL, 'overlay.txt'),
@@ -169,9 +173,26 @@ function prepareCharStats(document, changed) {
 
 function validateHirelings(document) {
   const headerIndexes = indexes(document.table.headers);
-  for (const header of ['Hireling', 'Skill1', 'Mode1', 'Chance1', 'Mode2', 'Chance2']) {
+  for (const header of [
+    'Hireling', 'Version', 'Difficulty', 'Level',
+    'Skill1', 'Mode1', 'Chance1',
+    'Skill2', 'Mode2', 'Chance2',
+    'Skill3', 'Mode3', 'Chance3',
+    'Skill4', 'Mode4', 'Chance4',
+  ]) {
     assert(headerIndexes[header] !== undefined, `hireling: colonne ${header} absente`);
   }
+
+  const cell = (row, header) => row[headerIndexes[header]];
+  const assertProfiles = (rows, keyForRow, expected, label) => {
+    const actual = rows.map(keyForRow).sort();
+    const wanted = [...expected].sort();
+    assert(
+      actual.length === wanted.length && actual.every((key, index) => key === wanted[index]),
+      `hireling: profils ${label} inattendus; attendu [${wanted.join(', ')}], recu [${actual.join(', ')}]`,
+    );
+  };
+
   const rogues = document.table.rows.filter((row) => row[headerIndexes.Hireling] === 'Rogue Scout');
   assert(rogues.length === 24, `hireling: 24 lignes Rogue Scout attendues, recu ${rogues.length}`);
   for (const row of rogues) {
@@ -179,11 +200,69 @@ function validateHirelings(document) {
     assert(row[headerIndexes.Mode1] === '4', 'hireling: Mode1 Rogue doit rester 4');
     assert(row[headerIndexes.Chance1] === '30', 'hireling: Chance1 Rogue doit rester 30 (TCP, sans spam)');
   }
+
   const desert = document.table.rows.filter((row) => row[headerIndexes.Hireling] === 'Desert Mercenary');
-  assert(desert.length === 45, `hireling: 45 lignes Desert Mercenary attendues, recu ${desert.length}`);
-  for (const row of desert) {
-    assert(row[headerIndexes.Mode2] === '4', 'hireling: Mode2 Desert Mercenary doit rester 4');
-    assert(row[headerIndexes.Chance2] === '9999', 'hireling: Chance2 Desert Mercenary doit rester 9999');
+  assert(desert.length === 36, `hireling: 36 lignes Desert Mercenary attendues, recu ${desert.length}`);
+
+  const legacyDesert = desert.filter((row) => cell(row, 'Version') === '0');
+  const expansionDesert = desert.filter((row) => cell(row, 'Version') === '100');
+  assert(
+    legacyDesert.length + expansionDesert.length === desert.length,
+    'hireling: seules les versions Desert Mercenary 0 et 100 sont supportees',
+  );
+  assertProfiles(
+    legacyDesert,
+    (row) => `${cell(row, 'Difficulty')}:${cell(row, 'Level')}:${cell(row, 'Skill2')}`,
+    [
+      '1:9:Prayer', '1:31:Prayer', '1:55:Prayer',
+      '1:9:Defiance', '1:31:Defiance', '1:55:Defiance',
+      '1:9:Blessed Aim', '1:31:Blessed Aim', '1:55:Blessed Aim',
+      '2:31:Thorns', '2:55:Thorns',
+      '2:31:Holy Freeze', '2:55:Holy Freeze',
+      '2:31:Might', '2:55:Might',
+      '3:55:Prayer', '3:55:Defiance', '3:55:Blessed Aim',
+    ],
+    'Desert legacy',
+  );
+  for (const row of legacyDesert) {
+    assert(cell(row, 'Skill1') === 'Jab', 'hireling: Skill1 Desert legacy doit rester Jab');
+    assert(cell(row, 'Mode1') === '14', 'hireling: Mode1 Desert legacy doit rester 14');
+    assert(cell(row, 'Mode2') === '4', 'hireling: aura Skill2 Desert legacy doit rester en Mode2=4');
+    assert(cell(row, 'Chance2') === '9999', 'hireling: aura Skill2 Desert legacy doit rester en Chance2=9999');
+  }
+
+  const expansionCombat = expansionDesert.filter((row) => cell(row, 'Skill1') === 'Jab');
+  const expansionAura = expansionDesert.filter((row) => cell(row, 'Skill1') !== 'Jab');
+  assertProfiles(
+    expansionCombat,
+    (row) => `${cell(row, 'Difficulty')}:${cell(row, 'Level')}`,
+    ['1:9', '1:43', '1:75', '2:43', '2:75', '3:75'],
+    'Desert expansion Combat',
+  );
+  for (const row of expansionCombat) {
+    assert(cell(row, 'Mode1') === '14' && cell(row, 'Chance1') === '60', 'hireling: Jab Combat doit rester Mode1=14 Chance1=60');
+    assert(cell(row, 'Skill2') === 'Fend' && cell(row, 'Mode2') === '4' && cell(row, 'Chance2') === '30', 'hireling: Fend Combat doit rester Skill2 Mode2=4 Chance2=30');
+    assert(cell(row, 'Skill3') === 'BKV Desert Smite' && cell(row, 'Mode3') === '4' && cell(row, 'Chance3') === '10', 'hireling: BKV Desert Smite doit rester Skill3 Mode3=4 Chance3=10');
+    assert(cell(row, 'Skill4') === 'BKV Desert Mastery' && cell(row, 'Mode4') === '1' && cell(row, 'Chance4') === '1', 'hireling: BKV Desert Mastery doit rester Skill4 Mode4=1 Chance4=1');
+  }
+
+  assertProfiles(
+    expansionAura,
+    (row) => `${cell(row, 'Difficulty')}:${cell(row, 'Level')}:${cell(row, 'Skill1')}`,
+    [
+      '1:9:Defiance', '1:43:Defiance', '1:75:Defiance',
+      '1:9:Blessed Aim', '1:43:Blessed Aim', '1:75:Blessed Aim',
+      '2:43:Prayer', '2:75:Prayer',
+      '2:43:Thorns', '2:75:Thorns',
+      '3:75:Holy Freeze', '3:75:Might',
+    ],
+    'Desert expansion Aura',
+  );
+  for (const row of expansionAura) {
+    assert(cell(row, 'Mode1') === '4' && cell(row, 'Chance1') === '9999', 'hireling: aura Desert expansion doit rester Skill1 Mode1=4 Chance1=9999');
+    assert(cell(row, 'Skill2') === 'Jab' && cell(row, 'Mode2') === '14' && cell(row, 'Chance2') === '30', 'hireling: Jab Desert expansion doit rester Skill2 Mode2=14 Chance2=30');
+    assert(cell(row, 'Skill3') === 'Iron Skin' && cell(row, 'Mode3') === '1' && cell(row, 'Chance3') === '1', 'hireling: Iron Skin Desert expansion doit rester Skill3 Mode3=1 Chance3=1');
+    assert(cell(row, 'Skill4') === '' && cell(row, 'Mode4') === '' && cell(row, 'Chance4') === '', 'hireling: Skill4 Desert expansion Aura doit rester vide');
   }
 }
 
@@ -310,10 +389,14 @@ function prepareStrings(source, target, changed) {
 }
 
 function sha256(filePath) {
-  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex').toUpperCase();
+  let content = fs.readFileSync(filePath);
+  if (path.extname(filePath).toLowerCase() === '.json') {
+    content = Buffer.from(content.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
+  }
+  return crypto.createHash('sha256').update(content).digest('hex').toUpperCase();
 }
 
-function prepareAssets(changed) {
+function prepareAssets(changed, preserved) {
   for (const relative of ASSETS) {
     const source = path.join(SOURCE_ROOT, ...relative.split('/'));
     const target = path.join(TARGET_ROOT, ...relative.split('/'));
@@ -327,7 +410,10 @@ function prepareAssets(changed) {
       }
       continue;
     }
-    assert(sha256(source) === sha256(target), `asset BKVince different: ${relative}`);
+    if (sha256(source) !== sha256(target)) {
+      assert(PRESERVED_ASSET_OVERRIDES.includes(relative), `asset BKVince different: ${relative}`);
+      preserved.push(relative);
+    }
   }
 }
 
@@ -361,6 +447,7 @@ function main() {
     strings: readJsonArray(FILES.target.strings, 'skills.json BKVince'),
   };
   const changed = [];
+  const preservedAssets = [];
 
   prepareCharStats(target.charStats, changed);
   validateHirelings(target.hireling);
@@ -390,7 +477,7 @@ function main() {
     changed,
   );
   prepareStrings(source.strings, target.strings, changed);
-  prepareAssets(changed);
+  prepareAssets(changed, preservedAssets);
 
   if (CHECK_ONLY) {
     assert(changed.length === 0, `portage incomplet: ${changed.join(', ')}`);
@@ -422,8 +509,13 @@ function main() {
     commandSkills: COMMAND_SKILLS.length,
     classes: COMMAND_SPECS.length,
     rogueAct1Chance1: 30,
-    desertAuraChance2: 9999,
+    desertMercenaryProfiles: {
+      legacyAura: 18,
+      expansionAura: 12,
+      expansionCombat: 6,
+    },
     assets: ASSETS.length,
+    preservedAssets,
     strings: COMMAND_STRING_KEYS.length,
   }, null, 2));
 }

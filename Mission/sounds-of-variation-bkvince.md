@@ -41,7 +41,20 @@ La page Nexus de l'auteur WyRuZzaH interdit la republication des assets sans aut
 
 Intégration source/runtime terminée. Les 1 228 FLAC ont été installés localement sans écraser d'asset existant; les trois tables ont été synchronisées avec les SHA-256 `ABDCA1CB…7DEF8` (`monsounds.txt`), `2DEF9754…FD67` (`monstats.txt`) et `6A8CDEB7…0B8C` (`sounds.txt`). Le cold start a atteint le rendu de l'Acte I sans assertion, crash ni erreur de table ou de son. La validation auditive et la matrice multijoueur restent ouvertes.
 
-La suite globale `npm run verify:data` atteint ensuite un témoin hors périmètre déjà présent dans Mercenary Command : 45 lignes Desert Mercenary attendues contre 36 trouvées. Les contrôles ciblés Sounds of Variation et le registre de workstreams sont valides; aucune donnée Mercenary Command n'a été modifiée dans ce chantier.
+Le témoin hors périmètre initialement rencontré dans Mercenary Command est
+résolu le 4 août 2026 : son validateur reconnaît désormais les 18 profils
+Desert Mercenary legacy, les 12 profils expansion à aura et les 6 profils
+expansion Combat de la refonte Acte II. Les tests ciblés Mercenary Command et
+Act I Rogue, ainsi que la suite globale `npm run verify:data`, sont verts.
+La comparaison des assets JSON normalise leurs fins de ligne afin qu'un checkout
+frais ne produise pas de faux positif. L'override HD `commandbar.json`, dont
+l'identifiant d'entité BKVince avait été normalisé, est explicitement préservé;
+toute autre divergence de contenu des assets Mercenary Command demeure refusée.
+`hireling.txt` est resté byte-identique
+(SHA-256
+`12C75CB39243EF5272EAC822ABCF86C0A123B6C830A9813A010235683AB64CD3`);
+aucune donnée Mercenary Command ou Sounds of Variation n'a été modifiée par ce
+correctif de maintenance.
 
 ## Prototype séparé — Magic Arrow et Guided Arrow
 
