@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-04T13:30:12.4394053+00:00",
+    "generatedAt":  "2026-08-04T16:39:44.7023741+00:00",
     "root":  {
                  "name":  "snapshot",
                  "path":  ".",
@@ -5212,6 +5212,11 @@
                                                                                                                                                                 {
                                                                                                                                                                     "name":  "skillstreepanelhd.json",
                                                                                                                                                                     "path":  "data-BKVince/BKVince.mpq/data/global/ui/layouts/skillstreepanelhd.json",
+                                                                                                                                                                    "kind":  "file"
+                                                                                                                                                                },
+                                                                                                                                                                {
+                                                                                                                                                                    "name":  "vendorpanellayouthd.json",
+                                                                                                                                                                    "path":  "data-BKVince/BKVince.mpq/data/global/ui/layouts/vendorpanellayouthd.json",
                                                                                                                                                                     "kind":  "file"
                                                                                                                                                                 }
                                                                                                                                                             ]
