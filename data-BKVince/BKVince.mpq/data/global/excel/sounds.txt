@@ -378,7 +378,7 @@ impact_lightning_layer_4	375		sfx/combat/impacts_sd	combat\impact\static4.flac	0
 impact_poison_1	376	custom_d2pack_impact_poison_1	sfx/combat/impacts_sd	combat\impact\green1.flac	0	0	0	0	0	255	255	100	100	3	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_poison_2	377		sfx/combat/impacts_sd	combat\impact\green2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_poison_3	378		sfx/combat/impacts_sd	combat\impact\green3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-impact_double_1	379		sfx/combat/impacts_sd	combat\impact\double1.flac	0	0	0	0	0	200	200	100	100	3	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+impact_double_1	379	custom_d2pack_impact_double_1	sfx/combat/impacts_sd	combat\impact\double1.flac	0	0	0	0	0	200	200	100	100	3	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_double_2	380		sfx/combat/impacts_sd	combat\impact\double2.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_double_3	381		sfx/combat/impacts_sd	combat\impact\double3.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 impact_stun_1	382		sfx/combat/impacts_sd	combat\impact\stun1.flac	0	0	0	0	0	200	200	100	100	3	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -2747,7 +2747,7 @@ light_run_dirt_1	2744		sfx/ambient/footsteps_sd	ambient\footstep\LightDirtRun1.f
 light_run_dirt_2	2745		sfx/ambient/footsteps_sd	ambient\footstep\LightDirtRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_dirt_3	2746		sfx/ambient/footsteps_sd	ambient\footstep\LightDirtRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_dirt_4	2747		sfx/ambient/footsteps_sd	ambient\footstep\LightDirtRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-light_run_istone_1	2748		sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+light_run_istone_1	2748	custom_d2pack_light_run_istone_1	sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun1.flac	0	0	0	0	0	159	159	100	100	4	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_istone_2	2749		sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_istone_3	2750		sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 light_run_istone_4	2751		sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -13217,11 +13217,24 @@ custom_d2pack_impact_goo_2	101267		sfx/combat/impacts_sd	combat\impact\goohit2.f
 custom_d2pack_impact_goo_3	101268		sfx/combat/impacts_sd	combat\impact\goohit3.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 custom_d2pack_impact_goo_4	101269		sfx/combat/impacts_sd	combat\impact\goohit4.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 custom_d2pack_impact_goo_5	101270		sfx/combat/impacts_sd	combat\impact\goohit5.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-custom_d2pack_impact_poison_1	101271		sfx/combat/impacts_sd	combat\impact\green1.flac	0	0	0	0	0	255	255	100	100	4	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_poison_1	101271		sfx/combat/impacts_sd	combat\impact\green1.flac	0	0	0	0	0	255	255	100	100	5	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 custom_d2pack_impact_poison_2	101272		sfx/combat/impacts_sd	combat\impact\green2.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 custom_d2pack_impact_poison_3	101273		sfx/combat/impacts_sd	combat\impact\green3.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 custom_d2pack_impact_poison_4	101274		sfx/combat/impacts_sd	combat\impact\green4.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_poison_5	101279		sfx/combat/impacts_sd	combat\impact\poisoned.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 custom_d2pack_item_pickup_1	101275		sfx/items_sd	cursor\pickup.flac	0	0	0	0	0	160	160	100	100	2	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
 custom_d2pack_item_pickup_2	101276		sfx/items_sd	cursor\pickup2.flac	0	0	0	0	0	160	160	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
 custom_d2pack_item_potion_1	101277		sfx/items_sd	item\potionui.flac	0	0	0	0	0	240	240	100	100	2	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 custom_d2pack_item_potion_2	101278		sfx/items_sd	item\potion.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_light_run_istone_1	101280		sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun1.flac	0	0	0	0	0	159	159	100	100	5	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_light_run_istone_2	101281		sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun2.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_light_run_istone_3	101282		sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun3.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_light_run_istone_4	101283		sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun4.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_light_run_istone_5	101284		sfx/ambient/footsteps_sd	ambient\footstep\LightIStoneRun5.flac	0	0	0	0	0	159	159	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_double_1	101285		sfx/combat/impacts_sd	combat\impact\double1.flac	0	0	0	0	0	200	200	100	100	4	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_double_2	101286		sfx/combat/impacts_sd	combat\impact\double2.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_double_3	101287		sfx/combat/impacts_sd	combat\impact\double3.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_impact_double_4	101288		sfx/combat/impacts_sd	combat\impact\critical_shot.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	1	0	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+custom_d2pack_paladin_smite_1	101289		sfx/player-skills_sd	skill\paladin\smite.flac	0	0	0	0	0	224	224	100	100	2	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+custom_d2pack_paladin_smite_2	101290		sfx/player-skills_sd	skill\paladin\smiteB.flac	0	0	0	0	0	224	224	100	100	0	0	0	0	0	0	0	0	0	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
+custom_d2pack_amazon_hurl	101291		sfx/player-skills_sd	skill\amazon\hurl.flac	0	0	0	0	0	180	180	100	100	0	0	0	8	8	0	0	0	-1	1	0	90	0	0	0	1	0	0	-1	-1	-1	0	0	
