@@ -385,7 +385,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "remote-stash",
     .name = "Remote Stash",
-    .version = "0.3.6",
+    .version = "1.0.0",
     .author = "RuffnecKk",
     .description = "Toggles the player stash remotely from a button or configurable hotkey.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -1773,7 +1773,7 @@ auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void
     std::snprintf(
         message,
         sizeof(message),
-        "RemoteStash 0.3.6: hotkeyEnabled=%s; hotkey=%s; hotkeyInput=%s; "
+        "RemoteStash 1.0.0: hotkeyEnabled=%s; hotkey=%s; hotkeyInput=%s; "
         "hotkeyUiDispatch=%s; consume=%s; config=%s; hotkeyAccepted=%llu; "
         "hotkeyDispatched=%llu; hotkeyRefused=%llu; hotkeyStale=%llu; "
         "hotkeyFailed=%llu; "
@@ -2128,7 +2128,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     std::snprintf(
         message,
         sizeof(message),
-        "RemoteStash 0.3.6 active for D2R 3.2.92777; button UI broker=%s; "
+        "RemoteStash 1.0.0 active for D2R 3.2.92777; button UI broker=%s; "
         "hotkey=%s; binding=%s; input=%s; consume=%s; config=%s.",
         UsingUiMessageBroker.load(std::memory_order_acquire)
             ? "PluginPack"

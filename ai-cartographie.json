@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-05T15:29:17.6859382+00:00",
+    "generatedAt":  "2026-08-05T18:04:04.5856141+00:00",
     "root":  {
                  "name":  "snapshot",
                  "path":  ".",
@@ -928,7 +928,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-public-intermod-d2rloader-addon",
-                                                                        "summary":  "Variante publique intermod de Remote Stash 0.2.25 dont le bouton desktop est entièrement placé et stylé par le layout du moddeur, sans modifier la version BKVince.",
+                                                                        "summary":  "Sources, package and official Remote Stash 1.0.0 release for D2RLoader 3.2.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "active"
                                                                     },
@@ -1097,6 +1097,11 @@
                                                                             {
                                                                                 "name":  "RemoteStash-0.3.6.zip",
                                                                                 "path":  "addons/RemoteStash/RemoteStash-0.3.6.zip",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "RemoteStash-1.0.0.zip",
+                                                                                "path":  "addons/RemoteStash/RemoteStash-1.0.0.zip",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]

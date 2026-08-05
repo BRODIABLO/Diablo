@@ -2,7 +2,8 @@
 
 Dernière mise à jour : 5 août 2026
 
-Statut : release publique autonome `RemoteStash 0.3.6` validée en jeu. Le hotkey
+Statut : release publique autonome `RemoteStash 1.0.0` fondée sur la candidate
+`0.3.6` validée en jeu. Le hotkey
 JSON optionnel est désactivé dans la configuration publique et utilise `S` par
 défaut. Lorsqu'il est activé avec `consume=true`, il ouvre et ferme le stash sans
 déclencher l'action `S` du jeu. Le comportement stash hérité de la 0.2.31 demeure
@@ -750,3 +751,24 @@ items, or et persistance de RemoteStash.
   contient ni source, PDB, log, preuve locale ou DLL tierce. Elle mesure `249096`
   octets et porte le SHA-256
   `6A46C3A371986AE56D14B848D79E69219B238B6F61EC987C871706CEFE5F7D0A`.
+
+## Release publique officielle — 1.0.0 — 5 août 2026
+
+- Vincent et un testeur externe coréen confirment que la candidate 0.3.6 est
+  stable sur leurs deux mods, y compris avec le layout personnalisé du testeur.
+  Cette preuve promeut le même comportement en première release stable 1.0.0.
+- Le passage à 1.0.0 modifie la version du manifeste, des ressources Windows,
+  des messages de log et du README; il ne change aucune politique de hotkey,
+  session distante, déplacement d'objet ou intégration de layout.
+- Le build Release x64 et CTest passent `2/2`. Les DLL du build et du package
+  sont byte-identiques : version `1.0.0`, taille `175616`, SHA-256
+  `5D3B92044B2731543BA38A373D935B474B61A3252602D11EE804B51CCBA40C5E`.
+- La même DLL 1.0.0 est installée dans la portée globale avec un hash identique.
+  Aucun cold start supplémentaire n'est lancé pendant la préparation de
+  l'archive; la preuve gameplay demeure celle du code fonctionnel identique
+  validé par Vincent et le testeur externe avant le bump de version.
+- L'archive officielle `RemoteStash-1.0.0.zip` contient exactement sept fichiers :
+  DLL, JSON, README court, deux fragments de layout et deux sprites. Chaque
+  entrée extraite est byte-identique au package. L'archive mesure `249093`
+  octets et porte le SHA-256
+  `B992F3585B8616A68F26CDB3975C6548D135780A0FB2B2D954D32E1732AE0D92`.

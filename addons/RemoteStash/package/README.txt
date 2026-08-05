@@ -1,4 +1,4 @@
-REMOTE STASH 0.3.6
+REMOTE STASH 1.0.0
 Author: RuffnecKk
 
 Opens and closes the player stash from an inventory button or configurable
