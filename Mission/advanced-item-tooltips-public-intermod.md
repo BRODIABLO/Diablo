@@ -1,6 +1,6 @@
 # Advanced Item Tooltips — Public Intermod Release
 
-Dernière mise à jour : 3 août 2026
+Dernière mise à jour : 5 août 2026 — mission clôturée
 
 ## Décision produit
 
@@ -407,3 +407,29 @@ Defense et dégâts de feu min/max séparés. L'audit intermod reste vert sur le
 quinze tables et toutes les fonctionnalités BKVince/vanilla. Le gate restant
 est une matrice visuelle minimale en anglais, coréen et chinois, après accord
 explicite de Vincent pour déployer et redémarrer le runtime.
+
+## Clôture produit — 5 août 2026
+
+Vincent déclare Advanced Item Tooltips terminé et ferme la mission sur la RC
+publique `3.1.0-rc.2`. Les staffmods hardcodés demeurent explicitement hors
+périmètre et aucune plage n'est inventée lorsque la provenance n'est pas
+démontrable. Les observations manette, hôte/joiner et la matrice visuelle
+anglais/coréen/chinois n'ont pas été exécutées exhaustivement; elles sont
+retirées des gates de livraison par décision produit et ne deviennent pas des
+succès implicites.
+
+Le setup personnel final utilise une installation globale unique :
+
+- DLL : `<D2R>/d2rloader/plugins/AdvancedItemTooltips.dll`;
+- JSON : `<D2R>/d2rloader/config/AdvancedItemTooltips.json`;
+- `includeSocketedContributionsInRanges=true` pour combiner les contributions
+  des runes, gems et jewels;
+- `showMaxSocketsOnSocketedItems=false` pour masquer `Max Sockets` dès que
+  l'objet possède des sockets.
+
+La copie mod-locale BKVince est neutralisée. La DLL globale porte le SHA-256
+`282652C6C637927A4A4D6265B3C2E88D50908A4342B0013857F6643EEDD3F764` et le
+JSON global le SHA-256
+`F425617759A69C6EF09BB630C9971469D53CEE7773B5D3C1F5686CB859509E5A`.
+Le déploiement statique et l'unicité de portée sont vérifiés; aucun cold start
+n'a été exécuté pendant cette bascule finale.
