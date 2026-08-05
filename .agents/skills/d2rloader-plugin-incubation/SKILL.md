@@ -36,6 +36,6 @@ description: Choisir, concevoir, auditer, implanter et emballer un nouveau plugi
 2. Valider séparément les portées globale et mod-locale, le repli de configuration, la coexistence avec les cinq DLL eezstreet et l'absence de plugins rejetés ou en échec.
 3. Produire le ZIP public avec uniquement la DLL autonome et le fichier de configuration indépendant requis par la destination confirmée, JSON ou TOML. Exclure README, sources, symboles, logs et fichiers de preuve.
 4. Inspecter la liste réelle des entrées du ZIP et calculer son SHA-256 avant de déclarer la livraison prête.
-5. Créditer exactement `RuffnecKk` dans les sources, logs et documentation de la fonctionnalité. Lors d'un merge, préserver aussi les métadonnées et crédits du propriétaire eezstreet.
+5. Créditer exactement `RuffnecKk` dans les sources, logs et documentation de la fonctionnalité. Si le plugin a nécessité des connaissances acquises grâce à D2MOO, créditer explicitement D2MOO dans le README du plugin, conservé avec la documentation du projet et hors du ZIP public strict. Lors d'un merge, préserver aussi les métadonnées et crédits du propriétaire eezstreet.
 
 Lire [references/incubation-checklist.md](references/incubation-checklist.md) pour le choix de destination, la cartographie des propriétaires de merge et les gates d'audit, de runtime et d'archive.

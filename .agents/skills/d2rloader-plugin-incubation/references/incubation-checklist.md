@@ -38,6 +38,7 @@ Relever le commit épinglé, les fichiers du module, les clés existantes de `D2
 
 - Manifeste v2 et trois exports attendus vérifiés.
 - Auteur exact `RuffnecKk`; crédits tiers conservés séparément.
+- Si le plugin a nécessité des connaissances acquises grâce à D2MOO, crédit explicite à D2MOO présent dans le README du plugin conservé hors du ZIP public strict.
 - Description anglaise courte, visible par le joueur et sans détails internes.
 - Build ciblé, signatures complètes, ABI et erreurs de chargement strictement contrôlés.
 - Installation globale et mod-locale démontrée, sans `ModScopedOnly`.
