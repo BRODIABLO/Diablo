@@ -21,3 +21,19 @@ INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
 LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
+
+## Diablo II: Resurrected UI sprites
+
+The paper-doll, item icons, skill atlases, and skill-tree backgrounds are generated locally from the
+versioned BKVince overlays and the vanilla `SpA1` v31 sprites extracted from
+Vincent's installed Diablo II: Resurrected CASC. They are Diablo II: Resurrected game assets and
+remain the property of Blizzard Entertainment. They are not copied from
+RuneWizard. The raw vanilla sprites stay in the ignored `analysis-cache/`
+directory; the application bundles only the generated PNG inventory visuals,
+the eight class skill atlases, and the 24 three-tab skill-tree backgrounds.
+
+The small build-time decoder follows the public `SpA1` v31 header and RGBA
+payload layout documented by the D2R modding community. Format references:
+`4KMong/D2RSpriteToolkit` and `eezstreet/D2RModding-SpriteEdit` (which credits
+shalzuth for the original sprite-format work). No source code from those tools
+is bundled in this application.

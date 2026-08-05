@@ -4,7 +4,8 @@
   "version": "0.2.0",
   "type": "module",
   "scripts": {
-    "generate": "node scripts/generate-constants.mjs",
+    "extract:vanilla-ui": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/extract-vanilla-ui-assets.ps1",
+    "generate": "node scripts/generate-constants.mjs && node scripts/generate-ui-assets.mjs",
     "check:constants": "node scripts/generate-constants.mjs --check",
     "test": "node --test src/lib/*.test.js",
     "dev": "npm run generate && vite",

@@ -1,5 +1,18 @@
+diff --git a/node_modules/@d2runewizard/d2s/lib/d2/d2s.js b/node_modules/@d2runewizard/d2s/lib/d2/d2s.js
+index 78c757c..4b4db22 100644
+--- a/node_modules/@d2runewizard/d2s/lib/d2/d2s.js
++++ b/node_modules/@d2runewizard/d2s/lib/d2/d2s.js
+@@ -72,7 +72,7 @@ async function readItem(buffer, version, constants, userConfig) {
+         constants = constants_1.getConstantData(version);
+     }
+     const item = await items.readItem(reader, version, constants, config);
+-    await attribute_enhancer_1.enhanceItems([item], constants);
++    await attribute_enhancer_1.enhanceItems([item], constants, 1, config);
+     return item;
+ }
+ exports.readItem = readItem;
 diff --git a/node_modules/@d2runewizard/d2s/lib/d2/items.js b/node_modules/@d2runewizard/d2s/lib/d2/items.js
-index 7a56f26..604a3a4 100644
+index 7a56f26..301e89e 100644
 --- a/node_modules/@d2runewizard/d2s/lib/d2/items.js
 +++ b/node_modules/@d2runewizard/d2s/lib/d2/items.js
 @@ -336,8 +336,16 @@ async function readItem(reader, version, originalConstants, config, parent) {
@@ -34,7 +47,24 @@ index 7a56f26..604a3a4 100644
              item.quantity = reader.ReadUInt16(9);
          }
          if (item.socketed === 1) {
-@@ -507,7 +516,15 @@ async function writeItem(item, version, constants, config) {
+@@ -390,6 +399,16 @@ async function readItem(reader, version, originalConstants, config, parent) {
+             }
+         }
+     }
++    if (version === 0x69 && item.simple_item) {
++        item.timestamp = reader.ReadUInt8(1);
++        if (item.timestamp) {
++            const realmDataCount = version > 0x60 ? 4 : version > 0x5d ? 3 : 2;
++            item._unknown_data.realm_data = [];
++            for (let i = 0; i < realmDataCount; i++) {
++                item._unknown_data.realm_data.push(reader.ReadUInt32());
++            }
++        }
++    }
+     /*if (item._unknown_data.b27_31 && item._unknown_data.b27_31?.some((b) => b === 1)) {
+       reader.SkipBits(53); // skip 50 - 53
+       reader.Align();
+@@ -507,7 +526,15 @@ async function writeItem(item, version, constants, config) {
          else if (item.type === "ibk") {
              writer.WriteUInt8(1, 5);
          }
@@ -51,7 +81,7 @@ index 7a56f26..604a3a4 100644
          if (item.type_id === ItemType.Armor || item.type_id === ItemType.Shield) {
              writer.WriteUInt16(item.defense_rating + constants.magical_properties[31].sA, constants.magical_properties[31].sB);
          }
-@@ -517,10 +534,11 @@ async function writeItem(item, version, constants, config) {
+@@ -517,10 +544,11 @@ async function writeItem(item, version, constants, config) {
                  writer.WriteUInt16(item.current_durability, constants.magical_properties[72].sB);
              }
          }
@@ -65,3 +95,71 @@ index 7a56f26..604a3a4 100644
              writer.WriteUInt16(item.quantity, 9);
          }
          if (item.socketed === 1) {
+@@ -542,6 +570,17 @@ async function writeItem(item, version, constants, config) {
+             _writeMagicProperties(writer, item.runeword_attributes, constants);
+         }
+     }
++    if (version === 0x69 && item.simple_item) {
++        const realmData = item._unknown_data.realm_data;
++        const hasRealmData = Array.isArray(realmData) && realmData.length > 0;
++        writer.WriteUInt8(hasRealmData ? 1 : 0, 1);
++        if (hasRealmData) {
++            const realmDataCount = version > 0x60 ? 4 : version > 0x5d ? 3 : 2;
++            for (let i = 0; i < realmDataCount; i++) {
++                writer.WriteUInt32(realmData[i] || 0);
++            }
++        }
++    }
+     if (version === 0x69) {
+         if (!item.identified && (item.quality === Quality.Unique || item.quality === Quality.Set) && item.chronicle) {
+             writer.WriteUInt16(item.chronicle.monsterId);
+@@ -644,12 +683,12 @@ function _readSimpleBits(item, reader, version, constants, config) {
+         else {
+             item.type_id = ItemType.Other;
+         }
+-        let bits = item.simple_item ? 1 : 3;
++        let bits = item.simple_item ? (version === 0x69 ? 0 : 1) : 3;
+         if ((_c = item.categories) === null || _c === void 0 ? void 0 : _c.includes("Quest")) {
+             item.quest_difficulty = reader.ReadUInt16(constants.magical_properties[356].sB) - constants.magical_properties[356].sA;
+-            bits = 1;
++            bits = version === 0x69 && item.simple_item ? 0 : 1;
+         }
+-        item.nr_of_items_in_sockets = reader.ReadUInt8(bits);
++        item.nr_of_items_in_sockets = bits > 0 ? reader.ReadUInt8(bits) : 0;
+     }
+ }
+ function _lookupRareId(name, constants) {
+@@ -708,13 +747,15 @@ function _writeSimpleBits(writer, version, item, constants, config) {
+                 writer.WriteUInt16(n.v, n.l);
+             }
+         }
+-        let bits = item.simple_item ? 1 : 3;
++        let bits = item.simple_item ? (version === 0x69 ? 0 : 1) : 3;
+         if ((_a = item.categories) === null || _a === void 0 ? void 0 : _a.includes("Quest")) {
+             const difficulty = item.quest_difficulty || 0;
+             writer.WriteUInt16(difficulty + constants.magical_properties[356].sA, constants.magical_properties[356].sB);
+-            bits = 1;
++            bits = version === 0x69 && item.simple_item ? 0 : 1;
++        }
++        if (bits > 0) {
++            writer.WriteUInt8(item.nr_of_items_in_sockets, bits);
+         }
+-        writer.WriteUInt8(item.nr_of_items_in_sockets, bits);
+     }
+ }
+ function _readMagicProperties(reader, constants, skipMagicProps) {
+diff --git a/node_modules/@d2runewizard/d2s/lib/d2/versions/default_header.js b/node_modules/@d2runewizard/d2s/lib/d2/versions/default_header.js
+index 11b3d51..cac9d24 100644
+--- a/node_modules/@d2runewizard/d2s/lib/d2/versions/default_header.js
++++ b/node_modules/@d2runewizard/d2s/lib/d2/versions/default_header.js
+@@ -369,9 +369,8 @@ function _writeQuests(quests) {
+         .WriteArray(_writeQuest(quests.act_iv.terrors_end))
+         .WriteArray(_writeQuest(quests.act_iv.hellforge))
+         .WriteUInt16(+quests.act_iv.completed || +quests.act_iv.terrors_end.is_completed)
+-        .WriteArray(new Uint8Array(6))
++        .WriteArray(new Uint8Array(10))
+         .WriteUInt16(+quests.act_v.introduced || +quests.act_iv.terrors_end.is_completed)
+-        .WriteArray(new Uint8Array(4))
+         .WriteArray(_writeQuest(quests.act_v.siege_on_harrogath))
+         .WriteArray(_writeQuest(quests.act_v.rescue_on_mount_arreat))
+         .WriteArray(_writeQuest(quests.act_v.prison_of_ice))
