@@ -1,4 +1,4 @@
-# MassID 0.2.9
+# MassID 1.0.0
 
 MassID identifies every eligible item by Shift-right-clicking a Tome of
 Identify. It keeps the normal cursor, plays Diablo II: Resurrected's vanilla

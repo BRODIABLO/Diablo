@@ -501,9 +501,93 @@ contrat :
   `scanned=12 active=12 rejected=0 failed=0`. La DLL build, package et runtime
   est byte-exacte au hash ci-dessus.
 
+## Compatibilité Cube Output Quantity — 0.2.10, 5 août 2026
+
+- Le rapport coréen fournit deux démarrages reproductibles. D2RLoader accepte
+  bien le build `3.2.92777` et charge `CubeOutputQuantity 1.0.2`, qui installe
+  d’abord son hook inline à `0x36CFE0`. MassID 0.2.9 vérifie ensuite le prologue
+  vanilla de la même entrée `ITEMS_GetInvPage`, refuse la signature modifiée et
+  produit l’unique échec du lot : `scanned=18 active=17 rejected=0 failed=1`.
+  La branche `kr` et la locale `koKR` ne causent pas cet échec.
+- Les preuves reçues sont `mass-id.log`, SHA-256
+  `19EC417970AABCB76A27C0BC89525F908868907641914328286A0F92072BA940`,
+  et `d2rloader.log`, SHA-256
+  `AB2B5B77E40056A9D2690A7E4D996AD1B2EEDC194A807A2DF954133D61FA5860`.
+  Les assertions Excel/RapidJSON ultérieures appartiennent au mod actif et sont
+  distinctes du refus de MassID.
+- Le workbench vérifié prouve que `ITEMS_GetInvPage 0x36CFE0` appelle
+  `UNITS_GetItemData 0x34A500`, puis retourne exactement l’octet `ItemData+0x55`.
+  La signature de 32 octets de `UNITS_GetItemData` utilisée par 0.2.10 est
+  unique dans `.text`. MassID lit désormais ce champ via son propre accesseur et
+  ne référence plus l’entrée `0x36CFE0`; aucun hook tiers ni ordre alphabétique
+  de chargement n’est requis.
+- Release x64 et CTest : `1/1` test vert. La DLL 0.2.10 porte exactement les
+  trois exports D2RLoader et son SHA-256 est
+  `3C7F3812053F524121D9F5DA38BCF5F069C49EA3FBDB75B78473F0DDCB591FCA`.
+  Les copies build, package et runtime global sont byte-identiques.
+- Le ZIP public contient exactement `MassID.dll`, `MassID.json` et `README.md`;
+  SHA-256
+  `EA4D5F553C1F4ACBBACD0159BB740515B9CF85ACAB74A9BDD60B899B2187BFB5`.
+  La politique du dépôt autorise explicitement ce seul `README.md` pour MassID
+  tout en continuant d’interdire les autres fichiers documentaires aux plugins
+  incubés. Le validateur ne signale aucune erreur MassID; son exécution globale
+  reste rouge uniquement à cause de huit archives non déclarées appartenant à
+  AdvancedItemTooltips, RemoteStash et Transmogrify.
+  La DLL globale a été synchronisée sans lancer le jeu.
+- Le cold start BKVince explicitement autorisé suivant lance
+  `D2RLoader.exe -mod BKVince -txt`, charge MassID 0.2.10 depuis la portée
+  globale et résout la configuration globale. Il applique `17/17` patches,
+  active `12/12` plugins sans rejet ni échec et atteint `24/24`. Le processus
+  reste ouvert pour le témoin gameplay de Vincent.
+- Le témoin gameplay local à `12:46:53` capture le Shift-clic droit, accepte le
+  paquet privé et identifie deux objets : inventaire `1`, Cube `0`, coffre
+  personnel `0`, shared stash `1`, avec `1001` conteneurs partagés visités et
+  deux charges consommées sous `freeIdentification=false`. Vincent confirme le
+  résultat en jeu. Ce cas est une non-régression MassID 0.2.10 seulement :
+  `CubeOutputQuantity.dll` n’était pas installé sur ce profil et la collision
+  signalée par le rapporteur coréen reste donc à retester séparément.
+- Vincent fournit ensuite le témoin tiers `CubeOutputQuantity.dll`. L’audit
+  local confirme une image x64 de `16 384` octets portant exactement les trois
+  exports D2RLoader, sans métadonnée de version et sans signature Authenticode;
+  son SHA-256 est
+  `105482DE46732DA5FC8A0C9245CC059D3E406AE18028439625EC602D00A74B30`.
+  Après arrêt propre du jeu, cette DLL est synchronisée byte-exactement dans
+  `C:\Games\Diablo II Resurrected\d2rloader\plugins\CubeOutputQuantity.dll`.
+  Aucune copie mod-locale homonyme n’est présente et le jeu n’est pas relancé.
+- Le cold start BKVince explicitement autorisé à `12:53:03` accepte le build
+  `3.2.92777`. `Cube Output Quantity 1.0.2` installe ses trois hooks, y compris
+  celui de `0x36CFE0`, puis `MassID 0.2.10` installe ses deux hooks et s’active
+  depuis la portée globale sans collision de signature. Les patches terminent
+  à `17/17`; le résumé plugins `scanned=13 active=12 rejected=0 failed=1`
+  contient un échec distinct de `RepeatableServices.dll`, tandis que MassID et
+  Cube Output Quantity sont tous deux actifs. Le jeu reste ouvert pour le
+  témoin gameplay Shift-clic droit de Vincent.
+- Vincent confirme le témoin gameplay de coexistence. À `12:54:33`, MassID
+  capture le Shift-clic droit sur le Tome GUID `38`, reçoit son paquet privé
+  `0x34`, puis accepte l’action avec `quantity=39`. Il identifie deux objets
+  (`inventory=1`, `cube=1`, `personalStash=0`, `sharedStash=0`) et consomme
+  exactement deux scrolls sous `freeIdentification=false`; Cube Output Quantity
+  1.0.2 demeure actif dans la même instance. Le gate local de coexistence est
+  donc `passed`.
+
 ## Prochain gate
 
-Le ZIP Discord et le cold start global sont techniquement validés. Les
-validations `freeIdentification=true`, sauvegarde/relecture et hôte/joiner
-restent ouvertes avant de fermer toute la matrice fonctionnelle et le futur
-merge PluginPack.
+La release publique est promue à `1.0.0` après la validation locale complète du
+chemin payé 0.2.10 avec Cube Output Quantity 1.0.2; ce changement de version ne
+modifie aucune politique, ABI ni surface de hook. Faire confirmer sur le profil
+coréen que MassID 1.0.0 charge et exécute la même action avec Cube Output
+Quantity 1.0.2 actif. Les validations
+`freeIdentification=true`, sauvegarde/relecture et hôte/joiner restent ouvertes
+avant de fermer toute la matrice fonctionnelle et le futur merge PluginPack.
+L’échec distinct de Repeatable Services demeure hors de cette matrice MassID.
+
+La DLL Release x64 `1.0.0` et son test de politique sont reconstruits avec
+`1/1` test vert. Les copies build, package et runtime global sont byte-exactes au
+SHA-256
+`D46ABFB09057130068DF1B23A23A1032E054C661384F4F07FE8C110C40E02460`;
+les ressources Windows exposent `FileVersion=1.0.0`, `ProductVersion=1.0.0` et
+`CompanyName=RuffnecKk`. Le ZIP public contient exactement `MassID.dll`,
+`MassID.json` et `README.md`, pour un SHA-256
+`243737E62541CA19A1F6439B5620F3907ACF6782FAB752279C9420AC435E38F8`.
+La DLL globale est synchronisée et le jeu demeure fermé, conformément à la
+consigne de ne pas relancer sans autorisation explicite.

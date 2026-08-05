@@ -22,6 +22,8 @@ inline constexpr std::uint32_t QuantityStat = 70;
 inline constexpr std::uint8_t InventoryPage = 0;
 inline constexpr std::uint8_t CubePage = 3;
 inline constexpr std::uint8_t StashPage = 4;
+inline constexpr std::uint8_t InvalidInventoryPage = 0xFF;
+inline constexpr std::size_t ItemDataInventoryPageOffset = 0x55;
 
 using RequestPacket = std::array<std::uint8_t, RequestPacketSize>;
 
@@ -86,6 +88,13 @@ constexpr bool IsSupportedInventoryPage(std::uint8_t page) noexcept {
 
 constexpr bool IsMassIdentifyTargetPage(std::uint8_t page) noexcept {
     return page == InventoryPage || page == CubePage || page == StashPage;
+}
+
+inline std::uint8_t ReadInventoryPageFromItemData(
+        const void* itemData) noexcept {
+    if (!itemData) return InvalidInventoryPage;
+    const auto* bytes = static_cast<const std::uint8_t*>(itemData);
+    return bytes[ItemDataInventoryPageOffset];
 }
 
 constexpr bool ShouldCaptureGesture(

@@ -46,8 +46,8 @@ constexpr std::uintptr_t GetUnitStatRva = 0x2F5020;
 constexpr std::uintptr_t CheckStateRva = 0x3351B0;
 constexpr std::uintptr_t GetUnitIdRva = 0x34A330;
 constexpr std::uintptr_t GetUnitInventoryRva = 0x34A360;
+constexpr std::uintptr_t GetItemDataRva = 0x34A500;
 constexpr std::uintptr_t GetUnitTypeRva = 0x34B9D0;
-constexpr std::uintptr_t GetInventoryPageRva = 0x36CFE0;
 constexpr std::uintptr_t CheckItemFlagRva = 0x36E2D0;
 constexpr std::uintptr_t SetItemFlagRva = 0x36D8F0;
 constexpr std::uintptr_t GetItemSuffixIdRva = 0x36EDD0;
@@ -168,9 +168,11 @@ constexpr std::array<std::uint8_t, 32> GetUnitTypeExpected{
     0x24, 0x30, 0xE8, 0x39, 0x9E, 0xFF, 0xFF, 0x84,
     0xC0, 0x74, 0x01, 0xCC, 0xB8, 0x06, 0x00, 0x00,
 };
-constexpr std::array<std::uint8_t, 15> GetInventoryPageExpected{
+constexpr std::array<std::uint8_t, 32> GetItemDataExpected{
     0x40, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B,
-    0xD9, 0x48, 0x85, 0xC9, 0x74, 0x0A, 0xE8,
+    0xD9, 0x48, 0x85, 0xC9, 0x75, 0x1D, 0x88, 0x4C,
+    0x24, 0x30, 0x48, 0x8D, 0x4C, 0x24, 0x30, 0xE8,
+    0x74, 0xC4, 0xFF, 0xFF, 0x84, 0xC0, 0x74, 0x01,
 };
 constexpr std::array<std::uint8_t, 16> CheckItemFlagExpected{
     0x48, 0x89, 0x5C, 0x24, 0x10, 0x57, 0x48, 0x83,
@@ -288,7 +290,7 @@ using GetUnitInventoryFn = void*(__fastcall*)(void*) noexcept;
 using GetCursorItemFn = void*(__fastcall*)(void*) noexcept;
 using GetParentInventoryFn = void*(__fastcall*)(void*) noexcept;
 using GetUnitTypeFn = std::int32_t(__fastcall*)(void*) noexcept;
-using GetInventoryPageFn = std::uint8_t(__fastcall*)(void*) noexcept;
+using GetItemDataFn = void*(__fastcall*)(void*) noexcept;
 using GetItemCodeFn = std::uint32_t(__fastcall*)(void*) noexcept;
 using GetUnitIdFn = std::int32_t(__fastcall*)(void*) noexcept;
 using GetServerUnitFn = void*(__fastcall*)(void*, std::int32_t, std::int32_t) noexcept;
@@ -328,7 +330,7 @@ GetUnitInventoryFn GetUnitInventory{};
 GetCursorItemFn GetCursorItem{};
 GetParentInventoryFn GetParentInventory{};
 GetUnitTypeFn GetUnitType{};
-GetInventoryPageFn GetInventoryPage{};
+GetItemDataFn GetItemData{};
 GetItemCodeFn GetItemCode{};
 GetUnitIdFn GetUnitId{};
 GetServerUnitFn GetServerUnit{};
@@ -368,7 +370,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "mass-id",
     .name = "MassID",
-    .version = "0.2.9",
+    .version = "1.0.0",
     .author = "RuffnecKk",
     .description = "Identifies inventory, Cube and stash items from an Identify Tome.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -398,6 +400,10 @@ bool IsExecutableAddress(const void* address) noexcept {
         || protection == PAGE_EXECUTE_READ
         || protection == PAGE_EXECUTE_READWRITE
         || protection == PAGE_EXECUTE_WRITECOPY;
+}
+
+std::uint8_t GetInventoryPage(void* item) noexcept {
+    return ReadInventoryPageFromItemData(GetItemData(item));
 }
 
 bool LoadConfig() noexcept {
@@ -537,8 +543,8 @@ bool ValidateRuntime() noexcept {
     check(CheckStateRva, CheckStateExpected, "STATES_CheckState");
     check(GetUnitIdRva, GetUnitIdExpected, "UNITS_GetUnitId");
     check(GetUnitInventoryRva, GetUnitInventoryExpected, "UNITS_GetInventory");
+    check(GetItemDataRva, GetItemDataExpected, "UNITS_GetItemData");
     check(GetUnitTypeRva, GetUnitTypeExpected, "UNITS_GetUnitType");
-    check(GetInventoryPageRva, GetInventoryPageExpected, "ITEMS_GetInvPage");
     check(CheckItemFlagRva, CheckItemFlagExpected, "ITEMS_CheckItemFlag");
     check(SetItemFlagRva, SetItemFlagExpected, "ITEMS_SetItemFlag");
     check(GetItemSuffixIdRva, GetItemSuffixIdExpected,
@@ -1155,7 +1161,7 @@ auto Status(
     std::snprintf(
         message,
         sizeof(message),
-        "MassID 0.2.9: enabled=%s; freeIdentification=%s; windowInput=%s; pendingGuid=%u; targetingWorkers=%llu; gestures=%llu; sent=%llu; accepted=%llu; rejected=%llu; identified=%llu; consumed=%llu; tooltip=%s; JSON=%s.",
+        "MassID 1.0.0: enabled=%s; freeIdentification=%s; windowInput=%s; pendingGuid=%u; targetingWorkers=%llu; gestures=%llu; sent=%llu; accepted=%llu; rejected=%llu; identified=%llu; consumed=%llu; tooltip=%s; JSON=%s.",
         Settings.enabled ? "true" : "false",
         Settings.freeIdentification ? "true" : "false",
         GameWindow && OriginalWindowProc ? "installed" : "pending",
@@ -1207,10 +1213,10 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     GetLocalizedStringByKey = At<GetLocalizedStringByKeyFn>(
         GetLocalizedStringByKeyRva);
     GetUnitInventory = At<GetUnitInventoryFn>(GetUnitInventoryRva);
+    GetItemData = At<GetItemDataFn>(GetItemDataRva);
     GetCursorItem = At<GetCursorItemFn>(GetCursorItemRva);
     GetParentInventory = At<GetParentInventoryFn>(GetParentInventoryRva);
     GetUnitType = At<GetUnitTypeFn>(GetUnitTypeRva);
-    GetInventoryPage = At<GetInventoryPageFn>(GetInventoryPageRva);
     GetItemCode = At<GetItemCodeFn>(GetItemCodeRva);
     GetUnitId = At<GetUnitIdFn>(GetUnitIdRva);
     GetServerUnit = At<GetServerUnitFn>(ServerUnitRva);
@@ -1246,7 +1252,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     std::snprintf(
         message,
         sizeof(message),
-        "MassID 0.2.9 %s for D2R 3.2.92777; window capture=%s; direct packed request dispatch=tooltip-frame; server 0x34 routing=corrected; target containers=inventory,cube,personal-stash,shared-stash; shared update actor=state-0xBA proxy; targeting-worker fallback=%s; localized tooltip=%s; freeIdentification=%s (JSON: %s).",
+        "MassID 1.0.0 %s for D2R 3.2.92777; window capture=%s; direct packed request dispatch=tooltip-frame; server 0x34 routing=corrected; target containers=inventory,cube,personal-stash,shared-stash; shared update actor=state-0xBA proxy; targeting-worker fallback=%s; localized tooltip=%s; freeIdentification=%s (JSON: %s).",
         Settings.enabled ? "active" : "disabled",
         Settings.enabled
             ? (windowInputInstalled ? "installed" : "pending")

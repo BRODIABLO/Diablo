@@ -16442,11 +16442,6 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
-                                                                                "name":  "MassID.json",
-                                                                                "path":  "data-BKVince/BKVince.mpq/MassID.json",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
                                                                                 "name":  "modinfo.json",
                                                                                 "path":  "data-BKVince/BKVince.mpq/modinfo.json",
                                                                                 "kind":  "file"

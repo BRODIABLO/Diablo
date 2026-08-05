@@ -306,26 +306,63 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
 
 ## MassID — clic de tome et identification autoritaire
 
-- Le handler générique des slots d’inventaire commence à `0x2C7540`. Son ABI
-  observée est `(widget, eventState) -> void`; il valide d’abord le slot par
-  `0x2C74D0`, résout le propriétaire local, lit l’objet sous le slot par le
-  vtable `+0xC8` et sépare l’état souris `5` de la branche clic droit. Le
-  prologue strict de 32 octets est unique dans le `.text` 92777.
+- Le témoin 0.1.6 confirme que ni `0x228AB0` ni `0x2C7540` ne reçoit l'usage du
+  tome dans le panneau actif : les hooks sont installés, le curseur Identify
+  apparaît, mais aucun compteur client ne bouge. Ces deux surfaces sont retirées
+  de MassID 0.1.7.
+- `0x1AC830` reçoit l'objet utilisé en `RCX`, résout son record ItemsTxt, lit le
+  champ `pSpell` à `+0x94`, collecte les paramètres de l'objet et appelle
+  `0x1B9720` avant de retourner `1`. Cette chaîne est la construction cliente de
+  l'usage ciblé qui arme le curseur Identify. La signature stricte de 32 octets
+  est unique. MassID 0.1.7 l'intercepte avant son effet uniquement pour Shift +
+  `ibk `; la confirmation gameplay reste ouverte.
+
+- D2R 92777 possède deux pipelines parallèles pour les slots d’inventaire. Le
+  premier témoin étudié commence à `0x2C7540`; il lit l’objet par le vtable
+  `+0xC8` à `0x2C7801`, teste Ctrl à `0x2C78CD` puis Shift à `0x2C7CEC`. Le test
+  physique de MassID 0.1.4 prouve cependant que le panneau clavier/souris actif
+  de Vincent ne passe pas par ses actions `0x2AA9F0`/`0x15F660`.
+- Le pipeline réellement utilisé commence à `0x228AB0`, avec la même ABI
+  `(widget, eventState) -> void`. Il rejette l’état souris `5` à `0x228AF0`,
+  résout l’objet exact par le vtable `+0xC8` à `0x228B2D`, teste Ctrl à
+  `0x228BA3`, Shift à `0x228CA4`, puis appelle le comportement vanilla par le
+  vtable `+0xD0` à `0x228CED`. MassID 0.1.5 hooke cette entrée avant toute
+  délégation : un `ibk ` avec Shift, branche droite et curseur vide envoie la
+  requête privée puis retourne, donc le curseur Identify n’est pas armé.
+- `0x2AA9F0` accepte `(widget, item) -> void`; son unique caller direct est le
+  chemin Shift ci-dessus. `0x15F660` accepte
+  `(item, owner, page, flag, state) -> void` et possède trois callers, dont le
+  même chemin Shift. Leurs signatures strictes de 32 octets sont uniques.
+  MassID 0.1.4 les hookait aux retours `0x2C7D1F/0x2C7D59`; le témoin joueur a
+  invalidé ce choix pour le panneau actif et 0.1.5 laisse désormais ces deux
+  fonctions intactes.
 - Le client Cain à `0x1141AB` appelle `0xEC820` avec l’opcode `0x34`.
   `0xEC820` sérialise exactement un opcode et cinq `uint32`, soit 21 octets,
   avant la queue sortante. Le paquet classique D2MOO de cinq octets n’est donc
   pas transposé au build 92777.
-- Le seul callback serveur 92777 correspondant à cette taille et à ce flux
-  commence à `0x4AE280`. Il possède l’ABI
+- Le callback serveur 92777 de l’opcode `0x34` commence à `0x4C6C90`. Il
+  possède l’ABI
   `(game, player, packet, packetSize) -> int32`, exige `packetSize == 0x15`,
   désérialise les cinq champs et rejoint le traitement serveur Cain. Le chemin
   privé MassID peut ainsi être multiplexé avant le flux vanilla sans accrocher
   `D2GAME_PACKETCALLBACK_EntityAction 0x4B0470`, déjà possédé par Vendor Stock
   Refresh dans `plugin-items.dll`.
-- `0x46EA70` accepte `(game, item, player)`, pose `IFLAG_IDENTIFIED`, exécute le
-  chemin d’item stocké et rafraîchit l’inventaire. Sa structure correspond au
-  helper sémantique D2MOO, mais sa confiance reste moyenne jusqu’au témoin
-  gameplay MassID.
+- Le témoin MassID 0.2.3 a prouvé que la queue cliente acceptait byte-exactement
+  la requête privée `0x34`, tandis que le hook serveur à `0x4AE280` ne recevait
+  rien. La table autoritaire commence à `0x1D2A790`, ancrée par le transport
+  RemoteStash fonctionnel (`0x18 -> 0x4BFF30` à `0x1D2A850`). Elle place
+  `0x4AE280` au slot `0x2E` et le vrai callback `0x34` à `0x4C6C90`, stocké à
+  `0x1D2A930`. MassID 0.2.4 corrige ce mauvais RVA.
+- `D2GAME_ITEMS_Identify 0x46E8C0` accepte `(game, player, item, flag)`. Le
+  caller Cain à `0x53C8F5` passe `1`; la routine pose `IFLAG_IDENTIFIED`, met à
+  jour les statlists si nécessaire, envoie `ITEMS_SendItemUpdate`, rafraîchit
+  l’inventaire puis appelle `SUNIT_AttachSound(player, 6, player)`. Sa signature
+  de 32 octets est unique dans `.text`.
+- `0x46EA70` accepte `(game, item, player)`, pose le flag et exécute seulement le
+  sous-chemin de statlists. Son unique caller à `0x4FD79D` l’utilise pendant une
+  création d’objet avant d’autres étapes de placement. Il ne fournit pas seul
+  l’update client et le son nécessaires à MassID; son emploi dans 0.1.0/0.1.1
+  expliquait le retour joueur « rien ne se passe ».
 - `SynchronizeItemAndBoundSkillQuantity 0x46F090` reçoit
   `(game, player, book, delta)`. Le caller tome à `0x5817BD` passe `-1` en `r9d`
   puis le tome en `r8`; la routine lit `STAT_QUANTITY`, calcule la nouvelle
@@ -334,10 +371,63 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
 - L’architecture retenue n’accroche ni le callback EntityAction partagé, ni
   `D2GAME_HandleUseItemPacket 0x4F40C0` possédé par Transmogrify, ni
   `CLIENT_QueueOutgoingPacket 0xEE2A0` déjà utilisé par EquippedItemToCube.
-- La portée globale a prouvé que `plugin-items.dll` peut accrocher auparavant
-  `UI_TOOLTIP_ResolveHoveredUnit 0x2A7810`. MassID compose avec cet owner sans
-  écrire ce RVA et valide la plage interne unique `0x2A7820` (16 octets,
-  une occurrence `.text`) afin de rester strict sans refuser le chaînage.
+- Le client 0.1.5 n’appelle pas `UI_TOOLTIP_ResolveHoveredUnit 0x2A7810`, déjà
+  partageable avec `plugin-items.dll`; il réutilise seulement la résolution
+  virtuelle `+0xC8` déjà effectuée par `0x228AB0`. Propriété et page restent
+  validées par le callback serveur autoritaire.
+- Le témoin 0.1.5 invalide l'ABI précédemment attribuée au second argument des
+  handlers `0x228AB0` et `0x2C7540`. Il s'agit d'un état d'événement transmis
+  par valeur : chacun le sauvegarde sur sa pile et passe l'adresse de cette
+  copie à la méthode virtuelle `widget+0xC8`. Le passage direct de cette valeur
+  comme pointeur empêchait la résolution du tome et laissait vanilla armer le
+  curseur Identify. MassID 0.1.6 reproduit la copie locale et couvre les deux
+  handlers à leur entrée; la validation gameplay demeure ouverte.
+- `Ctrl + Left Click to Drop/Move` ne fait pas partie du buffer produit par
+  `ITEMS_BuildItemTooltip 0x2BD480`. Drop vient de
+  `InventoryItemTooltipAppenderDrop`, aux appels `0x2279BD` et `0x2C552D`.
+  Lorsque le Cube est ouvert, vanilla sélectionne
+  `InventoryItemTooltipAppenderMove`, résolu à `0x2278DC`, `0x227936`,
+  `0x2C5241`, `0x2C528D`, `0x2C53AB` et `0x2CA2E0`. Les pipelines legacy et
+  alternatif conservent l’item en `r13`; les appels modernes Move le conservent
+  en `r12`, tandis que Drop moderne le garde dans `[rbp-0x78]`. MassID 0.2.5
+  redirige seulement ces huit appels de cinq octets vers trois relais proches.
+  Le wrapper retourne le texte natif suivi du hint Mass ID sans balise de
+  couleur : les deux lignes partagent donc exactement le style gris de
+  l’appender actif. La localisation globale et `0x2BD480` restent libres pour
+  le PluginPack.
+- `LOCALIZATION_GetStringByKey 0x5F4B90` résout aussi `ItemStats1h`; son
+  fingerprint sélectionne la même famille de treize locales intégrées
+  qu’AdvancedItemTooltips.
+- La page item `4` ne suffit pas à découvrir le shared stash depuis
+  l’inventaire du joueur principal. Le témoin 0.2.5 identifie le coffre
+  personnel mais retourne zéro devant les onglets partagés. Les handlers
+  shared-stash `0x4C5570` et `0x4C6480` montrent que ces items appartiennent à
+  des `UNIT_PLAYER` auxiliaires : ils résolvent le proxy par GUID, exigent
+  l’état `0xBA` avec `STATES_CheckState 0x3351B0`, lisent son inventaire et comparent
+  `INVENTORY_GetOwnerId 0x388BA0` au GUID du joueur principal.
+- La liste auxiliaire est accessible sans nouveau hook par
+  `INVENTORY_GetFirstCorpse 0x388E00` (lecture `inventory+0x68`),
+  `INVENTORY_GetNextCorpse 0x38CD70` (lecture `record+0x10`) et
+  `INVENTORY_GetUnitGUIDFromCorpse 0x2EF880` (premier dword du record). Le
+  caller natif `0x425010` prouve la chaîne record GUID vers
+  `SUNIT_GetServerUnit(game, UNIT_PLAYER, guid)`. Le témoin 0.2.6 a retourné
+  `sharedContainers=0` parce que le marqueur avait été interprété à tort comme
+  une statistique. MassID 0.2.7 reproduit l’appel natif à deux arguments
+  `STATES_CheckState(proxy, 0xBA)`, puis impose le propriétaire natif avant toute
+  identification; les hooks RemoteStash sur les deux handlers restent intacts.
+- Le témoin 0.2.7 a validé cette découverte avec `sharedContainers=1001` et
+  `sharedStash=3`, mais a révélé un second contrat : l’acteur passé à
+  `ITEMS_SendItemUpdate 0x535F60` détermine le conteneur client. En passant le
+  joueur principal pour un item appartenant à un proxy, l’identification était
+  persistée dans le `.d2i`, tandis que le client créait un fantôme gelé dans le
+  coffre personnel. Les GUID partagés sont demeurés absents du `.d2s`.
+- `ITEMS_SendItemUpdate` reconnaît précisément un acteur `UNIT_PLAYER` portant
+  l’état `0xBA` à `0x53623C`, vérifie son client propriétaire et appelle le
+  sérialiseur `0x536410`. Le retrait shared natif passe le proxy à l’update de
+  suppression `0x4C690C`, puis le joueur principal à l’update d’ajout
+  `0x4C694B`. MassID 0.2.8 passe donc chaque proxy validé comme acteur de
+  `D2GAME_ITEMS_Identify` pour ses propres items; ce routage attend encore son
+  témoin gameplay avant promotion comme preuve fonctionnelle.
 
 ## CharmZone — zone de charmes autoritaire et rendu coopératif
 

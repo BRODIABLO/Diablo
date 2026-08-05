@@ -1,4 +1,4 @@
-# MassID 0.2.9
+# MassID 1.0.0
 
 MassID identifies eligible items in the player's inventory, Horadric Cube,
 personal stash and shared stash when the player Shift-right-clicks a Tome of
@@ -37,6 +37,11 @@ The private request is multiplexed through the native 21-byte Cain identify
 callback. Normal Cain packets are forwarded unchanged. MassID does not hook the
 EntityAction callback owned by Vendor Stock Refresh, the use-item handler owned
 by Transmogrify, or the generic outgoing queue used by EquippedItemToCube.
+
+Version 1.0.0 reads the inventory page from the verified native item-data
+field instead of calling the `ITEMS_GetInvPage` entry owned by plugins such as
+Cube Output Quantity. This preserves strict build validation while allowing
+both plugins to load in either scope.
 
 Version 0.2.9 moves configuration discovery to D2RLoader's standard `config`
 directories and supports both global and mod-local installations. An active

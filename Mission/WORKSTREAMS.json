@@ -428,13 +428,10 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/mass-id-3.2.md",
-      "nextGate": "Observe empty, partial, and sufficient Tome behavior in paid and free modes, then validate save/reload and solo-host-joiner behavior before the future PluginPack merge.",
+      "nextGate": "Obtain the Korean reporter confirmation that MassID 1.0.0 loads and completes a paid Mass ID action while Cube Output Quantity 1.0.2 is active; local paid coexistence passed on the identical 0.2.10 code path, while free mode, save/reload and host/joiner remain explicit. The unrelated Repeatable Services startup failure remains outside this matrix.",
       "include": [
         "Mission/mass-id-3.2.md",
-        "addons/MassID/**",
-        "data-BKVince/BKVince.mpq/MassID.json",
-        "data-BKVince/d2rloader/plugins/MassID-src/**",
-        "data-BKVince/d2rloader/plugins/MassID.dll*"
+        "addons/MassID/**"
       ]
     },
     {

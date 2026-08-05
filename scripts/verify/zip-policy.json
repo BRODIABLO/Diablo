@@ -77,9 +77,11 @@
     },
     "addons/MassID/MassID.zip": {
       "kind": "plugin",
+      "allowReadme": true,
       "entries": [
         "MassID.dll",
-        "MassID.json"
+        "MassID.json",
+        "README.md"
       ]
     },
     "addons/QtyDisplayIssue/QtyDisplayIssue.zip": {

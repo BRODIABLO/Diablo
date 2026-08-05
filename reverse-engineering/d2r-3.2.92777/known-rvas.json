@@ -1865,7 +1865,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/mass-id-3.2.md",
-      "notes": "Generic inventory-slot click handler with observed ABI (widget, eventState) -> void. It validates the slot at 0x2C756B, resolves the local owner and cursor item, obtains the clicked unit through vtable slot +0xC8, and separates mouse state 5 from the right-click branch. MassID filters only Shift plus the non-5 branch on a locally owned ibk item and delegates every other click."
+      "notes": "Modern inventory-slot click handler with ABI (widget, eventStateValue) -> void. It stores the second argument by value and passes the address of that stack copy to widget vtable +0xC8 at 0x2C7801, validates the slot at 0x2C756B, separates mouse state 5 from the right branch at 0x2C7614, tests Ctrl at 0x2C78CD and Shift at 0x2C7CEC, then calls 0x2AA9F0 or 0x15F660. MassID 0.1.6 hooks this entry together with 0x228AB0 so panel selection is no longer inferred from an indirect witness. Its strict 32-byte entry signature is unique in build 92777."
     },
     {
       "rva": "0x46EA70",
@@ -1873,15 +1873,15 @@
       "kind": "function",
       "confidence": "medium",
       "source": "Mission/mass-id-3.2.md",
-      "notes": "Observed ABI (game, item, player) -> void. The function sets IFLAG_IDENTIFIED through ITEMS_SetItemFlag, performs the stored-item attach/stat-list path when applicable and refreshes the player inventory. Its control flow is the 92777 structural counterpart of the semantic D2MOO identify helper, but MassID gameplay validation remains required before raising confidence to high."
+      "notes": "Observed ABI (game, item, player) -> void. The function sets IFLAG_IDENTIFIED and performs the stored-item stat-list path when applicable, but does not itself send the complete item update or attach the vanilla identify sound. Its only direct caller at 0x4FD79D uses it during item creation before later placement and notification steps. MassID 0.1.0/0.1.1 used this partial helper and replaced it with the complete D2GAME_ITEMS_Identify path at 0x46E8C0 in 0.1.2."
     },
     {
       "rva": "0x4AE280",
-      "name": "D2GAME_PACKETCALLBACK_Rcv0x34_IdentifyItemsWithNpc",
+      "name": "D2GAME_PACKETCALLBACK_Rcv0x2E",
       "kind": "function",
       "confidence": "high",
       "source": "Mission/mass-id-3.2.md",
-      "notes": "Authoritative server callback with ABI (game, player, packet, packetSize) -> int32. It requires exactly 0x15 bytes, deserializes the same five-field payload produced by CLIENT_SendTwentyOneByteCommandPacket for native opcode 0x34, and forwards the validated Cain transaction into the server action flow. MassID recognizes two private payload markers before this vanilla path and delegates every normal Cain request unchanged."
+      "notes": "Authoritative server callback in dispatch-table slot 0x2E with ABI (game, player, packet, packetSize) -> int32 and an exact 0x15-byte size gate. It was incorrectly attributed to opcode 0x34 during MassID 0.1.0-0.2.3. The dispatch-table base is proven as 0x1D2A790 by RemoteStash's functional opcode 0x18 mapping to 0x4BFF30; 0x4AE280 is stored at 0x1D2A900, therefore index 0x2E."
     },
     {
       "rva": "0x15BB80",
@@ -2066,6 +2066,166 @@
       "confidence": "high",
       "source": "Mission/four-character-item-codes-3.2.md",
       "notes": "Unique 26-byte code-padding block inside HDItems_LoadBaseItemAssetsJson. Vanilla reads key byte 2, pads it when absent, then unconditionally stores ASCII space as byte 3 (0F B6 46 02 84 C0 75 09 66 C7 44 24 26 20 20 EB 09 88 44 24 26 C6 44 24 27 20). The Four Character Item Codes memory patch replaces the block in place with two symmetric byte reads and NUL-to-space fallbacks. The replacement is exactly 26 bytes, reaches the original 0x663A19 continuation without a relay, and preserves one-, two-, and three-character behavior."
+    },
+    {
+      "rva": "0x1AC830",
+      "name": "CLIENT_ItemUseTargetingDispatcher",
+      "kind": "function",
+      "confidence": "medium",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Receives the used item in RCX, resolves its ItemsTxt record, reads pSpell at +0x94, collects item parameters and calls 0x1B9720 before returning 1. Its strict 32-byte entry signature is unique in build 92777. MassID 0.1.7 hooks it before the targeted action is built; confidence remains medium until the gameplay witness confirms capture and cursor suppression."
+    },
+    {
+      "rva": "0x2EF880",
+      "name": "INVENTORY_GetUnitGUIDFromCorpse",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Returns the first dword of a corpse-list record, which is the auxiliary UNIT_PLAYER GUID. Native D2R caller 0x425010 combines it with INVENTORY_GetFirstCorpse/GetNextCorpse and SUNIT_GetServerUnit(game, UNIT_PLAYER, guid). MassID 0.2.6 uses the same ABI before applying the shared-stash marker and inventory-owner filters."
+    },
+    {
+      "rva": "0x3351B0",
+      "name": "STATES_CheckState",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Checks whether a unit has a state id with observed x64 ABI (unit, stateId) -> int32. Both native shared-stash handlers pass state 0xBA before accepting an auxiliary player as a shared-stash proxy. Caller 0x33A231 independently iterates state ids and calls this same predicate. Its strict 32-byte entry begins 48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 8B DA."
+    },
+    {
+      "rva": "0x388BA0",
+      "name": "INVENTORY_GetOwnerId",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Validates an inventory and returns its owner GUID from +0x48. Both native shared-stash transfer handlers compare this value to the requesting player's UnitId; MassID 0.2.6 repeats that ownership proof before traversing a shared proxy inventory."
+    },
+    {
+      "rva": "0x388E00",
+      "name": "INVENTORY_GetFirstCorpse",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Returns the first auxiliary-unit record at inventory+0x68. D2R reuses this native corpse registry for shared-stash proxy players; MassID 0.2.6 only reads the list and installs no hook here."
+    },
+    {
+      "rva": "0x38CD70",
+      "name": "INVENTORY_GetNextCorpse",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Returns the next auxiliary-unit record from record+0x10. Native caller 0x425010 proves the linked-list ABI together with INVENTORY_GetFirstCorpse and INVENTORY_GetUnitGUIDFromCorpse."
+    },
+    {
+      "rva": "0x15F660",
+      "name": "UI_ShiftRightClickPlaceAction",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Native item action with observed ABI (item, owner, page, flag, state) -> void and three direct callers. UI_InventorySlotWidget_HandleClick calls it at 0x2C7D54 only after the mouse-state right branch and native VK_SHIFT test. The MassID 0.1.4 witness proved that this modern-panel action is not reached by the player's active legacy inventory panel, so 0.1.5 leaves it intact. Its strict 32-byte entry signature is unique in build 92777."
+    },
+    {
+      "rva": "0x2AA9F0",
+      "name": "UI_ShiftRightClickQuickMoveAction",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Native item action with observed ABI (widget, item) -> void. Its only direct caller is UI_InventorySlotWidget_HandleClick at 0x2C7D1A after the mouse-state right branch and native VK_SHIFT test. The MassID 0.1.4 witness proved that this modern-panel action is not reached by the player's active legacy inventory panel, so 0.1.5 leaves it intact. Its strict 32-byte entry signature is unique in build 92777."
+    },
+    {
+      "rva": "0x2278DC",
+      "name": "UI_LegacyInventoryTooltipAppenderMoveCallA",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Exact E8 AF D2 3C 00 call to LOCALIZATION_GetStringByKey for InventoryItemTooltipAppenderMove inside the legacy inventory tooltip appender. The hovered item is stable in R13. MassID 0.2.5 redirects only this five-byte call through the same R13 near relay as the legacy Drop appender."
+    },
+    {
+      "rva": "0x227936",
+      "name": "UI_LegacyInventoryTooltipAppenderMoveCallB",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Exact E8 55 D2 3C 00 second call to LOCALIZATION_GetStringByKey for InventoryItemTooltipAppenderMove inside the legacy inventory tooltip appender. The hovered item remains stable in R13. MassID 0.2.5 redirects only this five-byte call through its R13 near relay."
+    },
+    {
+      "rva": "0x2279BD",
+      "name": "UI_LegacyInventoryTooltipAppenderDropCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Exact E8 CE D1 3C 00 call to LOCALIZATION_GetStringByKey for InventoryItemTooltipAppenderDrop inside the legacy inventory tooltip appender. Its outer function receives the hovered item in R8 and preserves it in R13. MassID 0.1.5 redirects only this five-byte call through a near relay that passes R13 as the wrapper's second argument."
+    },
+    {
+      "rva": "0x228AB0",
+      "name": "UI_LegacyInventorySlotWidget_HandleClick",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Keyboard/mouse inventory handler with ABI (widget, eventStateValue) -> void. It stores the second argument by value and passes the address of that stack copy to widget vtable +0xC8 at 0x228B2D, rejects mouse state 5 at 0x228AF0, tests Ctrl at 0x228BA3 and Shift at 0x228CA4, then dispatches the vanilla right-click through vtable +0xD0 at 0x228CED. The MassID 0.1.5 gameplay witness invalidated treating eventStateValue itself as a pointer; 0.1.6 reproduces the local-copy ABI. Its strict 32-byte entry signature is unique in build 92777."
+    },
+    {
+      "rva": "0x2C5241",
+      "name": "UI_ModernInventoryTooltipAppenderMoveCallA",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Exact E8 4A F9 32 00 call to LOCALIZATION_GetStringByKey for InventoryItemTooltipAppenderMove inside the modern inventory tooltip appender. The hovered item is stable in R12. MassID 0.2.5 redirects only this five-byte call through a near relay that passes R12 as the wrapper's second argument."
+    },
+    {
+      "rva": "0x2C528D",
+      "name": "UI_ModernInventoryTooltipAppenderMoveCallB",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Exact E8 FE F8 32 00 second call to LOCALIZATION_GetStringByKey for InventoryItemTooltipAppenderMove inside the modern inventory tooltip appender. The hovered item remains stable in R12. MassID 0.2.5 redirects only this five-byte call through its R12 near relay."
+    },
+    {
+      "rva": "0x2C53AB",
+      "name": "UI_ModernInventoryTooltipAppenderMoveCallC",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Exact E8 E0 F7 32 00 third call to LOCALIZATION_GetStringByKey for InventoryItemTooltipAppenderMove inside the modern inventory tooltip appender. The hovered item remains stable in R12. MassID 0.2.5 redirects only this five-byte call through its R12 near relay."
+    },
+    {
+      "rva": "0x2C552D",
+      "name": "UI_ModernInventoryTooltipAppenderDropCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Exact E8 5E F6 32 00 call to LOCALIZATION_GetStringByKey for InventoryItemTooltipAppenderDrop inside the modern inventory tooltip appender. The hovered item is stable at [RBP-0x78]. MassID 0.1.5 redirects only this five-byte call through a near relay, complementing the legacy call at 0x2279BD without owning the global localization function or ITEMS_BuildItemTooltip."
+    },
+    {
+      "rva": "0x2CA2E0",
+      "name": "UI_AlternateInventoryTooltipAppenderMoveCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Exact E8 AB A8 32 00 call to LOCALIZATION_GetStringByKey for InventoryItemTooltipAppenderMove inside the alternate inventory tooltip appender. The hovered item is stable in R13. MassID 0.2.5 redirects only this five-byte call through its R13 near relay."
+    },
+    {
+      "rva": "0x4C5570",
+      "name": "D2GAME_SHAREDSTASH_DepositHandler",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Native shared-stash deposit handler. It resolves an auxiliary UNIT_PLAYER from the packet GUID, requires state 0xBA through STATES_CheckState, validates that auxiliary inventory's owner GUID against the requesting player, and confirms the proxy in the player's corpse registry. RemoteStash owns the inline hook; MassID does not hook this function."
+    },
+    {
+      "rva": "0x4C6480",
+      "name": "D2GAME_SHAREDSTASH_WithdrawalHandler",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Native shared-stash withdrawal handler with the same auxiliary UNIT_PLAYER, state 0xBA, inventory-owner and corpse-registry validation chain as the deposit path. Its ITEMS_PlaceItemForPlayer call uses the auxiliary unit as the shared inventory holder. RemoteStash owns the inline hook; MassID only reuses the proven accessors."
+    },
+    {
+      "rva": "0x4C6C90",
+      "name": "D2GAME_PACKETCALLBACK_Rcv0x34_IdentifyItemsWithNpc",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md",
+      "notes": "Authoritative server callback in dispatch-table slot 0x34 with ABI (game, player, packet, packetSize) -> int32. It requires exactly 0x15 bytes and is stored at 0x1D2A930, which maps to opcode 0x34 from the table base 0x1D2A790. MassID 0.2.4 recognizes two private payload markers before this vanilla path and delegates every normal Cain request unchanged."
     }
   ]
 }

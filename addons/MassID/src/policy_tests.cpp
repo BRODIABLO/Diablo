@@ -1,5 +1,6 @@
 #include "mass_id_policy.hpp"
 
+#include <array>
 #include <cassert>
 #include <limits>
 
@@ -43,6 +44,12 @@ int main() {
     assert(IsMassIdentifyTargetPage(CubePage));
     assert(IsMassIdentifyTargetPage(StashPage));
     assert(!IsMassIdentifyTargetPage(2));
+
+    std::array<std::uint8_t, ItemDataInventoryPageOffset + 1> itemData{};
+    itemData[ItemDataInventoryPageOffset] = StashPage;
+    assert(ReadInventoryPageFromItemData(itemData.data()) == StashPage);
+    assert(ReadInventoryPageFromItemData(nullptr) == InvalidInventoryPage);
+
     assert(ShouldCaptureGesture(
         true, true, true, true, 4, IdentifyTomeCode));
     assert(!ShouldCaptureGesture(
