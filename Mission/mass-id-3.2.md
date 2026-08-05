@@ -129,8 +129,9 @@ contrat :
   eezstreet sans rejet ni échec.
 - [ ] Compatibilité fonctionnelle : souris/manette inchangées, solo,
   hôte/joiner.
-- [x] ZIP public strict limité à `MassID.dll` et `MassID.json`, entrées
-  inspectées et hash calculé.
+- [x] ZIP public limité à `MassID.dll`, `MassID.json` et `README.md` selon
+  l’allowlist explicitement confirmée par Vincent; entrées inspectées et hash
+  calculé.
 - [ ] Après validation intégrée future, supprimer seulement le binaire et le
   JSON autonomes; conserver les sources comme oracle jusqu’à équivalence.
 
@@ -480,10 +481,12 @@ contrat :
 - Release x64 et CTest : `1/1` test vert. La DLL 0.2.9 est x64, porte les trois
   exports D2RLoader attendus et a pour SHA-256
   `038FC28FB65965C4637D24FB6850F1C34CBD6E2A3256673A9ADB1AD0CCDDEA6B`.
-- Le ZIP public contient exactement `MassID.dll` et `MassID.json` à sa racine;
-  SHA-256
-  `C6B11E77D3A7FEFDEF200BB97B9FF7A8B6D8462FD712166A7EFFEBAD24DC4CEC`.
-  README, sources, symboles, logs et DLL tierces sont exclus.
+- À la demande explicite de Vincent, le ZIP public contient exactement
+  `MassID.dll`, `MassID.json` et `README.md` à sa racine; cette inclusion du
+  README constitue l’exception confirmée à l’archive d’incubation minimale.
+  SHA-256 :
+  `34FBA14176EBDAB379474CBAF789E158FA572C7B3C1B3DBD50A1215C88C5AB46`.
+  Sources, symboles, logs et DLL tierces restent exclus.
 - Le runtime global reçoit la DLL byte-exacte sous
   `<D2R>/d2rloader/plugins/` et le JSON byte-exact sous
   `<D2R>/d2rloader/config/`. Les deux artefacts mod-locaux sont retirés du profil
