@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-05T14:55:05.8609445+00:00",
+    "generatedAt":  "2026-08-05T15:29:17.6859382+00:00",
     "root":  {
                  "name":  "snapshot",
                  "path":  ".",
@@ -944,6 +944,18 @@
                                                                                                      "kind":  "directory",
                                                                                                      "children":  [
                                                                                                                       {
+                                                                                                                          "name":  "config",
+                                                                                                                          "path":  "addons/RemoteStash/package/d2rloader/config",
+                                                                                                                          "kind":  "directory",
+                                                                                                                          "children":  [
+                                                                                                                                           {
+                                                                                                                                               "name":  "RemoteStash.json",
+                                                                                                                                               "path":  "addons/RemoteStash/package/d2rloader/config/RemoteStash.json",
+                                                                                                                                               "kind":  "file"
+                                                                                                                                           }
+                                                                                                                                       ]
+                                                                                                                      },
+                                                                                                                      {
                                                                                                                           "name":  "plugins",
                                                                                                                           "path":  "addons/RemoteStash/package/d2rloader/plugins",
                                                                                                                           "kind":  "directory",
@@ -1051,6 +1063,16 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "hotkey_policy.hpp",
+                                                                                                     "path":  "addons/RemoteStash/src/hotkey_policy.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "hotkey_policy_tests.cpp",
+                                                                                                     "path":  "addons/RemoteStash/src/hotkey_policy_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "layout_owned_button.hpp",
                                                                                                      "path":  "addons/RemoteStash/src/layout_owned_button.hpp",
                                                                                                      "kind":  "file"
@@ -1073,8 +1095,8 @@
                                                                                              ]
                                                                             },
                                                                             {
-                                                                                "name":  "RemoteStash-0.2.26-InterMod.zip",
-                                                                                "path":  "addons/RemoteStash/RemoteStash-0.2.26-InterMod.zip",
+                                                                                "name":  "RemoteStash-0.3.6.zip",
+                                                                                "path":  "addons/RemoteStash/RemoteStash-0.3.6.zip",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]

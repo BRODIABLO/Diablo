@@ -2,7 +2,10 @@
   "type": "ButtonWidget",
   "name": "remote_stash",
   "fields": {
-    "rect": { "x": 95, "y": 1656 },
+    "rect": {
+      "x": "SET_X_FOR_YOUR_LAYOUT",
+      "y": "SET_Y_FOR_YOUR_LAYOUT"
+    },
     "filename": "PANEL\\Inventory\\RemoteStashButton",
     "hoveredFrame": 3,
     "tooltipString": "@OpenCurrentStashLegend",

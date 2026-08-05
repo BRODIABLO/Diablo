@@ -1,24 +1,13 @@
 # RemoteStash — D2R 3.2.92777
 
-Dernière mise à jour : 29 juillet 2026
+Dernière mise à jour : 5 août 2026
 
-Statut : prototype technique autonome `RemoteStash 0.2.24` compilé, déployé et
-validé en jeu pour BKVince. Vincent confirme que le bouton desktop ouvre
-désormais le panneau stash natif. Le clic passe par le broker partagé du
-dispatcher UI, détenu soit par l'autonome Bulk Skill Point Allocation, soit par
-`plugin-skills.dll`, sans conflit de hook. Un sprite coffre personnalisé à
-quatre états est maintenant déployé
-en `176 × 112` avec un placement dynamique qui préserve intégralement le bouton
-d’or. Vincent confirme son rendu, son hit-test, l’ouverture au clic et le tooltip
-natif `YOUR PRIVATE STASH` résolu par la clé `remoteStashTooltip`. Le bouton d’or
-reste à la position imposée par le layout BKVince et n’est jamais déplacé par
-RemoteStash. La session distante autoritaire permet désormais le dépôt, le
-retrait et le quick move hors ville dans les coffres personnel et partagé;
-la persistance du shared stash est confirmée après Save & Exit. Le 28 juillet
-2026, un profil isolé
-`RemoteStashRetail` sans BKVince valide aussi le bouton sur un inventaire
-desktop retail-like `10 × 4` : placement, sprite, hit-test, tooltip retail
-`OPEN CURRENT STASH` et ouverture sans dialogue `Drop Gold` sont confirmés.
+Statut : release publique autonome `RemoteStash 0.3.6` validée en jeu. Le hotkey
+JSON optionnel est désactivé dans la configuration publique et utilise `S` par
+défaut. Lorsqu'il est activé avec `consume=true`, il ouvre et ferme le stash sans
+déclencher l'action `S` du jeu. Le comportement stash hérité de la 0.2.31 demeure
+stable, le bouton reste entièrement défini par le layout desktop du mod hôte et
+le plugin demeure autonome, avec coexistence optionnelle du PluginPack.
 
 ## Décisions confirmées
 
@@ -29,12 +18,17 @@ desktop retail-like `10 × 4` : placement, sprite, hit-test, tooltip retail
   compilation de RemoteStash en parallèle de la mission active. Le prototype
   0.1.0 est maintenant déployable, mais aucun contournement du gate officiel de
   connexion ni aucune prétention de validation gameplay ne sont autorisés.
-- La catégorie PluginPack future est `misc`, avec `plugin-misc.dll` comme DLL
-  propriétaire et `misc.remoteStash` comme clé prévue dans l’unique
-  `D2RPlugins.json`.
-- Pendant l’incubation, la fonctionnalité restera dans une DLL autonome hybride
-  `RemoteStash.dll`, attribuée exactement à `RuffnecKk`, sans modifier, lier ni
-  redistribuer une DLL d’eezstreet.
+- Vincent confirme la version publique comme plugin autonome permanent : aucun
+  merge futur, aucune catégorie, aucune DLL propriétaire et aucune clé
+  `D2RPlugins.json` ne sont prévus.
+- `RemoteStash.dll` reste hybride, attribuée exactement à `RuffnecKk`, sans
+  modifier, lier ni redistribuer une DLL d’eezstreet. Elle ne dépend pas du
+  PluginPack; la coexistence avec ses cinq DLL reste seulement une compatibilité
+  optionnelle.
+- `RemoteStash.json` configure uniquement le hotkey optionnel. Son absence ou
+  `enabled=false` laisse le bouton pleinement fonctionnel et ne démarre aucun
+  worker d'entrée. Le mod hôte conserve la propriété exclusive du widget, de ses
+  coordonnées, de son sprite et de son tooltip dans son propre layout.
 - La première phase a prouvé le chemin natif d’ouverture du stash et sa
   reproduction depuis un autre contrôle UI. Le chantier couvre maintenant le
   sprite, le placement final et l’adaptation aux layouts personnalisés.
@@ -43,10 +37,10 @@ desktop retail-like `10 × 4` : placement, sprite, hit-test, tooltip retail
   à BKVince : il doit lire le layout runtime actif, se placer relativement à
   des enfants nommés du `PlayerInventoryPanel`, vérifier les collisions et se
   masquer si aucune géométrie sûre n’est disponible.
-- Le 27 juillet 2026, Vincent confirme le jalon visuel et fonctionnel desktop
-  complet dans BKVince. La prochaine évolution demandée est un hotkey
-  configurable qui appelle le même chemin RemoteStash sans dupliquer la logique
-  d’ouverture; son implantation reste à planifier séparément.
+- Le 4 août 2026, Vincent autorise l'implantation d'un hotkey configurable qui
+  appelle le même chemin RemoteStash sans dupliquer la logique d'ouverture. La
+  configuration demeure propre à la DLL autonome et ne crée aucune dépendance
+  envers `D2RPlugins.json` ou le PluginPack.
 
 ## Résultat joueur attendu
 
@@ -57,13 +51,13 @@ objets lui-même.
 
 ## Incubation compatible PluginPack
 
-- Description anglaise prévue : `Opens the player stash from the inventory screen.`
-- Utiliser un JSON autonome compatible PluginPack seulement lorsqu’une option
-  réelle est démontrée; aucun TOML ne sera créé.
+- Description anglaise : `Opens the player stash remotely from a button or configurable hotkey.`
+- Le JSON autonome est maintenant justifié par l'option réelle de hotkey; aucun
+  TOML n'est créé.
 - Rechercher la configuration d’abord dans le mod actif puis dans le dossier
   global du jeu; une configuration présente mais invalide devra être refusée.
-- Après un merge futur, intégrer la fonctionnalité à `plugin-misc.dll`, déplacer
-  ses options sous `misc.remoteStash`, puis supprimer la DLL et le JSON autonomes.
+- Aucun merge futur n'est prévu : `RemoteStash.dll` et `RemoteStash.json` restent
+  autonomes. La coexistence avec le PluginPack ne constitue pas une dépendance.
 
 ## Audit initial
 
@@ -574,3 +568,185 @@ items, or et persistance de RemoteStash.
   après le changement d’interception 0.2.26, un témoin manuel doit encore
   reconfirmer le bouton, le dépôt/retrait, le quick move et la persistance avec
   les trois fonctions PluginPack activées simultanément.
+
+## Correction de la variante publique — 0.2.28 — 3 août 2026
+
+- Le témoin BKVince a révélé une régression du routage UI 0.2.26 : le bouton
+  public restait visible, mais ouvrait la fenêtre vanilla `Drop Gold`. Le relais
+  étroit et le hook `UI_ButtonWidget_OnClick` essayé en 0.2.27 ne consommaient
+  pas le message du widget réellement fourni par ce layout.
+- La 0.2.28 restaure l’interception éprouvée de `UI_DispatchMessage 0x843D90`
+  lorsque RemoteStash charge en premier. Les exports de broker restent présents
+  afin que `plugin-skills.dll` puisse ensuite s’enregistrer auprès de
+  RemoteStash; les relais composables de portée et de quick move sont conservés.
+- La DLL publique, et non la variante privée BKVince, a été installée dans le
+  profil mod-local BKVince. Le chargement atteint
+  `scanned=13 active=12 disabled=1 rejected=0 failed=0`; Vincent confirme que
+  RemoteStash fonctionne sur toutes les tabs du layout BKVince.
+- Le build, le package et la DLL publique testée dans le runtime sont
+  byte-identiques : version `0.2.28`, taille `38912`, SHA-256
+  `002B46835E55D8DD25CF1E589322F2354494934DC3527FEC2CB06A6DFBFF07BC`.
+  Les fichiers privés BKVince ont été restaurés à leur état gouverné.
+- Le fragment public ne fournit plus les coordonnées BKVince `95,1656`.
+  `SET_X_FOR_YOUR_LAYOUT` et `SET_Y_FOR_YOUR_LAYOUT` rendent le fragment
+  volontairement inutilisable tant que le moddeur n’a pas fourni les
+  coordonnées entières propres à son layout. Le sprite par défaut demeure
+  facultatif; la géométrie ne possède aucune valeur universelle. Le README
+  donne séparément `93,1347` comme référence desktop vanilla 3.2 vérifiée
+  (`grid.x = 93`, `gold_button.y = 1347`), sans l’insérer dans le fragment.
+- Le kit d’intégration autonome `RemoteStash-0.2.28.zip` contient exactement
+  six entrées allowlistées : la DLL, le README, les deux fragments de layout et
+  les deux sprites. Il ne contient aucune DLL du PluginPack et porte le SHA-256
+  `C886261333BF1A7567749D60D88653C18137463ACA1680E0CF420B2FC2F1B325`.
+
+## Candidate de test public — 0.2.29 — 4 août 2026
+
+- La fermeture de session serveur suit maintenant le retrait de l'unité joueur
+  active. La fermeture côté client est aussi demandée si l'interface du stash
+  disparaît sans passer par le bouton de fermeture normal.
+- La télémétrie disque synchrone a été retirée des chemins de déplacement
+  d'objets. Les compteurs et le temps maximal restent disponibles sans écrire un
+  log pour chaque opération.
+- Le build Release x64 et CTest passent `1/1`. Le cold start BKVince charge
+  `Remote Stash 0.2.29`, installe le hook de retrait d'unité à `0x43EC10` et
+  atteint `scanned=13 active=12 disabled=1 rejected=0 failed=0`.
+- Les DLL du build, du package et du runtime BKVince sont byte-identiques :
+  version `0.2.29`, taille `37888`, SHA-256
+  `DC65F01A733F8B1B0C119B7074A83D825FDCD5F78B805693B7669633FEE0F402`.
+- La candidate `RemoteStash-0.2.29.zip` contient exactement six entrées : la
+  DLL, le README, deux fragments de layout et deux sprites. Elle ne contient ni
+  configuration, source, PDB, log ou DLL tierce et porte le SHA-256
+  `F86B48B385CFD34098B7D5D94984325E75AEE34F836375E0B76A5BADFED9140C`.
+- La validation externe doit encore confirmer deux régressions rapportées :
+  absence de gel bref après une tentative de chevauchement invalide, puis retour
+  au lobby et reconnexion du même personnage sans redémarrer D2R.
+
+## Resynchronisation après placement refusé — 0.2.30 — 4 août 2026
+
+- La vidéo externe `2026-08-04_22-59-05.mp4` montrait une désactivation après
+  une tentative de placement sur des cases occupées; recliquer Remote Stash
+  restaurait immédiatement les interactions. La 0.2.30 a tenté de reproduire
+  ce réarmement depuis le callback générique d'insertion en renvoyant l'action
+  native d'ouverture `0x10`.
+- Le test suivant a invalidé l'attribution au chevauchement : le shared stash se
+  désactivait aussi sans tentative de placement, environ cinq secondes après
+  son ouverture. L'appel de réarmement synchrone depuis un callback serveur
+  n'avait par ailleurs aucune preuve d'ordre par rapport aux paquets de refus.
+- Le 4 août, l'audit de la 0.2.31 retire donc cette couche expérimentale au lieu
+  de l'étendre. La 0.2.30 demeure une candidate historique non validée et ne
+  constitue pas la base du correctif final.
+- Les DLL du build, du package et du runtime BKVince sont byte-identiques :
+  version `0.2.30`, taille `37888`, SHA-256
+  `681C4F17C1A497290C22252C602E28C17545C4D81556DE890FF6C4087146A857`.
+- Le cold start mod-local charge `Remote Stash 0.2.30 by RuffnecKk`, installe les
+  hooks existants et atteint
+  `scanned=13 active=12 disabled=1 rejected=0 failed=0`.
+- La candidate `RemoteStash-0.2.30.zip` conserve les six entrées publiques : la
+  DLL, le README, deux fragments de layout et deux sprites. Elle ne contient ni
+  configuration, source, PDB, log ou DLL tierce et porte le SHA-256
+  `CFEEC5DC3900415A9B09AC3BB9363D8D2942810041872C664F2A9920140248A6`.
+- Le gameplay reste `not run` pour cette candidate. Le test externe doit
+  confirmer qu'un placement chevauché refusé laisse immédiatement le stash
+  interactif, sans deuxième clic sur Remote Stash, perte, duplication ou objet
+  bloqué au curseur. La reconnexion depuis le lobby reste un gate séparé.
+
+## Suppression du timeout de session partagé — 0.2.31 — 4 août 2026
+
+- La vidéo externe `2026-08-04_23-38-37.mp4` et la précision du testeur
+  invalident la 0.2.30 : dans le shared stash, les objets cessent de répondre
+  environ cinq secondes après l'ouverture, sans dépendre d'un chevauchement.
+- Le code client armait exactement `GetTickCount64() + 5000`. Si le layout
+  partagé ne publiait jamais l'état UI vanilla `0x16` comme ouvert, l'expiration
+  appelait `DeactivateRemoteClientSession(true)` et envoyait la requête de
+  fermeture serveur, tandis que le panneau custom demeurait visible.
+- La 0.2.31 supprime ce délai et ne ferme plus la session depuis le hook d'état
+  UI que lorsqu'un état ouvert a réellement été observé puis devient fermé. La
+  fermeture explicite du stash et le retrait de l'unité joueur au retour au
+  lobby restent en place; aucun layout, asset, hook ou protocole n'est ajouté.
+- L'audit retire aussi le réarmement expérimental de la 0.2.30. Aucun paquet
+  d'ouverture n'est injecté depuis un callback d'item : la 0.2.31 corrige
+  seulement la cause démontrée, sans supposer que l'overlap emprunte un callback
+  particulier ni modifier l'ordre natif des réponses serveur.
+- Le build Release x64 et CTest passent `1/1`. Les DLL du build, du package et
+  du runtime BKVince sont byte-identiques : version `0.2.31`, taille `37888`,
+  SHA-256 `99B1C84D04E3B52DC79E694AA2DAB4A4C2A49077C154DEBA8C0875C5F10B5A83`.
+- Le cold start mod-local charge `Remote Stash 0.2.31 by RuffnecKk`, accepte les
+  hooks existants et atteint `scanned=13 active=12 disabled=1 rejected=0
+  failed=0`, puis le frontend complète `24/24`. Les assertions BKVince déjà
+  connues après le frontend sont capturées et ignorées; aucun nouvel échec de
+  chargement RemoteStash n'est observé.
+- La candidate `RemoteStash-0.2.31.zip` contient exactement les six entrées
+  publiques allowlistées et porte le SHA-256
+  `85111B55E94E511B6FFFB28AF832FED7A8007A37FAC5730F0F9951BB9C239622`.
+- Vincent et un testeur externe confirment le 4 août que cette révision auditée
+  est stable et fonctionne correctement. Les scénarios qui reproduisaient la
+  désactivation du shared stash et l'interaction après un placement chevauché
+  refusé ne reproduisent plus la panne; ces deux gates passent à `passed`.
+- Le verdict communiqué ne détaille pas séparément la reconnexion depuis le
+  lobby. Cette case reste distincte, tout comme la matrice élargie inventaires
+  tiers, manette et hôte/joiner; aucun succès n'est inféré pour ces cas.
+
+## Hotkey configurable autonome — 0.3.0 — 4 août 2026
+
+- `RemoteStash.json` appartient uniquement à `RemoteStash.dll`. Il ne lit ni ne
+  modifie `D2RPlugins.json`, n'importe aucune DLL du PluginPack et n'impose aucun
+  ordre de chargement. La recherche suit le mod actif, puis son dossier de mod,
+  puis le dossier de travail global. Un fichier présent mais invalide refuse le
+  plugin avant l'installation de ses hooks; un fichier absent conserve les
+  valeurs sûres intégrées.
+- Le défaut livré est `enabled=false`, `hotkey=CTRL+SHIFT+S` et `consume=true`.
+  Les touches supportées sont `A-Z`, `0-9`, `F1-F24`, `SPACE`, `TAB`, `INSERT`,
+  `DELETE`, `HOME`, `END`, `PAGEUP`, `PAGEDOWN`, `MOUSE3`, `MOUSE4` et `MOUSE5`,
+  avec les modificateurs exacts `CTRL`, `SHIFT` et `ALT`.
+- Le worker Win32 ne démarre que lorsque le hotkey est activé. Il filtre les
+  répétitions et les entrées injectées, exige que D2R possède la fenêtre de
+  premier plan, borne chaque demande à 250 ms et transfère l'action au thread UI
+  du jeu par `WH_GETMESSAGE`. Le thread UI refuse l'action sans joueur local,
+  pendant le stash, le chat ou les modales connues.
+- Le bouton et le hotkey appellent tous deux `TryQueueRemoteOpenRequest`, lequel
+  émet la requête serveur RemoteStash déjà validée. Aucun second protocole stash,
+  aucun déplacement d'objet et aucun nouveau propriétaire de hook natif ne sont
+  ajoutés par le hotkey. `UI_FindTopLevelPanelByName` `0x846170` est seulement
+  appelé sur le thread UI après validation stricte de sa signature 92777.
+- Le build Release x64 passe les contrats de layout et de hotkey `2/2`. La DLL
+  0.3.0 mesure `174080` octets et porte le SHA-256
+  `C1DE53CE098464911165274E00ECFBEEE8977084CCDFBC896ACAA97FF5AA9A52`.
+  Les DLL du build, du package et du runtime sont byte-identiques.
+- Deux cold starts mod-locaux BKVince couvrent `enabled=false` puis
+  `enabled=true`. Les deux atteignent `24/24` avec
+  `scanned=13 active=12 disabled=1 rejected=0 failed=0`. En mode activé, le log
+  confirme `binding=CTRL+SHIFT+S`, la configuration du mod actif et le handoff
+  prêt sur le thread UI. Les assertions BKVince déjà connues après le frontend
+  restent capturées et ignorées.
+- L'archive `RemoteStash-0.3.0.zip` contient sept fichiers allowlistés : DLL,
+  JSON, README, deux fragments de layout et deux sprites. Aucun source, PDB, log
+  ou DLL tierce n'est inclus. Elle mesure `249613` octets et porte le SHA-256
+  `B933A57113267A6606C7041C8D5C013535DCDFC4C8E02845284877FF48F23645`.
+- L'ouverture gameplay par hotkey reste `not run`; le runtime est laissé avec la
+  configuration activée pour ce témoin manuel.
+
+## Hotkey consommé et toggle final — 0.3.6 — 5 août 2026
+
+- La configuration publique conserve `enabled=false`, adopte `hotkey=S` et garde
+  `consume=true`. La configuration globale de validation active ces trois mêmes
+  paramètres sans modifier `D2RPlugins.json` ni créer de dépendance envers une
+  autre DLL.
+- Le hook d'entrée Win32 consomme maintenant les messages clavier capturés quand
+  la demande RemoteStash est acceptée. Le même raccourci choisit l'ouverture ou
+  la fermeture selon l'état de la session distante et transmet l'action au
+  thread UI du jeu.
+- Le build Release x64 et CTest passent les contrats layout et hotkey `2/2`.
+  Les DLL du build, du package et du runtime global sont byte-identiques :
+  version `0.3.6`, taille `175616`, SHA-256
+  `9166B1D1E25F0BF44C79F05CC32FAB3443FD58CAC69E7AA7C129D1CEB3F7A005`.
+- Le cold start global charge `RemoteStash 0.3.6` sur D2R `3.2.92777`, résout la
+  configuration globale avec `binding=S` et `consume=true`, installe tous ses
+  hooks stricts et prépare le handoff du hotkey sur le thread UI.
+- Vincent confirme en jeu le 5 août que `S` ouvre et ferme le stash, que le menu
+  rapide des skills lié à `S` ne s'ouvre pas et que les micro-chutes de framerate
+  ont disparu après le retrait de la trace UI diagnostique synchrone.
+- L'archive publique `RemoteStash-0.3.6.zip` contient exactement sept fichiers :
+  DLL, JSON, README court, deux fragments de layout et deux sprites. Elle ne
+  contient ni source, PDB, log, preuve locale ou DLL tierce. Elle mesure `249096`
+  octets et porte le SHA-256
+  `6A46C3A371986AE56D14B848D79E69219B238B6F61EC987C871706CEFE5F7D0A`.

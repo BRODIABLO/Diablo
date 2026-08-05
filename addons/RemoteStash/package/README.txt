@@ -1,113 +1,67 @@
-REMOTE STASH 0.2.26
-INTER-MOD PUBLIC RELEASE
-
+REMOTE STASH 0.3.6
 Author: RuffnecKk
 
-
-WHAT IT DOES
-
-Adds a Remote Stash button to a mod's desktop inventory layout.
-The button opens the native Personal, Shared, and Crafting Stash from anywhere.
-
-There is no configuration file.
-The DLL never moves or resizes the button.
+Opens and closes the player stash from an inventory button or configurable
+hotkey, including outside town. The installed mod keeps control of its stash
+tabs and inventory layout.
 
 
 REQUIREMENTS
 
 - Diablo II: Resurrected 3.2.92777
 - D2RLoader
-- A desktop inventory layout owned by your mod
 
-Controller layouts are not included.
-
-
-PLUGINPACK COMPATIBILITY
-
-Remote Stash 0.2.26 can run with these PluginPack features enabled:
-
-- Equipped Item to Cube
-- Bulk Skill Point Allocation in plugin-skills.dll
-- Prevent Merc Death in Town
-
-No load order is required for these features.
+Remote Stash is standalone. It does not require PluginPack or another plugin.
 
 
-INSTALL THE DLL
+INSTALL THE PLUGIN
 
-Copy:
+Global:
+Copy the included d2rloader folder into your D2R installation folder.
 
-d2rloader/plugins/RemoteStash.dll
+Mod-local:
+Copy RemoteStash.dll to:
+<D2R>/mods/<ModName>/d2rloader/plugins/
 
-to either:
-
-<D2R>/d2rloader/plugins/RemoteStash.dll
-
-or:
-
-<D2R>/mods/<ModName>/d2rloader/plugins/RemoteStash.dll
+Copy RemoteStash.json to:
+<D2R>/mods/<ModName>/d2rloader/config/
 
 
-ADD THE BUTTON
+HOTKEY
 
-Open your active playerinventoryoriginallayouthd.json.
+Edit RemoteStash.json and set enabled to true.
+The default hotkey is S. Press it again to close the stash.
+Set consume to true to prevent the same key from reaching the game.
+Restart the game after changing the config.
 
-Merge the object from:
 
-merge-snippets/playerinventory-button.json
+ADD THE INVENTORY BUTTON
 
-into the PlayerInventoryPanel children array.
+Merge merge-snippets/playerinventory-button.json into the children array of
+your active playerinventoryoriginallayouthd.json.
 
-Do not replace the complete inventory layout.
+Replace SET_X_FOR_YOUR_LAYOUT and SET_Y_FOR_YOUR_LAYOUT with coordinates for
+your own inventory layout. Vanilla desktop reference: x 93, y 1347.
 
-If your expansion layout inherits the original children, nothing else is needed.
-If it replaces them, merge:
-
+If your expansion layout replaces the original children, also merge:
 merge-snippets/playerinventory-expansion-child.json
 
-
-CUSTOMIZE IT
-
-You own the button layout.
-
-You may freely change:
-
-- rect x and y
-- rect width and height
-- filename
-- hoveredFrame
-- tooltipString
-- the sprite files
-
-The DLL will use the exact rectangle supplied by your layout.
-
-Keep these values unchanged:
-
+Do not change these values:
 name: remote_stash
 onClickMessage: PlayerInventoryPanelMessage:DropGold
 
-The real gold button is identified separately and continues to work normally.
+The original gold button remains unchanged.
 
 
-DEFAULT SPRITE
+SPRITE
 
-A ready-to-use chest sprite is included under:
-
-mod-data/data/hd/global/ui/panel/inventory/
-
-Copy the contents of mod-data/data into your mod's MPQ data folder.
-
-You may replace both sprite files or point filename to your own sprite.
+A ready-to-use chest sprite is included under mod-data/data/.
+Merge that data folder into your mod's MPQ data folder. You may replace the
+sprite files or change the filename in the button layout.
 
 
 TEST
 
-1. Open the inventory.
-2. Confirm the button appears exactly where your layout placed it.
-3. Confirm the original gold button did not move.
-4. Open Remote Stash outside town.
-5. Test Personal and Shared Stash in both directions.
-6. Test Ctrl + left click in both directions.
-7. Save and exit, then confirm the items persisted.
-
+Test Personal, Shared, and any custom stash tabs outside town. Verify normal
+drag-and-drop, Ctrl + left click, save and exit, and reconnecting the character.
 Use a disposable character for the first test.
