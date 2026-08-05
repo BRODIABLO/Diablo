@@ -794,6 +794,34 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "FourCharacterItemCodes",
+                                                           "path":  "addons/FourCharacterItemCodes",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-standalone-d2rloader-addon",
+                                                                        "summary":  "Memory patch D2RLoader généraliste qui restaure les assets HD pour les codes d’items à quatre caractères, sans DLL ni configuration, avec ZIP public limité au JSON.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "active"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "four-character-item-codes.json",
+                                                                                "path":  "addons/FourCharacterItemCodes/four-character-item-codes.json",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "FourCharacterItemCodes.zip",
+                                                                                "path":  "addons/FourCharacterItemCodes/FourCharacterItemCodes.zip",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/FourCharacterItemCodes/README.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "MassID",
                                                            "path":  "addons/MassID",
                                                            "kind":  "directory",
@@ -33723,6 +33751,16 @@
                                                            "name":  "floating-damage-portage-3.2.md",
                                                            "path":  "Mission/floating-damage-portage-3.2.md",
                                                            "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "four-character-item-codes-3.2.md",
+                                                           "path":  "Mission/four-character-item-codes-3.2.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-mission-memory-patch",
+                                                                        "summary":  "Décision, preuves natives et validation runtime du memory patch D2RLoader généraliste pour les codes d’items à quatre caractères.",
+                                                                        "agentAccess":  "read-write"
+                                                                    }
                                                        },
                                                        {
                                                            "name":  "fourth-skill-tree-3.2.md",

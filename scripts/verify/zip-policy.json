@@ -62,6 +62,12 @@
         "floating-damage.toml"
       ]
     },
+    "addons/FourCharacterItemCodes/FourCharacterItemCodes.zip": {
+      "kind": "memory-patch",
+      "entries": [
+        "four-character-item-codes.json"
+      ]
+    },
     "addons/GambleScreenLimit/GambleScreenLimit.zip": {
       "kind": "plugin",
       "entries": [

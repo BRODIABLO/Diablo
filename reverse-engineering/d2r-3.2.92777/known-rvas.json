@@ -2042,6 +2042,30 @@
       "confidence": "high",
       "source": "Mission/base-mod-features-3.2.md",
       "notes": "Two-byte JG +4 (7F 04) selecting the positive rare-quality diminishing formula after CMP (MF+100),110. The 15-byte witness at 0x4424F4 is unique and includes constant 600. Replacing only this branch with two NOPs selects the existing linear ECX=MF+100 path; the magic-quality block at 0x442576 remains native and already linear."
+    },
+    {
+      "rva": "0x662FB0",
+      "name": "HDItems_ResolveBaseItemAsset",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/four-character-item-codes-3.2.md",
+      "notes": "Resolves a base-item HD asset for unit type 4. It obtains the ItemsTxt record, reads the complete packed dword code at record +0x80 and binary-searches the 64-byte base-item asset registry entries owned by the manager at +0xD8. This full-width lookup proves the runtime resolver itself accepts four significant code bytes in build 92777."
+    },
+    {
+      "rva": "0x6635A0",
+      "name": "HDItems_LoadBaseItemAssetsJson",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/four-character-item-codes-3.2.md",
+      "notes": "Initializes and fills the base-item HD asset registry from items.json. Its key-copy block at 0x6639D5 is the only build-92777 truncation found after the TXT compiler, full-dword item lookup, save encoding and runtime asset resolver were audited."
+    },
+    {
+      "rva": "0x6639FF",
+      "name": "HDItemsJsonCodePaddingBlock",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/four-character-item-codes-3.2.md",
+      "notes": "Unique 26-byte code-padding block inside HDItems_LoadBaseItemAssetsJson. Vanilla reads key byte 2, pads it when absent, then unconditionally stores ASCII space as byte 3 (0F B6 46 02 84 C0 75 09 66 C7 44 24 26 20 20 EB 09 88 44 24 26 C6 44 24 27 20). The Four Character Item Codes memory patch replaces the block in place with two symmetric byte reads and NUL-to-space fallbacks. The replacement is exactly 26 bytes, reaches the original 0x663A19 continuation without a relay, and preserves one-, two-, and three-character behavior."
     }
   ]
 }
