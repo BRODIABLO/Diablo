@@ -5,6 +5,44 @@ description: Isoler, auditer, valider, committer et pousser des checkpoints Git 
 
 # Checkpoints Git Diablo
 
+## Appliquer le fast-path ciblé
+
+Utiliser obligatoirement ce chemin lorsque Vincent dit `commit push ciblé go`,
+`commit ciblé`, ou demande dans une même instruction de committer et pousser un
+lot déjà implanté et testé.
+
+1. Exécuter une seule fois `npm run checkpoint`, lire l'index existant et définir
+   l'allowlist exacte du lot.
+2. Réutiliser les preuves et tests ciblés déjà réussis pendant la tâche tant que
+   les fichiers allowlistés n'ont pas dérivé. Ne pas les relancer par rituel.
+3. Construire l'index minimal. Si l'index principal contient d'autres lots,
+   utiliser un index alternatif fondé sur le `HEAD` courant et préserver
+   byte-exactement toutes les entrées non ciblées de l'index principal.
+4. Vérifier seulement `git diff --cached --check`, la liste et le diff du lot,
+   puis les parseurs ou tests directement nécessaires au type de fichiers livré.
+5. Créer au maximum un snapshot ciblé, uniquement si un staging partiel partagé
+   ou un artefact binaire ne peut pas être validé directement depuis l'index.
+6. Commettre, pousser et vérifier `HEAD...@{upstream}` dans la même passe lorsque
+   l'utilisateur a autorisé ensemble commit et push. S'arrêter ensuite.
+
+Dans ce fast-path :
+
+- ne pas exécuter `npm ci`;
+- ne pas exécuter `npm run verify` ni une suite globale;
+- ne pas créer plusieurs snapshots;
+- ne pas lancer le jeu;
+- ne pas poursuivre, réparer ou documenter une panne étrangère au lot;
+- ne pas invoquer une préparation de release ou modifier la ROADMAP, sauf si ces
+  fichiers appartiennent explicitement à l'allowlist demandée.
+
+Une panne globale déjà présente dans `HEAD` est classée immédiatement avec une
+preuve courte, puis ignorée pour ce commit ciblé. Escalader vers le workflow
+complet seulement si le périmètre reste ambigu, si un conflit ou chevauchement
+touche l'allowlist, si l'index ciblé est invalide, ou si Vincent demande
+explicitement une release, un audit complet ou un checkpoint complet. Un fichier
+`mixed` ou un workspace sale hors allowlist ne suffit pas à déclencher
+l'escalade.
+
 ## Protéger le travail en cours
 
 1. Lire `AGENTS.md`, la mission courante et les règles Git applicables avant toute mutation de l'index.
@@ -36,7 +74,10 @@ description: Isoler, auditer, valider, committer et pousser des checkpoints Git 
 4. Relire chaque contenu indexé avec `git diff --cached` ou `git show :chemin`. Prouver les comptes attendus, par exemple le nombre exact de RVA ou de nœuds du cadastre ajoutés.
 5. Relancer l'inspecteur. Aucun fichier inattendu, conflit ou erreur `git diff --cached --check` ne doit subsister.
 
-## Valider ce qui sera réellement committé
+## Valider complètement hors fast-path
+
+Appliquer cette section seulement après une escalade justifiée ou pour une
+release/audit complet explicitement demandé.
 
 1. Exécuter d'abord les tests ciblés sur les sources du lot.
 2. Exporter ensuite l'index avec `git checkout-index` dans un dossier unique sous `analysis-cache/`.
@@ -53,4 +94,4 @@ Lire [references/commands.md](references/commands.md) lorsqu'un staging partiel,
 2. Proposer un message de commit impératif et précis. Le mot « prototype » doit rester présent si des gates fonctionnels ou de distribution sont ouverts.
 3. Ne committer qu'après l'autorisation exigée par `AGENTS.md`. Vérifier immédiatement le commit créé et l'état de la branche.
 4. Ne pousser qu'après l'autorisation de push exigée par `AGENTS.md`. Vérifier ensuite que la branche locale et son upstream sont synchronisés.
-5. Après le commit ou la fin d'une tâche significative, utiliser `diablo-roadmap-release` pour vérifier la fraîcheur de la mission et de la ROADMAP sans écraser les changements concurrents.
+5. Hors fast-path, après le commit ou la fin d'une tâche significative, utiliser `diablo-roadmap-release` pour vérifier la fraîcheur de la mission et de la ROADMAP sans écraser les changements concurrents.

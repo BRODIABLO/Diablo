@@ -1,4 +1,4 @@
 interface:
   display_name: "Diablo Git Checkpoint"
-  short_description: "Isoler, valider et livrer un checkpoint Git"
-  default_prompt: "Utilise $diablo-git-checkpoint pour isoler et valider le prochain lot Git."
+  short_description: "Isoler et livrer rapidement un lot Git ciblé"
+  default_prompt: "Utilise $diablo-git-checkpoint et son fast-path pour committer puis pousser ce lot ciblé."

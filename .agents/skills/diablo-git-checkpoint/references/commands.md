@@ -1,5 +1,28 @@
 # Commandes de checkpoint Git
 
+## Fast-path `commit push ciblé go`
+
+Utiliser cette séquence courte pour un lot déjà testé :
+
+```powershell
+npm.cmd run checkpoint
+git status --short --branch
+git diff --cached --name-status
+git diff --cached --check
+git commit -m "Message impératif ciblé"
+git push
+git rev-list --left-right --count 'HEAD...@{upstream}'
+```
+
+Si l'index contient d'autres lots, exécuter les opérations de staging et de
+commit avec un `GIT_INDEX_FILE` alternatif construit depuis `HEAD`, puis
+réconcilier uniquement les chemins ciblés dans l'index principal. Comparer les
+entrées non ciblées avant/après et exiger un delta nul.
+
+Ne pas lancer `npm ci`, `npm run verify`, un test runtime ou plusieurs snapshots
+dans ce chemin. Réutiliser les tests frais du chantier et ne lancer qu'un
+parseur/test ciblé si le contenu allowlisté a changé depuis ces preuves.
+
 ## Inspection en lecture seule
 
 ```powershell
