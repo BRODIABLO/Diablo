@@ -18,6 +18,7 @@ FetchContent_MakeAvailable(nlohmann_json)
 
 add_library(MassID SHARED plugin.cpp plugin.rc)
 target_compile_features(MassID PRIVATE cxx_std_20)
+target_compile_options(MassID PRIVATE /utf-8)
 target_link_libraries(MassID PRIVATE
     D2RLPlugin::D2RLPlugin
     nlohmann_json::nlohmann_json
@@ -26,5 +27,6 @@ set_target_properties(MassID PROPERTIES OUTPUT_NAME "MassID")
 
 add_executable(MassIDTests policy_tests.cpp)
 target_compile_features(MassIDTests PRIVATE cxx_std_20)
+target_compile_options(MassIDTests PRIVATE /utf-8)
 enable_testing()
 add_test(NAME mass-id-policy COMMAND MassIDTests)

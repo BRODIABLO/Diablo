@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-04T16:54:05.0641978+00:00",
+    "generatedAt":  "2026-08-05T14:55:05.8609445+00:00",
     "root":  {
                  "name":  "snapshot",
                  "path":  ".",
@@ -826,8 +826,8 @@
                                                            "path":  "addons/MassID",
                                                            "kind":  "directory",
                                                            "meta":  {
-                                                                        "role":  "x-d2rloader-package-candidate",
-                                                                        "summary":  "Archive publique candidate DLL + JSON du plugin hybride MassID 0.1.0, destiné au futur merge items.massIdentify; les gates techniques sont verts et la matrice gameplay reste ouverte.",
+                                                                        "role":  "x-d2rloader-public-plugin-candidate",
+                                                                        "summary":  "Sources, documentation et archive publique globale DLL + JSON de MassID 0.2.9; la coexistence avec le PluginPack et le cold start global sont validés, tandis que la matrice fonctionnelle complète reste ouverte.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -850,8 +850,50 @@
                                                                                              ]
                                                                             },
                                                                             {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/MassID/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/MassID/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "mass_id_policy.hpp",
+                                                                                                     "path":  "addons/MassID/src/mass_id_policy.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/MassID/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/MassID/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "policy_tests.cpp",
+                                                                                                     "path":  "addons/MassID/src/policy_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "README.md",
+                                                                                                     "path":  "addons/MassID/src/README.md",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
                                                                                 "name":  "MassID.zip",
                                                                                 "path":  "addons/MassID/MassID.zip",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/MassID/README.md",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
@@ -1034,6 +1076,73 @@
                                                                                 "name":  "RemoteStash-0.2.26-InterMod.zip",
                                                                                 "path":  "addons/RemoteStash/RemoteStash-0.2.26-InterMod.zip",
                                                                                 "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "RepeatableServices",
+                                                           "path":  "addons/RepeatableServices",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-d2rloader-plugin-incubation",
+                                                                        "summary":  "Sources et package du plugin hybride RepeatableServices, destiné au futur merge dans plugin-quests et configuré par JSON standard global ou mod-local.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "experimental"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "package",
+                                                                                "path":  "addons/RepeatableServices/package",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "README.md",
+                                                                                                     "path":  "addons/RepeatableServices/package/README.md",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "RepeatableServices.dll",
+                                                                                                     "path":  "addons/RepeatableServices/package/RepeatableServices.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "RepeatableServices.json",
+                                                                                                     "path":  "addons/RepeatableServices/package/RepeatableServices.json",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/RepeatableServices/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/RepeatableServices/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/RepeatableServices/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/RepeatableServices/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "repeatable-services-policy.h",
+                                                                                                     "path":  "addons/RepeatableServices/src/repeatable-services-policy.h",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "repeatable-services-tests.cpp",
+                                                                                                     "path":  "addons/RepeatableServices/src/repeatable-services-tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
                                                                             }
                                                                         ]
                                                        },
@@ -17236,43 +17345,6 @@
                                                                                                                   ]
                                                                                                  },
                                                                                                  {
-                                                                                                     "name":  "MassID-src",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/MassID-src",
-                                                                                                     "kind":  "directory",
-                                                                                                     "children":  [
-                                                                                                                      {
-                                                                                                                          "name":  "CMakeLists.txt",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/MassID-src/CMakeLists.txt",
-                                                                                                                          "kind":  "file"
-                                                                                                                      },
-                                                                                                                      {
-                                                                                                                          "name":  "mass_id_policy.hpp",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/MassID-src/mass_id_policy.hpp",
-                                                                                                                          "kind":  "file"
-                                                                                                                      },
-                                                                                                                      {
-                                                                                                                          "name":  "plugin.cpp",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/MassID-src/plugin.cpp",
-                                                                                                                          "kind":  "file"
-                                                                                                                      },
-                                                                                                                      {
-                                                                                                                          "name":  "plugin.rc",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/MassID-src/plugin.rc",
-                                                                                                                          "kind":  "file"
-                                                                                                                      },
-                                                                                                                      {
-                                                                                                                          "name":  "policy_tests.cpp",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/MassID-src/policy_tests.cpp",
-                                                                                                                          "kind":  "file"
-                                                                                                                      },
-                                                                                                                      {
-                                                                                                                          "name":  "README.md",
-                                                                                                                          "path":  "data-BKVince/d2rloader/plugins/MassID-src/README.md",
-                                                                                                                          "kind":  "file"
-                                                                                                                      }
-                                                                                                                  ]
-                                                                                                 },
-                                                                                                 {
                                                                                                      "name":  "NoEtherealItemTypes-src",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/NoEtherealItemTypes-src",
                                                                                                      "kind":  "directory",
@@ -17802,11 +17874,6 @@
                                                                                                  {
                                                                                                      "name":  "FloatingDamage.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/FloatingDamage.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "MassID.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/MassID.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

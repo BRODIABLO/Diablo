@@ -1,0 +1,27 @@
+{
+  "quests": {
+    "repeatableServices": {
+      "respec": {
+        "mode": "disabled",
+        "goldPerLevel": 3000,
+        "minimumGold": 5000
+      },
+      "imbue": {
+        "mode": "disabled",
+        "goldPerLevel": 500,
+        "minimumGold": 5000
+      },
+      "socketing": {
+        "mode": "disabled",
+        "goldPerLevel": 1000,
+        "minimumGold": 20000
+      },
+      "personalization": {
+        "mode": "disabled",
+        "goldPerLevel": 500,
+        "minimumGold": 10000
+      },
+      "diagnostics": false
+    }
+  }
+}

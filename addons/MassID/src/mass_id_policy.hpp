@@ -1,9 +1,14 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <limits>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace ruffneckk::mass_id {
 
@@ -16,9 +21,29 @@ inline constexpr std::uint32_t IdentifiedItemFlag = 0x00000010u;
 inline constexpr std::uint32_t QuantityStat = 70;
 inline constexpr std::uint8_t InventoryPage = 0;
 inline constexpr std::uint8_t CubePage = 3;
-inline constexpr std::int32_t LeftClickMouseState = 5;
+inline constexpr std::uint8_t StashPage = 4;
 
 using RequestPacket = std::array<std::uint8_t, RequestPacketSize>;
+
+inline std::vector<std::filesystem::path> BuildConfigCandidates(
+        const std::filesystem::path& activeModConfigDirectory,
+        const std::filesystem::path& scopeConfigDirectory,
+        const std::filesystem::path& globalConfigDirectory,
+        const std::filesystem::path& fileName) {
+    std::vector<std::filesystem::path> candidates;
+    const auto append = [&](const std::filesystem::path& directory) {
+        if (directory.empty()) return;
+        const auto candidate = (directory / fileName).lexically_normal();
+        if (std::find(candidates.begin(), candidates.end(), candidate)
+                == candidates.end()) {
+            candidates.emplace_back(candidate);
+        }
+    };
+    append(activeModConfigDirectory);
+    append(scopeConfigDirectory);
+    append(globalConfigDirectory);
+    return candidates;
+}
 
 constexpr std::uint32_t ReadU32(
         const std::uint8_t* bytes, std::size_t offset) noexcept {
@@ -59,8 +84,8 @@ constexpr bool IsSupportedInventoryPage(std::uint8_t page) noexcept {
     return page == InventoryPage || page == CubePage;
 }
 
-constexpr bool IsRightClickState(std::int32_t mouseState) noexcept {
-    return mouseState != LeftClickMouseState;
+constexpr bool IsMassIdentifyTargetPage(std::uint8_t page) noexcept {
+    return page == InventoryPage || page == CubePage || page == StashPage;
 }
 
 constexpr bool ShouldCaptureGesture(
@@ -68,20 +93,24 @@ constexpr bool ShouldCaptureGesture(
         bool shiftDown,
         bool rightClick,
         bool cursorEmpty,
-        bool localOwner,
-        bool ownedByLocalInventory,
         std::int32_t unitType,
-        std::uint32_t itemCode,
-        std::uint8_t page) noexcept {
+        std::uint32_t itemCode) noexcept {
     return enabled
         && shiftDown
         && rightClick
         && cursorEmpty
-        && localOwner
-        && ownedByLocalInventory
         && unitType == 4
-        && itemCode == IdentifyTomeCode
-        && IsSupportedInventoryPage(page);
+        && itemCode == IdentifyTomeCode;
+}
+
+inline std::string AddMassIdTooltipLine(
+        std::string tooltip, std::string_view localizedText) {
+    if (localizedText.empty() || tooltip.find(localizedText) != std::string::npos) {
+        return tooltip;
+    }
+    if (!tooltip.empty() && tooltip.back() != '\n') tooltip.push_back('\n');
+    tooltip.append(localizedText);
+    return tooltip;
 }
 
 constexpr std::int32_t IdentificationBudget(
