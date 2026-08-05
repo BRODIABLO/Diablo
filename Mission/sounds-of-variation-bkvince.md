@@ -236,6 +236,54 @@ Retour en jeu de Vincent : le son vanilla d'identification et le son original du
 Horadric Cube sont confirmés `passed`. L'audition des Town Portals n'est pas
 explicitement confirmée et reste `not run`.
 
+## Priorité générale d'Enhanced Effects — 5 août 2026
+
+Vincent décide que tout effet audio réellement fourni par **Enhanced Effects
+and Sounds** doit conserver la priorité sur les packs audio intégrés ensuite.
+L'audit historique distingue les superpositions compatibles des remplacements :
+
+- **The Sounds of Variation** conserve ses groupes étendus et ses variantes,
+  puisqu'ils n'écrasent aucun asset Enhanced aux chemins concernés;
+- les lignes `custom_d2pack_*` restent disponibles dans la table, mais ne
+  remplacent plus une route dont le groupe HD contient des assets Enhanced;
+- les exceptions vanilla explicitement choisies par Vincent pour l'interface,
+  le cube, l'identification, les amulets, les rings, les waypoints, les Town
+  Portals et les pas des Fallen demeurent inchangées.
+
+Quatorze redirects sont restaurés vers leurs groupes HD Enhanced : swings 1H,
+bows, crossbows, punch, claw, blunt, blade thrust, blade swing, arrow, bash,
+ainsi que Cold Arrow, Fire Arrow, Magic Arrow et Multiple Shot. Les 53
+classifications `hit class` d'Enhanced dans `weapons.txt` étaient déjà intactes,
+et les assets Enhanced vérifiés restent byte-identiques entre la source et le
+runtime actuellement installé.
+
+Le changement source porte uniquement sur 14 cellules `Redirect` de
+`sounds.txt`, dont le SHA-256 passe de
+`B107AEC50592A215CB769516007C2061547DB34416451E560C8D3E1FE540DE5E` à
+`533FBEA427B1CD98F0FA139A026A2B39F7602A4465347DA539B063824FB2AAE1`.
+Le déploiement runtime, le redémarrage et l'audition restent `not run` jusqu'à
+l'autorisation explicite de Vincent.
+
+Vincent étend ensuite cette priorité aux deux derniers conflits directs entre
+Sounds of Variation et D2Pack. `weapon_bow_draw_1` retrouve le redirect
+`weapon_bow_draw_hd_1`, rendant ses 11 variantes accessibles, et
+`necromancer_corpseexp_1` retrouve `necromancer_corpseexp_hd7`, rendant ses 13
+variantes accessibles. Ces deux cellules supplémentaires font passer le
+SHA-256 de `sounds.txt` à
+`D1CEDC15CE63CBC3BF2529918874AF0E69E984A4887F85686E15470BF005C382`.
+Le runtime et l'audition restent `not run`.
+
+La synchronisation runtime est autorisée ensuite sans relance. Un candidat
+ciblé est construit depuis le `sounds.txt` runtime afin de conserver les trois
+lignes Magic/Guided Arrow encore source-only, puis les 16 redirects décidés y
+sont appliqués. Le runtime correspond byte-exactement au candidat, SHA-256
+`73DA51D3B5D747112C6652AEB83481E7E45979CA80D8712EE7006A07D96F02DA`;
+la version précédente `78B5752B363615E165A7DE651736B6C62D12E90D8EEA144A68AE9F14F79C1B1E`
+et le candidat sont conservés sous
+`analysis-cache/runtime-sync/audio-enhanced-variation-priority-20260805-100324/`.
+Aucune instance D2R ou D2RLoader n'était active avant ou après la copie. Aucun
+redémarrage n'est effectué; cold start et audition restent `not run`.
+
 ## Prototype séparé — Magic Arrow et Guided Arrow
 
 Ce petit lot du 4 août 2026 est distinct de **The Sounds of Variation**. Les
