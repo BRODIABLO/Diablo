@@ -1,4 +1,4 @@
-# Advanced Item Tooltips 3.0.0
+# Advanced Item Tooltips 3.2.3
 
 ## Install
 

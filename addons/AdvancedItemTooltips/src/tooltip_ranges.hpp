@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <map>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -41,6 +42,15 @@ struct ItemAffixIds {
     std::uint16_t magicSuffix[3]{};
 };
 
+struct CandidateResolution {
+    // Every table-backed history that the finished tooltip can still prove,
+    // including compatible Cube mutations.
+    std::vector<std::vector<ModifierRange>> candidates;
+    // The item-owned histories before markerless Cube mutations. These are a
+    // safe fallback when Cube provenance is ambiguous or deliberately capped.
+    std::vector<std::vector<ModifierRange>> intrinsicCandidates;
+};
+
 class RangeCatalog {
 public:
     using TableTextProvider = std::function<bool(
@@ -57,16 +67,35 @@ public:
         std::int32_t priority{};
         std::int32_t function{};
         bool parameterized{};
+        std::string fixedParameter;
     };
 
     bool Load(const std::filesystem::path& excelDirectory, std::string& error);
     bool Load(const TableTextProvider& provider, std::string& error);
+    static bool LoadLayeredTable(
+        const std::vector<std::filesystem::path>& excelDirectories,
+        const TableTextProvider& fallback,
+        std::string_view tableName,
+        std::string& text,
+        std::string& error,
+        std::size_t& physicalLoads,
+        std::size_t& fallbackLoads
+    );
     [[nodiscard]] std::vector<std::vector<ModifierRange>> ResolveCandidates(
         const ItemAffixIds& ids,
         std::string_view itemCode,
         std::string_view runewordKey = {},
         bool includeSocketedContributions = true,
         const StatReader& readStat = {}
+    ) const;
+    [[nodiscard]] CandidateResolution ResolveCandidateSet(
+        const ItemAffixIds& ids,
+        std::string_view itemCode,
+        std::string_view runewordKey = {},
+        bool includeSocketedContributions = true,
+        const StatReader& readStat = {},
+        std::string_view renderedTooltip = {},
+        const TooltipLocalization* localization = nullptr
     ) const;
     [[nodiscard]] std::vector<std::vector<ModifierRange>> ResolveSocketFillerCandidates(
         const ItemAffixIds& ids,
@@ -78,19 +107,30 @@ public:
         const LocalizedStringResolver& resolver
     ) const;
     [[nodiscard]] std::size_t PropertyCount() const noexcept { return properties_.size(); }
+    [[nodiscard]] const std::map<std::int32_t, std::size_t>&
+    UnsupportedPropertyFunctions() const noexcept {
+        return unsupportedPropertyFunctions_;
+    }
     [[nodiscard]] const std::vector<std::string>& RunewordKeys() const noexcept {
         return runewordKeys_;
     }
 
 private:
-    std::unordered_map<std::string, PropertyInfo> properties_;
+    using PropertyDefinitions = std::vector<PropertyInfo>;
+    std::unordered_map<std::string, PropertyDefinitions> properties_;
+    std::map<std::int32_t, std::size_t> unsupportedPropertyFunctions_;
     std::unordered_map<std::string, std::vector<std::string>> statStringKeys_;
     std::vector<std::vector<ModifierRange>> suffixes_;
     std::vector<std::vector<ModifierRange>> prefixes_;
     std::vector<std::vector<ModifierRange>> automagic_;
     std::vector<std::vector<ModifierRange>> superiors_;
     std::vector<std::vector<ModifierRange>> uniques_;
-    std::vector<std::vector<ModifierRange>> sets_;
+    struct SetRecord {
+        std::vector<ModifierRange> intrinsic;
+        std::int32_t addFunction{};
+        std::vector<std::vector<ModifierRange>> conditionalGroups;
+    };
+    std::vector<SetRecord> sets_;
     std::unordered_map<std::string, ArmorRange> armor_;
     std::unordered_map<std::string, std::vector<std::string>> itemTypes_;
     std::unordered_map<std::string, std::vector<std::vector<ModifierRange>>> crafts_;
@@ -122,7 +162,7 @@ private:
         std::vector<std::string> runes;
     };
     std::unordered_map<std::string, RuneModifiers> runes_;
-    std::unordered_map<std::string, RunewordRecord> runewords_;
+    std::unordered_map<std::string, std::vector<RunewordRecord>> runewords_;
     std::vector<std::string> runewordKeys_;
 };
 
@@ -130,7 +170,8 @@ private:
     std::string_view tooltip,
     const std::vector<std::vector<ModifierRange>>& candidates,
     bool allowExcludedSocketContributions = false,
-    const TooltipLocalization* localization = nullptr
+    const TooltipLocalization* localization = nullptr,
+    const std::vector<std::vector<ModifierRange>>* intrinsicFallback = nullptr
 );
 
 [[nodiscard]] std::vector<std::vector<ModifierRange>> MergeCandidateSources(

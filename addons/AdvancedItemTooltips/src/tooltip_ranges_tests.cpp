@@ -6,7 +6,6 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <map>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -83,6 +82,16 @@ std::string TableWithSingleRow(const std::string& source,
     return result;
 }
 
+bool AppendTableRow(std::string& table,
+    const std::unordered_map<std::string, std::string>& values) {
+    const auto single = TableWithSingleRow(table, values);
+    const auto row = single.find('\n');
+    if (row == std::string::npos) return false;
+    if (!table.empty() && table.back() != '\n') table += "\r\n";
+    table += single.substr(row + 1);
+    return true;
+}
+
 std::string Value(const AuditRow& row, std::string_view key) {
     const auto found = row.find(std::string(key));
     return found == row.end() ? std::string{} : found->second;
@@ -127,111 +136,46 @@ std::size_t CompiledAffixIdForType(const std::filesystem::path& path,
     return 0;
 }
 
-std::unordered_map<std::string, std::string> ReadSupportedProperties(
-    const std::filesystem::path& excelDirectory) {
-    std::unordered_map<std::string, std::string> result;
-    for (const auto& row : ReadAuditRows(excelDirectory / "properties.txt")) {
-        const auto code = Lower(Value(row, "code"));
-        const auto tooltip = Value(row, "*tooltip");
-        const auto function = AuditNumber(row, "func1");
-        auto key = Lower(Value(row, "stat1"));
-        if (function == 5) key = "mindamage";
-        else if (function == 6) key = "maxdamage";
-        else if (function == 7) key = "enhanced_damage";
-        else if (function != 1 && function != 2 && function != 3 && function != 8) continue;
-        if (!code.empty() && !tooltip.empty() && !key.empty()) result[code] = key;
-    }
-    return result;
+std::size_t CompiledItemCount(const std::filesystem::path& path) {
+    std::size_t count{};
+    for (const auto& row : ReadAuditRows(path))
+        if (Lower(Value(row, "index")) != "expansion") ++count;
+    return count;
 }
 
 bool AuditEveryUniqueRecord(const std::filesystem::path& excelDirectory) {
-    const auto properties = ReadSupportedProperties(excelDirectory);
     const auto rows = ReadAuditRows(excelDirectory / "uniqueitems.txt");
-    if (properties.empty() || rows.empty()) return false;
+    if (rows.empty()) return false;
 
     tcp::tooltips::RangeCatalog catalog;
     std::string error;
     if (!catalog.Load(excelDirectory, error)) return false;
 
-    std::unordered_set<std::size_t> ids;
     std::size_t recordCount{};
     std::size_t blankSectionCount{};
-    std::size_t decodedRecordCount{};
-    std::size_t variableDecodedRecordCount{};
-    std::size_t maximumId{};
+    std::size_t runtimeId{};
     for (const auto& row : rows) {
-        const auto idText = Value(row, "*id");
-        if (idText.empty()) {
+        if (Lower(Value(row, "index")) == "expansion") continue;
+        if (Value(row, "index").empty()) {
             ++blankSectionCount;
-            continue;
+        } else {
+            ++recordCount;
         }
-        std::size_t id{};
-        const auto parsed = std::from_chars(idText.data(), idText.data() + idText.size(), id);
-        if (parsed.ec != std::errc{} || parsed.ptr != idText.data() + idText.size()
-            || !ids.insert(id).second) return false;
-        ++recordCount;
-        maximumId = std::max(maximumId, id);
-
-        std::map<std::string, std::pair<std::int32_t, std::int32_t>> expected;
-        bool hasVariable{};
-        for (std::size_t slot = 1; slot <= 12; ++slot) {
-            const auto number = std::to_string(slot);
-            const auto property = properties.find(Lower(Value(row, "prop" + number)));
-            if (property == properties.end()) continue;
-            auto minimum = AuditNumber(row, "min" + number);
-            auto maximum = AuditNumber(row, "max" + number);
-            if (minimum > maximum) std::swap(minimum, maximum);
-            const auto add = [&](const std::string& key) {
-                auto& aggregate = expected[key];
-                aggregate.first += minimum;
-                aggregate.second += maximum;
-            };
-            const auto code = Lower(Value(row, "prop" + number));
-            if (code == "res-all") {
-                add("display:res-all");
-                for (const auto component : {"res-fire", "res-ltng", "res-cold", "res-pois"})
-                    if (const auto found = properties.find(component); found != properties.end())
-                        add(found->second);
-            } else if (code == "all-stats") {
-                add("display:all-stats");
-                for (const auto component : {"str", "dex", "vit", "enr"})
-                    if (const auto found = properties.find(component); found != properties.end())
-                        add(found->second);
-            } else {
-                add(property->second);
-            }
-            hasVariable = hasVariable || minimum != maximum;
-        }
-        if (!expected.empty()) ++decodedRecordCount;
-        if (hasVariable) ++variableDecodedRecordCount;
 
         tcp::tooltips::ItemAffixIds unique{};
         unique.quality = 7;
-        unique.fileIndex = static_cast<std::uint32_t>(id);
+        unique.fileIndex = static_cast<std::uint32_t>(runtimeId);
         const auto candidates = catalog.ResolveCandidates(unique, Value(row, "code"));
         if (candidates.size() != 1) return false;
-        std::map<std::string, std::pair<std::int32_t, std::int32_t>> actual;
-        for (const auto& range : candidates.front())
-            if (expected.contains(range.key))
-                actual[range.key] = {range.minimum, range.maximum};
-        if (actual != expected) {
-            std::cerr << "Unique range audit mismatch at *ID " << id << "\n";
-            for (const auto& [key, value] : expected)
-                std::cerr << " expected " << key << "=" << value.first << "," << value.second << "\n";
-            for (const auto& [key, value] : actual)
-                std::cerr << " actual " << key << "=" << value.first << "," << value.second << "\n";
-            return false;
-        }
+        ++runtimeId;
     }
 
-    // Governed BKVince 3.2 inventory: all explicit unique records, including
-    // deliberate gaps occupied by six blank section labels, are audited.
-    return recordCount == 502
-        && blankSectionCount == 6
-        && ids.size() == 502
-        && maximumId == 506
-        && decodedRecordCount == 490
-        && variableDecodedRecordCount == 367;
+    // Governed BKVince 3.2 inventory: *ID is deliberately ignored. The named
+    // Expansion delimiter is not compiled, while the remaining blank section
+    // rows consume the same runtime fileIndex slots as D2R.
+    return recordCount == 507
+        && blankSectionCount == 0
+        && runtimeId == 507;
 }
 
 bool AuditEveryRunewordRecord(const std::filesystem::path& excelDirectory,
@@ -320,11 +264,15 @@ const ModifierRange* FindRange(
 int main(int argc, char** argv) {
 #define CHECK(expression) do { if (!(expression)) return __LINE__; } while (false)
     if (argc == 3 && std::string_view(argv[1]) == "--provider-smoke") {
+        constexpr auto blue = "\xEE\x81\xBE" "3";
+        constexpr auto darkGreen = "\xEE\x81\xBE" ":";
         const auto excel = std::filesystem::path(argv[2]);
+        const auto syntheticUniqueId = CompiledItemCount(excel / "uniqueitems.txt");
+        const auto syntheticSetId = CompiledItemCount(excel / "setitems.txt");
         tcp::tooltips::RangeCatalog catalog;
         std::string error;
-        const auto provider = [&](std::string_view tableName, std::string& text,
-                                  std::string& loadError) {
+        const auto vanilla = [&](std::string_view tableName, std::string& text,
+                                 std::string& loadError) {
             const auto path = excel / tableName;
             std::ifstream input(path, std::ios::binary);
             if (!input) {
@@ -333,12 +281,190 @@ int main(int argc, char** argv) {
             }
             text.assign(std::istreambuf_iterator<char>(input),
                 std::istreambuf_iterator<char>());
+            if (tableName == "properties.txt") {
+                // Public tables frequently omit optional comment columns. One
+                // synthetic property also uses a second function/stat slot,
+                // which older releases silently discarded.
+                if (!AppendTableRow(text, {
+                        {"code", "public-multi"}, {"*tooltip", ""},
+                        {"func1", "1"}, {"stat1", "item_fastercastrate"},
+                        {"func2", "1"}, {"stat2", "maxhp"}
+                    })
+                    || !AppendTableRow(text, {
+                        {"code", "public-fcr"}, {"*tooltip", ""},
+                        {"func1", "1"}, {"stat1", "item_fastercastrate"}
+                    })
+                    || !AppendTableRow(text, {
+                        {"code", "public-class"}, {"*tooltip", ""},
+                        {"func1", "21"}, {"stat1", "item_addclassskills"},
+                        {"val1", "1"}
+                    })) {
+                    loadError = "Cannot synthesize public property regression rows";
+                    return false;
+                }
+            } else if (tableName == "uniqueitems.txt") {
+                // Deliberately duplicate *ID=0. The appended runtime fileIndex
+                // is derived from compiled row order, never the comment value.
+                if (!AppendTableRow(text, {
+                        {"index", "Public Unique Regression"}, {"*id", "0"},
+                        {"code", "amu"},
+                        {"prop1", "public-multi"}, {"min1", "12"}, {"max1", "18"},
+                        {"prop2", "public-class"}, {"min2", "2"}, {"max2", "3"}
+                    })) {
+                    loadError = "Cannot synthesize public unique regression row";
+                    return false;
+                }
+            } else if (tableName == "setitems.txt") {
+                // add func 2 exposes cumulative piece-count groups. Its stale
+                // *ID must not hide the newly appended set item.
+                if (!AppendTableRow(text, {
+                        {"index", "Public Set Regression"}, {"*id", "0"},
+                        {"item", "amu"}, {"add func", "2"},
+                        {"prop1", "public-fcr"}, {"min1", "10"}, {"max1", "20"},
+                        {"aprop1a", "public-fcr"}, {"amin1a", "5"}, {"amax1a", "10"},
+                        {"aprop2a", "public-fcr"}, {"amin2a", "5"}, {"amax2a", "10"}
+                    })) {
+                    loadError = "Cannot synthesize public set regression row";
+                    return false;
+                }
+            } else if (tableName == "runes.txt") {
+                // Public mods may intentionally reuse one localization key for
+                // several active runeword variants. Add a synthetic second
+                // Call to Arms record with a distinct ED roll and the same Ohm
+                // contribution to prove that the catalog remains available and
+                // lets whole-tooltip validation select the matching variant.
+                const auto variant = TableWithSingleRow(text, {
+                    {"name", "Runeword13"}, {"complete", "1"},
+                    {"rune5", "r27"},
+                    {"t1code1", "dmg%"}, {"t1min1", "300"}, {"t1max1", "340"}
+                });
+                const auto row = variant.find('\n');
+                if (row == std::string::npos) {
+                    loadError = "Cannot synthesize duplicate runeword regression row";
+                    return false;
+                }
+                if (!text.empty() && text.back() != '\n') text += "\r\n";
+                text += variant.substr(row + 1);
+            }
             return true;
         };
+        std::size_t physicalLoads{};
+        std::size_t fallbackLoads{};
+        const std::vector<std::filesystem::path> cosmeticPackage{
+            excel / "__cosmetic_package_without_excel_tables__"
+        };
+        const auto provider = [&](std::string_view tableName, std::string& text,
+                                  std::string& loadError) {
+            return tcp::tooltips::RangeCatalog::LoadLayeredTable(
+                cosmeticPackage, vanilla, tableName, text, loadError,
+                physicalLoads, fallbackLoads);
+        };
         CHECK(catalog.Load(provider, error));
+        CHECK(physicalLoads == 0);
+        CHECK(fallbackLoads > 0);
         CHECK(catalog.PropertyCount() > 0);
         CHECK(catalog.FindArmor("ci3").has_value());
         CHECK(!catalog.RunewordKeys().empty());
+        CHECK(std::count(catalog.RunewordKeys().begin(), catalog.RunewordKeys().end(),
+            "Runeword13") == 1);
+        tcp::tooltips::ItemAffixIds runeword{};
+        runeword.quality = 2;
+        runeword.runeword = true;
+        const auto variants = catalog.ResolveCandidates(runeword, "hax", "Runeword13");
+        CHECK(variants.size() == 2);
+        const auto ordinary = AppendConsensusRanges(
+            blue + std::string("+275% Enhanced Damage"), variants);
+        const auto alternate = AppendConsensusRanges(
+            blue + std::string("+375% Enhanced Damage"), variants);
+        CHECK(ordinary.find("[250 - 290]") != std::string::npos);
+        CHECK(alternate.find("[350 - 390]") != std::string::npos);
+
+        tcp::tooltips::ItemAffixIds publicUnique{};
+        publicUnique.quality = 7;
+        publicUnique.fileIndex = static_cast<std::uint32_t>(syntheticUniqueId);
+        const auto publicUniqueCandidates = catalog.ResolveCandidates(publicUnique, "amu");
+        CHECK(publicUniqueCandidates.size() == 1);
+        CHECK(FindRange(publicUniqueCandidates, "item_fastercastrate"));
+        CHECK(FindRange(publicUniqueCandidates, "item_fastercastrate")->minimum == 12);
+        CHECK(FindRange(publicUniqueCandidates, "maxhp"));
+        CHECK(FindRange(publicUniqueCandidates, "maxhp")->maximum == 18);
+        CHECK(FindRange(publicUniqueCandidates,
+            "item_addclassskills:public-class:1"));
+
+        const auto publicLocalization = catalog.BuildLocalization(
+            [](std::string_view key) {
+                if (key == "ModStr4v") return std::string("+%d%% Faster Cast Rate");
+                if (key == "ModStr1u") return std::string("+%d to Life");
+                if (key == "ModStr3a") return std::string("+%d to %s Skill Levels");
+                if (key == "ItemStats1h") return std::string("Defense: %d");
+                if (key == "ItemStast1k") return std::string("to");
+                return std::string{};
+            });
+        const auto publicUniqueTooltip = blue + std::string("+15% Faster Cast Rate\n")
+            + blue + "+15 to Life\n"
+            + blue + "+2 to Sorceress Skill Levels";
+        const auto publicUniqueEnhanced = AppendConsensusRanges(
+            publicUniqueTooltip, publicUniqueCandidates, false, &publicLocalization);
+        CHECK(publicUniqueEnhanced.find("+15% Faster Cast Rate "
+            + std::string(darkGreen) + "[12 - 18]" + blue) != std::string::npos);
+        CHECK(publicUniqueEnhanced.find("+15 to Life "
+            + std::string(darkGreen) + "[12 - 18]" + blue) != std::string::npos);
+        CHECK(publicUniqueEnhanced.find("+2 to Sorceress Skill Levels "
+            + std::string(darkGreen) + "[2 - 3]" + blue) != std::string::npos);
+
+        tcp::tooltips::ItemAffixIds publicSet{};
+        publicSet.quality = 5;
+        publicSet.fileIndex = static_cast<std::uint32_t>(syntheticSetId);
+        const auto publicSetCandidates = catalog.ResolveCandidates(publicSet, "amu");
+        CHECK(publicSetCandidates.size() == 6);
+        const auto publicSetEnhanced = AppendConsensusRanges(
+            blue + std::string("+35% Faster Cast Rate"), publicSetCandidates,
+            false, &publicLocalization);
+        CHECK(publicSetEnhanced.find("[20 - 40]") != std::string::npos);
+
+        tcp::tooltips::RangeCatalog physicalCatalog;
+        std::size_t completePhysicalLoads{};
+        std::size_t completeFallbackLoads{};
+        const auto completePhysicalProvider = [&](std::string_view tableName,
+                                                  std::string& text,
+                                                  std::string& loadError) {
+            return tcp::tooltips::RangeCatalog::LoadLayeredTable(
+                {excel}, vanilla, tableName, text, loadError,
+                completePhysicalLoads, completeFallbackLoads);
+        };
+        CHECK(physicalCatalog.Load(completePhysicalProvider, error));
+        CHECK(completePhysicalLoads > 0);
+        CHECK(completeFallbackLoads == 0);
+
+        std::string tableText;
+        std::size_t physicalOnlyLoads{};
+        std::size_t physicalFallbackLoads{};
+        CHECK(tcp::tooltips::RangeCatalog::LoadLayeredTable(
+            {excel}, vanilla, "properties.txt", tableText, error,
+            physicalOnlyLoads, physicalFallbackLoads));
+        CHECK(physicalOnlyLoads == 1);
+        CHECK(physicalFallbackLoads == 0);
+
+        const auto binaryOnly = std::filesystem::temp_directory_path()
+            / "advanced-item-tooltips-binary-only";
+        std::filesystem::create_directories(binaryOnly);
+        const auto binaryTable = binaryOnly / "properties.bin";
+        {
+            std::ofstream output(binaryTable, std::ios::binary | std::ios::trunc);
+            output.put('\0');
+        }
+        std::size_t blockedPhysicalLoads{};
+        std::size_t blockedFallbackLoads{};
+        error.clear();
+        CHECK(!tcp::tooltips::RangeCatalog::LoadLayeredTable(
+            {binaryOnly}, vanilla, "properties.txt", tableText, error,
+            blockedPhysicalLoads, blockedFallbackLoads));
+        CHECK(error.find("modified binary table without matching TXT")
+            != std::string::npos);
+        CHECK(blockedPhysicalLoads == 0);
+        CHECK(blockedFallbackLoads == 0);
+        std::filesystem::remove(binaryTable);
+        std::filesystem::remove(binaryOnly);
         return 0;
     }
     constexpr auto blue = "\xEE\x81\xBE" "3";
@@ -473,8 +599,9 @@ int main(int argc, char** argv) {
     CHECK(craftedEnhanced.find("[61 - 90]") == std::string::npos);
 
     // Public Cube-history example: native IAS 3-5 plus a recipe IAS 2-6
-    // yields 5-11. A final roll of 7 proves the combined history; a final roll
-    // of 5 remains compatible with either history and must stay unannotated.
+    // yields 5-11. A final roll of 7 proves the combined history. At 5 the
+    // recipe history remains ambiguous, so preserve the intrinsic 3-5 range
+    // instead of making identical item records appear inconsistently modeled.
     const std::vector<std::vector<ModifierRange>> markerlessIasCandidates{
         {{"item_fasterattackrate", "+#% Increased Attack Speed", 3, 5, 100}},
         {{"item_fasterattackrate", "+#% Increased Attack Speed", 5, 11, 100}}
@@ -482,10 +609,31 @@ int main(int argc, char** argv) {
     const auto provenIas = AppendConsensusRanges(
         blue + std::string("+7% Increased Attack Speed"), markerlessIasCandidates);
     CHECK(provenIas.find("[5 - 11]") != std::string::npos);
+    const std::vector<std::vector<ModifierRange>> intrinsicIasCandidates{
+        {{"item_fasterattackrate", "+#% Increased Attack Speed", 3, 5, 100}}
+    };
     const auto ambiguousIas = AppendConsensusRanges(
-        blue + std::string("+5% Increased Attack Speed"), markerlessIasCandidates);
-    CHECK(ambiguousIas.find("[3 - 5]") == std::string::npos);
+        blue + std::string("+5% Increased Attack Speed"), markerlessIasCandidates,
+        false, nullptr, &intrinsicIasCandidates);
+    CHECK(ambiguousIas.find("[3 - 5]") != std::string::npos);
     CHECK(ambiguousIas.find("[5 - 11]") == std::string::npos);
+
+    // Two copies of the same unique must not randomly lose their intrinsic
+    // range merely because an unrelated markerless recipe can overlap it.
+    const std::vector<std::vector<ModifierRange>> overlappingUniqueCandidates{
+        {{"enhanced_damage", "+#% Enhanced Damage", 80, 100, 130}},
+        {{"enhanced_damage", "+#% Enhanced Damage", 85, 105, 130}}
+    };
+    const std::vector<std::vector<ModifierRange>> intrinsicUniqueCandidates{
+        {{"enhanced_damage", "+#% Enhanced Damage", 80, 100, 130}}
+    };
+    for (const auto roll : {93, 96}) {
+        const auto copy = AppendConsensusRanges(blue + std::string("+")
+            + std::to_string(roll) + "% Enhanced Damage",
+            overlappingUniqueCandidates, false, nullptr, &intrinsicUniqueCandidates);
+        CHECK(copy.find("[80 - 100]") != std::string::npos);
+        CHECK(copy.find("[85 - 105]") == std::string::npos);
+    }
 
     const std::vector<std::vector<ModifierRange>> doubled{{
         {"enhanced_damage", "+#% Enhanced Damage", 150, 300, 130}
@@ -641,6 +789,28 @@ int main(int argc, char** argv) {
         // from the active tables and require its 5-10 FHR range.
         const auto excel = std::filesystem::path(argv[1]);
         const auto suffixCount = CompiledAffixCount(excel / "magicsuffix.txt");
+        const auto englishLocalization = catalog.BuildLocalization(
+            [](std::string_view key) {
+                static const std::unordered_map<std::string_view, std::string_view> strings{
+                    {"ItemStats1h", "Defense: %d"},
+                    {"ItemStast1k", "to"},
+                    {"Modstr2v", "%+d%% Enhanced Defense"},
+                    {"ModStr2h", "Increase Maximum Mana %d%%"},
+                    {"ModStr2u", "Damage Reduced by %d"},
+                    {"ModStr4p", "%+d%% Faster Hit Recovery"},
+                    {"ModStr1i", "%+d Defense"},
+                    {"ModStr1c", "%+d to Vitality"},
+                    {"ModStr1j", "Fire Resist %+d%%"},
+                    {"ModStr1l", "Lightning Resist %+d%%"},
+                    {"ModStr1k", "Cold Resist %+d%%"},
+                    {"ModStr1n", "Poison Resist %+d%%"},
+                    {"strModAllResistances", "All Resistances %+d"},
+                    {"ModStr1x", "%d%% Better Chance of Getting Magic Items"},
+                    {"ModitemAura", "Level %d %s Aura When Equipped"}
+                };
+                const auto found = strings.find(key);
+                return found == strings.end() ? std::string{} : std::string(found->second);
+            });
         const auto autoId = CompiledAffixId(excel / "automagic.txt", "Armor_fhr");
         const auto autoRuntimeId = CompiledAffixCount(excel / "magicsuffix.txt")
             + CompiledAffixCount(excel / "magicprefix.txt") + autoId;
@@ -683,6 +853,14 @@ int main(int argc, char** argv) {
             + std::string(darkGreen) + "[1 - 8]" + blue) != std::string::npos);
         CHECK(superiorAutoEnhanced.find("Damage Reduced by 2 "
             + std::string(darkGreen) + "[1 - 2]" + blue) != std::string::npos);
+        const auto superiorAutoRuntime = catalog.ResolveCandidateSet(
+            superiorAutoArmor, "lea", {}, true, {}, superiorAutoTooltip,
+            &englishLocalization);
+        const auto superiorAutoRuntimeEnhanced = AppendConsensusRanges(
+            superiorAutoTooltip, superiorAutoRuntime.candidates, false,
+            &englishLocalization, &superiorAutoRuntime.intrinsicCandidates);
+        CHECK(superiorAutoRuntimeEnhanced.find("+8% Enhanced Defense "
+            + std::string(darkGreen) + "[5 - 25]" + blue) != std::string::npos);
 
         // Exact runtime trace for the socketed rare Stone Razor. The 8-bit
         // rare name ids 172/7 spell the generated name; they must never be
@@ -1013,12 +1191,77 @@ int main(int argc, char** argv) {
             + std::string(darkGreen) + "[1 - 2]" + blue) != std::string::npos);
         CHECK(superiorDreamEnhanced.find("+180 Defense "
             + std::string(darkGreen) + "[150 - 220]" + blue) != std::string::npos);
+        const auto superiorDreamRuntime = catalog.ResolveCandidateSet(
+            superiorDreamIds, "crn", "Runeword29", true, {},
+            superiorDreamTooltip, &englishLocalization);
+        const auto superiorDreamRuntimeEnhanced = AppendConsensusRanges(
+            superiorDreamTooltip, superiorDreamRuntime.candidates, false,
+            &englishLocalization, &superiorDreamRuntime.intrinsicCandidates);
+        CHECK(superiorDreamRuntimeEnhanced.find("+55% Enhanced Defense "
+            + std::string(darkGreen) + "[55 - 75]" + blue) != std::string::npos);
+        CHECK(superiorDreamRuntimeEnhanced.find("All Resistances +17 "
+            + std::string(darkGreen) + "[14 - 20]" + blue) != std::string::npos);
+
+        // Runtime regression: ordinary magic armor must retain both prefix
+        // and suffix ranges while the Cube provenance resolver is active.
+        tcp::tooltips::ItemAffixIds saintlyChance{};
+        saintlyChance.quality = 4;
+        const auto saintly = CompiledAffixIdForType(
+            excel / "magicprefix.txt", "Saintly", "armo");
+        const auto ofChance = CompiledAffixIdForType(
+            excel / "magicsuffix.txt", "of Chance", "glov");
+        CHECK(saintly && ofChance);
+        saintlyChance.magicPrefix[0] = static_cast<std::uint16_t>(suffixCount + saintly);
+        saintlyChance.magicSuffix[0] = static_cast<std::uint16_t>(ofChance);
+        const auto saintlyChanceTooltip = blue + std::string("+71% Enhanced Defense\n")
+            + blue + "14% Better Chance of Getting Magic Items";
+        const auto saintlyChanceRuntime = catalog.ResolveCandidateSet(
+            saintlyChance, "tgl", {}, true, {}, saintlyChanceTooltip,
+            &englishLocalization);
+        const auto saintlyChanceEnhanced = AppendConsensusRanges(
+            saintlyChanceTooltip, saintlyChanceRuntime.candidates, false,
+            &englishLocalization, &saintlyChanceRuntime.intrinsicCandidates);
+        CHECK(saintlyChanceEnhanced.find("+71% Enhanced Defense "
+            + std::string(darkGreen) + "[66 - 80]" + blue) != std::string::npos);
+
+        // Exile combines its runeword Enhanced Defense with the Paladin
+        // shield's Prismatic automagic All Resistances range.
+        auto exileIds = normal;
+        const auto prismaticAutoId = CompiledAffixId(
+            excel / "automagic.txt", "Prismatic");
+        CHECK(prismaticAutoId != 0);
+        exileIds.autoPrefix = static_cast<std::uint16_t>(
+            CompiledAffixCount(excel / "magicsuffix.txt")
+            + CompiledAffixCount(excel / "magicprefix.txt") + prismaticAutoId);
+        const auto exileTooltip = blue + std::string("Level 14 Defiance Aura When Equipped\n")
+            + blue + "+239% Enhanced Defense\n"
+            + blue + "All Resistances +25\n"
+            + blue + "30% Better Chance of Getting Magic Items";
+        const auto exileRuntime = catalog.ResolveCandidateSet(
+            exileIds, "paf", "Runeword37", true, {}, exileTooltip,
+            &englishLocalization);
+        const auto exileEnhanced = AppendConsensusRanges(
+            exileTooltip, exileRuntime.candidates, false,
+            &englishLocalization, &exileRuntime.intrinsicCandidates);
+        CHECK(exileEnhanced.find("+239% Enhanced Defense "
+            + std::string(darkGreen) + "[220 - 260]" + blue) != std::string::npos);
+        CHECK(exileEnhanced.find("All Resistances +25 "
+            + std::string(darkGreen) + "[25 - 35]" + blue) != std::string::npos);
 
         const auto crescentMoon = catalog.ResolveCandidates(normal, "hax", "Runeword17");
         const auto* aura = FindRange(crescentMoon, "item_aura:aura:holy shock");
         CHECK(aura && aura->minimum == 14 && aura->maximum == 16);
         const auto auraTooltip = blue + std::string("Level 15 Holy Shock Aura When Equipped");
-        CHECK(AppendConsensusRanges(auraTooltip, crescentMoon).find("[14 - 16]")
+        const auto englishSkillLocalization = catalog.BuildLocalization(
+            [](std::string_view key) {
+                if (key == "ModitemAura")
+                    return std::string("Level %d %s Aura When Equipped");
+                if (key == "ItemStats1h") return std::string("Defense: %d");
+                if (key == "ItemStast1k") return std::string("to");
+                return std::string{};
+            });
+        CHECK(AppendConsensusRanges(auraTooltip, crescentMoon, false,
+            &englishSkillLocalization).find("[14 - 16]")
             != std::string::npos);
 
         const auto bone = catalog.ResolveCandidates(normal, "aar", "Runeword8");
@@ -1122,13 +1365,13 @@ int main(int argc, char** argv) {
             augmentedTooltip, augmentedCandidates);
         CHECK(augmentedEnhanced.find("[70 - 85]") != std::string::npos);
 
-        // A public markerless recipe is recoverable only when the finished
-        // roll rules out the untouched item. Here Great Wyrm's owns 61-90
-        // Mana and the synthetic Cube recipe adds 10-20. At 103 the only
-        // compatible history is 71-110; at 83 both native-only and mutated
-        // histories remain possible, so the range must be omitted.
+        // A public markerless recipe is recoverable when the finished tooltip
+        // proves it. Great Wyrm's owns 61-90 Mana, a useitem recipe adds 10-20,
+        // and a usetype recipe adds 2-6 FCR. The resolver must support their
+        // combined history without letting an ambiguous recipe erase the
+        // intrinsic Mana range.
         const auto cubeSource = ReadBinaryText(excel / "cubemain.txt");
-        const auto syntheticCube = TableWithSingleRow(cubeSource, {
+        auto syntheticCube = TableWithSingleRow(cubeSource, {
             {"description", "Public markerless Mana recipe"},
             {"enabled", "1"},
             {"numinputs", "1"},
@@ -1138,6 +1381,32 @@ int main(int argc, char** argv) {
             {"mod 1 min", "10"},
             {"mod 1 max", "20"}
         });
+        CHECK(AppendTableRow(syntheticCube, {
+            {"description", "Public markerless FCR reroll"},
+            {"enabled", "1"},
+            {"numinputs", "1"},
+            {"input 1", "amu,mag"},
+            {"output", "usetype,mag"},
+            {"mod 1", "cast1"},
+            {"mod 1 min", "2"},
+            {"mod 1 max", "6"}
+        }));
+        // Simulate a large public mod containing many structurally compatible
+        // Cube mutations. None of these unrelated rows may expand the hover
+        // candidate set for this tooltip.
+        for (int recipe = 0; recipe < 128; ++recipe) {
+            CHECK(AppendTableRow(syntheticCube, {
+                {"description", "Unrelated markerless mutation "
+                    + std::to_string(recipe)},
+                {"enabled", "1"},
+                {"numinputs", "1"},
+                {"input 1", "amu"},
+                {"output", "useitem"},
+                {"mod 1", "mana"},
+                {"mod 1 min", std::to_string(1000 + recipe)},
+                {"mod 1 max", std::to_string(1000 + recipe)}
+            }));
+        }
         tcp::tooltips::RangeCatalog syntheticCatalog;
         std::string syntheticError;
         CHECK(syntheticCatalog.Load([&](std::string_view tableName,
@@ -1154,15 +1423,89 @@ int main(int argc, char** argv) {
         tcp::tooltips::ItemAffixIds markerlessAmulet{};
         markerlessAmulet.quality = 4;
         markerlessAmulet.magicPrefix[0] = 794 + 312;
-        const auto markerlessCandidates = syntheticCatalog.ResolveCandidates(
-            markerlessAmulet, "amu");
-        const auto provenRecipe = AppendConsensusRanges(
-            blue + std::string("+103 to Mana"), markerlessCandidates);
+        const auto provenTooltip = blue + std::string("+103 to Mana");
+        const auto provenResolution = syntheticCatalog.ResolveCandidateSet(
+            markerlessAmulet, "amu", {}, true, {}, provenTooltip);
+        CHECK(provenResolution.candidates.size() == 2);
+        const auto provenRecipe = AppendConsensusRanges(provenTooltip,
+            provenResolution.candidates, false, nullptr,
+            &provenResolution.intrinsicCandidates);
         CHECK(provenRecipe.find("[71 - 110]") != std::string::npos);
-        const auto ambiguousRecipe = AppendConsensusRanges(
-            blue + std::string("+83 to Mana"), markerlessCandidates);
-        CHECK(ambiguousRecipe.find("[61 - 90]") == std::string::npos);
+
+        const auto ambiguousTooltip = blue + std::string("+83 to Mana");
+        const auto ambiguousResolution = syntheticCatalog.ResolveCandidateSet(
+            markerlessAmulet, "amu", {}, true, {}, ambiguousTooltip);
+        CHECK(ambiguousResolution.candidates.size() == 1);
+        const auto ambiguousRecipe = AppendConsensusRanges(ambiguousTooltip,
+            ambiguousResolution.candidates, false, nullptr,
+            &ambiguousResolution.intrinsicCandidates);
+        CHECK(ambiguousRecipe.find("[61 - 90]") != std::string::npos);
         CHECK(ambiguousRecipe.find("[71 - 110]") == std::string::npos);
+
+        const auto combinedTooltip = blue + std::string("+103 to Mana\n")
+            + blue + "+4% Faster Cast Rate";
+        const auto combinedResolution = syntheticCatalog.ResolveCandidateSet(
+            markerlessAmulet, "amu", {}, true, {}, combinedTooltip);
+        CHECK(combinedResolution.candidates.size() == 4);
+        const auto combinedRecipe = AppendConsensusRanges(combinedTooltip,
+            combinedResolution.candidates, false, nullptr,
+            &combinedResolution.intrinsicCandidates);
+        CHECK(combinedRecipe.find("[71 - 110]") != std::string::npos);
+        CHECK(combinedRecipe.find("[2 - 6]") != std::string::npos);
+
+        // usetype,crf defines the crafted item's intrinsic properties; it must
+        // not be applied a second time when a later useitem mutation is also
+        // compatible with the finished crafted item.
+        auto craftedCube = TableWithSingleRow(cubeSource, {
+            {"description", "Synthetic Caster Amulet"},
+            {"enabled", "1"},
+            {"numinputs", "1"},
+            {"input 1", "amu,mag"},
+            {"output", "usetype,crf"},
+            {"mod 1", "cast1"},
+            {"mod 1 min", "5"},
+            {"mod 1 max", "10"},
+            {"mod 2", "mana"},
+            {"mod 2 min", "10"},
+            {"mod 2 max", "20"}
+        });
+        CHECK(AppendTableRow(craftedCube, {
+            {"description", "Crafted useitem Mana mutation"},
+            {"enabled", "1"},
+            {"numinputs", "1"},
+            {"input 1", "any,crf"},
+            {"output", "useitem"},
+            {"mod 1", "mana"},
+            {"mod 1 min", "2"},
+            {"mod 1 max", "4"}
+        }));
+        tcp::tooltips::RangeCatalog craftedCatalog;
+        std::string craftedError;
+        CHECK(craftedCatalog.Load([&](std::string_view tableName,
+                std::string& text, std::string& loadError) {
+            if (tableName == "cubemain.txt") {
+                text = craftedCube;
+                return true;
+            }
+            text = ReadBinaryText(excel / tableName);
+            if (!text.empty()) return true;
+            loadError = "missing crafted synthetic source table";
+            return false;
+        }, craftedError));
+        tcp::tooltips::ItemAffixIds mutatedCraft{};
+        mutatedCraft.quality = 8;
+        mutatedCraft.magicPrefix[0] = 794 + 312;
+        const auto mutatedCraftTooltip = blue + std::string("+8% Faster Cast Rate\n")
+            + blue + "+112 to Mana";
+        const auto mutatedCraftResolution = craftedCatalog.ResolveCandidateSet(
+            mutatedCraft, "amu", {}, true, {}, mutatedCraftTooltip);
+        CHECK(mutatedCraftResolution.candidates.size() == 2);
+        const auto mutatedCraftEnhanced = AppendConsensusRanges(mutatedCraftTooltip,
+            mutatedCraftResolution.candidates, false, nullptr,
+            &mutatedCraftResolution.intrinsicCandidates);
+        CHECK(mutatedCraftEnhanced.find("[5 - 10]") != std::string::npos);
+        CHECK(mutatedCraftEnhanced.find("[73 - 114]") != std::string::npos);
+        CHECK(mutatedCraftEnhanced.find("[81 - 130]") == std::string::npos);
 
         // BKVince Blood Weapon fixed properties must remain resolvable after
         // sockets are added, even when unrelated affix lines are present.

@@ -433,3 +433,57 @@ JSON global le SHA-256
 `F425617759A69C6EF09BB630C9971469D53CEE7773B5D3C1F5686CB859509E5A`.
 Le déploiement statique et l'unicité de portée sont vérifiés; aucun cold start
 n'a été exécuté pendant cette bascule finale.
+
+## Maintenance 3.2.2 — coexistence avec PluginPack
+
+Le cold start BKVince du 5 août 2026 a reproduit un refus propre de la 3.2.1 :
+`plugin-skills.dll` installe d'abord son hook inline gouverné sur
+`LANG_GetStringByKey 0x5F4B90`, puis Advanced Item Tooltips exigeait encore le
+prologue vanilla de cette même entrée qu'il appelle sans la posséder. La DLL
+refusait donc son chargement avec `runeword ABI signature mismatch`, tandis que
+les versions antérieures demeuraient compatibles avec la pile.
+
+La 3.2.2 conserve les signatures strictes sur les fonctions et les sept
+call-sites qu'elle possède. Pour l'entrée partagée `0x5F4B90`, elle exige
+désormais seulement une adresse mémoire exécutable, puis appelle normalement
+la chaîne installée par `plugin-skills`. Les quatre suites CTest passent,
+incluant les régressions de lignes `setitems.txt` à `*ID` dupliqué et de
+plusieurs variantes actives partageant une clé de runeword.
+
+La DLL Release, la copie de package et le runtime global sont byte-identiques
+au SHA-256
+`BFBFAEC8A64D7FAF7151C0D149A4E54DA63329D779D526DAC615C742A81EFCCA`.
+Le cold start complet suivant charge `plugin-skills` et son hook `0x5F4B90`,
+puis active `AdvancedItemTooltips 3.2.2` avec les sept call-sites, les tables
+BKVince, la configuration globale, les contributions socketed incluses et
+`Max Sockets` masqué sur les objets socketed. Le résumé termine à
+`scanned=13 active=12 disabled=0 rejected=0 failed=1`; l'unique échec restant
+est le problème préexistant et distinct de `RepeatableServices.dll`.
+
+## Maintenance 3.2.3 — plages ED, groupes de statistiques et recettes craft
+
+Les captures runtime BKVince ont exposé une régression générale : la fonction
+`ac%` était réduite à sa borne maximale pendant le décodage de `properties.txt`.
+Cela supprimait les plages Enhanced Defense des objets Superior, des affixes
+magiques (Saintly) et des runewords Dream/Exile. La 3.2.3 conserve maintenant
+l'enveloppe min/max définie par la table propriétaire.
+
+Les formats localisés groupés (`All Resistances`, `All Attributes`) sont aussi
+séparés de leurs composantes individuelles afin d'éviter qu'une même ligne ne
+corresponde simultanément à plusieurs statistiques. Enfin, les sorties
+`usetype,crf` sont indexées comme recettes craft intrinsèques et les marqueurs
+persistants d'augment/corruption sont sélectionnés sans confondre les bonus de
+gameplay visibles avec la provenance de la recette.
+
+Les régressions automatisées couvrent le Superior Leather Armor, les gants
+Saintly of Chance, Dream, Exile, le Caster Amulet, l'augment et la corruption
+sur les tables réellement chargées par le runtime BKVince.
+
+La DLL Release, la copie de package et le runtime global 3.2.3 sont
+byte-identiques au SHA-256
+`5906A7876CC191677C9D20B4F9785518B2A846CF66B73375262A6DD1910C712A`.
+Le démarrage BKVince du 2026-08-05 à 20:11 active les sept call-sites avec le
+catalogue runtime BKVince, les contributions socketed incluses et `Max Sockets`
+masqué sur les objets socketed. Le résumé reste à
+`scanned=13 active=12 disabled=0 rejected=0 failed=1`; l'échec unique demeure
+le problème préexistant et distinct de `RepeatableServices.dll`.

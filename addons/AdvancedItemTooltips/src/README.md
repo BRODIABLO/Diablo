@@ -5,6 +5,25 @@ global `d2rloader/plugins` directory or in a mod-local plugin directory. This
 public release is autonomous: it does not depend on BKVince, Transmogrify, or
 any eezstreet PluginPack DLL.
 
+Version 3.2.3 restores variable Enhanced Defense and separates grouped stat
+formats such as All Resistances from their individual components. It also
+indexes crafted `usetype,crf` recipes correctly and distinguishes persistent
+Cube provenance markers from ordinary visible gameplay stats.
+
+The plugin caches exact, unchanged tooltip transformations per UI thread,
+keeps intrinsic ranges when markerless Cube histories are ambiguous, and
+filters unrelated `useitem`/`usetype` recipes before resolving combinations.
+Repeated hover frames therefore reuse the validated result while any native
+tooltip text, affix identity, defense, socket count, or socket filler change
+invalidates the entry automatically.
+
+It also derives unique-item, set-item, property, and stat identities from the
+same compiled row order used by D2R. Modder comment columns such as `*ID` and
+`*Tooltip` may be blank, stale, or duplicated without hiding newly added
+records. Properties using several `func`/`stat` slots are decoded component by
+component, and conditional set-item bonus groups are evaluated as alternative
+equipped states before whole-tooltip consensus chooses a range.
+
 ## Installation
 
 Install the DLL in either supported D2RLoader scope:
@@ -74,11 +93,14 @@ count in standard item data and are never guessed.
 
 Pure vanilla has no loose mod directory for the public D2RLoader SDK to expose.
 In that context, the DLL automatically loads its embedded D2R 3.2.92777 vanilla
-catalog; no fake mod, `-txt` launch flag, or copied TXT files are required. An
-active mod always takes priority and is read from its own loose TXT tables. If
-an active mod does not expose those tables, the plugin does not silently apply
-vanilla ranges to modded items: range annotations fail closed while native
-`Max Sockets` remains available.
+catalog; no fake mod, `-txt` launch flag, or copied TXT files are required.
+Active packages are resolved table by table: a loose TXT supplied by the package
+takes priority, while a table that is absent in both TXT and BIN form falls back
+to embedded vanilla. Cosmetic online packages therefore keep vanilla ranges,
+and partial TXT mods inherit only the vanilla tables they did not replace. A BIN
+without its matching TXT is treated as an unreadable gameplay override: range
+annotations fail closed with the exact binary path while native `Max Sockets`
+remains available.
 
 `includeSocketedContributionsInRanges=false` is the public default. Affixes,
 automagic, superior properties, crafts, uniques, sets, and intrinsic runeword
@@ -94,6 +116,9 @@ Runewords are resolved from the concrete item's native compiled RunesTxt
 record, then matched to the active mod's `runes.txt` localization key. All
 active runeword rows are loaded. Their variable scalar properties are combined
 with rune bonuses only when `includeSocketedContributionsInRanges=true`.
+Multiple active rows may intentionally reuse one localization key; the plugin
+keeps every variant as a candidate and lets the complete rendered tooltip select
+the compatible range instead of rejecting the mod's entire catalog.
 For example, Call to Arms combines its `200-240%` runeword Enhanced Damage
 with Ohm's fixed `+50%`, so the final line is annotated `[250 - 290]`.
 
@@ -133,9 +158,18 @@ only the three `magicPrefix` and three `magicSuffix` slots contribute stats.
 Treating name ids as property ids makes ranges depend incorrectly on the random
 rare name and is therefore forbidden.
 
-For `uniqueitems.txt` and `setitems.txt`, only rows carrying a valid `*ID` are
-indexed. Blank section labels never replace the real record 0, including The
-Gnasher and Civerb's Ward.
+For `uniqueitems.txt` and `setitems.txt`, runtime `fileIndex` follows compiled
+physical row order. The named `Expansion` delimiter is skipped, while every
+other row—including blank section records—consumes an index. The plugin never
+trusts the optional `*ID` comment column, so new unique and set records remain
+aligned even when a mod leaves that column empty or reuses an old value.
+
+Set `add func` modes `0`, `1`, and `2` are modeled from `aprop1a` through
+`aprop5b`: unconditional groups, companion-piece subsets, and cumulative
+piece-count prefixes respectively. Unknown modes are fail-closed and keep only
+the set item's intrinsic properties. Property functions that cannot be decoded
+exactly are likewise omitted and summarized once in the startup log rather
+than fabricating a range.
 
 D2R stores final-tooltip lines in bottom-to-top display order. The plugin
 therefore inserts the socket line immediately before the lowest displayed

@@ -19,6 +19,7 @@
 #include <mutex>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -137,12 +138,54 @@ tcp::tooltips::TooltipLocalization Localization;
 ruffneckk::advanced_item_tooltips::Config Settings{};
 std::string LoadedConfigPath{"built-in defaults"};
 
+struct CachedAffixState {
+    std::uintptr_t identity{};
+    std::int32_t classId{};
+    std::uint32_t quality{};
+    std::uint32_t flags{};
+    std::uint32_t fileIndex{};
+    std::uint16_t rarePrefix{};
+    std::uint16_t rareSuffix{};
+    std::uint16_t autoPrefix{};
+    std::array<std::uint16_t, 3> magicPrefix{};
+    std::array<std::uint16_t, 3> magicSuffix{};
+
+    bool operator==(const CachedAffixState&) const = default;
+};
+
+struct TooltipCacheState {
+    CachedAffixState item;
+    std::int32_t socketCount{};
+    std::int32_t defense{};
+    std::uint8_t maximumSockets{};
+    std::array<CachedAffixState, 6> socketFillers{};
+    std::size_t socketFillerCount{};
+
+    bool operator==(const TooltipCacheState&) const = default;
+};
+
+struct TooltipCacheEntry {
+    bool occupied{};
+    TooltipCacheState state;
+    std::string original;
+    std::string enhanced;
+};
+
+// Large stashes and comparison panels routinely cycle through more than eight
+// items. Keep enough exact transformations to avoid rebuilding table-backed
+// histories whenever the cursor returns to a recently inspected item.
+constexpr std::size_t TooltipCacheCapacity = 64;
+constexpr std::size_t TooltipScratchCapacity = 64 * 1024;
+thread_local std::array<TooltipCacheEntry, TooltipCacheCapacity> TooltipCache;
+thread_local std::size_t TooltipCacheNext{};
+thread_local std::array<char, TooltipScratchCapacity> TooltipScratch;
+
 constexpr D2RL::PluginInfo Info{
     .infoSize = D2RL::PluginInfoSize,
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "advanced-item-tooltips",
     .name = "Advanced Item Tooltips",
-    .version = "3.1.0-rc.2",
+    .version = "3.2.3",
     .author = "RuffnecKk",
     .description = "Shows maximum sockets and exact item roll ranges.",
     .flags = D2RL::PluginFlags::None,
@@ -263,6 +306,19 @@ bool IsReadable(const void* address, std::size_t size) noexcept {
     return begin <= regionEnd && size <= regionEnd - begin;
 }
 
+bool IsExecutableAddress(const void* address) noexcept {
+    if (!address) return false;
+    MEMORY_BASIC_INFORMATION memory{};
+    if (VirtualQuery(address, &memory, sizeof(memory)) != sizeof(memory)
+        || memory.State != MEM_COMMIT
+        || (memory.Protect & (PAGE_GUARD | PAGE_NOACCESS)) != 0) return false;
+    const auto protection = memory.Protect & 0xFF;
+    return protection == PAGE_EXECUTE
+        || protection == PAGE_EXECUTE_READ
+        || protection == PAGE_EXECUTE_READWRITE
+        || protection == PAGE_EXECUTE_WRITECOPY;
+}
+
 tcp::tooltips::ItemAffixIds ReadAffixIds(const std::uint8_t* data) noexcept {
     tcp::tooltips::ItemAffixIds ids{};
     ids.quality = Read<std::uint32_t>(data, ItemDataQualityOffset);
@@ -290,6 +346,70 @@ std::string ItemCode(void* item) noexcept {
     std::string result(code);
     while (!result.empty() && (result.back() == ' ' || result.back() == '\0')) result.pop_back();
     return result;
+}
+
+bool CaptureAffixState(void* item, CachedAffixState& state) noexcept {
+    if (!item || !GetItemData) return false;
+    const auto* data = GetItemData(item);
+    if (!data) return false;
+    state.identity = reinterpret_cast<std::uintptr_t>(item);
+    state.classId = Read<std::int32_t>(static_cast<const std::uint8_t*>(item), UnitClassIdOffset);
+    state.quality = Read<std::uint32_t>(data, ItemDataQualityOffset);
+    state.flags = Read<std::uint32_t>(data, ItemDataFlagsOffset);
+    state.fileIndex = Read<std::uint32_t>(data, ItemDataFileIndexOffset);
+    state.rarePrefix = Read<std::uint16_t>(data, ItemDataRarePrefixOffset);
+    state.rareSuffix = Read<std::uint16_t>(data, ItemDataRareSuffixOffset);
+    state.autoPrefix = Read<std::uint16_t>(data, ItemDataAutoPrefixOffset);
+    for (std::size_t index = 0; index < 3; ++index) {
+        state.magicPrefix[index] = Read<std::uint16_t>(
+            data, ItemDataMagicPrefixOffset + index * 2);
+        state.magicSuffix[index] = Read<std::uint16_t>(
+            data, ItemDataMagicSuffixOffset + index * 2);
+    }
+    return true;
+}
+
+bool CaptureTooltipCacheState(void* item, TooltipCacheState& state) noexcept {
+    if (!CaptureAffixState(item, state.item)) return false;
+    if (GetUnitStat) {
+        state.socketCount = GetUnitStat(item, SocketCountStat, 0);
+        state.defense = GetUnitStat(item, ArmorClassStat, 0);
+    }
+    if (GetMaxSockets) state.maximumSockets = GetMaxSockets(item);
+
+    if (!Settings.includeSocketedContributionsInRanges
+        || (state.item.flags & ItemFlagRuneword) != 0
+        || !GetInventory || !GetFirstInventoryItem || !GetNextInventoryItem) return true;
+    const auto inventory = GetInventory(item);
+    if (!inventory) return true;
+    auto* filler = GetFirstInventoryItem(inventory);
+    while (filler && state.socketFillerCount < state.socketFillers.size()) {
+        auto& fillerState = state.socketFillers[state.socketFillerCount];
+        if (!CaptureAffixState(filler, fillerState)) return false;
+        ++state.socketFillerCount;
+        filler = GetNextInventoryItem(filler);
+    }
+    return true;
+}
+
+const std::string* FindCachedTooltip(
+    const TooltipCacheState& state, std::string_view original) noexcept {
+    for (const auto& entry : TooltipCache) {
+        if (entry.occupied && entry.state == state && entry.original == original)
+            return &entry.enhanced;
+    }
+    return nullptr;
+}
+
+const std::string& StoreCachedTooltip(
+    TooltipCacheState state, std::string original, std::string enhanced) {
+    auto& entry = TooltipCache[TooltipCacheNext];
+    TooltipCacheNext = (TooltipCacheNext + 1) % TooltipCache.size();
+    entry.occupied = true;
+    entry.state = std::move(state);
+    entry.original = std::move(original);
+    entry.enhanced = std::move(enhanced);
+    return entry.enhanced;
 }
 
 const tcp::tooltips::TooltipLocalization& CurrentLocalization() {
@@ -464,22 +584,37 @@ void* TransformOwnedTooltip(void* result, void* item) noexcept {
         const auto length = *reinterpret_cast<const std::size_t*>(object + 8);
         if (length == 0 || length > 16 * 1024 || !IsReadable(data, length + 1)) return result;
 
-        const std::string original(data, length);
-        auto enhanced = original;
-        std::array<char, 64 * 1024> buffer{};
-        const auto enhancedLength = AdvancedItemTooltipsEnhanceTooltip(
-            item, enhanced.data(), enhanced.size(), buffer.data(), buffer.size());
-        if (enhancedLength > 0 && enhancedLength < buffer.size()) {
-            enhanced.assign(buffer.data(), enhancedLength);
+        const std::string_view originalView(data, length);
+        TooltipCacheState state;
+        const auto cacheable = CaptureTooltipCacheState(item, state);
+        const std::string* enhanced = cacheable
+            ? FindCachedTooltip(state, originalView)
+            : nullptr;
+        std::string uncached;
+        if (!enhanced) {
+            std::string original(originalView);
+            uncached = original;
+            const auto enhancedLength = AdvancedItemTooltipsEnhanceTooltip(
+                item, original.data(), original.size(),
+                TooltipScratch.data(), TooltipScratch.size());
+            if (enhancedLength > 0 && enhancedLength < TooltipScratch.size()) {
+                uncached.assign(TooltipScratch.data(), enhancedLength);
+            }
+            uncached = InsertMaxSocketsBelowPrimaryStat(std::move(uncached), item);
+            if (cacheable) {
+                enhanced = &StoreCachedTooltip(
+                    std::move(state), std::move(original), std::move(uncached));
+            } else {
+                enhanced = &uncached;
+            }
         }
-        enhanced = InsertMaxSocketsBelowPrimaryStat(std::move(enhanced), item);
-        if (enhanced == original) return result;
+        if (*enhanced == originalView) return result;
 
-        EnsureStringCapacity(result, enhanced.size());
+        EnsureStringCapacity(result, enhanced->size());
         auto* destination = *reinterpret_cast<char**>(result);
-        if (!IsReadable(destination, enhanced.size() + 1)) return result;
-        std::memcpy(destination, enhanced.c_str(), enhanced.size() + 1);
-        const auto size = enhanced.size();
+        if (!IsReadable(destination, enhanced->size() + 1)) return result;
+        std::memcpy(destination, enhanced->c_str(), enhanced->size() + 1);
+        const auto size = enhanced->size();
         std::memcpy(static_cast<std::uint8_t*>(result) + 8, &size, sizeof(size));
     } catch (...) {
         if (Context) Context->LogError(
@@ -557,7 +692,7 @@ auto Status(
     std::snprintf(
         message,
         sizeof(message),
-        "AdvancedItemTooltips 3.1.0-rc.2: enabled=%s; maxSockets=%s; maxSocketsOnSocketed=%s; baseDefense=%s; propertyRanges=%s; socketContributions=%s; catalog=%s; config=%s.",
+        "AdvancedItemTooltips 3.2.3: enabled=%s; maxSockets=%s; maxSocketsOnSocketed=%s; baseDefense=%s; propertyRanges=%s; socketContributions=%s; catalog=%s; config=%s.",
         Settings.enabled ? "yes" : "no",
         Settings.showMaxSockets ? "yes" : "no",
         Settings.showMaxSocketsOnSocketedItems ? "yes" : "no",
@@ -592,11 +727,11 @@ extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsEnhance
         const auto& localization = CurrentLocalization();
         const auto runewordKey = ResolveRunewordKey(
             item, itemData, std::string_view(tooltip, tooltipLength));
-        auto candidates = Catalog.ResolveCandidates(
+        auto resolution = Catalog.ResolveCandidateSet(
             ids, code, runewordKey, Settings.includeSocketedContributionsInRanges,
             [&](std::int32_t statId, std::uint16_t layer) {
                 return GetUnitStat ? GetUnitStat(item, statId, layer) : 0;
-            });
+            }, std::string_view(tooltip, tooltipLength), &localization);
         bool hasSocketFillers{};
         // Runeword rune bonuses are already reconstructed from runes.txt plus
         // gems.txt in ResolveCandidates. Enumerating their socket inventory as
@@ -613,8 +748,11 @@ extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsEnhance
                             const auto fillerCode = ItemCode(socketFiller);
                             const auto fillerCandidates = Catalog.ResolveSocketFillerCandidates(
                                 fillerIds, fillerCode, code);
-                            candidates = tcp::tooltips::MergeCandidateSources(
-                                candidates, fillerCandidates);
+                            resolution.candidates = tcp::tooltips::MergeCandidateSources(
+                                resolution.candidates, fillerCandidates);
+                            resolution.intrinsicCandidates =
+                                tcp::tooltips::MergeCandidateSources(
+                                    resolution.intrinsicCandidates, fillerCandidates);
                         }
                         socketFiller = GetNextInventoryItem(socketFiller);
                     }
@@ -623,9 +761,9 @@ extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsEnhance
         }
         const std::string original(tooltip, tooltipLength);
         auto enhanced = Settings.showPropertyRanges
-            ? tcp::tooltips::AppendConsensusRanges(original, candidates,
+            ? tcp::tooltips::AppendConsensusRanges(original, resolution.candidates,
                 !Settings.includeSocketedContributionsInRanges && hasSocketFillers,
-                &localization)
+                &localization, &resolution.intrinsicCandidates)
             : original;
         enhanced = InsertBaseDefense(
             std::move(enhanced), item, itemData, localization);
@@ -702,7 +840,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         context->LogWarn("AdvancedItemTooltips: status command could not be registered.");
     }
     if (!Settings.enabled) {
-        context->LogInfo("AdvancedItemTooltips 3.1.0-rc.2 disabled by JSON config; no hooks installed.");
+        context->LogInfo("AdvancedItemTooltips 3.2.3 disabled by JSON config; no hooks installed.");
         return true;
     }
 
@@ -751,11 +889,6 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     constexpr std::array<std::uint8_t, 14> localizedStringExpected{
         0x80,0x3D,0x05,0xAE,0xCF,0x02,0x00,
         0x48,0x8D,0x05,0xDA,0x96,0xDB,0x01};
-    constexpr std::array<std::uint8_t, 29> localizedStringByKeyExpected{
-        0x4C,0x8B,0xDC,0x55,0x53,0x57,0x49,0x8D,
-        0x6B,0xA1,0x48,0x81,0xEC,0xB0,0x00,0x00,
-        0x00,0x48,0x8B,0x05,0x20,0x67,0x3D,0x02,
-        0x48,0x33,0xC4,0x48,0x89};
     constexpr std::array<std::uint8_t, 16> getInventoryExpected{
         0x48,0x89,0x5C,0x24,0x18,0x56,0x48,0x83,
         0xEC,0x20,0x48,0x8B,0xF1,0x48,0x85,0xC9};
@@ -772,10 +905,16 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     if (!context->CheckExpectedBytes(GetRunesTxtRecordFromItemRva,
             runewordResolverExpected.data(), runewordResolverExpected.size())
         || !context->CheckExpectedBytes(GetLocalizedStringRva,
-            localizedStringExpected.data(), localizedStringExpected.size())
-        || !context->CheckExpectedBytes(GetLocalizedStringByKeyRva,
-            localizedStringByKeyExpected.data(), localizedStringByKeyExpected.size())) {
+            localizedStringExpected.data(), localizedStringExpected.size())) {
         context->LogError("AdvancedItemTooltips: runeword ABI signature mismatch for build 92777.");
+        return false;
+    }
+    // plugin-skills can legitimately own an inline hook on this shared
+    // localization entry before global plugins load. AdvancedItemTooltips only
+    // calls the entry and never owns it, so require a live executable target
+    // without demanding the original vanilla prologue.
+    if (!IsExecutableAddress(Base + GetLocalizedStringByKeyRva)) {
+        context->LogError("AdvancedItemTooltips: localization entry is not executable.");
         return false;
     }
     if (!context->CheckExpectedBytes(GetInventoryRva,
@@ -798,25 +937,52 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     GetLocalizedString = At<GetLocalizedStringFn>(GetLocalizedStringRva);
     GetLocalizedStringByKey = At<GetLocalizedStringByKeyFn>(GetLocalizedStringByKeyRva);
     std::string catalogError;
-    if (context->modDirectory) {
+    const bool hasActiveMod = context->activeMod && context->activeMod[0] != '\0';
+    if (hasActiveMod && context->modDirectory) {
         const auto modDirectory = std::filesystem::path(context->modDirectory);
-        std::vector<std::filesystem::path> excelCandidates{
-            modDirectory / L"data/global/excel"
-        };
-        if (context->activeMod && context->activeMod[0] != '\0') {
-            excelCandidates.push_back(modDirectory
-                / (std::string(context->activeMod) + ".mpq") / L"data/global/excel");
-        }
-        for (const auto& excel : excelCandidates) {
-            if (!std::filesystem::exists(excel / L"properties.txt")) continue;
-            if (Catalog.Load(excel, catalogError)) {
+        std::error_code directoryError;
+        const auto directoryExists = std::filesystem::exists(modDirectory, directoryError);
+        if (directoryError) {
+            catalogError = "Cannot inspect active package directory " + modDirectory.string()
+                + ": " + directoryError.message();
+        } else if (!directoryExists) {
+            catalogError = "Active package directory is unavailable: " + modDirectory.string();
+        } else {
+            const std::vector<std::filesystem::path> excelCandidates{
+                modDirectory / L"data/global/excel",
+                modDirectory / (std::string(context->activeMod) + ".mpq")
+                    / L"data/global/excel"
+            };
+            std::size_t physicalLoads{};
+            std::size_t fallbackLoads{};
+            const auto provider = [&](std::string_view tableName, std::string& text,
+                                      std::string& error) {
+                return tcp::tooltips::RangeCatalog::LoadLayeredTable(
+                    excelCandidates, LoadEmbeddedVanillaTable, tableName, text, error,
+                    physicalLoads, fallbackLoads);
+            };
+            if (Catalog.Load(provider, catalogError)) {
                 CatalogLoaded = true;
-                CatalogSource = excel.string();
-                break;
+                if (physicalLoads == 0) {
+                    CatalogSource = "embedded vanilla 3.2.92777 (cosmetic package)";
+                } else if (fallbackLoads == 0) {
+                    const auto source = std::find_if(excelCandidates.begin(), excelCandidates.end(),
+                        [](const auto& excel) {
+                            std::error_code error;
+                            return std::filesystem::exists(excel / L"properties.txt", error)
+                                && !error;
+                        });
+                    CatalogSource = source == excelCandidates.end()
+                        ? "active package TXT tables"
+                        : source->string();
+                } else {
+                    CatalogSource = "active package TXT tables + embedded vanilla fallback";
+                }
             }
         }
+    } else if (hasActiveMod) {
+        catalogError = "D2RLoader did not expose the active package directory";
     }
-    const bool hasActiveMod = context->activeMod && context->activeMod[0] != '\0';
     if (!CatalogLoaded && !hasActiveMod) {
         catalogError.clear();
         if (Catalog.Load(LoadEmbeddedVanillaTable, catalogError)) {
@@ -827,6 +993,13 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     if (!CatalogLoaded) {
         const auto message = "AdvancedItemTooltips: roll ranges unavailable; sockets remain active. " + catalogError;
         context->LogWarn(message.c_str());
+    } else if (!Catalog.UnsupportedPropertyFunctions().empty()) {
+        std::string message = "AdvancedItemTooltips: unsupported property functions omitted:";
+        for (const auto& [function, count] : Catalog.UnsupportedPropertyFunctions()) {
+            message += " func" + std::to_string(function) + "=" + std::to_string(count);
+        }
+        message += ".";
+        context->LogInfo(message.c_str());
     }
     if (!InstallTooltipCallSites()) {
         context->LogError(
@@ -834,7 +1007,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         return false;
     }
     const auto activation = std::string(
-        "AdvancedItemTooltips 3.1.0-rc.2 active for D2R 3.2.92777 (7/7 call-sites); catalog=")
+        "AdvancedItemTooltips 3.2.3 active for D2R 3.2.92777 (7/7 call-sites); catalog=")
         + CatalogSource
         + "; config="
         + LoadedConfigPath

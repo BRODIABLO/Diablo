@@ -11,6 +11,7 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include <system_error>
 #include <tuple>
 #include <unordered_set>
 
@@ -255,7 +256,6 @@ bool DescriptionFits(std::string_view line, const ModifierRange& range,
     const auto firstVisible = cleanLine.find_first_not_of(" \t\r");
     const auto hasExplicitSign = firstVisible != std::string::npos
         && (cleanLine[firstVisible] == '+' || cleanLine[firstVisible] == '-');
-    if (anchor.empty()) return false;
     if (localization) {
         if (std::any_of(localization->metadataTemplates.begin(),
                 localization->metadataTemplates.end(), [&](const auto& format) {
@@ -271,6 +271,7 @@ bool DescriptionFits(std::string_view line, const ModifierRange& range,
                         !range.parameter.empty());
                 })) return true;
     }
+    if (anchor.empty()) return false;
     // Structural item lines are metadata, not rolled modifiers. Without this
     // gate, "Required Strength: 110" can match a variable Strength affix and
     // reject the item's complete candidate. Keep the patterns specific so
@@ -302,7 +303,12 @@ bool DescriptionFits(std::string_view line, const ModifierRange& range,
     }
     if (!range.parameter.empty()) {
         const auto parameter = NormalizeWords(range.parameter);
-        if (!parameter.empty() && normalizedLine.find(parameter) == std::string::npos) return false;
+        const auto numericParameter = std::all_of(range.parameter.begin(), range.parameter.end(),
+            [](unsigned char ch) { return std::isdigit(ch) != 0; });
+        // Numeric skill/tab/monster ids are not rendered literally. They are
+        // safe only when a native localized stat template matched above.
+        if (numericParameter || (!parameter.empty()
+            && normalizedLine.find(parameter) == std::string::npos)) return false;
     }
     return true;
 }
@@ -344,29 +350,51 @@ std::vector<ModifierRange> Combine(std::vector<ModifierRange> raw) {
 }
 
 std::optional<RangeCatalog::PropertyInfo> DecodeProperty(
-    const Row& row, const std::unordered_map<std::string, std::int32_t>& priorities) {
+    const Row& row, std::size_t slot,
+    const std::unordered_map<std::string, std::int32_t>& priorities) {
+    const auto number = std::to_string(slot);
     const auto code = Lower(Get(row, "code"));
-    const auto tooltip = Get(row, "*tooltip");
-    const auto function = Number(row, "func1");
-    auto stat = Lower(Get(row, "stat1"));
-    if (code.empty() || tooltip.empty()) return std::nullopt;
+    const auto function = Number(row, "func" + number);
+    auto stat = Lower(Get(row, "stat" + number));
+    if (code.empty() || function == 0) return std::nullopt;
     if (function == 5) stat = "mindamage";
     else if (function == 6) stat = "maxdamage";
     else if (function == 7) stat = "enhanced_damage";
-    else if (function != 1 && function != 2 && function != 3 && function != 8
-        && function != 9 && function != 10 && function != 13
-        && function != 21 && function != 22 && function != 24) return std::nullopt;
+    else if (function != 1 && function != 2 && function != 3 && function != 4
+        && function != 8 && function != 9 && function != 10 && function != 13
+        && function != 15 && function != 16 && function != 21
+        && function != 22 && function != 24) return std::nullopt;
     if (stat.empty()) return std::nullopt;
     const auto priority = priorities.contains(stat) ? priorities.at(stat) : 0;
-    const auto parameterized = function == 9 || function == 10 || function == 22 || function == 24;
-    return RangeCatalog::PropertyInfo{stat, tooltip, priority, function, parameterized};
+    const auto parameterized = function == 9 || function == 10 || function == 21
+        || function == 22 || function == 24;
+    // Function 21 takes its parameter from properties.txt/val#. Functions 9,
+    // 10, 22 and 24 take the parameter supplied by the owning table row; a
+    // stray val# comment/helper value must not override that runtime input.
+    auto fixedParameter = function == 21 ? Trim(Get(row, "val" + number)) : std::string{};
+    return RangeCatalog::PropertyInfo{
+        stat, slot == 1 ? Get(row, "*tooltip") : std::string{}, priority,
+        function, parameterized, std::move(fixedParameter)};
 }
 
 ModifierRange MakeRange(const std::string& code, const RangeCatalog::PropertyInfo& property,
     std::string parameter, std::int32_t minimum, std::int32_t maximum) {
+    // Functions 2/4 cannot be collapsed to the owner table's maximum here.
+    // D2R's generated affix/runeword records demonstrably retain their
+    // min/max roll (ac% is the canonical case: Saintly 66-80, Exile 220-260).
+    // The function describes how the compiled property is applied, while the
+    // owning TXT row still defines the possible roll envelope presented to
+    // the player. Functions 15/16 are different: their two columns encode the
+    // selected minimum or maximum component itself.
+    if (property.function == 16) {
+        minimum = maximum;
+    } else if (property.function == 15) {
+        maximum = minimum;
+    }
     if (minimum > maximum) std::swap(minimum, maximum);
     auto key = property.key;
     if (property.parameterized) {
+        if (!property.fixedParameter.empty()) parameter = property.fixedParameter;
         parameter = Trim(std::move(parameter));
         key += ":" + code + ":" + Lower(parameter);
     } else {
@@ -377,7 +405,8 @@ ModifierRange MakeRange(const std::string& code, const RangeCatalog::PropertyInf
 }
 
 void AppendPropertyRanges(
-    const std::unordered_map<std::string, RangeCatalog::PropertyInfo>& properties,
+    const std::unordered_map<std::string,
+        std::vector<RangeCatalog::PropertyInfo>>& properties,
     const std::string& code, std::string parameter, std::int32_t minimum,
     std::int32_t maximum, std::vector<ModifierRange>& result) {
     // Property functions 15/16 use the TXT minimum as the visible minimum
@@ -397,29 +426,27 @@ void AppendPropertyRanges(
         composite != compositeDamage.end()) {
         const auto low = properties.find(std::string((*composite)[1]));
         const auto high = properties.find(std::string((*composite)[2]));
-        if (low != properties.end() && high != properties.end()) {
-            result.push_back(MakeRange(std::string((*composite)[1]), low->second, {},
+        if (low != properties.end() && !low->second.empty()
+            && high != properties.end() && !high->second.empty()) {
+            result.push_back(MakeRange(std::string((*composite)[1]), low->second.front(), {},
                 minimum, minimum));
-            result.push_back(MakeRange(std::string((*composite)[2]), high->second, {},
+            result.push_back(MakeRange(std::string((*composite)[2]), high->second.front(), {},
                 maximum, maximum));
         }
         return;
     }
     const auto property = properties.find(code);
-    if (property == properties.end()) return;
-    if (property->second.parameterized
-        && std::none_of(parameter.begin(), parameter.end(), [](unsigned char ch) {
-            return std::isalpha(ch) != 0 || ch >= 0x80;
-        })) return;
-    auto display = MakeRange(code, property->second, parameter, minimum, maximum);
+    if (property == properties.end() || property->second.empty()) return;
+    auto display = MakeRange(code, property->second.front(), parameter, minimum, maximum);
     const auto appendComposite = [&](std::initializer_list<std::string_view> components) {
         display.key = "display:" + code;
+        display.statKey = "group:" + property->second.front().key;
         result.push_back(display);
         for (const auto component : components) {
             const auto found = properties.find(std::string(component));
-            if (found == properties.end()) continue;
-            result.push_back(MakeRange(std::string(component), found->second, parameter,
-                minimum, maximum));
+            if (found == properties.end() || found->second.empty()) continue;
+            result.push_back(MakeRange(std::string(component), found->second.front(),
+                parameter, minimum, maximum));
         }
     };
     if (code == "res-all") {
@@ -427,12 +454,14 @@ void AppendPropertyRanges(
     } else if (code == "all-stats") {
         appendComposite({"str", "dex", "vit", "enr"});
     } else {
-        result.push_back(std::move(display));
+        for (const auto& definition : property->second)
+            result.push_back(MakeRange(code, definition, parameter, minimum, maximum));
     }
 }
 
 std::vector<ModifierRange> ReadMagicModifiers(const Row& row,
-    const std::unordered_map<std::string, RangeCatalog::PropertyInfo>& properties) {
+    const std::unordered_map<std::string,
+        std::vector<RangeCatalog::PropertyInfo>>& properties) {
     std::vector<ModifierRange> result;
     for (std::size_t slot = 1; slot <= 3; ++slot) {
         const auto number = std::to_string(slot);
@@ -445,7 +474,8 @@ std::vector<ModifierRange> ReadMagicModifiers(const Row& row,
 }
 
 std::vector<ModifierRange> ReadItemModifiers(const Row& row, std::size_t count,
-    const std::unordered_map<std::string, RangeCatalog::PropertyInfo>& properties,
+    const std::unordered_map<std::string,
+        std::vector<RangeCatalog::PropertyInfo>>& properties,
     std::string_view codePrefix = "prop", std::string_view minPrefix = "min",
     std::string_view maxPrefix = "max", std::string_view paramPrefix = "par") {
     std::vector<ModifierRange> result;
@@ -539,6 +569,58 @@ bool RangeCatalog::Load(const std::filesystem::path& excelDirectory, std::string
     }, error);
 }
 
+bool RangeCatalog::LoadLayeredTable(
+    const std::vector<std::filesystem::path>& excelDirectories,
+    const TableTextProvider& fallback,
+    std::string_view tableName,
+    std::string& text,
+    std::string& error,
+    std::size_t& physicalLoads,
+    std::size_t& fallbackLoads
+) {
+    for (const auto& directory : excelDirectories) {
+        const auto path = directory / tableName;
+        std::error_code inspectionError;
+        const auto exists = std::filesystem::exists(path, inspectionError);
+        if (inspectionError) {
+            error = "Cannot inspect " + path.string() + ": " + inspectionError.message();
+            return false;
+        }
+        if (!exists) continue;
+        std::ifstream input(path, std::ios::binary);
+        if (!input) {
+            error = "Cannot open " + path.string();
+            return false;
+        }
+        text.assign(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
+        ++physicalLoads;
+        return true;
+    }
+
+    for (const auto& directory : excelDirectories) {
+        auto binary = directory / tableName;
+        binary.replace_extension(".bin");
+        std::error_code inspectionError;
+        const auto exists = std::filesystem::exists(binary, inspectionError);
+        if (inspectionError) {
+            error = "Cannot inspect " + binary.string() + ": " + inspectionError.message();
+            return false;
+        }
+        if (!exists) continue;
+        error = "Cannot safely model modified binary table without matching TXT: "
+            + binary.string();
+        return false;
+    }
+
+    if (!fallback) {
+        error = "No TXT, BIN, or fallback is available for table: " + std::string(tableName);
+        return false;
+    }
+    if (!fallback(tableName, text, error)) return false;
+    ++fallbackLoads;
+    return true;
+}
+
 bool RangeCatalog::Load(const TableTextProvider& provider, std::string& error) {
     const auto read = [&](std::string_view tableName, std::vector<Row>& rows) {
         std::string text;
@@ -546,7 +628,8 @@ bool RangeCatalog::Load(const TableTextProvider& provider, std::string& error) {
         return ParseTsv(tableName, text, rows, error);
     };
 
-    properties_.clear(); statStringKeys_.clear(); suffixes_.clear(); prefixes_.clear(); automagic_.clear();
+    properties_.clear(); unsupportedPropertyFunctions_.clear();
+    statStringKeys_.clear(); suffixes_.clear(); prefixes_.clear(); automagic_.clear();
     superiors_.clear();
     uniques_.clear(); sets_.clear(); armor_.clear(); itemTypes_.clear(); crafts_.clear();
     cubeRecipes_.clear(); uniqueTokens_.clear(); setTokens_.clear();
@@ -558,18 +641,33 @@ bool RangeCatalog::Load(const TableTextProvider& provider, std::string& error) {
     std::unordered_map<std::string, std::int32_t> priorities;
     std::unordered_map<std::string, std::int32_t> statIds;
     std::unordered_set<std::string> persistentStats;
-    for (const auto& row : stats) {
+    for (std::size_t statId = 0; statId < stats.size(); ++statId) {
+        const auto& row = stats[statId];
         const auto stat = Lower(Get(row, "stat"));
         if (stat.empty()) continue;
         priorities[stat] = Number(row, "descpriority");
-        statIds[stat] = Number(row, "*id");
+        // *ID is a comment column. D2's compiled stat id is the physical
+        // record order, so stale or duplicated helper ids in public mods must
+        // never redirect Cube provenance reads to another stat.
+        statIds[stat] = static_cast<std::int32_t>(statId);
         auto& stringKeys = statStringKeys_[stat];
-        for (const auto key : {"descstrpos", "descstrneg", "descstr2",
-                "dgrpstrpos", "dgrpstrneg", "dgrpstr2"}) {
+        for (const auto key : {"descstrpos", "descstrneg", "descstr2"}) {
             const auto value = Trim(Get(row, key));
             if (!value.empty()
                 && std::find(stringKeys.begin(), stringKeys.end(), value) == stringKeys.end())
                 stringKeys.push_back(value);
+        }
+        // Group descriptions (notably All Resistances and All Attributes)
+        // are rendered separately from each component stat. Keeping a dgrp
+        // format on fireresist/strength makes one grouped line match every
+        // component and forces range consensus to fail closed.
+        auto& groupStringKeys = statStringKeys_["group:" + stat];
+        for (const auto key : {"dgrpstrpos", "dgrpstrneg", "dgrpstr2"}) {
+            const auto value = Trim(Get(row, key));
+            if (!value.empty()
+                && std::find(groupStringKeys.begin(), groupStringKeys.end(), value)
+                    == groupStringKeys.end())
+                groupStringKeys.push_back(value);
         }
         if (Number(row, "save bits") > 0 && Number(row, "send bits") > 0)
             persistentStats.insert(stat);
@@ -582,19 +680,38 @@ bool RangeCatalog::Load(const TableTextProvider& provider, std::string& error) {
         std::int32_t statId{};
         bool visible{};
         bool persistent{};
+        bool provenancePriority{};
     };
     std::unordered_map<std::string, PropertyStatTarget> propertyStatTargets;
     for (const auto& row : properties) {
         const auto code = Lower(Get(row, "code"));
-        const auto decoded = DecodeProperty(row, priorities);
-        if (decoded) properties_[code] = *decoded;
-        const auto stat = Lower(Get(row, "stat1"));
-        if (Number(row, "func1") == 1) {
-            if (const auto found = statIds.find(stat); found != statIds.end()) {
-                propertyStatTargets[code] = {
-                    found->second, decoded.has_value(), persistentStats.contains(stat)};
+        if (code.empty()) continue;
+        auto& definitions = properties_[code];
+        for (std::size_t slot = 1; slot <= 7; ++slot) {
+            const auto function = Number(row, "func" + std::to_string(slot));
+            if (const auto decoded = DecodeProperty(row, slot, priorities)) {
+                definitions.push_back(*decoded);
+            } else if (function != 0) {
+                ++unsupportedPropertyFunctions_[function];
             }
         }
+        const auto visible = std::any_of(definitions.begin(), definitions.end(),
+            [&](const auto& definition) {
+                const auto templates = statStringKeys_.find(definition.key);
+                return !definition.anchor.empty()
+                    || (templates != statStringKeys_.end() && !templates->second.empty());
+            });
+        for (std::size_t slot = 1; slot <= 7; ++slot) {
+            if (Number(row, "func" + std::to_string(slot)) != 1) continue;
+            const auto stat = Lower(Get(row, "stat" + std::to_string(slot)));
+            if (const auto found = statIds.find(stat); found != statIds.end()) {
+                propertyStatTargets[code] = {
+                    found->second, visible, persistentStats.contains(stat),
+                    priorities.contains(stat) && priorities.at(stat) >= 250};
+                break;
+            }
+        }
+        if (definitions.empty()) properties_.erase(code);
     }
 
     auto loadMagic = [&](std::string_view file, std::vector<std::vector<ModifierRange>>& target) {
@@ -629,27 +746,43 @@ bool RangeCatalog::Load(const TableTextProvider& provider, std::string& error) {
         std::vector<Row> rows;
         if (!read(file, rows)) return false;
         target.clear();
+        tokens.clear();
         for (const auto& row : rows) {
-            const auto text = Trim(Get(row, "*id"));
-            // Section labels such as Expansion, Armor and Rings have no *ID.
-            // They are not compiled records and must not overwrite the genuine
-            // record 0 (The Gnasher / Civerb's Ward).
-            if (text.empty()) continue;
-            std::size_t id{};
-            const auto parsed = std::from_chars(text.data(), text.data() + text.size(), id);
-            if (parsed.ec != std::errc{} || parsed.ptr != text.data() + text.size()) {
-                error = "Invalid *ID in " + std::string(file) + ": " + text;
-                return false;
-            }
-            if (target.size() <= id) target.resize(id + 1);
-            if (tokens.size() <= id) tokens.resize(id + 1);
-            target[id] = ReadItemModifiers(row, count, properties_);
-            tokens[id] = Lower(Trim(Get(row, "index")));
+            // The TXT compiler consumes the named Expansion delimiter but
+            // compiles every other physical row, including blank section
+            // records. Runtime fileIndex therefore follows this derived order;
+            // *ID is only a modder comment and may be absent, stale or reused.
+            if (Lower(Trim(Get(row, "index"))) == "expansion") continue;
+            target.push_back(ReadItemModifiers(row, count, properties_));
+            tokens.push_back(Lower(Trim(Get(row, "index"))));
         }
         return true;
     };
-    if (!loadItems("uniqueitems.txt", 12, uniques_, uniqueTokens_)
-        || !loadItems("setitems.txt", 9, sets_, setTokens_)) return false;
+    if (!loadItems("uniqueitems.txt", 12, uniques_, uniqueTokens_)) return false;
+
+    std::vector<Row> setRows;
+    if (!read("setitems.txt", setRows)) return false;
+    sets_.clear();
+    setTokens_.clear();
+    for (const auto& row : setRows) {
+        if (Lower(Trim(Get(row, "index"))) == "expansion") continue;
+        SetRecord record;
+        record.intrinsic = ReadItemModifiers(row, 9, properties_);
+        record.addFunction = Number(row, "add func");
+        record.conditionalGroups.resize(5);
+        for (std::size_t group = 1; group <= 5; ++group) {
+            auto& modifiers = record.conditionalGroups[group - 1];
+            for (const auto side : {'a', 'b'}) {
+                const auto suffix = std::to_string(group) + side;
+                AppendPropertyRanges(properties_,
+                    Lower(Get(row, "aprop" + suffix)), Get(row, "apar" + suffix),
+                    Number(row, "amin" + suffix), Number(row, "amax" + suffix),
+                    modifiers);
+            }
+        }
+        sets_.push_back(std::move(record));
+        setTokens_.push_back(Lower(Trim(Get(row, "index"))));
+    }
 
     std::vector<Row> armor;
     if (!read("armor.txt", armor)) return false;
@@ -725,11 +858,9 @@ bool RangeCatalog::Load(const TableTextProvider& provider, std::string& error) {
             const auto rune = Lower(Trim(Get(row, "rune" + std::to_string(slot))));
             if (!rune.empty()) record.runes.push_back(rune);
         }
-        if (!runewords_.emplace(key, std::move(record)).second) {
-            error = "Duplicate active runeword key in runes.txt: " + key;
-            return false;
-        }
-        runewordKeys_.push_back(key);
+        auto [entry, inserted] = runewords_.try_emplace(key);
+        entry->second.push_back(std::move(record));
+        if (inserted) runewordKeys_.push_back(key);
     }
 
     std::vector<Row> cube;
@@ -737,6 +868,7 @@ bool RangeCatalog::Load(const TableTextProvider& provider, std::string& error) {
     struct PendingMarker {
         RecipeMarker marker;
         std::string propertyCode;
+        bool visible{};
     };
     struct PendingRecipe {
         CubeRecipe recipe;
@@ -747,8 +879,8 @@ bool RangeCatalog::Load(const TableTextProvider& provider, std::string& error) {
     for (const auto& row : cube) {
         if (Number(row, "enabled") == 0) continue;
         const auto outputTokens = RecipeTokens(Get(row, "output"));
-        const auto output = outputTokens.empty() ? std::string{} : outputTokens.front();
-        if (output.find("crf") == std::string::npos) continue;
+        if (std::find(outputTokens.begin(), outputTokens.end(), "crf")
+            == outputTokens.end()) continue;
         const auto input = RecipeInputToken(Get(row, "input 1"));
         auto fixed = ReadItemModifiers(row, 5, properties_, "mod ", "mod ", "mod ");
         // Cube columns are "mod N", "mod N min", and "mod N max".
@@ -769,12 +901,19 @@ bool RangeCatalog::Load(const TableTextProvider& provider, std::string& error) {
         const auto outputTokens = RecipeTokens(Get(row, "output"));
         if (inputTokens.empty() || outputTokens.empty()
             || (outputTokens.front() != "useitem" && outputTokens.front() != "usetype")) continue;
+        // usetype,crf rows are the creation recipe for the final crafted item.
+        // Their fixed properties were already indexed in crafts_ above and
+        // form part of the intrinsic crafted candidate. Treating the same row
+        // as a later markerless mutation double-counts every crafted property,
+        // especially when a subsequent useitem recipe is also compatible.
+        if (outputTokens.front() == "usetype"
+            && std::any_of(outputTokens.begin() + 1, outputTokens.end(),
+                [](std::string_view token) { return token == "crf"; })) continue;
         PendingRecipe pending;
         pending.recipe.inputToken = inputTokens.front();
         pending.recipe.inputQualifiers.assign(inputTokens.begin() + 1, inputTokens.end());
         pending.recipe.outputToken = outputTokens.front();
         pending.recipe.outputQualifiers.assign(outputTokens.begin() + 1, outputTokens.end());
-        std::unordered_set<std::string> markerCodes;
         for (std::size_t slot = 1; slot <= 5; ++slot) {
             const auto number = std::to_string(slot);
             const auto code = Lower(Trim(Get(row, "mod " + number)));
@@ -784,26 +923,39 @@ bool RangeCatalog::Load(const TableTextProvider& provider, std::string& error) {
             AppendPropertyRanges(properties_, code, Get(row, "mod " + number + " param"),
                 minimum, maximum, pending.recipe.modifiers);
             const auto target = propertyStatTargets.find(code);
-            if (target != propertyStatTargets.end() && !target->second.visible
-                && target->second.persistent) {
+            if (target != propertyStatTargets.end() && target->second.persistent
+                && (!target->second.visible || target->second.provenancePriority)) {
                 auto low = minimum;
                 auto high = maximum;
                 if (low > high) std::swap(low, high);
                 pending.markers.push_back({
-                    RecipeMarker{code, target->second.statId, 0, low, high}, code});
-                markerCodes.insert(code);
+                    RecipeMarker{code, target->second.statId, 0, low, high}, code,
+                    target->second.visible});
             }
         }
-        for (const auto& code : markerCodes) ++markerOccurrences[code];
         if (!pending.recipe.modifiers.empty() || !pending.markers.empty()) {
             pendingRecipes.push_back(std::move(pending));
         }
     }
     for (auto& pending : pendingRecipes) {
+        const auto hasHiddenMarker = std::any_of(pending.markers.begin(),
+            pending.markers.end(), [](const auto& marker) { return !marker.visible; });
+        if (hasHiddenMarker) {
+            pending.markers.erase(std::remove_if(pending.markers.begin(),
+                pending.markers.end(), [](const auto& marker) { return marker.visible; }),
+                pending.markers.end());
+        }
+        std::unordered_set<std::string> markerCodes;
+        for (const auto& marker : pending.markers) markerCodes.insert(marker.propertyCode);
+        for (const auto& code : markerCodes) ++markerOccurrences[code];
+    }
+    for (auto& pending : pendingRecipes) {
         for (auto& marker : pending.markers) {
-            // A non-display property repeated across recipe outcomes is a
-            // table-defined provenance family. Single unsupported properties
-            // are gameplay modifiers, not reliable recipe markers.
+            // Prefer a hidden persistent provenance stat when the recipe has
+            // one (corruption2 over the visible corruption1 flag). A visible
+            // persistent stat is still valid when it is the recipe's only
+            // provenance family, as with BKVince's augmented1 recipes.
+            // Single properties remain gameplay modifiers, not safe markers.
             if (markerOccurrences[marker.propertyCode] >= 2) {
                 pending.recipe.markers.push_back(std::move(marker.marker));
             }
@@ -820,9 +972,10 @@ TooltipLocalization RangeCatalog::BuildLocalization(
     return BuildTooltipLocalization(statStringKeys_, resolver);
 }
 
-std::vector<std::vector<ModifierRange>> RangeCatalog::ResolveCandidates(
+CandidateResolution RangeCatalog::ResolveCandidateSet(
     const ItemAffixIds& ids, std::string_view itemCode, std::string_view runewordKey,
-    bool includeSocketedContributions, const StatReader& readStat) const {
+    bool includeSocketedContributions, const StatReader& readStat,
+    std::string_view renderedTooltip, const TooltipLocalization* localization) const {
     std::vector<ModifierRange> affixes;
     const auto suffixCount = suffixes_.empty() ? 0U : suffixes_.size() - 1U;
     const auto prefixCount = prefixes_.empty() ? 0U : prefixes_.size() - 1U;
@@ -846,26 +999,79 @@ std::vector<std::vector<ModifierRange>> RangeCatalog::ResolveCandidates(
         const auto offset = suffixCount + prefixCount;
         AddRecord(automagic_, ids.autoPrefix > offset ? ids.autoPrefix - offset : ids.autoPrefix, affixes);
     }
-    if (ids.quality == 5) AddRecord(sets_, ids.fileIndex, affixes);
     if (ids.quality == 7) AddRecord(uniques_, ids.fileIndex, affixes);
+    std::vector<std::vector<ModifierRange>> itemCandidates;
+    if (ids.quality == 5 && ids.fileIndex < sets_.size()) {
+        const auto& set = sets_[ids.fileIndex];
+        affixes.insert(affixes.end(), set.intrinsic.begin(), set.intrinsic.end());
+        const auto appendGroup = [&](std::vector<ModifierRange>& candidate,
+            std::size_t group) {
+            if (group >= set.conditionalGroups.size()) return;
+            candidate.insert(candidate.end(), set.conditionalGroups[group].begin(),
+                set.conditionalGroups[group].end());
+        };
+        if (set.addFunction == 0) {
+            for (std::size_t group = 0; group < set.conditionalGroups.size(); ++group)
+                appendGroup(affixes, group);
+            itemCandidates.push_back(std::move(affixes));
+        } else if (set.addFunction == 1) {
+            // Each group belongs to a particular companion piece. The item
+            // does not persist the equipped-set mask, so retain every subset
+            // and let whole-tooltip consensus select only a proven state.
+            const auto combinations = std::size_t{1} << set.conditionalGroups.size();
+            itemCandidates.reserve(combinations);
+            for (std::size_t mask = 0; mask < combinations; ++mask) {
+                auto candidate = affixes;
+                for (std::size_t group = 0; group < set.conditionalGroups.size(); ++group)
+                    if ((mask & (std::size_t{1} << group)) != 0)
+                        appendGroup(candidate, group);
+                itemCandidates.push_back(std::move(candidate));
+            }
+        } else if (set.addFunction == 2) {
+            // Count-based bonuses are cumulative prefixes: zero through five
+            // active groups cover every possible number of equipped pieces.
+            itemCandidates.reserve(set.conditionalGroups.size() + 1);
+            auto candidate = affixes;
+            itemCandidates.push_back(candidate);
+            for (std::size_t group = 0; group < set.conditionalGroups.size(); ++group) {
+                appendGroup(candidate, group);
+                itemCandidates.push_back(candidate);
+            }
+        } else {
+            // Unknown add-function semantics are fail-closed: preserve only
+            // intrinsic properties instead of fabricating conditional rolls.
+            itemCandidates.push_back(std::move(affixes));
+        }
+    } else {
+        itemCandidates.push_back(std::move(affixes));
+    }
+
+    std::vector<std::vector<ModifierRange>> baseCandidates;
     if (!runewordKey.empty()) {
         const auto runeword = runewords_.find(std::string(runewordKey));
         if (runeword != runewords_.end()) {
-            affixes.insert(affixes.end(), runeword->second.modifiers.begin(),
-                runeword->second.modifiers.end());
-            if (includeSocketedContributions) {
-                const auto category = FindSocketCategory(itemTypes_, itemCode);
-                for (const auto& runeCode : runeword->second.runes) {
-                    const auto rune = runes_.find(runeCode);
-                    if (rune == runes_.end() || category == SocketCategory::Unknown) continue;
-                    const auto* modifiers = &rune->second.armor;
-                    if (category == SocketCategory::Weapon) modifiers = &rune->second.weapon;
-                    else if (category == SocketCategory::Shield) modifiers = &rune->second.shield;
-                    affixes.insert(affixes.end(), modifiers->begin(), modifiers->end());
+            const auto category = FindSocketCategory(itemTypes_, itemCode);
+            for (const auto& itemCandidate : itemCandidates) {
+                for (const auto& record : runeword->second) {
+                    auto candidate = itemCandidate;
+                    candidate.insert(candidate.end(), record.modifiers.begin(),
+                        record.modifiers.end());
+                    if (includeSocketedContributions) {
+                        for (const auto& runeCode : record.runes) {
+                            const auto rune = runes_.find(runeCode);
+                            if (rune == runes_.end() || category == SocketCategory::Unknown) continue;
+                            const auto* modifiers = &rune->second.armor;
+                            if (category == SocketCategory::Weapon) modifiers = &rune->second.weapon;
+                            else if (category == SocketCategory::Shield) modifiers = &rune->second.shield;
+                            candidate.insert(candidate.end(), modifiers->begin(), modifiers->end());
+                        }
+                    }
+                    baseCandidates.push_back(std::move(candidate));
                 }
             }
         }
     }
+    if (baseCandidates.empty()) baseCandidates = std::move(itemCandidates);
 
     std::vector<std::vector<ModifierRange>> result;
     if (ids.quality == 3) {
@@ -875,21 +1081,23 @@ std::vector<std::vector<ModifierRange>> RangeCatalog::ResolveCandidates(
         // alternatives. Whole-tooltip validation then selects the candidate
         // that can reproduce all visible superior properties instead of
         // applying an unsafe global offset or item-specific exception.
-        for (const auto record : {ids.fileIndex, ids.fileIndex + 1U}) {
-            auto candidate = affixes;
-            AddRecord(superiors_, record, candidate);
-            const auto combined = Combine(std::move(candidate));
-            if (std::find_if(result.begin(), result.end(), [&](const auto& existing) {
-                    if (existing.size() != combined.size()) return false;
-                    for (std::size_t index = 0; index < existing.size(); ++index) {
-                        const auto& left = existing[index];
-                        const auto& right = combined[index];
-                        if (left.key != right.key || left.minimum != right.minimum
-                            || left.maximum != right.maximum
-                            || left.parameter != right.parameter) return false;
-                    }
-                    return true;
-                }) == result.end()) result.push_back(combined);
+        for (const auto& base : baseCandidates) {
+            for (const auto record : {ids.fileIndex, ids.fileIndex + 1U}) {
+                auto candidate = base;
+                AddRecord(superiors_, record, candidate);
+                const auto combined = Combine(std::move(candidate));
+                if (std::find_if(result.begin(), result.end(), [&](const auto& existing) {
+                        if (existing.size() != combined.size()) return false;
+                        for (std::size_t index = 0; index < existing.size(); ++index) {
+                            const auto& left = existing[index];
+                            const auto& right = combined[index];
+                            if (left.key != right.key || left.minimum != right.minimum
+                                || left.maximum != right.maximum
+                                || left.parameter != right.parameter) return false;
+                        }
+                        return true;
+                    }) == result.end()) result.push_back(combined);
+            }
         }
     }
     if (ids.quality == 8) {
@@ -901,13 +1109,16 @@ std::vector<std::vector<ModifierRange>> RangeCatalog::ResolveCandidates(
         collect(Lower(std::string(itemCode)));
         if (const auto types = itemTypes_.find(Lower(std::string(itemCode))); types != itemTypes_.end())
             for (const auto& type : types->second) collect(type);
-        for (const auto* recipe : recipes) {
-            auto candidate = affixes;
-            candidate.insert(candidate.end(), recipe->begin(), recipe->end());
-            result.push_back(Combine(std::move(candidate)));
-        }
+        for (const auto& base : baseCandidates)
+            for (const auto* recipe : recipes) {
+                auto candidate = base;
+                candidate.insert(candidate.end(), recipe->begin(), recipe->end());
+                result.push_back(Combine(std::move(candidate)));
+            }
     }
-    if (result.empty()) result.push_back(Combine(std::move(affixes)));
+    if (result.empty())
+        for (auto& candidate : baseCandidates)
+            result.push_back(Combine(std::move(candidate)));
 
     std::unordered_set<std::string> itemTokens;
     itemTokens.insert(Lower(std::string(itemCode)));
@@ -986,7 +1197,13 @@ std::vector<std::vector<ModifierRange>> RangeCatalog::ResolveCandidates(
     // corruption families, while still resolving each outcome by the full
     // rendered tooltip.
     for (const auto& [_, recipes] : activeMarkerFamilies) {
-        if (recipes.empty() || result.size() > MaxRecipeCandidates / recipes.size()) return {};
+        if (recipes.empty()) continue;
+        if (result.size() > MaxRecipeCandidates / recipes.size()) {
+            // Never turn a large mod table into an empty catalog. The marker
+            // family cannot be resolved safely within the bounded hover-path
+            // budget, but the item-owned ranges remain valid fallbacks.
+            return {{}, std::move(result)};
+        }
         std::vector<std::vector<ModifierRange>> expanded;
         for (const auto& base : result) {
             for (const auto* recipe : recipes) pushUnique(expanded, addRecipe(base, *recipe));
@@ -994,21 +1211,100 @@ std::vector<std::vector<ModifierRange>> RangeCatalog::ResolveCandidates(
         result = std::move(expanded);
     }
 
-    // Markerless public recipes cannot be proven from persistence alone. Keep
-    // the untouched item and every compatible one-step history as alternatives;
-    // consensus then annotates only rolls that are identical in all surviving
-    // explanations. Repeated markerless mutations are intentionally not
-    // guessed because cubemain does not encode a durable application count.
-    if (!markerlessRecipes.empty()) {
-        if (result.size() > MaxRecipeCandidates / (markerlessRecipes.size() + 1)) return {};
-        auto expanded = result;
-        for (const auto& base : result) {
-            for (const auto* recipe : markerlessRecipes)
-                pushUnique(expanded, addRecipe(base, *recipe));
+    auto intrinsicCandidates = result;
+
+    // Markerless public recipes cannot be proven from persistence alone. When
+    // a rendered tooltip is available, retain only recipes that explain at
+    // least one numeric line which the intrinsic item cannot reproduce. This
+    // removes hundreds of irrelevant useitem/usetype alternatives from the
+    // mouse-hover path while retaining every table-backed mutation that leaves
+    // visible evidence on the finished item.
+    if (!markerlessRecipes.empty() && !renderedTooltip.empty()) {
+        std::vector<std::string> tooltipLines;
+        if (!renderedTooltip.empty()) {
+            std::size_t start{};
+            while (start <= renderedTooltip.size()) {
+                const auto end = renderedTooltip.find('\n', start);
+                tooltipLines.emplace_back(renderedTooltip.substr(start, end - start));
+                if (end == std::string_view::npos) break;
+                start = end + 1;
+            }
         }
-        result = std::move(expanded);
+        const auto candidateFitsLine = [&](const std::vector<ModifierRange>& candidate,
+            std::string_view line) {
+            return std::any_of(candidate.begin(), candidate.end(), [&](const auto& range) {
+                const auto roll = RollForRange(line, range, localization);
+                return DescriptionFits(line, range, localization) && roll
+                    && RollFits(roll->value, range);
+            });
+        };
+        std::vector<bool> intrinsicLineFits(tooltipLines.size());
+        std::vector<bool> numericLines(tooltipLines.size());
+        for (std::size_t line = 0; line < tooltipLines.size(); ++line) {
+            numericLines[line] = !SignedIntegers(tooltipLines[line]).empty();
+            intrinsicLineFits[line] = std::any_of(
+                intrinsicCandidates.begin(), intrinsicCandidates.end(),
+                [&](const auto& candidate) {
+                    return candidateFitsLine(candidate, tooltipLines[line]);
+                });
+        }
+
+        std::vector<const CubeRecipe*> evidencedRecipes;
+        for (const auto* recipe : markerlessRecipes) {
+            bool evidenced = tooltipLines.empty();
+            if (!evidenced) {
+                for (const auto& base : intrinsicCandidates) {
+                    const auto mutated = addRecipe(base, *recipe);
+                    for (std::size_t line = 0; line < tooltipLines.size(); ++line) {
+                        if (numericLines[line] && !intrinsicLineFits[line]
+                            && candidateFitsLine(mutated, tooltipLines[line])) {
+                            evidenced = true;
+                            break;
+                        }
+                    }
+                    if (evidenced) break;
+                }
+            }
+            if (evidenced) evidencedRecipes.push_back(recipe);
+        }
+
+        // A mod may apply a usetype creation recipe and later one or more
+        // useitem mutations. Build combinations of distinct evidenced recipes
+        // (order is irrelevant after stat aggregation), but keep the operation
+        // strictly bounded. If the bound is reached, discard uncertain Cube
+        // histories instead of erasing or fabricating intrinsic ranges.
+        auto expanded = intrinsicCandidates;
+        bool overflow{};
+        for (const auto& base : intrinsicCandidates) {
+            const auto expand = [&](auto&& self, const std::vector<ModifierRange>& current,
+                std::size_t nextRecipe) -> void {
+                for (std::size_t index = nextRecipe; index < evidencedRecipes.size(); ++index) {
+                    if (expanded.size() >= MaxRecipeCandidates) {
+                        overflow = true;
+                        return;
+                    }
+                    auto mutated = addRecipe(current, *evidencedRecipes[index]);
+                    pushUnique(expanded, mutated);
+                    self(self, mutated, index + 1);
+                    if (overflow) return;
+                }
+            };
+            expand(expand, base, 0);
+            if (overflow) break;
+        }
+        if (!overflow) result = std::move(expanded);
     }
-    return result;
+    return {std::move(result), std::move(intrinsicCandidates)};
+}
+
+std::vector<std::vector<ModifierRange>> RangeCatalog::ResolveCandidates(
+    const ItemAffixIds& ids, std::string_view itemCode, std::string_view runewordKey,
+    bool includeSocketedContributions, const StatReader& readStat) const {
+    // This compatibility API has no rendered-tooltip evidence. The resolver
+    // therefore skips markerless Cube histories, but still returns persisted
+    // marker families and intrinsic crafted-item recipes.
+    return ResolveCandidateSet(ids, itemCode, runewordKey,
+        includeSocketedContributions, readStat).candidates;
 }
 
 std::vector<std::vector<ModifierRange>> RangeCatalog::ResolveSocketFillerCandidates(
@@ -1247,8 +1543,10 @@ std::string FormatPositiveRange(std::int32_t minimum, std::int32_t maximum, char
 std::string AppendConsensusRanges(std::string_view tooltip,
     const std::vector<std::vector<ModifierRange>>& candidates,
     bool allowExcludedSocketContributions,
-    const TooltipLocalization* localization) {
-    if (candidates.empty()) return std::string(tooltip);
+    const TooltipLocalization* localization,
+    const std::vector<std::vector<ModifierRange>>* intrinsicFallback) {
+    if (candidates.empty() && (!intrinsicFallback || intrinsicFallback->empty()))
+        return std::string(tooltip);
     std::vector<std::string> lines;
     std::size_t start{};
     while (start <= tooltip.size()) {
@@ -1264,62 +1562,61 @@ std::string AppendConsensusRanges(std::string_view tooltip,
     // line. A Caster Amulet with 15 FCR, for example, rejects the non-Caster
     // candidates whose fixed suffix can only produce 10 FCR; its Mana line can
     // then safely include the recipe's additional 10-20 Mana.
-    std::vector<bool> modeledLines;
-    modeledLines.reserve(lines.size());
-    for (const auto& line : lines) {
-        // A rendered value can include a source that is not represented by
-        // the parent item's affix candidate (most notably a socketed jewel).
-        // Such a line must not reject the complete candidate and erase ranges
-        // for unrelated properties. Only use a line as candidate evidence
-        // when at least one candidate can actually reproduce its final roll.
-        modeledLines.push_back(!SignedIntegers(line).empty()
-            && std::any_of(candidates.begin(), candidates.end(),
-            [&](const auto& candidate) {
-                return std::any_of(candidate.begin(), candidate.end(),
-                    [&](const auto& range) {
-                        const auto roll = RollForRange(line, range, localization);
-                        return DescriptionFits(line, range, localization) && roll
-                            && RollFits(roll->value, range);
-                    });
-            }));
-    }
-
-    std::vector<const std::vector<ModifierRange>*> compatibleCandidates;
-    for (const auto& candidate : candidates) {
-        bool compatible = true;
-        for (std::size_t index = 0; index < lines.size(); ++index) {
-            if (!modeledLines[index]) continue;
-            bool producesRoll{};
-            for (const auto& range : candidate) {
-                const auto roll = RollForRange(lines[index], range, localization);
-                if (DescriptionFits(lines[index], range, localization)
-                    && roll && RollFits(roll->value, range)) producesRoll = true;
-            }
-            // Once any candidate identifies a rendered line as a modeled
-            // property, every surviving recipe must contain and reproduce it.
-            // This rejects an Ascended Caster recipe when a standard craft's
-            // Experience Gained line is visibly present.
-            if (!producesRoll) {
-                compatible = false;
-                break;
-            }
+    const auto compatibleFor = [&](const std::vector<std::vector<ModifierRange>>& source) {
+        std::vector<bool> modeledLines;
+        modeledLines.reserve(lines.size());
+        for (const auto& line : lines) {
+            // A rendered value can include a source that is not represented by
+            // the parent item's candidate (most notably a socketed jewel).
+            // Only use a line as evidence when this source can reproduce it.
+            modeledLines.push_back(!SignedIntegers(line).empty()
+                && std::any_of(source.begin(), source.end(), [&](const auto& candidate) {
+                    return std::any_of(candidate.begin(), candidate.end(),
+                        [&](const auto& range) {
+                            const auto roll = RollForRange(line, range, localization);
+                            return DescriptionFits(line, range, localization) && roll
+                                && RollFits(roll->value, range);
+                        });
+                }));
         }
-        if (compatible) compatibleCandidates.push_back(&candidate);
-    }
+
+        std::vector<const std::vector<ModifierRange>*> compatible;
+        for (const auto& candidate : source) {
+            bool fits = true;
+            for (std::size_t index = 0; index < lines.size(); ++index) {
+                if (!modeledLines[index]) continue;
+                const auto producesRoll = std::any_of(candidate.begin(), candidate.end(),
+                    [&](const auto& range) {
+                        const auto roll = RollForRange(lines[index], range, localization);
+                        return DescriptionFits(lines[index], range, localization)
+                            && roll && RollFits(roll->value, range);
+                    });
+                if (!producesRoll) {
+                    fits = false;
+                    break;
+                }
+            }
+            if (fits) compatible.push_back(&candidate);
+        }
+        return compatible;
+    };
+
+    const auto compatibleCandidates = compatibleFor(candidates);
+    const auto fallbackCandidates = intrinsicFallback
+        ? compatibleFor(*intrinsicFallback)
+        : std::vector<const std::vector<ModifierRange>*>{};
 
     // D2 stores and parses final-tooltip lines bottom-to-top. A native color
     // marker may appear only on the first line of a modifier block; the lines
     // above it inherit that state. Track the renderer state in buffer order so
     // every dark-green suffix restores the actual native color.
-    char activeColor = '0';
-    for (auto& line : lines) {
-        activeColor = LastColor(line, activeColor);
-        if (SignedIntegers(line).empty()) continue;
-        using ConsensusRange = std::tuple<std::size_t, std::string,
-            std::int32_t, std::int32_t>;
+    using ConsensusRange = std::tuple<std::size_t, std::string,
+        std::int32_t, std::int32_t>;
+    const auto consensusFor = [&](std::string_view line,
+        const std::vector<const std::vector<ModifierRange>*>& compatible)
+        -> std::optional<std::vector<ConsensusRange>> {
         std::optional<std::vector<ConsensusRange>> consensus;
-        bool ambiguous{};
-        for (const auto* candidate : compatibleCandidates) {
+        for (const auto* candidate : compatible) {
             std::vector<ConsensusRange> matches;
             for (const auto& range : *candidate) {
                 if (range.minimum == range.maximum
@@ -1343,20 +1640,32 @@ std::string AppendConsensusRanges(std::string_view tooltip,
             // consensus: annotating the variable alternative would claim a
             // recipe history that the finished item does not prove.
             if (matches.empty()) {
-                ambiguous = true;
-                break;
+                return std::nullopt;
             }
             std::sort(matches.begin(), matches.end());
             if (std::adjacent_find(matches.begin(), matches.end(), [](const auto& left,
                     const auto& right) { return std::get<0>(left) == std::get<0>(right); })
                 != matches.end()) {
-                ambiguous = true;
-                break;
+                return std::nullopt;
             }
             if (!consensus) consensus = matches;
-            else if (*consensus != matches) { ambiguous = true; break; }
+            else if (*consensus != matches) return std::nullopt;
         }
-        if (!ambiguous && consensus) {
+        return consensus;
+    };
+
+    char activeColor = '0';
+    for (auto& line : lines) {
+        activeColor = LastColor(line, activeColor);
+        if (SignedIntegers(line).empty()) continue;
+        auto consensus = consensusFor(line, compatibleCandidates);
+        // A markerless Cube history is not persisted. If multiple compatible
+        // histories disagree, retain the range owned by the item itself rather
+        // than suppressing a valid vanilla/custom unique, set, affix, craft or
+        // automagic range. A uniquely evidenced Cube aggregate still wins.
+        if (!consensus && intrinsicFallback)
+            consensus = consensusFor(line, fallbackCandidates);
+        if (consensus) {
             line.push_back(' ');
             for (std::size_t index = 0; index < consensus->size(); ++index) {
                 if (index) line += " "
