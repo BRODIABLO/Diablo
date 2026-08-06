@@ -65,6 +65,8 @@ const RIFT_GROUP = {
   NameString: 'RiftGroup',
 };
 const RIFT_LEVEL_IDS = Array.from({ length: 9 }, (_, index) => 138 + index);
+const REGULAR_RIFT_ZONE_ID = 'Act5-Rifts';
+const MANUAL_RIFT_ZONE_ID = 'Act5-Rifts-Manual';
 const RIFT_STRING_ID = 73040;
 const COW_GROUP_STRING_ID = 27338;
 const COW_GROUP_STRING_KEY = 'MooMooFarmGroup';
@@ -208,8 +210,27 @@ function validateReferences(groupsTable) {
   const allZones = [...regularZones, ...manualZones];
   const references = allZones.flatMap((zone) => (zone.levels ?? []).map((level) => ({ zone: zone.id, ...level })));
 
-  const riftZones = allZones.filter((zone) => zone.id === 'Act5-Rifts');
-  assert(riftZones.length === 2, `desecratedzones.json: Act5-Rifts attendu deux fois, trouve ${riftZones.length}`);
+  const zoneIdCounts = new Map();
+  for (const zone of allZones) {
+    zoneIdCounts.set(zone.id, (zoneIdCounts.get(zone.id) ?? 0) + 1);
+  }
+  const duplicateZoneIds = [...zoneIdCounts].filter(([, count]) => count > 1).map(([id]) => id);
+  assert(
+    duplicateZoneIds.length === 0,
+    `desecratedzones.json: identifiants de zone dupliques: ${duplicateZoneIds.join(', ')}`,
+  );
+
+  const regularRiftZones = regularZones.filter((zone) => zone.id === REGULAR_RIFT_ZONE_ID);
+  const manualRiftZones = manualZones.filter((zone) => zone.id === MANUAL_RIFT_ZONE_ID);
+  assert(
+    regularRiftZones.length === 1,
+    `desecratedzones.json: ${REGULAR_RIFT_ZONE_ID} regulier attendu une fois, trouve ${regularRiftZones.length}`,
+  );
+  assert(
+    manualRiftZones.length === 1,
+    `desecratedzones.json: ${MANUAL_RIFT_ZONE_ID} manuel attendu une fois, trouve ${manualRiftZones.length}`,
+  );
+  const riftZones = [...regularRiftZones, ...manualRiftZones];
   for (const zone of riftZones) {
     const ids = zone.levels.map((level) => Number(level.level_id));
     assert(
@@ -219,7 +240,12 @@ function validateReferences(groupsTable) {
   }
 
   for (const reference of references) {
-    const level = levelsById.get(Number(reference.level_id));
+    const levelId = Number(reference.level_id);
+    assert(
+      Number.isInteger(levelId) && levelId > 0,
+      `desecratedzones.json: level_id invalide ${reference.level_id}`,
+    );
+    const level = levelsById.get(levelId);
     assert(level, `desecratedzones.json: level_id ${reference.level_id} absent de levels.txt`);
     if (level.LevelGroup) {
       assert(
@@ -228,14 +254,32 @@ function validateReferences(groupsTable) {
       );
     }
     if (reference.waypoint_level_id !== undefined) {
+      const waypointLevelId = Number(reference.waypoint_level_id);
       assert(
-        levelsById.has(Number(reference.waypoint_level_id)),
+        Number.isInteger(waypointLevelId) && waypointLevelId > 0 && levelsById.has(waypointLevelId),
         `desecratedzones.json: waypoint_level_id ${reference.waypoint_level_id} absent de levels.txt`,
       );
     }
   }
 
-  return { referenceCount: references.length, riftZoneCount: riftZones.length };
+  const harrogath = levelsById.get(109);
+  const riftOne = levelsById.get(138);
+  assert(
+    harrogath?.Vis0 === '138' && harrogath?.Warp0 === '83',
+    'levels.txt: Harrogath doit relier Rift 1 par Vis0=138 et Warp0=83',
+  );
+  assert(
+    riftOne?.Vis0 === '109' && riftOne?.Warp0 === '81',
+    'levels.txt: Rift 1 doit relier Harrogath par Vis0=109 et Warp0=81',
+  );
+
+  return {
+    referenceCount: references.length,
+    uniqueZoneIdCount: zoneIdCounts.size,
+    riftZoneCount: riftZones.length,
+    riftZoneIds: riftZones.map((zone) => zone.id),
+    harrogathRiftLink: { levelId: 109, Vis0: 138, Warp0: 83 },
+  };
 }
 
 function main() {

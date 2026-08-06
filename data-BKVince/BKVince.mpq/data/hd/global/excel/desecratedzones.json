@@ -543,7 +543,7 @@
                                     "type": "DesecratedLevel",
                                     "name": "desecratedzones_desecrated_zones_0_manual_zones_0_zones_0_levels_17",
                                     "level_id": 28,
-                                    "waypoint_level_id": 0,
+                                    "waypoint_level_id": 27,
                                     "zone_data_id": "Act1-Barracks",
                                     "zone_completion_weight": 1.0
                                 },
@@ -1453,7 +1453,7 @@
                         {
                             "type": "DesecratedZone",
                             "name": "desecratedzones_desecrated_zones_0_manual_zones_4_zones_1",
-                            "id": "Act5-Rifts",
+                            "id": "Act5-Rifts-Manual",
                             "levels": [
                                 {
                                     "type": "DesecratedLevel",
@@ -1694,7 +1694,7 @@
                             "type": "DesecratedLevel",
                             "name": "desecratedzones_desecrated_zones_0_zones_5_levels_0",
                             "level_id": 28,
-                            "waypoint_level_id": 0,
+                            "waypoint_level_id": 27,
                             "zone_data_id": "Act1-Barracks",
                             "zone_completion_weight": 1.0
                         },
