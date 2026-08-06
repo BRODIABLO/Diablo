@@ -1,6 +1,16 @@
 {
   "version": 1,
   "archives": {
+    "addons/AdvancedItemTooltips/AdvancedItemTooltips-3.0.0.zip": {
+      "kind": "plugin",
+      "legacy": true,
+      "reason": "Existing prototype archive predates strict DLL/JSON-only public packaging and preserves its bundled README.",
+      "entries": [
+        "AdvancedItemTooltips.dll",
+        "AdvancedItemTooltips.json",
+        "README.md"
+      ]
+    },
     "addons/BulkSkillPointAllocation/BulkSkillPointAllocation.zip": {
       "kind": "plugin",
       "entries": [
@@ -91,13 +101,36 @@
         "QtyDisplayIssue.json"
       ]
     },
-    "addons/RemoteStash/RemoteStash-0.2.26-InterMod.zip": {
+    "addons/RemoteStash/RemoteStash-0.3.6.zip": {
       "kind": "integration-kit",
       "entries": [
         "README.txt",
+        "d2rloader/config/RemoteStash.json",
         "d2rloader/plugins/RemoteStash.dll",
         "merge-snippets/playerinventory-button.json",
         "merge-snippets/playerinventory-expansion-child.json",
+        "mod-data/data/",
+        "mod-data/data/hd/",
+        "mod-data/data/hd/global/",
+        "mod-data/data/hd/global/ui/",
+        "mod-data/data/hd/global/ui/panel/",
+        "mod-data/data/hd/global/ui/panel/inventory/remotestashbutton.lowend.sprite",
+        "mod-data/data/hd/global/ui/panel/inventory/remotestashbutton.sprite"
+      ]
+    },
+    "addons/RemoteStash/RemoteStash-1.0.0.zip": {
+      "kind": "integration-kit",
+      "entries": [
+        "README.txt",
+        "d2rloader/config/RemoteStash.json",
+        "d2rloader/plugins/RemoteStash.dll",
+        "merge-snippets/playerinventory-button.json",
+        "merge-snippets/playerinventory-expansion-child.json",
+        "mod-data/data/",
+        "mod-data/data/hd/",
+        "mod-data/data/hd/global/",
+        "mod-data/data/hd/global/ui/",
+        "mod-data/data/hd/global/ui/panel/",
         "mod-data/data/hd/global/ui/panel/inventory/remotestashbutton.lowend.sprite",
         "mod-data/data/hd/global/ui/panel/inventory/remotestashbutton.sprite"
       ]

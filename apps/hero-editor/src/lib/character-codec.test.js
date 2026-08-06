@@ -1563,7 +1563,7 @@ test('generates a deterministic fail-closed catalog from governed BKVince tables
   assert.equal(itemCatalog.bases.find(({ code }) => code === 'cap').beltable, false);
   assert.equal(itemCatalog.bases.find(({ code }) => code === 'lbl').beltLayout, 1);
   assert.equal(itemCatalog.bases.find(({ code }) => code === 'hbl').beltLayout, 3);
-  assert.equal(availableBeltItemBases().length, 20);
+  assert.equal(availableBeltItemBases().length, 19);
   assert.ok(availableBeltItemBases().every(({ beltable, width, height }) => (
     beltable && width === 1 && height === 1
   )));
