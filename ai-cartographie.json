@@ -1,8 +1,8 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-05T18:04:04.5856141+00:00",
+    "generatedAt":  "2026-08-05T15:29:17.6859382+00:00",
     "root":  {
-                 "name":  "snapshot",
+                 "name":  "rehearsal2-snapshot",
                  "path":  ".",
                  "kind":  "directory",
                  "meta":  {
@@ -5410,6 +5410,36 @@
                                                                                                                                                "kind":  "directory",
                                                                                                                                                "children":  [
                                                                                                                                                                 {
+                                                                                                                                                                    "name":  "ancientbarb3",
+                                                                                                                                                                    "path":  "data-BKVince/BKVince.mpq/data/hd/character/enemy/ancientbarb3",
+                                                                                                                                                                    "kind":  "directory",
+                                                                                                                                                                    "meta":  {
+                                                                                                                                                                                 "role":  "x-third-party-bearded-barbarian-asset",
+                                                                                                                                                                                 "summary":  "Texture capillaire Barbarian issue de Paladin Veteran and Bearded Barbarian 1.0 par deadjack.",
+                                                                                                                                                                                 "agentAccess":  "read-write",
+                                                                                                                                                                                 "status":  "active",
+                                                                                                                                                                                 "provenance":  {
+                                                                                                                                                                                                    "source":  "Paladin Veteran and Bearded Barbarian par deadjack",
+                                                                                                                                                                                                    "version":  "1.0",
+                                                                                                                                                                                                    "reference":  "https://www.nexusmods.com/diablo2resurrected/mods/311"
+                                                                                                                                                                                                }
+                                                                                                                                                                             },
+                                                                                                                                                                    "children":  [
+                                                                                                                                                                                     {
+                                                                                                                                                                                         "name":  "textures",
+                                                                                                                                                                                         "path":  "data-BKVince/BKVince.mpq/data/hd/character/enemy/ancientbarb3/textures",
+                                                                                                                                                                                         "kind":  "directory",
+                                                                                                                                                                                         "children":  [
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "name":  "ancientbarb3_hair_alb.texture",
+                                                                                                                                                                                                              "path":  "data-BKVince/BKVince.mpq/data/hd/character/enemy/ancientbarb3/textures/ancientbarb3_hair_alb.texture",
+                                                                                                                                                                                                              "kind":  "file"
+                                                                                                                                                                                                          }
+                                                                                                                                                                                                      ]
+                                                                                                                                                                                     }
+                                                                                                                                                                                 ]
+                                                                                                                                                                },
+                                                                                                                                                                {
                                                                                                                                                                     "name":  "baron",
                                                                                                                                                                     "path":  "data-BKVince/BKVince.mpq/data/hd/character/enemy/baron",
                                                                                                                                                                     "kind":  "directory",
@@ -5553,6 +5583,21 @@
                                                                                                                                                                 {
                                                                                                                                                                     "name":  "act2hire.json",
                                                                                                                                                                     "path":  "data-BKVince/BKVince.mpq/data/hd/character/enemy/act2hire.json",
+                                                                                                                                                                    "kind":  "file"
+                                                                                                                                                                },
+                                                                                                                                                                {
+                                                                                                                                                                    "name":  "act5barb1.json",
+                                                                                                                                                                    "path":  "data-BKVince/BKVince.mpq/data/hd/character/enemy/act5barb1.json",
+                                                                                                                                                                    "kind":  "file"
+                                                                                                                                                                },
+                                                                                                                                                                {
+                                                                                                                                                                    "name":  "act5barb2.json",
+                                                                                                                                                                    "path":  "data-BKVince/BKVince.mpq/data/hd/character/enemy/act5barb2.json",
+                                                                                                                                                                    "kind":  "file"
+                                                                                                                                                                },
+                                                                                                                                                                {
+                                                                                                                                                                    "name":  "act5barb3.json",
+                                                                                                                                                                    "path":  "data-BKVince/BKVince.mpq/data/hd/character/enemy/act5barb3.json",
                                                                                                                                                                     "kind":  "file"
                                                                                                                                                                 },
                                                                                                                                                                 {
@@ -6114,6 +6159,49 @@
                                                                                                                                                                                                       ]
                                                                                                                                                                                      },
                                                                                                                                                                                      {
+                                                                                                                                                                                         "name":  "textures",
+                                                                                                                                                                                         "path":  "data-BKVince/BKVince.mpq/data/hd/character/player/paladin/textures",
+                                                                                                                                                                                         "kind":  "directory",
+                                                                                                                                                                                         "meta":  {
+                                                                                                                                                                                                      "role":  "x-third-party-paladin-veteran-skin-textures",
+                                                                                                                                                                                                      "summary":  "Textures de visage du lot principal et textures d\u0027armure du skin Paladin optionnel 1.0 par deadjack.",
+                                                                                                                                                                                                      "agentAccess":  "read-write",
+                                                                                                                                                                                                      "status":  "active",
+                                                                                                                                                                                                      "provenance":  {
+                                                                                                                                                                                                                         "source":  "Paladin Veteran and Bearded Barbarian et Optional Paladin Armor Skin par deadjack",
+                                                                                                                                                                                                                         "version":  "1.0",
+                                                                                                                                                                                                                         "reference":  "https://www.nexusmods.com/diablo2resurrected/mods/311"
+                                                                                                                                                                                                                     }
+                                                                                                                                                                                                  },
+                                                                                                                                                                                         "children":  [
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "name":  "paladin_armorlit_alb.texture",
+                                                                                                                                                                                                              "path":  "data-BKVince/BKVince.mpq/data/hd/character/player/paladin/textures/paladin_armorlit_alb.texture",
+                                                                                                                                                                                                              "kind":  "file"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "name":  "paladin_armormed_alb.texture",
+                                                                                                                                                                                                              "path":  "data-BKVince/BKVince.mpq/data/hd/character/player/paladin/textures/paladin_armormed_alb.texture",
+                                                                                                                                                                                                              "kind":  "file"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "name":  "paladin_armormed_nrm.texture",
+                                                                                                                                                                                                              "path":  "data-BKVince/BKVince.mpq/data/hd/character/player/paladin/textures/paladin_armormed_nrm.texture",
+                                                                                                                                                                                                              "kind":  "file"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "name":  "paladin_face_alb.texture",
+                                                                                                                                                                                                              "path":  "data-BKVince/BKVince.mpq/data/hd/character/player/paladin/textures/paladin_face_alb.texture",
+                                                                                                                                                                                                              "kind":  "file"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "name":  "paladin_face_nrm.texture",
+                                                                                                                                                                                                              "path":  "data-BKVince/BKVince.mpq/data/hd/character/player/paladin/textures/paladin_face_nrm.texture",
+                                                                                                                                                                                                              "kind":  "file"
+                                                                                                                                                                                                          }
+                                                                                                                                                                                                      ]
+                                                                                                                                                                                     },
+                                                                                                                                                                                     {
                                                                                                                                                                                          "name":  "paladin_state_machine.json",
                                                                                                                                                                                          "path":  "data-BKVince/BKVince.mpq/data/hd/character/player/paladin/paladin_state_machine.json",
                                                                                                                                                                                          "kind":  "file"
@@ -6204,6 +6292,16 @@
                                                                                                                                                                                          "kind":  "file"
                                                                                                                                                                                      }
                                                                                                                                                                                  ]
+                                                                                                                                                                },
+                                                                                                                                                                {
+                                                                                                                                                                    "name":  "paladin.frontend",
+                                                                                                                                                                    "path":  "data-BKVince/BKVince.mpq/data/hd/character/player/paladin.frontend",
+                                                                                                                                                                    "kind":  "file"
+                                                                                                                                                                },
+                                                                                                                                                                {
+                                                                                                                                                                    "name":  "paladin.json",
+                                                                                                                                                                    "path":  "data-BKVince/BKVince.mpq/data/hd/character/player/paladin.json",
+                                                                                                                                                                    "kind":  "file"
                                                                                                                                                                 }
                                                                                                                                                             ]
                                                                                                                                            },
@@ -12697,15 +12795,15 @@
                                                                                                                                                "path":  "data-BKVince/BKVince.mpq/data/hd/items/armor",
                                                                                                                                                "kind":  "directory",
                                                                                                                                                "meta":  {
-                                                                                                                                                            "role":  "x-third-party-hide-helmet-data",
-                                                                                                                                                            "summary":  "Overrides JSON tiers de Hide helmet 1.0 qui masquent les circlets et helmets équipés sur les personnages joueurs de BKVince.",
+                                                                                                                                                            "role":  "x-third-party-bearded-helmet-data",
+                                                                                                                                                            "summary":  "Overrides JSON de Paladin Veteran and Bearded Barbarian 1.0 qui masquent les helmets tout en préservant les barbes Barbarian et Paladin.",
                                                                                                                                                             "agentAccess":  "read-write",
                                                                                                                                                             "status":  "active",
                                                                                                                                                             "provenance":  {
-                                                                                                                                                                               "source":  "Hide helmet par deadjack",
+                                                                                                                                                                               "source":  "Paladin Veteran and Bearded Barbarian par deadjack",
                                                                                                                                                                                "version":  "1.0",
-                                                                                                                                                                               "importedAt":  "2026-08-03T00:16:13.081Z",
-                                                                                                                                                                               "reference":  "https://www.nexusmods.com/diablo2resurrected/mods/6"
+                                                                                                                                                                               "importedAt":  "2026-08-03T00:55:40.299Z",
+                                                                                                                                                                               "reference":  "https://www.nexusmods.com/diablo2resurrected/mods/311"
                                                                                                                                                                            }
                                                                                                                                                         },
                                                                                                                                                "children":  [

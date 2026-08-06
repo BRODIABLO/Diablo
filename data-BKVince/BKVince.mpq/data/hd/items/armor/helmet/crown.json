@@ -63,7 +63,7 @@
 				{
 					"type": "SkeletonDefinitionComponent",
 					"name": "component_skeleton",
-					"filename": "data/hd/items/dropped_items/skeleton/dropped_items.skeleton"
+					"filename": "data/hd/character/enemy/ancientbarb3/skeleton/ancientbarb3.skeleton"
 				},
 				{
 					"type": "ChangeMeshLayersOnAttachComponent",
@@ -71,8 +71,7 @@
 					"defaultLayerChange": {
 						"type": "MeshLayerChange",
 						"name": "entity_root_ChangeMeshLayersOnAttach_defaultLayerChange",
-						"layersToHide": 32,
-						"layersToShow": 32
+						"layersToHide": 0
 					},
 					"playerClassOverrides": {}
 				},
@@ -92,10 +91,20 @@
 						"3": {
 							"type": "Transform",
 							"name": "entity_root_OverrideAttachmentTransform_playerClassTransforms_Paladin",
-							"scale": {
+							"translation": {
+								"x": 0.0,
+								"y": -6.50,
+								"z": 0.0
+							},
+							"rotation": {
 								"x": 0.0,
 								"y": 0.0,
 								"z": 0.0
+							},
+							"scale": {
+								"x": 1.1,
+								"y": 1.1,
+								"z": 1.1
 							}
 						},
 						"6": {
@@ -110,10 +119,20 @@
 						"4": {
 							"type": "Transform",
 							"name": "entity_root_OverrideAttachmentTransform_playerClassTransforms_Barbarian",
-							"scale": {
+							"translation": {
+								"x": 0.0,
+								"y": -6.50,
+								"z": -0.08
+							},
+							"rotation": {
 								"x": 0.0,
 								"y": 0.0,
 								"z": 0.0
+							},
+							"scale": {
+								"x": 1.1,
+								"y": 1.1,
+								"z": 1.1
 							}
 						},
 						"1": {
@@ -149,20 +168,20 @@
 					"type": "TransformDefinitionComponent",
 					"name": "entity_root_TransformDefinition",
 					"position": {
-						"x": -0.15,
-						"y": 0.0,
-						"z": -0.25
+						"x": 0.1,
+						"y": -6.85,
+						"z": -0.1
 					},
 					"orientation": {
 						"x": 0.0,
-						"y": -0.173648179,
+						"y": 0.130526185,
 						"z": 0.0,
-						"w": 0.9848077
+						"w": 0.9914449
 					},
 					"scale": {
-						"x": 1.1,
-						"y": 1.1,
-						"z": 1.1
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
 					},
 					"inheritOnlyPosition": false
 				}
@@ -176,8 +195,8 @@
 				{
 					"type": "ModelDefinitionComponent",
 					"name": "component_model_crown",
-					"filename": "data/hd/items/armor/helmet/crown/crown.model",
-					"visibleLayers": 1,
+					"filename": "data/hd/character/enemy/ancientbarb3/hair.model",
+					"visibleLayers": 6145,
 					"lightMask": 19,
 					"shadowMask": 3,
 					"ghostShadows": false,

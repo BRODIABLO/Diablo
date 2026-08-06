@@ -53,11 +53,18 @@ les crédits.
 
 ## Apports tiers intégrés à BKVince
 
-- **Hide helmet 1.0** — créé par **deadjack** et publié sur
-  [Nexus Mods](https://www.nexusmods.com/diablo2resurrected/mods/6). Les 24 JSON
-  originaux de l'archive `Hide helmet-6-1-0-1632934137.rar` sont conservés sans
-  modification sous `BKVince.mpq/data/hd/items/armor/`. SHA-256 de l'archive :
-  `3ABC7AE037C7316CD42089A480243B4794143A449FC4229BEB962900D50C4BF1`.
+- **Paladin Veteran and Bearded Barbarian 1.0** — créé par **deadjack** et
+  publié sur [Nexus Mods](https://www.nexusmods.com/diablo2resurrected/mods/311).
+  BKVince conserve sans modification 54 fichiers sélectionnés de
+  `main-311-1-0-1675511319.rar` — définitions Hide helmet et personnages,
+  textures Barbarian/Paladin et 24 sons `gethit` atténués — puis superpose les cinq fichiers de
+  `Optional Paladin Armor Skin-311-1-0-1675760135.rar`, soit deux définitions
+  Paladin et trois textures d'armure. Les deux backups `_orig.json` et le
+  `modinfo.json` autonome sont volontairement exclus.
+  SHA-256 du lot principal :
+  `D36082DECEA594666F21432A25EECBA7B41CF0037E21E72993C47A1F967D5D17`.
+  SHA-256 du skin optionnel :
+  `A5B7EA3B8B3065D26F433E25C450AE856320EDCDCDF856512E5DD1F8A27B8B3A`.
 
 - **SpecialNavi 1.1** — créé par **Porory** et **HeoHeo**, puis publié sur
   [Diablo II Inven](https://www.inven.co.kr/board/diablo2/5842/4283). BKVince

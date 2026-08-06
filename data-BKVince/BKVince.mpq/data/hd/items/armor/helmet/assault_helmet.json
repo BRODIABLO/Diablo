@@ -8,7 +8,7 @@
 		],
 		"skeletons": [
 			{
-				"path": "data/hd/items/dropped_items/skeleton/dropped_items.skeleton"
+				"path": "data/hd/character/enemy/ancientbarb3/skeleton/ancientbarb3.skeleton"
 			}
 		],
 		"animations": [],
@@ -63,7 +63,7 @@
 				{
 					"type": "SkeletonDefinitionComponent",
 					"name": "component_skeleton",
-					"filename": "data/hd/items/dropped_items/skeleton/dropped_items.skeleton"
+					"filename": "data/hd/character/enemy/ancientbarb3/skeleton/ancientbarb3.skeleton"
 				},
 				{
 					"type": "ChangeMeshLayersOnAttachComponent",
@@ -71,8 +71,7 @@
 					"defaultLayerChange": {
 						"type": "MeshLayerChange",
 						"name": "entity_root_ChangeMeshLayersOnAttach_defaultLayerChange",
-						"layersToHide": 32,
-						"layersToShow": 32
+						"layersToHide": 0
 					},
 					"playerClassOverrides": {}
 				},
@@ -92,10 +91,20 @@
 						"3": {
 							"type": "Transform",
 							"name": "entity_root_OverrideAttachmentTransform_playerClassTransforms_Paladin",
-							"scale": {
+							"translation": {
+								"x": 0.0,
+								"y": -6.50,
+								"z": 0.0
+							},
+							"rotation": {
 								"x": 0.0,
 								"y": 0.0,
 								"z": 0.0
+							},
+							"scale": {
+								"x": 1.1,
+								"y": 1.1,
+								"z": 1.1
 							}
 						},
 						"6": {
@@ -110,10 +119,20 @@
 						"4": {
 							"type": "Transform",
 							"name": "entity_root_OverrideAttachmentTransform_playerClassTransforms_Barbarian",
-							"scale": {
+							"translation": {
+								"x": 0.0,
+								"y": -6.50,
+								"z": -0.08
+							},
+							"rotation": {
 								"x": 0.0,
 								"y": 0.0,
 								"z": 0.0
+							},
+							"scale": {
+								"x": 1.1,
+								"y": 1.1,
+								"z": 1.1
 							}
 						},
 						"1": {
@@ -176,8 +195,8 @@
 				{
 					"type": "ModelDefinitionComponent",
 					"name": "component_model_assault_helmet",
-					"filename": "data/hd/items/armor/helmet/assault_helmet/assault_helmet.model",
-					"visibleLayers": 1,
+					"filename": "data/hd/character/enemy/ancientbarb3/hair.model",
+					"visibleLayers": 6145,
 					"lightMask": 19,
 					"shadowMask": 3,
 					"ghostShadows": false,
