@@ -243,3 +243,4 @@ dyeblackW	240																																																						weap	blac		74
 magicconviction	241					1																																					mconvictionfront	mconvictionfront																		paladin_aura_sanctuary												0
 splashdamage	242																																																																									0
 bkvbowmastery	243																																																																									0
+bkvrogueraven	244																																																																									0

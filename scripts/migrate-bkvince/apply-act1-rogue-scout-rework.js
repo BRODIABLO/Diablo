@@ -48,6 +48,8 @@ const NAMES = {
   fireRavenSkillDesc: 'bkv fire raven',
   coldRavenSkill: 'BKV Cold Raven',
   coldRavenSkillDesc: 'bkv cold raven',
+  ravenAuraSkill: 'BKV Rogue Raven Aura',
+  ravenState: 'bkvrogueraven',
   fireRavenMonster: 'bkvfireraven',
   coldRavenMonster: 'bkvcoldraven',
   ravenMonStatsEx: 'bkvrogueraven',
@@ -130,6 +132,43 @@ function appendOrVerify(table, keyHeader, keyValue, values, label) {
     );
   }
   return false;
+}
+
+function removeOwnedRow(table, keyHeader, keyValue, values, label) {
+  const matches = table.rows.filter((row) => cell(table, row, keyHeader) === keyValue);
+  assert(matches.length <= 1, `${label}: duplicate ${keyHeader}=${keyValue}`);
+  if (matches.length === 0) return false;
+  for (const [header, expected] of Object.entries(values)) {
+    assert(
+      cell(table, matches[0], header) === String(expected),
+      `${label}: refusing to remove divergent ${keyValue}.${header}`,
+    );
+  }
+  table.rows.splice(table.rows.indexOf(matches[0]), 1);
+  return true;
+}
+
+function migrateOwnedCell(
+  table,
+  keyHeader,
+  keyValue,
+  header,
+  previousValues,
+  expectedValue,
+  label,
+) {
+  const matches = table.rows.filter((row) => cell(table, row, keyHeader) === keyValue);
+  assert(matches.length <= 1, `${label}: duplicate ${keyHeader}=${keyValue}`);
+  if (matches.length === 0) return false;
+  const currentValue = cell(table, matches[0], header);
+  const acceptedPreviousValues = Array.isArray(previousValues) ? previousValues : [previousValues];
+  assert(
+    currentValue === expectedValue || acceptedPreviousValues.includes(currentValue),
+    `${label}: ${keyValue}.${header} has unexpected value ${JSON.stringify(currentValue)}`,
+  );
+  if (currentValue === expectedValue) return false;
+  setCell(table, matches[0], header, expectedValue);
+  return true;
 }
 
 function cloneRowWith(table, sourceHeader, sourceValue, values, label) {
@@ -236,7 +275,10 @@ function ravenMonsterValues(name, hcIdx, damageSkill) {
     BaseId: 'druidhawk',
     TransLvl: '0',
     NameStr: 'Druid Hawk',
-    MonStatsEx: NAMES.ravenMonStatsEx,
+    // Reuse the vanilla Raven/Hawk render identity. A custom MonStatsEx key
+    // without matching HD assets creates a live server unit that is invisible
+    // on the D2R client.
+    MonStatsEx: 'druidhawk',
     MonProp: 'druidhawk',
     AI: 'NecroPet',
     Code: 'hk',
@@ -254,6 +296,18 @@ function ravenMonsterValues(name, hcIdx, damageSkill) {
     aip1: '90',
     'aip1(N)': '90',
     'aip1(H)': '90',
+    aip2: '',
+    'aip2(N)': '',
+    'aip2(H)': '',
+    aip3: '',
+    'aip3(N)': '',
+    'aip3(H)': '',
+    aip4: '',
+    'aip4(N)': '',
+    'aip4(H)': '',
+    aip5: '',
+    'aip5(N)': '',
+    'aip5(H)': '',
     Align: '1',
     isSpawn: '1',
     inTown: '1',
@@ -263,6 +317,9 @@ function ravenMonsterValues(name, hcIdx, damageSkill) {
     switchai: '1',
     neverCount: '1',
     CannotHerald: '1',
+    Skill1: '',
+    Sk1mode: '',
+    Sk1lvl: '',
     Drain: '100',
     'Drain(N)': '100',
     'Drain(H)': '100',
@@ -286,8 +343,63 @@ function ravenMonsterValues(name, hcIdx, damageSkill) {
   };
 }
 
+function migrateRavenMonster(table, name, damageSkill) {
+  const previousValues = {
+    MonStatsEx: NAMES.ravenMonStatsEx,
+    AI: 'Raven',
+    aidel: '15',
+    'aidel(N)': '8',
+    'aidel(H)': '0',
+    aip1: '10',
+    'aip1(N)': '10',
+    'aip1(H)': '10',
+    aip2: '6',
+    'aip2(N)': '6',
+    'aip2(H)': '6',
+    aip3: '2',
+    'aip3(N)': '2',
+    'aip3(H)': '2',
+    aip4: '95',
+    'aip4(N)': '95',
+    'aip4(H)': '95',
+    aip5: '35',
+    'aip5(N)': '35',
+    'aip5(H)': '35',
+    Skill1: damageSkill,
+    Sk1mode: 'NU',
+    Sk1lvl: '0',
+    Drain: '',
+    'Drain(N)': '',
+    'Drain(H)': '',
+  };
+  const expected = ravenMonsterValues(name, '', damageSkill);
+  let changed = false;
+  for (const [header, previousValue] of Object.entries(previousValues)) {
+    changed = migrateOwnedCell(
+      table,
+      'Id',
+      name,
+      header,
+      previousValue,
+      expected[header],
+      'monstats',
+    ) || changed;
+  }
+  return changed;
+}
+
 function applyRavenMonsters(table) {
   let changed = false;
+  changed = migrateRavenMonster(
+    table,
+    NAMES.fireRavenMonster,
+    NAMES.fireRavenSkill,
+  ) || changed;
+  changed = migrateRavenMonster(
+    table,
+    NAMES.coldRavenMonster,
+    NAMES.coldRavenSkill,
+  ) || changed;
   changed = appendOrVerify(
     table,
     'Id',
@@ -306,21 +418,23 @@ function applyRavenMonsters(table) {
 }
 
 function applyRavenMonStatsEx(table) {
-  return appendCloneOrVerify(
+  const expected = cloneRowWith(table, 'Id', 'druidhawk', {
+    Id: NAMES.ravenMonStatsEx,
+    '*hcIdx': '755',
+    Light: '7',
+    'light-r': '255',
+    'light-g': '255',
+    'light-b': '255',
+    '*eol': '0',
+  }, 'monstats2');
+  const expectedValues = Object.fromEntries(
+    table.headers.map((header, index) => [header, expected[index] ?? '']),
+  );
+  return removeOwnedRow(
     table,
     'Id',
     NAMES.ravenMonStatsEx,
-    'Id',
-    'druidhawk',
-    {
-      Id: NAMES.ravenMonStatsEx,
-      '*hcIdx': '755',
-      Light: '7',
-      'light-r': '255',
-      'light-g': '255',
-      'light-b': '255',
-      '*eol': '0',
-    },
+    expectedValues,
     'monstats2',
   );
 }
@@ -334,12 +448,19 @@ function applyPetType(table) {
   }, 'pettype');
 }
 
-function applyMasteryState(table) {
-  return appendOrVerify(table, 'state', NAMES.masteryState, {
+function applyStates(table) {
+  let changed = false;
+  changed = appendOrVerify(table, 'state', NAMES.masteryState, {
     state: NAMES.masteryState,
     '*ID': '243',
     '*eol': '0',
-  }, 'states');
+  }, 'states') || changed;
+  changed = appendOrVerify(table, 'state', NAMES.ravenState, {
+    state: NAMES.ravenState,
+    '*ID': '244',
+    '*eol': '0',
+  }, 'states') || changed;
+  return changed;
 }
 
 function baseSkillValues(name) {
@@ -397,21 +518,27 @@ function ravenSkillValues(name, monster, element) {
   const values = {
     ...baseSkillValues(name),
     skilldesc: element === 'fire' ? NAMES.fireRavenSkillDesc : NAMES.coldRavenSkillDesc,
-    srvdofunc: '119',
+    srvstfunc: '28',
+    srvdofunc: '44',
+    srvmissilea: 'blade shield attachment',
+    aurastate: NAMES.ravenState,
+    auralencalc: '125',
     summon: monster,
     pettype: NAMES.ravenPetType,
     petmax: '1',
     summode: 'S1',
+    sumskill1: NAMES.ravenAuraSkill,
+    sumsk1calc: '1',
     stsound: 'druid_summon',
     anim: 'SC',
     seqtrans: 'SC',
     monanim: 'xx',
     restrict: '1',
     InTown: '1',
-    calc1: '0',
-    '*calc1 desc': 'HP %',
-    calc2: 'ulvl',
-    '*calc2 desc': 'Summon pet level',
+    calc1: '',
+    '*calc1 desc': '',
+    calc2: '',
+    '*calc2 desc': '',
     ToHitCalc: '512*ulvl',
     MinDam: '2',
     MinLevDam1: '1',
@@ -425,16 +552,25 @@ function ravenSkillValues(name, monster, element) {
     MaxLevDam3: '5',
     MaxLevDam4: '8',
     MaxLevDam5: '14',
+    Param5: '',
+    '*Param5 Description': '',
+    Param6: '',
+    '*Param6 Description': '',
     EType: element,
     aitype: '1',
   };
   if (element === 'fire') {
     Object.assign(values, {
+      passivestat1: 'firemindam', passivecalc1: 'edmn',
+      passivestat2: 'firemaxdam', passivecalc2: 'edmx',
       EMin: '1', EMinLev1: '2', EMinLev2: '3', EMinLev3: '6', EMinLev4: '12', EMinLev5: '24',
       EMax: '4', EMaxLev1: '2', EMaxLev2: '3', EMaxLev3: '7', EMaxLev4: '14', EMaxLev5: '27',
     });
   } else {
     Object.assign(values, {
+      passivestat1: 'coldmindam', passivecalc1: 'edmn',
+      passivestat2: 'coldmaxdam', passivecalc2: 'edmx',
+      passivestat3: 'coldlength', passivecalc3: 'edln',
       EMin: '3', EMinLev1: '2', EMinLev2: '3', EMinLev3: '5', EMinLev4: '9', EMinLev5: '15',
       EMax: '4', EMaxLev1: '2', EMaxLev2: '3', EMaxLev3: '6', EMaxLev4: '10', EMaxLev5: '17',
       ELen: '100', ELevLen1: '30', ELevLen2: '30', ELevLen3: '30',
@@ -443,9 +579,84 @@ function ravenSkillValues(name, monster, element) {
   return values;
 }
 
+function ravenAuraSkillValues() {
+  return {
+    ...baseSkillValues(NAMES.ravenAuraSkill),
+    srvdofunc: '65',
+    aurafilter: '65539',
+    aurastate: NAMES.ravenState,
+    auratargetstate: NAMES.ravenState,
+    aurarangecalc: '1024',
+    immediate: '1',
+    monanim: 'NU',
+    aura: '1',
+    perdelay: '50',
+  };
+}
+
+function migrateRavenSkill(table, skillName, monster, element) {
+  const expected = ravenSkillValues(skillName, monster, element);
+  const previousValues = {
+    srvstfunc: '',
+    srvdofunc: ['119', '114'],
+    srvmissilea: '',
+    aurastate: '',
+    auralencalc: '',
+    passivestat1: '',
+    passivecalc1: '',
+    passivestat2: '',
+    passivecalc2: '',
+    passivestat3: '',
+    passivecalc3: '',
+    sumskill1: ['', 'Summon Splash'],
+    sumsk1calc: '',
+    calc1: '0',
+    '*calc1 desc': 'HP %',
+    calc2: 'ulvl',
+    '*calc2 desc': 'Summon pet level',
+    Param5: '999999',
+    '*Param5 Description': 'Maximum attacks before expiration',
+    Param6: '0',
+    '*Param6 Description': 'Additional attacks per skill level',
+    aitype: ['', '1'],
+  };
+  let changed = false;
+  for (const [header, previousValue] of Object.entries(previousValues)) {
+    changed = migrateOwnedCell(
+      table,
+      'skill',
+      skillName,
+      header,
+      previousValue,
+      expected[header] ?? '',
+      'skills',
+    ) || changed;
+  }
+  return changed;
+}
+
 function applySkills(table) {
   let changed = false;
+  changed = migrateRavenSkill(
+    table,
+    NAMES.fireRavenSkill,
+    NAMES.fireRavenMonster,
+    'fire',
+  ) || changed;
+  changed = migrateRavenSkill(
+    table,
+    NAMES.coldRavenSkill,
+    NAMES.coldRavenMonster,
+    'cold',
+  ) || changed;
   changed = appendOrVerify(table, 'skill', NAMES.mastery, masterySkillValues(), 'skills') || changed;
+  changed = appendOrVerify(
+    table,
+    'skill',
+    NAMES.ravenAuraSkill,
+    ravenAuraSkillValues(),
+    'skills',
+  ) || changed;
   changed = appendOrVerify(
     table,
     'skill',
@@ -710,13 +921,17 @@ function validateReferences(tables) {
   const properties = new Set(tables.properties.rows.map((row) => cell(tables.properties, row, 'code')).filter(Boolean));
   const stats = new Set(tables.itemStatCost.rows.map((row) => cell(tables.itemStatCost, row, 'Stat')).filter(Boolean));
 
-  for (const name of [NAMES.mastery, NAMES.fireRavenSkill, NAMES.coldRavenSkill]) {
+  for (const name of [
+    NAMES.mastery,
+    NAMES.fireRavenSkill,
+    NAMES.coldRavenSkill,
+  ]) {
     assert(skillNames.has(name), `Missing skill ${name}`);
   }
   for (const name of [NAMES.fireRavenMonster, NAMES.coldRavenMonster]) {
     assert(monsterNames.has(name), `Missing monster ${name}`);
   }
-  assert(monStatsExNames.has(NAMES.ravenMonStatsEx), 'Missing Raven MonStats2 row');
+  assert(!monStatsExNames.has(NAMES.ravenMonStatsEx), 'Obsolete custom Raven MonStats2 row still present');
   assert(petTypes.has(NAMES.ravenPetType), 'Missing Raven pet type');
   assert(properties.has(NAMES.meleeProcProperty), 'Missing melee proc property');
   assert(stats.has(NAMES.meleeProcStat), 'Missing melee proc stat');
@@ -726,6 +941,7 @@ function validateReferences(tables) {
   assertNumericOwned(tables.itemStatCost, '*ID', '390', 'Stat', NAMES.meleeProcStat, 'itemstatcost');
   assertNumericOwned(tables.properties, '*Id', '309', 'code', NAMES.meleeProcProperty, 'properties');
   assertNumericOwned(tables.states, '*ID', '243', 'state', NAMES.masteryState, 'states');
+  assertNumericOwned(tables.states, '*ID', '244', 'state', NAMES.ravenState, 'states');
   assertNumericOwned(tables.monStats, '*hcIdx', '787', 'Id', NAMES.fireRavenMonster, 'monstats');
   assertNumericOwned(tables.monStats, '*hcIdx', '788', 'Id', NAMES.coldRavenMonster, 'monstats');
 }
@@ -766,7 +982,7 @@ function main() {
   applyRavenMonsters(tables.monStats);
   applyRavenMonStatsEx(tables.monStats2);
   applyPetType(tables.petType);
-  applyMasteryState(tables.states);
+  applyStates(tables.states);
   applySkills(tables.skills);
   applyHirelings(tables.hireling);
   validateReferences(tables);

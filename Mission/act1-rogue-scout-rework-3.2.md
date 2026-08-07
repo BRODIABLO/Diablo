@@ -245,6 +245,106 @@ byte-exact.
 - La réouverture manuelle de l’inventaire de la Rogue Ice reste `not run`; le
   jeu est laissé ouvert avec `-mod BKVince -txt` pour cette observation.
 
+### 6 août 2026 — assertions du cycle Fire/Cold Raven
+
+- Le premier rapport, `d2r-crash-report (2026_08_07 00_30_02 UTC).log`, capture
+  à 20:29:50 l’assertion `D2Common/src/Stats/States.cpp:46` :
+  `nShift >= 0 && nShift < DataTablesGetNumStates(UnitGetGameVersion(hUnit))`.
+  La Rogue Ice utilise `BKV Cold Raven` dans son slot 5 avec le même mode
+  d’animation que ses tirs; le crash pouvait donc visuellement sembler provenir
+  d’une flèche.
+- Le workbench vérifié du build `3.2.92777` prouve que le chemin natif teste
+  `D2SkillsTxt+0x2D8` (`aitype`) à `1`, charge ensuite le signed word
+  `D2SkillsTxt+0x0A0` (`aurastate`) et appelle `STATES_CheckState`. Les deux
+  Ravens BKVince étaient les seules compétences `aitype=1` sans `aurastate`
+  résolu. Le premier correctif a supprimé cette incohérence, mais il conservait
+  le summon générique `srvdofunc=119` et ne constituait donc qu’un correctif
+  partiel.
+- Le test en combat a ensuite produit
+  `d2r-crash-report (2026_08_07 00_46_35 UTC).log`, assertion
+  `D2Common/src/Units/Units.cpp:4666` :
+  `ptUnit->eType == UNIT_PLAYER`. Le Raven avait bien été créé. La backtrace
+  remonte de `0x5C12E1` vers le helper de déplacement `0x5BD1E0`, lequel appelle
+  à `0x5BD23C` la routine `0x34B240` qui exige les données d’un joueur. Avec
+  `srvdofunc=119`, le propriétaire direct du familier était la mercenaire
+  `UNIT_MONSTER`, d’où cette seconde assertion.
+- L’architecture TDE complète n’est pas un simple summon 119 : `RavenRF` et
+  `RavenRC` utilisent `srvstfunc=28`, `srvdofunc=44`, l’état `rogueraven` et une
+  compétence d’aura auxiliaire exécutée par `srvdofunc=65`. La documentation
+  D2R 3.2 confirme respectivement le démarrage Blade Shield, l’invocation Blade
+  Sentinel et l’aura Might. D2MOO, au commit gouverné
+  `19019806df7f3e877fa105b05395d1e3597e2316`, montre dans
+  `SKILLS_SrvDo044_BladeSentinel` que la chaîne des propriétaires monstres est
+  remontée avant la création du familier; le joueur devient donc son
+  propriétaire effectif. Cette preuve est sémantique et reste soumise au test
+  runtime D2R 3.2.
+- La migration BKVince reproduit désormais ce contrat sans importer d’IDs TDE :
+  les deux Ravens utilisent `srvstfunc=28`, `srvdofunc=44`, le missile
+  `blade shield attachment`, `aurastate=bkvrogueraven`, `auralencalc=125`,
+  `aitype=1`, `pettype=bkvrogueraven` et `petmax=1`. Le nouvel état gouverné
+  `bkvrogueraven` occupe l’ID libre `244`. La compétence auxiliaire
+  `BKV Rogue Raven Aura` utilise `srvdofunc=65`, le même état en aura source et
+  cible, `aurafilter=65539`, `aurarangecalc=1024`, `aura=1` et `perdelay=50`.
+- Le validateur refuse maintenant tout `aitype=1` sans état résolu et verrouille
+  explicitement le contrat Blade Sentinel, l’état et la compétence auxiliaire.
+  `test:bkvince-act1-rogue`, `test:bkvince-startup-refs`,
+  `test:bkvince-mercenary-command`, les contrôles de syntaxe et la suite complète
+  `verify:data` passent. Les round-trips de `skills.txt` (449 lignes) et
+  `states.txt` (245 lignes) sont byte-exact avec CRLF préservés.
+- Les deux tables redéployées sont identiques à la source : `skills.txt`
+  `4FB3EA8EB98C8429179867E398B7FAD2B853CF2FDBEF0121103970148D317507` et
+  `states.txt`
+  `BBADCF47A7AE1675D42D4164FCB2184896B797925840ABB11FD65E3A837CF555`.
+  Le cold start frais accepte le build `92777`, applique `18/18` patchsets,
+  charge `13/13` plugins sans rejet ni échec — dont `RogueScoutMovement` — et
+  atteint `24/24`. Aucun nouveau rapport de crash n’est présent au moment du
+  contrôle; le test Fire/Cold Raven en combat reste toutefois `not run` jusqu’à
+  observation directe du familier en mouvement et en attaque.
+- `BindAndSummon.dll` est absent de la pile actuellement installée; ce cold
+  start ne constitue donc pas une preuve de coexistence avec ce plugin.
+
+### 7 août 2026 — Raven serveur présent, rendu client absent
+
+- L’observation gameplay corrige l’interprétation précédente : le Raven issu du
+  cycle TDE était bien créé côté serveur et attaquait les monstres. L’absence à
+  l’écran était donc un défaut de rendu client, pas un échec d’invocation.
+- Les deux classes `bkvfireraven` et `bkvcoldraven` utilisaient
+  `MonStatsEx=bkvrogueraven`. La recherche dans tout `data-BKVince` ne trouve
+  aucune ressource HD ni aucun mapping portant cette identité, seulement les
+  cinq références TXT qui la définissaient. Le client recevait donc une unité
+  serveur fonctionnelle sans identité graphique HD résoluble.
+- Le prototype de diagnostic qui a remplacé temporairement le cycle TDE par
+  `srvdofunc=114` et l’IA native `Raven` était fondé sur une mauvaise attribution
+  de l’assertion `LvlTbls`. Il a introduit l’assertion distincte
+  `D2Game/src/Unit/SUnitMsg.cpp:459` dans le rapport
+  `d2r-crash-report (2026_08_07 01_21_48 UTC).log`.
+- Le workbench 92777 situe cette assertion à `0x539D36`, dans le sérialiseur des
+  stats d’une unité au moment où ses états sont envoyés au client. La référence
+  sémantique D2MOO montre que `SKILLS_SrvDo114_Raven` applique les passives du
+  skill au pet; combiné à l’état d’aura requis par l’IA du mercenaire, ce
+  prototype faisait entrer les dégâts élémentaires signés dans ce trajet
+  réseau. Il est retiré intégralement plutôt que masqué par un clamp arbitraire.
+- Le correctif revient au cycle TDE déjà observé fonctionnel : `srvstfunc=28`,
+  `srvdofunc=44`, état `bkvrogueraven`, helper
+  `BKV Rogue Raven Aura` en `srvdofunc=65` et IA `NecroPet`. Les deux monstres
+  réutilisent désormais `MonStatsEx=druidhawk`, soit l’identité graphique Raven
+  vanilla existante, tout en conservant leurs classes et leur pet type propres.
+- La ligne `monstats2=bkvrogueraven`, qui ne fournissait qu’un halo blanc sur une
+  identité HD inexistante, est supprimée. Le halo reste volontairement hors de
+  ce correctif de stabilité et devra revenir par un effet visuel valide.
+- `LvlTbls.cpp:284` est explicitement hors de ce diagnostic et traité dans une
+  autre tâche. Aucun fichier de niveau n’est modifié ici.
+- La migration est idempotente; `test:bkvince-act1-rogue`,
+  `test:bkvince-startup-refs`, `test:bkvince-mercenary-command` et la suite
+  complète `verify:data` passent. La visibilité et l’absence d’assertion en
+  combat restent à confirmer après le redéploiement runtime.
+- Le redéploiement ciblé porte des hashes source/runtime identiques :
+  `skills.txt` `4FB3EA8E…17507`, `monstats.txt` `FE4015AF…C7407` et
+  `monstats2.txt` `AAA34238…E2764`. Le cold start accepte le build `92777`,
+  applique `18/18` patchsets, charge `13/13` plugins sans rejet ni échec — dont
+  `RogueScoutMovement` — et atteint `24/24`. Aucun nouveau rapport de crash
+  n’est créé avant le test gameplay; le jeu reste ouvert pour ce témoin.
+
 ## Implantation native autonome — 2 août 2026
 
 - Destination confirmée par Vincent : plugin autonome permanent, sans future
