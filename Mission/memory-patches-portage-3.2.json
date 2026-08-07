@@ -73,12 +73,15 @@
       "monsterHpCapValidation": "runtime-hook-and-command-smoke-passed-awaiting-boss-gameplay-validation",
       "infiniteTomesPatchAppliedAt": "0x5817BD",
       "rejectedTomeSitesRemainVanilla": ["0x47145D", "0x4F5849"],
+      "normalAreaLevelScalingGuardRva": "0x543D32",
+      "normalAreaLevelScalingGuardBytes": "4585F67E19",
+      "normalAreaLevelScalingRuntimeValidation": "passed-2026-08-06: Helena entered the Rogue Encampment with Anor restored, no LevelId assertion and no new crash report; startup 24/24, patches 18/18, plugins 13/13",
       "status": "static-validation-runtime-sync-and-cold-start-passed-awaiting-gameplay-validation"
     },
     "patches": [
       {
         "path": "data-BKVince/d2rloader/patches/normal-area-level-scaling.json",
-        "entries": ["Make monsters scale off area level on normal"]
+        "entries": ["Scale Normal monsters by area level with a null-LevelId fallback"]
       },
       {
         "path": "data-BKVince/d2rloader/patches/infinite-item-quantity-and-tomes.json",
@@ -529,9 +532,10 @@
       },
       {
         "name": "Make monsters scale off area level on normal",
-        "classification": "patch-site-located",
+        "classification": "implemented-runtime-validated",
         "confidence": "high",
-        "sites": [{ "rva": "0x543D35", "expected": "7419", "futureIntent": "NOP the conditional branch." }]
+        "sites": [{ "rva": "0x543D32", "expected": "4585FF7419", "replacement": "4585F67E19", "instruction": "test r14d, r14d; jle 0x543D50" }],
+        "decision": "Keep Normal area-level scaling when the room-derived LevelId is positive, but take the native monstats base-level fallback when the room is absent and the derived LevelId is zero. A live build-92777 trace proved the failing path restored roguehire class 271 with a null room and LevelId 0; levels.txt itself remained byte-exact and complete. The corrected patch loaded successfully and Helena entered the Rogue Encampment with Anor restored without the LvlTbls assertion or a new crash report."
       },
       {
         "name": "Make umon field in levels.txt work on all difficulties",

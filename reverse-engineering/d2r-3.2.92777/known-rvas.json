@@ -852,6 +852,14 @@
       "notes": "Computes per-monster player-count bonuses. BKVince hooks it with strict expected bytes to cap monster HP scaling independently at players 8 while the requested difficulty can remain 65535."
     },
     {
+      "rva": "0x543D32",
+      "name": "MonsterStatsAreaLevelGuard",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/memory-patches-portage-3.2.json",
+      "notes": "Native `test r15d,r15d; je 0x543D50` prevents area-level scaling in Normal difficulty. The original BKVince NOP enabled Normal scaling but also sent a roomless restored Rogue mercenary through DATATBLS_GetMonsterLevelInArea with LevelId 0. Runtime tracing on build 92777 proved source room null, LevelId 0 and target UNIT_MONSTER class 271. The governed patch replaces the five bytes with `test r14d,r14d; jle 0x543D50`, preserving area scaling for positive room-derived LevelIds and selecting the native monstats base-level fallback otherwise."
+    },
+    {
       "rva": "0x5817BD",
       "name": "BookQuantityDeltaBeforeSynchronization",
       "kind": "patch-site",
