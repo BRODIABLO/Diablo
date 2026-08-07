@@ -47,11 +47,29 @@ function value(row, indexes, header, tableName) {
 }
 
 function main() {
+  const hireling = load('hireling.txt');
+  const skills = load('skills.txt');
   const skilldesc = load('skilldesc.txt');
   const missiles = load('missiles.txt');
   const treasureClasses = load('treasureclassex.txt');
+  const hirelingIndexes = headerIndexes(hireling);
+  const skillsIndexes = headerIndexes(skills);
   const skilldescIndexes = headerIndexes(skilldesc);
   const treasureIndexes = headerIndexes(treasureClasses);
+
+  const hirelingSkillNames = new Set();
+  for (const row of hireling.rows) {
+    for (let slot = 1; slot <= 6; slot += 1) {
+      const skillName = value(row, hirelingIndexes, `Skill${slot}`, 'hireling.txt');
+      if (skillName) hirelingSkillNames.add(skillName);
+    }
+  }
+  for (const skillName of hirelingSkillNames) {
+    const skill = uniqueRow(skills, skillName, 'skills.txt');
+    const description = value(skill, skillsIndexes, 'skilldesc', 'skills.txt');
+    assert(description, `skills.txt: ${skillName} utilise par hireling.txt sans skilldesc`);
+    uniqueRow(skilldesc, description, 'skilldesc.txt');
+  }
 
   const eruption = uniqueRow(skilldesc, 'eruption', 'skilldesc.txt');
   const eruptionFormula = value(
@@ -100,6 +118,7 @@ function main() {
   'treasureclassex.txt: la progression Normal -> Nightmare des crafts Rift est invalide');
 
   console.log('VALID : references BKVince de demarrage resolues');
+  console.log(`  Hireling skills -> ${hirelingSkillNames.size} skilldesc resolus`);
   console.log(`  Eruption -> ${missileMatch[1]}`);
   console.log('  Andariel (H) -> Andariel Essence (H) -> tes');
   console.log('  Rift Crafts (N) Premium precede Rift Crafts Premium');

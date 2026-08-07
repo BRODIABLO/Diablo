@@ -42,9 +42,12 @@ const FILES = {
 
 const NAMES = {
   mastery: 'BKV Bow Mastery',
+  masterySkillDesc: 'bkv bow mastery',
   masteryState: 'bkvbowmastery',
   fireRavenSkill: 'BKV Fire Raven',
+  fireRavenSkillDesc: 'bkv fire raven',
   coldRavenSkill: 'BKV Cold Raven',
+  coldRavenSkillDesc: 'bkv cold raven',
   fireRavenMonster: 'bkvfireraven',
   coldRavenMonster: 'bkvcoldraven',
   ravenMonStatsEx: 'bkvrogueraven',
@@ -363,6 +366,7 @@ function baseSkillValues(name) {
 function masterySkillValues() {
   return {
     ...baseSkillValues(NAMES.mastery),
+    skilldesc: NAMES.masterySkillDesc,
     passivestate: NAMES.masteryState,
     passiveitype: 'bow',
     passivestat1: 'passive_mastery_melee_th',
@@ -392,6 +396,7 @@ function masterySkillValues() {
 function ravenSkillValues(name, monster, element) {
   const values = {
     ...baseSkillValues(name),
+    skilldesc: element === 'fire' ? NAMES.fireRavenSkillDesc : NAMES.coldRavenSkillDesc,
     srvdofunc: '119',
     summon: monster,
     pettype: NAMES.ravenPetType,

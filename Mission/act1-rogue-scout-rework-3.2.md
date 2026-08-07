@@ -1,6 +1,6 @@
 # Rework des Rogue Scouts de l’Acte I — BKVince 3.2
 
-Dernière mise à jour : 2 août 2026
+Dernière mise à jour : 6 août 2026
 
 ## Statut
 
@@ -216,6 +216,34 @@ byte-exact.
 - Aucun personnage n’a été ouvert et aucune sauvegarde n’a été modifiée durant
   cette validation. Les dégâts réels, les trois paliers et la branche Cold
   corrigée restent à observer en combat.
+
+### 6 août 2026 — descriptions du panneau mercenaire
+
+- L’ouverture de l’inventaire d’une Rogue Ice a produit un `assert exit` dans
+  `HirelingInventoryPanel.cpp:890` : `Skill has no associated description!`,
+  avec l’index interne `444`, soit `BKV Cold Raven`.
+- L’audit exhaustif des compétences référencées par `hireling.txt` a trouvé six
+  références invalides. `BKV Bow Mastery`, `BKV Fire Raven` et
+  `BKV Cold Raven` reçoivent trois descriptions BKVince originales;
+  `BKV Desert Smite`, `BKV Desert Mastery` et `BKV Desert Sacrifice`
+  réutilisent respectivement `smite`, `pole arm mastery` et `sacrifice`.
+- TDE 3.1d ne fournit pas de correctif copiable : `RavenRF`, `RavenRC`,
+  `Bow Mastery` et `Mizan Mastery` y ont eux aussi un `skilldesc` vide. Aucun
+  texte ni aucune ligne `skilldesc.txt` de TDE n’a donc été importé.
+- Le validateur de démarrage contrôle désormais les 38 compétences distinctes
+  utilisées par les mercenaires et refuse toute référence vide ou absente.
+  `npm run verify:data` est vert.
+- Les trois fichiers du correctif ont été redéployés le 6 août dans le profil
+  BKVince avec des SHA-256 source/runtime identiques : `skills.txt`
+  `46906B94…E022B3`, `skilldesc.txt` `66EDF1D4…5FE548` et `skills.json`
+  `D77D0A1D…748C9`.
+- Le cold start frais accepte D2R `3.2.92777`, applique `18/18` patchsets,
+  atteint `24/24` et ne produit aucun nouveau crash. Il reste `PARTIAL` :
+  `RogueScoutMovement.dll` refuse sa signature attendue à `0x349860`, incident
+  déjà observé depuis le 5 août et distinct des trois tables redéployées
+  (`13/14` plugins actifs, zéro rejet, un échec).
+- La réouverture manuelle de l’inventaire de la Rogue Ice reste `not run`; le
+  jeu est laissé ouvert avec `-mod BKVince -txt` pour cette observation.
 
 ## Implantation native autonome — 2 août 2026
 
