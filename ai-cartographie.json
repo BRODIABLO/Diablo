@@ -263,6 +263,35 @@
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "plugin-architect",
+                                                                                "path":  ".agents/skills/plugin-architect",
+                                                                                "kind":  "directory",
+                                                                                "meta":  {
+                                                                                             "role":  "x-plugin-architecture-review",
+                                                                                             "summary":  "Skill opt-in de revue approfondie et read-only pour les architectures D2R, D2RMM, memory patches et plugins D2RLoader.",
+                                                                                             "agentAccess":  "read-write"
+                                                                                         },
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "agents",
+                                                                                                     "path":  ".agents/skills/plugin-architect/agents",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "openai.yaml",
+                                                                                                                          "path":  ".agents/skills/plugin-architect/agents/openai.yaml",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "SKILL.md",
+                                                                                                     "path":  ".agents/skills/plugin-architect/SKILL.md",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
                                                                             }
                                                                         ]
                                                        }

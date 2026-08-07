@@ -1,0 +1,6 @@
+interface:
+  display_name: "Plugin Architect"
+  short_description: "Concevoir des plugins D2R en profondeur"
+  default_prompt: "Utilise $plugin-architect pour analyser cette idee de plugin en profondeur sans rien implanter."
+policy:
+  allow_implicit_invocation: false
