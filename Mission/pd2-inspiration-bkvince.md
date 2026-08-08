@@ -28,6 +28,74 @@ et exigent des preuves natives distinctes.
   livraison complète;
 - ne copier en masse ni tables, ni valeurs, ni assets.
 
+## Lot 2 — décisions mercenaires confirmées
+
+- Acte I : conserver l'idée d'une Rogue physique avec des auras et 66 % de
+  pierce intrinsèque, mais reporter son nouveau skill et son équilibrage à un
+  lot ultérieur;
+- Acte II : ne rien changer;
+- Acte III : procéder en deux phases. La phase 1 ajoute seulement Cleansing,
+  Prayer et Holy Shock aux trois variantes; les masteries élémentaires restent
+  réservées à la phase 2;
+- Acte IV : conserver les Ascendants comme idée de chantier hardcodé futur,
+  sans copier leurs IDs, skills ou tables PD2;
+- Acte V : étudier plus tard une variante à nouvel ID avec Battle Orders,
+  Battle Cry et un Whirlwind propre au mercenaire;
+- reporter l'interface générique à cinq ou six compétences. Le panneau actuel
+  reste limité à trois widgets visibles et son extension exige d'abord un test
+  de binding `Skill3–Skill5`.
+
+### Acte III phase 1 — implantation statique
+
+Le 8 août 2026, les 18 lignes `Eastern Sorceror`, `Version=100`, de
+`hireling.txt` ont reçu une quatrième compétence sans modifier leurs trois
+sorts existants, leurs IDs, leurs classes ou leurs paliers de recrutement :
+
+| Variante | Skill4 | Niveau 15 | Niveau 49 | Niveau 79 |
+|---|---|---:|---:|---:|
+| Fire | Cleansing | `4 + 13/32` | `17 + 16/32` | `30`, plafonné |
+| Cold | Prayer | `3 + 8/32` | `12 + 8/32` | `18`, plafonné |
+| Lightning | Holy Shock | `6 + 8/32` | `15 + 8/32` | `21`, plafonné |
+
+Les six cellules possédées par ligne sont `Skill4`, `Mode4`, `Chance4`,
+`ChancePerLvl4`, `Level4` et `LvlPerLvl4`, soit exactement 108 cellules. Les
+trois auras utilisent `Mode4=1`, `Chance4=10` et `ChancePerLvl4=0`, le pattern
+natif D2R 3.2 des auras de mercenaires. Le palier 79 porte
+`LvlPerLvl4=0` afin de préserver l'identité du mercenaire Acte II Prayer et de
+contenir les auras BKVince déjà accélérées ou agrandies.
+
+Ces deux choix sont des adaptations BKVince explicites, pas une copie littérale
+de PD2 : la source PD2 S13 emploie `Chance=0` et laisse encore progresser Prayer
+et Holy Shock après le palier 79. BKVince retient `Chance=10`, conformément au
+précédent natif D2R 3.2 des auras de mercenaires, puis plafonne les courbes. Le
+risque résiduel est une sélection AI périodique de l'aura; l'activité des sorts,
+le recast et l'idle doivent donc être observés en jeu.
+
+Le fichier final reste en CRLF, conserve ses 77 colonnes, ses 126 lignes et son
+saut de ligne final, puis passe un round-trip byte-exact. Son SHA-256 source est
+`1FA4EC8899F772F87C6129C69518C15D701C9AB59D0002C43214FB08CB1CE27A`.
+Les validateurs de références de démarrage, Mercenary Command et Rogue Acte I
+sont verts après la modification. Ce jalon est donc **implanté statiquement**,
+mais pas encore déclaré validé en jeu. `npm run verify:data` est également vert
+sur la table finale.
+
+Le déploiement allowlist du 8 août 2026 a copié uniquement `hireling.txt` vers
+le profil `C:\Games\Diablo II Resurrected\mods\BKVince`, après sauvegarde de la
+version runtime précédente. Le rapport
+`analysis-cache/runtime-sync/20260808-152233670-apply.json` prouve l'égalité du
+SHA-256 source/runtime. Le cold start frais accepte le build 92777, charge
+`18/18` patchsets et `14/14` plugins sans désactivation, rejet ni échec, puis
+atteint `24/24` étapes. Aucun nouvel assert n'apparaît dans les logs frais.
+Cela valide le déploiement et le chargement de la table, pas encore le
+comportement des auras en combat.
+
+Gates runtime encore ouverts : activation et maintien de chaque aura après
+embauche, chargement, portail, waypoint, mort et résurrection; continuité des
+casts; interaction avec une aura identique fournie par l'équipement; solo,
+hôte et joiner. Cleansing doit aussi être observé séparément : sa composante de
+soin dépend de Prayer et devrait rester nulle sur la variante Fire qui ne
+possède pas cette compétence.
+
 ## Sources figées
 
 Le dossier local Single Player Plus correspond byte-exactement au dépôt public
@@ -131,16 +199,17 @@ chapitres restent explicitement planifiés et ne sont pas déclarés complets.
 - le catalogue est validé par
   [`pd2-inspiration-bkvince.schema.json`](pd2-inspiration-bkvince.schema.json).
 
-Le dossier PD2/SP+ et les mods de référence restent read-only. Ce premier lot ne
-modifie aucune table gameplay BKVince et ne déploie rien dans le runtime.
+Le dossier PD2/SP+ et les mods de référence restent read-only. La baseline
+initiale ne modifiait aucune table gameplay BKVince; l'implantation atomique
+Acte III phase 1 modifie désormais seulement `hireling.txt`.
 
 ## Prochain gate
 
-Terminer le chapitre « General Changes / QoL / general balancing » en reliant
-chaque différence pertinente à ses lignes et colonnes TXT, à la révision wiki
-figée, au chevauchement BKVince et à une disposition explicite : conserver
-BKVince, adapter/rééquilibrer, candidat fidèle, rejeter ou envoyer en preuve
-native. Ensuite seulement, ouvrir le chapitre mercenaires.
+Déployer et valider en jeu l'Acte III phase 1 : les trois auras, leurs cycles de
+vie, leurs interactions avec l'équipement et l'absence de régression sur les
+casts. La validation réseau hôte/joiner reste obligatoire avant de déclarer le
+lot livré. Les masteries élémentaires et l'UI étendue demeurent la phase 2 et un
+chantier ultérieur distinct.
 
 ## Crédits
 
