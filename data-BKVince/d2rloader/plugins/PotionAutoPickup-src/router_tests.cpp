@@ -1,15 +1,83 @@
 #include "router.hpp"
 #include <cassert>
-using namespace tcp::autopickup;
+using namespace ruffneckk::potion_auto_pickup;
 int main() {
     static_assert(Classify("hp5").family == Family::Healing);
     static_assert(Classify("mp4").tier == 4);
     static_assert(Classify("rvl").family == Family::Rejuvenation);
-    Policy p{true,{false,false,false,false,true,true},{1,0,0,0},1,false};
-    assert(Route(p,Classify("hp4"),{true,false,false,false},true)==Destination::Column1);
-    assert(Route(p,Classify("hp3"),{true,false,false,false},true)==Destination::Ground);
-    assert(Route(p,Classify("hp5"),{false,false,false,false},true)==Destination::Ground);
-    p.overflow=true;
-    assert(Route(p,Classify("hp5"),{false,false,false,false},true)==Destination::Inventory);
-    assert(Route(p,Classify("hp5"),{false,false,false,false},false)==Destination::Ground);
+
+    Policy everyHealing{};
+    everyHealing.enabled=true;
+    for(std::uint8_t tier=1;tier<=5;++tier) everyHealing.tiers[tier]=true;
+    everyHealing.overflowTiers[1]=everyHealing.overflowTiers[3]=everyHealing.overflowTiers[5]=true;
+    for(const auto code:{"hp1","hp2","hp3","hp4","hp5"}) {
+        const auto item=Classify(code);
+        assert(everyHealing.Accepts(item));
+        assert(everyHealing.AllowsOverflow(item)==(item.tier%2==1));
+    }
+    assert(!everyHealing.Accepts(Classify("mp1")));
+
+    Policy everyMana{};
+    everyMana.enabled=true;
+    for(std::uint8_t tier=1;tier<=5;++tier) {
+        everyMana.tiers[tier]=true;
+        everyMana.overflowTiers[tier]=true;
+    }
+    for(const auto code:{"mp1","mp2","mp3","mp4","mp5"}) {
+        const auto item=Classify(code);
+        assert(everyMana.Accepts(item));
+        assert(everyMana.AllowsOverflow(item));
+    }
+
+    Policy everyRejuvenation{};
+    everyRejuvenation.enabled=true;
+    everyRejuvenation.tiers[1]=everyRejuvenation.tiers[2]=true;
+    everyRejuvenation.overflowTiers[1]=everyRejuvenation.overflowTiers[2]=true;
+    assert(everyRejuvenation.Accepts(Classify("rvs")));
+    assert(everyRejuvenation.Accepts(Classify("rvl")));
+    assert(everyRejuvenation.AllowsOverflow(Classify("rvs")));
+    assert(everyRejuvenation.AllowsOverflow(Classify("rvl")));
+
+    Policy healing{};
+    healing.enabled=true;
+    healing.tiers[2]=healing.tiers[3]=true;
+    healing.columns={1,2,0,0};
+    healing.columnCount=2;
+    healing.overflowTiers[3]=true;
+
+    std::array<BeltSlot,16> belt{};
+    auto routed=Route(healing,Classify("hp2"),belt,16,true);
+    assert(routed.destination==Destination::Column1 && routed.beltSlot==0);
+
+    belt[0]={true,Family::Healing};
+    routed=Route(healing,Classify("hp3"),belt,16,true);
+    assert(routed.destination==Destination::Column1 && routed.beltSlot==4);
+
+    belt[4]=belt[8]=belt[12]={true,Family::Healing};
+    belt[1]={true,Family::Mana};
+    routed=Route(healing,Classify("hp2"),belt,16,true);
+    assert(routed.destination==Destination::Ground);
+    routed=Route(healing,Classify("hp3"),belt,16,true);
+    assert(routed.destination==Destination::Inventory);
+    routed=Route(healing,Classify("hp3"),belt,16,false);
+    assert(routed.destination==Destination::Ground);
+
+    Policy rejuvenation{};
+    rejuvenation.enabled=true;
+    rejuvenation.tiers[1]=rejuvenation.tiers[2]=true;
+    rejuvenation.columns={4,0,0,0};
+    rejuvenation.columnCount=1;
+    rejuvenation.overflowTiers[1]=rejuvenation.overflowTiers[2]=true;
+    belt={};
+    routed=Route(rejuvenation,Classify("rvl"),belt,8,true);
+    assert(routed.destination==Destination::Column4 && routed.beltSlot==3);
+    belt[3]=belt[7]={true,Family::Rejuvenation};
+    routed=Route(rejuvenation,Classify("rvs"),belt,8,true);
+    assert(routed.destination==Destination::Inventory);
+
+    Policy inventoryOnly=everyMana;
+    inventoryOnly.columnCount=0;
+    belt={};
+    routed=Route(inventoryOnly,Classify("mp5"),belt,16,true);
+    assert(routed.destination==Destination::Inventory);
 }

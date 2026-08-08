@@ -14,12 +14,15 @@ Chaque famille possède sa propre politique :
 - Mana : sélection indépendante de `mp1`, `mp2`, `mp3`, `mp4`, `mp5`;
 - Rejuvenation : sélection indépendante de `rvs` et `rvl`;
 - colonnes de belt ordonnées et indépendantes par famille;
-- overflow vers l’inventaire indépendant par famille;
+- overflow vers l’inventaire indépendant pour chacun des 12 types;
 - priorité configurable entre familles et entre tiers;
 - distance et cadence de scan globales;
 - objet laissé au sol si aucune destination autorisée n’est libre.
 
-Le preset BKVince initial réserve la colonne 1 aux Greater/Super Healing, la colonne 2 aux Greater/Super Mana et les colonnes 3–4 aux deux Rejuvenation. Seules les Rejuvenation débordent vers l’inventaire.
+Le preset BKVince actif sélectionne `hp2`–`hp5` dans les colonnes 1–2 et
+`mp2`–`mp5` dans les colonnes 3–4. `hp3`–`hp5` et `mp3`–`mp5` débordent vers
+l’inventaire. `rvs` et `rvl` utilisent d’abord la colonne 4, puis débordent vers
+l’inventaire.
 
 ## Architecture cible
 
@@ -27,6 +30,23 @@ Le preset BKVince initial réserve la colonne 1 aux Greater/Super Healing, la co
 2. Une couche D2RLoader lit `PotionAutoPickup.toml`, journalise les refus et installe uniquement des hooks natifs prouvés pour le build 92777.
 3. L’adaptateur runtime parcourt les items serveur au sol, contrôle distance/collision et appelle le chemin vanilla de pickup.
 4. Le sélecteur de belt respecte la hauteur réelle de la ceinture, les colonnes autorisées et la famille déjà présente dans une colonne.
+
+## Implantation 1.1.1
+
+- `tiers` sélectionne individuellement `hp1`–`hp5`, `mp1`–`mp5`, `rvs` et
+  `rvl`;
+- `overflow_tiers` autorise l’overflow indépendamment pour chaque type;
+- `columns` reste ordonné par famille et une liste vide permet un routage
+  inventaire seulement pour les types autorisés à déborder;
+- le hook thread-local de `INVENTORY_GetFreeBeltSlot 0x3862D0` ne remplace la
+  destination que pendant le pickup automatique de l’objet exact sélectionné;
+- `UNITS_GetInventory 0x34A360` et `INVENTORY_ResolveOccupancyGrid 0x38B070`
+  fournissent la hauteur et les cases réellement occupées de la ceinture.
+- les cases `0x01`–`0x12` de la table serveur `0x1D2A790` déclenchent les scans
+  sur les déplacements et actions normaux; `0x16` reste le callback de pickup
+  original et n’est plus utilisé comme faux déclencheur autonome;
+- la capacité réelle vient du type de belt lu par `ITEMS_GetBeltType 0x349720`,
+  après résolution de la case body 8, plutôt que de supposer quatre rangées.
 
 ## Gate de sécurité
 
@@ -42,8 +62,24 @@ Le preset BKVince initial réserve la colonne 1 aux Greater/Super Healing, la co
 - activation/désactivation et ordre de priorité par famille;
 - chaque combinaison de colonnes 1–4 avec ceintures de 1 à 4 rangées;
 - colonne vide, compatible, incompatible et pleine;
-- overflow actif/inactif par famille, inventaire libre/partiel/plein;
+- overflow actif/inactif pour chacun des 12 types, inventaire libre/partiel/plein;
 - distance limite, collision, plusieurs potions à distance égale;
 - souris, manette, solo, hôte et joiner;
 - retour menu/reconnexion/déchargement;
 - absence de duplication, perte, crash et désynchronisation.
+
+## Validation technique du 8 août 2026
+
+- Release x64 et `router-policy` : `1/1` test réussi;
+- DLL build/source/runtime byte-identique :
+  `60295EB52651FDDA8B1015241CA2C78B1047407B32C80B04AA972FD46D94D6A8`;
+- TOML source/runtime byte-identique :
+  `3CE5FA69FFACE1BC54BFC8A2F23227114DFFF12A44B3F773D3BF37F615952F38`;
+- cold start mod-local avec pile complète : `18/18` patchsets appliqués,
+  `14/14` plugins actifs, zéro rejet/échec et startup `24/24`;
+- les 18 cases runtime `0x01`–`0x12` pointent vers une cible unique située dans
+  `PotionAutoPickup.dll`; le hook de belt `0x3862D0` est accepté;
+- le log frais restitue exactement le preset BKVince demandé.
+
+La matrice gameplay avec potions réellement déposées, inventaire plein et belt
+de différentes hauteurs reste à observer; elle n’est pas inférée du cold start.

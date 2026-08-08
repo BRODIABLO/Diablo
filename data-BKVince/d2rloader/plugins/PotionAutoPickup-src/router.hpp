@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string_view>
 
-namespace tcp::autopickup {
+namespace ruffneckk::potion_auto_pickup {
 enum class Family : std::uint8_t { Healing, Mana, Rejuvenation, Unknown };
 struct Item { std::string_view code; Family family; std::uint8_t tier; };
 inline constexpr std::array Items{
@@ -20,13 +20,50 @@ struct Policy {
     std::array<bool,6> tiers{};
     std::array<std::uint8_t,4> columns{};
     std::uint8_t columnCount{};
-    bool overflow{};
+    std::array<bool,6> overflowTiers{};
     constexpr bool Accepts(Item item) const noexcept { return enabled && item.family != Family::Unknown && item.tier < tiers.size() && tiers[item.tier]; }
+    constexpr bool AllowsOverflow(Item item) const noexcept { return Accepts(item) && item.tier < overflowTiers.size() && overflowTiers[item.tier]; }
 };
+struct BeltSlot { bool occupied{}; Family family{Family::Unknown}; };
 enum class Destination : std::int8_t { Ground=-1, Inventory=0, Column1=1, Column2=2, Column3=3, Column4=4 };
-inline constexpr Destination Route(const Policy& policy, Item item, const std::array<bool,4>& columnHasRoom, bool inventoryHasRoom) noexcept {
-    if (!policy.Accepts(item)) return Destination::Ground;
-    for (std::uint8_t i=0;i<policy.columnCount;i++) { const auto c=policy.columns[i]; if (c>=1 && c<=4 && columnHasRoom[c-1]) return static_cast<Destination>(c); }
-    return policy.overflow && inventoryHasRoom ? Destination::Inventory : Destination::Ground;
+struct RouteResult { Destination destination{Destination::Ground}; std::int8_t beltSlot{-1}; };
+inline constexpr std::int8_t ChooseBeltSlot(
+    const Policy& policy,
+    Item item,
+    const std::array<BeltSlot,16>& slots,
+    std::uint8_t capacity) noexcept {
+    if (!policy.Accepts(item)) return -1;
+    if (capacity < 4 || capacity > slots.size() || capacity % 4 != 0) return -1;
+    const auto rows = static_cast<std::uint8_t>(capacity / 4);
+    for (std::uint8_t index=0; index<policy.columnCount; ++index) {
+        const auto column = policy.columns[index];
+        if (column < 1 || column > 4) continue;
+        const auto bottom = static_cast<std::uint8_t>(column - 1);
+        if (!slots[bottom].occupied || slots[bottom].family != item.family) continue;
+        for (std::uint8_t row=1; row<rows; ++row) {
+            const auto slot = static_cast<std::uint8_t>(bottom + row * 4);
+            if (!slots[slot].occupied) return static_cast<std::int8_t>(slot);
+        }
+    }
+    for (std::uint8_t index=0; index<policy.columnCount; ++index) {
+        const auto column = policy.columns[index];
+        if (column < 1 || column > 4) continue;
+        const auto bottom = static_cast<std::uint8_t>(column - 1);
+        if (!slots[bottom].occupied) return static_cast<std::int8_t>(bottom);
+    }
+    return -1;
+}
+inline constexpr RouteResult Route(
+    const Policy& policy,
+    Item item,
+    const std::array<BeltSlot,16>& slots,
+    std::uint8_t capacity,
+    bool inventoryHasRoom) noexcept {
+    const auto slot = ChooseBeltSlot(policy,item,slots,capacity);
+    if (slot >= 0) {
+        return {static_cast<Destination>((slot % 4) + 1),slot};
+    }
+    if (policy.AllowsOverflow(item) && inventoryHasRoom) return {Destination::Inventory,-1};
+    return {Destination::Ground,-1};
 }
 }

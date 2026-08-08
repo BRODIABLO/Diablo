@@ -260,6 +260,14 @@
       "notes": "Returns the data-table context byte for an item unit immediately before item-record and item-type lookups."
     },
     {
+      "rva": "0x349720",
+      "name": "ITEMS_GetBeltType",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/PotionAutoPickup-portage-3.2.md",
+      "notes": "Validates UNIT_ITEM, resolves its ItemsTxt record and returns the unsigned belt-type byte at record+0x140 with observed ABI (beltItem) -> int32. INVENTORY_GetFreeBeltSlot calls it for the item equipped in body slot 8. Its strict 32-byte prologue is unique in build 92777."
+    },
+    {
       "rva": "0x34A330",
       "name": "UNITS_GetUnitId",
       "kind": "function",
@@ -1516,6 +1524,22 @@
       "notes": "Returns an item's one-byte width and height through the proven x64 ABI (item, widthOut, heightOut, sourceFile, sourceLine) -> void. INVENTORY_FindFreePosition calls it before choosing a scan direction; CubeQuickMove pins its 32-byte prologue and uses it only after the vanilla Cube search succeeds."
     },
     {
+      "rva": "0x1D2A790",
+      "name": "D2GAME_ServerPacketCallbackTable",
+      "kind": "data",
+      "confidence": "high",
+      "source": "Mission/mass-id-3.2.md; Mission/PotionAutoPickup-portage-3.2.md",
+      "notes": "Base of the authoritative 256-entry server packet callback table, with one eight-byte function pointer per opcode. Runtime captures prove slots 0x01-0x12 point respectively to 0x4AC050, 0x4ACE20, 0x4ACE40, 0x4ACE60, 0x4ACE80, 0x4ACF80, 0x4AD030, 0x4AD0E0, 0x4AD100, 0x4AD120, 0x4AD140, 0x4AD230, 0x4AD330, 0x4AD3E0, 0x4AD490, 0x4AD4B0, 0x4AD4D0 and 0x4AD4F0 on build 92777. PotionAutoPickup 1.1.1 validates every pointer before redirecting those player-action slots; slot 0x16 remains the vanilla pickup callback at 0x4B9DF0."
+    },
+    {
+      "rva": "0x3862D0",
+      "name": "INVENTORY_GetFreeBeltSlot",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/PotionAutoPickup-portage-3.2.md",
+      "notes": "Chooses a free belt cell with proven x64 ABI (inventory, item, freeSlotOut, allowAnyBeltable) -> int32. The automatic ground-pickup helper calls it at 0x471C31. Its strict 32-byte prologue is unique in build 92777. PotionAutoPickup 1.1.1 hooks it only inside a thread-local scope bound to the exact inventory and ground item selected by the plugin."
+    },
+    {
       "rva": "0x386735",
       "name": "InventoryPlayerHeightPlacementGate",
       "kind": "branch-site",
@@ -1528,8 +1552,8 @@
       "name": "INVENTORY_ResolveOccupancyGrid",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/cube-quick-move-bottom-right-3.2.md",
-      "notes": "Resolves the temporary occupancy grid used by free-position searches with ABI (inventory, pagePlusTwo, gridContext) -> occupancyGrid. The Cube caller supplies native page 3, so INVENTORY_FindFreePosition passes grid index 5."
+      "source": "Mission/cube-quick-move-bottom-right-3.2.md; Mission/PotionAutoPickup-portage-3.2.md",
+      "notes": "Resolves the temporary occupancy grid used by free-position searches with ABI (inventory, gridIndex, gridInfo) -> occupancyGrid. The Cube caller supplies native page 3, so INVENTORY_FindFreePosition passes grid index 5. INVENTORY_GetFreeBeltSlot passes grid index 1 with the static belt grid info at 0x237B638; the resulting grid exposes width at +0x10, height at +0x11 and the cell item-pointer array at +0x18."
     },
     {
       "rva": "0x38D8F0",
