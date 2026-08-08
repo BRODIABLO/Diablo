@@ -96,6 +96,43 @@ hôte et joiner. Cleansing doit aussi être observé séparément : sa composant
 soin dépend de Prayer et devrait rester nulle sur la variante Fire qui ne
 possède pas cette compétence.
 
+## Lot Skills — Enchant de groupe
+
+Le 8 août 2026, BKVince a repris uniquement l'architecture de lancement de
+groupe d'Enchant depuis PD2. La ligne unique `Enchant` de `skills.txt` reçoit
+exactement trois cellules :
+
+- `aurafilter=65539`, soit les bits documentés `Find Players`,
+  `Find Monsters` et `Find Allies`;
+- `aurarangecalc=15`;
+- `auratargetstate=enchant`.
+
+Le ciblage individuel BKVince (`targetally=1`, `targetpet=1`) reste présent.
+Les formules d'équilibrage BKVince sont conservées octet pour octet :
+`auralencalc=ln12`, `aurastatcalc1=enma`, `aurastatcalc2=exma`,
+`aurastatcalc3=toht` et
+`edmgsympercalc=(skill('Warmth'.blvl))*par8`. La durée pratiquement permanente,
+la courbe d'Attack Rating, les dégâts et la synergie Warmth ne sont donc pas
+remplacés par leurs valeurs PD2.
+
+La table finale conserve ses 322 colonnes, ses 449 lignes, ses fins de ligne
+CRLF et son saut de ligne final, puis passe un round-trip byte-exact. Son
+SHA-256 source est
+`033084004BE58CB4AFCE20C74E96851C3DAC96087BED96FEB702648450DA4254`.
+
+`npm run verify:data` et les cinq tests du catalogue PD2 sont verts. Les 11
+tests sémantiques du rapport Skills sont également verts; ses deux gates de
+fraîcheur restent ouverts parce que le hash épinglé précède ce lot et que sa
+régénération absorberait aussi un changement concurrent hors périmètre dans
+`missiles.txt`. Le rapport exhaustif n'a donc pas été réécrit dans ce lot.
+
+Ce jalon est **implanté statiquement**, mais pas encore validé en jeu. Gates
+runtime ouverts : un cast doit enchanter le joueur, les membres du groupe, les
+mercenaires et les summons alliés dans le rayon, sans affecter les ennemis ni
+les unités hors rayon; vérifier aussi le recast, les transitions de zone, la
+persistance après sauvegarde/rechargement et le comportement solo, hôte et
+joiner avec des tables identiques.
+
 ## Sources figées
 
 Le dossier local Single Player Plus correspond byte-exactement au dépôt public
