@@ -38223,6 +38223,11 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
+                                                                                "name":  "apply-pd2-inferno-shredder.js",
+                                                                                "path":  "scripts/migrate-bkvince/apply-pd2-inferno-shredder.js",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "audit-three-way.js",
                                                                                 "path":  "scripts/migrate-bkvince/audit-three-way.js",
                                                                                 "kind":  "file"

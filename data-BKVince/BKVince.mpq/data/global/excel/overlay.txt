@@ -341,3 +341,4 @@ commandpal	9999	null	0	15	common	0	1	0	0	0	0	0	0	2	0	3	0	0	0	0	0	1	0
 commanddru	9999	null	0	18	common	0	1	0	0	0	0	0	0	4	0	3	0	0	255	255	255	1	0			
 commandnec	9999	null	0	18	common	0	1	0	0	0	0	0	0	8	0	3	0	0	255	255	255	1	0			
 commandass	9999	null	0	15	common	0	1	0	0	0	0	0	0	2	0	3	0	0	255	255	255	1	0			
+inferno_debuff	342	Extra\AuraResistFire	100		all	0	1	0	0	0	0	0	0	16	0	3	0	0	100	0	0	1	0			
