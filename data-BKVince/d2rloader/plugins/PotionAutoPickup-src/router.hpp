@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <string_view>
 
 namespace ruffneckk::potion_auto_pickup {
@@ -11,6 +12,15 @@ inline constexpr std::array Items{
     Item{"mp1",Family::Mana,1}, Item{"mp2",Family::Mana,2}, Item{"mp3",Family::Mana,3}, Item{"mp4",Family::Mana,4}, Item{"mp5",Family::Mana,5},
     Item{"rvs",Family::Rejuvenation,1}, Item{"rvl",Family::Rejuvenation,2},
 };
+inline constexpr std::uint32_t PackItemCode(std::string_view code) noexcept {
+    std::uint32_t packed=0x20202020;
+    for(std::size_t index=0;index<4 && index<code.size();++index) {
+        const auto shift=static_cast<std::uint32_t>(index*8);
+        packed=(packed & ~(0xFFu<<shift))
+            | (static_cast<std::uint32_t>(static_cast<std::uint8_t>(code[index]))<<shift);
+    }
+    return packed;
+}
 inline constexpr Item Classify(std::string_view code) noexcept {
     for (const auto& item : Items) if (item.code == code) return item;
     return {code, Family::Unknown, 0};
@@ -25,6 +35,14 @@ struct Policy {
     constexpr bool AllowsOverflow(Item item) const noexcept { return Accepts(item) && item.tier < overflowTiers.size() && overflowTiers[item.tier]; }
 };
 struct BeltSlot { bool occupied{}; Family family{Family::Unknown}; };
+struct RoutingToken {
+    static constexpr std::uint32_t InvalidGuid=std::numeric_limits<std::uint32_t>::max();
+    std::uint32_t itemGuid{InvalidGuid};
+    constexpr bool Matches(std::uint32_t actualGuid) const noexcept {
+        return itemGuid!=InvalidGuid && itemGuid==actualGuid;
+    }
+    constexpr void Reset() noexcept { itemGuid=InvalidGuid; }
+};
 enum class Destination : std::int8_t { Ground=-1, Inventory=0, Column1=1, Column2=2, Column3=3, Column4=4 };
 struct RouteResult { Destination destination{Destination::Ground}; std::int8_t beltSlot{-1}; };
 inline constexpr std::int8_t ChooseBeltSlot(

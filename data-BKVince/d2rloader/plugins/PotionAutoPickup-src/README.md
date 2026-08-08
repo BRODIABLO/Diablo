@@ -5,6 +5,16 @@ a mod plugin folder. The native adapter targets `D2R.exe 3.2.92777`, scans
 server-side ground items, and invokes the same server pickup routine used by
 vanilla automatic gold pickup.
 
+The selected item is carried through the synchronous native pickup path by its
+server GUID. This keeps belt routing exact even when the engine resolves a
+different in-memory address for the same ground item. The
+`potion-auto-pickup` console command reports routing counters and per-code
+`seen/selected/picked` totals for live diagnosis.
+
+Potion families are classified through D2R's native packed item code (`hp2`,
+`mp2`, `rvs`, and so on), not through calculated TXT row IDs. This keeps the
+runtime behavior stable when a mod changes the compiled item-table layout.
+
 Automatic scans are triggered by the normal player-action packet range
 `0x01`-`0x12`, including movement and skill actions. The legacy
 `minimum_interval_frames` key remains accepted, but new configurations should

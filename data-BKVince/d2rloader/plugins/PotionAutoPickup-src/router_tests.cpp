@@ -5,6 +5,15 @@ int main() {
     static_assert(Classify("hp5").family == Family::Healing);
     static_assert(Classify("mp4").tier == 4);
     static_assert(Classify("rvl").family == Family::Rejuvenation);
+    static_assert(PackItemCode("hp2") == 0x20327068);
+    static_assert(PackItemCode("mp2") == 0x2032706D);
+    static_assert(PackItemCode("rvs") == 0x20737672);
+
+    RoutingToken routingToken{610};
+    assert(routingToken.Matches(610));
+    assert(!routingToken.Matches(605));
+    routingToken.Reset();
+    assert(!routingToken.Matches(610));
 
     Policy everyHealing{};
     everyHealing.enabled=true;

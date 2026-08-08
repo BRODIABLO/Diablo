@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cctype>
 #include <climits>
 #include <cstdint>
@@ -18,6 +19,7 @@ constexpr std::uintptr_t GetGameRva=0x34B440, EnumerateRva=0x2EFDE0;
 constexpr std::uintptr_t FirstUnitRva=0x2EFD90, NextUnitRva=0x34B4A0, UnitTypeRva=0x34B9D0;
 constexpr std::uintptr_t UnitIdRva=0x34A330, UnitModeRva=0x34AB60, UnitDistanceRva=0x325140;
 constexpr std::uintptr_t UnitCollisionRva=0x350550, PickupRva=0x471950;
+constexpr std::uintptr_t GetItemCodeRva=0x36EF50;
 constexpr std::uintptr_t GetInventoryRva=0x34A360, ResolveOccupancyGridRva=0x38B070;
 constexpr std::uintptr_t GetBeltTypeRva=0x349720, GetFreeBeltSlotRva=0x3862D0;
 constexpr std::uintptr_t BodyGridInfoRva=0x237B620, BeltGridInfoRva=0x237B638;
@@ -57,15 +59,20 @@ constexpr std::array<std::uint8_t,32> GetBeltTypeExpected{
     0x75,0x15,0x88,0x4C,0x24,0x30,0x48,0x8D,
     0x4C,0x24,0x30,0xE8,0xE0,0xC0,0xFF,0xFF
 };
+constexpr std::array<std::uint8_t,32> GetItemCodeExpected{
+    0x48,0x89,0x5C,0x24,0x10,0x57,0x48,0x83,
+    0xEC,0x20,0x48,0x8B,0xF9,0x48,0x85,0xC9,
+    0x75,0x13,0x88,0x4C,0x24,0x30,0x48,0x8D,
+    0x4C,0x24,0x30,0xE8,0x80,0x83,0xFF,0xFF
+};
 
-// BKVince 3.2 combined Weapons (307) + Armor (218) + Misc row indices.
-struct PotionClass { std::uint32_t id; std::string_view code; Family family; std::uint8_t tier; };
+struct PotionClass { std::uint32_t packedCode; std::string_view code; Family family; std::uint8_t tier; };
 constexpr std::array<PotionClass,12> PotionClasses{
-    PotionClass{604,"hp1",Family::Healing,1}, PotionClass{605,"hp2",Family::Healing,2},
-    PotionClass{606,"hp3",Family::Healing,3}, PotionClass{607,"hp4",Family::Healing,4}, PotionClass{608,"hp5",Family::Healing,5},
-    PotionClass{609,"mp1",Family::Mana,1}, PotionClass{610,"mp2",Family::Mana,2}, PotionClass{611,"mp3",Family::Mana,3},
-    PotionClass{612,"mp4",Family::Mana,4}, PotionClass{613,"mp5",Family::Mana,5},
-    PotionClass{532,"rvs",Family::Rejuvenation,1}, PotionClass{533,"rvl",Family::Rejuvenation,2},
+    PotionClass{PackItemCode("hp1"),"hp1",Family::Healing,1}, PotionClass{PackItemCode("hp2"),"hp2",Family::Healing,2},
+    PotionClass{PackItemCode("hp3"),"hp3",Family::Healing,3}, PotionClass{PackItemCode("hp4"),"hp4",Family::Healing,4}, PotionClass{PackItemCode("hp5"),"hp5",Family::Healing,5},
+    PotionClass{PackItemCode("mp1"),"mp1",Family::Mana,1}, PotionClass{PackItemCode("mp2"),"mp2",Family::Mana,2}, PotionClass{PackItemCode("mp3"),"mp3",Family::Mana,3},
+    PotionClass{PackItemCode("mp4"),"mp4",Family::Mana,4}, PotionClass{PackItemCode("mp5"),"mp5",Family::Mana,5},
+    PotionClass{PackItemCode("rvs"),"rvs",Family::Rejuvenation,1}, PotionClass{PackItemCode("rvl"),"rvl",Family::Rejuvenation,2},
 };
 
 struct FamilyConfig {
@@ -76,7 +83,7 @@ struct FamilyConfig {
     std::uint8_t tierPriorityCount{};
 };
 struct Config {
-    bool enabled=true, diagnostics=false;
+    bool enabled=true, diagnostics=false, logScans=false;
     std::uint32_t distance=4, interval=3;
     FamilyConfig healing{}, mana{}, rejuvenation{};
     std::array<Family,3> familyPriority{Family::Rejuvenation,Family::Healing,Family::Mana};
@@ -91,6 +98,7 @@ using UnitIntFn=std::uint32_t(__fastcall*)(void*);
 using UnitPairFn=std::int32_t(__fastcall*)(void*,void*);
 using CollisionFn=std::int32_t(__fastcall*)(void*,void*,std::uint32_t);
 using PickupFn=bool(__fastcall*)(void*,std::uint32_t,bool,std::uint32_t,bool,bool);
+using GetItemCodeFn=std::uint32_t(__fastcall*)(void*);
 using GetInventoryFn=void*(__fastcall*)(void*);
 using GetBeltTypeFn=std::int32_t(__fastcall*)(void*);
 using ResolveOccupancyGridFn=void*(__fastcall*)(void*,std::uint64_t,const void*);
@@ -102,19 +110,31 @@ std::array<TriggerFn,LastTriggerOpcode+1> OriginalTriggers{};
 GetFreeBeltSlotFn OriginalGetFreeBeltSlot{};
 GetGameFn GetGame{}; EnumerateFn Enumerate{}; UnitFn FirstUnit{},NextUnit{};
 UnitIntFn UnitType{},UnitId{},UnitMode{}; UnitPairFn UnitDistance{}; CollisionFn UnitCollision{}; PickupFn Pickup{};
+GetItemCodeFn GetItemCode{};
 GetInventoryFn GetInventory{}; GetBeltTypeFn GetBeltType{}; ResolveOccupancyGridFn ResolveOccupancyGrid{};
 Config Settings{};
+struct RuntimeMetrics {
+    std::atomic<std::uint64_t> actions{}, scans{}, beltStateFailures{}, enumerationFailures{};
+    std::atomic<std::uint64_t> tierRejects{}, collisionRejects{}, distanceRejects{}, destinationRejects{};
+    std::atomic<std::uint64_t> selections{}, beltRoutes{}, overflowRoutes{};
+    std::atomic<std::uint64_t> routeMatches{}, routeMismatches{}, inventoryAliases{};
+    std::atomic<std::uint64_t> pickupSuccesses{}, pickupFailures{};
+    std::array<std::atomic<std::uint64_t>,PotionClasses.size()> seenByCode{};
+    std::array<std::atomic<std::uint64_t>,PotionClasses.size()> selectedByCode{};
+    std::array<std::atomic<std::uint64_t>,PotionClasses.size()> pickedByCode{};
+};
+RuntimeMetrics Metrics{};
 thread_local bool Inside{};
 thread_local std::uint32_t TriggerCounter{};
 thread_local void* ForcedInventory{};
-thread_local void* ForcedItem{};
+thread_local RoutingToken ForcedRoute{};
 thread_local std::int32_t ForcedBeltSlot{-1};
 thread_local bool ForceInventoryOverflow{};
 thread_local bool LoggedScanException{};
 
 constexpr D2RL::PluginInfo Info{
     .infoSize=D2RL::PluginInfoSize, .apiVersion=D2RL_PLUGIN_API_VERSION,
-    .id="potion-auto-pickup", .name="PotionAutoPickup", .version="1.1.1",
+    .id="potion-auto-pickup", .name="PotionAutoPickup", .version="1.1.3",
     .author="RuffnecKk", .description="Automatically picks up configured potions when belt and inventory rules allow.",
     .flags=D2RL::PluginFlags::NativeHooks,
 };
@@ -260,7 +280,10 @@ bool LoadConfig() {
                 ParseTierSet(familyId,value,family->policy.overflowTiers);
                 family->explicitOverflowTiers=true;
             } else if(key=="tier_priority") ParseTierPriority(*family,familyId,value);
-        } else if(section=="diagnostics" && key=="enabled") Settings.diagnostics=BoolValue(value,Settings.diagnostics);
+        } else if(section=="diagnostics") {
+            if(key=="enabled") Settings.diagnostics=BoolValue(value,Settings.diagnostics);
+            else if(key=="log_scans") Settings.logScans=BoolValue(value,Settings.logScans);
+        }
     }
     FinalizeOverflow(Settings.healing);
     FinalizeOverflow(Settings.mana);
@@ -268,7 +291,10 @@ bool LoadConfig() {
     return true;
 }
 
-const PotionClass* ClassifyId(std::uint32_t id) { for(const auto& p:PotionClasses) if(p.id==id) return &p; return nullptr; }
+const PotionClass* ClassifyPackedCode(std::uint32_t packedCode) {
+    for(const auto& potion:PotionClasses) if(potion.packedCode==packedCode) return &potion;
+    return nullptr;
+}
 const FamilyConfig& FamilySettings(Family family) {
     if(family==Family::Healing) return Settings.healing; if(family==Family::Mana) return Settings.mana; return Settings.rejuvenation;
 }
@@ -317,9 +343,9 @@ bool ReadBeltState(
         for(std::uint8_t index=0;index<capacity;++index) {
             if(!items[index]) continue;
             slots[index].occupied=true;
-            const auto classId=*reinterpret_cast<std::uint32_t*>(
-                static_cast<std::uint8_t*>(items[index])+4);
-            if(const auto* potion=ClassifyId(classId)) slots[index].family=potion->family;
+            if(const auto* potion=ClassifyPackedCode(GetItemCode(items[index]))) {
+                slots[index].family=potion->family;
+            }
         }
         return true;
     } __except(EXCEPTION_EXECUTE_HANDLER) {
@@ -351,27 +377,74 @@ std::string FamilySummary(std::string_view name,Family family,const FamilyConfig
     return output;
 }
 std::string Summary() {
-    std::string output="PotionAutoPickup 1.1.1 active; triggers=0x01-0x12; ";
+    std::string output="PotionAutoPickup 1.1.3 active; triggers=0x01-0x12; ";
     output.append(FamilySummary("healing",Family::Healing,Settings.healing)).append("; ");
     output.append(FamilySummary("mana",Family::Mana,Settings.mana)).append("; ");
     output.append(FamilySummary("rejuvenation",Family::Rejuvenation,Settings.rejuvenation)).append(".");
     return output;
+}
+std::size_t PotionIndex(const PotionClass& potion) noexcept {
+    return static_cast<std::size_t>(&potion-PotionClasses.data());
+}
+std::uint64_t Value(const std::atomic<std::uint64_t>& counter) noexcept {
+    return counter.load(std::memory_order_relaxed);
+}
+std::string MetricsSummary() {
+    std::string output="PotionAutoPickup metrics actions="+std::to_string(Value(Metrics.actions));
+    output.append(" scans=").append(std::to_string(Value(Metrics.scans)));
+    output.append(" belt-state-failures=").append(std::to_string(Value(Metrics.beltStateFailures)));
+    output.append(" enumeration-failures=").append(std::to_string(Value(Metrics.enumerationFailures)));
+    output.append(" tier-rejects=").append(std::to_string(Value(Metrics.tierRejects)));
+    output.append(" collision-rejects=").append(std::to_string(Value(Metrics.collisionRejects)));
+    output.append(" distance-rejects=").append(std::to_string(Value(Metrics.distanceRejects)));
+    output.append(" destination-rejects=").append(std::to_string(Value(Metrics.destinationRejects)));
+    output.append(" selections=").append(std::to_string(Value(Metrics.selections)));
+    output.append(" belt-routes=").append(std::to_string(Value(Metrics.beltRoutes)));
+    output.append(" overflow-routes=").append(std::to_string(Value(Metrics.overflowRoutes)));
+    output.append(" route-matches=").append(std::to_string(Value(Metrics.routeMatches)));
+    output.append(" route-mismatches=").append(std::to_string(Value(Metrics.routeMismatches)));
+    output.append(" inventory-aliases=").append(std::to_string(Value(Metrics.inventoryAliases)));
+    output.append(" pickup-successes=").append(std::to_string(Value(Metrics.pickupSuccesses)));
+    output.append(" pickup-failures=").append(std::to_string(Value(Metrics.pickupFailures)));
+    output.append(" codes=");
+    for(std::size_t index=0;index<PotionClasses.size();++index) {
+        if(index) output.push_back(',');
+        output.append(PotionClasses[index].code).append(":")
+            .append(std::to_string(Value(Metrics.seenByCode[index]))).append("/")
+            .append(std::to_string(Value(Metrics.selectedByCode[index]))).append("/")
+            .append(std::to_string(Value(Metrics.pickedByCode[index])));
+    }
+    output.append(" (seen/selected/picked).");
+    return output;
+}
+std::uint32_t ReadUnitId(void* unit) noexcept {
+    __try {
+        return unit && UnitId ? UnitId(unit) : RoutingToken::InvalidGuid;
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        return RoutingToken::InvalidGuid;
+    }
 }
 std::int32_t __fastcall HookGetFreeBeltSlot(
     void* inventory,
     void* item,
     std::int32_t* freeSlot,
     bool allowAnyBeltable) {
-    if(Inside && inventory==ForcedInventory && item==ForcedItem) {
-        if(ForceInventoryOverflow) {
-            if(freeSlot) *freeSlot=-1;
+    if(Inside) {
+        const auto itemGuid=ReadUnitId(item);
+        if(ForcedRoute.Matches(itemGuid)) {
+            Metrics.routeMatches.fetch_add(1,std::memory_order_relaxed);
+            if(inventory!=ForcedInventory) Metrics.inventoryAliases.fetch_add(1,std::memory_order_relaxed);
+            if(ForceInventoryOverflow) {
+                if(freeSlot) *freeSlot=-1;
+                return 0;
+            }
+            if(freeSlot && ForcedBeltSlot>=0 && ForcedBeltSlot<16) {
+                *freeSlot=ForcedBeltSlot;
+                return 1;
+            }
             return 0;
         }
-        if(freeSlot && ForcedBeltSlot>=0 && ForcedBeltSlot<16) {
-            *freeSlot=ForcedBeltSlot;
-            return 1;
-        }
-        return 0;
+        Metrics.routeMismatches.fetch_add(1,std::memory_order_relaxed);
     }
     return OriginalGetFreeBeltSlot(inventory,item,freeSlot,allowAnyBeltable);
 }
@@ -379,31 +452,58 @@ std::int32_t __fastcall HookGetFreeBeltSlot(
 void ResetRoutingScope() noexcept {
     ForceInventoryOverflow=false;
     ForcedBeltSlot=-1;
-    ForcedItem=nullptr;
+    ForcedRoute.Reset();
     ForcedInventory=nullptr;
     Inside=false;
 }
 void ScanUnsafe(void* player) {
-    if(!Settings.enabled || Inside || !player || (++TriggerCounter%Settings.interval)!=0) return;
+    if(!Settings.enabled || Inside || !player) return;
+    Metrics.actions.fetch_add(1,std::memory_order_relaxed);
+    if((++TriggerCounter%Settings.interval)!=0) return;
+    Metrics.scans.fetch_add(1,std::memory_order_relaxed);
     void* game=GetGame(player); if(!game) return;
     void* inventory=GetInventory(player); if(!inventory) return;
     std::array<BeltSlot,16> belt{};
     std::uint8_t beltCapacity{};
-    if(!ReadBeltState(inventory,belt,beltCapacity)) return;
-    void** buckets=nullptr; std::uint32_t count=0; Enumerate(game,&buckets,&count); if(!buckets || !count || count>4096) return;
+    if(!ReadBeltState(inventory,belt,beltCapacity)) {
+        Metrics.beltStateFailures.fetch_add(1,std::memory_order_relaxed);
+        return;
+    }
+    void** buckets=nullptr; std::uint32_t count=0; Enumerate(game,&buckets,&count);
+    if(!buckets || !count || count>4096) {
+        Metrics.enumerationFailures.fetch_add(1,std::memory_order_relaxed);
+        return;
+    }
     void* best=nullptr; const PotionClass* bestPotion=nullptr; std::int32_t bestDistance=INT_MAX,bestBeltSlot=-1;
     bool bestOverflow{};
     std::uint8_t bestFamilyRank=UINT8_MAX,bestTierRank=UINT8_MAX;
     for(std::uint32_t i=0;i<count;i++) for(void* unit=FirstUnit(buckets[i]);unit;unit=NextUnit(unit)) {
         if(UnitType(unit)!=ItemType || UnitMode(unit)!=GroundMode) continue;
-        const auto* potion=ClassifyId(*reinterpret_cast<std::uint32_t*>(static_cast<std::uint8_t*>(unit)+4));
-        if(!potion || !Accepted(*potion) || UnitCollision(player,unit,PickupCollisionMask)!=0) continue;
-        const auto distance=UnitDistance(player,unit); if(distance<0 || static_cast<std::uint32_t>(distance)>Settings.distance) continue;
+        const auto* potion=ClassifyPackedCode(GetItemCode(unit));
+        if(!potion) continue;
+        const auto potionIndex=PotionIndex(*potion);
+        Metrics.seenByCode[potionIndex].fetch_add(1,std::memory_order_relaxed);
+        if(!Accepted(*potion)) {
+            Metrics.tierRejects.fetch_add(1,std::memory_order_relaxed);
+            continue;
+        }
+        if(UnitCollision(player,unit,PickupCollisionMask)!=0) {
+            Metrics.collisionRejects.fetch_add(1,std::memory_order_relaxed);
+            continue;
+        }
+        const auto distance=UnitDistance(player,unit);
+        if(distance<0 || static_cast<std::uint32_t>(distance)>Settings.distance) {
+            Metrics.distanceRejects.fetch_add(1,std::memory_order_relaxed);
+            continue;
+        }
         const auto& family=FamilySettings(potion->family);
         const Item item{potion->code,potion->family,potion->tier};
         const auto beltSlot=ChooseBeltSlot(family.policy,item,belt,beltCapacity);
         const bool overflow=beltSlot<0 && family.policy.AllowsOverflow(item);
-        if(beltSlot<0 && !overflow) continue;
+        if(beltSlot<0 && !overflow) {
+            Metrics.destinationRejects.fetch_add(1,std::memory_order_relaxed);
+            continue;
+        }
         const auto familyRank=FamilyRank(potion->family),tierRank=TierRank(family,potion->tier);
         const bool better=!best
             || familyRank<bestFamilyRank
@@ -415,10 +515,29 @@ void ScanUnsafe(void* player) {
         }
     }
     if(!best || !bestPotion) return;
-    Inside=true; ForcedInventory=inventory; ForcedItem=best;
+    const auto bestGuid=ReadUnitId(best);
+    if(bestGuid==RoutingToken::InvalidGuid) return;
+    const auto bestIndex=PotionIndex(*bestPotion);
+    Metrics.selections.fetch_add(1,std::memory_order_relaxed);
+    Metrics.selectedByCode[bestIndex].fetch_add(1,std::memory_order_relaxed);
+    if(bestOverflow) Metrics.overflowRoutes.fetch_add(1,std::memory_order_relaxed);
+    else Metrics.beltRoutes.fetch_add(1,std::memory_order_relaxed);
+    Inside=true; ForcedInventory=inventory; ForcedRoute.itemGuid=bestGuid;
     ForcedBeltSlot=bestBeltSlot; ForceInventoryOverflow=bestOverflow;
     // Same server pickup routine and flags used by vanilla automatic gold pickup.
-    Pickup(player,UnitId(best),true,Settings.distance,true,false);
+    const bool picked=Pickup(player,bestGuid,true,Settings.distance,true,false);
+    if(picked) {
+        Metrics.pickupSuccesses.fetch_add(1,std::memory_order_relaxed);
+        Metrics.pickedByCode[bestIndex].fetch_add(1,std::memory_order_relaxed);
+    } else Metrics.pickupFailures.fetch_add(1,std::memory_order_relaxed);
+    if(Settings.diagnostics && Settings.logScans && Context) {
+        std::string message="PotionAutoPickup route code=";
+        message.append(bestPotion->code).append(" guid=").append(std::to_string(bestGuid));
+        if(bestOverflow) message.append(" destination=inventory");
+        else message.append(" destination=belt slot=").append(std::to_string(bestBeltSlot));
+        message.append(picked ? " result=success" : " result=failed");
+        Context->LogInfo(message.c_str());
+    }
     ResetRoutingScope();
 }
 
@@ -449,8 +568,8 @@ std::int64_t __fastcall HookTrigger(void* game,void* player,void* packet,std::in
 }
 auto Status(D2R::Game::Client*,const D2RL::ConsoleCommandContext* command,void*) noexcept -> D2RL::ConsoleCommandResult {
     if(!command || !command->plugin) return D2RL::ConsoleCommandResult::Failed;
-    const auto summary=Summary();
-    command->plugin->WriteConsoleMessage(summary.c_str());
+    const auto summary=Summary(); command->plugin->WriteConsoleMessage(summary.c_str());
+    const auto metrics=MetricsSummary(); command->plugin->WriteConsoleMessage(metrics.c_str());
     return D2RL::ConsoleCommandResult::Handled;
 }
 template<class T> T At(std::uintptr_t rva) { return reinterpret_cast<T>(Base+rva); }
@@ -491,12 +610,14 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     GetGame=At<GetGameFn>(GetGameRva); Enumerate=At<EnumerateFn>(EnumerateRva); FirstUnit=At<UnitFn>(FirstUnitRva); NextUnit=At<UnitFn>(NextUnitRva);
     UnitType=At<UnitIntFn>(UnitTypeRva); UnitId=At<UnitIntFn>(UnitIdRva); UnitMode=At<UnitIntFn>(UnitModeRva); UnitDistance=At<UnitPairFn>(UnitDistanceRva);
     UnitCollision=At<CollisionFn>(UnitCollisionRva); Pickup=At<PickupFn>(PickupRva);
+    GetItemCode=At<GetItemCodeFn>(GetItemCodeRva);
     GetInventory=At<GetInventoryFn>(GetInventoryRva);
     GetBeltType=At<GetBeltTypeFn>(GetBeltTypeRva);
     ResolveOccupancyGrid=At<ResolveOccupancyGridFn>(ResolveOccupancyGridRva);
 
     if(!ValidateTriggerTable()
         || !context->CheckExpectedBytes(GetFreeBeltSlotRva,GetFreeBeltSlotExpected.data(),static_cast<std::uint32_t>(GetFreeBeltSlotExpected.size()))
+        || !context->CheckExpectedBytes(GetItemCodeRva,GetItemCodeExpected.data(),static_cast<std::uint32_t>(GetItemCodeExpected.size()))
         || !context->CheckExpectedBytes(ResolveOccupancyGridRva,ResolveOccupancyGridExpected.data(),static_cast<std::uint32_t>(ResolveOccupancyGridExpected.size()))
         || !context->CheckExpectedBytes(GetInventoryRva,GetInventoryExpected.data(),static_cast<std::uint32_t>(GetInventoryExpected.size()))
         || !context->CheckExpectedBytes(GetBeltTypeRva,GetBeltTypeExpected.data(),static_cast<std::uint32_t>(GetBeltTypeExpected.size()))) {
@@ -504,7 +625,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         return false;
     }
     if(!Settings.enabled) {
-        context->LogInfo("PotionAutoPickup 1.1.1 disabled by configuration.");
+        context->LogInfo("PotionAutoPickup 1.1.3 disabled by configuration.");
         return true;
     }
     if(!context->InstallInlineHook(
