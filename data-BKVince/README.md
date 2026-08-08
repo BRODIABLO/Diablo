@@ -66,6 +66,14 @@ les crédits.
   SHA-256 du skin optionnel :
   `A5B7EA3B8B3065D26F433E25C450AE856320EDCDCDF856512E5DD1F8A27B8B3A`.
 
+- **No Terror Zone Music 1.0** — créé et publié par **NDState** sur
+  [Nexus Mods](https://www.nexusmods.com/diablo2resurrected/mods/404); le
+  manifeste local crédite également `salzgaard`. BKVince réimplémente
+  sélectivement son effet data-only depuis la référence D2R 3.2 : la seule ligne
+  `ESOUNDENVIRON_INHERIT_DESECRATED` est retirée de `soundenviron.txt` afin que
+  chaque Terror Zone conserve la musique normale de sa zone, sans importer le
+  MPQ cumulatif produit par D2RMM.
+
 - **SpecialNavi 1.1** — créé par **Porory** et **HeoHeo**, puis publié sur
   [Diablo II Inven](https://www.inven.co.kr/board/diablo2/5842/4283). BKVince
   conserve sélectivement ses balises de navigation, ses prefabs, ses flèches

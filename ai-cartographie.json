@@ -8439,6 +8439,11 @@
                                                                                                                                                "kind":  "file"
                                                                                                                                            },
                                                                                                                                            {
+                                                                                                                                               "name":  "soundenviron.txt",
+                                                                                                                                               "path":  "data-BKVince/BKVince.mpq/data/global/excel/soundenviron.txt",
+                                                                                                                                               "kind":  "file"
+                                                                                                                                           },
+                                                                                                                                           {
                                                                                                                                                "name":  "sounds.txt",
                                                                                                                                                "path":  "data-BKVince/BKVince.mpq/data/global/excel/sounds.txt",
                                                                                                                                                "kind":  "file"

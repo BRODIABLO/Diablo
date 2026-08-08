@@ -65,3 +65,39 @@ Dans D2RMM Custom :
 - rejouer les TSV avec `scripts/build-data/tsv.js`;
 - tester un démarrage à froid sous D2RLoader et le build D2R ciblé;
 - ne conserver dans Git que les changements explicitement validés.
+
+## Adoption sélective — No Terror Zone Music 1.0
+
+Décision de Vincent du 2 août 2026 : intégrer à BKVince l'effet data-only du mod
+de NDState, dont le manifeste local crédite `salzgaard`, sans recopier le
+`D2RMM.mpq` cumulatif. Ce dernier contenait aussi des versions divergentes de
+`skills.txt` et `desecratedzones.json` et n'était donc pas une source acceptable.
+
+Preuves statiques :
+
+- la table du mod est byte-identique à la référence vanilla D2R 3.2 sauf la
+  suppression de la clé stable `ESOUNDENVIRON_INHERIT_DESECRATED`;
+- cette ligne sélectionnait `music_desecrated` avec
+  `InheritEnvrionment = 1`; les 75 autres lignes et les 37 headers sont
+  inchangés;
+- la table gouvernée BKVince reste en CRLF avec saut final et passe un
+  round-trip byte-exact via `scripts/build-data/tsv.js`;
+- SHA-256 source gouvernée et runtime :
+  `E2141C013B70762D2EBDCE693C1AB366D76CD22E713BE462F69D2871B8F637F1`.
+
+Validation runtime du 2 août 2026 sur D2R `3.2.92777` et D2RLoader
+`1.0.1-beta` :
+
+| Domaine | Résultat | Statut |
+|---|---|---|
+| Déploiement ciblé | Un seul fichier copié, hashes source/runtime identiques | passed |
+| Chargement BKVince | Mod build 92777 et `savepath BKVince/` acceptés | passed |
+| Table sonore | Étape `Loading sound data tables` atteinte | passed |
+| Extensions | 18/18 patchsets et 11/11 plugins actifs, zéro rejet/échec | passed |
+| Cold start | Initialisation D2R `24/24` atteinte | passed |
+| Musique en Terror Zone | Musique normale de la zone audible | not run |
+
+Les quatre assertions d'items déjà connues surviennent après le frontend et ne
+concernent pas cette table. La livraison fonctionnelle reste conditionnée à une
+observation auditive dans une Terror Zone BKVince; elle ne doit pas être inférée
+du seul cold start.
