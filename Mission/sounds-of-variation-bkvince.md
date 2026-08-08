@@ -338,6 +338,45 @@ byte-exact en CRLF. Le SHA-256 gouverné de `sounds.txt` passe de
 `D1CEDC15CE63CBC3BF2529918874AF0E69E984A4887F85686E15470BF005C382` à
 `07141226C0D0C841AA3EBB17CC811E6B3FBFC94C89422D4804A96288BC2ACE8D`.
 
-Le déploiement runtime, le cold start et l'audition comparative restent
-`not run`. Ils constituent le gate suivant avant de déclarer l'équilibre
-subjectif validé en jeu.
+La synchronisation ciblée du 8 août 2026 remplace uniquement le `sounds.txt` du
+profil actif `mods/BKVince`. La copie runtime et la source gouvernée sont
+byte-identiques, SHA-256
+`07141226C0D0C841AA3EBB17CC811E6B3FBFC94C89422D4804A96288BC2ACE8D`.
+La version runtime précédente, SHA-256
+`73DA51D3B5D747112C6652AEB83481E7E45979CA80D8712EE7006A07D96F02DA`,
+est conservée sous
+`analysis-cache/runtime-sync-backups/20260808-130310708/`. Une instance
+`D2RLoader` a été fermée avant la copie et n'a pas été relancée. Le cold start
+et l'audition comparative restent `not run`; ils constituent le gate suivant
+avant de déclarer l'équilibre subjectif validé en jeu.
+
+### Remplacement par l'étalonnage HD natif — 8 août 2026
+
+Le retour runtime de Vincent invalide la première passe pour les ambiances :
+malgré le bon hash runtime et un lancement ultérieur avec
+`D2RLoader.exe -mod BKVince -txt`, aucune baisse audible n'est observée. Cette
+première méthode n'avait modifié que 9 boucles et avait conservé notamment les
+ambiances Desert, Harem, Jungle, Lava, Town 3 et Wilderness à leurs anciens
+volumes. Son plafond RMS n'est donc plus la référence retenue pour les scènes.
+
+L'audit du routage `soundenviron.txt` montre 126 références HD Day/Night vers
+19 boucles custom actives. Pour chacune, `Volume Min` et `Volume Max` héritent
+désormais exactement des anciennes cibles HD que le D2Pack avait déconnectées.
+Les FLAC custom et les redirects vides sont conservés. `scene_rain` reste exclue
+parce que son asset custom avait déjà été retiré pour restaurer la pluie
+vanilla. Les 7 corrections d'objets de la première passe restent inchangées.
+
+Le changement porte sur 38 cellules de 19 lignes. Les 13 242 lignes, les
+headers et le CRLF restent byte-exacts; `verify:data` et le validateur ciblé
+des 126 références passent. Le SHA-256 de `sounds.txt` devient
+`528F1D402733BF5EF575D32E2E04A333ED1380176311A4FEF31118449FBF25BE`.
+
+L'autosync ciblé remplace uniquement le `sounds.txt` du profil actif BKVince.
+La source et le runtime sont byte-identiques au nouveau SHA-256. La version
+runtime précédente `07141226C0D0C841AA3EBB17CC811E6B3FBFC94C89422D4804A96288BC2ACE8D`
+est conservée sous
+`analysis-cache/runtime-sync-backups/20260808-134736263-hd-ambient/`.
+`D2RLoader` était terminé côté noyau mais son PID restait publié par CIM;
+la copie de repli n'a été effectuée qu'après confirmation de zéro processus
+vivant. Aucun redémarrage n'est effectué. Le cold start et l'audition de cette
+nouvelle correction restent `not run`.
