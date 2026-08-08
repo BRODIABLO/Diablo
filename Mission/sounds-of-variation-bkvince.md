@@ -301,3 +301,43 @@ partage. L'archive locale `c2517874081.7z` porte le SHA-256
 - Aucun fichier ni identifiant Warlock n'est modifié et `Silent.flac` est exclu.
 - Le snapshot exact de l'index passe `verify:data`, le cadastre et les contrôles
   ciblés TSV/références. L'audition en jeu reste volontairement ouverte.
+
+## Normalisation perceptuelle des ambiances et des objets — 8 août 2026
+
+Vincent signale que plusieurs ambiances du D2Pack dominent la musique et que
+certaines manipulations d'objet sont anormalement fortes. L'audit confirme que
+ce problème est distinct des 38 groupes de Sounds of Variation : l'intégration
+du D2Pack avait changé les routes audio sans recalibrer `Volume Min` et
+`Volume Max` pour le niveau propre des nouveaux FLAC.
+
+Les trois manifestes locaux du D2Pack recensent 371 assets. Les 370 assets
+encore installés sont décodés avec Xiph FLAC 1.5.0, dont l'archive officielle
+porte le SHA-256 déjà gouverné
+`53F1500F0D6E7C61379D7FEE50D4A9F7F504C650009506D9BA015530D76C0DDE`.
+`rain2.flac`, supprimé intentionnellement lors du retour à la pluie vanilla,
+reste exclu. L'analyse PCM mesure le RMS et le peak sans modifier les fichiers :
+
+- les 18 ambiances custom vont d'environ `-40.36` à `-14.18 dBFS RMS`;
+- les manipulations d'objet actives vont d'environ `-28.13` à
+  `-11.66 dBFS RMS`;
+- `cathedral`, `sewer`, `mesa`, `metalshield`, `quiver`, `sword` et plusieurs
+  armures sont des outliers mesurés, pas une simple impression de volume;
+- les footsteps, le combat, les skills, les sons restaurés vanilla et les
+  routes prioritaires Enhanced Effects ne sont pas retouchés.
+
+La correction applique uniquement une atténuation dans `sounds.txt`, sans
+réencoder de FLAC et sans augmenter les sons déjà faibles. Le plafond retenu
+est d'environ `-24 dBFS RMS effectif` pour les ambiances continues et
+`-20 dBFS RMS effectif` pour les manipulations d'objet. Une correction
+inférieure à 1 dB est ignorée afin d'éviter un churn sans gain audible.
+
+Le changement porte exactement sur 32 cellules `Volume Min`/`Volume Max` de
+16 lignes : 9 ambiances et 7 manipulations d'objet. Les headers, les 13 242
+lignes, les redirects et les FLAC restent inchangés. Le round-trip TSV demeure
+byte-exact en CRLF. Le SHA-256 gouverné de `sounds.txt` passe de
+`D1CEDC15CE63CBC3BF2529918874AF0E69E984A4887F85686E15470BF005C382` à
+`07141226C0D0C841AA3EBB17CC811E6B3FBFC94C89422D4804A96288BC2ACE8D`.
+
+Le déploiement runtime, le cold start et l'audition comparative restent
+`not run`. Ils constituent le gate suivant avant de déclarer l'équilibre
+subjectif validé en jeu.

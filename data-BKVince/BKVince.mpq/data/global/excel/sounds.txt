@@ -51,22 +51,22 @@ quest_tainted_sun_flash_3	48		sfx/ambient/event-3d_sd	quest\flash3.flac	0	0	0	0	
 quest_tainted_sun_ball_1	49	quest_tainted_sun_ball_hd_1	sfx/ambient/event-3d_sd	quest\ball1.flac	0	0	0	0	0	255	255	100	100	3	0	1	4	12	0	0	0	24	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
 quest_tainted_sun_ball_2	50		sfx/ambient/event-3d_sd	quest\ball2.flac	0	0	0	0	0	255	255	100	100	0	0	1	4	12	0	0	0	24	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
 quest_tainted_sun_ball_3	51		sfx/ambient/event-3d_sd	quest\ball3.flac	0	0	0	0	0	255	255	100	100	0	0	1	4	12	0	0	0	24	1	0	0	0	0	0	1	0	0	-1	-1	-1	0	0	
-scene_catacombs	52		sfx/ambient/scene-2d_sd	ambient\scene\catacombs.flac	0	0	1	0	0	150	150	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_cathedral	53		sfx/ambient/scene-2d_sd	ambient\scene\cathedral.flac	0	0	1	0	0	180	180	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_cave	54		sfx/ambient/scene-2d_sd	ambient\scene\cave.flac	0	0	1	0	0	179	179	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_crypt	55		sfx/ambient/scene-2d_sd	ambient\scene\crypt.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_catacombs	52		sfx/ambient/scene-2d_sd	ambient\scene\catacombs.flac	0	0	1	0	0	124	124	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_cathedral	53		sfx/ambient/scene-2d_sd	ambient\scene\cathedral.flac	0	0	1	0	0	82	82	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_cave	54		sfx/ambient/scene-2d_sd	ambient\scene\cave.flac	0	0	1	0	0	118	118	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_crypt	55		sfx/ambient/scene-2d_sd	ambient\scene\crypt.flac	0	0	1	0	0	198	198	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
 scene_desert_day	56		sfx/ambient/scene-2d_sd	ambient\scene\desertday.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_desert_night	57		sfx/ambient/scene-2d_sd	ambient\scene\desertnight.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_desert_night	57		sfx/ambient/scene-2d_sd	ambient\scene\desertnight.flac	0	0	1	0	0	206	206	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
 scene_harem	58		sfx/ambient/scene-2d_sd	ambient\scene\harem.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
 scene_jungle_day	59		sfx/ambient/scene-2d_sd	ambient\scene\jungleday.flac	0	0	1	0	0	200	200	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
 scene_jungle_night	60		sfx/ambient/scene-2d_sd	ambient\scene\junglenight.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
 scene_lava	61		sfx/ambient/scene-2d_sd	ambient\scene\lava.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_mesa	62		sfx/ambient/scene-2d_sd	ambient\scene\hell1.flac	0	0	1	0	0	201	201	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_mesa	62		sfx/ambient/scene-2d_sd	ambient\scene\hell1.flac	0	0	1	0	0	105	105	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
 scene_monastery	63		sfx/ambient/scene-2d_sd	ambient\scene\creepywind.flac	0	0	1	0	0	200	200	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
 scene_rain	64		sfx/ambient/scene-2d_sd	ambient\scene\rain2.flac	0	0	1	0	0	119	119	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_sewer	65		sfx/ambient/scene-2d_sd	ambient\scene\sewer.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_tavern_interior	66		sfx/ambient/scene-2d_sd	ambient\scene\cathedral.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-scene_tomb	67		sfx/ambient/scene-2d_sd	ambient\scene\tomb.flac	0	0	1	0	0	201	201	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_sewer	65		sfx/ambient/scene-2d_sd	ambient\scene\sewer.flac	0	0	1	0	0	123	123	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_tavern_interior	66		sfx/ambient/scene-2d_sd	ambient\scene\cathedral.flac	0	0	1	0	0	82	82	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
+scene_tomb	67		sfx/ambient/scene-2d_sd	ambient\scene\tomb.flac	0	0	1	0	0	148	148	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
 scene_town_3_day	68		sfx/ambient/scene-2d_sd	ambient\scene\town3day.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
 scene_town_3_night	69		sfx/ambient/scene-2d_sd	ambient\scene\town3night.flac	0	0	1	0	0	255	255	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
 scene_wilderness_day	70		sfx/ambient/scene-2d_sd	ambient\scene\wilderness_day_2.flac	0	0	1	0	0	80	80	100	100	0	0	1	12	12	0	0	0	0	1	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
@@ -212,7 +212,7 @@ item_bootschain	209	item_bootschain_hd	sfx/items_sd	item\bootschain.flac	0	0	0	0
 item_bootsmetal	210	item_bootsmetal_hd	sfx/items_sd	item\bootsmetal.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_bow	211		sfx/items_sd	item\bow.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_cap	212	item_cap_hd	sfx/items_sd	item\cap.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_chainarmor	213		sfx/items_sd	item\chainarmor.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_chainarmor	213		sfx/items_sd	item\chainarmor.flac	0	0	0	0	0	153	153	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_charm	214		sfx/items_sd	item\charm.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_crossbow	215	item_crossbow_hd	sfx/items_sd	item\xbow.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_flippy	216		sfx/items_sd	item\flippy.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
@@ -228,24 +228,24 @@ item_javelins	225		sfx/items_sd	item\javelins.flac	0	0	0	0	0	240	240	100	100	0	0
 item_jewel	226		sfx/items_sd	item\jewel.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_key	227		sfx/items_sd	item\key.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_key_used	228	item_key_used_hd	sfx/items_sd	item\keyused.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_largemetalweapon	229		sfx/items_sd	item\largemetalweapon.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_lightarmor	230		sfx/items_sd	item\lightarmor.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_metalshield	231		sfx/items_sd	item\metalshield.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_largemetalweapon	229		sfx/items_sd	item\largemetalweapon.flac	0	0	0	0	0	173	173	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_lightarmor	230		sfx/items_sd	item\lightarmor.flac	0	0	0	0	0	165	165	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_metalshield	231		sfx/items_sd	item\metalshield.flac	0	0	0	0	0	98	98	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_monsterbone	232	item_monsterbone_hd	sfx/items_sd	item\skull.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_monsterguts	233	item_monsterguts_hd	sfx/items_sd	item\monsterguts.flac	0	0	0	0	0	255	255	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_orb	234	item_orb_hd	sfx/items_sd	item\wand.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_pickup	235	custom_d2pack_item_pickup_1	sfx/items_sd	cursor\pickup.flac	0	0	0	0	0	160	160	100	100	0	0	0	0	0	0	1	0	0	1	0	120	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_platearmor	236		sfx/items_sd	item\platearmor.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_platearmor	236		sfx/items_sd	item\platearmor.flac	0	0	0	0	0	153	153	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_potion	237	custom_d2pack_item_potion_1	sfx/items_sd	item\potionui.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_potion_drink	238		sfx/items_sd	item\potiondrink.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_quiver	239		sfx/items_sd	item\quiver.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_quiver	239		sfx/items_sd	item\quiver.flac	0	0	0	0	0	118	118	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_rare	240		sfx/items_sd	item\rare.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_ring	241	item_ring_hd	sfx/items_sd	item\ring.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	100	0	0	0	0	0	-1	-1	-1	0	0	
 item_rune	242	item_rune_hd	sfx/items_sd	item\rune.flac	0	0	0	0	0	200	200	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_scroll	243		sfx/items_sd	item\scroll.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_smallmetalweapon	244		sfx/items_sd	item\smallmetalweapon.flac	0	0	0	0	0	240	240	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_staff	245		sfx/items_sd	item\staff.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
-item_sword	246		sfx/items_sd	item\sword.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
+item_sword	246		sfx/items_sd	item\sword.flac	0	0	0	0	0	130	130	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_wand	247	item_wand_hd	sfx/items_sd	item\wand.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_whip	248	item_whip_hd	sfx/items_sd	item\whip.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
 item_woodshield	249	item_woodshield_hd	sfx/items_sd	item\woodshield.flac	0	0	0	0	0	220	220	100	100	0	0	0	0	0	0	1	0	0	1	0	90	0	0	0	0	0	0	-1	-1	-1	0	0	
