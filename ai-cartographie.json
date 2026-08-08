@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-06T13:46:01.1361525+00:00",
+    "generatedAt":  "2026-08-08T12:46:18.6041188+00:00",
     "root":  {
                  "name":  "ci-fix-20260806-094547",
                  "path":  ".",
@@ -37515,6 +37515,21 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "pd2-inspiration-bkvince.catalog.json",
+                                                           "path":  "Mission/pd2-inspiration-bkvince.catalog.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-inspiration-bkvince.md",
+                                                           "path":  "Mission/pd2-inspiration-bkvince.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-inspiration-bkvince.schema.json",
+                                                           "path":  "Mission/pd2-inspiration-bkvince.schema.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "PotionAutoPickup-portage-3.2.md",
                                                            "path":  "Mission/PotionAutoPickup-portage-3.2.md",
                                                            "kind":  "file"
@@ -38077,6 +38092,18 @@
                                                },
                                       "children":  [
                                                        {
+                                                           "name":  "audit-pd2-bkvince",
+                                                           "path":  "scripts/audit-pd2-bkvince",
+                                                           "kind":  "directory",
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "audit.mjs",
+                                                                                "path":  "scripts/audit-pd2-bkvince/audit.mjs",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "build-data",
                                                            "path":  "scripts/build-data",
                                                            "kind":  "directory",
@@ -38443,6 +38470,23 @@
                                                                             {
                                                                                 "name":  "validate.test.mjs",
                                                                                 "path":  "scripts/validate-current-mission/validate.test.mjs",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "validate-pd2-catalog",
+                                                           "path":  "scripts/validate-pd2-catalog",
+                                                           "kind":  "directory",
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "validate.mjs",
+                                                                                "path":  "scripts/validate-pd2-catalog/validate.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "validate.test.mjs",
+                                                                                "path":  "scripts/validate-pd2-catalog/validate.test.mjs",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]

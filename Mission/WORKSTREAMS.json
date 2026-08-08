@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-03",
+  "updatedAt": "2026-08-08",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -494,6 +494,21 @@
       ]
     },
     {
+      "id": "pd2-inspiration-bkvince",
+      "name": "PD2 and Single Player Plus Inspiration for BKVince",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/pd2-inspiration-bkvince.md",
+      "nextGate": "Complete the General Changes, QoL, and balance chapter with row-level evidence and explicit BKVince dispositions.",
+      "include": [
+        "Mission/pd2-inspiration-bkvince.md",
+        "Mission/pd2-inspiration-bkvince.catalog.json",
+        "Mission/pd2-inspiration-bkvince.schema.json",
+        "scripts/audit-pd2-bkvince/**",
+        "scripts/validate-pd2-catalog/**"
+      ]
+    },
+    {
       "id": "act1-rogue-scout-rework",
       "name": "Act I Rogue Scout Rework",
       "status": "active",
@@ -669,6 +684,7 @@
         "extended-item-stats",
         "rift-terror-zone-group",
         "tde-inspiration-bkvince",
+        "pd2-inspiration-bkvince",
         "act1-rogue-scout-rework",
         "workstream-registry"
       ],

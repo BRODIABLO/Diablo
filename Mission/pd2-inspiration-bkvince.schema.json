@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ruffneckk.local/schemas/pd2-inspiration-bkvince.schema.json",
+  "title": "PD2 and Single Player+ inspiration catalog for BKVince",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "catalogId", "status", "source", "wikiRevisions", "method", "coverage", "credits", "chapters", "entries", "nativeBacklog"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "catalogId": { "const": "pd2-inspiration-bkvince" },
+    "status": { "enum": ["study", "approved", "retired"] },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "commit", "tree", "repositoryFileCount", "tableCount", "tableManifestSha256", "checkedAt"],
+      "properties": {
+        "repository": { "type": "string", "format": "uri" },
+        "commit": { "$ref": "#/$defs/gitSha" },
+        "tree": { "$ref": "#/$defs/gitSha" },
+        "repositoryFileCount": { "type": "integer", "minimum": 1 },
+        "tableCount": { "type": "integer", "minimum": 1 },
+        "tableManifestSha256": { "$ref": "#/$defs/sha256" },
+        "checkedAt": { "type": "string", "format": "date" }
+      }
+    },
+    "wikiRevisions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "url", "revision", "timestamp"],
+        "properties": {
+          "title": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "format": "uri" },
+          "revision": { "type": "integer", "minimum": 1 },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "method": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceLayers", "target", "excluded", "savePolicy", "multiplayerPolicy", "sequence", "implementationBoundary"],
+      "properties": {
+        "sourceLayers": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "enum": ["pd2_core", "single_player_plus", "unknown"] } },
+        "target": { "const": "BKVince D2RLoader 3.2 build 92777" },
+        "excluded": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "savePolicy": { "const": "Preserve existing BKVince characters and stashes whenever possible; stop for an explicit decision before an unavoidable reset." },
+        "multiplayerPolicy": { "const": "Validate solo first; host/joiner remains mandatory before a lot is fully delivered." },
+        "sequence": { "const": "Complete the governed audit before opening stable implementation lots." },
+        "implementationBoundary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pd2Tables", "pd2RoundTripByteExact", "pd2Eol", "bkvinceTableCount", "commonTables", "exactNormalizedHeaders", "schemaDifferences", "pd2OnlyCount", "bkvinceOnly"],
+      "properties": {
+        "pd2Tables": { "type": "array", "minItems": 93, "maxItems": 93, "uniqueItems": true, "items": { "$ref": "#/$defs/table" } },
+        "pd2RoundTripByteExact": { "const": true },
+        "pd2Eol": { "const": "LF" },
+        "bkvinceTableCount": { "const": 50 },
+        "commonTables": { "const": 49 },
+        "exactNormalizedHeaders": { "const": 9 },
+        "schemaDifferences": { "const": 40 },
+        "pd2OnlyCount": { "const": 44 },
+        "bkvinceOnly": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "const": "levelgroups.txt" } }
+      }
+    },
+    "credits": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "role", "source"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "role": { "type": "string", "minLength": 1 },
+          "source": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "chapters": {
+      "type": "array",
+      "minItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "status"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "title": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["planned", "in_progress", "complete"] }
+        }
+      }
+    },
+    "entries": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/entry" } },
+    "nativeBacklog": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "gitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[A-F0-9]{64}$" },
+    "table": { "type": "string", "pattern": "^[a-z0-9]+\\.txt$" },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "domain", "sourceLayer", "sourceRefs", "tables", "playerEffect", "bkvinceCoverage", "route", "disposition", "evidenceStatus", "saveRisk", "multiplayer", "rationale", "dependencies"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "type": "string", "minLength": 1 },
+        "domain": { "enum": ["general_qol", "balance", "item", "cube", "hireling", "skill", "monster", "boss", "world", "system"] },
+        "sourceLayer": { "enum": ["pd2_core", "single_player_plus", "mixed", "unknown"] },
+        "sourceRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "tables": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/table" } },
+        "playerEffect": { "type": "string", "minLength": 1 },
+        "bkvinceCoverage": { "enum": ["absent", "partial", "equivalent", "better", "conflict", "unknown"] },
+        "route": { "enum": ["data_only", "data_assets", "memory_patch", "plugin", "hybrid", "unknown", "none"] },
+        "disposition": { "enum": ["keep_bkvince", "adapt_retune", "faithful_candidate", "reject", "needs_re"] },
+        "evidenceStatus": { "enum": ["verified", "partial", "hypothesis"] },
+        "saveRisk": { "enum": ["none", "low", "medium", "high", "unknown"] },
+        "multiplayer": { "enum": ["not_applicable", "solo_first", "host_authority_required", "unknown"] },
+        "rationale": { "type": "string", "minLength": 1 },
+        "dependencies": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+      }
+    }
+  }
+}
