@@ -499,7 +499,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/pd2-inspiration-bkvince.md",
-      "nextGate": "Complete the General Changes, QoL, and balance chapter with row-level evidence and explicit BKVince dispositions.",
+      "nextGate": "Complete PD2 Game Mechanics Foundation / Audit Mechanics 2.0 across all thirteen Game Mechanics sections, with pinned provenance, proven BKVince coverage, and an explicit baseline_only, adapt, reject, or needs_re disposition for every block; make no gameplay mutation.",
       "include": [
         "Mission/pd2-inspiration-bkvince.md",
         "Mission/pd2-inspiration-bkvince.catalog.json",

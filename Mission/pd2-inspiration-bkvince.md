@@ -316,11 +316,15 @@ un témoin hôte/joiner.
 
 ## Prochain gate
 
-Déployer et valider en jeu l'Acte III phase 1 : les trois auras, leurs cycles de
-vie, leurs interactions avec l'équipement et l'absence de régression sur les
-casts. La validation réseau hôte/joiner reste obligatoire avant de déclarer le
-lot livré. Les masteries élémentaires et l'UI étendue demeurent la phase 2 et un
-chantier ultérieur distinct.
+Produire en priorité PD2 Game Mechanics Foundation / Audit Mechanics 2.0 selon
+l'Option A confirmée par Vincent le 8 août 2026. Couvrir les treize sections de
+`Game Mechanics`, épingler la révision source, distinguer baseline moteur, PD2
+core et Single Player Plus, prouver l'état BKVince et attribuer à chaque bloc
+une disposition `baseline_only`, `adapt`, `reject` ou `needs_re`, avec route,
+dépendances et risques. Le melee splash déjà en cours reste hors implantation
+de ce lot et sera seulement relié au contrat commun. General Changes / QoL /
+balance est mis en pause jusqu'à la fermeture de ce socle; aucune mutation
+gameplay n'est autorisée dans l'audit.
 
 ## Crédits
 
