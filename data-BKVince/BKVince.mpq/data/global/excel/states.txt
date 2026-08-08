@@ -245,3 +245,4 @@ splashdamage	242																																																																
 bkvbowmastery	243																																																																									0
 bkvrogueraven	244																																																																									0
 inferno_debuff	245																						1																				inferno_debuff																															0
+staticfield_debuff	246																																										staticfield_debuff																															0

@@ -1208,6 +1208,78 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "StaticFieldRework",
+                                                           "path":  "addons/StaticFieldRework",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-standalone-d2rloader-addon",
+                                                                        "summary":  "Plugin hybride RuffnecKk pour D2RLoader 3.2.92777 qui ajoute au Static Field BKVince un debuff temporaire de résistance à la foudre via les fonctions serveur natives.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "experimental"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "package",
+                                                                                "path":  "addons/StaticFieldRework/package",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "StaticFieldRework.dll",
+                                                                                                     "path":  "addons/StaticFieldRework/package/StaticFieldRework.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "StaticFieldRework.toml",
+                                                                                                     "path":  "addons/StaticFieldRework/package/StaticFieldRework.toml",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/StaticFieldRework/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/StaticFieldRework/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/StaticFieldRework/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/StaticFieldRework/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "static-field-rework-policy.hpp",
+                                                                                                     "path":  "addons/StaticFieldRework/src/static-field-rework-policy.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "static-field-rework-tests.cpp",
+                                                                                                     "path":  "addons/StaticFieldRework/src/static-field-rework-tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/StaticFieldRework/README.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "StaticFieldRework-0.1.0.zip",
+                                                                                "path":  "addons/StaticFieldRework/StaticFieldRework-0.1.0.zip",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "Transmogrify",
                                                            "path":  "addons/Transmogrify",
                                                            "kind":  "directory",
@@ -20144,6 +20216,11 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "StaticFieldRework.toml",
+                                                                                                     "path":  "data-BKVince/d2rloader/config/StaticFieldRework.toml",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "transmogrify.toml",
                                                                                                      "path":  "data-BKVince/d2rloader/config/transmogrify.toml",
                                                                                                      "kind":  "file"
@@ -21404,6 +21481,11 @@
                                                                                                                           "kind":  "file"
                                                                                                                       }
                                                                                                                   ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "StaticFieldRework.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/StaticFieldRework.dll",
+                                                                                                     "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "Transmogrify-src",
@@ -38225,6 +38307,11 @@
                                                                             {
                                                                                 "name":  "apply-pd2-inferno-shredder.js",
                                                                                 "path":  "scripts/migrate-bkvince/apply-pd2-inferno-shredder.js",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "apply-static-field-rework.js",
+                                                                                "path":  "scripts/migrate-bkvince/apply-static-field-rework.js",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

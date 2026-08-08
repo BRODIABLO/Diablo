@@ -868,6 +868,22 @@
       "notes": "Native `test r15d,r15d; je 0x543D50` prevents area-level scaling in Normal difficulty. The original BKVince NOP enabled Normal scaling but also sent a roomless restored Rogue mercenary through DATATBLS_GetMonsterLevelInArea with LevelId 0. Runtime tracing on build 92777 proved source room null, LevelId 0 and target UNIT_MONSTER class 271. The governed patch replaces the five bytes with `test r14d,r14d; jle 0x543D50`, preserving area scaling for positive room-derived LevelIds and selecting the native monstats base-level fallback otherwise."
     },
     {
+      "rva": "0x5546B0",
+      "name": "SKILLS_SrvDoFunc20_StaticField",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/pd2-inspiration-bkvince.md",
+      "notes": "Build-92777 Static Field server handler with x64 ABI (game, unit, skillId, skillLevel) -> int32. It resolves SkillsTxt, evaluates calc2/calc1 and aura range, then enumerates targets through 0x4327D0 with callback 0x5556A0. The 53-byte entry witness used by StaticFieldRework is exact, while its wildcarded form is unique in .text. D2MOO was used only to confirm the semantic role; no legacy address, structure or ABI was transposed."
+    },
+    {
+      "rva": "0x55D6B0",
+      "name": "SKILLS_SrvDoFunc30_Curse",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/pd2-inspiration-bkvince.md",
+      "notes": "Build-92777 native area-state applicator with x64 ABI (game, unit, skillId, skillLevel) -> int32. It validates aurastat1 and auratargetstate, evaluates aurarangecalc and auralencalc, evaluates up to six aura stat formulas, and enumerates targets using aurafilter. The 64-byte entry witness used by StaticFieldRework is exact and its wildcarded form is unique in .text."
+    },
+    {
       "rva": "0x5817BD",
       "name": "BookQuantityDeltaBeforeSynchronization",
       "kind": "patch-site",

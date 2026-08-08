@@ -568,6 +568,33 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   `0x4A7270`, une entrée distincte en amont; le nouveau hook aval reste inerte
   hors de son scope Rogue et conserve donc la chaîne existante.
 
+## Static Field — package PD2 avec fonctions serveur D2R 3.2
+
+- Le handler serveur natif de Static Field commence à `0x5546B0`. Son ABI x64
+  observée est `(game, unit, skillId, skillLevel) -> int32`; il résout la ligne
+  SkillsTxt, évalue `calc2`, `calc1` et `aurarangecalc`, puis délègue la
+  sélection des cibles à `0x4327D0` avec le callback `0x5556A0`. La signature
+  wildcardée de 53 octets ne correspond qu'à cette entrée dans le build 92777.
+- Le `srvdofunc=20` D2R ne lit ni `auratargetstate`, ni `auralencalc`, ni les
+  paires `aurastat/aurastatcalc`. Le portage exact ne peut donc pas être obtenu
+  par la seule ligne `skills.txt`; le `srvdofunc=160` de PD2 est spécifique à
+  PD2 et correspond à un autre comportement dans D2R 3.2.
+- Le handler natif de malédiction/état commence à `0x55D6B0` avec la même ABI.
+  Il valide le target state et le premier aura stat, évalue le rayon et la
+  durée, évalue jusqu'à six stats d'aura et énumère les cibles selon
+  `aurafilter`. Sa signature wildcardée de 64 octets est elle aussi unique.
+- `StaticFieldRework` conserve le handler 20 comme autorité pour les 25 % de
+  vie, puis appelle le handler 30 avec le même skill et niveau. La ligne
+  BKVince fournit donc seulement les données natives : rayon
+  `min(ln12 / 2, 14)`, état `staticfield_debuff`, durée liée à Lightning
+  Mastery et `lightresist=-min(lvl,100)`. Les statlists, le filtrage et
+  l'autorité multijoueur restent entièrement dans les fonctions D2R.
+- L'audit du PluginPack épinglé à
+  `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` ne trouve aucun hook à ces deux
+  entrées. Le patch Telekinesis de `plugin-skills` à `0x554936` est voisin mais
+  hors du corps de Static Field; les quatre autres DLL ne possèdent aucun site
+  chevauchant.
+
 ## Discipline de promotion
 
 Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de

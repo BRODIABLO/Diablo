@@ -1,0 +1,5 @@
+# Enables the D2R-native Static Field debuff chain.
+enabled = true
+
+# Logs one diagnostic line for each successful debuff cast.
+diagnostics = false

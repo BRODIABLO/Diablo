@@ -144,6 +144,15 @@
         "no-ethereal-item-types.toml"
       ]
     },
+    "addons/StaticFieldRework/StaticFieldRework-0.1.0.zip": {
+      "kind": "plugin",
+      "legacy": true,
+      "reason": "The standalone plugin intentionally uses TOML for its two boolean settings.",
+      "entries": [
+        "StaticFieldRework.dll",
+        "StaticFieldRework.toml"
+      ]
+    },
     "addons/Transmogrify/Transmogrify.zip": {
       "kind": "plugin",
       "legacy": true,

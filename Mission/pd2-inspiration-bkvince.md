@@ -240,6 +240,80 @@ Le dossier PD2/SP+ et les mods de référence restent read-only. La baseline
 initiale ne modifiait aucune table gameplay BKVince; l'implantation atomique
 Acte III phase 1 modifie désormais seulement `hireling.txt`.
 
+## Static Field — package PD2 hybride D2R 3.2
+
+Le 8 août 2026, Vincent a retenu explicitement une **DLL autonome**. Le portage
+conserve donc `srvdofunc=20` dans `skills.txt` et ne copie pas le
+`srvdofunc=160` propre à PD2. Le reverse engineering gouverné du build
+`3.2.92777` prouve que le handler Static Field D2R commence à `0x5546B0` et ne
+consomme que les calculs de vie et de rayon; le handler natif d'état/malédiction
+à `0x55D6B0` consomme en revanche le target state, la durée, le filtre, le rayon
+et jusqu'à six paires aura stat/calc. Le plugin appelle donc le Static Field
+natif en premier, puis cet applicateur D2R avec le même skill et niveau. Les
+25 % de vie, le filtrage, les statlists, la durée et l'autorité multijoueur
+restent dans le moteur.
+
+La migration réversible
+`scripts/migrate-bkvince/apply-static-field-rework.js` applique et vérifie :
+
+- dégâts de vie : `calc1=par4`, `Param4=25`;
+- rayon : `"min(ln12 / 2, 14)"`, `Param1=8`, `Param2=1`, soit
+  `4/8/13/14` aux niveaux `1/10/20/40`;
+- résistance foudre : `lightresist` avec `"-min(lvl, 100)"`, soit
+  `-1/-10/-20/-40` aux mêmes niveaux;
+- durée : `125 + (5 * skill('Lightning Mastery'.blvl))`, soit 225 frames
+  avec Lightning Mastery niveau 20;
+- état et feedback visuel dédiés : `staticfield_debuff` dans `states.txt` et
+  `overlay.txt`, sans collision avec Lower Resist.
+
+`StaticFieldRework 0.1.0` est une DLL RuffnecKk hybride sans
+`ModScopedOnly`, munie de son TOML indépendant et de signatures strictes. Le
+seul hook est `0x5546B0`; le handler `0x55D6B0` est validé puis appelé sans être
+patché. L'audit du PluginPack eezstreet épinglé à
+`dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` ne trouve aucun chevauchement dans
+les cinq DLL. D2MOO est crédité dans le README comme référence sémantique, sans
+transposition d'adresse, de structure ou d'ABI 32 bits.
+
+La compilation MSVC Release, le test de politique, l'architecture PE32+ x64,
+les ressources de version et les trois exports D2RLoader sont validés. Le
+SHA-256 de la DLL est
+`9BCF9C96D21A21AD54BA66C8795B2900FC569348D7F30793359D1C6020DE8883`;
+celui du TOML est
+`734271EB84151A443DCC81CBE0CB915F76F5EA82FEA3CEC1F5703581DAEFC708`.
+L'archive stricte contient uniquement ces deux fichiers et porte le hash
+`D9E5849EE5BBA1ED900A6C4A055E67752CF3F87E9285B6D1371AAAEEBB7FC2FE`;
+le README et les crédits restent hors ZIP.
+
+Les validations TSV sont vertes : CRLF et round-trip byte-exact, migration
+`--check`, références de démarrage et cadastre `VALID`. Les hashes finaux sont
+`FF8EEC13D83183261484CFBB49E66EB79017F902BD2B5B1EA6F06A5BE3E325C1`
+pour `skills.txt`,
+`DA580CA0FDB0713FC62663602BB7BF81EB4D2AB0D422031901D676A2876E0940`
+pour `states.txt` et
+`918B3CADEC29424ED86706DCC91B5286BD063040494A6BDCE2168860DC9CAE6F`
+pour `overlay.txt`.
+
+La matrice runtime du 8 août 2026 est la suivante :
+
+| Domaine | Cas | Statut | Preuve |
+|---|---|---|---|
+| Déploiement | 5 hashes source/runtime | passed | égalité avant/après cold start |
+| Mod-local | DLL + TOML BKVince | passed | hook accepté, config mod-local résolue |
+| PluginPack complet | 5 DLL et fonctionnalités actives | passed | `16/16`, rejet `0`, échec `0` |
+| Memory patches | pile complète | passed | `18/18`, disabled `0`, failed `0` |
+| Startup | D2R 3.2.92777 | passed | `24/24`, processus répondant |
+| Doublon hybride | mod + global | passed | mod actif, global neutralisé; rejet `0`, échec `0` |
+| Portée globale seule | DLL + TOML globaux | passed | `16/16`, `18/18`, `24/24` |
+| Gameplay solo | cast, rayon, durée, shred, overlay | not run | témoin en jeu encore requis |
+| Réseau | hôte/joiner | not run | témoin synchronisé encore requis |
+
+Après les tests de portée, les deux copies globales temporaires ont été
+supprimées, la DLL et le TOML mod-locaux ont été restaurés avec leurs hashes
+sources, et aucun processus D2R/D2RLoader n'est resté ouvert. Le lot est donc
+**implanté, compilé et qualifié au chargement dans les deux portées**, mais la
+validation fonctionnelle ne sera fermée qu'après un cast observé en solo puis
+un témoin hôte/joiner.
+
 ## Prochain gate
 
 Déployer et valider en jeu l'Acte III phase 1 : les trois auras, leurs cycles de

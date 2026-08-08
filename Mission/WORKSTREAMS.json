@@ -504,7 +504,12 @@
         "Mission/pd2-inspiration-bkvince.md",
         "Mission/pd2-inspiration-bkvince.catalog.json",
         "Mission/pd2-inspiration-bkvince.schema.json",
+        "addons/StaticFieldRework/**",
+        "data-BKVince/BKVince.mpq/data/global/excel/overlay.txt",
+        "data-BKVince/d2rloader/config/StaticFieldRework.toml",
+        "data-BKVince/d2rloader/plugins/StaticFieldRework.dll",
         "scripts/audit-pd2-bkvince/**",
+        "scripts/migrate-bkvince/apply-static-field-rework.js",
         "scripts/validate-pd2-catalog/**"
       ]
     },
@@ -711,7 +716,8 @@
         "workstream-registry",
         "mass-id",
         "base-mod-features",
-        "four-character-item-codes"
+        "four-character-item-codes",
+        "pd2-inspiration-bkvince"
       ],
       "reason": "Shared allowlist for public plugin and memory-patch archive contents."
     },
@@ -745,7 +751,8 @@
         "char-start",
         "mass-id",
         "require-item-display-for-pickup",
-        "base-mod-features"
+        "base-mod-features",
+        "pd2-inspiration-bkvince"
       ],
       "reason": "Governed native evidence registry shared by native plugin missions."
     },
@@ -771,7 +778,8 @@
         "char-start",
         "mass-id",
         "require-item-display-for-pickup",
-        "base-mod-features"
+        "base-mod-features",
+        "pd2-inspiration-bkvince"
       ],
       "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."
     },
@@ -837,6 +845,22 @@
         "act1-rogue-scout-rework"
       ],
       "reason": "Readable Items and the Act I Rogue rework append independent custom runtime stats to the shared table."
+    },
+    {
+      "pattern": "data-BKVince/BKVince.mpq/data/global/excel/skills.txt",
+      "workstreams": [
+        "pd2-inspiration-bkvince",
+        "act1-rogue-scout-rework"
+      ],
+      "reason": "The PD2 inspiration workstream adapts selected player skills while the Act I Rogue rework owns independent mercenary skill mechanics in the same table."
+    },
+    {
+      "pattern": "data-BKVince/BKVince.mpq/data/global/excel/states.txt",
+      "workstreams": [
+        "pd2-inspiration-bkvince",
+        "act1-rogue-scout-rework"
+      ],
+      "reason": "The PD2 inspiration workstream owns selected player-skill debuff states while the Act I Rogue rework owns independent mercenary states in the same table."
     },
     {
       "pattern": "data-BKVince/BKVince.mpq/data/global/excel/properties.txt",
