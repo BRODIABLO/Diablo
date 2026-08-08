@@ -4,5 +4,7 @@
   "showMaxSocketsOnSocketedItems": false,
   "showBaseDefenseRange": true,
   "showPropertyRanges": true,
-  "includeSocketedContributionsInRanges": false
+  "includeSocketedContributionsInRanges": false,
+  "_propertyRangeColorHelp": "ChronicleColor uses the default Chronicle teal/light blue color. BHDarkGreen uses BH's dark green color (the one that came with the first iterations of this plugin).",
+  "propertyRangeColor": "ChronicleColor"
 }

@@ -20,6 +20,11 @@ get_filename_component(
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../data-vanilla3.2/data/data/global/excel"
     ABSOLUTE
 )
+get_filename_component(
+    INTERMOD_REFERENCE_EXCEL_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../../data-BK/global/excel"
+    ABSOLUTE
+)
 set(ADVANCED_ITEM_TOOLTIPS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 configure_file(vanilla_tables.rc.in vanilla_tables.rc @ONLY)
 
@@ -61,4 +66,10 @@ add_test(
     NAME advanced-item-tooltips-embedded-provider
     COMMAND AdvancedItemTooltipsRangeTests --provider-smoke "${VANILLA_EXCEL_DIR}"
 )
+if(IS_DIRECTORY "${INTERMOD_REFERENCE_EXCEL_DIR}")
+    add_test(
+        NAME advanced-item-tooltips-intermod-reference
+        COMMAND AdvancedItemTooltipsRangeTests "${INTERMOD_REFERENCE_EXCEL_DIR}"
+    )
+endif()
 add_test(NAME advanced-item-tooltips-config COMMAND AdvancedItemTooltipsConfigTests)

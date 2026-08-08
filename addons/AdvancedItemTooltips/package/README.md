@@ -1,4 +1,4 @@
-# Advanced Item Tooltips 3.2.3
+# Advanced Item Tooltips 3.2.4
 
 ## Install
 
@@ -22,3 +22,11 @@ The mod-local JSON overrides the global JSON.
 - `showBaseDefenseRange`: shows base-defense rolls. Default: `true`.
 - `showPropertyRanges`: shows property roll ranges. Default: `true`.
 - `includeSocketedContributionsInRanges`: includes gems, runes, and jewels in ranges. Default: `false`.
+- `propertyRangeColor`: accepts `ChronicleColor` for Chronicle's default
+  teal/light blue or `BHDarkGreen` for BH's dark green from the first plugin
+  iterations. Default: `ChronicleColor`.
+
+Crafted-item creation properties from `usetype,crf` recipes remain part of the
+intrinsic roll range. Later `useitem` and non-crafted `usetype` mutations are
+ignored because a finished item does not retain a portable, complete recipe
+history across mods.

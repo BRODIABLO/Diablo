@@ -8,9 +8,34 @@
 #include <fstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace ruffneckk::advanced_item_tooltips {
+
+enum class PropertyRangeColor {
+    ChronicleColor,
+    BHDarkGreen,
+};
+
+inline PropertyRangeColor ParsePropertyRangeColor(std::string_view value) {
+    if (value == "ChronicleColor") return PropertyRangeColor::ChronicleColor;
+    if (value == "BHDarkGreen") return PropertyRangeColor::BHDarkGreen;
+    throw std::invalid_argument(
+        "propertyRangeColor must be ChronicleColor or BHDarkGreen");
+}
+
+inline constexpr std::string_view PropertyRangeColorName(PropertyRangeColor value) noexcept {
+    return value == PropertyRangeColor::ChronicleColor
+        ? std::string_view{"ChronicleColor"}
+        : std::string_view{"BHDarkGreen"};
+}
+
+inline constexpr char PropertyRangeColorCode(PropertyRangeColor value) noexcept {
+    // Chronicle uses D2R's U color (teal/light blue). BH's legacy dark-green
+    // palette entry is ':' and was used by the first plugin releases.
+    return value == PropertyRangeColor::ChronicleColor ? 'U' : ':';
+}
 
 struct Config {
     bool enabled{true};
@@ -19,6 +44,7 @@ struct Config {
     bool showBaseDefenseRange{true};
     bool showPropertyRanges{true};
     bool includeSocketedContributionsInRanges{false};
+    PropertyRangeColor propertyRangeColor{PropertyRangeColor::ChronicleColor};
 };
 
 inline Config ParseConfig(const nlohmann::json& root) {
@@ -31,10 +57,24 @@ inline Config ParseConfig(const nlohmann::json& root) {
         "showBaseDefenseRange",
         "showPropertyRanges",
         "includeSocketedContributionsInRanges",
+        "_propertyRangeColorHelp",
+        "propertyRangeColor",
     };
     for (auto entry = root.begin(); entry != root.end(); ++entry) {
         if (std::find(allowed.begin(), allowed.end(), entry.key()) == allowed.end()) {
             throw std::invalid_argument("unknown configuration key: " + entry.key());
+        }
+        if (entry.key() == "_propertyRangeColorHelp") {
+            if (!entry.value().is_string()) {
+                throw std::invalid_argument("_propertyRangeColorHelp must be a string");
+            }
+            continue;
+        }
+        if (entry.key() == "propertyRangeColor") {
+            if (!entry.value().is_string()) {
+                throw std::invalid_argument("propertyRangeColor must be a string");
+            }
+            continue;
         }
         if (!entry.value().is_boolean()) {
             throw std::invalid_argument(entry.key() + " must be a boolean");
@@ -52,6 +92,9 @@ inline Config ParseConfig(const nlohmann::json& root) {
     config.includeSocketedContributionsInRanges = root.value(
         "includeSocketedContributionsInRanges",
         config.includeSocketedContributionsInRanges);
+    if (const auto entry = root.find("propertyRangeColor"); entry != root.end()) {
+        config.propertyRangeColor = ParsePropertyRangeColor(entry->get<std::string>());
+    }
     return config;
 }
 

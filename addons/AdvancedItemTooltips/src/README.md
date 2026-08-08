@@ -5,17 +5,16 @@ global `d2rloader/plugins` directory or in a mod-local plugin directory. This
 public release is autonomous: it does not depend on BKVince, Transmogrify, or
 any eezstreet PluginPack DLL.
 
-Version 3.2.3 restores variable Enhanced Defense and separates grouped stat
-formats such as All Resistances from their individual components. It also
-indexes crafted `usetype,crf` recipes correctly and distinguishes persistent
-Cube provenance markers from ordinary visible gameplay stats.
+Version 3.2.4 keeps the validated intrinsic item-range pipeline, removes
+post-creation Cube mutation inference from the mouse-hover path, and makes the
+range color selectable between Chronicle's teal/light blue and BH's legacy
+dark green.
 
-The plugin caches exact, unchanged tooltip transformations per UI thread,
-keeps intrinsic ranges when markerless Cube histories are ambiguous, and
-filters unrelated `useitem`/`usetype` recipes before resolving combinations.
-Repeated hover frames therefore reuse the validated result while any native
-tooltip text, affix identity, defense, socket count, or socket filler change
-invalidates the entry automatically.
+The plugin caches exact, unchanged tooltip transformations per UI thread.
+Repeated hover frames reuse the validated result while any native tooltip text,
+affix identity, defense, socket count, or socket filler change invalidates the
+entry automatically. Later `useitem` and non-crafted `usetype` mutations are
+not reconstructed or combined on a cache miss.
 
 It also derives unique-item, set-item, property, and stat identities from the
 same compiled row order used by D2R. Modder comment columns such as `*ID` and
@@ -64,32 +63,27 @@ Korean, Polish, Latin American Spanish, Japanese, Brazilian Portuguese,
 Russian, and Simplified Chinese. No language option is required in the JSON.
 
 Mods may provide their own translations for native stat keys and the plugin
-will use the strings resolved by D2R at runtime. The numeric dark-green range
-suffix remains language-neutral; its connector is read from D2R's active
-localization rather than hardcoded as English `to`.
+will use the strings resolved by D2R at runtime. The numeric range color is
+language-neutral and selected by `propertyRangeColor`; its connector is read
+from D2R's active localization rather than hardcoded as English `to`.
 
-For identified items, the plugin also reads the loose TXT tables from the
-currently loaded mod and appends exact variable roll ranges using
-SlashDiablo's dark green (`:`), distinct from set-item green. The
-calculation starts from the affix identifiers stored on the item, combines all
-sources that render as the same stat, and includes fixed `cubemain.txt` crafted
-properties. For example, a fixed crafted `5-10% Faster Cast Rate` property and
-a `+10% Faster Cast Rate` suffix are displayed as `[15 - 20]`.
+For identified items, the plugin reads the loose TXT tables from the currently
+loaded mod and appends exact variable roll ranges. `ChronicleColor` uses D2R's
+`U` palette entry for Chronicle's default teal/light blue. `BHDarkGreen` uses
+BH's `:` dark-green entry from the first plugin iterations. The calculation
+starts from the affix identifiers stored on the item, combines all intrinsic
+sources that render as the same stat, and includes fixed `cubemain.txt`
+properties from the `usetype,crf` recipe that created a crafted item. For
+example, a fixed crafted `5-10% Faster Cast Rate` property and a `+10% Faster
+Cast Rate` suffix are displayed as `[15 - 20]`.
 
-Version 3.1 also models stat additions from enabled `cubemain.txt` recipes whose
-primary output is `useitem` or `usetype`. It discovers persistent recipe-marker
-families from the active mod's own `properties.txt` and `itemstatcost.txt` only
-when the marker property is non-display, repeated across recipe outcomes, saved
-with `Save Bits`, and synchronized with `Send Bits`. No marker name or stat ID is
-hardcoded. This lets BKVince augments and corruptions compose on the same item,
-while giving an unrelated public mod the same behavior from its own tables.
-
-When a recipe has no durable marker, the plugin compares the untouched item and
-each compatible one-step recipe history against the complete finished tooltip.
-For native IAS `[3 - 5]` plus a recipe IAS `[2 - 6]`, a final roll of `7` proves
-and displays `[5 - 11]`; a final roll of `5` is compatible with both histories,
-so no range is appended. Repeated markerless applications have no persistent
-count in standard item data and are never guessed.
+Later `useitem` recipes and non-crafted `usetype` recipes are deliberately
+ignored. A finished item does not retain a portable, complete record of which
+mod-specific mutations ran, how many times they ran, or which roll each
+application produced. If such a mutation moves a visible value outside its
+intrinsic range, that line remains unannotated rather than receiving a guessed
+aggregate. This policy also removes recipe-history combinations from the
+mouse-hover path.
 
 Pure vanilla has no loose mod directory for the public D2RLoader SDK to expose.
 In that context, the DLL automatically loads its embedded D2R 3.2.92777 vanilla
@@ -131,16 +125,18 @@ Fixed-only properties remain unchanged. If a runeword identity cannot be
 resolved unambiguously, the plugin omits its ranges and never interprets the
 repurposed runeword id as an affix.
 
-Craft recipe variants are filtered against every modeled stat in the complete
-tooltip before any individual range is rendered. This lets an identifying line
-such as stacked Faster Cast Rate select the Caster recipe and apply its fixed
-Mana bonus to the separate Mana range. If multiple remaining recipes disagree,
-or if a property function is not modeled safely, the range is omitted. Base
-defense is reconstructed exactly across plain, superior, ethereal, unique,
-set, rare, crafted, socketed, and runeword armor, including stacked Enhanced
-Defense and exact flat `+Defense`. Ambiguous reconstructions still fail closed.
-Eligible armor receives a white `Base Defense: N [min - max]` line immediately
-below its Defense line.
+Crafted creation-recipe variants (`usetype,crf`) are filtered against every
+modeled stat in the complete tooltip before any individual range is rendered.
+This lets an identifying line such as stacked Faster Cast Rate select the
+Caster creation recipe and apply its fixed Mana bonus to the separate Mana
+range. It does not re-enable later `useitem` or non-crafted `usetype`
+mutations. If multiple remaining creation recipes disagree, or if a property
+function is not modeled safely, the range is omitted. Base defense is
+reconstructed exactly across plain, superior, ethereal, unique, set, rare,
+crafted, socketed, and runeword armor, including stacked Enhanced Defense and
+exact flat `+Defense`. Ambiguous reconstructions still fail closed. Eligible
+armor receives a white `Base Defense: N [min - max]` line immediately below
+its Defense line.
 
 The range suffix restores the color active on the original modifier line. It
 recognizes D2R's private marker and both native `ÿcX` encodings, then follows
@@ -184,6 +180,9 @@ avoids competing for the builder's strict prologue when another plugin owns it.
 
 The strict `AdvancedItemTooltips.json` keys are `enabled`, `showMaxSockets`,
 `showMaxSocketsOnSocketedItems`, `showBaseDefenseRange`, `showPropertyRanges`,
-and `includeSocketedContributionsInRanges`. The mod-local file takes priority
-over the global file. Missing configuration uses built-in defaults; a present
-but malformed configuration refuses the plugin before hooks are installed.
+`includeSocketedContributionsInRanges`, `_propertyRangeColorHelp`, and
+`propertyRangeColor`. The help key is optional, must be a string when present,
+and is ignored at runtime. `propertyRangeColor` accepts exactly
+`ChronicleColor` or `BHDarkGreen`. The mod-local file takes priority over the
+global file. Missing configuration uses built-in defaults; a present but
+malformed configuration refuses the plugin before hooks are installed.

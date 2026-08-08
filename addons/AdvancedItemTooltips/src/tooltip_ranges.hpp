@@ -43,11 +43,10 @@ struct ItemAffixIds {
 };
 
 struct CandidateResolution {
-    // Every table-backed history that the finished tooltip can still prove,
-    // including compatible Cube mutations.
+    // Every table-backed history intrinsic to the generated item.
     std::vector<std::vector<ModifierRange>> candidates;
-    // The item-owned histories before markerless Cube mutations. These are a
-    // safe fallback when Cube provenance is ambiguous or deliberately capped.
+    // A stable item-owned copy retained for callers that merge separately
+    // inspectable sources such as socket fillers.
     std::vector<std::vector<ModifierRange>> intrinsicCandidates;
 };
 
@@ -134,22 +133,6 @@ private:
     std::unordered_map<std::string, ArmorRange> armor_;
     std::unordered_map<std::string, std::vector<std::string>> itemTypes_;
     std::unordered_map<std::string, std::vector<std::vector<ModifierRange>>> crafts_;
-    struct RecipeMarker {
-        std::string family;
-        std::int32_t statId{};
-        std::uint16_t layer{};
-        std::int32_t minimum{};
-        std::int32_t maximum{};
-    };
-    struct CubeRecipe {
-        std::string inputToken;
-        std::vector<std::string> inputQualifiers;
-        std::string outputToken;
-        std::vector<std::string> outputQualifiers;
-        std::vector<ModifierRange> modifiers;
-        std::vector<RecipeMarker> markers;
-    };
-    std::vector<CubeRecipe> cubeRecipes_;
     std::vector<std::string> uniqueTokens_;
     std::vector<std::string> setTokens_;
     struct RuneModifiers {
@@ -171,7 +154,8 @@ private:
     const std::vector<std::vector<ModifierRange>>& candidates,
     bool allowExcludedSocketContributions = false,
     const TooltipLocalization* localization = nullptr,
-    const std::vector<std::vector<ModifierRange>>* intrinsicFallback = nullptr
+    const std::vector<std::vector<ModifierRange>>* intrinsicFallback = nullptr,
+    char rangeColor = ':'
 );
 
 [[nodiscard]] std::vector<std::vector<ModifierRange>> MergeCandidateSources(
@@ -182,7 +166,8 @@ private:
 [[nodiscard]] std::string FormatPositiveRange(
     std::int32_t minimum,
     std::int32_t maximum,
-    char restoreColor = '0'
+    char restoreColor = '0',
+    char rangeColor = ':'
 );
 
 [[nodiscard]] std::optional<std::int32_t> FirstSignedInteger(std::string_view text);

@@ -36,6 +36,9 @@ int main() {
     CHECK(defaults.showBaseDefenseRange);
     CHECK(defaults.showPropertyRanges);
     CHECK(!defaults.includeSocketedContributionsInRanges);
+    CHECK(defaults.propertyRangeColor == PropertyRangeColor::ChronicleColor);
+    CHECK(PropertyRangeColorCode(defaults.propertyRangeColor) == 'U');
+    CHECK(PropertyRangeColorName(defaults.propertyRangeColor) == "ChronicleColor");
 
     const auto combined = ParseConfig({
         {"enabled", true},
@@ -44,14 +47,22 @@ int main() {
         {"showBaseDefenseRange", false},
         {"showPropertyRanges", true},
         {"includeSocketedContributionsInRanges", true},
+        {"_propertyRangeColorHelp", "ChronicleColor uses Chronicle teal; BHDarkGreen uses BH dark green."},
+        {"propertyRangeColor", "BHDarkGreen"},
     });
     CHECK(!combined.showMaxSockets);
     CHECK(combined.showMaxSocketsOnSocketedItems);
     CHECK(!combined.showBaseDefenseRange);
     CHECK(combined.includeSocketedContributionsInRanges);
+    CHECK(combined.propertyRangeColor == PropertyRangeColor::BHDarkGreen);
+    CHECK(PropertyRangeColorCode(combined.propertyRangeColor) == ':');
+    CHECK(PropertyRangeColorName(combined.propertyRangeColor) == "BHDarkGreen");
 
     CHECK(Throws([] { ParseConfig(nlohmann::json::array()); }));
     CHECK(Throws([] { ParseConfig({{"enabled", 1}}); }));
+    CHECK(Throws([] { ParseConfig({{"_propertyRangeColorHelp", true}}); }));
+    CHECK(Throws([] { ParseConfig({{"propertyRangeColor", true}}); }));
+    CHECK(Throws([] { ParseConfig({{"propertyRangeColor", "Blue"}}); }));
     CHECK(Throws([] { ParseConfig({{"unknown", true}}); }));
 
     const auto paths = ConfigCandidates(

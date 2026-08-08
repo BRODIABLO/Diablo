@@ -345,6 +345,34 @@ int main(int argc, char** argv) {
                 }
                 if (!text.empty() && text.back() != '\n') text += "\r\n";
                 text += variant.substr(row + 1);
+            } else if (tableName == "cubemain.txt") {
+                // A usetype,crf creation row defines the crafted item's
+                // intrinsic property. Later useitem and non-crafted usetype
+                // mutations must never alter the inter-mod range candidate.
+                if (!AppendTableRow(text, {
+                        {"description", "Public crafted creation regression"},
+                        {"enabled", "1"}, {"numinputs", "1"},
+                        {"input 1", "zzz,mag"}, {"output", "usetype,crf"},
+                        {"mod 1", "public-fcr"},
+                        {"mod 1 min", "5"}, {"mod 1 max", "10"}
+                    })
+                    || !AppendTableRow(text, {
+                        {"description", "Ignored public useitem mutation"},
+                        {"enabled", "1"}, {"numinputs", "1"},
+                        {"input 1", "any,crf"}, {"output", "useitem"},
+                        {"mod 1", "public-fcr"},
+                        {"mod 1 min", "2"}, {"mod 1 max", "4"}
+                    })
+                    || !AppendTableRow(text, {
+                        {"description", "Ignored public usetype mutation"},
+                        {"enabled", "1"}, {"numinputs", "1"},
+                        {"input 1", "zzz,crf"}, {"output", "usetype,mag"},
+                        {"mod 1", "public-fcr"},
+                        {"mod 1 min", "50"}, {"mod 1 max", "60"}
+                    })) {
+                    loadError = "Cannot synthesize crafted mutation regression rows";
+                    return false;
+                }
             }
             return true;
         };
@@ -421,6 +449,24 @@ int main(int argc, char** argv) {
             blue + std::string("+35% Faster Cast Rate"), publicSetCandidates,
             false, &publicLocalization);
         CHECK(publicSetEnhanced.find("[20 - 40]") != std::string::npos);
+
+        tcp::tooltips::ItemAffixIds publicCraft{};
+        publicCraft.quality = 8;
+        const auto publicCraftResolution = catalog.ResolveCandidateSet(
+            publicCraft, "zzz", {}, true, {}, blue + std::string("+8% Faster Cast Rate"));
+        CHECK(publicCraftResolution.candidates.size() == 1);
+        CHECK(publicCraftResolution.intrinsicCandidates.size() == 1);
+        CHECK(FindRange(publicCraftResolution.candidates, "item_fastercastrate"));
+        CHECK(FindRange(publicCraftResolution.candidates, "item_fastercastrate")->minimum == 5);
+        CHECK(FindRange(publicCraftResolution.candidates, "item_fastercastrate")->maximum == 10);
+        const auto publicCraftEnhanced = AppendConsensusRanges(
+            blue + std::string("+8% Faster Cast Rate"), publicCraftResolution.candidates,
+            false, &publicLocalization);
+        CHECK(publicCraftEnhanced.find("[5 - 10]") != std::string::npos);
+        const auto mutatedPublicCraft = AppendConsensusRanges(
+            blue + std::string("+12% Faster Cast Rate"), publicCraftResolution.candidates,
+            false, &publicLocalization);
+        CHECK(mutatedPublicCraft.find('[') == std::string::npos);
 
         tcp::tooltips::RangeCatalog physicalCatalog;
         std::size_t completePhysicalLoads{};
@@ -567,6 +613,13 @@ int main(int argc, char** argv) {
 
     const auto enhanced = AppendConsensusRanges(tooltip, stacked);
     CHECK(enhanced.find(darkGreen + std::string("[15 - 20]") + blue) != std::string::npos);
+    constexpr auto chronicleColor = "\xEE\x81\xBE" "U";
+    const auto chronicleEnhanced = AppendConsensusRanges(
+        tooltip, stacked, false, nullptr, nullptr, 'U');
+    CHECK(chronicleEnhanced.find(
+        chronicleColor + std::string("[15 - 20]") + blue) != std::string::npos);
+    CHECK(chronicleEnhanced.find(darkGreen + std::string("[15 - 20]"))
+        == std::string::npos);
 
     const std::vector<std::vector<ModifierRange>> disagreement{
         {{"item_fastercastrate", "+#% Faster Cast Rate", 5, 10, 142}},
@@ -1343,7 +1396,7 @@ int main(int argc, char** argv) {
         const auto corruptedTooltip = blue + std::string("+7% Increased Attack Speed");
         const auto corruptedEnhanced = AppendConsensusRanges(
             corruptedTooltip, corruptedCandidates);
-        CHECK(corruptedEnhanced.find("[5 - 10]") != std::string::npos);
+        CHECK(corruptedEnhanced.find("[5 - 10]") == std::string::npos);
 
         // BKVince augment persists stat 370 (augmented). On an amulet with a
         // native 20-35 MF suffix, the MF/GF augment's fixed +50 MF must shift
@@ -1363,13 +1416,13 @@ int main(int argc, char** argv) {
             + blue + "+2% to Experience Gained";
         const auto augmentedEnhanced = AppendConsensusRanges(
             augmentedTooltip, augmentedCandidates);
-        CHECK(augmentedEnhanced.find("[70 - 85]") != std::string::npos);
+        CHECK(augmentedEnhanced.find("[70 - 85]") == std::string::npos);
+        CHECK(augmentedEnhanced.find("[20 - 35]") == std::string::npos);
 
-        // A public markerless recipe is recoverable when the finished tooltip
-        // proves it. Great Wyrm's owns 61-90 Mana, a useitem recipe adds 10-20,
-        // and a usetype recipe adds 2-6 FCR. The resolver must support their
-        // combined history without letting an ambiguous recipe erase the
-        // intrinsic Mana range.
+        // Even when the finished tooltip appears compatible with a public
+        // mutation, only Great Wyrm's intrinsic 61-90 Mana may enter the
+        // candidate set. The useitem Mana and non-crafted usetype FCR rows are
+        // deliberately ignored, including with many compatible table rows.
         const auto cubeSource = ReadBinaryText(excel / "cubemain.txt");
         auto syntheticCube = TableWithSingleRow(cubeSource, {
             {"description", "Public markerless Mana recipe"},
@@ -1426,11 +1479,11 @@ int main(int argc, char** argv) {
         const auto provenTooltip = blue + std::string("+103 to Mana");
         const auto provenResolution = syntheticCatalog.ResolveCandidateSet(
             markerlessAmulet, "amu", {}, true, {}, provenTooltip);
-        CHECK(provenResolution.candidates.size() == 2);
+        CHECK(provenResolution.candidates.size() == 1);
         const auto provenRecipe = AppendConsensusRanges(provenTooltip,
             provenResolution.candidates, false, nullptr,
             &provenResolution.intrinsicCandidates);
-        CHECK(provenRecipe.find("[71 - 110]") != std::string::npos);
+        CHECK(provenRecipe.find("[71 - 110]") == std::string::npos);
 
         const auto ambiguousTooltip = blue + std::string("+83 to Mana");
         const auto ambiguousResolution = syntheticCatalog.ResolveCandidateSet(
@@ -1446,16 +1499,32 @@ int main(int argc, char** argv) {
             + blue + "+4% Faster Cast Rate";
         const auto combinedResolution = syntheticCatalog.ResolveCandidateSet(
             markerlessAmulet, "amu", {}, true, {}, combinedTooltip);
-        CHECK(combinedResolution.candidates.size() == 4);
+        CHECK(combinedResolution.candidates.size() == 1);
         const auto combinedRecipe = AppendConsensusRanges(combinedTooltip,
             combinedResolution.candidates, false, nullptr,
             &combinedResolution.intrinsicCandidates);
-        CHECK(combinedRecipe.find("[71 - 110]") != std::string::npos);
-        CHECK(combinedRecipe.find("[2 - 6]") != std::string::npos);
+        CHECK(combinedRecipe.find("[71 - 110]") == std::string::npos);
+        CHECK(combinedRecipe.find("[2 - 6]") == std::string::npos);
 
-        // usetype,crf defines the crafted item's intrinsic properties; it must
-        // not be applied a second time when a later useitem mutation is also
-        // compatible with the finished crafted item.
+        // Rapidly revisiting the same item must not re-enter Cube provenance
+        // work. Even with 130 compatible mutation rows in the loaded catalog,
+        // the hover path stays intrinsic-only and performs no marker stat reads.
+        std::size_t hoverMarkerStatReads{};
+        for (int hover = 0; hover < 512; ++hover) {
+            const auto stressResolution = syntheticCatalog.ResolveCandidateSet(
+                markerlessAmulet, "amu", {}, true,
+                [&](std::int32_t, std::uint16_t) {
+                    ++hoverMarkerStatReads;
+                    return 0;
+                }, combinedTooltip);
+            CHECK(stressResolution.candidates.size() == 1);
+            CHECK(stressResolution.intrinsicCandidates.size() == 1);
+        }
+        CHECK(hoverMarkerStatReads == 0);
+
+        // usetype,crf defines the crafted item's intrinsic properties. A later
+        // useitem mutation is ignored even when the final crafted tooltip could
+        // otherwise be explained by aggregating both recipes.
         auto craftedCube = TableWithSingleRow(cubeSource, {
             {"description", "Synthetic Caster Amulet"},
             {"enabled", "1"},
@@ -1499,12 +1568,13 @@ int main(int argc, char** argv) {
             + blue + "+112 to Mana";
         const auto mutatedCraftResolution = craftedCatalog.ResolveCandidateSet(
             mutatedCraft, "amu", {}, true, {}, mutatedCraftTooltip);
-        CHECK(mutatedCraftResolution.candidates.size() == 2);
+        CHECK(mutatedCraftResolution.candidates.size() == 1);
         const auto mutatedCraftEnhanced = AppendConsensusRanges(mutatedCraftTooltip,
             mutatedCraftResolution.candidates, false, nullptr,
             &mutatedCraftResolution.intrinsicCandidates);
         CHECK(mutatedCraftEnhanced.find("[5 - 10]") != std::string::npos);
-        CHECK(mutatedCraftEnhanced.find("[73 - 114]") != std::string::npos);
+        CHECK(mutatedCraftEnhanced.find("[71 - 110]") == std::string::npos);
+        CHECK(mutatedCraftEnhanced.find("[73 - 114]") == std::string::npos);
         CHECK(mutatedCraftEnhanced.find("[81 - 130]") == std::string::npos);
 
         // BKVince Blood Weapon fixed properties must remain resolvable after

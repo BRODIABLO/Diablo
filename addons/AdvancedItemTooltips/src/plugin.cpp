@@ -185,7 +185,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "advanced-item-tooltips",
     .name = "Advanced Item Tooltips",
-    .version = "3.2.3",
+    .version = "3.2.4",
     .author = "RuffnecKk",
     .description = "Shows maximum sockets and exact item roll ranges.",
     .flags = D2RL::PluginFlags::None,
@@ -553,7 +553,9 @@ std::string InsertBaseDefense(std::string tooltip, void* item, const std::uint8_
             const auto added = std::string("\xEE\x81\xBE" "0")
                 + tcp::tooltips::FormatLocalizedInteger(
                     localization.baseDefenseFormat, *rolled) + " "
-                + tcp::tooltips::FormatPositiveRange(minimum, maximum, '0') + "\n";
+                + tcp::tooltips::FormatPositiveRange(minimum, maximum, '0',
+                    ruffneckk::advanced_item_tooltips::PropertyRangeColorCode(
+                        Settings.propertyRangeColor)) + "\n";
             tooltip.insert(start, added);
             break;
         }
@@ -692,12 +694,14 @@ auto Status(
     std::snprintf(
         message,
         sizeof(message),
-        "AdvancedItemTooltips 3.2.3: enabled=%s; maxSockets=%s; maxSocketsOnSocketed=%s; baseDefense=%s; propertyRanges=%s; socketContributions=%s; catalog=%s; config=%s.",
+        "AdvancedItemTooltips 3.2.4: enabled=%s; maxSockets=%s; maxSocketsOnSocketed=%s; baseDefense=%s; propertyRanges=%s; rangeColor=%s; socketContributions=%s; cubeMutations=ignored; catalog=%s; config=%s.",
         Settings.enabled ? "yes" : "no",
         Settings.showMaxSockets ? "yes" : "no",
         Settings.showMaxSocketsOnSocketedItems ? "yes" : "no",
         Settings.showBaseDefenseRange ? "yes" : "no",
         Settings.showPropertyRanges ? "yes" : "no",
+        ruffneckk::advanced_item_tooltips::PropertyRangeColorName(
+            Settings.propertyRangeColor).data(),
         Settings.includeSocketedContributionsInRanges ? "included" : "intrinsic only",
         CatalogSource.c_str(),
         LoadedConfigPath.c_str());
@@ -763,7 +767,9 @@ extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsEnhance
         auto enhanced = Settings.showPropertyRanges
             ? tcp::tooltips::AppendConsensusRanges(original, resolution.candidates,
                 !Settings.includeSocketedContributionsInRanges && hasSocketFillers,
-                &localization, &resolution.intrinsicCandidates)
+                &localization, &resolution.intrinsicCandidates,
+                ruffneckk::advanced_item_tooltips::PropertyRangeColorCode(
+                    Settings.propertyRangeColor))
             : original;
         enhanced = InsertBaseDefense(
             std::move(enhanced), item, itemData, localization);
@@ -840,7 +846,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         context->LogWarn("AdvancedItemTooltips: status command could not be registered.");
     }
     if (!Settings.enabled) {
-        context->LogInfo("AdvancedItemTooltips 3.2.3 disabled by JSON config; no hooks installed.");
+        context->LogInfo("AdvancedItemTooltips 3.2.4 disabled by JSON config; no hooks installed.");
         return true;
     }
 
@@ -1007,14 +1013,18 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         return false;
     }
     const auto activation = std::string(
-        "AdvancedItemTooltips 3.2.3 active for D2R 3.2.92777 (7/7 call-sites); catalog=")
+        "AdvancedItemTooltips 3.2.4 active for D2R 3.2.92777 (7/7 call-sites); catalog=")
         + CatalogSource
         + "; config="
         + LoadedConfigPath
         + "; maxSocketsOnSocketed="
         + (Settings.showMaxSocketsOnSocketedItems ? "yes" : "no")
+        + "; rangeColor="
+        + std::string(ruffneckk::advanced_item_tooltips::PropertyRangeColorName(
+            Settings.propertyRangeColor))
         + "; socketContributions="
         + (Settings.includeSocketedContributionsInRanges ? "included" : "intrinsic only")
+        + "; cubeMutations=ignored"
         + ".";
     context->LogInfo(activation.c_str());
     return true;
