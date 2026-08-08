@@ -39,6 +39,12 @@ enum class HotkeyDispatch : std::uint8_t {
     Close,
 };
 
+enum class CompanionInventoryCloseDecision : std::uint8_t {
+    Wait,
+    Close,
+    Expire,
+};
+
 inline std::vector<std::filesystem::path> BuildConfigCandidates(
     const std::filesystem::path& activeModConfigDirectory,
     const std::filesystem::path& scopeConfigDirectory,
@@ -184,12 +190,46 @@ inline bool ExactModifiersMatch(
         && hotkey.alt == alt;
 }
 
-inline bool IsFreshRequest(
-    std::uint64_t now,
-    std::uint64_t requestedAt,
-    std::uint64_t maximumAge
+inline bool ShouldConsumeMatchedHotkey(bool matched, bool consume) noexcept {
+    return matched && consume;
+}
+
+inline bool ShouldRestoreIndependentInventory(
+    bool inventoryWasOpenBeforeStashClose,
+    bool inventoryIsOpenAfterStashClose
 ) noexcept {
-    return requestedAt != 0 && now >= requestedAt && now - requestedAt <= maximumAge;
+    return inventoryWasOpenBeforeStashClose && !inventoryIsOpenAfterStashClose;
+}
+
+inline bool ResolveRemoteStashTransitionFlag(
+    bool remoteHotkeyOpenIsScoped,
+    bool requestedFlag
+) noexcept {
+    return remoteHotkeyOpenIsScoped ? false : requestedFlag;
+}
+
+inline bool ShouldSuppressRemoteStashClose(
+    bool remoteSessionIsActive,
+    bool stashInterfaceIsClosing,
+    bool explicitClose,
+    bool escapeIsDown
+) noexcept {
+    return remoteSessionIsActive
+        && stashInterfaceIsClosing
+        && !explicitClose
+        && !escapeIsDown;
+}
+
+inline bool ShouldSuppressMovementInventoryClose(
+    bool remoteSessionIsActive,
+    bool stashInterfaceIsOpen,
+    bool inventoryInterfaceIsClosing,
+    bool movementUiCloseIsScoped
+) noexcept {
+    return remoteSessionIsActive
+        && stashInterfaceIsOpen
+        && inventoryInterfaceIsClosing
+        && movementUiCloseIsScoped;
 }
 
 inline HotkeyDispatch ResolveHotkeyDispatch(
@@ -198,6 +238,19 @@ inline HotkeyDispatch ResolveHotkeyDispatch(
 ) noexcept {
     if (knownInputIsBlocked) return HotkeyDispatch::Refuse;
     return remoteSessionIsActive ? HotkeyDispatch::Close : HotkeyDispatch::Open;
+}
+
+inline CompanionInventoryCloseDecision ResolveCompanionInventoryClose(
+    std::uint64_t deadline,
+    bool stashInterfaceIsOpening,
+    std::uint64_t now
+) noexcept {
+    if (deadline == 0 || !stashInterfaceIsOpening) {
+        return CompanionInventoryCloseDecision::Wait;
+    }
+    return now <= deadline
+        ? CompanionInventoryCloseDecision::Close
+        : CompanionInventoryCloseDecision::Expire;
 }
 
 inline HotkeyConfig ParseHotkeyConfig(const nlohmann::json& config) {

@@ -23,19 +23,24 @@
 
 namespace {
 using ruffneckk::remote_stash::BuildConfigCandidates;
+using ruffneckk::remote_stash::CompanionInventoryCloseDecision;
 using ruffneckk::remote_stash::ExactModifiersMatch;
 using ruffneckk::remote_stash::HotkeyConfig;
 using ruffneckk::remote_stash::HotkeyDispatch;
-using ruffneckk::remote_stash::IsFreshRequest;
 using ruffneckk::remote_stash::IsMouseHotkey;
 using ruffneckk::remote_stash::IsUsableLayoutOwnedButton;
 using ruffneckk::remote_stash::ParseHotkeyConfig;
 using ruffneckk::remote_stash::ResolveHotkeyDispatch;
+using ruffneckk::remote_stash::ResolveCompanionInventoryClose;
+using ruffneckk::remote_stash::ResolveRemoteStashTransitionFlag;
+using ruffneckk::remote_stash::ShouldConsumeMatchedHotkey;
+using ruffneckk::remote_stash::ShouldRestoreIndependentInventory;
+using ruffneckk::remote_stash::ShouldSuppressMovementInventoryClose;
+using ruffneckk::remote_stash::ShouldSuppressRemoteStashClose;
 using ruffneckk::remote_stash::WidgetRect;
 
 constexpr std::uint32_t SupportedBuild = 92777;
 constexpr wchar_t ConfigFileName[] = L"RemoteStash.json";
-constexpr std::uint64_t RequestLifetimeMilliseconds = 250;
 constexpr WPARAM DispatchRequestCookie = 0x5253484B; // RSHK
 
 constexpr std::uintptr_t ConfigurePlayerInventoryRva = 0x22BA70;
@@ -58,7 +63,12 @@ constexpr std::uintptr_t GetLocalPlayerRva = 0x9A480;
 constexpr std::uintptr_t IsRoomInTownRva = 0x2F0750;
 constexpr std::uintptr_t TransferItemToInventoryPageRva = 0x15F8B0;
 constexpr std::uintptr_t GetUiStateRva = 0xCE500;
+constexpr std::uintptr_t OpenInterfaceStateRva = 0xCD7C0;
 constexpr std::uintptr_t CloseInterfaceStateRva = 0xC7D30;
+constexpr std::uintptr_t MovementUiCloseRva = 0xC8240;
+constexpr std::uintptr_t MovementUiCloseCallRva = 0x102590;
+constexpr std::uintptr_t StashInterfaceTransitionRva = 0x11FB80;
+constexpr std::uintptr_t StashInterfaceTransitionCallRva = 0xC1F01;
 constexpr std::uintptr_t MarkUiDirtyRva = 0x843FC0;
 constexpr std::uintptr_t FindTopLevelPanelRva = 0x846170;
 constexpr std::uintptr_t FindWidgetRva = 0x856220;
@@ -73,10 +83,16 @@ constexpr std::uintptr_t QuickMoveItemPlacementTownCheckReturnRva = 0xFF1DC;
 constexpr std::uintptr_t QuickMoveStashUiStateReturnRva = 0x15F982;
 constexpr std::uintptr_t QuickMoveToStashItemPacketStateReturnRva = 0x473F80;
 constexpr std::uintptr_t QuickMoveFromStashItemPacketStateReturnRva = 0x474257;
+constexpr std::uintptr_t ServerUiCloseStashReturnRva = 0x1F0AD8;
+constexpr std::uintptr_t StashPanelCloseButtonReturnRva = 0x23C150;
+constexpr std::uintptr_t GeneralUiTeardownStashReturnRva = 0x22A9FE;
 constexpr std::size_t WidgetRectOffset = 0x70;
 constexpr std::size_t WidgetVisibleOffset = 0x51;
 constexpr std::size_t ButtonOnClickMessageOffset = 0x558;
 constexpr std::int32_t StashInterfaceState = 0x18;
+constexpr std::int32_t InventoryInterfaceState = 1;
+constexpr std::uint64_t CompanionInventoryCloseWindowMs = 2000;
+constexpr std::uint64_t HotkeyOpenTransitionWindowMs = 2000;
 
 constexpr std::array<std::uint8_t, 32> ConfigurePlayerInventoryExpected{
     0x4C, 0x8B, 0xDC, 0x49, 0x89, 0x5B, 0x20, 0x55,
@@ -162,6 +178,17 @@ constexpr std::array<std::uint8_t, 15> GetUiStateExpected{
     0x48, 0x63, 0xC1, 0x48, 0x8D, 0x0D, 0x96, 0xC8,
     0x95, 0x02, 0x0F, 0xB6, 0x04, 0x08, 0xC3
 };
+constexpr std::array<std::uint8_t, 68> OpenInterfaceStateExpected{
+    0x48, 0x89, 0x5C, 0x24, 0x18, 0x55, 0x56, 0x41,
+    0x54, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xAC,
+    0x24, 0x40, 0xFD, 0xFF, 0xFF, 0x48, 0x81, 0xEC,
+    0xC0, 0x03, 0x00, 0x00, 0x48, 0x8B, 0x05, 0xE5,
+    0xDA, 0x8F, 0x02, 0x48, 0x33, 0xC4, 0x48, 0x89,
+    0x85, 0xB0, 0x02, 0x00, 0x00, 0x48, 0x63, 0xD9,
+    0x4C, 0x8D, 0x25, 0x09, 0x28, 0xF3, 0xFF, 0x44,
+    0x0F, 0xB6, 0xF2, 0x45, 0x0F, 0xB6, 0xBC, 0x1C,
+    0xA0, 0xAD, 0xA2, 0x02,
+};
 constexpr std::array<std::uint8_t, 64> CloseInterfaceStateExpected{
     0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74,
     0x24, 0x18, 0x55, 0x57, 0x41, 0x54, 0x41, 0x56,
@@ -171,6 +198,11 @@ constexpr std::array<std::uint8_t, 64> CloseInterfaceStateExpected{
     0x48, 0x33, 0xC4, 0x48, 0x89, 0x85, 0x10, 0x02,
     0x00, 0x00, 0x48, 0x63, 0xD9, 0x4C, 0x8D, 0x25,
     0x94, 0x82, 0xF3, 0xFF, 0x0F, 0xB6, 0xF2, 0x46,
+};
+constexpr std::array<std::uint8_t, 20> StashInterfaceTransitionExpected{
+    0x48, 0x89, 0x5C, 0x24, 0x10, 0x57, 0x48, 0x83,
+    0xEC, 0x20, 0x0F, 0xB6, 0xFA, 0x8B, 0xD9, 0xE8,
+    0xAC, 0x75, 0x72, 0x00,
 };
 constexpr std::array<std::uint8_t, 20> MarkUiDirtyExpected{
     0x48, 0x8B, 0x05, 0xA9, 0xC1, 0xBF, 0x02, 0x48,
@@ -202,6 +234,12 @@ struct RelativeCallSite {
 
 constexpr std::array<RelativeCallSite, 1> ButtonDispatchUiMessageCallSites{{
     {ButtonDispatchUiMessageCallRva, {0xE8, 0x22, 0x2D, 0xF5, 0xFF}},
+}};
+constexpr std::array<RelativeCallSite, 1> StashInterfaceTransitionCallSites{{
+    {StashInterfaceTransitionCallRva, {0xE8, 0x7A, 0xDC, 0x05, 0x00}},
+}};
+constexpr std::array<RelativeCallSite, 1> MovementUiCloseCallSites{{
+    {MovementUiCloseCallRva, {0xE8, 0xAB, 0x5C, 0xFC, 0xFF}},
 }};
 constexpr std::array<RelativeCallSite, 4> IsRoomInTownCallSites{{
     {0x259132, {0xE8, 0x19, 0x76, 0x09, 0x00}},
@@ -249,9 +287,21 @@ using TransferItemToInventoryPageFn = bool(__fastcall*)(
     void* placementOut
 ) noexcept;
 using GetUiStateFn = std::uint8_t(__fastcall*)(std::int32_t state) noexcept;
+using OpenInterfaceStateFn = bool(__fastcall*)(
+    std::int32_t state,
+    bool secondary
+) noexcept;
 using CloseInterfaceStateFn = void(__fastcall*)(
     std::int32_t state,
     bool secondary
+) noexcept;
+using MovementUiCloseFn = void(__fastcall*)(
+    std::int32_t closeMode,
+    std::int32_t secondary
+) noexcept;
+using StashInterfaceTransitionFn = void(__fastcall*)(
+    std::int32_t mode,
+    bool transitionFlag
 ) noexcept;
 using MarkUiDirtyFn = void(__fastcall*)() noexcept;
 using FindTopLevelPanelFn = void*(__fastcall*)(const char* name) noexcept;
@@ -293,7 +343,10 @@ GetLocalPlayerFn GetLocalPlayer{};
 IsRoomInTownFn OriginalIsRoomInTown{};
 TransferItemToInventoryPageFn OriginalTransferItemToInventoryPage{};
 GetUiStateFn OriginalGetUiState{};
-CloseInterfaceStateFn CloseInterfaceState{};
+OpenInterfaceStateFn OriginalOpenInterfaceState{};
+CloseInterfaceStateFn OriginalCloseInterfaceState{};
+MovementUiCloseFn OriginalMovementUiClose{};
+StashInterfaceTransitionFn OriginalStashInterfaceTransition{};
 MarkUiDirtyFn MarkUiDirty{};
 FindTopLevelPanelFn FindTopLevelPanel{};
 FindWidgetFn FindWidget{};
@@ -309,12 +362,21 @@ std::atomic_bool InputStopping{};
 std::atomic_bool UiDispatchReady{};
 std::atomic_bool HotkeyPressed{};
 std::atomic_bool HotkeyCaptured{};
-std::atomic<std::uint64_t> HotkeyRequestedAt{};
+std::atomic_bool HotkeyRequestPending{};
 std::atomic<std::uint64_t> HotkeyAcceptedRequests{};
+std::atomic<std::uint64_t> HotkeyCoalescedRequests{};
 std::atomic<std::uint64_t> HotkeyDispatchedRequests{};
 std::atomic<std::uint64_t> HotkeyRefusedRequests{};
-std::atomic<std::uint64_t> HotkeyStaleRequests{};
 std::atomic<std::uint64_t> HotkeyFailedRequests{};
+std::atomic<std::uint64_t> CompanionInventoryCloseDeadline{};
+std::atomic<std::uint64_t> CompanionInventoryCloseTickets{};
+std::atomic<std::uint64_t> CompanionInventoryCloses{};
+std::atomic<std::uint64_t> CompanionInventoryCloseExpirations{};
+std::atomic<std::uint64_t> HotkeyOpenTransitionDeadline{};
+std::atomic<std::uint64_t> HotkeyOpenTransitionTickets{};
+std::atomic<std::uint64_t> HotkeyOpenTransitionApplications{};
+std::atomic<std::uint64_t> HotkeyOpenTransitionExpirations{};
+std::atomic<std::uint64_t> IndependentInventoryRestores{};
 std::atomic_bool UiReadyReported{};
 HHOOK UiMessageHookHandle{};
 DWORD UiThreadId{};
@@ -337,6 +399,10 @@ std::atomic<std::uint64_t> RemoteSharedTransferFailures{};
 std::atomic<std::uint64_t> RemoteGoldTransactions{};
 std::atomic<std::uint64_t> RemoteGoldFailures{};
 std::atomic<std::uint64_t> RemoteQuickMoveUiBypasses{};
+std::atomic<std::uint64_t> RemoteAutomaticCloseSuppressions{};
+std::atomic<std::uint64_t> RemoteGeneralUiCloseSuppressions{};
+std::atomic<std::uint64_t> RemoteExplicitClosePasses{};
+std::atomic<std::uint64_t> RemoteMovementInventoryCloseSuppressions{};
 std::atomic<std::uint64_t> RemoteQuickMoveWithdrawalDeadline{};
 std::atomic_bool PlacementSuccessReported{};
 std::atomic_bool PlacementFailureReported{};
@@ -357,6 +423,8 @@ std::atomic_bool RemoteClientSessionActive{};
 std::atomic_bool RemoteClientUiObservedOpen{};
 thread_local bool RemoteItemScope{};
 thread_local bool RemoteGoldScope{};
+thread_local bool RemoteHotkeyOpenTransitionScope{};
+thread_local bool RemoteMovementUiCloseScope{};
 void* GoldRangeStub{};
 void* GoldRangeTrampoline{};
 void* CallSiteRelayPage{};
@@ -385,7 +453,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "remote-stash",
     .name = "Remote Stash",
-    .version = "1.0.0",
+    .version = "1.1.7",
     .author = "RuffnecKk",
     .description = "Toggles the player stash remotely from a button or configurable hotkey.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -505,6 +573,7 @@ bool ValidateRuntime() noexcept {
             TransferItemToInventoryPageExpected
         )
         && Matches(GetUiStateRva, GetUiStateExpected)
+        && Matches(CloseInterfaceStateRva, CloseInterfaceStateExpected)
         && Matches(FindWidgetRva, FindWidgetExpected)
         && Matches(GetWidgetRectRva, GetWidgetRectExpected)
         && MatchesAll(ButtonDispatchUiMessageCallSites)
@@ -513,10 +582,14 @@ bool ValidateRuntime() noexcept {
 }
 
 bool ValidateHotkeyRuntime() noexcept {
-    const auto helpersMatch = Matches(FindTopLevelPanelRva, FindTopLevelPanelExpected)
-        && Matches(CloseInterfaceStateRva, CloseInterfaceStateExpected)
+    return Matches(FindTopLevelPanelRva, FindTopLevelPanelExpected)
+        && Matches(OpenInterfaceStateRva, OpenInterfaceStateExpected)
+        && Matches(
+            StashInterfaceTransitionRva,
+            StashInterfaceTransitionExpected
+        )
+        && MatchesAll(StashInterfaceTransitionCallSites)
         && Matches(MarkUiDirtyRva, MarkUiDirtyExpected);
-    return helpersMatch;
 }
 
 bool IsRemoteControlRequest(
@@ -602,6 +675,8 @@ void DeactivateRemoteClientSession(bool notifyServer) noexcept {
     );
     RemoteClientUiObservedOpen.store(false, std::memory_order_release);
     RemoteQuickMoveWithdrawalDeadline.store(0, std::memory_order_release);
+    CompanionInventoryCloseDeadline.store(0, std::memory_order_release);
+    HotkeyOpenTransitionDeadline.store(0, std::memory_order_release);
     if (!notifyServer || !wasActive || !QueueOutgoingPacket) return;
 
     __try {
@@ -959,6 +1034,166 @@ std::uint8_t __fastcall HookGetUiState(std::int32_t state) noexcept {
     return result;
 }
 
+bool __fastcall HookOpenInterfaceState(
+    std::int32_t state,
+    bool secondary
+) noexcept {
+    const auto transitionNow = GetTickCount64();
+    const auto transitionDeadline = HotkeyOpenTransitionDeadline.load(
+        std::memory_order_acquire
+    );
+    const auto transitionDecision = ResolveCompanionInventoryClose(
+        transitionDeadline,
+        state == StashInterfaceState,
+        transitionNow
+    );
+    bool scopedHotkeyTransition = false;
+    if (transitionDecision != CompanionInventoryCloseDecision::Wait) {
+        auto expected = transitionDeadline;
+        if (HotkeyOpenTransitionDeadline.compare_exchange_strong(
+                expected,
+                0,
+                std::memory_order_acq_rel,
+                std::memory_order_acquire
+            )) {
+            if (transitionDecision == CompanionInventoryCloseDecision::Close) {
+                scopedHotkeyTransition = true;
+            } else {
+                HotkeyOpenTransitionExpirations.fetch_add(
+                    1,
+                    std::memory_order_relaxed
+                );
+            }
+        }
+    }
+
+    const auto previousTransitionScope = RemoteHotkeyOpenTransitionScope;
+    RemoteHotkeyOpenTransitionScope =
+        previousTransitionScope || scopedHotkeyTransition;
+    const auto result = OriginalOpenInterfaceState(state, secondary);
+    RemoteHotkeyOpenTransitionScope = previousTransitionScope;
+    const auto now = GetTickCount64();
+    const auto deadline = CompanionInventoryCloseDeadline.load(
+        std::memory_order_acquire
+    );
+    const auto decision = ResolveCompanionInventoryClose(
+        deadline,
+        state == StashInterfaceState,
+        now
+    );
+    if (decision == CompanionInventoryCloseDecision::Wait) return result;
+
+    if (decision == CompanionInventoryCloseDecision::Expire) {
+        auto expected = deadline;
+        if (CompanionInventoryCloseDeadline.compare_exchange_strong(
+                expected,
+                0,
+                std::memory_order_acq_rel,
+                std::memory_order_acquire
+            )) {
+            CompanionInventoryCloseExpirations.fetch_add(
+                1,
+                std::memory_order_relaxed
+            );
+        }
+        return result;
+    }
+
+    __try {
+        if (OriginalGetUiState(StashInterfaceState) == 0) return result;
+        auto expected = deadline;
+        if (!CompanionInventoryCloseDeadline.compare_exchange_strong(
+                expected,
+                0,
+                std::memory_order_acq_rel,
+                std::memory_order_acquire
+            )) {
+            return result;
+        }
+        if (OriginalGetUiState(InventoryInterfaceState) != 0) {
+            OriginalCloseInterfaceState(InventoryInterfaceState, false);
+            MarkUiDirty();
+            CompanionInventoryCloses.fetch_add(1, std::memory_order_relaxed);
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        CompanionInventoryCloseDeadline.store(0, std::memory_order_release);
+    }
+    return result;
+}
+
+void __fastcall HookStashInterfaceTransition(
+    std::int32_t mode,
+    bool transitionFlag
+) noexcept {
+    const auto resolvedFlag = ResolveRemoteStashTransitionFlag(
+        RemoteHotkeyOpenTransitionScope && mode == 2,
+        transitionFlag
+    );
+    if (resolvedFlag != transitionFlag) {
+        HotkeyOpenTransitionApplications.fetch_add(1, std::memory_order_relaxed);
+    }
+    OriginalStashInterfaceTransition(mode, resolvedFlag);
+}
+
+bool IsExplicitRemoteStashClose(std::uintptr_t returnAddress) noexcept {
+    return returnAddress == reinterpret_cast<std::uintptr_t>(
+               Base + ServerUiCloseStashReturnRva
+           )
+        || returnAddress == reinterpret_cast<std::uintptr_t>(
+               Base + StashPanelCloseButtonReturnRva
+           );
+}
+
+void __fastcall HookMovementUiClose(
+    std::int32_t closeMode,
+    std::int32_t secondary
+) noexcept {
+    const auto previousScope = RemoteMovementUiCloseScope;
+    RemoteMovementUiCloseScope = true;
+    OriginalMovementUiClose(closeMode, secondary);
+    RemoteMovementUiCloseScope = previousScope;
+}
+
+void __fastcall HookCloseInterfaceState(
+    std::int32_t state,
+    bool secondary
+) noexcept {
+    const auto returnAddress = reinterpret_cast<std::uintptr_t>(_ReturnAddress());
+    const auto explicitClose = IsExplicitRemoteStashClose(returnAddress);
+    const auto escapeIsDown = (GetAsyncKeyState(VK_ESCAPE) & 0x8000) != 0;
+    if (ShouldSuppressMovementInventoryClose(
+            RemoteClientSessionActive.load(std::memory_order_acquire),
+            OriginalGetUiState
+                && OriginalGetUiState(StashInterfaceState) != 0,
+            state == InventoryInterfaceState,
+            RemoteMovementUiCloseScope
+        )) {
+        RemoteMovementInventoryCloseSuppressions.fetch_add(
+            1,
+            std::memory_order_relaxed
+        );
+        return;
+    }
+    if (ShouldSuppressRemoteStashClose(
+            RemoteClientSessionActive.load(std::memory_order_acquire),
+            state == StashInterfaceState,
+            explicitClose,
+            escapeIsDown
+        )) {
+        RemoteAutomaticCloseSuppressions.fetch_add(1, std::memory_order_relaxed);
+        if (returnAddress == reinterpret_cast<std::uintptr_t>(
+                Base + GeneralUiTeardownStashReturnRva
+            )) {
+            RemoteGeneralUiCloseSuppressions.fetch_add(1, std::memory_order_relaxed);
+        }
+        return;
+    }
+    if (state == StashInterfaceState && (explicitClose || escapeIsDown)) {
+        RemoteExplicitClosePasses.fetch_add(1, std::memory_order_relaxed);
+    }
+    OriginalCloseInterfaceState(state, secondary);
+}
+
 std::int32_t PacketAction(const std::uint8_t* packet, std::int32_t size) noexcept {
     if (!packet || size < 17) return -1;
     std::int32_t action{};
@@ -1209,9 +1444,30 @@ bool IsCurrentRemoteStashMessage(void* message) noexcept {
     }
 }
 
-bool TryQueueRemoteOpenRequest(const char* source) noexcept {
+bool TryQueueRemoteOpenRequest(
+    const char* source,
+    bool closeCompanionInventory = false,
+    bool smoothHotkeyTransition = false
+) noexcept {
+    CompanionInventoryCloseDeadline.store(0, std::memory_order_release);
+    HotkeyOpenTransitionDeadline.store(0, std::memory_order_release);
     if (!QueueOutgoingPacket || !LocalPlayerIsAvailable()) return false;
     __try {
+        const auto now = GetTickCount64();
+        if (closeCompanionInventory) {
+            CompanionInventoryCloseDeadline.store(
+                now + CompanionInventoryCloseWindowMs,
+                std::memory_order_release
+            );
+            CompanionInventoryCloseTickets.fetch_add(1, std::memory_order_relaxed);
+        }
+        if (smoothHotkeyTransition) {
+            HotkeyOpenTransitionDeadline.store(
+                now + HotkeyOpenTransitionWindowMs,
+                std::memory_order_release
+            );
+            HotkeyOpenTransitionTickets.fetch_add(1, std::memory_order_relaxed);
+        }
         RemoteClientUiObservedOpen.store(false, std::memory_order_release);
         RemoteClientSessionActive.store(true, std::memory_order_release);
         QueueOutgoingPacket(
@@ -1270,9 +1526,31 @@ bool TryQueueRemoteCloseRequest(const char* source) noexcept {
 }
 
 bool TryCloseStashUiFromHotkey() noexcept {
-    if (!CloseInterfaceState || !MarkUiDirty) return false;
+    if (!OriginalGetUiState || !OriginalOpenInterfaceState
+        || !OriginalCloseInterfaceState || !MarkUiDirty) {
+        return false;
+    }
     __try {
-        CloseInterfaceState(StashInterfaceState, false);
+        const auto inventoryWasOpen =
+            OriginalGetUiState(InventoryInterfaceState) != 0;
+        OriginalCloseInterfaceState(StashInterfaceState, false);
+        const auto inventoryIsOpen =
+            OriginalGetUiState(InventoryInterfaceState) != 0;
+        if (ShouldRestoreIndependentInventory(
+                inventoryWasOpen,
+                inventoryIsOpen
+            )) {
+            if (!OriginalOpenInterfaceState(InventoryInterfaceState, false)
+                || OriginalGetUiState(InventoryInterfaceState) == 0) {
+                if (Context) {
+                    Context->LogError(
+                        "RemoteStash: independent inventory could not be restored after hotkey close."
+                    );
+                }
+                return false;
+            }
+            IndependentInventoryRestores.fetch_add(1, std::memory_order_relaxed);
+        }
         MarkUiDirty();
         if (Context) {
             Context->LogInfo("RemoteStash: hotkey native UI close dispatched.");
@@ -1351,13 +1629,7 @@ bool ModifierDown(int virtualKey) noexcept {
 }
 
 void ProcessQueuedHotkeyRequest() noexcept {
-    const auto requestedAt = HotkeyRequestedAt.exchange(0, std::memory_order_acq_rel);
-    if (requestedAt == 0) return;
-    const auto now = GetTickCount64();
-    if (!IsFreshRequest(now, requestedAt, RequestLifetimeMilliseconds)) {
-        HotkeyStaleRequests.fetch_add(1, std::memory_order_relaxed);
-        return;
-    }
+    if (!HotkeyRequestPending.exchange(false, std::memory_order_acq_rel)) return;
     const auto dispatch = ResolveHotkeyDispatch(
         RemoteClientSessionActive.load(std::memory_order_acquire),
         KnownInputIsBlocked()
@@ -1367,9 +1639,18 @@ void ProcessQueuedHotkeyRequest() noexcept {
         return;
     }
     const auto closing = dispatch == HotkeyDispatch::Close;
+    bool closeCompanionInventory = false;
+    if (!closing && OriginalGetUiState) {
+        __try {
+            closeCompanionInventory =
+                OriginalGetUiState(InventoryInterfaceState) == 0;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            closeCompanionInventory = false;
+        }
+    }
     const auto queued = closing
         ? TryQueueRemoteCloseRequest("hotkey")
-        : TryQueueRemoteOpenRequest("hotkey");
+        : TryQueueRemoteOpenRequest("hotkey", closeCompanionInventory, true);
     if (queued && closing && !TryCloseStashUiFromHotkey()) {
         HotkeyFailedRequests.fetch_add(1, std::memory_order_relaxed);
         return;
@@ -1437,10 +1718,7 @@ bool EnsureUiMessageHook(HMODULE module) noexcept {
 }
 
 bool QueueHotkeyRequest() noexcept {
-    if (!CurrentProcessOwnsForegroundWindow()
-        || !UiDispatchReady.load(std::memory_order_acquire)) {
-        return false;
-    }
+    if (!CurrentProcessOwnsForegroundWindow()) return false;
     if (!ExactModifiersMatch(
             HotkeySettings.hotkey,
             ModifierDown(VK_CONTROL),
@@ -1450,14 +1728,19 @@ bool QueueHotkeyRequest() noexcept {
         return false;
     }
 
-    const auto now = GetTickCount64();
-    std::uint64_t noRequest{};
-    if (!HotkeyRequestedAt.compare_exchange_strong(
+    bool noRequest{};
+    if (!HotkeyRequestPending.compare_exchange_strong(
             noRequest,
-            now,
+            true,
             std::memory_order_acq_rel,
             std::memory_order_acquire
         )) {
+        HotkeyCoalescedRequests.fetch_add(1, std::memory_order_relaxed);
+        return true;
+    }
+    if (!UiDispatchReady.load(std::memory_order_acquire)) {
+        HotkeyRequestPending.store(false, std::memory_order_release);
+        HotkeyFailedRequests.fetch_add(1, std::memory_order_relaxed);
         return false;
     }
     if (!PostThreadMessageW(
@@ -1466,13 +1749,12 @@ bool QueueHotkeyRequest() noexcept {
             DispatchRequestCookie,
             0
         )) {
-        HotkeyRequestedAt.store(0, std::memory_order_release);
+        HotkeyRequestPending.store(false, std::memory_order_release);
         HotkeyFailedRequests.fetch_add(1, std::memory_order_relaxed);
         ResetUiMessageHook();
         return false;
     }
     HotkeyAcceptedRequests.fetch_add(1, std::memory_order_relaxed);
-    HotkeyCaptured.store(true, std::memory_order_release);
     return true;
 }
 
@@ -1486,12 +1768,22 @@ bool HandleInputTransition(bool isDown, bool isUp, bool injected) noexcept {
             && CurrentProcessOwnsForegroundWindow();
     }
     if (!isDown || injected || !CurrentProcessOwnsForegroundWindow()) return false;
+    const auto modifiersMatch = ExactModifiersMatch(
+        HotkeySettings.hotkey,
+        ModifierDown(VK_CONTROL),
+        ModifierDown(VK_SHIFT),
+        ModifierDown(VK_MENU)
+    );
+    if (!modifiersMatch) return false;
 
     const auto firstDown = !HotkeyPressed.exchange(true, std::memory_order_acq_rel);
     if (!firstDown) {
-        return HotkeyCaptured.load(std::memory_order_acquire) && HotkeySettings.consume;
+        return HotkeyCaptured.load(std::memory_order_acquire);
     }
-    return QueueHotkeyRequest() && HotkeySettings.consume;
+    const auto consume = ShouldConsumeMatchedHotkey(true, HotkeySettings.consume);
+    HotkeyCaptured.store(consume, std::memory_order_release);
+    (void)QueueHotkeyRequest();
+    return consume;
 }
 
 LRESULT CALLBACK KeyboardHook(
@@ -1718,7 +2010,7 @@ bool PatchCallSites(
 
 bool InstallComposableCallSiteRedirects() noexcept {
     constexpr std::size_t RelayStride = 16;
-    constexpr std::size_t RelayCount = 4;
+    constexpr std::size_t RelayCount = 5;
     constexpr std::size_t RelayBytes = RelayStride * RelayCount;
 
     CallSiteRelayPage = AllocateCallSiteRelayPageNear(
@@ -1735,6 +2027,14 @@ bool InstallComposableCallSiteRedirects() noexcept {
         || !WriteAbsoluteJumpRelay(
             relays + RelayStride * 2,
             reinterpret_cast<const void*>(&HookTransferItemToInventoryPage)
+        )
+        || (HotkeySettings.enabled && !WriteAbsoluteJumpRelay(
+            relays + RelayStride * 3,
+            reinterpret_cast<const void*>(&HookStashInterfaceTransition)
+        ))
+        || !WriteAbsoluteJumpRelay(
+            relays + RelayStride * 4,
+            reinterpret_cast<const void*>(&HookMovementUiClose)
         )) {
         VirtualFree(CallSiteRelayPage, 0, MEM_RELEASE);
         CallSiteRelayPage = nullptr;
@@ -1758,25 +2058,39 @@ bool InstallComposableCallSiteRedirects() noexcept {
     const auto baseAddress = reinterpret_cast<std::uintptr_t>(Base);
     if (relayAddress < baseAddress) return false;
     const auto relayRva = relayAddress - baseAddress;
-    return PatchCallSites(ButtonDispatchUiMessageCallSites, relayRva)
+    const auto coreRedirectsInstalled =
+        PatchCallSites(ButtonDispatchUiMessageCallSites, relayRva)
         && PatchCallSites(IsRoomInTownCallSites, relayRva + RelayStride)
         && PatchCallSites(
             TransferItemToInventoryPageCallSites,
             relayRva + RelayStride * 2
+        )
+        && PatchCallSites(
+            MovementUiCloseCallSites,
+            relayRva + RelayStride * 4
+        );
+    if (!coreRedirectsInstalled) return false;
+    return !HotkeySettings.enabled
+        || PatchCallSites(
+            StashInterfaceTransitionCallSites,
+            relayRva + RelayStride * 3
         );
 }
 
 auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void*) noexcept
     -> D2RL::ConsoleCommandResult {
     if (!command || !command->plugin) return D2RL::ConsoleCommandResult::Failed;
-    char message[1400]{};
+    char message[1600]{};
     std::snprintf(
         message,
         sizeof(message),
-        "RemoteStash 1.0.0: hotkeyEnabled=%s; hotkey=%s; hotkeyInput=%s; "
+        "RemoteStash 1.1.7: hotkeyEnabled=%s; hotkey=%s; hotkeyInput=%s; "
         "hotkeyUiDispatch=%s; consume=%s; config=%s; hotkeyAccepted=%llu; "
-        "hotkeyDispatched=%llu; hotkeyRefused=%llu; hotkeyStale=%llu; "
-        "hotkeyFailed=%llu; "
+        "hotkeyCoalesced=%llu; hotkeyDispatched=%llu; hotkeyRefused=%llu; "
+        "hotkeyFailed=%llu; companionCloseTickets=%llu; "
+        "companionInventoryCloses=%llu; companionCloseExpirations=%llu; "
+        "hotkeyTransitionTickets=%llu; hotkeyTransitionApplications=%llu; "
+        "hotkeyTransitionExpirations=%llu; independentInventoryRestores=%llu; "
         "layoutBindings=%llu; bindingFailures=%llu; "
         "clientOpenRequests=%llu; clientCloseRequests=%llu; sessionsOpened=%llu; "
         "sessionsClosed=%llu; sessionsPruned=%llu; activeSessions=%llu; "
@@ -1784,7 +2098,9 @@ auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void
         "remoteGoldOps=%llu; "
         "remoteGoldFailures=%llu; stashProximityBypasses=%llu; "
         "clientTownBypasses=%llu; sharedTransferOps=%llu; "
-        "sharedTransferFailures=%llu; quickMoveUiBypasses=%llu.",
+        "sharedTransferFailures=%llu; quickMoveUiBypasses=%llu; "
+        "automaticCloseSuppressions=%llu; generalUiCloseSuppressions=%llu; "
+        "movementInventoryCloseSuppressions=%llu; explicitClosePasses=%llu.",
         HotkeySettings.enabled ? "true" : "false",
         HotkeySettings.hotkeyText.c_str(),
         IsMouseHotkey(HotkeySettings.hotkey) ? "mouse" : "keyboard",
@@ -1795,16 +2111,37 @@ auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void
             HotkeyAcceptedRequests.load(std::memory_order_relaxed)
         ),
         static_cast<unsigned long long>(
+            HotkeyCoalescedRequests.load(std::memory_order_relaxed)
+        ),
+        static_cast<unsigned long long>(
             HotkeyDispatchedRequests.load(std::memory_order_relaxed)
         ),
         static_cast<unsigned long long>(
             HotkeyRefusedRequests.load(std::memory_order_relaxed)
         ),
         static_cast<unsigned long long>(
-            HotkeyStaleRequests.load(std::memory_order_relaxed)
+            HotkeyFailedRequests.load(std::memory_order_relaxed)
         ),
         static_cast<unsigned long long>(
-            HotkeyFailedRequests.load(std::memory_order_relaxed)
+            CompanionInventoryCloseTickets.load(std::memory_order_relaxed)
+        ),
+        static_cast<unsigned long long>(
+            CompanionInventoryCloses.load(std::memory_order_relaxed)
+        ),
+        static_cast<unsigned long long>(
+            CompanionInventoryCloseExpirations.load(std::memory_order_relaxed)
+        ),
+        static_cast<unsigned long long>(
+            HotkeyOpenTransitionTickets.load(std::memory_order_relaxed)
+        ),
+        static_cast<unsigned long long>(
+            HotkeyOpenTransitionApplications.load(std::memory_order_relaxed)
+        ),
+        static_cast<unsigned long long>(
+            HotkeyOpenTransitionExpirations.load(std::memory_order_relaxed)
+        ),
+        static_cast<unsigned long long>(
+            IndependentInventoryRestores.load(std::memory_order_relaxed)
         ),
         static_cast<unsigned long long>(DynamicPlacements.load(std::memory_order_relaxed)),
         static_cast<unsigned long long>(PlacementFailures.load(std::memory_order_relaxed)),
@@ -1831,6 +2168,20 @@ auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void
         ),
         static_cast<unsigned long long>(
             RemoteQuickMoveUiBypasses.load(std::memory_order_relaxed)
+        ),
+        static_cast<unsigned long long>(
+            RemoteAutomaticCloseSuppressions.load(std::memory_order_relaxed)
+        ),
+        static_cast<unsigned long long>(
+            RemoteGeneralUiCloseSuppressions.load(std::memory_order_relaxed)
+        ),
+        static_cast<unsigned long long>(
+            RemoteMovementInventoryCloseSuppressions.load(
+                std::memory_order_relaxed
+            )
+        ),
+        static_cast<unsigned long long>(
+            RemoteExplicitClosePasses.load(std::memory_order_relaxed)
         )
     );
     command->plugin->WriteConsoleMessage(message);
@@ -1900,18 +2251,30 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     UiDispatchReady.store(false, std::memory_order_relaxed);
     HotkeyPressed.store(false, std::memory_order_relaxed);
     HotkeyCaptured.store(false, std::memory_order_relaxed);
-    HotkeyRequestedAt.store(0, std::memory_order_relaxed);
+    HotkeyRequestPending.store(false, std::memory_order_relaxed);
     HotkeyAcceptedRequests.store(0, std::memory_order_relaxed);
+    HotkeyCoalescedRequests.store(0, std::memory_order_relaxed);
     HotkeyDispatchedRequests.store(0, std::memory_order_relaxed);
     HotkeyRefusedRequests.store(0, std::memory_order_relaxed);
-    HotkeyStaleRequests.store(0, std::memory_order_relaxed);
     HotkeyFailedRequests.store(0, std::memory_order_relaxed);
+    CompanionInventoryCloseDeadline.store(0, std::memory_order_relaxed);
+    CompanionInventoryCloseTickets.store(0, std::memory_order_relaxed);
+    CompanionInventoryCloses.store(0, std::memory_order_relaxed);
+    CompanionInventoryCloseExpirations.store(0, std::memory_order_relaxed);
+    HotkeyOpenTransitionDeadline.store(0, std::memory_order_relaxed);
+    HotkeyOpenTransitionTickets.store(0, std::memory_order_relaxed);
+    HotkeyOpenTransitionApplications.store(0, std::memory_order_relaxed);
+    HotkeyOpenTransitionExpirations.store(0, std::memory_order_relaxed);
+    IndependentInventoryRestores.store(0, std::memory_order_relaxed);
     UiReadyReported.store(false, std::memory_order_relaxed);
     UiMessageHookHandle = nullptr;
     UiThreadId = 0;
     DispatchRequestMessage = 0;
     FindTopLevelPanel = nullptr;
-    CloseInterfaceState = nullptr;
+    OriginalOpenInterfaceState = nullptr;
+    OriginalCloseInterfaceState = nullptr;
+    OriginalMovementUiClose = nullptr;
+    OriginalStashInterfaceTransition = nullptr;
     MarkUiDirty = nullptr;
     PlacementSuccessReported.store(false, std::memory_order_relaxed);
     PlacementFailureReported.store(false, std::memory_order_relaxed);
@@ -1924,8 +2287,17 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     RemoteClientSessionActive.store(false, std::memory_order_relaxed);
     RemoteClientUiObservedOpen.store(false, std::memory_order_relaxed);
     RemoteQuickMoveWithdrawalDeadline.store(0, std::memory_order_relaxed);
+    RemoteAutomaticCloseSuppressions.store(0, std::memory_order_relaxed);
+    RemoteGeneralUiCloseSuppressions.store(0, std::memory_order_relaxed);
+    RemoteExplicitClosePasses.store(0, std::memory_order_relaxed);
+    RemoteMovementInventoryCloseSuppressions.store(
+        0,
+        std::memory_order_relaxed
+    );
     RemoteItemScope = false;
     RemoteGoldScope = false;
+    RemoteHotkeyOpenTransitionScope = false;
+    RemoteMovementUiCloseScope = false;
     GoldRangeStub = nullptr;
     GoldRangeTrampoline = nullptr;
     CallSiteRelayPage = nullptr;
@@ -1955,8 +2327,10 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
 
     if (HotkeySettings.enabled) {
         FindTopLevelPanel = At<FindTopLevelPanelFn>(FindTopLevelPanelRva);
-        CloseInterfaceState = At<CloseInterfaceStateFn>(CloseInterfaceStateRva);
         MarkUiDirty = At<MarkUiDirtyFn>(MarkUiDirtyRva);
+        OriginalStashInterfaceTransition = At<StashInterfaceTransitionFn>(
+            StashInterfaceTransitionRva
+        );
     }
     FindWidget = At<FindWidgetFn>(FindWidgetRva);
     GetWidgetRect = At<GetWidgetRectFn>(GetWidgetRectRva);
@@ -1970,6 +2344,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     OriginalTransferItemToInventoryPage = At<TransferItemToInventoryPageFn>(
         TransferItemToInventoryPageRva
     );
+    OriginalMovementUiClose = At<MovementUiCloseFn>(MovementUiCloseRva);
     for (const auto* brokerName : UiMessageBrokerModules) {
         const auto brokerModule = GetModuleHandleW(brokerName);
         if (!brokerModule) continue;
@@ -2037,6 +2412,27 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
             &OriginalGetUiState
         )) {
         context->LogError("RemoteStash: scoped quick-move UI-state hook failed.");
+        return false;
+    }
+    if (!context->InstallInlineHook(
+            CloseInterfaceStateRva,
+            CloseInterfaceStateExpected.data(),
+            static_cast<std::uint32_t>(CloseInterfaceStateExpected.size()),
+            HookCloseInterfaceState,
+            &OriginalCloseInterfaceState
+        )) {
+        context->LogError("RemoteStash: persistent remote UI hook failed.");
+        return false;
+    }
+    if (HotkeySettings.enabled
+        && !context->InstallInlineHook(
+            OpenInterfaceStateRva,
+            OpenInterfaceStateExpected.data(),
+            static_cast<std::uint32_t>(OpenInterfaceStateExpected.size()),
+            HookOpenInterfaceState,
+            &OriginalOpenInterfaceState
+        )) {
+        context->LogError("RemoteStash: post-open companion inventory hook failed.");
         return false;
     }
     if (!context->InstallInlineHook(
@@ -2128,7 +2524,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     std::snprintf(
         message,
         sizeof(message),
-        "RemoteStash 1.0.0 active for D2R 3.2.92777; button UI broker=%s; "
+        "RemoteStash 1.1.7 active for D2R 3.2.92777; button UI broker=%s; "
         "hotkey=%s; binding=%s; input=%s; consume=%s; config=%s.",
         UsingUiMessageBroker.load(std::memory_order_acquire)
             ? "PluginPack"
@@ -2156,14 +2552,19 @@ D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
     DeactivateRemoteClientSession(false);
     RemoteItemScope = false;
     RemoteGoldScope = false;
+    RemoteHotkeyOpenTransitionScope = false;
+    RemoteMovementUiCloseScope = false;
     try {
         const std::lock_guard lock(RemoteSessionsMutex);
         RemoteSessions.clear();
     } catch (...) {
     }
-    HotkeyRequestedAt.store(0, std::memory_order_release);
+    HotkeyRequestPending.store(false, std::memory_order_release);
     FindTopLevelPanel = nullptr;
-    CloseInterfaceState = nullptr;
+    OriginalOpenInterfaceState = nullptr;
+    OriginalCloseInterfaceState = nullptr;
+    OriginalMovementUiClose = nullptr;
+    OriginalStashInterfaceTransition = nullptr;
     MarkUiDirty = nullptr;
     HotkeySettings = {};
     Base = nullptr;

@@ -1,9 +1,18 @@
-REMOTE STASH 1.0.0
+REMOTE STASH 1.1.7
 Author: RuffnecKk
+Reverse-engineering reference: D2MOO
 
 Opens and closes the player stash from an inventory button or configurable
 hotkey, including outside town. The installed mod keeps control of its stash
 tabs and inventory layout.
+
+The remote stash remains open while the character moves. Close it with the
+same hotkey, Escape, or the stash close button.
+If the inventory is also open, moving leaves both panels visible.
+When the hotkey opens Remote Stash by itself, the companion inventory panel is
+closed after D2R finishes constructing the stash. An inventory that was already
+open remains open. Closing Remote Stash with its hotkey also leaves that
+independently opened inventory visible.
 
 
 REQUIREMENTS
@@ -32,6 +41,7 @@ HOTKEY
 Edit RemoteStash.json and set enabled to true.
 The default hotkey is S. Press it again to close the stash.
 Set consume to true to prevent the same key from reaching the game.
+Native D2R actions bound to that key are suppressed for that key press only.
 Restart the game after changing the config.
 
 

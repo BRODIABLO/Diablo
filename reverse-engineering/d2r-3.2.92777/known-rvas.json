@@ -1500,6 +1500,38 @@
       "notes": "Consumes the action byte at packet+1. Action 0x10 follows the native open-stash UI branch and action 0x14 follows its separate UI branch. The exact 32-byte entry signature is pinned by RemoteStash 0.1.0 before the wrapper at 0x12DBC0 can be called."
     },
     {
+      "rva": "0x11FB80",
+      "name": "UI_ApplyInterfaceModeTransition",
+      "kind": "function",
+      "confidence": "medium",
+      "source": "Mission/remote-stash-3.2.md",
+      "notes": "Observed x64 ABI (int32 mode, bool transitionFlag) -> void at a unique 20-byte entry signature. The state dispatcher at 0xC1E80 calls it as (2, true) from the unique callsite 0xC1F01 on the native stash-state 0x18 branch. RemoteStash 1.1.6 redirects only that callsite and, only inside a bounded hotkey-open scope, forwards (2, false). The exact behavioral meaning of transitionFlag remains gameplay-gated, so the semantic name and confidence remain provisional."
+    },
+    {
+      "rva": "0xC8240",
+      "name": "UI_CloseActiveInterfaceStates",
+      "kind": "function",
+      "confidence": "medium",
+      "source": "Mission/remote-stash-3.2.md",
+      "notes": "Builds a temporary list of active UI-state identifiers and closes each entry through UI_CloseInterfaceState at 0xC84C6. Runtime capture during a click-to-move action proves the call chain 0x102590 -> 0xC8240 -> 0xC84C6. The observed x64 arguments are two integer or boolean mode values, but their complete semantic meaning remains provisional."
+    },
+    {
+      "rva": "0x102590",
+      "name": "WorldActionCloseActiveInterfacesCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/remote-stash-3.2.md",
+      "notes": "Exact E8 AB 5C FC FF call to UI_CloseActiveInterfaceStates. A RemoteStash 1.1.7 runtime stack capture proved this callsite as the close cascade reached when clicking the world to move while both remote stash state 0x18 and inventory state 1 are open. RemoteStash redirects only this callsite and uses a thread-local scope so only the movement-driven inventory close is suppressed; explicit inventory hotkey and close-button paths remain native."
+    },
+    {
+      "rva": "0xCD7C0",
+      "name": "UI_OpenInterfaceState",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/remote-stash-3.2.md",
+      "notes": "Opens or refreshes a native UI state with observed x64 ABI (int32 state, bool secondary) -> bool. The entry indexes the UI-state byte array with the signed state argument, validates the transition, and dispatches the state-specific UI message. Its strict 68-byte prologue is unique in build 92777. Direct callers pass state 1 for inventory, while CLIENT_ApplyUiPacket77 opens the stash with state 0x18. RemoteStash 1.1.3 proved that suppressing state 1 before native composition leaves a broken desktop shell. RemoteStash 1.1.5 instead delegates every open first; after a successful remote state 0x18 open, a bounded one-shot hotkey ticket may close the companion state 1 through UI_CloseInterfaceState. No native open is suppressed."
+    },
+    {
       "rva": "0x22BA70",
       "name": "UI_PlayerInventory_RefreshGoldControls",
       "kind": "function",

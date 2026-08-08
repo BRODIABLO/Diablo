@@ -39,12 +39,42 @@ int main(int argc, char** argv) {
     REQUIRE(!ParseHotkey("S+H", hotkey));
     REQUIRE(!ParseHotkey("F25", hotkey));
 
-    REQUIRE(IsFreshRequest(1'100, 1'000, 250));
-    REQUIRE(!IsFreshRequest(1'251, 1'000, 250));
+    REQUIRE(ShouldConsumeMatchedHotkey(true, true));
+    REQUIRE(!ShouldConsumeMatchedHotkey(true, false));
+    REQUIRE(!ShouldConsumeMatchedHotkey(false, true));
+    REQUIRE(ShouldRestoreIndependentInventory(true, false));
+    REQUIRE(!ShouldRestoreIndependentInventory(true, true));
+    REQUIRE(!ShouldRestoreIndependentInventory(false, false));
+    REQUIRE(!ShouldRestoreIndependentInventory(false, true));
+    REQUIRE(!ResolveRemoteStashTransitionFlag(true, true));
+    REQUIRE(!ResolveRemoteStashTransitionFlag(true, false));
+    REQUIRE(ResolveRemoteStashTransitionFlag(false, true));
+    REQUIRE(!ResolveRemoteStashTransitionFlag(false, false));
     REQUIRE(ResolveHotkeyDispatch(false, false) == HotkeyDispatch::Open);
     REQUIRE(ResolveHotkeyDispatch(true, false) == HotkeyDispatch::Close);
     REQUIRE(ResolveHotkeyDispatch(false, true) == HotkeyDispatch::Refuse);
     REQUIRE(ResolveHotkeyDispatch(true, true) == HotkeyDispatch::Refuse);
+    REQUIRE(ShouldSuppressRemoteStashClose(true, true, false, false));
+    REQUIRE(!ShouldSuppressRemoteStashClose(false, true, false, false));
+    REQUIRE(!ShouldSuppressRemoteStashClose(true, false, false, false));
+    REQUIRE(!ShouldSuppressRemoteStashClose(true, true, true, false));
+    REQUIRE(!ShouldSuppressRemoteStashClose(true, true, false, true));
+    REQUIRE(ShouldSuppressMovementInventoryClose(true, true, true, true));
+    REQUIRE(!ShouldSuppressMovementInventoryClose(false, true, true, true));
+    REQUIRE(!ShouldSuppressMovementInventoryClose(true, false, true, true));
+    REQUIRE(!ShouldSuppressMovementInventoryClose(true, true, false, true));
+    REQUIRE(!ShouldSuppressMovementInventoryClose(true, true, true, false));
+
+    REQUIRE(ResolveCompanionInventoryClose(0, true, 100)
+        == CompanionInventoryCloseDecision::Wait);
+    REQUIRE(ResolveCompanionInventoryClose(200, false, 100)
+        == CompanionInventoryCloseDecision::Wait);
+    REQUIRE(ResolveCompanionInventoryClose(200, true, 100)
+        == CompanionInventoryCloseDecision::Close);
+    REQUIRE(ResolveCompanionInventoryClose(200, true, 200)
+        == CompanionInventoryCloseDecision::Close);
+    REQUIRE(ResolveCompanionInventoryClose(200, true, 201)
+        == CompanionInventoryCloseDecision::Expire);
 
 
     const auto modLocalPaths = BuildConfigCandidates(

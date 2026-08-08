@@ -1,14 +1,15 @@
 # RemoteStash — D2R 3.2.92777
 
-Dernière mise à jour : 5 août 2026
+Dernière mise à jour : 8 août 2026
 
-Statut : release publique autonome `RemoteStash 1.0.0` fondée sur la candidate
-`0.3.6` validée en jeu. Le hotkey
-JSON optionnel est désactivé dans la configuration publique et utilise `S` par
-défaut. Lorsqu'il est activé avec `consume=true`, il ouvre et ferme le stash sans
-déclencher l'action `S` du jeu. Le comportement stash hérité de la 0.2.31 demeure
-stable, le bouton reste entièrement défini par le layout desktop du mod hôte et
-le plugin demeure autonome, avec coexistence optionnelle du PluginPack.
+Statut : maintenance active sur la candidate autonome `RemoteStash 1.1.5`.
+La release publique 1.0.0 reste la dernière version validée en jeu. La 1.1.5
+conserve le hotkey réactif, sa consommation et l'interface persistante, mais
+laisse le stash natif ouvrir son panneau Inventory compagnon afin de préserver
+la composition desktop complète. Son build, ses tests statiques et son cold
+start complet passent; le témoin gameplay reste ouvert. Le bouton reste
+entièrement défini par le layout desktop du mod hôte et le plugin demeure
+autonome, avec coexistence optionnelle du PluginPack.
 
 ## Décisions confirmées
 
@@ -772,3 +773,186 @@ items, or et persistance de RemoteStash.
   entrée extraite est byte-identique au package. L'archive mesure `249093`
   octets et porte le SHA-256
   `B992F3585B8616A68F26CDB3975C6548D135780A0FB2B2D954D32E1732AE0D92`.
+
+## Hotkey réactif et interface persistante — candidate 1.1.0 — 8 août 2026
+
+- Le délai client de 250 ms est retiré. Une pression valide arme désormais une
+  demande persistante, coalescée jusqu'à son traitement sur le thread UI; la
+  demande n'expire donc plus lorsque le personnage se déplace ou que le thread
+  UI accuse un retard momentané.
+- Lorsque `consume=true`, la touche configurée est consommée dès que la
+  combinaison exacte est reconnue, indépendamment du délai du handoff. Le
+  raccourci D2R portant la même touche ne reçoit plus une pression qui a été
+  attribuée à RemoteStash.
+- `UI_CloseInterfaceState` à `0xC7D30` est validé par une signature stricte de
+  64 octets, unique sur l'image gouvernée 92777, puis intercepté seulement pour
+  l'état stash `0x18` pendant une session distante. Le bouton X est identifié
+  par le hash FNV-1a de la commande UI `Close`
+  (`0x5E8250FB85D64C23`) et demeure une fermeture explicite, tout comme Escape,
+  le hotkey et la fermeture serveur.
+- Le teardown général appelant successivement la fermeture des états `0x18`,
+  `0x19` et `0x0B` n'est pas allowlisté. Sa tentative de fermeture du stash est
+  supprimée pendant la session distante afin qu'un clic de déplacement ne
+  ferme plus le panneau. Des compteurs atomiques distinguent ce chemin sans
+  ajouter de logging synchrone à l'entrée utilisateur.
+- Le build Release x64 et CTest passent `2/2`. Les DLL du build, du package et
+  du runtime global sont byte-identiques : version `1.1.0`, taille `176128`, SHA-256
+  `0103166B712550E99E8F69FBC44388B3A27A5E99D5FEC31CE8F26BF8DB3807BB`.
+- La synchronisation globale ne remplace pas `RemoteStash.json`; la
+  configuration de validation reste `enabled=true`, `hotkey=H` et
+  `consume=true`.
+- Le gameplay reste `not run`. Il doit confirmer une seule pression en
+  déplacement, l'absence d'ouverture du raccourci D2R concurrent, le maintien
+  du stash pendant un clic de déplacement, puis les fermetures par hotkey,
+  Escape et bouton X.
+
+## Suppression ciblée de l'inventaire natif — candidate 1.1.3 — 8 août 2026
+
+- Le témoin gameplay 1.1.2 ouvre encore le stash et l'inventaire ensemble. La
+  lecture directe des compteurs de la DLL vivante observe 16 tickets armés et
+  16 demandes RemoteStash dispatchées, mais zéro passage et zéro expiration
+  dans le hook `UI_ToggleInterfaceState 0xCDE00`. Le délai de 150 ms n'est donc
+  pas la cause : l'inventaire emprunte une autre surface native.
+- `UI_OpenInterfaceState 0xCD7C0` reçoit `(int32 state, bool secondary) -> bool`,
+  indexe l'état demandé dans le tableau UI puis distribue son message propre.
+  Sa signature stricte de 68 octets est unique dans l'image gouvernée 92777 et
+  ses 49 xrefs incluent plusieurs appels explicites avec l'état inventaire `1`.
+  `CLIENT_ApplyUiPacket77` ouvre séparément le stash avec l'état `0x18`.
+- La 1.1.3 remplace uniquement le hook de consommation 1.1.2. Pendant le ticket
+  d'un hotkey accepté, elle supprime la première ouverture de l'état `1`; tout
+  autre état, notamment le stash `0x18`, délègue immédiatement la fonction
+  native vivante. En dehors de ce ticket, l'inventaire reste entièrement natif.
+- Le build Release x64 et CTest passent `2/2`. Les DLL du build et du package
+  sont byte-identiques : version `1.1.3`, taille `177152`, SHA-256
+  `DA76E1F44E83058990E5A2FF8485220FB7D1D5D36B4C257F219FD86C4C6415B6`.
+- Le cold start global charge RemoteStash 1.1.3 sur D2R `3.2.92777`, accepte le
+  nouveau hook à `0xCD7C0`, garde la configuration globale `H / consume=true`,
+  applique `18/18` patchsets, charge `14/14` plugins sans rejet ni échec et
+  atteint l'étape frontend `24/24`.
+- Le témoin gameplay confirme que l'inventaire ne s'ouvre plus, mais la capture
+  `codex-clipboard-d2a769df-1515-471b-8cff-e188821e3bfa.png` montre les bordures
+  supérieures et latérales du shell à deux panneaux laissées sans contenu à
+  droite. Le filtre d'état fonctionne donc, mais la composition desktop native
+  ne supporte pas un stash `0x18` isolé. La 1.1.3 n'est pas livrable en l'état;
+  aucune nouvelle stratégie n'est implantée avant décision.
+
+## Rétablissement de la composition native — candidate 1.1.4 — 8 août 2026
+
+- Vincent confirme le retrait de la stratégie 1.1.3. Le hotkey doit toujours
+  être consommé afin que son action D2R concurrente ne s'exécute pas, mais le
+  stash doit conserver le panneau Inventory compagnon requis par son shell
+  desktop natif.
+- La 1.1.4 retire entièrement le hook `UI_OpenInterfaceState 0xCD7C0`, son
+  ticket de 150 ms, sa politique et ses compteurs. La capture clavier/souris
+  retourne toujours la valeur de consommation configurée et le dispatch
+  RemoteStash reste inchangé. Le plugin ne filtre donc plus aucun état UI
+  natif pendant l'ouverture.
+- Le build Release x64 et CTest passent `2/2`. Les DLL du build, du package et
+  du runtime global sont byte-identiques : version `1.1.4`, taille `176128`,
+  SHA-256 `A645DECCDAFE4583FD13249AA7D5877064E284F3D3E385FDC91CF853187FE7FA`.
+- La synchronisation globale ne remplace pas `RemoteStash.json`; la
+  configuration de validation reste `enabled=true`, `hotkey=H` et
+  `consume=true`.
+- Le cold start global charge RemoteStash 1.1.4 sur D2R `3.2.92777`, ne pose
+  aucun hook à `0xCD7C0`, applique `18/18` patchsets, charge `14/14` plugins
+  sans rejet ni échec et atteint l'étape frontend `24/24`.
+- Le gameplay reste `not run`. Il doit confirmer le shell stash + Inventory
+  complet, une seule pression en déplacement, l'absence de l'action D2R liée
+  au même hotkey, le maintien pendant un clic de déplacement, puis les
+  fermetures par hotkey, Escape et bouton X.
+
+## Fermeture post-composition de l'inventaire — candidate 1.1.5 — 8 août 2026
+
+- Le témoin gameplay 1.1.4 confirme que la composition native complète est
+  propre et que la fermeture ultérieure de l'inventaire ne déforme pas le
+  shell du stash. La 1.1.5 conserve donc toute l'ouverture native au lieu de
+  restaurer le filtre cassé de la 1.1.3.
+- Une ouverture au hotkey vérifie d'abord l'état Inventory `1`. S'il était
+  fermé, elle arme un ticket one-shot de 2000 ms. Le bouton d'inventaire
+  n'arme jamais ce ticket, et un Inventory déjà ouvert reste ouvert.
+- Le hook `UI_OpenInterfaceState 0xCD7C0` appelle toujours l'original en
+  premier. Après la construction effective du stash `0x18`, il consomme le
+  ticket, ferme l'état Inventory `1` avec `UI_CloseInterfaceState 0xC7D30`,
+  puis appelle `MarkUiDirty 0x843FC0`. Aucun état d'ouverture n'est supprimé.
+- Un ticket périmé ou une session annulée est effacé sans agir. Des compteurs
+  distinguent les tickets armés, les fermetures effectuées et les expirations.
+- Le build Release x64 et CTest passent `2/2`. Les DLL du build, du package et
+  du runtime global sont byte-identiques : version `1.1.5`, taille `177664`,
+  SHA-256
+  `76D3FA91A7E1FE644CA4E19861C6C644449DCBBF370FF9165A360EC7B914A3C0`.
+- La synchronisation globale ne remplace pas `RemoteStash.json`; la
+  configuration de validation reste `enabled=true`, `hotkey=H` et
+  `consume=true`.
+- Le cold start global charge le nouveau hook post-composition à `0xCD7C0`,
+  applique `18/18` patchsets, charge `14/14` plugins sans rejet ni échec et
+  atteint l'étape frontend `24/24`. Le journal RemoteStash frais ne contient
+  aucune erreur ni alerte autre que les annonces normales d'installation des
+  hooks.
+- Le gameplay reste `not run`. Il doit confirmer l'absence visuelle de
+  l'inventaire quand celui-ci était fermé, la conservation d'un inventaire
+  déjà ouvert, puis les ouvertures par bouton et les fermetures normales.
+
+## Transition hotkey fluide et fermeture indépendante — candidate 1.1.6 — 8 août 2026
+
+- Le gameplay 1.1.5 confirme que le hotkey ouvre enfin le stash seul. Deux
+  écarts restent ciblés : l'ouverture native du stash interrompt un déplacement
+  déjà engagé, et sa fermeture au hotkey ferme aussi un Inventory qui était
+  ouvert indépendamment.
+- `CLIENT_ApplyUiPacket77` continue d'ouvrir le stash par l'action native
+  `0x10`; RemoteStash n'envoie aucun ordre de mouvement. La branche de l'état
+  stash `0x18` dans le répartiteur `0xC1E80` appelle la transition UI
+  `0x11FB80(2, true)` depuis l'unique callsite `0xC1F01`. La signature de 20
+  octets de la cible et l'appel relatif de 5 octets sont uniques dans D2R
+  3.2.92777.
+- La 1.1.6 redirige uniquement ce callsite. Un ticket hotkey one-shot de 2000 ms
+  arme une portée thread-local autour de l'ouverture native `0x18`; dans cette
+  portée seulement, l'appel devient `0x11FB80(2, false)`. Tous les autres appels
+  et toutes les ouvertures non hotkey conservent leurs arguments natifs.
+- Lors d'une fermeture par hotkey, le plugin photographie l'état Inventory `1`,
+  ferme normalement le stash `0x18`, puis rouvre Inventory dans le même cycle
+  UI seulement si celui-ci était ouvert avant et a été fermé comme compagnon.
+  Un Inventory initialement fermé demeure fermé. Escape et le bouton X ne sont
+  pas redéfinis par cette restauration.
+- Le callsite `0xC1F01` et la cible `0x11FB80` ne sont référencés par aucun
+  composant du snapshot PluginPack épinglé
+  `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`. La DLL reste autonome et ses
+  dépendances PE sont limitées aux bibliothèques Windows et MSVC habituelles.
+- Le build Release x64 et CTest passent `2/2`. La DLL candidate du package porte
+  la version `1.1.6`, mesure `179200` octets et son SHA-256 est
+  `6C6691045810A11E7E0544FB0BDB05C68F1AC09476B1F4507DF067FC99511FC4`.
+- Le runtime reste `not run`. Il doit vérifier le déplacement continu pendant
+  ouverture/fermeture, l'ouverture visuelle du stash seul, la conservation d'un
+  Inventory indépendant à la fermeture, puis les régressions bouton, Escape,
+  drag-and-drop, Ctrl-clic, onglets Shared/custom, save-and-exit et reconnexion.
+
+## Fenêtres indépendantes pendant le déplacement — release 1.1.7 — 8 août 2026
+
+- Le gameplay 1.1.6 confirme l'ouverture fluide du stash seul et les fermetures
+  indépendantes, mais un clic de déplacement ferme encore Inventory quand les
+  deux panneaux sont visibles. Une première sonde observe le retour générique
+  `0xC84CB`; la pile complète prouve ensuite la chaîne
+  `0x102590 -> 0xC8240 -> 0xC84C6` propre au close cascade du clic dans le monde.
+- `0xC8240` construit la liste des états UI actifs puis appelle
+  `UI_CloseInterfaceState` pour chacun. RemoteStash redirige uniquement l'appel
+  relatif exact `E8 AB 5C FC FF` à `0x102590` et arme une portée thread-local
+  pendant cette cascade seulement.
+- Dans cette portée, l'état Inventory `1` est conservé uniquement si la session
+  distante est active et si l'état stash `0x18` est encore ouvert. Les hotkeys,
+  boutons X, Escape et autres fermetures explicites ne passent pas par cette
+  portée et conservent leur comportement natif.
+- Le build Release x64 et CTest passent `2/2`. Le build, le package et le
+  runtime global sont byte-identiques : version `1.1.7`, taille `179200`,
+  SHA-256
+  `31D037043EAC49DA10E2736A2D7DBE075220C1A20C55451E2B0164DDD5E34499`.
+- Le cold start global BKVince avec toute la pile active applique `18/18`
+  patchsets, charge `14/14` plugins sans rejet ni échec et atteint `24/24`.
+  Vincent confirme ensuite en jeu que le déplacement continue, que RemoteStash
+  et Inventory restent tous deux visibles, et que `H` et `I` ferment seulement
+  leur propre panneau.
+- L'archive publique stricte `RemoteStash-1.1.7.zip` contient uniquement
+  `d2rloader/plugins/RemoteStash.dll` et
+  `d2rloader/config/RemoteStash.json`. Elle mesure `79774` octets et son SHA-256
+  est `BCC5F1C933E3323C2B2ACC3ECE073581F5D50175449438BB62894AE9F03F31CC`.
+  Le JSON public validé conserve `enabled=false`, `hotkey=S`, `consume=true` et
+  son SHA-256 est
+  `A1F59CB1BCAF2BBD23E20249992B99E90D9803870FCE4B3D622A7678BD854616`.
