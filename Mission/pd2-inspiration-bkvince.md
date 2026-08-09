@@ -693,14 +693,80 @@ Ce lot n'a modifié aucune table BKVince, DLL, configuration, sauvegarde ou
 installation runtime. Le melee déjà en cours n'a reçu aucune nouvelle
 implantation et garde son propriétaire.
 
+## Premier merge General/QoL — conservation BKVince et cap élémentaire 90
+
+Le 8 août 2026, Vincent a autorisé le premier lot de merge gouverné après
+Mechanics 2.0. Les deux décisions QoL déjà vérifiées sont fermées sans mutation
+gameplay : `storage-layout` reste `keep_bkvince` parce que le stockage et
+l'identité charm-inventory de BKVince dépassent la couverture PD2, et
+`stackable-materials` reste `keep_bkvince` afin de préserver les codes,
+compteurs, recettes et sauvegardes existants. Le catalogue consigne explicitement
+ces deux clôtures; le chapitre General/QoL reste néanmoins `in_progress` pour
+les candidats encore non traités.
+
+Le seul changement gameplay de ce lot active l'option existante de
+`plugin-items` dans `D2RPlugins.json` :
+
+- `items.elementalResistCap.enabled=true`;
+- `items.elementalResistCap.max=90`;
+- `items.physResistCap` reste désactivé à `50`;
+- `items.absorbCap` reste désactivé à `40`.
+
+Aucune table TXT, DLL, sauvegarde ou statistique persistante n'a changé. Le
+resolver d'immunité, Sunders, breakers, pierce et le patch permissif
+`0x44F8F1` restent hors de ce lot. Le propriétaire natif demeure
+`plugin-items`; son manifeste gouverne l'octet attendu `0x5F` au RVA
+`0x4524DE`, et sa transaction échoue fermée si le site ne correspond pas.
+Le SHA-256 de la configuration source et runtime est
+`7F3CE0442BF8DF3A4D308D1F8E1D3DBF9E7085021A6BB696B4BAA6C6E85F8C86`.
+Le runtime précédent est récupérable sous
+`analysis-cache/runtime-sync-backups/20260809-001257287/`.
+
+Les validations statiques sont vertes : catalogue gouverné, cinq tests métier,
+références de démarrage BKVince et `git diff --check` ciblé. Le rapport de
+synchronisation final
+`analysis-cache/runtime-sync/20260809-001648988-apply.json` porte le SHA-256
+`24D0C4B2C5D1CFC2B5D864D9639BE0B8B2106343EAE21352BB9C78DB8B057A29`.
+
+La première tentative de cold start a chargé les cinq DLL PluginPack et commis
+les `30/30` opérations `plugin-items`, puis a reproduit à l'étape graphique une
+signature de crash préexistante, déjà observée le 8 août avant ce lot :
+`dxgi.dll + 0x38B1C1` appelée depuis `plugin-items.dll + 0x8436`. Cette preuve
+négative est conservée au lieu d'être masquée. La seconde tentative, lancée
+avec les arguments BKVince gouvernés par défaut, atteint le frontend `24/24`,
+avec build `92777`, `16/16` plugins actifs, `18/18` memory patches, aucun plugin
+désactivé, rejeté ou échoué et `30/30` opérations `plugin-items` committées. Les
+logs figés sont sous
+`analysis-cache/pd2-elemental-cap-90/20260809-001648988/`; aucun processus
+D2R/D2RLoader ne reste ouvert après la matrice.
+
+| Domaine | Cas | Statut | Preuve |
+|---|---|---|---|
+| QoL | stockage et stacking BKVince | passed | décisions `keep_bkvince` vérifiées dans le catalogue |
+| Déploiement | hash source/runtime | passed | SHA-256 identiques avant le second cold start |
+| Chargement | build et profil mod-local | passed | `92777`, BKVince, frontend `24/24` |
+| Pile installée | plugins et memory patches | passed | `16/16`, `18/18`, rejet `0`, échec `0` |
+| Transaction | cap élémentaire | passed | `plugin-items` commet `30/30`; un mismatch aurait annulé la transaction |
+| PluginPack toutes options | toutes fonctions configurables actives | not run | plusieurs fonctions restent volontairement désactivées dans la configuration livrée |
+| Gameplay solo | base 75, bornes sous/à/au-dessus de 90, feu/froid/foudre/poison | not run | témoin équipé et observation en jeu requis |
+| Non-régression | physique 50, absorb 40, immunités, Sunders, breakers et pierce | not run | matrice gameplay requise |
+| Réseau | hôte/joiner | not run | témoin synchronisé requis |
+
+Le rollback à froid consiste à remettre `elementalResistCap.enabled=false` et
+`max=95`, resynchroniser ce seul JSON et refaire un cold start. Aucun ID ne doit
+être réservé et aucune migration de sauvegarde n'est nécessaire. La baseline
+NoDrop PD2 reste un futur lot économique distinct, sans modification dans ce
+merge.
+
 ## Prochain gate
 
-Reprendre le chapitre `General Changes / QoL / balance` à son gate existant en
-appliquant Mechanics 2.0 comme frontière : aucun lot ne peut réinterpréter une
-loi `baseline_only`, rouvrir le dual-wield rejeté ou consommer une surface
-`needs_re` sans sa preuve 92777. Comparer d'abord les candidats data-only et les
-fonctionnalités déjà mieux couvertes par BKVince; toute mutation gameplay reste
-un lot atomique séparé, explicitement autorisé, mesuré et réversible.
+Valider en jeu le cap élémentaire avec une base à 75 et des maximums effectifs
+sous, à et au-dessus de 90 pour feu, froid, foudre et poison; confirmer que le
+physique reste à 50 et l'absorb à 40, puis couvrir sauvegarde/rechargement et
+hôte/joiner. La compatibilité formelle « toutes fonctions PluginPack actives »
+reste séparément ouverte. Ensuite reprendre General/QoL sur les prochains
+candidats data-only; la baseline NoDrop PD2 exige d'abord l'inventaire complet
+des Treasure Classes et une simulation économique approuvée.
 
 ## Crédits
 

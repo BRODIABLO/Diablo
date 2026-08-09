@@ -147,8 +147,8 @@
 
         // Override the maximum elemental resistance cap (vanilla: 95%).
         "elementalResistCap": {
-            "enabled": false,
-            "max": 95
+            "enabled": true,
+            "max": 90
         },
 
         // Override the maximum absorb percentage cap (vanilla: 40%).

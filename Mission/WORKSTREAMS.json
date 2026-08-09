@@ -499,7 +499,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/pd2-inspiration-bkvince.md",
-      "nextGate": "Resume General Changes / QoL / balance at its existing gate under Mechanics 2.0: compare data-only candidates and features already better covered by BKVince first; do not reinterpret baseline_only rules, reopen rejected dual-wield behavior, or consume needs_re surfaces without governed 92777 evidence.",
+      "nextGate": "Validate the elemental resistance cap in game at effective maxima below, at, and above 90 for fire, cold, lightning, and poison; confirm physical remains 50 and absorb remains 40, then cover save/reload and host/joiner. Keep the all-PluginPack-features matrix open, then resume the remaining data-only General/QoL candidates before any measured NoDrop economy lot.",
       "include": [
         "Mission/pd2-inspiration-bkvince.md",
         "Mission/pd2-inspiration-bkvince.catalog.json",

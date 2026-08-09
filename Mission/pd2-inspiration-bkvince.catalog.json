@@ -126,7 +126,7 @@
       "evidenceStatus": "verified",
       "saveRisk": "none",
       "multiplayer": "not_applicable",
-      "rationale": "BKVince already has its own larger storage and charm-inventory identity; PD2 parity would regress or conflict.",
+      "rationale": "Decision closed on 2026-08-08: keep BKVince. Its larger storage and charm-inventory identity already exceed PD2 coverage, so a PD2 merge would regress or conflict.",
       "dependencies": []
     },
     {
@@ -143,7 +143,7 @@
       "evidenceStatus": "verified",
       "saveRisk": "none",
       "multiplayer": "not_applicable",
-      "rationale": "The concept is already present in BKVince and should be compared for missing cases rather than copied wholesale.",
+      "rationale": "Decision closed on 2026-08-08: keep BKVince. The relevant stacking families already exist, so preserve their established codes, counters, recipes, and save compatibility.",
       "dependencies": []
     },
     {
