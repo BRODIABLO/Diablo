@@ -1,11 +1,11 @@
 {
-  "enabled": false,
+  "enabled": true,
   "activationMode": "allEligibleMelee",
   "allowNormalAttack": true,
   "includedSkillIds": [],
   "excludedSkillIds": [],
-  "requireGateStat": true,
-  "gateStatId": 384,
+  "requireGateStat": false,
+  "gateStatId": -1,
   "increasedRadiusStatId": 391,
   "radiusPercentPerTile": 20,
   "splashDamagePercentStatId": 392,
@@ -16,9 +16,9 @@
   "diagnosticLogging": false,
   "skillOverrides": {},
   "legacyEvent20Suppression": {
-    "enabled": true,
-    "statId": 384,
-    "layer": 430,
+    "enabled": false,
+    "statId": -1,
+    "layer": -1,
     "playerAttackersOnly": true
   }
 }

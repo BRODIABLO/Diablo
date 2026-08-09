@@ -15,13 +15,16 @@ la correction ont produit la même DLL de 199 168 octets, SHA-256
 chacun passé le CTest `1/1`. L'inspection PE/ABI confirme l'API D2RLoader v2,
 les trois exports exacts, l'absence de dépendance eezstreet et l'absence de nom,
 chemin ou ID BKVince obligatoire. L'intégration BKVince demeure un profil
-séparé et réversible.
+séparé; son rollback sûr signifie désormais « aucun splash » plutôt qu'un
+retour à l'ancien missile.
 
 La qualification technique initiale couvre les portées globale, mod-locale avec
 shadow et default-off. La correction `DBA0C40C...8856C` a ensuite reçu son propre
 cold start mod-local activé : `18/18` patches, `17/17` plugins, `24/24`, zéro
-disabled/rejected/failed. La configuration runtime finale est de nouveau
-`enabled=false` et les artefacts globaux temporaires restent retirés.
+disabled/rejected/failed. Après le smoke complémentaire, B, C et D passent
+avec les stats exacts 391/392. Le rollback visuel de l'ancien montage a en
+revanche déclenché l'assertion native `ptSkill->nItemEffect != 0`. Vincent a
+donc autorisé son retrait complet de BKVince.
 
 Le ZIP public strict `MeleeSplash-0.1.0.zip` est construit et audité : deux
 entrées racine seulement, la DLL qualifiée et le JSON générique default-off.
@@ -40,16 +43,20 @@ explicitement autorisés sont hors portée ou non testés dans cette mission.
 
 ## Prochain gate
 
-Le premier smoke a découvert que l'attaque normale revient de
-`FillDamageValues` à `0x4300BB`, alors que le filtre n'admettait que le chemin
-queued `0x44B6A0`. La signature unique et la chaîne Prepare/Allocate/Consume ont
-été gouvernées, puis le filtre a été corrigé pour ces deux continuations
-exactes. Le témoin suivant passe A avec un burst sur trois secondaires; E, F,
-H et G-actif passent aussi : Critical/Deadly, CB et OW sont indépendants par
-cible, la primaire n'est pas frappée deux fois et la récursion est absente.
-B, C, D et le rollback visuel default-off de G restent `not run`. La config
-default-off et QtyTester sont restaurés byte-exact; aucun processus D2R ne reste
-actif. Multijoueur et PvP demeurent hors portée.
+La nouvelle intégration BKVince est active sans gate : elle couvre toutes les
+attaques melee joueur admissibles et conserve les stats 391/392. L'ancien
+graphe stat 384/property 302/skills 430 et 432/missile 743 est retiré tout en
+conservant ses numéros comme tombstones compatibles avec les sauvegardes. Les
+références Summon Splash, Titan's Echo et sa treasure class sont supprimées.
+Le migrateur gouverné est idempotent et son contrôle ciblé passe.
+
+Le cold start final sur ces tables passe avec `18/18` patches, `17/17` plugins,
+`24/24` et zéro disabled/rejected/failed. Un hit QtyTester sans stat 384 produit
+une capture valide avec `gateSeen=false`, sans EventFunc20 ni ancienne
+assertion. A, B, C, D, E, F et H possèdent leurs témoins; G est supersédé par
+la décision produit de ne plus fournir de rollback vers le vieux missile. La
+mission MeleeSplash est donc fermée; le prochain lot planifié demeure
+Critical/Deadly. Multijoueur et PvP restent hors portée.
 
 Le cold start prouve la coexistence avec la pile actuellement installée, pas une
 compatibilité universelle ni une matrice où toutes les fonctionnalités

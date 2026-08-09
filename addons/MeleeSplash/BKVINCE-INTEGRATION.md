@@ -1,8 +1,9 @@
 # BKVince integration
 
-BKVince consumes the public `MeleeSplash.dll` through a separate, default-off
-host profile. The public DLL contains no BKVince name, path, skill ID, or stat
-ID.
+BKVince consumes the public `MeleeSplash.dll` through a separate active host
+profile. The public DLL contains no BKVince name, path, skill ID, or stat ID.
+The public package remains default-off; only the governed BKVince integration
+enables it.
 
 ## Reserved namespace
 
@@ -11,7 +12,7 @@ never be reassigned after publication.
 
 | Purpose | Stat | Stat ID | Property | Property ID | String key | String ID |
 |---|---|---:|---|---:|---|---:|
-| Existing distribution gate | `item_splashonhit` | 384 | `splash` | 302 | `splash3` | 28301 |
+| Retired legacy ABI tombstone | `item_splashonhit` | 384 | `splash` | 302 | `splash3` | 28301 |
 | Increased radius percent | `inc_splash_radius` | 391 | `splash-radius%` | 310 | `ModIncSplashRadius` | 65028 |
 | Increased splash damage percent | `item_melee_splash_damage_percent` | 392 | `splash-dmg%` | 311 | `ModMeleeSplashDamagePercent` | 65029 |
 
@@ -27,32 +28,33 @@ The governed profile is:
 data-BKVince/d2rloader/config/MeleeSplash.json
 ```
 
-It remains `enabled=false` after packaging and selects gate stat 384, radius
-stat 391, and damage stat 392. The public configuration keeps all three IDs at
-`-1` and does not require a gate.
+It is `enabled=true`, applies to all eligible player melee attacks without a
+gate stat, and selects radius stat 391 plus damage stat 392. The public
+configuration remains default-off with all host stat IDs at `-1`.
 
-## Reversible legacy neutralization
+## Retired legacy splash
 
-The historical player splash is carried by EventFunc20 token stat 384/layer
-430, which invokes skill 430 and missile 743. BKVince opts into suppressing
-only that exact token, only for player attackers, and only after the new plugin
-is fully operational.
+The historical skill/missile splash was found unsafe during its default-off
+rollback witness: skill item-effect execution asserted before a visual legacy
+missile could be qualified. Vincent therefore retired that system instead of
+preserving it as a fallback.
 
-No integration edit is made to:
+The migration keeps numeric IDs stable but makes the old graph unreachable:
 
-- `item_splashonhit` or property `splash`;
-- skill 430 `Splash` or skill 432 `Summon Splash`;
-- missile 743 `proc_splashdamage`;
-- state 242 `splashdamage`;
-- `Titan's Echo` or any other item row;
-- the distinct, currently unassigned stat 379 `hit_skill_splash`.
+- stat 384 and property 302 remain decode-safe tombstones with no event or
+  property function;
+- skills 430/432 and missile 743 retain only their names and numeric IDs;
+- every `Summon Splash` assignment is removed from skills and monsters;
+- `Titan's Echo` remains at unique ID 473 but is non-spawnable and has no
+  splash property; its treasure-class reference is removed;
+- state 242 remains an inert name/ID tombstone;
+- stat 379 `hit_skill_splash` remains distinct and untouched.
 
-This preserves the legacy non-player `Summon Splash` path and makes rollback
-atomic. With the global plugin switch disabled, an invalid configuration, a
-signature or ownership failure, or the DLL removed, EventFunc20 remains
-pass-through. A cold restart then restores the historical player skill/missile
-path without a TXT rollback. The two reserved, unassigned stats may remain in
-the tables permanently.
+Disabling or removing `MeleeSplash.dll` now means **no melee splash**, not a
+return to the old missile. This is the safe rollback. Existing saves may still
+contain stat 384, but the retired row can only decode it; it cannot dispatch
+EventFunc20. The migration is idempotent and never shifts a row or reuses an
+ID.
 
 ## Governed deployment
 
@@ -65,16 +67,15 @@ data-BKVince/d2rloader/plugins/MeleeSplash.dll
 data-BKVince/d2rloader/config/MeleeSplash.json
   -> <D2R>/mods/BKVince/d2rloader/config/MeleeSplash.json
 
-data-BKVince/BKVince.mpq/data/global/excel/{itemstatcost,properties}.txt
+data-BKVince/BKVince.mpq/data/global/excel/{itemstatcost,properties,skills,missiles,monstats,uniqueitems,treasureclassex}.txt
   -> <D2R>/mods/BKVince/BKVince.mpq/data/global/excel/
 
 data-BKVince/BKVince.mpq/data/local/lng/strings/item-modifiers.json
   -> <D2R>/mods/BKVince/BKVince.mpq/data/local/lng/strings/
 ```
 
-Do not deploy `skills.txt`, `missiles.txt`, `states.txt`, or
-`uniqueitems.txt` for this integration. They are deliberately outside its
-owned delta.
+`states.txt` is intentionally unchanged because state 242 was already an inert
+name/ID row.
 
 Run the targeted byte-safety check before deployment:
 
@@ -84,6 +85,7 @@ npm run test:bkvince-melee-splash-stats
 
 The check requires CRLF plus final EOL for both TSVs, exact row widths and
 append positions, unique ownership of the two stat IDs, two property IDs, and
-two string IDs, preserved UTF-8 BOM plus LF for the localization file, and the
-exact default-off BKVince profile.
+two string IDs, preserved UTF-8 BOM plus LF for the localization file, the
+exact active BKVince profile, and the complete legacy tombstone/reference
+retirement.
 Runtime synchronization and smoke testing remain separate governed steps.

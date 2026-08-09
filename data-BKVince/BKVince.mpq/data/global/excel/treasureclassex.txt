@@ -1366,7 +1366,7 @@ Act 4 (H) Herald C	41	87	-6	800	800	850	1024	0	Act 4 (H) Herald Item K	2	Act 4 (
 Act 5 (H) Herald A	41	90	-6	800	800	850	1024	0	Act 5 (H) Herald Item L	2	Act 5 (H) Herald Item L - 1 Extra	1	Act 5 (H) Herald Item L - 2 Extra	1	Act 5 (H) Cpot A	2																						0
 Act 5 (H) Herald B	41	93	-6	800	800	850	1024	0	Act 5 (H) Herald Item M	2	Act 5 (H) Herald Item M - 1 Extra	1	Act 5 (H) Herald Item M - 2 Extra	1	Act 5 (H) Cpot B	2																						0
 Act 5 (H) Herald C	41	96	-6	800	800	850	1024	0	Act 5 (H) Herald Item N	2	Act 5 (H) Herald Item N - 1 Extra	1	Act 5 (H) Herald Item N - 2 Extra	1	Act 5 (H) Cpot C	2																						0
-Corpsefire Titans	18	0	-2	800	800	972	1024	0	Act 1 Cpot A	1	Titan's Echo	1																										0
+Corpsefire Titans	18	0	-2	800	800	972	1024	0	Act 1 Cpot A	1																												0
 Barons			-2	1024				0	Static Accumulator	1	rvl	1																										0
 Uber Mephisto			1				1024	0	cm1	1																												0
 Uber Diablo			1				1024	0	cm2	1																												0

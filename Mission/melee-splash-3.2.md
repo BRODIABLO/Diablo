@@ -8,8 +8,10 @@
 > et son ZIP public strict est audité. Tous les critères de livraison demandés
 > sont fermés. Le premier smoke a découvert un caller Fill manquant; la
 > correction gouvernée admet maintenant les deux continuations melee exactes.
-> Le smoke nominal passe avec un burst sur trois cibles secondaires. B, C, D et
-> le rollback visuel default-off de G restent explicitement `not run`.
+> Le smoke nominal passe avec un burst sur trois cibles secondaires. B, C et D
+> passent ensuite avec les stats exacts 391/392. Le rollback legacy de G a
+> exposé une assertion native; Vincent a donc retiré définitivement l'ancien
+> splash BKVince au lieu de le conserver comme fallback.
 
 Auteur : `RuffnecKk`
 
@@ -31,7 +33,7 @@ DBA0C40C191B2568A6B39D21324A45F770C1CBF8AD747B099AA3BCBEDEF8856C
 L'inspection PE confirme une DLL AMD64, l'API D2RLoader v2, exactement les trois
 exports attendus, la version `0.1.0`, l'auteur `RuffnecKk`, aucun chemin PDB et
 aucune dépendance, chaîne ou ID BKVince/eezstreet obligatoire. Les configurations
-générique et BKVince restent default-off; le test ciblé des IDs 391/392,
+générique reste default-off tandis que le profil BKVince est actif; le test ciblé des IDs 391/392,
 properties 310/311, textes 65028/65029 et de la politique TSV/configuration
 réussit.
 
@@ -61,10 +63,16 @@ Le build corrigé `DBA0C40C...8856C` a ensuite passé un cold start mod-local
 activé avec `18/18`, `17/17`, `24/24` et zéro disabled/rejected/failed avant le
 smoke réussi. La DLL source, package, dépôt BKVince et runtime mod-local sont
 byte-identiques sur ce hash corrigé.
-Le JSON final source/runtime vaut SHA-256
-`32747A94E8744C39813AEBC8EA32BD284AA12F10A5E898DA7272D3721D06E5E6` avec
-`enabled=false`; les copies globales temporaires de la DLL et du JSON sont
-retirées.
+La baseline technique default-off historique reste archivée. La configuration
+BKVince gouvernée est désormais active et sans gate; les copies globales
+temporaires de la DLL et du JSON restent retirées.
+
+Le cold start final sur les sept tables où l'ancien splash est retiré passe
+avec `18/18` patches, `17/17` plugins, `24/24` et zéro
+disabled/rejected/failed. QtyTester sans stat 384 produit une capture
+`gateSeen=false`, sans EventFunc20 ni ancienne assertion. La configuration
+active silencieuse source/runtime vaut SHA-256
+`0A7B1878C6D20CE3362F9B95055B7DBF9E56EDEC81C24001E2B88A400017802D`.
 
 Cette qualification prouve la coexistence avec la pile installée active, pas
 avec toute DLL future ou toute combinaison de fonctionnalités. La matrice
@@ -163,11 +171,14 @@ par des valeurs sûres documentées. Le fichier générique livré utilise
 `"enabled": false`; le profil BKVince séparé peut l'activer.
 
 La DLL ne contient aucun nom, chemin ou ID BKVince obligatoire. Le profil
-BKVince configure le gate existant `item_splashonhit` ID 384, réserve des IDs
-collision-safe pour `inc_splash_radius` et
-`item_melee_splash_damage_percent`, et neutralise séparément l'ancien montage
-skill/missile sans permettre un second `proc_splashdamage`. Cette intégration
-doit rester atomique et réversible lorsque le plugin est désactivé ou retiré.
+BKVince active toutes les attaques melee joueur admissibles sans gate, réserve
+les IDs collision-safe de `inc_splash_radius` et
+`item_melee_splash_damage_percent`, et n'emploie plus EventFunc20. Le vieux
+montage est retiré des tables : stat 384/property 302, skills 430/432, missile
+743 et state 242 conservent seulement les données minimales nécessaires à la
+stabilité des IDs; les références Summon Splash et Titan's Echo sont retirées.
+Désactiver ou retirer la DLL produit désormais « aucun splash », jamais un
+retour au missile historique.
 
 ## Gates et livrables v0.1
 
@@ -176,7 +187,7 @@ doit rester atomique et réversible lorsque le plugin est désactivé ou retiré
 - [x] README public, options, CHANGELOG et rapport court hooks/signatures;
 - [x] package public strict limité à la DLL et au JSON;
 - [x] profil BKVince séparé, deux stats/propriétés/textes collision-safe et IDs documentés;
-- [x] neutralisation réversible du vieux splash BKVince implantée; témoin G runtime ouvert;
+- [x] vieux splash BKVince retiré avec tombstones ID-stables et migrateur idempotent;
 - [x] audit statique de coexistence PluginPack, FloatingDamage et patches actifs;
 - [x] cold starts techniques global, mod-local shadow et rollback default-off
   avec la pile actuellement installée;
@@ -192,9 +203,12 @@ la chaîne 92777 mène le même record vers Prepare/Allocate/Consume. Après
 correction, le coup réussi journalise une capture puis un burst sur trois
 secondaires. Chaque cible reçoit un roll Critical/Deadly et exactement un appel
 CB et OW réussi; la primaire est rejetée de l'aire et la profondeur de récursion
-revient à zéro. A, E, F, H et G-actif passent. B, C, D et le retour visuel
-default-off de G restent `not run`. La config et la famille QtyTester sont
-restaurées byte-exact et le jeu est arrêté. La compatibilité formelle de toutes
+revient à zéro. A, E, F, H et G-actif passent. B passe par exclusion de
+l'attaque normale; C passe avec `inc_splash_radius=20/40` (rayons finaux 6/7)
+et D avec `item_melee_splash_damage_percent=50` (150 %). Le retour default-off
+de G a atteint l'ancien chemin puis déclenché l'assertion native
+`ptSkill->nItemEffect != 0`; cette preuve a motivé son retrait définitif plutôt
+qu'un correctif du montage obsolète. La compatibilité formelle de toutes
 les fonctionnalités simultanément actives reste bloquée par la baseline
 préexistante ci-dessus.
 
@@ -203,6 +217,11 @@ Wounds/DPS plat, résistances hybrides, puis itemisation et équilibrage global.
 Aucune de ces quatre refontes générales n'est implantée dans la v0.1.
 
 ## Archive historique — prototype du 8 août 2026
+
+> **Supersession du 9 août 2026 :** les passages historiques ci-dessous qui
+> promettent le retour automatique d'EventFunc20 ne gouvernent plus BKVince.
+> L'ancien montage est retiré; ils sont conservés uniquement comme trace du
+> prototype et de la décision remplacée.
 
 Le bloc ci-dessous conserve le prototype précédent comme inventaire
 d'hypothèses non probantes. Ses hashes décrivent la baseline au moment du gel;

@@ -12,10 +12,10 @@ qualification, prepared gameplay tests, and repository-wide closure gates.
 | Automated configuration policy | **PASS** | CTest passed 1/1 on both frozen-source builds. |
 | PE/ABI inspection | **PASS** | The final DLL is x64, carries API resource v2, and exposes only the three D2RLoader exports. |
 | Static hook ownership | **PASS FOR CURRENT WORKSPACE** | No exact overlap was found against the governed PluginPack manifest, FloatingDamage, standalone source-visible addons, or active BKVince patch sites. Runtime ownership remains fail-closed. |
-| BKVince table/config checks | **PASS** | `npm run test:bkvince-melee-splash-stats` passes with the default-off host profile and reserved IDs. |
-| Current-stack runtime coexistence | **PASS** | Global-enabled, mod-local shadow-enabled, and final mod-local default-off cold starts completed with no failed or rejected plugin. |
+| BKVince table/config checks | **PASS** | `npm run test:bkvince-melee-splash-stats` passes with the active no-gate host profile, reserved IDs, and complete legacy retirement. |
+| Current-stack runtime coexistence | **PASS** | The earlier global/shadow/default-off matrix and the final active no-gate BKVince retirement cold start completed with no failed or rejected plugin. |
 | Formal every-feature PluginPack matrix | **BOUNDED BY PRE-EXISTING CONFLICTS** | Existing non-Melee collisions prevent mutually conflicting PluginPack features from all being enabled at once; this does not invalidate MeleeSplash on the qualified current stack. |
-| Solo gameplay smoke A-H | **PARTIAL PASS AFTER FIX** | The first attempt exposed a missing governed Fill caller. After the correction, A passed with one successful normal Attack and a three-target burst; E, F, H and G-active also passed in diagnostics. B, C, D and the default-off visual rollback half of G remain not run. |
+| Solo gameplay smoke A-H | **PASS WITH G SUPERSEDED** | A/E/F/H and legacy suppression passed after the Fill-caller fix. B passed by excluding skill 0; C passed with exact stats 391=20/40; D passed with exact stat 392=50. The old default-off path asserted, so Vincent retired it and superseded that half of G. |
 | Public ZIP | **PASS** | The final archive contains exactly the validated default-off DLL and JSON at its root. |
 
 ## Build and automated checks
@@ -65,7 +65,7 @@ These hashes describe the frozen build and packaging snapshot.
 | BKVince plugin copy | 2026-08-09 13:09:53 | `DBA0C40C191B2568A6B39D21324A45F770C1CBF8AD747B099AA3BCBEDEF8856C` | Byte-equal to corrected build and package |
 | `package/MeleeSplash.json` | 2026-08-09 05:37:00 | `6AA40B37051189ADE2CA5D60FE133765EE1D426E0B6DA5E2059B619E77030C20` | Generic, default-off |
 | Enabled generic example | 2026-08-09 05:37:00 | `CAE51A8A98F1BBA1278263DB7D3137D4DBFFC7DD8073670C65427F090A06B1EA` | Test/example only; excluded from ZIP |
-| BKVince configuration | 2026-08-09 05:26:09 | `32747A94E8744C39813AEBC8EA32BD284AA12F10A5E898DA7272D3721D06E5E6` | Separate, default-off host profile; excluded from ZIP |
+| BKVince configuration | 2026-08-09 16:34:48 | `0A7B1878C6D20CE3362F9B95055B7DBF9E56EDEC81C24001E2B88A400017802D` | Separate, active no-gate host profile; excluded from ZIP |
 | `MeleeSplash-0.1.0.zip` | 2026-08-09 16:05:28 | `F137F1B708A4C51C8A88EA68B49BFB85619F380693E63899B508EB1C342E35A9` | Strict two-file public archive, 89072 bytes |
 
 ## PE and public ABI inspection
@@ -123,9 +123,11 @@ npm run test:bkvince-melee-splash-stats
 ```
 
 It currently passes for stat IDs 391/392, property IDs 310/311, localization
-IDs 65028/65029, TSV byte policy, and the separate default-off BKVince
-configuration. The legacy EventFunc20 suppression is host-configured and
-reversible; no historical skill, missile, state, or item row is deleted.
+IDs 65028/65029, TSV byte policy, and the separate active BKVince
+configuration. It also verifies that stat 384/property 302, skills 430/432,
+missile 743 and state 242 are inert ID-stable tombstones; every Summon Splash
+reference is gone; Titan's Echo is non-spawnable and unreferenced. No row is
+deleted or renumbered.
 The governed BKVince DLL copy is byte-equal to the final package and qualified
 mod-local runtime DLL.
 
@@ -138,9 +140,9 @@ analysis-cache/meleesplash-runtime-validation/20260809-095701652/
 ```
 
 The original cold-start matrix used the frozen `D9A49607...21B0` artifact. The
-corrected gameplay build is `DBA0C40C...8856C`. The final BKVince
-configuration is default-off with SHA-256 `32747A94...6E5E6`. Three D2R
-3.2.92777 cold starts were recorded:
+corrected gameplay build is `DBA0C40C...8856C`. Its historical default-off
+baseline used SHA-256 `32747A94...6E5E6`. Three D2R 3.2.92777 cold starts were
+recorded for that packaging matrix:
 
 1. **global enabled:** all twelve entry hooks and two call relays installed;
    18/18 BKVince patches applied, 17/17 plugins active, 0 disabled/rejected/
@@ -152,9 +154,9 @@ configuration is default-off with SHA-256 `32747A94...6E5E6`. Three D2R
    0 disabled/rejected/failed, startup reached 24/24, and the fresh plugin log
    states `loaded disabled; no hooks installed`.
 
-The global test copy was removed, the mod-local DLL remains the final hash, the
-mod-local JSON was restored to the governed default-off hash, and no D2R process
-was left running.
+The global test copy was removed and the mod-local DLL remains the final hash.
+That default-off state was later superseded only for BKVince by the governed
+active no-gate profile; the public package itself remains default-off.
 
 This proves loading, ownership, global/mod-local precedence, rollback, and
 coexistence with the currently installable stack. It does not prove the A-H
@@ -202,17 +204,46 @@ with exactly one successful Crushing Blow and one successful Open Wounds call
 per target. EventFuncs 19 and 20 were filtered at recursion depth 1; the burst
 ended at recursion depth 0. The primary GUID appeared only as the primary and
 was rejected by the area callback, so it was not hit twice. This passes A, E,
-F, H and the active suppression half of G. B, C, D and G default-off visual
-rollback remain explicitly not run.
+F, H and the active suppression half of G.
 
-The runtime config was restored byte-exact to default-off SHA-256
-`32747A94E8744C39813AEBC8EA32BD284AA12F10A5E898DA7272D3721D06E5E6`.
-QtyTester and all its sidecars were restored; `QtyTester.d2s` is again SHA-256
-`323EE322E0F22FE9B239359A0B4FF265F5CD4AA671E1DAEE518472166F1DA5F1`.
-No D2R process remains active. The corrected mod-local DLL is installed, while
-the runtime JSON is restored to default-off and QtyTester is restored byte-exact.
-The final corrected cold start logged `loaded disabled; no hooks installed`,
-18/18 patches, 17/17 plugins, 24/24 startup, and zero disabled/rejected/failed.
+The complementary smoke then passed B with `excludedSkillIds:[0]`, C with the
+exact reserved radius stat at 20 and 40 (radius bonus 1/2, final radius 6/7),
+and D with the exact reserved damage stat at 50 (`splashPercent=150`). Evidence
+is preserved under
+`analysis-cache/meleesplash-runtime-validation/20260809-smoke-bcdg/`.
+The attempted default-off visual rollback reached the obsolete skill-item
+effect path and asserted `ptSkill->nItemEffect != 0` before the old missile
+could be qualified. Vincent explicitly superseded that rollback requirement:
+the legacy graph is now retired in data, and disabling/removing the plugin
+means no splash.
+
+## BKVince legacy-retirement qualification
+
+After Vincent superseded the legacy rollback, the seven governed Excel tables
+and active no-gate JSON were synchronized byte-exact to the mod-local runtime.
+The final configuration is 602 bytes, SHA-256
+`0A7B1878C6D20CE3362F9B95055B7DBF9E56EDEC81C24001E2B88A400017802D`.
+
+A diagnostic hit by the unmodified no-gate QtyTester path logged
+`gateSeen=false`, `radiusFinal=5`, `splashPercent=100`, a valid capture and a
+completed burst. It emitted no configured-legacy suppression record and no
+EventFunc20 token. No secondary monster happened to be in radius for that hit;
+the earlier A/E/F/H witnesses retain the multi-target application proof.
+
+The final silent cold start on the retired data reached 18/18 patches,
+17/17 plugins and 24/24 startup with zero disabled, rejected or failed entries.
+The session was stopped and no D2R process remains. Preserved evidence:
+
+```text
+analysis-cache/meleesplash-runtime-validation/20260809-legacy-retirement/melee-splash-hit-no-gate.log
+SHA-256 F36551F4960A17C88ED101EB4B99A4B8EEA5509AB398DF8A7F56F8CD29B98992
+
+analysis-cache/meleesplash-runtime-validation/20260809-legacy-retirement/d2rloader-final-active-silent.log
+SHA-256 D5F9C307A6DA46E912D68E7C1555867B992DFEABD40DF82180D3784BACDBDA20
+
+analysis-cache/meleesplash-runtime-validation/20260809-legacy-retirement/melee-splash-final-active-silent.log
+SHA-256 462101B04E98CEA44FF98DA1C1CEB752B846471C3E4A8831E1A834B97020FCFE
+```
 
 A formal matrix with every PluginPack feature simultaneously enabled is not
 possible in the current workspace because of pre-existing conflicts at
@@ -278,8 +309,9 @@ this inventory before the final checkpoint if another file is added or removed.
   `SMOKE-TEST.md`, `BKVINCE-INTEGRATION.md`, and this validation record;
 - the separate BKVince configuration and staged plugin copy under
   `data-BKVince/d2rloader/`;
-- BKVince `itemstatcost.txt`, `properties.txt`, and
-  `item-modifiers.json` append-only reservations;
+- BKVince `itemstatcost.txt`, `properties.txt`, `skills.txt`, `missiles.txt`,
+  `monstats.txt`, `uniqueitems.txt`, `treasureclassex.txt`, and
+  `item-modifiers.json` reservations/legacy retirement;
 - `scripts/migrate-bkvince/apply-melee-splash-stats.js` and the MeleeSplash
   entry in `scripts/verify/zip-policy.json`;
 - `Mission/melee-splash-3.2.md`, the targeted Mechanics evidence updates,
@@ -290,8 +322,9 @@ and runtime logs stay under `analysis-cache/` and are not release payloads.
 
 ## Repository closure
 
-No MeleeSplash build, PE, current-stack runtime, default-off rollback, public
-package, whitespace, or cartography blocker remains. The targeted data checks,
+No MeleeSplash build, PE, current-stack runtime, active-host integration,
+public package, whitespace, or cartography blocker remains. The old default-off
+rollback is intentionally superseded, not claimed as successful. The targeted data checks,
 cartography schema validation, CURRENT/ROADMAP alignment, JSON parsing and
 `git diff --check` pass. The repository-wide verifier remains red only for 13
 unassigned files from unrelated concurrent work; none belongs to MeleeSplash.

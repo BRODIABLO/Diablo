@@ -44,6 +44,12 @@ const MODE = modeFlags[0].slice(2);
 const TABLES = Object.freeze({
   itemStatCost: path.join(EXCEL, 'itemstatcost.txt'),
   properties: path.join(EXCEL, 'properties.txt'),
+  skills: path.join(EXCEL, 'skills.txt'),
+  missiles: path.join(EXCEL, 'missiles.txt'),
+  states: path.join(EXCEL, 'states.txt'),
+  monStats: path.join(EXCEL, 'monstats.txt'),
+  uniqueItems: path.join(EXCEL, 'uniqueitems.txt'),
+  treasureClassEx: path.join(EXCEL, 'treasureclassex.txt'),
 });
 
 const ITEM_STAT_ROWS = Object.freeze([
@@ -136,13 +142,13 @@ const STRING_ROWS = Object.freeze([
 ]);
 
 const EXPECTED_CONFIG = Object.freeze({
-  enabled: false,
+  enabled: true,
   activationMode: 'allEligibleMelee',
   allowNormalAttack: true,
   includedSkillIds: [],
   excludedSkillIds: [],
-  requireGateStat: true,
-  gateStatId: 384,
+  requireGateStat: false,
+  gateStatId: -1,
   increasedRadiusStatId: 391,
   radiusPercentPerTile: 20,
   splashDamagePercentStatId: 392,
@@ -153,11 +159,27 @@ const EXPECTED_CONFIG = Object.freeze({
   diagnosticLogging: false,
   skillOverrides: {},
   legacyEvent20Suppression: {
-    enabled: true,
-    statId: 384,
-    layer: 430,
+    enabled: false,
+    statId: -1,
+    layer: -1,
     playerAttackersOnly: true,
   },
+});
+
+const LEGACY_SPLASH = Object.freeze({
+  itemStat: 'item_splashonhit',
+  itemStatId: '384',
+  property: 'splash',
+  propertyId: '302',
+  playerSkill: 'Splash',
+  playerSkillId: '430',
+  summonSkill: 'Summon Splash',
+  summonSkillId: '432',
+  missile: 'proc_splashdamage',
+  missileId: '743',
+  state: 'splashdamage',
+  stateId: '242',
+  unique: "Titan's Echo",
 });
 
 function headerIndexes(table) {
@@ -168,6 +190,175 @@ function getCell(table, row, header) {
   const index = headerIndexes(table).get(header);
   assert.notStrictEqual(index, undefined, `Missing column ${header}`);
   return row[index] ?? '';
+}
+
+function setCell(table, row, header, value) {
+  const index = headerIndexes(table).get(header);
+  assert.notStrictEqual(index, undefined, `Missing column ${header}`);
+  const next = String(value);
+  if ((row[index] ?? '') === next) return false;
+  row[index] = next;
+  return true;
+}
+
+function findUniqueRow(document, header, value) {
+  const matches = document.table.rows.filter((row) => getCell(document.table, row, header) === value);
+  assert.strictEqual(matches.length, 1, `${document.label}: expected one ${header}=${value}`);
+  return matches[0];
+}
+
+function clearRowExcept(document, row, keepHeaders) {
+  const keep = new Set(keepHeaders);
+  let changed = false;
+  for (const header of document.table.headers) {
+    if (!keep.has(header)) changed = setCell(document.table, row, header, '') || changed;
+  }
+  if (keep.has('*eol')) changed = setCell(document.table, row, '*eol', '0') || changed;
+  return changed;
+}
+
+function compactPairedSlots(document, row, skillHeaders, calcHeaders, removedSkill) {
+  const pairs = skillHeaders.map((header, index) => ({
+    skill: getCell(document.table, row, header),
+    calc: getCell(document.table, row, calcHeaders[index]),
+  }));
+  const removed = pairs.filter(({ skill }) => skill === removedSkill).length;
+  if (removed === 0) return { changed: false, removed: 0 };
+  const kept = pairs.filter(({ skill }) => skill && skill !== removedSkill);
+  let changed = false;
+  for (let index = 0; index < skillHeaders.length; index += 1) {
+    changed = setCell(document.table, row, skillHeaders[index], kept[index]?.skill ?? '') || changed;
+    changed = setCell(document.table, row, calcHeaders[index], kept[index]?.calc ?? '') || changed;
+  }
+  return { changed, removed };
+}
+
+function retireLegacySplash(documents) {
+  const changed = [];
+
+  const itemStat = findUniqueRow(documents.itemStatCost, 'Stat', LEGACY_SPLASH.itemStat);
+  assert.strictEqual(getCell(documents.itemStatCost.table, itemStat, '*ID'), LEGACY_SPLASH.itemStatId);
+  let itemStatChanged = false;
+  for (const header of [
+    'fCallback', 'damagerelated', 'itemevent1', 'itemeventfunc1',
+    'descpriority', 'descfunc', 'descval', 'descstrpos', 'descstrneg', 'advdisplay',
+  ]) {
+    itemStatChanged = setCell(documents.itemStatCost.table, itemStat, header, '') || itemStatChanged;
+  }
+  if (itemStatChanged) changed.push('retire-item_splashonhit-event');
+
+  const property = findUniqueRow(documents.properties, 'code', LEGACY_SPLASH.property);
+  assert.strictEqual(getCell(documents.properties.table, property, '*Id'), LEGACY_SPLASH.propertyId);
+  let propertyChanged = clearRowExcept(
+    documents.properties,
+    property,
+    ['code', '*Id', '*Enabled', '*eol'],
+  );
+  propertyChanged = setCell(documents.properties.table, property, '*Enabled', '0') || propertyChanged;
+  if (propertyChanged) changed.push('retire-splash-property');
+
+  for (const [skill, id] of [
+    [LEGACY_SPLASH.playerSkill, LEGACY_SPLASH.playerSkillId],
+    [LEGACY_SPLASH.summonSkill, LEGACY_SPLASH.summonSkillId],
+  ]) {
+    const row = findUniqueRow(documents.skills, 'skill', skill);
+    assert.strictEqual(getCell(documents.skills.table, row, '*Id'), id);
+    if (clearRowExcept(documents.skills, row, ['skill', '*Id', '*eol'])) {
+      changed.push(`retire-skill-${id}`);
+    }
+  }
+
+  const missile = findUniqueRow(documents.missiles, 'Missile', LEGACY_SPLASH.missile);
+  assert.strictEqual(getCell(documents.missiles.table, missile, '*ID'), LEGACY_SPLASH.missileId);
+  if (clearRowExcept(documents.missiles, missile, ['Missile', '*ID', '*eol'])) {
+    changed.push('retire-proc_splashdamage-missile');
+  }
+
+  const state = findUniqueRow(documents.states, 'state', LEGACY_SPLASH.state);
+  assert.strictEqual(getCell(documents.states.table, state, '*ID'), LEGACY_SPLASH.stateId);
+  if (clearRowExcept(documents.states, state, ['state', '*ID', '*eol'])) {
+    changed.push('retire-splashdamage-state');
+  }
+
+  const summonHeaders = Array.from({ length: 5 }, (_, index) => `sumskill${index + 1}`);
+  const summonCalcHeaders = Array.from({ length: 5 }, (_, index) => `sumsk${index + 1}calc`);
+  let skillReferencesRemoved = 0;
+  for (const row of documents.skills.table.rows) {
+    const result = compactPairedSlots(
+      documents.skills,
+      row,
+      summonHeaders,
+      summonCalcHeaders,
+      LEGACY_SPLASH.summonSkill,
+    );
+    skillReferencesRemoved += result.removed;
+  }
+  if (skillReferencesRemoved) changed.push(`remove-${skillReferencesRemoved}-summon-skill-references`);
+
+  const monsterSkillHeaders = Array.from({ length: 8 }, (_, index) => `Skill${index + 1}`);
+  const monsterModeHeaders = Array.from({ length: 8 }, (_, index) => `Sk${index + 1}mode`);
+  const monsterLevelHeaders = Array.from({ length: 8 }, (_, index) => `Sk${index + 1}lvl`);
+  let monsterReferencesRemoved = 0;
+  for (const row of documents.monStats.table.rows) {
+    const skills = monsterSkillHeaders.map((header, index) => ({
+      skill: getCell(documents.monStats.table, row, header),
+      mode: getCell(documents.monStats.table, row, monsterModeHeaders[index]),
+      level: getCell(documents.monStats.table, row, monsterLevelHeaders[index]),
+    }));
+    const removed = skills.filter(({ skill }) => skill === LEGACY_SPLASH.summonSkill).length;
+    monsterReferencesRemoved += removed;
+    if (removed === 0) continue;
+    const kept = skills.filter(({ skill }) => skill && skill !== LEGACY_SPLASH.summonSkill);
+    for (let index = 0; index < monsterSkillHeaders.length; index += 1) {
+      setCell(documents.monStats.table, row, monsterSkillHeaders[index], kept[index]?.skill ?? '');
+      setCell(documents.monStats.table, row, monsterModeHeaders[index], kept[index]?.mode ?? '');
+      setCell(documents.monStats.table, row, monsterLevelHeaders[index], kept[index]?.level ?? '');
+    }
+  }
+  if (monsterReferencesRemoved) changed.push(`remove-${monsterReferencesRemoved}-monster-skill-references`);
+
+  const unique = findUniqueRow(documents.uniqueItems, 'index', LEGACY_SPLASH.unique);
+  let uniqueChanged = setCell(documents.uniqueItems.table, unique, 'spawnable', '0');
+  for (const header of ['prop1', 'par1', 'min1', 'max1']) {
+    uniqueChanged = setCell(documents.uniqueItems.table, unique, header, '') || uniqueChanged;
+  }
+  if (uniqueChanged) changed.push('retire-titans-echo');
+
+  const itemHeaders = Array.from({ length: 10 }, (_, index) => `Item${index + 1}`);
+  const probabilityHeaders = Array.from({ length: 10 }, (_, index) => `Prob${index + 1}`);
+  let treasureReferencesRemoved = 0;
+  for (const row of documents.treasureClassEx.table.rows) {
+    const result = compactPairedSlots(
+      documents.treasureClassEx,
+      row,
+      itemHeaders,
+      probabilityHeaders,
+      LEGACY_SPLASH.unique,
+    );
+    treasureReferencesRemoved += result.removed;
+  }
+  if (treasureReferencesRemoved) changed.push(`remove-${treasureReferencesRemoved}-treasure-reference`);
+
+  assert.ok(
+    !documents.skills.table.rows.some((row) => summonHeaders.some(
+      (header) => getCell(documents.skills.table, row, header) === LEGACY_SPLASH.summonSkill,
+    )),
+    'skills: legacy Summon Splash reference remains',
+  );
+  assert.ok(
+    !documents.monStats.table.rows.some((row) => monsterSkillHeaders.some(
+      (header) => getCell(documents.monStats.table, row, header) === LEGACY_SPLASH.summonSkill,
+    )),
+    'monstats: legacy Summon Splash reference remains',
+  );
+  assert.ok(
+    !documents.treasureClassEx.table.rows.some((row) => itemHeaders.some(
+      (header) => getCell(documents.treasureClassEx.table, row, header) === LEGACY_SPLASH.unique,
+    )),
+    "treasureclassex: Titan's Echo reference remains",
+  );
+
+  return changed;
 }
 
 function makeRow(table, values) {
@@ -256,7 +447,7 @@ function validateStrings() {
 
 function validateConfig() {
   const actual = JSON.parse(fs.readFileSync(BKVINCE_CONFIG, 'utf8').replace(/^\uFEFF/, ''));
-  assert.deepStrictEqual(actual, EXPECTED_CONFIG, 'BKVince MeleeSplash.json differs from the governed default-off profile');
+  assert.deepStrictEqual(actual, EXPECTED_CONFIG, 'BKVince MeleeSplash.json differs from the governed active profile');
 }
 
 function writeIfChanged(document) {
@@ -272,8 +463,10 @@ function writeIfChanged(document) {
 }
 
 function main() {
-  const itemStatCost = loadTable(TABLES.itemStatCost, 'itemstatcost');
-  const properties = loadTable(TABLES.properties, 'properties');
+  const documents = Object.fromEntries(Object.entries(TABLES).map(([key, filePath]) => (
+    [key, loadTable(filePath, key)]
+  )));
+  const { itemStatCost, properties } = documents;
   const changed = [];
 
   for (const definition of ITEM_STAT_ROWS) {
@@ -283,13 +476,18 @@ function main() {
     if (ensureAppendOnlyRow(properties, definition, 'code', '*Id')) changed.push(definition.key);
   }
   validateCrossReferences(itemStatCost, properties);
+  changed.push(...retireLegacySplash(documents));
 
   if (MODE === 'check') {
-    assert.strictEqual(serializeTable(itemStatCost.table), itemStatCost.raw, 'itemstatcost: check would mutate the file');
-    assert.strictEqual(serializeTable(properties.table), properties.raw, 'properties: check would mutate the file');
+    for (const document of Object.values(documents)) {
+      assert.strictEqual(
+        serializeTable(document.table),
+        document.raw,
+        `${document.label}: check would mutate the file`,
+      );
+    }
   } else {
-    writeIfChanged(itemStatCost);
-    writeIfChanged(properties);
+    for (const document of Object.values(documents)) writeIfChanged(document);
   }
 
   validateStrings();
@@ -304,6 +502,7 @@ function main() {
     propertyIds: PROPERTY_ROWS.map(({ index, key }) => ({ id: index, code: key })),
     stringIds: STRING_ROWS.map(({ id, Key }) => ({ id, key: Key })),
     configEnabled: EXPECTED_CONFIG.enabled,
+    legacySplashRetired: true,
   }, null, 2));
 }
 
