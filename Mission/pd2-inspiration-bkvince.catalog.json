@@ -19,6 +19,12 @@
       "timestamp": "2026-05-25T15:18:03Z"
     },
     {
+      "title": "Game Mechanics",
+      "url": "https://wiki.projectdiablo2.com/wiki/Game_Mechanics",
+      "revision": 23934,
+      "timestamp": "2026-07-18T16:30:25Z"
+    },
+    {
       "title": "Skill Changes",
       "url": "https://wiki.projectdiablo2.com/wiki/Skill_Changes",
       "revision": 23785,
@@ -96,6 +102,7 @@
   ],
   "chapters": [
     { "id": "inventory", "title": "Table inventory and structural comparison", "status": "complete" },
+    { "id": "mechanics-foundation", "title": "Game Mechanics foundation and engine contracts", "status": "complete" },
     { "id": "general-qol", "title": "General changes, quality of life, and balance", "status": "in_progress" },
     { "id": "mercenaries", "title": "Mercenaries, equipment, skills, and AI", "status": "planned" },
     { "id": "skills", "title": "Global and class-specific skills", "status": "planned" },
@@ -141,20 +148,20 @@
     },
     {
       "id": "players-five-nodrop",
-      "title": "Solo no-drop baseline inspired by higher player count",
+      "title": "PD2 core solo NoDrop baseline",
       "domain": "balance",
-      "sourceLayer": "single_player_plus",
-      "sourceRefs": ["treasureclassex.txt", "difficultylevels.txt"],
-      "tables": ["treasureclassex.txt", "difficultylevels.txt"],
-      "playerEffect": "Raises solo drop density without requiring the player-count command.",
-      "bkvinceCoverage": "unknown",
-      "route": "hybrid",
-      "disposition": "needs_re",
-      "evidenceStatus": "partial",
+      "sourceLayer": "pd2_core",
+      "sourceRefs": ["Game Mechanics", "treasureclassex.txt"],
+      "tables": ["treasureclassex.txt"],
+      "playerEffect": "Raises solo drop quantity through PD2 Treasure Class weights without increasing monster difficulty.",
+      "bkvinceCoverage": "conflict",
+      "route": "data_only",
+      "disposition": "adapt_retune",
+      "evidenceStatus": "verified",
       "saveRisk": "none",
       "multiplayer": "host_authority_required",
-      "rationale": "The table delta is measurable, but the exact engine no-drop semantics and host authority must be proven before adaptation.",
-      "dependencies": ["d2r32-reverse-engineering"]
+      "rationale": "The official page attributes the p5-like solo baseline to PD2 core, and the two published NoDrop examples reproduce exactly from the PD2 table weights while BKVince reproduces the LoD values. Adaptation is data-only but still requires a complete BKVince economy baseline and statistical validation.",
+      "dependencies": []
     },
     {
       "id": "endgame-zone-levels",
@@ -399,8 +406,8 @@
       "title": "Single Player Plus accelerated drop rates",
       "domain": "balance",
       "sourceLayer": "single_player_plus",
-      "sourceRefs": ["treasureclassex.txt", "itemratio.txt"],
-      "tables": ["treasureclassex.txt", "itemratio.txt"],
+      "sourceRefs": ["Single Player Plus README", "treasureclassex.txt"],
+      "tables": ["treasureclassex.txt"],
       "playerEffect": "Accelerates access to rare, set, unique, and crafting rewards in solo play.",
       "bkvinceCoverage": "conflict",
       "route": "data_only",
@@ -408,7 +415,7 @@
       "evidenceStatus": "partial",
       "saveRisk": "none",
       "multiplayer": "host_authority_required",
-      "rationale": "Direct transplantation would destabilize BKVince progression; only measured rate concepts should be retained.",
+      "rationale": "This is a separate solo-economy overlay, not the PD2 core p5-like NoDrop foundation. Direct transplantation would stack with BKVince's own rune and linear-MF choices; any future review belongs to an isolated economy lot.",
       "dependencies": []
     },
     {
@@ -430,7 +437,6 @@
     }
   ],
   "nativeBacklog": [
-    "players-five-nodrop",
     "pointmods-overhaul",
     "rare-affix-floor",
     "mercenary-ai",

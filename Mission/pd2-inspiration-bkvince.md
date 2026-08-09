@@ -659,17 +659,48 @@ sources, et aucun processus D2R/D2RLoader n'est resté ouvert. Le lot est donc
 validation fonctionnelle ne sera fermée qu'après un cast observé en solo puis
 un témoin hôte/joiner.
 
+## Audit Mechanics 2.0 — clôture documentaire
+
+Le 8 août 2026, l'Option A demandée par Vincent est fermée dans
+[`pd2-game-mechanics-vs-bkvince-audit.md`](pd2-game-mechanics-vs-bkvince-audit.md).
+La page officielle `Game Mechanics` est épinglée à la révision `23934`,
+horodatée `2026-07-18T16:30:25Z`, encore courante au moment de l'audit. Les
+treize sections de premier niveau possèdent chacune une couche source, une
+preuve BKVince, une route et une disposition exacte : quatre
+`baseline_only`, deux `adapt`, un `reject` et six `needs_re`.
+
+Les décisions structurantes sont :
+
+- conserver arrondis, leech de base, distance et mouvement comme contrats
+  moteur, sans nouveau port;
+- rejeter la règle dual-wield globale `IAS - WSM`, tout en conservant la
+  taxonomie local/global comme contrainte à prouver;
+- isoler comme futurs candidats le cap élémentaire 90 et la baseline NoDrop
+  PD2 core, sans les confondre avec les breakers ni avec l'accélération SP+;
+- maintenir melee splash, Critical/Deadly, Crushing Blow, Open Wounds, curse
+  effectiveness et réduction de résistances dans le backlog 92777 tant que
+  leurs handlers, ABI, ordre et propriétaires ne sont pas gouvernés;
+- ne copier aucun ID PD2 : les collisions et les extensions hors de la plage
+  BKVince `0..390` sont inventoriées dans l'audit.
+
+Le catalogue gouverné référence désormais `Game Mechanics`, marque le chapitre
+`mechanics-foundation` complet et corrige `players-five-nodrop` : la baseline
+p5-like appartient au cœur PD2 et sa route est le retune data-only des poids de
+Treasure Class, pas `/players5` ni un handler natif. L'accélération Single
+Player Plus reste une surcouche économique distincte.
+
+Ce lot n'a modifié aucune table BKVince, DLL, configuration, sauvegarde ou
+installation runtime. Le melee déjà en cours n'a reçu aucune nouvelle
+implantation et garde son propriétaire.
+
 ## Prochain gate
 
-Produire en priorité PD2 Game Mechanics Foundation / Audit Mechanics 2.0 selon
-l'Option A confirmée par Vincent le 8 août 2026. Couvrir les treize sections de
-`Game Mechanics`, épingler la révision source, distinguer baseline moteur, PD2
-core et Single Player Plus, prouver l'état BKVince et attribuer à chaque bloc
-une disposition `baseline_only`, `adapt`, `reject` ou `needs_re`, avec route,
-dépendances et risques. Le melee splash déjà en cours reste hors implantation
-de ce lot et sera seulement relié au contrat commun. General Changes / QoL /
-balance est mis en pause jusqu'à la fermeture de ce socle; aucune mutation
-gameplay n'est autorisée dans l'audit.
+Reprendre le chapitre `General Changes / QoL / balance` à son gate existant en
+appliquant Mechanics 2.0 comme frontière : aucun lot ne peut réinterpréter une
+loi `baseline_only`, rouvrir le dual-wield rejeté ou consommer une surface
+`needs_re` sans sa preuve 92777. Comparer d'abord les candidats data-only et les
+fonctionnalités déjà mieux couvertes par BKVince; toute mutation gameplay reste
+un lot atomique séparé, explicitement autorisé, mesuré et réversible.
 
 ## Crédits
 

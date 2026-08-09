@@ -6,20 +6,22 @@ Dernière mise à jour : 8 août 2026
 
 [PD2 / Single Player Plus — inspiration gouvernée pour BKVince](pd2-inspiration-bkvince.md)
 
-État : Option A confirmée par Vincent. PD2 Game Mechanics Foundation / Audit
-Mechanics 2.0 devient le gate documentaire immédiat. General Changes / QoL /
-balance est mis en pause à son gate existant; mercenaires, skills, monstres et
-items restent derrière ce socle. Le melee splash déjà en cours demeure hors
-implantation de ce lot et sera seulement relié au contrat commun.
+État : PD2 Game Mechanics Foundation / Audit Mechanics 2.0 est fermé
+documentairement : les treize sections possèdent une provenance épinglée, une
+preuve BKVince, une route et une disposition. Aucune mutation gameplay n'a été
+faite. General Changes / QoL / balance reprend à son gate existant; le melee
+splash déjà en cours demeure un chantier séparé et conserve son propriétaire.
 
 ## Prochain gate
 
-Produire l'Audit Mechanics 2.0 sur les treize sections de `Game Mechanics` :
-épingler la révision source, distinguer baseline moteur, PD2 core et Single
-Player Plus, prouver l'état BKVince et attribuer à chaque bloc une disposition
-`baseline_only`, `adapt`, `reject` ou `needs_re`. Aucune mutation gameplay.
+Reprendre le chapitre `General Changes / QoL / balance` en appliquant Mechanics
+2.0 comme frontière : comparer d'abord les candidats data-only et les fonctions
+déjà mieux couvertes par BKVince; ne pas réinterpréter une loi `baseline_only`,
+rouvrir le dual-wield rejeté ni consommer une surface `needs_re` sans preuve
+92777. Toute mutation gameplay formera un lot atomique séparé et autorisé.
 
 ## Frontière Git
 
-Le lot Mechanics 2.0 ne modifie aucune table BKVince et ne déploie rien dans le
-runtime. Aucun commit ni push n'est effectué sans demande explicite de Vincent.
+Le lot Mechanics 2.0 n'a modifié aucune table BKVince et n'a rien déployé dans
+le runtime. Le prochain lot gameplay reste hors de ce périmètre documentaire.
+Aucun commit ni push n'est effectué sans demande explicite de Vincent.
