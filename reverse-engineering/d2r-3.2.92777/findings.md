@@ -595,6 +595,49 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   hors du corps de Static Field; les quatre autres DLL ne possèdent aucun site
   chevauchant.
 
+## Mechanics 2.0 MEC-00 — sous-graphe damage 92777
+
+- Le workbench vérifié ferme statiquement `D2Damage` à `0x180` octets. Les
+  constructeurs/destructeur `0x4494B0/0x4496E0` prouvent le conteneur SBO et le
+  sous-objet possédé; les offsets gameplay utiles sont consignés dans
+  `Mission/mechanics-native-proof-92777.md`.
+- `SUNITDMG_FillDamageValues 0x44C030` résout Critical/Deadly dans l'ordre
+  court-circuité weapon mastery, passive Critical Strike, Deadly Strike. Le
+  succès double uniquement `damage+0x18` et pose le même bit
+  `resultFlags+0x04 & 0x2000`; l'origine Critical ou Deadly est donc perdue
+  après résolution.
+- `SUNITDMG_ExecuteEvents 0x44CE80` est une couture autoritaire de commit
+  partagée, pas une couture exclusivement melee. Le callsite melee
+  `0x44B3FA` passe `bMissile=0`; le missile `0x436F95` passe `1`. Toute
+  conclusion « hit melee réussi » doit encore corréler ce flag, `SUCCESS`, le
+  caller et un témoin runtime read-only.
+- Le life/mana leech possède un consumer unique à `0x450C90`, appelé seulement
+  par ExecuteEvents à `0x44D038`. Les pourcentages bruts vivent à
+  `D2Damage+0x120/+0x124`, puis sont transformés en montants effectifs après
+  Drain, diviseurs de difficulté, troncatures et caps.
+- Les jets Critical/Deadly, monster critical et overlay leech prennent le seed
+  de l'attacker par `UNITS_GetSeed 0x34A1E0`, mais appliquent le LCG et le
+  modulo inline. Aucune primitive callable commune de roll n'est démontrée sur
+  ce sous-graphe.
+- Le dispatcher `0x5881E0` transporte neuf positions aux callbacks, et non les
+  sept arguments exacts du préfixe legacy. Les handlers statiques sont Freeze
+  `0x583580`, Open Wounds `0x584170`, Crushing Blow `0x583150` et
+  SkillOnAttack/Hit/Kill `0x583B30`. Ils sont appelés indirectement; aucune
+  table D2R associant les numéros 14/15/16/20 n'a été retrouvée, et les labels
+  numériques reposent sur l'isomorphisme sémantique complet avec D2MOO épinglé.
+- Open Wounds appelle le helper curse/statlist `0x433D20`; création, refresh,
+  remplacement, expiration et callback `0x436240` sont fermés statiquement.
+  La constante BSS duration/stat, les stacks multi-attacker, disconnect,
+  fin de game et GUID reuse restent des témoins MEC-01.
+- `0x44DF10` calcule résistances/réductions/absorb/total et délègue au resolver
+  `0x4523E0`; `0x44A9B0` finalise modes, réactions et mort. La chaîne prouve un
+  transport natif cohérent, mais pas encore une primitive sûre d'application
+  secondaire ni une architecture `Pd2CombatCore`.
+- `0x48E060` est confirmé comme prédicat serveur
+  `(game, attacker, candidate)->int32`. `0x4398B0` est seulement `partial` :
+  son entrée, ses huit callers, son descriptor room/x/y et son callback sont
+  observés, mais ses bornes, rooms adjacentes, doublons et LOS restent ouverts.
+
 ## Discipline de promotion
 
 Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de

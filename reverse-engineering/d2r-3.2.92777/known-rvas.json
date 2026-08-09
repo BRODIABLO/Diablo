@@ -1312,8 +1312,8 @@
       "name": "UNITS_GetSeed",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/repair-costs-cap-3.2.md",
-      "notes": "Returns the native seed at unit offset 0x28. RepairCostsCap uses the repaired item's own seed for the configurable durability-wear roll."
+      "source": "Mission/repair-costs-cap-3.2.md; Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static accessor returning the native seed pair at unit+0x28. RepairCostsCap uses the repaired item's seed. Mechanics 2.0 proves Critical/Deadly, monster critical, Event15/16/20 and the leech-overlay choice all call this accessor, then inline their own LCG/modulo sequence; this RVA is not a shared callable random-roll primitive."
     },
     {
       "rva": "0x153B00",
@@ -2306,6 +2306,150 @@
       "confidence": "high",
       "source": "Mission/mass-id-3.2.md",
       "notes": "Authoritative server callback in dispatch-table slot 0x34 with ABI (game, player, packet, packetSize) -> int32. It requires exactly 0x15 bytes and is stored at 0x1D2A930, which maps to opcode 0x34 from the table base 0x1D2A790. MassID 0.2.4 recognizes two private payload markers before this vanilla path and delegates every normal Cain request unchanged."
+    },
+    {
+      "rva": "0x44CE80",
+      "name": "SUNITDMG_ExecuteEvents",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static authoritative damage/event commit with logical bounds 0x44CE80..0x44D569 and ABI (game, attacker, defender, bMissile, D2Damage*) -> void. Its 31-byte entry signature is unique and it has 36 direct callers. Melee callsite 0x44B3FA passes bMissile=0 while missile callsite 0x436F95 passes 1, so this is a shared commit surface rather than an exclusively-melee hit seam."
+    },
+    {
+      "rva": "0x583580",
+      "name": "D2GAME_EventFunc14_ItemFreeze",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static EventFunc14 ItemFreeze callback. Its strict 33-byte entry signature is unique in build 92777; zero direct xrefs are expected because the native dispatcher calls handlers indirectly. The D2R callback frame transports nine positions, not a seven-argument ABI copied from legacy D2MOO."
+    },
+    {
+      "rva": "0x583B30",
+      "name": "D2GAME_EventFunc20_SkillOnAttackHitKill",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static EventFunc20 callback for skill-on-attack/hit/kill nodes. Its strict 33-byte entry signature is unique; packed node payload uses high-word stat id and low-word layer before the layered stat getter. Dispatch is indirect with a nine-position D2R frame, so zero direct xrefs do not imply an unused handler."
+    },
+    {
+      "rva": "0x48E060",
+      "name": "SUNIT_CanDamageTarget",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static server target-permission predicate with logical bounds 0x48E060..0x48E248 and ABI (game, attacker, candidate) -> int32. Its 19-byte entry signature is unique; direct callers 0x44CEC1 and 0x44A9C9 prove its role before damage commit and finalization. It resolves owners/minions, town, rooms and hostile relation but does not prove distance or LOS."
+    },
+    {
+      "rva": "0x44C030",
+      "name": "SUNITDMG_FillDamageValues",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static native damage builder with bounds 0x44C030..0x44CDC8 and ABI (game, attacker, defender, D2Damage*, mode, SrcDam) -> void. Its unique 30-byte signature and eight callers are governed. The mode-zero path resolves weapon-mastery Critical, passive Critical Strike, then Deadly Strike with short-circuiting; success doubles physical and sets the shared result bit 0x2000."
+    },
+    {
+      "rva": "0x44D710",
+      "name": "SUNITDMG_ApplyDamageBonuses",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static eight-argument native damage-bonus helper with bounds 0x44D710..0x44D9E5 and ABI (attacker, getStats, item, minDamage, maxDamage, enhancedPct, flatDamage, SrcDam) -> int32. Its 31-byte signature is unique with six callers and nine material callees. This proof establishes the generic helper only; it does not validate the prototype's historical Smite composition."
+    },
+    {
+      "rva": "0x5889E0",
+      "name": "SUNITDMG_ApplyMonsterCritical",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static monster-critical stage with bounds 0x5889E0..0x588AF4, unique 32-byte signature and ABI (attacker, defender, D2Damage*) -> void. It rolls the attacker seed against MonStats chance and doubles six damage components. It does not set the player Critical/Deadly result bit 0x2000 and is therefore a distinct result path."
+    },
+    {
+      "rva": "0x44DF10",
+      "name": "SUNITDMG_CalculateTotalDamage",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static component-aware damage resolver with bounds 0x44DF10..0x44ECE0 and ABI (game, attacker, defender, D2Damage*) -> void. Its 49-byte signature is unique with four callers. It applies resistances, reductions, absorb and final totals and delegates to the governed resistance resolver 0x4523E0."
+    },
+    {
+      "rva": "0x44A9B0",
+      "name": "SUNITDMG_FinalizeDamage",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static final damage/status/mode/death stage with bounds 0x44A9B0..0x44B2A2, unique 30-byte signature and ABI (game, attacker, defender, D2Damage*) -> void. It has 32 direct callers and follows ExecuteEvents on the governed melee and missile chains. Runtime ordering of reactions, death and packets remains a MEC-01 witness."
+    },
+    {
+      "rva": "0x4494B0",
+      "name": "D2Damage_CopyConstructor",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static deep-copy constructor with bounds 0x4494B0..0x4496DF, unique 32-byte signature and ABI (destination, source) -> destination for the build-92777 0x180-byte D2Damage object. It copies scalars, reconstructs the internal SBO container and constructs the owned subobject at +0x158."
+    },
+    {
+      "rva": "0x4496E0",
+      "name": "D2Damage_Destructor",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static destructor with bounds 0x4496E0..0x449752, unique 32-byte signature and ABI (D2Damage*) -> void for the 0x180-byte record. It destroys the owned subobject at +0x158 and releases the +0x40 container only when it is outside the inline SBO storage."
+    },
+    {
+      "rva": "0x584170",
+      "name": "D2GAME_EventFunc15_OpenWounds",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static Open Wounds event callback with bounds 0x584170..0x584316 and unique 24-byte signature. The native nine-position callback frame supplies game, event, attacker, target and packed layered-stat payload. It rolls the attacker seed, computes the native OW value and delegates state 62 to the generic curse/statlist helper; the exact BSS tuple for duration/stat id still requires a runtime read-only witness."
+    },
+    {
+      "rva": "0x583150",
+      "name": "D2GAME_EventFunc16_CrushingBlow",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static Crushing Blow event callback with bounds 0x583150..0x583276 and unique 32-byte signature. It consumes the D2Damage pointer and packed chance from the native nine-position callback frame, rolls the attacker seed, builds the target-class divisor context and calls the native Crushing Blow core at 0x581BD0."
+    },
+    {
+      "rva": "0x450C90",
+      "name": "SUNITDMG_ApplyLifeAndManaLeech",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static unique life/mana leech consumer with bounds 0x450C90..0x451380, unique 32-byte signature and ABI (game, attacker, defender, D2Damage*) -> void. Its only direct caller is ExecuteEvents at 0x44D038. It consumes raw percentages at D2Damage+0x120/+0x124, applies Drain, difficulty divisors, bases, truncations and caps, credits attacker stats and rewrites the fields with effective amounts."
+    },
+    {
+      "rva": "0x5881E0",
+      "name": "D2GAME_DispatchUnitStatEventList",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static native unit-stat event-list dispatcher with bounds 0x5881E0..0x58844B and unique 16-byte signature. Eight direct callers include the damage-event wrapper at 0x44D5F2. It walks attacker+0xE0, invokes node callbacks through a nine-position D2R frame and safely performs deferred deletion after callback return."
+    },
+    {
+      "rva": "0x581BD0",
+      "name": "D2GAME_ApplyCrushingBlowCore",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static Crushing Blow core with bounds 0x581BD0..0x581EC7, unique 24-byte signature and ABI (game, attacker, target, context) -> void. Its two callers are 0x51D950 and EventFunc16 at 0x583257. It selects target divisors, applies player-count and physical resistance, writes HP, sets D2Damage result bit 2 on lethal damage and applies overlay 147 when positive."
+    },
+    {
+      "rva": "0x433D20",
+      "name": "D2GAME_ApplyCurseStateStatList",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static generic curse/state statlist applicator with bounds 0x433D20..0x4341DC, unique 24-byte signature and 32 callers including Open Wounds. It validates state/target, refreshes matching lists, rejects weaker replacements, unlinks mismatches, allocates and posts new lists, schedules expiration event 12 and installs a remove callback. It is generic and must not be named as an Open-Wounds-only primitive."
+    },
+    {
+      "rva": "0x436240",
+      "name": "D2GAME_DefaultCurseStateRemoveCallback",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static default curse/state removal callback with bounds 0x436240..0x4362DC and unique 24-byte signature. It unregisters the pending event, preserves dead/stay-death handling, disables the state and refreshes animation, passives and player state as required. It is shared by generic state lists and is not Open-Wounds-exclusive."
     }
   ]
 }

@@ -24,6 +24,14 @@ le runtime. Le melee splash déjà en cours conserve son propriétaire et son
 séquencement; la présente fondation le relie seulement aux contrats partagés de
 crit, leech, résistances, Open Wounds et Crushing Blow.
 
+> **Erratum de gouvernance — 8 août 2026.** La décision MEC-00/MEC-01 prise
+> après cet audit remplace la phrase précédente : le prototype gameplay
+> `MeleeSplash` est désormais quarantiné comme hypothèse non probante. Il ne
+> conserve aucun propriétaire ni séquencement de production, et ne peut être
+> bâti, déployé, testé, publié ou utilisé comme témoin avant fermeture des
+> preuves natives. Les contrats courants sont définis dans
+> `mechanics-contracts.md` et `mechanics-native-proof-92777.md`.
+
 Les quatre dispositions ont un sens strict :
 
 | Disposition | Signification dans cet audit |

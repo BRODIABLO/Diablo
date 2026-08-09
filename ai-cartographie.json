@@ -37597,6 +37597,36 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "mechanics-contracts.md",
+                                                           "path":  "Mission/mechanics-contracts.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-mission-native-mechanics-contracts",
+                                                                        "summary":  "Contrats MEC-00/MEC-01 gouvernant les preuves natives 92777 et interdisant toute mutation gameplay avant qualification.",
+                                                                        "agentAccess":  "read-write"
+                                                                    }
+                                                       },
+                                                       {
+                                                           "name":  "mechanics-native-proof-92777.md",
+                                                           "path":  "Mission/mechanics-native-proof-92777.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-mission-native-mechanics-proof",
+                                                                        "summary":  "Ledger MEC-00 des signatures, bornes, ABI, callers, callees, owners et limites du pipeline damage D2R 3.2.92777.",
+                                                                        "agentAccess":  "read-write"
+                                                                    }
+                                                       },
+                                                       {
+                                                           "name":  "melee-splash-3.2.md",
+                                                           "path":  "Mission/melee-splash-3.2.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-mission-native-plugin-quarantine",
+                                                                        "summary":  "Mission historique du prototype MeleeSplash, gelé byte-exactement comme hypothèse non probante sous MEC-00/MEC-01.",
+                                                                        "agentAccess":  "read-write"
+                                                                    }
+                                                       },
+                                                       {
                                                            "name":  "memory-patches-portage-3.2.json",
                                                            "path":  "Mission/memory-patches-portage-3.2.json",
                                                            "kind":  "file"
