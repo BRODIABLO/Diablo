@@ -6430,7 +6430,10 @@ function ItemEditorModal({
                 const editableGroup = group.definitions.every(Boolean);
                 const statSummary = group.attributes.map(({ id }) => `#${id}`).join(', ');
                 return (
-                  <div className={`magic-attribute-row ${editing ? 'editing' : ''}`} key={`${group.summary}-${attributeIndex}`}>
+                  <div
+                    className={`magic-attribute-row ${editing ? 'editing' : ''}`}
+                    key={`magic-${group.attributeIndices.join('-')}-${group.attributes.map(({ id }) => id).join('-')}`}
+                  >
                     <div className="magic-attribute-summary">
                       <strong>{group.summary}</strong>
                       <span>
@@ -6525,7 +6528,7 @@ function ItemEditorModal({
                                   ))}
                                 </select>
                               ) : (
-                                <NumberStepper
+                                <BufferedNumberStepper
                                   label={valueDefinition?.name || `Value ${valueIndex + 1}`}
                                   disabled={!attributesEditable || !valueDefinition}
                                   min={minimum}
@@ -6812,6 +6815,59 @@ function NumberField({ label, value, min, max, onChange }) {
       />
       <small>{formatNumber(min)}–{formatNumber(max)}</small>
     </label>
+  );
+}
+
+function BufferedNumberStepper({ label, value, min, max, disabled = false, onChange }) {
+  const hasMinimum = min !== undefined && min !== null && Number.isFinite(Number(min));
+  const hasMaximum = max !== undefined && max !== null && Number.isFinite(Number(max));
+  const storedValue = String(value ?? '');
+  const [draftValue, setDraftValue] = useState(storedValue);
+
+  useEffect(() => {
+    setDraftValue(storedValue);
+  }, [storedValue]);
+
+  function commitDraftValue() {
+    const candidate = draftValue.trim();
+    if (candidate === '' || candidate === '-' || candidate === '+' || !Number.isFinite(Number(candidate))) {
+      setDraftValue(storedValue);
+      return;
+    }
+
+    const nextValue = clampInteger(
+      candidate,
+      hasMinimum ? Number(min) : Number.MIN_SAFE_INTEGER,
+      hasMaximum ? Number(max) : Number.MAX_SAFE_INTEGER,
+    );
+    setDraftValue(String(nextValue));
+    if (nextValue !== Number(value)) onChange(nextValue);
+  }
+
+  return (
+    <input
+      className="rune-number-input"
+      type="number"
+      inputMode="numeric"
+      autoComplete="off"
+      aria-label={label}
+      step={1}
+      value={draftValue}
+      min={hasMinimum ? min : undefined}
+      max={hasMaximum ? max : undefined}
+      disabled={disabled}
+      onChange={(event) => setDraftValue(event.target.value)}
+      onBlur={commitDraftValue}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          event.currentTarget.blur();
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          setDraftValue(storedValue);
+        }
+      }}
+    />
   );
 }
 
