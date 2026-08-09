@@ -5,7 +5,21 @@
 - Contrats : `Mission/mechanics-contracts.md`
 - Build exclusif : `D2R.exe 3.2.92777`
 - Verdict courant : **COUTURE AUTORITAIRE COMMUNE NON PROUVÉE**
+- Témoins gameplay MEC-01A : **positifs dans leur portée exploratoire**
+- Conclusion d'architecture MEC-01A : `LIKELY_FRAGMENTED`
 - Mutation gameplay : **aucune**
+
+> **Décision de production séparée — 9 août 2026.** `MeleeSplash.dll` v0.1 est
+> désormais le chantier actif, limité à D2R 3.2.92777 offline/local
+> single-player et joueur contre monstres. Cette décision ne modifie aucun grade
+> du ledger : la couture commune reste `NON PROUVÉE`, l'ancien prototype reste
+> non probant et aucun `Pd2CombatCore` n'est sélectionné. La v0.1 peut utiliser
+> plusieurs coutures seulement après validation ciblée de leurs signatures,
+> octets, ABI et propriété; multijoueur et PvP restent hors portée actuelle.
+> Pour cette v0.1, Vincent a retenu un paquet offensif pré-critique partagé et
+> des jets Critical/Deadly, CB et OW indépendants par cible. Cette politique de
+> production ne change aucun grade de preuve MEC et ne constitue pas le futur
+> resolver Critical/Deadly PD2.
 
 ## 1. Gate du workbench
 
@@ -38,7 +52,7 @@ analysisSha256=673E8C0B2E89563E75525B24D137098EFD07B2DB4ED42ADEC56AA1ADDF0E63AB
 analysisVerified=true
 indexVerified=true
 functions=105850 refs=1057329 strings=59699 patch_sites=57
-knowledge=343 json_refs=119
+knowledge=352 json_refs=119
 ghidraProjectPresent=true canonicalReady=true
 selfTest=PASS
 knownXref=0x5817CC->0x46F090
@@ -81,8 +95,8 @@ incomplètes jusqu'à `confirmed_runtime`.
 | MEC-APPLY-01 | calcul total/résistances | `0x44DF10` | `confirmed_static` | ordre runtime et relation interposée avec owners actifs |
 | MEC-APPLY-02 | events/HP | `0x44CE80` | `confirmed_static` | distinguer le hit melee autoritaire parmi 36 callers |
 | MEC-APPLY-03 | finalisation/réactions | `0x44A9B0` | `confirmed_static` | ordre/mort/packets runtime |
-| MEC-APPLY-04 | primitive générique d'application secondaire | chaîne 01→02→03 | `unresolved` | prouver un appel canonique sans doubler events/leech/mort/packets |
-| MEC-AREA-01 | énumération d'unités en zone | `0x4398B0` | `partial` | bornes, ABI callback, rooms adjacentes, ordre, masque et doublons |
+| MEC-APPLY-04 | primitive générique d'application secondaire | chaîne 01→02→03 | primitive sûre `unresolved`; conclusion limitée `LIKELY_FRAGMENTED` | aucune chaîne native prouvée n'exclut events/leech/CB/OW tout en conservant HP/réactions/mort/packets |
+| MEC-AREA-01 | énumération d'unités en zone | `0x4398B0` | noyau `confirmed_static`; contrat W07 global `partial` | writer de la room-list, membership adjacente, unicité/dédup et témoin frontière |
 | MEC-AREA-02 | targetability/hostilité | `0x48E060` | `confirmed_static` | LOS/distance appartiennent à d'autres surfaces |
 | MEC-OW-01 | lifecycle OW statlists | Event15 + helpers natifs | `partial` | ticks, teardown global, disconnect/end-game et stacks runtime |
 | MEC-OWNER-01 | conflits PluginPack/FloatingDamage/patches | manifeste 139 sites + 19 patches + addons | `confirmed_static` pour les registres audités | inventaire exact du profil chargé MEC-01 |
@@ -101,7 +115,7 @@ le worktree de `known-rvas.json` n'est pas une preuve.
 | `0x44CE80` | `SUNITDMG_ExecuteEvents` | commit damage/events partagé | `confirmed_static` |
 | `0x583580` | `D2GAME_EventFunc14_ItemFreeze` | EventFunc14 | `confirmed_static` |
 | `0x583B30` | `D2GAME_EventFunc20_SkillOnAttackHitKill` | EventFunc20 | `confirmed_static` |
-| `0x4398B0` | `D2GAME_EnumerateUnitsInArea` | énumération spatiale | `partial` |
+| `0x4398B0` | `D2GAME_EnumerateUnitsInArea` | noyau d'énumération spatiale | `confirmed_static`; W07 global reste `partial` |
 | `0x48E060` | `SUNIT_CanDamageTarget` | filtre attacker/candidate | `confirmed_static` |
 | `0x4242B0` | `D2GAME_ResolveActiveWeaponForSkill` | arme locale de la source | `hypothesis` |
 | `0x44C030` | `SUNITDMG_FillDamageValues` | weapon/item/all-components | `confirmed_static` |
@@ -332,14 +346,62 @@ adresse ne suffit pas à déclarer « hit melee réussi ».
   `0x451E50`, `0x451FB0`, `0x48B230`, `0x48E060`, `0x491960`, `0x498EE0`,
   `0x543900`, `0x588B50`, `0x588CE0`.
 
-Verdict MEC-APPLY : le moteur expose une chaîne native prouvée autour d'un
-record déjà construit — CalculateTotal, ExecuteEvents/commit, puis Finalize —
-mais aucune fonction unique n'est encore prouvée comme primitive générique et
-sûre « applique ce record à une cible secondaire ». Crushing Blow écrit même
-HP par son core spécialisé. Appeler seulement Finalize, ou rejouer toute la
-chaîne, pourrait doubler events, leech, mort ou packets; cette primitive reste
-donc `unresolved` pour une future implantation malgré les fonctions elles-mêmes
-`confirmed_static`.
+#### Préparation et queue du combat `0x44B600` / `0x4507B0`
+
+`0x44B600`, nom conservateur `SUNITDMG_PrepareAndQueueCombatRecord`, est
+`confirmed_static` sur le CFG logique `0x44B600..0x44B71B` :
+
+- ABI `void(game:RCX, attacker:RDX, defender:R8, damage:R9, SrcDam:uint8
+  [caller rsp+0x20])`;
+- signature unique, 33 octets :
+  `48 89 5C 24 20 55 56 41 56 48 83 EC 30 49 8B D9 49 8B F0 48 8B EA 4C 8B F1 48 85 D2 74 05 4D 85 C0`;
+- 31 callers directs;
+- Fill à `0x44B69B`, CalculateTotal à `0x44B6AC`, calcul WILLDIE, puis
+  caller unique du linker `0x4507B0` à `0x44B703`.
+
+`0x4507B0`, `SUNITDMG_AllocateAndLinkCombatRecord`, est `confirmed_static` sur
+`0x4507B0..0x4509A3` :
+
+- ABI `void(game:RCX, attacker:RDX, defender:R8, const damage:R9)`;
+- signature unique, 32 octets :
+  `40 55 57 41 56 41 57 48 81 EC C8 01 00 00 48 8B 05 03 AB 57 02 48 33 C4 48 89 84 24 B0 01 00 00`;
+- caller direct unique `0x44B703`;
+- allocation d'un node `0x1A0`, stockage type/GUID source et cible, copie profonde
+  du record à `node+0x18`, puis lien dans `attacker+0x108` via `node+0x198`.
+
+Cette paire prépare un record **propre à la cible** et le met en attente. Elle
+n'applique aucun HP et peut rejouer Fill/CS/DS selon ses flags; elle n'est donc
+pas une primitive secondaire.
+
+#### Consommation melee `0x44B2B0`
+
+`SUNITDMG_ConsumeMeleeCombatRecord` est `confirmed_static` sur le CFG logique
+`0x44B2B0..0x44B5F5` :
+
+- ABI `bool/uint8(game:RCX, attacker:RDX, defender:R8, rangeBonus:R9D)`;
+- signature unique, 34 octets :
+  `40 53 55 56 57 41 54 41 56 48 81 EC C8 01 00 00 48 8B 05 01 00 58 02 48 33 C4 48 89 84 24 B0 01 00 00`;
+- 36 callers directs;
+- recherche du node par type/GUID, copie profonde à `0x44B37C`, validation de
+  portée, ExecuteEvents melee à `0x44B3FA`, effets melee supplémentaires,
+  events 7/3, chemin thorns, Finalize à `0x44B4F4`, puis unlink/free du node.
+
+La paire `0x44B600 → node → 0x44B2B0` est donc la chaîne melee canonique
+complète et sa largeur est positivement prouvée. Dans ExecuteEvents, le leech est
+appelé à `0x44D038`, la mutation HP est inline à `0x44D06C..0x44D093`, tandis
+que Finalize porte séparément réactions, mort et packets. Aucun callee prouvé ne
+fournit « HP + statuts + kill sans events/leech ».
+
+Le pattern AoE natif le plus proche, callback Mind Blast
+`0x56E590..0x56E695`, copie un record, appelle ExecuteEvents avec `bMissile=1`
+et Finalize, puis le détruit. Il conserve events/leech et les canaux missile; il
+ne constitue donc pas une primitive melee-splash sûre.
+
+Verdict MEC-APPLY-04 : la primitive sûre reste `unresolved`, mais les preuves
+positives suffisent à la conclusion limitée `LIKELY_FRAGMENTED`. Une composition
+Calculate → Execute(0) → Finalize serait une architecture custom à filtrer et
+qualifier, pas un contrat natif. La couture commune autorisant `Pd2CombatCore`
+reste `NON PROUVÉE`.
 
 ### MEC-LEECH-01 — point unique life/mana leech
 
@@ -359,10 +421,11 @@ hit flag `0x4` est absent, stat 62 mana à `+0x124` si `0x8` est absent. Le
 consumer prend le Drain de la cible, les diviseurs de difficulté joueur, la
 base physique et, sous hit flag `0x40`, les composantes élémentaires. Il
 applique deux troncatures en pourcentage puis une division signée après le
-shift interne; il cappe mana/life au manque, crédite les stats natives et
-réécrit `+0x120/+0x124` avec les montants effectifs. ExecuteEvents soustrait
-ensuite le mana effectif à la cible. Le roll final choisit seulement l'overlay
-visuel et ne décide pas la valeur de leech.
+shift interne. Il réécrit `+0x120/+0x124` avec les pourcentages ajustés natifs,
+puis calcule séparément les montants effectifs, les cappe au manque, crédite les
+stats natives et soustrait ensuite le mana effectif à la cible. Les champs du
+record ne sont donc pas un témoin direct des montants crédités. Le roll final
+choisit seulement l'overlay visuel et ne décide pas la valeur de leech.
 
 ### MEC-RNG-01 — seed et rolls inlinés
 
@@ -548,18 +611,37 @@ de damage, ce qui ferme le sens du booléen sans utiliser le prototype.
 
 | Champ | Preuve 92777 |
 |---|---|
-| Statut | `partial` |
-| RVA | entrée réelle `0x4398B0`; les entrées `.pdata` découpent le corps et ne fournissent pas encore une borne gouvernée unique |
+| Statut | noyau `confirmed_static`; MEC-W07 global `partial` |
+| RVA / bounds | `0x4398B0..0x439C04` end-exclusive; les entrées `.pdata` fragmentent artificiellement ce CFG logique |
 | Signature | `44 89 4C 24 20 55 57 41 56 41 57 48 8B EC 48 83 EC 78`, unique dans `.text` |
 | Callers directs | `0x42F23B`, `0x43287D`, `0x4329BC`, `0x43329A`, `0x4333AB`, `0x435733`, `0x43585F`, `0x43792E` |
-| ABI observée | dix arguments; `RCX=game`, `RDX=origin/owner`, `R8=descriptor {room*, x:int32, y:int32}`, `R9D=radius`, puis masque, callback, contexte, flag et provenance fichier/ligne sur la stack |
-| Contrôle de flux | le wrapper `0x4327E4` obtient `UNITS_GetRoom(origin)`, forme le descriptor de 16 octets et transmet les dix arguments; le corps parcourt une liste de rooms puis leurs listes d'unités et appelle indirectement le callback à `0x439B94` |
-| Limites | la primitive qui produit la liste de rooms adjacentes, les doublons de frontière, l'ordre, la collision/LOS et le comportement sur despawn restent non fermés |
-| Action RVA | aucune promotion : les bornes et le contrat rooms/callback restent incomplets |
+| ABI | `void(game RCX, origin RDX, descriptor R8, radius R9D, mask arg5, callback arg6, userCtx arg7, specialMonsterFilter arg8, sourceFile arg9, sourceLine arg10)`; le corps consomme les huit premiers arguments |
+| Descriptor | `{room* +0, x:int32 +8, y:int32 +0x0C}`; game/origin/callback non nuls, rayon strictement positif; masque nul remplacé par `0x583` |
+| Callback | `int32 callback(localCtx*:RCX, candidate*:RDX)` à `0x439B94`; `localCtx={game +0, origin +8, countNonZero +0x10, userCtx +0x18}`; un retour non nul incrémente le compteur sans interrompre le parcours |
+| Ordre | tableau de rooms dans son ordre brut, puis chaîne d'unités de chaque room; le next est lu avant filtres/callback; aucun tri ni set `seen` local |
+| Aire | broad phase carré/rectangle de room, puis `distance² <= radius²`; l'origine seule est explicitement exclue |
+| Collision | gate ray/collision optionnel si `mask & 0x200`; le masque par défaut `0x583` n'active pas ce gate; il n'existe donc pas de LOS implicite par défaut |
+| Limites | le writer de la room-list, sa membership adjacente exacte, l'unicité des rooms/unités, la dédup et le comportement runtime de frontière restent ouverts |
+| Action RVA | promotion du noyau seulement; ne pas reformuler cette promotion comme fermeture de MEC-W07 |
 
-Cette preuve suffit à confirmer l'existence d'une primitive spatiale native,
-mais pas encore le contrat « room courante plus rooms adjacentes » requis pour
-un futur splash.
+Helpers natifs fermés :
+
+- `0x2EFDE0..0x2EFDED`, `DUNGEON_GetRoomListAndCount` : écrit le pointeur
+  stocké à `room+0` et le count `room+0x40`; signature unique
+  `8B 41 40 41 89 00 48 8B 01 48 89 02 C3`;
+- `0x2EFD90..0x2EFD98` : retourne le premier unit à `room+0xA8`;
+- `0x34B4A0` : retourne le next à `unit+0x160`;
+- `0x3256E0..0x325760` : broad phase inclusive entre le carré de recherche et
+  le rectangle de room;
+- `0x3412C0..0x3412D3` : calcule la distance euclidienne au carré.
+
+Le corps et l'ABI de `0x2EFDE0` sont isomorphes à l'accesseur legacy de rooms
+adjacentes, mais l'image 92777 ne livre ici que l'accesseur d'une liste déjà
+construite. Sans son writer/builder natif, « rooms adjacentes » demeure une
+identification sémantique haute confiance et non un invariant 92777 prouvé.
+De même, `0x4398B0` ne déduplique ni room ni GUID : le modèle normal d'une unité
+dans une seule room active reste une hypothèse tant que les structures amont ne
+sont pas fermées.
 
 ## 6. Ledger détaillé à remplir
 
@@ -646,6 +728,100 @@ sans second hook. Le prototype `MeleeSplash` est exclu de tout témoin qualifié
 MEC-01 reste bloqué tant que le gate gameplay du cap élémentaire 90 n'est pas
 fermé. Un cold start ne remplace aucun de ces témoins.
 
+### 8.4 MEC-01A — session exploratoire solo du 8 août 2026
+
+Cette session n'a pas contourné le gate précédent. Elle a utilisé le Combat Log
+et les écrans de debug intégrés à D2RLoader, sans debugger externe, hook,
+trampoline, DLL, table, configuration ou formule supplémentaire. Son dossier
+est
+`analysis-cache/mechanics-92777/20260808-223638-mec01a-exploratory/`.
+
+Baseline observée : D2R `3.2.92777`, D2RLoader `1.0.1-beta`, BKVince solo local,
+16 plugins et 18 patches. L'inventaire des 162 modules ne contenait pas
+`MeleeSplash.dll`; le prototype se trouvait seulement sous `paused-plugins`
+avec SHA-256
+`6960BEB1D5F480E77DE05F18D312536F9FE165AE3A3C61FD6CDAD4AE5D664B07`.
+Les hashes complets sont dans `runtime-manifest.json`.
+
+Le témoin était `QtyTester` avec un Fleshripper modifié. Les captures Character
+Stats prouvent `item_openwounds=100`, `item_crushingblow=100`,
+`item_deadlystrike=100` et `lifedrainmindam=50`. Blade Mastery niveau 20 ajoute
+une source Critical distincte; le rendu aval ne peut donc pas attribuer un hit
+précis à Critical ou Deadly.
+
+Le Combat Log du hit propre contient aussi `PLen=75` et `Pois=42`, composante
+runtime non expliquée par les stats sérialisées inspectées. Elle est conservée
+comme facteur non contrôlé : elle n'annule pas les témoins CB/OW, mais interdit
+d'utiliser ce hit comme preuve d'une formule purement physique.
+
+| Surface | Statut exploratoire | Observation | Limite décisive |
+|---|---|---|---|
+| MEC-W01 | `passed exploratory` | deux rolls rejetés `78/69`, `97/69`, puis hits acceptés `10/69` et `22/73` | aucun caller/thread/`bMissile`/SUCCESS natif/record corrélé |
+| MEC-W02 | `observed` | DS 100 et popup FloatingDamage or/jaune | le bit partagé ne distingue pas mastery CS de DS; branches et seed non tracées |
+| MEC-W03 | `passed exploratory` | Misshapen identique gris vers rouge après hit, puis rouge vers gris après `monfreeze=0` | EventFunc15, state 62, statlist, durée, callback, RNG et refresh non tracés |
+| MEC-W04 | `passed exploratory` | roll CB `95<100`, montant 25 000 sur 100 000 HP, puis HP 75 000 et 71 496 | handler/core, seed, diviseur interne et ordre natif non tracés |
+| MEC-W05/W06/W08 complet/W10/W12 | `not run` | aucun nouveau témoin | contrats inchangés |
+| MEC-W07 | `not run` (runtime) | reprise statique : noyau `0x4398B0` fermé, ordre et callback prouvés | room-list adjacente, unicité/dédup et frontière runtime restent `partial` |
+| MEC-APPLY-04 | `not run` (runtime) | reprise statique : chaîne melee canonique prouvée trop large | primitive secondaire sûre toujours `unresolved`; disposition `LIKELY_FRAGMENTED` |
+| MEC-W09/W11 | `observed` | joueur vers monstre, solo local | autres sources et réseau non couverts |
+
+Le Combat Log intégré suffit à ces observations gameplay, mais pas à un
+témoin natif du pipeline. Il n'expose ni thread, caller, `bMissile`, pointeur
+`D2Damage`, `resultFlags`, ni les entrées Fill/Calculate/Execute/Finalize. Les
+chaînes locales `attackinfo` et `attacklog` ne révèlent aucun format plus riche.
+
+Le hit propre est conservé byte-exactement dans
+`capture-01-equipped-hit.txt`; la capture brute bruitée dans
+`capture-00-noisy-combat-log.txt`; les stats et l'état OW rouge dans les PNG du
+même dossier. L'observation du retrait rouge vers gris vient du compte rendu
+explicite de l'opérateur et ne possède pas de capture d'écran.
+
+À `2026-08-09 03:14:03Z`, la session a fini sur un `assert exit`
+`package_cache\\tact\\3.5.20\\src\\download\\download_curl.cpp:810`, message
+`BC_VERIFY: iter`. La pile contient D2RCore, D2RLoader, KERNEL32 et ntdll, sans
+DLL gameplay. Deux rapports du 7 août ont la même identité, le même caller et la
+même pile. Le dossier conserve les trois rapports. La classification est donc
+**assert TACT/CURL récurrent incident**, sans preuve d'un lien direct avec OW,
+`monfreeze`, FloatingDamage, PluginPack ou MEC-01A.
+
+Conclusion limitée : les témoins gameplay sont positifs dans leur portée et ne
+doivent pas être décrits comme insuffisants. C'est la **preuve d'architecture**
+qui reste incomplète : la session ne ferme ni l'ordre natif, ni une application
+secondaire sûre, ni l'aire, ni la réentrance. La conclusion d'architecture
+MEC-01A vaut donc `LIKELY_FRAGMENTED`; le verdict global demeure
+`NON PROUVÉE` et aucune architecture n'est sélectionnée.
+
+### 8.5 MEC-W01 — identité logique du record et frontière de copie
+
+La preuve statique ferme une correction importante du cahier MEC-01A : le chemin
+melee ne transporte pas la même **adresse** `D2Damage` jusqu'au commit.
+
+- `0x44B600` conserve le record amont `P` en `RBX`, l'envoie à Fill à
+  `0x44B69B`, puis à CalculateTotalDamage à `0x44B6AC` et à l'enqueue
+  `0x4507B0` à `0x44B703`;
+- `0x4508FC` copie `P` vers un temporaire, puis `0x450908` transfère ce record
+  dans le combat node à `node+0x18`;
+- `0x44B37C` appelle `D2Damage_CopyConstructor(LOCAL, node+0x18)`;
+- `0x44B3E1` remplace seulement `LOCAL+0x00` par `0x20` avant les events;
+- `0x44B3FA` passe `bMissile=0` et `LOCAL` à ExecuteEvents;
+- `0x44B4F4` passe le même `LOCAL` à FinalizeDamage.
+
+Le record amont et le record local sont donc deux objets reliés par une copie
+profonde gouvernée. Un futur témoin debugger doit corréler leurs champs, les GUIDs
+et le callsite de copie; il ne doit pas exiger l'égalité des pointeurs. Quatre
+breakpoints hardware sur Fill, Calculate, Execute et Finalize suffisent à une
+première vague. Ils doivent être log-only, filtrés sur le couple de GUIDs et
+consigner thread, caller, `P`, `node+0x18`, `LOCAL`, `bMissile`, SUCCESS, flags,
+physical, total et leech. La comparaison porte sur les champs scalaires stables,
+pas sur `+0x00`, les pointeurs du conteneur `+0x40` ou le sous-objet `+0x158`.
+
+Le critère d'acceptation est Fill → Calculate sur le même `P`, puis Execute →
+Finalize sur le même `LOCAL`, même thread/couple, retour melee exact,
+`bMissile=0`, `SUCCESS=1` et fingerprints `P≈node+0x18≈LOCAL`. Un miss du même
+couple ne doit produire aucune séquence pipeline dans la fenêtre bornée. Un
+second passage sur les trois copies n'est requis qu'en cas de divergence. Aucun
+observer ou nouveau hook n'est justifié à ce stade; ce témoin reste `not run`.
+
 ## 9. Matrice de propriété initiale
 
 | Surface | Owner connu | État |
@@ -720,6 +896,14 @@ encore comme contrat prouvé. Elle n'est pas exclusivement melee, ne fournit pas
 à elle seule le gate SUCCESS, l'aire, le lifecycle OW complet ni une primitive
 d'application secondaire non récursive. Le verdict architectural reste donc
 **COUTURE AUTORITAIRE COMMUNE NON PROUVÉE**.
+
+La conclusion **limitée MEC-01A** est toutefois `LIKELY_FRAGMENTED`, et non
+`INSUFFICIENT_EVIDENCE` : la preuve positive de la queue/consommation melee, de
+la mutation HP inline dans ExecuteEvents et de la finalisation séparée montre
+que les responsabilités nécessaires au splash ne sont pas offertes par une
+primitive native unique et sûre. Cela ne promeut pas encore le verdict formel
+global à `FRAGMENTÉE`, lequel exige la fermeture des autres contrats et la preuve
+qu'aucune couture autorisée commune ne peut les composer.
 
 Valeurs finales autorisées :
 

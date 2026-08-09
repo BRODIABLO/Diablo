@@ -309,3 +309,5 @@ RB-Mid	306	1	17	RB_Mid																																	0
 RB-High	307	1	17	RB_High																																	0
 readable-id	308	1	1	item_readable_message																												Readable message ID		Message ID	Message ID	Selects messages[].id in ReadableItems.json	0
 bkv-gethitmelee-skill	309	1	11	item_bkv_skillongethitmelee																											7	#% Chance to cast level # [Skill] when struck in melee	Skill	"% Chance (If 0, then default to 5)"	Skill Level		0
+splash-radius%	310	1	1	inc_splash_radius																												+#% Increased Melee Splash Radius		Min %	Max %		0
+splash-dmg%	311	1	1	item_melee_splash_damage_percent																												+#% Melee Splash Damage		Min %	Max %		0

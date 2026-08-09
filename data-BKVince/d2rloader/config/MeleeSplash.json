@@ -1,0 +1,24 @@
+{
+  "enabled": false,
+  "activationMode": "allEligibleMelee",
+  "allowNormalAttack": true,
+  "includedSkillIds": [],
+  "excludedSkillIds": [],
+  "requireGateStat": true,
+  "gateStatId": 384,
+  "increasedRadiusStatId": 391,
+  "radiusPercentPerTile": 20,
+  "splashDamagePercentStatId": 392,
+  "baseSplashDamagePercent": 100,
+  "baseRadiusNormalWeapon": 4,
+  "baseRadiusExceptionalEliteWeapon": 5,
+  "maximumRadiusTiles": 0,
+  "diagnosticLogging": false,
+  "skillOverrides": {},
+  "legacyEvent20Suppression": {
+    "enabled": true,
+    "statId": 384,
+    "layer": 430,
+    "playerAttackersOnly": true
+  }
+}

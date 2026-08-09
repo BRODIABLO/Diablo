@@ -172,6 +172,13 @@
         "CharmZone.dll",
         "charm-zone.toml"
       ]
+    },
+    "addons/MeleeSplash/MeleeSplash-0.1.0.zip": {
+      "kind": "plugin",
+      "entries": [
+        "MeleeSplash.dll",
+        "MeleeSplash.json"
+      ]
     }
   }
 }

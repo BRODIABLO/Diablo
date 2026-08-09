@@ -1,39 +1,73 @@
 # Mission courante
 
-Dernière mise à jour : 8 août 2026
+Dernière mise à jour : 9 août 2026
 
 ## Priorité active
 
-[PD2 / Single Player Plus — inspiration gouvernée pour BKVince](pd2-inspiration-bkvince.md)
+[MeleeSplash.dll v0.1 public](melee-splash-3.2.md)
 
-État : deux lanes coordonnées avancent sans se contaminer. Le gate runtime
-prioritaire reste la validation gameplay du cap élémentaire 90 déjà implanté;
-MEC-00 commence en parallèle avec des contrats et preuves natives strictement
-statiques pour D2R 3.2.92777. MEC-01 reste bloqué jusqu'à la fermeture du gate
-cap 90 et n'utilisera ensuite que des témoins runtime read-only.
+État : **livraison v0.1.0 fermée**. Vincent a confirmé la destination
+**plugin autonome permanent** puis a
+autorisé l'implantation de la v0.1.0. Le candidat technique public, générique et
+default-off est maintenant compilé en Release x64. Deux builds propres ont
+produit la même DLL de 196 608 octets, SHA-256
+`D9A49607C0BA7EFF2E52200ED480EF8381739161F4E4B2BDE066D548554921B0`, et ont
+chacun passé le CTest `1/1`. L'inspection PE/ABI confirme l'API D2RLoader v2,
+les trois exports exacts, l'absence de dépendance eezstreet et l'absence de nom,
+chemin ou ID BKVince obligatoire. L'intégration BKVince demeure un profil
+séparé et réversible.
+
+La qualification technique fraîche charge ce même hash en portée globale
+activée, puis en portée mod-locale activée avec shadow du doublon global. Les
+deux parcours acceptent les hooks, appliquent `18/18` patches, conservent les
+17 plugins effectifs actifs, atteignent `24/24` et ne produisent aucun rejet ni
+échec. Le cold start final charge la DLL mod-locale avec `enabled=false`,
+n'installe aucun hook et conserve `18/18`, `17/17`, `24/24`; les artefacts
+globaux temporaires sont retirés.
+
+Le ZIP public strict `MeleeSplash-0.1.0.zip` est construit et audité : deux
+entrées racine seulement, la DLL qualifiée et le JSON générique default-off.
+Son SHA-256 vaut
+`D53A36974A61B3909733F9F5CBFB496211EF820F36DBFEB788660A2FCF17183B`.
+
+Le paquet offensif pré-critique est partagé entre les cibles; Critical/Deadly,
+Crushing Blow et Open Wounds sont roulés indépendamment pour chaque secondaire.
+L'adaptateur Critical/Deadly de la v0.1 reproduit seulement l'autorité native
+92777 et reste remplaçable par le futur lot général PD2.
+
+Le périmètre officiel initial est D2R 3.2.92777, offline/local single-player,
+joueur contre monstres et attaques melee admissibles. Multijoueur, PvP,
+mercenaires, summons, monstres comme attaquants et skills multi-hit non
+explicitement autorisés sont hors portée ou non testés dans cette mission.
 
 ## Prochain gate
 
-Valider en jeu les maximums élémentaires sous, à et au-dessus de 90 pour feu,
-froid, foudre et poison; confirmer physique 50 et absorb 40, puis couvrir
-sauvegarde/rechargement et hôte/joiner. La matrice toutes fonctions PluginPack
-actives reste ouverte avant la qualification fonctionnelle complète. En
-parallèle, le workbench 92777 est désormais vérifié (`status` et `self-test`
-verts avec les hashes gouvernés). MEC-00 consolide `mechanics-contracts.md` et
-`mechanics-native-proof-92777.md`, puis n'admet dans `known-rvas.json` que les
-identifications indépendamment prouvées.
+La prochaine implantation planifiée est le lot général Critical/Deadly, mais
+elle attend une autorisation distincte de Vincent. Le protocole solo A–H de la
+v0.1 peut être exécuté lors d'une future fenêtre gameplay; il est préparé mais
+`not run`, donc aucun comportement splash n'est déclaré validé en jeu.
+Multijoueur et PvP demeurent hors portée.
 
-## Gel probatoire MeleeSplash
+Le cold start prouve la coexistence avec la pile actuellement installée, pas une
+compatibilité universelle ni une matrice où toutes les fonctionnalités
+PluginPack seraient simultanément activées. Cette matrice formelle reste bloquée
+par des conflits antérieurs indépendants de MeleeSplash : `0x589736`,
+`0x314110` et les rel32 `0x18885B/0x18887F` de `plugin-misc`.
 
-Le prototype existant `MeleeSplash` est conservé mais gelé comme hypothèse non
-probante : aucun nouveau build, déploiement, test gameplay ou usage comme
-témoin MEC-01. Ses hooks, RVA, structures et ABI doivent être redémontrés sans
-s'appuyer sur son comportement. Aucune sélection de `Pd2CombatCore`, nouvelle
-DLL gameplay ou formule de combat n'est autorisée par MEC-00/MEC-01.
+## Supersession du prototype historique
+
+Le prototype gelé le 8 août reste une hypothèse historique non probante et ses
+hashes ne valident pas la nouvelle v0.1. La décision du 9 août lève uniquement
+le gel de **production** pour une implantation gouvernée distincte. Elle ne
+promeut aucune de ses anciennes RVA ou ABI, ne prouve aucune couture commune et
+ne sélectionne pas `Pd2CombatCore`. Seul le reverse engineering ciblé requis
+par une surface précise est autorisé; plusieurs coutures individuellement
+validées peuvent être utilisées si la composition reste fail-closed.
 
 ## Frontière Git
 
-Le lot de gouvernance MEC modifie uniquement la mission, la ROADMAP et les
-preuves documentaires; aucune table gameplay, configuration active, DLL,
-sauvegarde, statistique persistante ou formule de combat ne change. Aucun
-commit ni push n'est effectué sans demande explicite de Vincent.
+La mission peut modifier les sources et artefacts MeleeSplash, son profil
+BKVince, les seules lignes TXT/statistiques nécessaires, les documents
+Mechanics et les scripts/tests ciblés. Les autres changements du workspace
+restent hors périmètre et doivent être préservés. Aucun commit ni push n'est
+effectué sans demande explicite de Vincent.

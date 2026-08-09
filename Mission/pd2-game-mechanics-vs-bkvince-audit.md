@@ -32,6 +32,30 @@ crit, leech, résistances, Open Wounds et Crushing Blow.
 > preuves natives. Les contrats courants sont définis dans
 > `mechanics-contracts.md` et `mechanics-native-proof-92777.md`.
 
+> **Décision produit supersédante — 9 août 2026.** Vincent autorise une nouvelle
+> mission `MeleeSplash.dll` v0.1, publique, générique, autonome et distincte de
+> l'ancien prototype, qui demeure une hypothèse historique non probante. La
+> portée initiale est limitée à D2R 3.2.92777 offline/local single-player,
+> joueur contre monstres; multijoueur et PvP sont hors portée actuelle. La
+> preuve `LIKELY_FRAGMENTED` autorise seulement le reverse engineering ciblé et
+> la composition de coutures individuellement validées, sans sélectionner
+> `Pd2CombatCore` ni transférer au splash la propriété des formules générales.
+> La roadmap produit retient Critical 75 %/×2,0 avant Deadly 75 %/×1,5;
+> Crushing Blow PD2 avec scaling, catégories et CBE; Open Wounds 5 secondes,
+> trois stacks, résistance physique, règles boss/pets et DPS plat; puis le
+> resolver hybride Sunders 95, breakers à demi-efficacité, pierce après bris,
+> moitié de la partie négative et plancher −100. Après MeleeSplash viennent,
+> dans cet ordre, Critical/Deadly, CB/CBE, OW/DPS plat, résistances, puis
+> itemisation et équilibrage. Aucune de ces quatre refontes générales n'est
+> implantée par la mission MeleeSplash v0.1.
+>
+> **Décision d'application splash — 9 août 2026.** Le paquet offensif de base
+> reste partagé, mais Critical/Deadly, Crushing Blow et Open Wounds sont roulés
+> indépendamment pour chaque cible secondaire. Pour Critical/Deadly, la v0.1
+> reproduit seulement l'ordre et les chances actuellement autoritaires de
+> 92777 derrière un adaptateur remplaçable; elle n'implante pas encore les caps
+> ou multiplicateurs PD2 du futur lot général.
+
 Les quatre dispositions ont un sens strict :
 
 | Disposition | Signification dans cet audit |
@@ -433,7 +457,7 @@ comportement historique que les tables BKVince continuent de sélectionner.
 | Crushing Blow | Chance vanilla et formule LoD présumée | Nouveaux diviseurs, ranged ×1,5, scaling, Prime Evil dynamique, CBE | Hybride | Bon contrôle des boss si implanté avec OW/splash |
 | Immunités | Sunders D2R + patch permissif contre `>=100` | Breakers à demi-efficacité; pierce seulement après bris | Hardcode conflictuel | Décision de philosophie obligatoire |
 | Résistance négative | Plancher `-100`; aucune division PD2 identifiée | Partie négative finale divisée par deux, puis plancher `-100` | Hardcode | À intégrer avec le resolver d’immunité |
-| Melee splash | Skill + missile radial, 50 % source, NHD présent | AoE serveur 360°, jet partagé, CB/OW par cible, demi-leech | Hardcode + TXT | Le missile actuel ne permet pas la parité |
+| Melee splash | Skill + missile radial, 50 % source, NHD présent | AoE serveur 360°, paquet pré-critique partagé, CS/DS/CB/OW par cible, demi-leech | Hardcode + TXT | Le missile actuel ne permet pas la parité |
 
 ---
 
@@ -1306,8 +1330,8 @@ Le melee splash PD2 :
 - n’utilise pas de missile;
 - n’utilise pas de Next Hit Delay;
 - exclut la cible principale;
-- partage un seul jet de dégâts offensifs entre le groupe;
-- partage le même résultat Critical/Deadly Strike;
+- partage un seul paquet de dégâts offensifs pré-critique entre le groupe;
+- effectue une séquence Critical/Deadly Strike séparée par cible;
 - recalcule les résistances et absorptions de chaque cible;
 - effectue un jet Crushing Blow séparé par cible;
 - effectue un jet Open Wounds séparé par cible;
@@ -1337,7 +1361,7 @@ Modifier `SrcDamage`, `Range`, `NextHit` ou le nombre de missiles est
 softcode, mais ne garantit pas :
 
 - l’exclusion exacte du main target;
-- un jet de dégâts et de crit partagé;
+- un paquet de dégâts pré-critique partagé et un jet de crit par cible;
 - des défenses propres à chaque cible;
 - CB et OW indépendants par cible;
 - le demi-leech sans réduire le dommage;
@@ -1721,8 +1745,8 @@ politiques qu’il multiplie.
 
 - zéro, une et plusieurs cibles secondaires;
 - cible principale jamais doublée;
-- même jet offensif sur cibles à résistances différentes;
-- même résultat Critical/Deadly;
+- même paquet offensif pré-critique sur cibles à résistances différentes;
+- séquence Critical/Deadly indépendante par cible;
 - CB et OW indépendants par cible;
 - aucun missile et aucun NHD;
 - aucun CTC/stun/knockback/on-hit exclu;

@@ -928,6 +928,119 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "MeleeSplash",
+                                                           "path":  "addons/MeleeSplash",
+                                                           "kind":  "directory",
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "examples",
+                                                                                "path":  "addons/MeleeSplash/examples",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "MeleeSplash.enabled.example.json",
+                                                                                                     "path":  "addons/MeleeSplash/examples/MeleeSplash.enabled.example.json",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "package",
+                                                                                "path":  "addons/MeleeSplash/package",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "MeleeSplash.dll",
+                                                                                                     "path":  "addons/MeleeSplash/package/MeleeSplash.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "MeleeSplash.json",
+                                                                                                     "path":  "addons/MeleeSplash/package/MeleeSplash.json",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/MeleeSplash/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/MeleeSplash/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "config_tests.cpp",
+                                                                                                     "path":  "addons/MeleeSplash/src/config_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "melee_splash_config.hpp",
+                                                                                                     "path":  "addons/MeleeSplash/src/melee_splash_config.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "melee_splash_gameplay.hpp",
+                                                                                                     "path":  "addons/MeleeSplash/src/melee_splash_gameplay.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/MeleeSplash/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/MeleeSplash/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "BKVINCE-INTEGRATION.md",
+                                                                                "path":  "addons/MeleeSplash/BKVINCE-INTEGRATION.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "CHANGELOG.md",
+                                                                                "path":  "addons/MeleeSplash/CHANGELOG.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "MeleeSplash-0.1.0.zip",
+                                                                                "path":  "addons/MeleeSplash/MeleeSplash-0.1.0.zip",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "NATIVE-HOOKS.md",
+                                                                                "path":  "addons/MeleeSplash/NATIVE-HOOKS.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "OPTIONS.md",
+                                                                                "path":  "addons/MeleeSplash/OPTIONS.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/MeleeSplash/README.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "SMOKE-TEST.md",
+                                                                                "path":  "addons/MeleeSplash/SMOKE-TEST.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "VALIDATION.md",
+                                                                                "path":  "addons/MeleeSplash/VALIDATION.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "NoEtherealItemTypes",
                                                            "path":  "addons/NoEtherealItemTypes",
                                                            "kind":  "directory",
@@ -20196,6 +20309,11 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "MeleeSplash.json",
+                                                                                                     "path":  "data-BKVince/d2rloader/config/MeleeSplash.json",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "monsterdisplay.toml",
                                                                                                      "path":  "data-BKVince/d2rloader/config/monsterdisplay.toml",
                                                                                                      "kind":  "file"
@@ -21612,6 +21730,11 @@
                                                                                                  {
                                                                                                      "name":  "FloatingDamage.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/FloatingDamage.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "MeleeSplash.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/MeleeSplash.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -38332,6 +38455,11 @@
                                                                             {
                                                                                 "name":  "apply-cell-deltas.js",
                                                                                 "path":  "scripts/migrate-bkvince/apply-cell-deltas.js",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "apply-melee-splash-stats.js",
+                                                                                "path":  "scripts/migrate-bkvince/apply-melee-splash-stats.js",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

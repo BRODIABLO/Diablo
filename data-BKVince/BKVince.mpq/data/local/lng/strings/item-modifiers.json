@@ -6747,5 +6747,39 @@
     "ruRU": "[%d - %d]",
     "zhCN": "[%d - %d]",
     "zhTW": "[%d - %d]"
+  },
+  {
+    "id": 65028,
+    "Key": "ModIncSplashRadius",
+    "deDE": "%+d%% erhöhter Nahkampf-Flächenschadenradius",
+    "enUS": "%+d%% Increased Melee Splash Radius",
+    "esES": "%+d%% de radio de daño de salpicadura cuerpo a cuerpo",
+    "esMX": "%+d%% de radio de daño de salpicadura cuerpo a cuerpo",
+    "frFR": "%+d%% au rayon des dégâts de zone en mêlée",
+    "itIT": "%+d%% al raggio dei danni ad area in mischia",
+    "jaJP": "近接スプラッシュ範囲 %+d%%",
+    "koKR": "근접 광역 피해 반경 %+d%%",
+    "plPL": "%+d%% do promienia obrażeń obszarowych w zwarciu",
+    "ptBR": "%+d%% de raio de dano em área corpo a corpo",
+    "ruRU": "%+d%% к радиусу урона по области в ближнем бою",
+    "zhCN": "%+d%% 近战溅射范围",
+    "zhTW": "%+d%% 近戰濺射範圍"
+  },
+  {
+    "id": 65029,
+    "Key": "ModMeleeSplashDamagePercent",
+    "deDE": "%+d%% Nahkampf-Flächenschaden",
+    "enUS": "%+d%% Melee Splash Damage",
+    "esES": "%+d%% de daño de salpicadura cuerpo a cuerpo",
+    "esMX": "%+d%% de daño de salpicadura cuerpo a cuerpo",
+    "frFR": "%+d%% de dégâts de zone en mêlée",
+    "itIT": "%+d%% danni ad area in mischia",
+    "jaJP": "近接スプラッシュダメージ %+d%%",
+    "koKR": "근접 광역 피해 %+d%%",
+    "plPL": "%+d%% obrażeń obszarowych w zwarciu",
+    "ptBR": "%+d%% de dano em área corpo a corpo",
+    "ruRU": "%+d%% к урону по области в ближнем бою",
+    "zhCN": "%+d%% 近战溅射伤害",
+    "zhTW": "%+d%% 近戰濺射傷害"
   }
 ]

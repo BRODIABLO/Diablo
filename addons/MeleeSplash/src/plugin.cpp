@@ -1,0 +1,1981 @@
+#define NOMINMAX
+
+#include <D2RLPlugin/api.h>
+
+#include "melee_splash_config.hpp"
+#include "melee_splash_gameplay.hpp"
+
+#include <Windows.h>
+#include <intrin.h>
+#include <malloc.h>
+
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <cstdarg>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <filesystem>
+#include <limits>
+#include <memory>
+#include <mutex>
+#include <new>
+#include <string>
+#include <utility>
+#include <vector>
+
+#pragma intrinsic(_ReturnAddress)
+
+namespace RuffnecKk::MeleeSplash {
+namespace {
+
+constexpr std::uint32_t SupportedBuild = 92777;
+constexpr std::int32_t UnitPlayer = 0;
+constexpr std::int32_t UnitMonster = 1;
+constexpr std::int32_t HitPointsStatId = 6;
+constexpr std::int32_t PassiveCriticalStatId = 337;
+constexpr std::int32_t DeadlyStrikeStatId = 141;
+constexpr std::int32_t UninterruptibleStateId = 0x36;
+constexpr std::uint8_t ReactiveMeleeEvent = 3;
+constexpr std::uint32_t StructuralAreaMask = 0x0583;
+constexpr std::size_t MaximumSidecars = 256;
+constexpr std::size_t MaximumPendingCaptures = 32;
+constexpr std::size_t MaximumCombatNodes = 1024;
+constexpr std::size_t MaximumPoisonEntries = 4096;
+
+constexpr std::uint32_t SyntheticHitFlags = 0x00000020;
+constexpr std::uint16_t ResultSuccess = 0x0001;
+constexpr std::uint16_t ResultWillDie = 0x0002;
+constexpr std::uint16_t ResultGetHit = 0x0004;
+
+constexpr std::size_t DamageSize = 0x180;
+constexpr std::size_t DamageHitFlagsOffset = 0x000;
+constexpr std::size_t DamageResultFlagsOffset = 0x004;
+constexpr std::size_t DamagePhysicalOffset = 0x018;
+constexpr std::size_t DamageFireOffset = 0x020;
+constexpr std::size_t DamageBurnOffset = 0x024;
+constexpr std::size_t DamageLightningOffset = 0x02C;
+constexpr std::size_t DamageMagicOffset = 0x030;
+constexpr std::size_t DamageColdOffset = 0x034;
+constexpr std::size_t DamagePoisonOffset = 0x038;
+constexpr std::size_t DamagePoisonVectorOffset = 0x040;
+constexpr std::size_t DamagePoisonVectorCountOffset = 0x048;
+constexpr std::size_t DamagePoisonVectorCapacityOffset = 0x050;
+constexpr std::size_t DamagePoisonInlineStorageOffset = 0x058;
+constexpr std::size_t DamageColdLengthOffset = 0x118;
+constexpr std::size_t DamageFreezeLengthOffset = 0x11C;
+constexpr std::size_t DamageLifeLeechOffset = 0x120;
+constexpr std::size_t DamageManaLeechOffset = 0x124;
+constexpr std::size_t DamageStaminaLeechOffset = 0x128;
+constexpr std::size_t DamageStunLengthOffset = 0x12C;
+constexpr std::size_t DamageAbsorbedLifeOffset = 0x130;
+constexpr std::size_t DamageTotalOffset = 0x134;
+constexpr std::size_t DamageHitClassOffset = 0x144;
+constexpr std::size_t DamageActiveHitClassOffset = 0x148;
+constexpr std::size_t DamageConversionTypeOffset = 0x149;
+constexpr std::size_t DamageOverlayOffset = 0x150;
+
+constexpr std::size_t UnitTypeOffset = 0x000;
+constexpr std::size_t UnitClassIdOffset = 0x004;
+constexpr std::size_t UnitGuidOffset = 0x008;
+constexpr std::size_t UnitPathOffset = 0x038;
+constexpr std::size_t UnitCombatListOffset = 0x108;
+
+constexpr std::size_t SkillRecordOffset = 0x000;
+constexpr std::size_t SkillsIdOffset = 0x000;
+constexpr std::size_t ItemsCodeOffset = 0x080;
+constexpr std::size_t ItemsNormalCodeOffset = 0x084;
+
+constexpr std::size_t CombatAttackerTypeOffset = 0x008;
+constexpr std::size_t CombatAttackerGuidOffset = 0x00C;
+constexpr std::size_t CombatDefenderTypeOffset = 0x010;
+constexpr std::size_t CombatDefenderGuidOffset = 0x014;
+constexpr std::size_t CombatNextOffset = 0x198;
+
+constexpr std::uintptr_t FillDamageValuesRva = 0x44C030;
+constexpr std::uintptr_t AllocateCombatRecordRva = 0x4507B0;
+constexpr std::uintptr_t ConsumeCombatRecordRva = 0x44B2B0;
+constexpr std::uintptr_t ExecuteEventsRva = 0x44CE80;
+constexpr std::uintptr_t EventFunc7Rva = 0x583E00;
+constexpr std::uintptr_t EventFunc9Rva = 0x583400;
+constexpr std::uintptr_t EventFunc14Rva = 0x583580;
+constexpr std::uintptr_t EventFunc15Rva = 0x584170;
+constexpr std::uintptr_t EventFunc16Rva = 0x583150;
+constexpr std::uintptr_t EventFunc19Rva = 0x5849D0;
+constexpr std::uintptr_t EventFunc20Rva = 0x583B30;
+constexpr std::uintptr_t EventFunc21Rva = 0x5837F0;
+
+constexpr std::uintptr_t ApplyDamageBonusesRva = 0x44D710;
+constexpr std::uintptr_t ApplyDamageEventRva = 0x44D570;
+constexpr std::uintptr_t PreCriticalCallRva = 0x44C2AC;
+constexpr std::uintptr_t PreEvent3CallRva = 0x44CB9E;
+constexpr std::uintptr_t CopyDamageRva = 0x4494B0;
+constexpr std::uintptr_t DestroyDamageRva = 0x4496E0;
+constexpr std::uintptr_t EnumerateUnitsRva = 0x4398B0;
+constexpr std::uintptr_t CanDamageTargetRva = 0x48E060;
+constexpr std::uintptr_t GetRoomRva = 0x34B440;
+constexpr std::uintptr_t GetUsedSkillRva = 0x34B720;
+constexpr std::uintptr_t ResolveActiveWeaponRva = 0x4242B0;
+constexpr std::uintptr_t GetDataContextFromUnitRva = 0x34A0E0;
+constexpr std::uintptr_t GetItemsRecordRva = 0x314110;
+constexpr std::uintptr_t GetServerUnitRva = 0x48FE80;
+constexpr std::uintptr_t GetLayeredStatRva = 0x2F5C60;
+constexpr std::uintptr_t GetUnitStatRva = 0x2F5020;
+constexpr std::uintptr_t CheckStateRva = 0x3351B0;
+constexpr std::uintptr_t CalculateTotalDamageRva = 0x44DF10;
+constexpr std::uintptr_t FinalizeDamageRva = 0x44A9B0;
+constexpr std::uintptr_t GetSeedRva = 0x34A1E0;
+constexpr std::uintptr_t RollLimitedRandomRva = 0x153B00;
+constexpr std::uintptr_t GetWeaponMasteryChanceRva = 0x33D4F0;
+constexpr std::uintptr_t GetPathXRva = 0x341A20;
+constexpr std::uintptr_t GetPathYRva = 0x341A30;
+
+constexpr std::uintptr_t FillMeleeReturnRva = 0x44B6A0;
+constexpr std::uintptr_t AllocateMeleeReturnRva = 0x44B708;
+constexpr std::uintptr_t ExecuteMeleeReturnRva = 0x44B3FF;
+constexpr std::uintptr_t PreEvent3ReturnRva = 0x44CBA3;
+
+constexpr auto FillExpected = std::to_array<std::uint8_t>({
+    0x40,0x56,0x57,0x41,0x54,0x48,0x81,0xEC,0x10,0x05,0x00,0x00,0x48,0x8B,0x05,
+    0x85,0xF2,0x57,0x02,0x48,0x33,0xC4,0x48,0x89,0x84,0x24,0xD0,0x04,0x00,0x00,
+});
+constexpr auto AllocateExpected = std::to_array<std::uint8_t>({
+    0x40,0x55,0x57,0x41,0x56,0x41,0x57,0x48,0x81,0xEC,0xC8,0x01,0x00,0x00,0x48,
+    0x8B,0x05,0x03,0xAB,0x57,0x02,0x48,0x33,0xC4,0x48,0x89,0x84,0x24,0xB0,0x01,
+    0x00,0x00,
+});
+constexpr auto ConsumeExpected = std::to_array<std::uint8_t>({
+    0x40,0x53,0x55,0x56,0x57,0x41,0x54,0x41,0x56,0x48,0x81,0xEC,0xC8,0x01,0x00,
+    0x00,0x48,0x8B,0x05,0x01,0x00,0x58,0x02,0x48,0x33,0xC4,0x48,0x89,0x84,0x24,
+    0xB0,0x01,0x00,0x00,
+});
+constexpr auto ExecuteExpected = std::to_array<std::uint8_t>({
+    0x40,0x55,0x53,0x56,0x57,0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,0x24,0xE8,0xFE,
+    0xFF,0xFF,0x48,0x81,0xEC,0x18,0x02,0x00,0x00,0x48,0x8B,0x05,0x29,0xE4,0x57,
+    0x02,
+});
+constexpr auto Event7Expected = std::to_array<std::uint8_t>({
+    0x48,0x89,0x6C,0x24,0x10,0x48,0x89,0x74,0x24,0x18,0x48,0x89,0x7C,0x24,0x20,
+    0x41,0x56,0x48,0x83,0xEC,0x20,0x49,0x8B,0xF1,0x49,0x8B,0xE8,0x4C,0x8B,0xF1,
+});
+constexpr auto Event9Expected = std::to_array<std::uint8_t>({
+    0x48,0x89,0x5C,0x24,0x08,0x48,0x89,0x6C,0x24,0x10,0x48,0x89,0x74,0x24,0x18,
+    0x57,0x41,0x56,0x41,0x57,0x48,0x83,0xEC,0x20,0x49,0x8B,0xE9,0x49,0x8B,0xF0,
+});
+constexpr auto Event14Expected = std::to_array<std::uint8_t>({
+    0x40,0x55,0x53,0x56,0x57,0x41,0x54,0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,0x24,
+    0x40,0xFF,0xFF,0xFF,0x48,0x81,0xEC,0xC0,0x01,0x00,0x00,0x48,0x8B,0x05,0x27,
+    0x7D,0x44,0x02,
+});
+constexpr auto Event15Expected = std::to_array<std::uint8_t>({
+    0x48,0x89,0x5C,0x24,0x08,0x48,0x89,0x6C,0x24,0x10,0x48,0x89,0x74,0x24,0x18,
+    0x57,0x48,0x83,0xEC,0x50,0x49,0x8B,0xF9,0x49,
+});
+constexpr auto Event16Expected = std::to_array<std::uint8_t>({
+    0x48,0x89,0x6C,0x24,0x10,0x48,0x89,0x74,0x24,0x18,0x57,0x41,0x56,0x41,0x57,
+    0x48,0x83,0xEC,0x60,0x49,0x8B,0xF1,0x49,0x8B,0xF8,0x44,0x8B,0xFA,0x4C,0x8B,
+    0xF1,
+});
+constexpr auto Event19Expected = std::to_array<std::uint8_t>({
+    0x48,0x89,0x5C,0x24,0x08,0x48,0x89,0x6C,0x24,0x10,0x48,0x89,0x74,0x24,0x18,
+    0x57,0x41,0x56,0x41,0x57,0x48,0x83,0xEC,0x60,0x49,0x8B,0xF1,0x49,0x8B,0xE8,
+    0x4C,0x8B,0xF1,
+});
+constexpr auto Event20Expected = std::to_array<std::uint8_t>({
+    0x48,0x89,0x5C,0x24,0x08,0x48,0x89,0x6C,0x24,0x10,0x48,0x89,0x74,0x24,0x18,
+    0x48,0x89,0x7C,0x24,0x20,0x41,0x54,0x41,0x56,0x41,0x57,0x48,0x83,0xEC,0x40,
+    0x49,0x8B,0xF1,
+});
+constexpr auto Event21Expected = std::to_array<std::uint8_t>({
+    0x48,0x89,0x5C,0x24,0x08,0x48,0x89,0x6C,0x24,0x10,0x56,0x57,0x41,0x54,0x41,
+    0x56,0x41,0x57,0x48,0x83,0xEC,0x40,0x4D,0x8B,0xF1,0x49,0x8B,0xF8,0x4C,0x8B,
+    0xF9,
+});
+constexpr auto PreCriticalContextExpected = std::to_array<std::uint8_t>({
+    0xE8,0x5F,0x14,0x00,0x00,0x89,0x47,0x18,0x45,0x85,0xF6,0x75,0x67,0x48,0x8B,
+    0xCE,0xE8,0xEF,0x7F,0xFD,0xFF,
+});
+constexpr auto PreEvent3ContextExpected = std::to_array<std::uint8_t>({
+    0x48,0x8B,0x4C,0x24,0x68,0x4C,0x8B,0xCE,0x4D,0x8B,0xC4,0x48,0x89,0x7C,0x24,
+    0x20,0xBA,0x03,0x00,0x00,0x00,0xE8,0xCD,0x09,0x00,0x00,0x44,0x0F,0xB6,0x97,
+    0x49,0x01,0x00,0x00,
+});
+constexpr auto PreCriticalCallExpected = std::to_array<std::uint8_t>({
+    0xE8,0x5F,0x14,0x00,0x00,
+});
+constexpr auto PreEvent3CallExpected = std::to_array<std::uint8_t>({
+    0xE8,0xCD,0x09,0x00,0x00,
+});
+
+using FillDamageFn = void(__fastcall*)(
+    void*, void*, void*, void*, std::int32_t, std::uint8_t) noexcept;
+using AllocateCombatRecordFn = void(__fastcall*)(
+    void*, void*, void*, const void*) noexcept;
+using ConsumeCombatRecordFn = std::uint8_t(__fastcall*)(
+    void*, void*, void*, std::int32_t) noexcept;
+using ExecuteEventsFn = void(__fastcall*)(
+    void*, void*, void*, std::int32_t, void*) noexcept;
+using EventFunctionFn = std::int32_t(__fastcall*)(
+    void*, std::int32_t, void*, void*, void*, std::int32_t, std::int32_t,
+    std::int32_t, void*) noexcept;
+using ApplyDamageBonusesFn = std::int32_t(__fastcall*)(
+    void*, std::int32_t, void*, std::int32_t, std::int32_t, std::int32_t,
+    std::int32_t, std::uint8_t) noexcept;
+using ApplyDamageEventFn = std::int32_t(__fastcall*)(
+    void*, std::int32_t, void*, void*, void*) noexcept;
+using DamageStageFn = void(__fastcall*)(void*, void*, void*, void*) noexcept;
+using CopyDamageFn = void*(__fastcall*)(void*, const void*) noexcept;
+using DestroyDamageFn = void(__fastcall*)(void*) noexcept;
+using AreaCallbackFn = std::int32_t(__fastcall*)(void*, void*) noexcept;
+using EnumerateUnitsFn = void(__fastcall*)(
+    void*, void*, void*, std::int32_t, std::uint32_t, AreaCallbackFn, void*,
+    std::int32_t, const char*, std::int32_t) noexcept;
+using CanDamageTargetFn = std::int32_t(__fastcall*)(void*, void*, void*) noexcept;
+using GetUnitPointerFn = void*(__fastcall*)(void*) noexcept;
+using GetDataContextFromUnitFn = std::uint8_t(__fastcall*)(void*) noexcept;
+using GetItemsRecordFn = void*(__fastcall*)(std::uint8_t, std::uint32_t) noexcept;
+using GetServerUnitFn = void*(__fastcall*)(
+    void*, std::int32_t, std::uint32_t) noexcept;
+using GetStatFn = std::int32_t(__fastcall*)(
+    void*, std::int32_t, std::uint16_t) noexcept;
+using CheckStateFn = std::int32_t(__fastcall*)(void*, std::int32_t) noexcept;
+using GetSeedFn = NativeSeedPair*(__fastcall*)(void*) noexcept;
+using RollLimitedRandomFn = std::uint32_t(__fastcall*)(
+    NativeSeedPair*, std::int32_t) noexcept;
+using GetWeaponMasteryChanceFn = std::int32_t(__fastcall*)(
+    void*, void*, std::int32_t, std::int32_t) noexcept;
+using GetPathCoordinateFn = std::uint16_t(__fastcall*)(void*) noexcept;
+
+const D2RL::PluginContext* Context{};
+std::uint8_t* Base{};
+Config ActiveConfig{};
+std::filesystem::path ActiveConfigPath;
+
+FillDamageFn OriginalFill{};
+AllocateCombatRecordFn OriginalAllocate{};
+ConsumeCombatRecordFn OriginalConsume{};
+ExecuteEventsFn OriginalExecute{};
+EventFunctionFn OriginalEvent7{};
+EventFunctionFn OriginalEvent9{};
+EventFunctionFn OriginalEvent14{};
+EventFunctionFn OriginalEvent15{};
+EventFunctionFn OriginalEvent16{};
+EventFunctionFn OriginalEvent19{};
+EventFunctionFn OriginalEvent20{};
+EventFunctionFn OriginalEvent21{};
+
+ApplyDamageBonusesFn ApplyDamageBonuses{};
+ApplyDamageEventFn ApplyDamageEvent{};
+DamageStageFn CalculateTotalDamage{};
+DamageStageFn FinalizeDamage{};
+CopyDamageFn CopyDamage{};
+DestroyDamageFn DestroyDamage{};
+EnumerateUnitsFn EnumerateUnits{};
+CanDamageTargetFn CanDamageTarget{};
+GetUnitPointerFn GetRoom{};
+GetUnitPointerFn GetUsedSkill{};
+GetUnitPointerFn ResolveActiveWeapon{};
+GetDataContextFromUnitFn GetDataContextFromUnit{};
+GetItemsRecordFn GetItemsRecord{};
+GetServerUnitFn GetServerUnit{};
+GetStatFn GetLayeredStat{};
+GetStatFn GetUnitStat{};
+CheckStateFn CheckState{};
+GetSeedFn GetSeed{};
+RollLimitedRandomFn RollLimitedRandom{};
+GetWeaponMasteryChanceFn GetWeaponMasteryChance{};
+GetPathCoordinateFn GetPathX{};
+GetPathCoordinateFn GetPathY{};
+
+std::atomic<bool> Operational{};
+std::atomic<bool> AnyMutationInstalled{};
+std::atomic<std::uint64_t> Sequence{};
+std::atomic<std::uint64_t> Captures{};
+std::atomic<std::uint64_t> Bursts{};
+std::atomic<std::uint64_t> SecondaryHits{};
+std::atomic<std::uint64_t> RejectedHits{};
+std::atomic<std::uint64_t> RejectedTargets{};
+std::atomic<std::uint64_t> DroppedSidecars{};
+
+void* RelayPage{};
+constexpr std::size_t RelayStride = 16;
+constexpr std::size_t RelayCount = 2;
+constexpr std::size_t RelayBytes = RelayStride * RelayCount;
+
+template <typename Fn>
+Fn At(std::uintptr_t rva) noexcept {
+    return reinterpret_cast<Fn>(Base + rva);
+}
+
+template <typename T>
+T Read(const void* object, std::size_t offset) noexcept {
+    T value{};
+    std::memcpy(
+        &value,
+        static_cast<const std::byte*>(object) + offset,
+        sizeof(value));
+    return value;
+}
+
+template <typename T>
+void Write(void* object, std::size_t offset, T value) noexcept {
+    std::memcpy(
+        static_cast<std::byte*>(object) + offset,
+        &value,
+        sizeof(value));
+}
+
+auto Identity(const void* unit) noexcept -> UnitIdentity {
+    if (!unit) return {};
+    return {
+        .type = Read<std::int32_t>(unit, UnitTypeOffset),
+        .guid = Read<std::uint32_t>(unit, UnitGuidOffset),
+    };
+}
+
+void DiagnosticLog(const char* format, ...) noexcept {
+    if (!ActiveConfig.diagnosticLogging || !Context) return;
+    char message[1024]{};
+    va_list arguments;
+    va_start(arguments, format);
+    std::vsnprintf(message, sizeof(message), format, arguments);
+    va_end(arguments);
+    Context->LogInfo(message);
+}
+
+const char* CriticalOutcomeName(
+        Native92777CriticalOutcome outcome) noexcept {
+    switch (outcome) {
+    case Native92777CriticalOutcome::WeaponMastery: return "weaponMastery";
+    case Native92777CriticalOutcome::PassiveCritical: return "critical";
+    case Native92777CriticalOutcome::DeadlyStrike: return "deadly";
+    case Native92777CriticalOutcome::None: return "none";
+    }
+    return "none";
+}
+
+class OwnedDamage final {
+public:
+    OwnedDamage() = default;
+    OwnedDamage(const OwnedDamage&) = delete;
+    auto operator=(const OwnedDamage&) -> OwnedDamage& = delete;
+    ~OwnedDamage() noexcept { Reset(); }
+
+    static auto Copy(const void* source) -> std::unique_ptr<OwnedDamage> {
+        if (!source || !CopyDamage) return {};
+        auto result = std::make_unique<OwnedDamage>();
+        result->bytes_ = static_cast<std::byte*>(
+            _aligned_malloc(DamageSize, 16));
+        if (!result->bytes_) throw std::bad_alloc{};
+        CopyDamage(result->bytes_, source);
+        result->constructed_ = true;
+        return result;
+    }
+
+    auto Get() noexcept -> void* { return bytes_; }
+    auto Get() const noexcept -> const void* { return bytes_; }
+
+private:
+    void Reset() noexcept {
+        if (constructed_ && DestroyDamage) DestroyDamage(bytes_);
+        if (bytes_) _aligned_free(bytes_);
+        bytes_ = nullptr;
+        constructed_ = false;
+    }
+
+    std::byte* bytes_{};
+    bool constructed_{};
+};
+
+struct AreaDescriptor {
+    void* room{};
+    std::int32_t x{};
+    std::int32_t y{};
+};
+static_assert(sizeof(AreaDescriptor) == 0x10);
+
+struct PoisonEntry {
+    std::uint32_t sourceKey{};
+    std::int32_t damage{};
+    std::int32_t length{};
+};
+static_assert(sizeof(PoisonEntry) == 12);
+
+struct CaptureMetadata {
+    UnitIdentity attacker{};
+    UnitIdentity primary{};
+    std::int32_t skillId{};
+    std::int32_t damageMode{};
+    std::uint32_t weaponClassId{UINT32_MAX};
+    std::int32_t baseRadiusTiles{};
+    std::int32_t radiusBonusTiles{};
+    std::int32_t radiusTiles{};
+    std::int32_t splashPercent{};
+    bool exceptionalOrEliteWeapon{};
+    bool gateRequired{};
+    bool gateSatisfied{};
+    bool primaryCriticalDeadly{};
+};
+
+struct FillFrame {
+    FillFrame* previous{};
+    void* game{};
+    void* attacker{};
+    void* defender{};
+    void* damage{};
+    bool candidate{};
+    bool preCriticalSeen{};
+    bool event3Seen{};
+    bool gateSeen{};
+    bool primaryCriticalDeadly{};
+    std::int32_t preCriticalPhysical{};
+    std::uint16_t preCriticalFlags{};
+    std::unique_ptr<OwnedDamage> normalizedDamage;
+};
+
+struct PendingCapture {
+    void* gameToken{};
+    const void* sourceDamage{};
+    std::uint32_t threadId{};
+    std::uint64_t sequence{};
+    CaptureMetadata metadata{};
+    std::unique_ptr<OwnedDamage> damage;
+};
+
+struct CombatSidecar {
+    void* gameToken{};
+    void* node{};
+    std::uint32_t threadId{};
+    std::uint64_t sequence{};
+    CaptureMetadata metadata{};
+    std::unique_ptr<OwnedDamage> damage;
+};
+
+struct PrimaryFrame {
+    CombatSidecar* sidecar{};
+    void* game{};
+    void* attacker{};
+    void* defender{};
+    void* damage{};
+    bool gateSeen{};
+    bool primaryHitSucceeded{};
+};
+
+struct SecondaryDiagnostics {
+    std::uint32_t openWoundsCalls{};
+    std::uint32_t crushingBlowCalls{};
+    std::int32_t lastOpenWoundsResult{};
+    std::int32_t lastCrushingBlowResult{};
+};
+
+struct CollectionContext {
+    UnitIdentity attacker{};
+    UnitIdentity primary{};
+    std::vector<UnitIdentity>* targets{};
+    bool failed{};
+};
+
+std::mutex SidecarMutex;
+std::vector<std::unique_ptr<CombatSidecar>> Sidecars;
+
+thread_local FillFrame* ActiveFillFrame{};
+thread_local PrimaryFrame* ActivePrimaryFrame{};
+thread_local SecondaryDiagnostics* ActiveSecondaryDiagnostics{};
+thread_local std::vector<PendingCapture> PendingCaptures;
+thread_local std::uint32_t SecondaryDepth{};
+
+class FillFrameScope final {
+public:
+    explicit FillFrameScope(FillFrame* frame) noexcept
+        : frame_(frame) {
+        frame_->previous = ActiveFillFrame;
+        ActiveFillFrame = frame_;
+    }
+    ~FillFrameScope() noexcept { ActiveFillFrame = frame_->previous; }
+    FillFrameScope(const FillFrameScope&) = delete;
+    auto operator=(const FillFrameScope&) -> FillFrameScope& = delete;
+private:
+    FillFrame* frame_{};
+};
+
+class PrimaryFrameScope final {
+public:
+    explicit PrimaryFrameScope(PrimaryFrame* frame) noexcept
+        : previous_(ActivePrimaryFrame) {
+        ActivePrimaryFrame = frame;
+    }
+    ~PrimaryFrameScope() noexcept { ActivePrimaryFrame = previous_; }
+    PrimaryFrameScope(const PrimaryFrameScope&) = delete;
+    auto operator=(const PrimaryFrameScope&) -> PrimaryFrameScope& = delete;
+private:
+    PrimaryFrame* previous_{};
+};
+
+class SecondaryScope final {
+public:
+    SecondaryScope() noexcept { ++SecondaryDepth; }
+    ~SecondaryScope() noexcept { --SecondaryDepth; }
+    SecondaryScope(const SecondaryScope&) = delete;
+    auto operator=(const SecondaryScope&) -> SecondaryScope& = delete;
+};
+
+class SecondaryDiagnosticsScope final {
+public:
+    explicit SecondaryDiagnosticsScope(
+            SecondaryDiagnostics* diagnostics) noexcept
+        : previous_(ActiveSecondaryDiagnostics) {
+        ActiveSecondaryDiagnostics = diagnostics;
+    }
+    ~SecondaryDiagnosticsScope() noexcept {
+        ActiveSecondaryDiagnostics = previous_;
+    }
+    SecondaryDiagnosticsScope(const SecondaryDiagnosticsScope&) = delete;
+    auto operator=(const SecondaryDiagnosticsScope&)
+        -> SecondaryDiagnosticsScope& = delete;
+private:
+    SecondaryDiagnostics* previous_{};
+};
+
+auto SkillIdFromActualHit(void* attacker) noexcept -> std::int32_t {
+    if (!attacker || !GetUsedSkill) return NormalAttackSkillId;
+    const auto* skill = GetUsedSkill(attacker);
+    if (!skill) return NormalAttackSkillId;
+    const auto* record = Read<void*>(skill, SkillRecordOffset);
+    if (!record) return NormalAttackSkillId;
+    return static_cast<std::int32_t>(
+        Read<std::int16_t>(record, SkillsIdOffset));
+}
+
+auto IsExceptionalOrEliteWeapon(void* weapon) noexcept -> bool {
+    if (!weapon || !GetDataContextFromUnit || !GetItemsRecord) {
+        return false;
+    }
+    const auto classId = Read<std::uint32_t>(weapon, UnitClassIdOffset);
+    auto* record = GetItemsRecord(GetDataContextFromUnit(weapon), classId);
+    if (!record) return false;
+    return Read<std::uint32_t>(record, ItemsCodeOffset)
+        != Read<std::uint32_t>(record, ItemsNormalCodeOffset);
+}
+
+auto BuildMetadata(
+        void* attacker, void* primary, std::int32_t damageMode)
+        -> std::unique_ptr<CaptureMetadata> {
+    if (!attacker || !primary || Identity(attacker).type != UnitPlayer
+            || Identity(primary).type != UnitMonster) {
+        return {};
+    }
+    const auto skillId = SkillIdFromActualHit(attacker);
+    if (!IsSkillEnabled(ActiveConfig, skillId)) return {};
+
+    auto metadata = std::make_unique<CaptureMetadata>();
+    metadata->attacker = Identity(attacker);
+    metadata->primary = Identity(primary);
+    metadata->skillId = skillId;
+    metadata->damageMode = damageMode;
+    auto* weapon = ResolveActiveWeapon ? ResolveActiveWeapon(attacker) : nullptr;
+    if (weapon) {
+        metadata->weaponClassId = Read<std::uint32_t>(
+            weapon, UnitClassIdOffset);
+    }
+    metadata->exceptionalOrEliteWeapon = IsExceptionalOrEliteWeapon(weapon);
+    metadata->gateRequired = RequiresGateStat(ActiveConfig, skillId);
+    metadata->gateSatisfied = !metadata->gateRequired;
+    if (metadata->gateRequired && ActiveConfig.gateStatId >= 0) {
+        metadata->gateSatisfied =
+            GetUnitStat(attacker, ActiveConfig.gateStatId, 0) > 0;
+    }
+
+    const auto radiusPercent = ActiveConfig.increasedRadiusStatId >= 0
+        ? GetUnitStat(attacker, ActiveConfig.increasedRadiusStatId, 0)
+        : 0;
+    const auto damagePercent = ActiveConfig.splashDamagePercentStatId >= 0
+        ? GetUnitStat(attacker, ActiveConfig.splashDamagePercentStatId, 0)
+        : 0;
+    metadata->baseRadiusTiles = metadata->exceptionalOrEliteWeapon
+        ? ActiveConfig.baseRadiusExceptionalEliteWeapon
+        : ActiveConfig.baseRadiusNormalWeapon;
+    if (const auto* override = FindSkillOverride(ActiveConfig, skillId);
+            override && override->baseRadiusTiles.has_value()) {
+        metadata->baseRadiusTiles = *override->baseRadiusTiles;
+    }
+    metadata->radiusBonusTiles = std::max(radiusPercent, 0)
+        / std::max(ActiveConfig.radiusPercentPerTile, 1);
+    metadata->radiusTiles = ClampNativeRadius(ResolveRadiusTiles(
+        ActiveConfig,
+        skillId,
+        metadata->exceptionalOrEliteWeapon,
+        radiusPercent));
+    metadata->splashPercent = ResolveSplashDamagePercent(
+        ActiveConfig, skillId, damagePercent);
+    if (metadata->radiusTiles <= 0 || metadata->splashPercent <= 0) return {};
+    return metadata;
+}
+
+bool CaptureNormalizedPacket(FillFrame& frame, void* damage) {
+    if (!frame.candidate || frame.normalizedDamage || !frame.preCriticalSeen
+            || frame.damage != damage || !damage) {
+        return false;
+    }
+    if (Read<std::uint8_t>(damage, DamageConversionTypeOffset) != 0
+            || (frame.preCriticalFlags & CriticalDeadlyResultFlag) != 0) {
+        return false;
+    }
+    const auto lateFlags = Read<std::uint16_t>(
+        damage, DamageResultFlagsOffset);
+    const auto allowedLateFlags = static_cast<std::uint16_t>(
+        frame.preCriticalFlags | CriticalDeadlyResultFlag);
+    if (lateFlags != frame.preCriticalFlags && lateFlags != allowedLateFlags) {
+        return false;
+    }
+    frame.primaryCriticalDeadly =
+        (lateFlags & CriticalDeadlyResultFlag) != 0;
+    auto copy = OwnedDamage::Copy(damage);
+    if (!copy) return false;
+    Write(copy->Get(), DamagePhysicalOffset, frame.preCriticalPhysical);
+    Write(copy->Get(), DamageResultFlagsOffset, frame.preCriticalFlags);
+    frame.normalizedDamage = std::move(copy);
+    return true;
+}
+
+void PushPendingCapture(
+        FillFrame& frame, std::unique_ptr<CaptureMetadata> metadata) {
+    if (!frame.normalizedDamage || !metadata) return;
+    metadata->gateSatisfied = metadata->gateSatisfied || frame.gateSeen;
+    metadata->primaryCriticalDeadly = frame.primaryCriticalDeadly;
+    std::erase_if(PendingCaptures, [&frame](const auto& pending) {
+        return pending.gameToken != frame.game;
+    });
+    if (PendingCaptures.size() >= MaximumPendingCaptures) {
+        PendingCaptures.erase(PendingCaptures.begin());
+        DroppedSidecars.fetch_add(1, std::memory_order_relaxed);
+    }
+    const auto sequence = Sequence.fetch_add(1, std::memory_order_relaxed) + 1;
+    const auto* packet = frame.normalizedDamage->Get();
+    PendingCaptures.push_back({
+        .gameToken = frame.game,
+        .sourceDamage = frame.damage,
+        .threadId = GetCurrentThreadId(),
+        .sequence = sequence,
+        .metadata = *metadata,
+        .damage = std::move(frame.normalizedDamage),
+    });
+    Captures.fetch_add(1, std::memory_order_relaxed);
+    DiagnosticLog(
+        "MeleeSplash capture seq=%llu attacker=%d/%u primary=%d/%u skill=%d mode=%d "
+        "weaponClass=%u tier=%s baseRadius=%d radiusBonus=%d radiusFinal=%d "
+        "splashPercent=%d sharedPhys=%d sharedFire=%d sharedBurn=%d "
+        "sharedLightning=%d sharedMagic=%d sharedCold=%d sharedPoison=%d "
+        "primaryCrit=%s.",
+        static_cast<unsigned long long>(sequence),
+        metadata->attacker.type,
+        metadata->attacker.guid,
+        metadata->primary.type,
+        metadata->primary.guid,
+        metadata->skillId,
+        metadata->damageMode,
+        metadata->weaponClassId,
+        metadata->exceptionalOrEliteWeapon ? "exceptionalOrElite" : "normal",
+        metadata->baseRadiusTiles,
+        metadata->radiusBonusTiles,
+        metadata->radiusTiles,
+        metadata->splashPercent,
+        Read<std::int32_t>(packet, DamagePhysicalOffset),
+        Read<std::int32_t>(packet, DamageFireOffset),
+        Read<std::int32_t>(packet, DamageBurnOffset),
+        Read<std::int32_t>(packet, DamageLightningOffset),
+        Read<std::int32_t>(packet, DamageMagicOffset),
+        Read<std::int32_t>(packet, DamageColdOffset),
+        Read<std::int32_t>(packet, DamagePoisonOffset),
+        metadata->primaryCriticalDeadly ? "yes" : "no");
+}
+
+auto TakePendingCapture(
+        const void* sourceDamage,
+        void* gameToken,
+        UnitIdentity attacker,
+        UnitIdentity defender) -> std::unique_ptr<PendingCapture> {
+    for (auto iterator = PendingCaptures.rbegin();
+            iterator != PendingCaptures.rend(); ++iterator) {
+        if (iterator->sourceDamage != sourceDamage
+                || iterator->gameToken != gameToken
+                || iterator->metadata.attacker != attacker
+                || iterator->metadata.primary != defender) {
+            continue;
+        }
+        const auto index = static_cast<std::size_t>(
+            std::distance(iterator, PendingCaptures.rend()) - 1);
+        auto result = std::make_unique<PendingCapture>(
+            std::move(PendingCaptures[index]));
+        PendingCaptures.erase(PendingCaptures.begin()
+            + static_cast<std::ptrdiff_t>(index));
+        return result;
+    }
+    return {};
+}
+
+bool CombatNodeMatches(
+        const void* node,
+        UnitIdentity attacker,
+        UnitIdentity defender) noexcept {
+    return node
+        && Read<std::int32_t>(node, CombatAttackerTypeOffset) == attacker.type
+        && Read<std::uint32_t>(node, CombatAttackerGuidOffset) == attacker.guid
+        && Read<std::int32_t>(node, CombatDefenderTypeOffset) == defender.type
+        && Read<std::uint32_t>(node, CombatDefenderGuidOffset) == defender.guid;
+}
+
+auto FindCombatNode(
+        void* attacker,
+        UnitIdentity attackerId,
+        UnitIdentity defenderId,
+        const void* stopBefore = nullptr) noexcept -> void* {
+    auto* node = attacker
+        ? Read<void*>(attacker, UnitCombatListOffset)
+        : nullptr;
+    for (std::size_t index = 0;
+            node && index < MaximumCombatNodes; ++index) {
+        if (node == stopBefore) break;
+        if (CombatNodeMatches(node, attackerId, defenderId)) return node;
+        node = Read<void*>(node, CombatNextOffset);
+    }
+    return nullptr;
+}
+
+void StoreSidecar(
+        void* node, std::unique_ptr<PendingCapture> pending) {
+    if (!node || !pending || !pending->damage) return;
+    auto sidecar = std::make_unique<CombatSidecar>();
+    sidecar->gameToken = pending->gameToken;
+    sidecar->node = node;
+    sidecar->threadId = pending->threadId;
+    sidecar->sequence = pending->sequence;
+    sidecar->metadata = pending->metadata;
+    sidecar->damage = std::move(pending->damage);
+    std::scoped_lock lock(SidecarMutex);
+    const auto gameToken = sidecar->gameToken;
+    std::erase_if(Sidecars, [node, gameToken](const auto& existing) {
+        return existing
+            && (existing->node == node || existing->gameToken != gameToken);
+    });
+    if (Sidecars.size() >= MaximumSidecars) {
+        Sidecars.erase(Sidecars.begin());
+        DroppedSidecars.fetch_add(1, std::memory_order_relaxed);
+    }
+    Sidecars.push_back(std::move(sidecar));
+}
+
+auto TakeSidecar(
+        void* node,
+        void* gameToken,
+        UnitIdentity attacker,
+        UnitIdentity defender) noexcept -> std::unique_ptr<CombatSidecar> {
+    if (!node || !gameToken) return {};
+    try {
+        std::scoped_lock lock(SidecarMutex);
+        const auto iterator = std::find_if(
+            Sidecars.begin(), Sidecars.end(),
+            [node, gameToken, attacker, defender](const auto& sidecar) {
+                return sidecar
+                    && sidecar->node == node
+                    && sidecar->gameToken == gameToken
+                    && sidecar->metadata.attacker == attacker
+                    && sidecar->metadata.primary == defender;
+            });
+        if (iterator == Sidecars.end()) return {};
+        auto result = std::move(*iterator);
+        Sidecars.erase(iterator);
+        return result;
+    } catch (...) {
+        return {};
+    }
+}
+
+void ReturnSidecar(std::unique_ptr<CombatSidecar> sidecar) noexcept {
+    if (!sidecar) return;
+    try {
+        std::scoped_lock lock(SidecarMutex);
+        const auto node = sidecar->node;
+        const auto gameToken = sidecar->gameToken;
+        std::erase_if(Sidecars, [node, gameToken](const auto& existing) {
+            return existing
+                && (existing->node == node || existing->gameToken != gameToken);
+        });
+        if (Sidecars.size() >= MaximumSidecars) {
+            Sidecars.erase(Sidecars.begin());
+            DroppedSidecars.fetch_add(1, std::memory_order_relaxed);
+        }
+        Sidecars.push_back(std::move(sidecar));
+    } catch (...) {
+        DroppedSidecars.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+bool IsCombatNodeLinked(void* attacker, const void* expected) noexcept {
+    auto* node = attacker
+        ? Read<void*>(attacker, UnitCombatListOffset)
+        : nullptr;
+    for (std::size_t index = 0;
+            node && index < MaximumCombatNodes; ++index) {
+        if (node == expected) return true;
+        node = Read<void*>(node, CombatNextOffset);
+    }
+    return false;
+}
+
+bool ScalePoisonPacket(void* damage, std::int32_t percent) noexcept {
+    const auto rawCapacity = Read<std::uint64_t>(
+        damage, DamagePoisonVectorCapacityOffset);
+    const auto capacity = rawCapacity & UINT64_C(0x7FFFFFFFFFFFFFFF);
+    const auto count = Read<std::uint64_t>(
+        damage, DamagePoisonVectorCountOffset);
+    const auto inlineStorage = (rawCapacity >> 63U) != 0;
+    auto* entries = Read<PoisonEntry*>(damage, DamagePoisonVectorOffset);
+    if (count > capacity || count > MaximumPoisonEntries
+            || capacity > MaximumPoisonEntries
+            || (count > 0 && !entries)
+            || (reinterpret_cast<std::uintptr_t>(entries)
+                % alignof(std::uint32_t)) != 0) {
+        return false;
+    }
+    if (inlineStorage) {
+        const auto* expected = static_cast<std::byte*>(damage)
+            + DamagePoisonInlineStorageOffset;
+        if (capacity != 16 || entries != reinterpret_cast<const PoisonEntry*>(
+                expected)) {
+            return false;
+        }
+    }
+    const auto scalar = Read<std::int32_t>(damage, DamagePoisonOffset);
+    if (scalar < 0) return false;
+    std::int64_t originalEntrySum{};
+    std::int64_t scaledEntrySum{};
+    for (std::uint64_t index = 0; index < count; ++index) {
+        if (entries[index].damage < 0) return false;
+        originalEntrySum += entries[index].damage;
+        scaledEntrySum += ScaleFixedDamage(entries[index].damage, percent);
+    }
+    const auto scaledScalar = ScaleFixedDamage(scalar, percent);
+    if (originalEntrySum > scalar || scaledEntrySum > scaledScalar) {
+        return false;
+    }
+    Write(damage, DamagePoisonOffset, scaledScalar);
+    for (std::uint64_t index = 0; index < count; ++index) {
+        entries[index].damage = ScaleFixedDamage(entries[index].damage, percent);
+    }
+    return true;
+}
+
+bool ScaleOffensivePacket(void* damage, std::int32_t percent) noexcept {
+    constexpr std::array<std::size_t, 6> FixedComponents{
+        DamagePhysicalOffset,
+        DamageFireOffset,
+        DamageBurnOffset,
+        DamageLightningOffset,
+        DamageMagicOffset,
+        DamageColdOffset,
+    };
+    for (const auto offset : FixedComponents) {
+        const auto value = Read<std::int32_t>(damage, offset);
+        if (value < 0) return false;
+    }
+    if (!ScalePoisonPacket(damage, percent)) return false;
+    for (const auto offset : FixedComponents) {
+        Write(damage, offset, ScaleFixedDamage(
+            Read<std::int32_t>(damage, offset), percent));
+    }
+    return true;
+}
+
+auto RollCriticalForTarget(
+        void* attacker, void* damage, std::int32_t damageMode) noexcept
+        -> Native92777CriticalOutcome {
+    if (!attacker || !damage || !GetSeed || !RollLimitedRandom) {
+        return Native92777CriticalOutcome::None;
+    }
+    auto* seed = GetSeed(attacker);
+    if (!seed) return Native92777CriticalOutcome::None;
+    const auto succeeds = [seed](std::int32_t chance) noexcept {
+        return chance > 0
+            && static_cast<std::int32_t>(RollLimitedRandom(seed, 100)) < chance;
+    };
+
+    auto* weapon = damageMode == 0 ? ResolveActiveWeapon(attacker) : nullptr;
+    if (weapon && succeeds(GetWeaponMasteryChance(attacker, weapon, 0, 2))) {
+        Write(damage, DamagePhysicalOffset, ApplyNative92777CriticalMultiplier(
+            Read<std::int32_t>(damage, DamagePhysicalOffset),
+            Native92777CriticalOutcome::WeaponMastery));
+        Write(damage, DamageResultFlagsOffset, static_cast<std::uint16_t>(
+            Read<std::uint16_t>(damage, DamageResultFlagsOffset)
+            | CriticalDeadlyResultFlag));
+        return Native92777CriticalOutcome::WeaponMastery;
+    }
+    if (succeeds(GetUnitStat(attacker, PassiveCriticalStatId, 0))) {
+        Write(damage, DamagePhysicalOffset, ApplyNative92777CriticalMultiplier(
+            Read<std::int32_t>(damage, DamagePhysicalOffset),
+            Native92777CriticalOutcome::PassiveCritical));
+        Write(damage, DamageResultFlagsOffset, static_cast<std::uint16_t>(
+            Read<std::uint16_t>(damage, DamageResultFlagsOffset)
+            | CriticalDeadlyResultFlag));
+        return Native92777CriticalOutcome::PassiveCritical;
+    }
+    if (succeeds(GetLayeredStat(attacker, DeadlyStrikeStatId, 0))) {
+        Write(damage, DamagePhysicalOffset, ApplyNative92777CriticalMultiplier(
+            Read<std::int32_t>(damage, DamagePhysicalOffset),
+            Native92777CriticalOutcome::DeadlyStrike));
+        Write(damage, DamageResultFlagsOffset, static_cast<std::uint16_t>(
+            Read<std::uint16_t>(damage, DamageResultFlagsOffset)
+            | CriticalDeadlyResultFlag));
+        return Native92777CriticalOutcome::DeadlyStrike;
+    }
+    return Native92777CriticalOutcome::None;
+}
+
+void PrepareSyntheticRecord(void* target, void* damage) noexcept {
+    Write(damage, DamageHitFlagsOffset, SyntheticHitFlags);
+    // The synthetic target shares only the successful-hit decision.  Do not
+    // inherit primary knockback, block/dodge/avoid/evade, weapon-block, event
+    // suppression, lethal, or any other target-specific result bit.
+    auto flags = ResultSuccess;
+    if (!CheckState(target, UninterruptibleStateId)) flags |= ResultGetHit;
+    Write(damage, DamageResultFlagsOffset, flags);
+    Write(damage, DamageColdLengthOffset, std::int32_t{});
+    Write(damage, DamageFreezeLengthOffset, std::int32_t{});
+    Write(damage, DamageStaminaLeechOffset, std::int32_t{});
+    Write(damage, DamageStunLengthOffset, std::int32_t{});
+    Write(damage, DamageAbsorbedLifeOffset, std::int32_t{});
+    Write(damage, DamageTotalOffset, std::int32_t{});
+    Write(damage, DamageHitClassOffset, std::uint32_t{});
+    Write(damage, DamageActiveHitClassOffset, std::uint8_t{});
+    Write(damage, DamageOverlayOffset, std::uint32_t{});
+}
+
+void UpdateWillDie(void* target, void* damage) noexcept {
+    constexpr std::array<std::size_t, 6> FixedComponents{
+        DamagePhysicalOffset,
+        DamageFireOffset,
+        DamageLightningOffset,
+        DamageMagicOffset,
+        DamageColdOffset,
+        DamagePoisonOffset,
+    };
+    std::uint32_t total{};
+    for (const auto offset : FixedComponents) {
+        total += static_cast<std::uint32_t>(
+            Read<std::int32_t>(damage, offset));
+    }
+    const auto damageMasked = total & UINT32_C(0xFFFFFF00);
+    const auto hitPointsMasked = static_cast<std::uint32_t>(
+        GetUnitStat(target, HitPointsStatId, 0)) & UINT32_C(0xFFFFFF00);
+    auto flags = Read<std::uint16_t>(damage, DamageResultFlagsOffset);
+    if (static_cast<std::int32_t>(hitPointsMasked)
+            < static_cast<std::int32_t>(damageMasked)) {
+        flags |= ResultWillDie;
+    }
+    else flags = static_cast<std::uint16_t>(flags & ~ResultWillDie);
+    Write(damage, DamageResultFlagsOffset, flags);
+}
+
+auto CollectAreaCandidate(void* nativeContext, void* candidate) noexcept
+        -> std::int32_t {
+    if (!nativeContext || !candidate) return 0;
+    auto* collection = Read<CollectionContext*>(nativeContext, 0x18);
+    if (!collection || !collection->targets || collection->failed) return 0;
+    try {
+        const auto candidateId = Identity(candidate);
+        if (candidateId.type != UnitMonster) {
+            RejectedTargets.fetch_add(1, std::memory_order_relaxed);
+            DiagnosticLog(
+                "MeleeSplash reject target=%d/%u reason=not-monster.",
+                candidateId.type,
+                candidateId.guid);
+            return 0;
+        }
+        if (!AppendUniqueSecondaryTarget(
+            *collection->targets,
+            candidateId,
+            collection->attacker,
+            collection->primary)) {
+            RejectedTargets.fetch_add(1, std::memory_order_relaxed);
+            const auto* reason = candidateId == collection->attacker
+                ? "attacker"
+                : (candidateId == collection->primary
+                    ? "primary"
+                    : "duplicate");
+            DiagnosticLog(
+                "MeleeSplash reject target=%d/%u reason=%s.",
+                candidateId.type,
+                candidateId.guid,
+                reason);
+            return 0;
+        }
+        return 1;
+    } catch (...) {
+        collection->failed = true;
+        return 0;
+    }
+}
+
+auto CollectSecondaryTargets(
+        void* game,
+        void* attacker,
+        void* primary,
+        std::int32_t radius) -> std::vector<UnitIdentity> {
+    std::vector<UnitIdentity> targets;
+    if (!game || !attacker || !primary || radius <= 0) {
+        DiagnosticLog("MeleeSplash reject area reason=invalid-origin-or-radius.");
+        return targets;
+    }
+    auto* path = Read<void*>(primary, UnitPathOffset);
+    auto* room = GetRoom(primary);
+    if (!path || !room) {
+        DiagnosticLog(
+            "MeleeSplash reject area primary=%d/%u reason=missing-path-or-room.",
+            Identity(primary).type,
+            Identity(primary).guid);
+        return targets;
+    }
+    AreaDescriptor descriptor{
+        .room = room,
+        .x = static_cast<std::int32_t>(GetPathX(path)),
+        .y = static_cast<std::int32_t>(GetPathY(path)),
+    };
+    CollectionContext collection{
+        .attacker = Identity(attacker),
+        .primary = Identity(primary),
+        .targets = &targets,
+    };
+    EnumerateUnits(
+        game,
+        primary,
+        &descriptor,
+        radius,
+        StructuralAreaMask,
+        CollectAreaCandidate,
+        &collection,
+        0,
+        "MeleeSplash",
+        __LINE__);
+    if (collection.failed) throw std::bad_alloc{};
+    std::sort(targets.begin(), targets.end(), [](const auto& left, const auto& right) {
+        return left.type < right.type
+            || (left.type == right.type && left.guid < right.guid);
+    });
+    return targets;
+}
+
+bool ApplySplashToTarget(
+        void* game,
+        void* attacker,
+        const CaptureMetadata& metadata,
+        const OwnedDamage& baseDamage,
+        UnitIdentity targetId) {
+    auto* target = GetServerUnit(game, targetId.type, targetId.guid);
+    if (!target || Identity(target) != targetId
+            || !CanDamageTarget(game, attacker, target)) {
+        RejectedTargets.fetch_add(1, std::memory_order_relaxed);
+        DiagnosticLog(
+            "MeleeSplash reject target=%d/%u reason=unresolved-or-cannot-damage.",
+            targetId.type,
+            targetId.guid);
+        return false;
+    }
+    auto damage = OwnedDamage::Copy(baseDamage.Get());
+    if (!damage) return false;
+    PrepareSyntheticRecord(target, damage->Get());
+    if (!ScaleOffensivePacket(damage->Get(), metadata.splashPercent)) {
+        RejectedTargets.fetch_add(1, std::memory_order_relaxed);
+        DiagnosticLog(
+            "MeleeSplash reject target=%d/%u reason=invalid-poison-packet.",
+            targetId.type,
+            targetId.guid);
+        return false;
+    }
+    const auto critical = RollCriticalForTarget(
+        attacker, damage->Get(), metadata.damageMode);
+
+    SecondaryDiagnostics diagnostics{};
+    std::int32_t normalLifeLeechPercent{};
+    std::int32_t normalManaLeechPercent{};
+    std::int32_t splashLifeLeechPercent{};
+    std::int32_t splashManaLeechPercent{};
+    {
+        SecondaryScope secondaryScope;
+        SecondaryDiagnosticsScope diagnosticsScope(&diagnostics);
+        CalculateTotalDamage(game, attacker, target, damage->Get());
+        normalLifeLeechPercent = Read<std::int32_t>(
+            damage->Get(), DamageLifeLeechOffset);
+        normalManaLeechPercent = Read<std::int32_t>(
+            damage->Get(), DamageManaLeechOffset);
+        splashLifeLeechPercent = normalLifeLeechPercent / 2;
+        splashManaLeechPercent = normalManaLeechPercent / 2;
+        Write(damage->Get(), DamageLifeLeechOffset, splashLifeLeechPercent);
+        Write(damage->Get(), DamageManaLeechOffset, splashManaLeechPercent);
+        UpdateWillDie(target, damage->Get());
+        OriginalExecute(game, attacker, target, 0, damage->Get());
+        FinalizeDamage(game, attacker, target, damage->Get());
+    }
+
+    SecondaryHits.fetch_add(1, std::memory_order_relaxed);
+    DiagnosticLog(
+        "MeleeSplash target=%d/%u crit=%s phys=%d fire=%d burn=%d lightning=%d "
+        "magic=%d cold=%d poison=%d postTotal=%d normalLifeLeechPct=%d "
+        "splashLifeLeechPct=%d nativeAdjustedLifeLeechPct=%d normalManaLeechPct=%d "
+        "splashManaLeechPct=%d nativeAdjustedManaLeechPct=%d "
+        "CBcalls=%u CBresult=%d OWcalls=%u OWresult=%d.",
+        targetId.type,
+        targetId.guid,
+        CriticalOutcomeName(critical),
+        Read<std::int32_t>(damage->Get(), DamagePhysicalOffset),
+        Read<std::int32_t>(damage->Get(), DamageFireOffset),
+        Read<std::int32_t>(damage->Get(), DamageBurnOffset),
+        Read<std::int32_t>(damage->Get(), DamageLightningOffset),
+        Read<std::int32_t>(damage->Get(), DamageMagicOffset),
+        Read<std::int32_t>(damage->Get(), DamageColdOffset),
+        Read<std::int32_t>(damage->Get(), DamagePoisonOffset),
+        Read<std::int32_t>(damage->Get(), DamageTotalOffset),
+        normalLifeLeechPercent,
+        splashLifeLeechPercent,
+        Read<std::int32_t>(damage->Get(), DamageLifeLeechOffset),
+        normalManaLeechPercent,
+        splashManaLeechPercent,
+        Read<std::int32_t>(damage->Get(), DamageManaLeechOffset),
+        diagnostics.crushingBlowCalls,
+        diagnostics.lastCrushingBlowResult,
+        diagnostics.openWoundsCalls,
+        diagnostics.lastOpenWoundsResult);
+    return true;
+}
+
+void TriggerSplash(PrimaryFrame& frame) noexcept {
+    try {
+        if (!frame.sidecar || !frame.sidecar->damage) {
+            DiagnosticLog("MeleeSplash reject hit reason=missing-sidecar-packet.");
+            return;
+        }
+        if (!frame.primaryHitSucceeded) {
+            DiagnosticLog(
+                "MeleeSplash reject hit seq=%llu reason=primary-not-successful.",
+                static_cast<unsigned long long>(frame.sidecar->sequence));
+            return;
+        }
+        if (frame.sidecar->metadata.gateRequired
+                && !frame.sidecar->metadata.gateSatisfied
+                && !frame.gateSeen) {
+            DiagnosticLog(
+                "MeleeSplash reject hit seq=%llu reason=gate-stat-absent.",
+                static_cast<unsigned long long>(frame.sidecar->sequence));
+            return;
+        }
+        const auto& metadata = frame.sidecar->metadata;
+        auto* attacker = GetServerUnit(
+            frame.game, metadata.attacker.type, metadata.attacker.guid);
+        auto* primary = GetServerUnit(
+            frame.game, metadata.primary.type, metadata.primary.guid);
+        if (!attacker || !primary
+                || Identity(attacker) != metadata.attacker
+                || Identity(primary) != metadata.primary) {
+            RejectedHits.fetch_add(1, std::memory_order_relaxed);
+            DiagnosticLog(
+                "MeleeSplash reject hit seq=%llu reason=unit-reresolve-failed.",
+                static_cast<unsigned long long>(frame.sidecar->sequence));
+            return;
+        }
+        auto targets = CollectSecondaryTargets(
+            frame.game, attacker, primary, metadata.radiusTiles);
+        std::uint32_t applied{};
+        for (const auto target : targets) {
+            if (ApplySplashToTarget(
+                    frame.game,
+                    attacker,
+                    metadata,
+                    *frame.sidecar->damage,
+                    target)) {
+                ++applied;
+            }
+        }
+        Bursts.fetch_add(1, std::memory_order_relaxed);
+        DiagnosticLog(
+            "MeleeSplash burst seq=%llu attacker=%d/%u primary=%d/%u "
+            "radius=%d percent=%d candidates=%zu applied=%u recursionDepth=%u.",
+            static_cast<unsigned long long>(frame.sidecar->sequence),
+            metadata.attacker.type,
+            metadata.attacker.guid,
+            metadata.primary.type,
+            metadata.primary.guid,
+            metadata.radiusTiles,
+            metadata.splashPercent,
+            targets.size(),
+            applied,
+            SecondaryDepth);
+    } catch (const std::exception& exception) {
+        RejectedHits.fetch_add(1, std::memory_order_relaxed);
+        if (Context) {
+            char message[1024]{};
+            std::snprintf(
+                message,
+                sizeof(message),
+                "MeleeSplash: synthetic resolution rejected: %s",
+                exception.what());
+            Context->LogError(message);
+        }
+    } catch (...) {
+        RejectedHits.fetch_add(1, std::memory_order_relaxed);
+        if (Context) Context->LogError(
+            "MeleeSplash: synthetic resolution rejected by an unknown error.");
+    }
+}
+
+void __fastcall HookFill(
+        void* game,
+        void* attacker,
+        void* defender,
+        void* damage,
+        std::int32_t mode,
+        std::uint8_t sourceDamage) noexcept {
+    const auto returnRva = reinterpret_cast<std::uintptr_t>(_ReturnAddress())
+        - reinterpret_cast<std::uintptr_t>(Base);
+    if (Operational.load(std::memory_order_acquire) && SecondaryDepth != 0) {
+        DiagnosticLog(
+            "MeleeSplash recursion guard pass-through at Fill depth=%u.",
+            SecondaryDepth);
+    }
+    if (!Operational.load(std::memory_order_acquire)
+            || SecondaryDepth != 0
+            || returnRva != FillMeleeReturnRva
+            || !attacker || !defender || !damage
+            || Identity(attacker).type != UnitPlayer
+            || Identity(defender).type != UnitMonster) {
+        OriginalFill(game, attacker, defender, damage, mode, sourceDamage);
+        return;
+    }
+
+    FillFrame frame{
+        .game = game,
+        .attacker = attacker,
+        .defender = defender,
+        .damage = damage,
+        .candidate = true,
+    };
+    FillFrameScope scope(&frame);
+    OriginalFill(game, attacker, defender, damage, mode, sourceDamage);
+    try {
+        if (!frame.event3Seen) CaptureNormalizedPacket(frame, damage);
+        PushPendingCapture(
+            frame, BuildMetadata(attacker, defender, mode));
+    } catch (...) {
+        RejectedHits.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+std::int32_t __fastcall HookPreCriticalBonuses(
+        void* attacker,
+        std::int32_t getStats,
+        void* item,
+        std::int32_t minimumDamage,
+        std::int32_t maximumDamage,
+        std::int32_t enhancedDamage,
+        std::int32_t flatDamage,
+        std::uint8_t sourceDamage) noexcept {
+    const auto result = ApplyDamageBonuses(
+        attacker,
+        getStats,
+        item,
+        minimumDamage,
+        maximumDamage,
+        enhancedDamage,
+        flatDamage,
+        sourceDamage);
+    auto* frame = ActiveFillFrame;
+    if (Operational.load(std::memory_order_acquire)
+            && frame && frame->candidate && frame->attacker == attacker
+            && frame->damage) {
+        frame->preCriticalPhysical = result;
+        frame->preCriticalFlags = Read<std::uint16_t>(
+            frame->damage, DamageResultFlagsOffset);
+        frame->preCriticalSeen = true;
+    }
+    return result;
+}
+
+std::int32_t __fastcall HookPreEvent3(
+        void* game,
+        std::int32_t event,
+        void* defender,
+        void* attacker,
+        void* damage) noexcept {
+    const auto returnRva = reinterpret_cast<std::uintptr_t>(_ReturnAddress())
+        - reinterpret_cast<std::uintptr_t>(Base);
+    auto* frame = ActiveFillFrame;
+    if (Operational.load(std::memory_order_acquire)
+            && frame && frame->candidate
+            && returnRva == PreEvent3ReturnRva
+            && event == ReactiveMeleeEvent
+            && frame->game == game
+            && frame->attacker == attacker
+            && frame->defender == defender
+            && frame->damage == damage) {
+        frame->event3Seen = true;
+        try {
+            CaptureNormalizedPacket(*frame, damage);
+        } catch (...) {
+            frame->candidate = false;
+        }
+    }
+    return ApplyDamageEvent(game, event, defender, attacker, damage);
+}
+
+void __fastcall HookAllocate(
+        void* game,
+        void* attacker,
+        void* defender,
+        const void* damage) noexcept {
+    const auto returnRva = reinterpret_cast<std::uintptr_t>(_ReturnAddress())
+        - reinterpret_cast<std::uintptr_t>(Base);
+    const auto attackerId = Identity(attacker);
+    const auto defenderId = Identity(defender);
+    auto* oldHead = attacker
+        ? Read<void*>(attacker, UnitCombatListOffset)
+        : nullptr;
+    OriginalAllocate(game, attacker, defender, damage);
+    if (!Operational.load(std::memory_order_acquire)
+            || SecondaryDepth != 0
+            || returnRva != AllocateMeleeReturnRva) {
+        return;
+    }
+    try {
+        auto pending = TakePendingCapture(
+            damage, game, attackerId, defenderId);
+        if (!pending) return;
+        auto* node = FindCombatNode(
+            attacker, attackerId, defenderId, oldHead);
+        if (!node) {
+            DroppedSidecars.fetch_add(1, std::memory_order_relaxed);
+            return;
+        }
+        StoreSidecar(node, std::move(pending));
+    } catch (...) {
+        DroppedSidecars.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+std::uint8_t __fastcall HookConsume(
+        void* game,
+        void* attacker,
+        void* defender,
+        std::int32_t rangeBonus) noexcept {
+    if (!Operational.load(std::memory_order_acquire)
+            || SecondaryDepth != 0 || !attacker || !defender) {
+        return OriginalConsume(game, attacker, defender, rangeBonus);
+    }
+    auto* node = FindCombatNode(
+        attacker, Identity(attacker), Identity(defender));
+    const auto attackerId = Identity(attacker);
+    const auto defenderId = Identity(defender);
+    auto sidecar = TakeSidecar(node, game, attackerId, defenderId);
+    if (!sidecar) return OriginalConsume(game, attacker, defender, rangeBonus);
+    if (sidecar->threadId != GetCurrentThreadId()
+            || sidecar->gameToken != game
+            || sidecar->metadata.attacker != attackerId
+            || sidecar->metadata.primary != defenderId) {
+        RejectedHits.fetch_add(1, std::memory_order_relaxed);
+        return OriginalConsume(game, attacker, defender, rangeBonus);
+    }
+
+    PrimaryFrame frame{
+        .sidecar = sidecar.get(),
+        .game = game,
+        .attacker = attacker,
+        .defender = defender,
+    };
+    PrimaryFrameScope scope(&frame);
+    const auto result = OriginalConsume(game, attacker, defender, rangeBonus);
+    if (IsCombatNodeLinked(attacker, node)) {
+        ReturnSidecar(std::move(sidecar));
+        return result;
+    }
+    return result;
+}
+
+void __fastcall HookExecute(
+        void* game,
+        void* attacker,
+        void* defender,
+        std::int32_t missile,
+        void* damage) noexcept {
+    const auto returnRva = reinterpret_cast<std::uintptr_t>(_ReturnAddress())
+        - reinterpret_cast<std::uintptr_t>(Base);
+    auto* frame = ActivePrimaryFrame;
+    if (!Operational.load(std::memory_order_acquire)
+            || SecondaryDepth != 0 || !frame
+            || returnRva != ExecuteMeleeReturnRva || missile != 0
+            || frame->game != game || frame->attacker != attacker
+            || frame->defender != defender) {
+        OriginalExecute(game, attacker, defender, missile, damage);
+        return;
+    }
+    OriginalExecute(game, attacker, defender, missile, damage);
+    frame->damage = damage;
+    frame->primaryHitSucceeded = damage
+        && (Read<std::uint16_t>(damage, DamageResultFlagsOffset)
+            & ResultSuccess) != 0;
+    // Resolve the burst at the first authoritative post-hit seam.  The rest
+    // of the native melee consumer performs durability, reactive melee
+    // events, thorns, primary FinalizeDamage and combat-node destruction;
+    // delaying until HookConsume returns would observe mutated item/RNG state
+    // and can lose the primary's room/path on a killing blow.
+    TriggerSplash(*frame);
+}
+
+std::int32_t __fastcall FilteredEvent(
+        EventFunctionFn original,
+        const char* name,
+        void* game,
+        std::int32_t event,
+        void* attacker,
+        void* target,
+        void* damage,
+        std::int32_t argument6,
+        std::int32_t argument7,
+        std::int32_t argument8,
+        void* argument9) noexcept {
+    if (Operational.load(std::memory_order_acquire) && SecondaryDepth != 0) {
+        DiagnosticLog(
+            "MeleeSplash filtered event=%s attacker=%d/%u target=%d/%u "
+            "recursionDepth=%u.",
+            name,
+            Identity(attacker).type,
+            Identity(attacker).guid,
+            Identity(target).type,
+            Identity(target).guid,
+            SecondaryDepth);
+        return 0;
+    }
+    return original(
+        game,
+        event,
+        attacker,
+        target,
+        damage,
+        argument6,
+        argument7,
+        argument8,
+        argument9);
+}
+
+#define MELEE_SPLASH_FILTERED_EVENT(NUMBER) \
+    std::int32_t __fastcall HookEvent##NUMBER( \
+            void* game, std::int32_t event, void* attacker, void* target, \
+            void* damage, std::int32_t argument6, std::int32_t argument7, \
+            std::int32_t argument8, void* argument9) noexcept { \
+        return FilteredEvent( \
+            OriginalEvent##NUMBER, #NUMBER, game, event, attacker, target, \
+            damage, argument6, argument7, argument8, argument9); \
+    }
+
+MELEE_SPLASH_FILTERED_EVENT(7)
+MELEE_SPLASH_FILTERED_EVENT(9)
+MELEE_SPLASH_FILTERED_EVENT(14)
+MELEE_SPLASH_FILTERED_EVENT(19)
+MELEE_SPLASH_FILTERED_EVENT(21)
+
+#undef MELEE_SPLASH_FILTERED_EVENT
+
+std::int32_t __fastcall HookEvent15(
+        void* game,
+        std::int32_t event,
+        void* attacker,
+        void* target,
+        void* damage,
+        std::int32_t argument6,
+        std::int32_t argument7,
+        std::int32_t argument8,
+        void* argument9) noexcept {
+    const auto result = OriginalEvent15(
+        game, event, attacker, target, damage,
+        argument6, argument7, argument8, argument9);
+    if (Operational.load(std::memory_order_acquire)
+            && SecondaryDepth != 0 && ActiveSecondaryDiagnostics) {
+        ++ActiveSecondaryDiagnostics->openWoundsCalls;
+        ActiveSecondaryDiagnostics->lastOpenWoundsResult = result;
+    }
+    return result;
+}
+
+std::int32_t __fastcall HookEvent16(
+        void* game,
+        std::int32_t event,
+        void* attacker,
+        void* target,
+        void* damage,
+        std::int32_t argument6,
+        std::int32_t argument7,
+        std::int32_t argument8,
+        void* argument9) noexcept {
+    const auto result = OriginalEvent16(
+        game, event, attacker, target, damage,
+        argument6, argument7, argument8, argument9);
+    if (Operational.load(std::memory_order_acquire)
+            && SecondaryDepth != 0 && ActiveSecondaryDiagnostics) {
+        ++ActiveSecondaryDiagnostics->crushingBlowCalls;
+        ActiveSecondaryDiagnostics->lastCrushingBlowResult = result;
+    }
+    return result;
+}
+
+std::int32_t __fastcall HookEvent20(
+        void* game,
+        std::int32_t event,
+        void* attacker,
+        void* target,
+        void* damage,
+        std::int32_t argument6,
+        std::int32_t argument7,
+        std::int32_t argument8,
+        void* argument9) noexcept {
+    if (!Operational.load(std::memory_order_acquire)) {
+        return OriginalEvent20(
+            game, event, attacker, target, damage,
+            argument6, argument7, argument8, argument9);
+    }
+    if (SecondaryDepth != 0) {
+        DiagnosticLog(
+            "MeleeSplash filtered event=20 attacker=%d/%u target=%d/%u.",
+            Identity(attacker).type,
+            Identity(attacker).guid,
+            Identity(target).type,
+            Identity(target).guid);
+        return 0;
+    }
+    const auto packed = static_cast<std::uint32_t>(argument6);
+    const auto statId = static_cast<std::uint16_t>(packed >> 16U);
+    const auto layer = static_cast<std::uint16_t>(packed);
+    if (ActiveFillFrame && ActiveConfig.gateStatId >= 0
+            && statId == static_cast<std::uint16_t>(ActiveConfig.gateStatId)
+            && ActiveFillFrame->game == game
+            && ActiveFillFrame->attacker == attacker
+            && ActiveFillFrame->defender == target
+            && GetLayeredStat(attacker, statId, layer) > 0) {
+        ActiveFillFrame->gateSeen = true;
+    }
+    if (ActivePrimaryFrame && ActiveConfig.gateStatId >= 0
+            && statId == static_cast<std::uint16_t>(ActiveConfig.gateStatId)
+            && ActivePrimaryFrame->attacker == attacker
+            && ActivePrimaryFrame->defender == target
+            && GetLayeredStat(attacker, statId, layer) > 0) {
+        ActivePrimaryFrame->gateSeen = true;
+    }
+    if (MatchesLegacyEvent20Suppression(
+            ActiveConfig,
+            packed,
+            attacker && Identity(attacker).type == UnitPlayer)) {
+        DiagnosticLog(
+            "MeleeSplash suppressed configured legacy Event20 token=0x%08X.",
+            packed);
+        return 0;
+    }
+    return OriginalEvent20(
+        game, event, attacker, target, damage,
+        argument6, argument7, argument8, argument9);
+}
+
+bool CheckBytes(
+        std::uintptr_t rva,
+        const std::uint8_t* expected,
+        std::size_t size,
+        const char* label) noexcept {
+    if (Context->CheckExpectedBytes(
+            rva, expected, static_cast<std::uint32_t>(size))) {
+        return true;
+    }
+    char message[512]{};
+    std::snprintf(
+        message,
+        sizeof(message),
+        "MeleeSplash: signature mismatch at %s; plugin refused before mutation.",
+        label ? label : "<unknown>");
+    Context->LogError(message);
+    return false;
+}
+
+template <std::size_t Size>
+bool CheckBytes(
+        std::uintptr_t rva,
+        const std::array<std::uint8_t, Size>& expected,
+        const char* label) noexcept {
+    return CheckBytes(rva, expected.data(), expected.size(), label);
+}
+
+bool ValidateOwnedSites() noexcept {
+    return CheckBytes(FillDamageValuesRva, FillExpected, "FillDamageValues")
+        && CheckBytes(AllocateCombatRecordRva, AllocateExpected, "AllocateCombatRecord")
+        && CheckBytes(ConsumeCombatRecordRva, ConsumeExpected, "ConsumeCombatRecord")
+        && CheckBytes(ExecuteEventsRva, ExecuteExpected, "ExecuteEvents")
+        && CheckBytes(EventFunc7Rva, Event7Expected, "EventFunc7")
+        && CheckBytes(EventFunc9Rva, Event9Expected, "EventFunc9")
+        && CheckBytes(EventFunc14Rva, Event14Expected, "EventFunc14")
+        && CheckBytes(EventFunc15Rva, Event15Expected, "EventFunc15")
+        && CheckBytes(EventFunc16Rva, Event16Expected, "EventFunc16")
+        && CheckBytes(EventFunc19Rva, Event19Expected, "EventFunc19")
+        && CheckBytes(EventFunc20Rva, Event20Expected, "EventFunc20")
+        && CheckBytes(EventFunc21Rva, Event21Expected, "EventFunc21")
+        && CheckBytes(PreCriticalCallRva, PreCriticalContextExpected, "pre-critical call")
+        && CheckBytes(PreEvent3CallRva - 0x15, PreEvent3ContextExpected, "pre-Event3 call context");
+}
+
+void* AllocateRelayPageNear(void* hint) noexcept {
+    SYSTEM_INFO systemInfo{};
+    GetSystemInfo(&systemInfo);
+    const auto granularity = static_cast<std::uintptr_t>(
+        systemInfo.dwAllocationGranularity);
+    const auto base = reinterpret_cast<std::uintptr_t>(hint)
+        & ~(granularity - 1);
+    for (std::uintptr_t delta = granularity;
+            delta < UINT64_C(0x70000000); delta += granularity) {
+        if (base > std::numeric_limits<std::uintptr_t>::max() - delta) break;
+        if (auto* memory = VirtualAlloc(
+                reinterpret_cast<void*>(base + delta),
+                systemInfo.dwPageSize,
+                MEM_COMMIT | MEM_RESERVE,
+                PAGE_READWRITE)) {
+            return memory;
+        }
+    }
+    return nullptr;
+}
+
+bool WriteAbsoluteJumpRelay(
+        std::uint8_t* destination, const void* target) noexcept {
+    if (!destination || !target) return false;
+    std::array<std::uint8_t, 14> relay{
+        0xFF,0x25,0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    };
+    const auto address = reinterpret_cast<std::uintptr_t>(target);
+    std::memcpy(relay.data() + 6, &address, sizeof(address));
+    std::memcpy(destination, relay.data(), relay.size());
+    return true;
+}
+
+bool CreateRelays() noexcept {
+    RelayPage = AllocateRelayPageNear(Base + PreCriticalCallRva);
+    if (!RelayPage) return false;
+    auto* relays = static_cast<std::uint8_t*>(RelayPage);
+    if (!WriteAbsoluteJumpRelay(
+            relays, reinterpret_cast<const void*>(&HookPreCriticalBonuses))
+            || !WriteAbsoluteJumpRelay(
+                relays + RelayStride,
+                reinterpret_cast<const void*>(&HookPreEvent3))) {
+        VirtualFree(RelayPage, 0, MEM_RELEASE);
+        RelayPage = nullptr;
+        return false;
+    }
+    DWORD previousProtection{};
+    if (!VirtualProtect(
+            RelayPage, RelayBytes, PAGE_EXECUTE_READ, &previousProtection)) {
+        VirtualFree(RelayPage, 0, MEM_RELEASE);
+        RelayPage = nullptr;
+        return false;
+    }
+    FlushInstructionCache(GetCurrentProcess(), RelayPage, RelayBytes);
+    const auto relayAddress = reinterpret_cast<std::uintptr_t>(RelayPage);
+    const auto baseAddress = reinterpret_cast<std::uintptr_t>(Base);
+    if (relayAddress < baseAddress
+            || relayAddress - baseAddress
+                > std::numeric_limits<std::uint32_t>::max()) {
+        VirtualFree(RelayPage, 0, MEM_RELEASE);
+        RelayPage = nullptr;
+        return false;
+    }
+    return true;
+}
+
+template <typename Function, std::size_t Size>
+bool InstallInline(
+        std::uintptr_t rva,
+        const std::array<std::uint8_t, Size>& expected,
+        Function hook,
+        Function* original) noexcept {
+    if (!Context->InstallInlineHook(
+            rva,
+            expected.data(),
+            static_cast<std::uint32_t>(expected.size()),
+            hook,
+            original)) {
+        return false;
+    }
+    AnyMutationInstalled.store(true, std::memory_order_release);
+    return true;
+}
+
+bool InstallHooks() noexcept {
+    if (!CreateRelays()) {
+        Context->LogError("MeleeSplash: could not create rel32 relay page.");
+        return false;
+    }
+    const auto inlineInstalled =
+        InstallInline(FillDamageValuesRva, FillExpected, HookFill, &OriginalFill)
+        && InstallInline(AllocateCombatRecordRva, AllocateExpected, HookAllocate, &OriginalAllocate)
+        && InstallInline(ConsumeCombatRecordRva, ConsumeExpected, HookConsume, &OriginalConsume)
+        && InstallInline(ExecuteEventsRva, ExecuteExpected, HookExecute, &OriginalExecute)
+        && InstallInline(EventFunc7Rva, Event7Expected, HookEvent7, &OriginalEvent7)
+        && InstallInline(EventFunc9Rva, Event9Expected, HookEvent9, &OriginalEvent9)
+        && InstallInline(EventFunc14Rva, Event14Expected, HookEvent14, &OriginalEvent14)
+        && InstallInline(EventFunc15Rva, Event15Expected, HookEvent15, &OriginalEvent15)
+        && InstallInline(EventFunc16Rva, Event16Expected, HookEvent16, &OriginalEvent16)
+        && InstallInline(EventFunc19Rva, Event19Expected, HookEvent19, &OriginalEvent19)
+        && InstallInline(EventFunc20Rva, Event20Expected, HookEvent20, &OriginalEvent20)
+        && InstallInline(EventFunc21Rva, Event21Expected, HookEvent21, &OriginalEvent21);
+    if (!inlineInstalled) return false;
+
+    const auto relayRva = reinterpret_cast<std::uintptr_t>(RelayPage)
+        - reinterpret_cast<std::uintptr_t>(Base);
+    if (!Context->PatchCallRel32(
+            PreCriticalCallRva,
+            PreCriticalCallExpected.data(),
+            static_cast<std::uint32_t>(PreCriticalCallExpected.size()),
+            relayRva,
+            5)) {
+        return false;
+    }
+    AnyMutationInstalled.store(true, std::memory_order_release);
+    if (!Context->PatchCallRel32(
+            PreEvent3CallRva,
+            PreEvent3CallExpected.data(),
+            static_cast<std::uint32_t>(PreEvent3CallExpected.size()),
+            relayRva + RelayStride,
+            5)) {
+        return false;
+    }
+    return true;
+}
+
+void ResolveNativeFunctions() noexcept {
+    ApplyDamageBonuses = At<ApplyDamageBonusesFn>(ApplyDamageBonusesRva);
+    ApplyDamageEvent = At<ApplyDamageEventFn>(ApplyDamageEventRva);
+    CalculateTotalDamage = At<DamageStageFn>(CalculateTotalDamageRva);
+    FinalizeDamage = At<DamageStageFn>(FinalizeDamageRva);
+    CopyDamage = At<CopyDamageFn>(CopyDamageRva);
+    DestroyDamage = At<DestroyDamageFn>(DestroyDamageRva);
+    EnumerateUnits = At<EnumerateUnitsFn>(EnumerateUnitsRva);
+    CanDamageTarget = At<CanDamageTargetFn>(CanDamageTargetRva);
+    GetRoom = At<GetUnitPointerFn>(GetRoomRva);
+    GetUsedSkill = At<GetUnitPointerFn>(GetUsedSkillRva);
+    ResolveActiveWeapon = At<GetUnitPointerFn>(ResolveActiveWeaponRva);
+    GetDataContextFromUnit = At<GetDataContextFromUnitFn>(
+        GetDataContextFromUnitRva);
+    GetItemsRecord = At<GetItemsRecordFn>(GetItemsRecordRva);
+    GetServerUnit = At<GetServerUnitFn>(GetServerUnitRva);
+    GetLayeredStat = At<GetStatFn>(GetLayeredStatRva);
+    GetUnitStat = At<GetStatFn>(GetUnitStatRva);
+    CheckState = At<CheckStateFn>(CheckStateRva);
+    GetSeed = At<GetSeedFn>(GetSeedRva);
+    RollLimitedRandom = At<RollLimitedRandomFn>(RollLimitedRandomRva);
+    GetWeaponMasteryChance = At<GetWeaponMasteryChanceFn>(
+        GetWeaponMasteryChanceRva);
+    GetPathX = At<GetPathCoordinateFn>(GetPathXRva);
+    GetPathY = At<GetPathCoordinateFn>(GetPathYRva);
+}
+
+auto ExecutableDirectory() -> std::filesystem::path {
+    std::array<wchar_t, 32768> buffer{};
+    const auto length = GetModuleFileNameW(
+        nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+    if (length == 0 || length >= buffer.size()) return {};
+    return std::filesystem::path(buffer.data(), buffer.data() + length)
+        .parent_path();
+}
+
+auto LoadSettings() -> bool {
+    try {
+        const auto activeModConfig = Context->modSupportDirectory
+            ? std::filesystem::path(Context->modSupportDirectory) / L"config"
+            : std::filesystem::path{};
+        const auto scopeConfig = Context->pluginConfigPath
+            ? std::filesystem::path(Context->pluginConfigPath).parent_path()
+            : (Context->pluginDirectory
+                ? std::filesystem::path(Context->pluginDirectory)
+                    .parent_path() / L"config"
+                : std::filesystem::path{});
+        const auto globalConfig = ExecutableDirectory()
+            / L"d2rloader" / L"config";
+        const auto loaded = LoadConfig(BuildConfigCandidates(
+            activeModConfig, scopeConfig, globalConfig));
+        ActiveConfig = loaded.config;
+        ActiveConfigPath = loaded.source;
+        return true;
+    } catch (const std::exception& exception) {
+        char message[1024]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "MeleeSplash: configuration refused: %s",
+            exception.what());
+        Context->LogError(message);
+        return false;
+    } catch (...) {
+        Context->LogError(
+            "MeleeSplash: configuration refused by an unknown error.");
+        return false;
+    }
+}
+
+auto Status(
+        D2R::Game::Client*,
+        const D2RL::ConsoleCommandContext* command,
+        void*) noexcept -> D2RL::ConsoleCommandResult {
+    if (!command || !command->plugin) {
+        return D2RL::ConsoleCommandResult::Failed;
+    }
+    try {
+        const auto path = ActiveConfigPath.empty()
+            ? std::string("<absent>")
+            : ActiveConfigPath.string();
+        char message[1024]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "MeleeSplash 0.1.0: enabled=%s operational=%s partial=%s config=%s "
+            "captures=%llu bursts=%llu secondaryHits=%llu rejectedHits=%llu "
+            "rejectedTargets=%llu droppedSidecars=%llu.",
+            ActiveConfig.enabled ? "true" : "false",
+            Operational.load(std::memory_order_acquire) ? "true" : "false",
+            AnyMutationInstalled.load(std::memory_order_acquire)
+                && !Operational.load(std::memory_order_acquire) ? "true" : "false",
+            path.c_str(),
+            static_cast<unsigned long long>(Captures.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(Bursts.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(SecondaryHits.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(RejectedHits.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(RejectedTargets.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(DroppedSidecars.load(std::memory_order_relaxed)));
+        command->plugin->WriteConsoleMessage(message);
+    } catch (...) {
+        command->plugin->WriteConsoleMessage(
+            "MeleeSplash 0.1.0: status unavailable (allocation failure).");
+    }
+    return D2RL::ConsoleCommandResult::Handled;
+}
+
+void ResetState() noexcept {
+    Operational.store(false, std::memory_order_release);
+    AnyMutationInstalled.store(false, std::memory_order_release);
+    Sequence.store(0, std::memory_order_relaxed);
+    Captures.store(0, std::memory_order_relaxed);
+    Bursts.store(0, std::memory_order_relaxed);
+    SecondaryHits.store(0, std::memory_order_relaxed);
+    RejectedHits.store(0, std::memory_order_relaxed);
+    RejectedTargets.store(0, std::memory_order_relaxed);
+    DroppedSidecars.store(0, std::memory_order_relaxed);
+    try {
+        std::scoped_lock lock(SidecarMutex);
+        Sidecars.clear();
+    } catch (...) {
+    }
+}
+
+} // namespace
+} // namespace RuffnecKk::MeleeSplash
+
+namespace {
+
+constexpr D2RL::PluginInfo Info{
+    .infoSize = D2RL::PluginInfoSize,
+    .apiVersion = D2RL_PLUGIN_API_VERSION,
+    .id = "melee-splash",
+    .name = "Melee Splash",
+    .version = "0.1.0",
+    .author = "RuffnecKk",
+    .description = "Splashes melee damage onto nearby monsters.",
+    .flags = D2RL::PluginFlags::NativeHooks,
+};
+
+} // namespace
+
+D2RL_PLUGIN_EXPORT auto D2RLoaderGetPluginInfo() noexcept
+        -> const D2RL::PluginInfo* {
+    return &Info;
+}
+
+D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
+        const D2RL::PluginContext* context) noexcept -> bool {
+    using namespace RuffnecKk::MeleeSplash;
+    Context = context;
+    Base = context ? reinterpret_cast<std::uint8_t*>(context->exeBase) : nullptr;
+    ResetState();
+    if (!Context || !Base) return false;
+    if (!LoadSettings()) return false;
+    if (!ActiveConfig.enabled) {
+        Context->LogInfo(
+            "MeleeSplash 0.1.0 by RuffnecKk loaded disabled; no hooks installed.");
+        if (!Context->RegisterConsoleCommand(
+                "melee-splash", Status, "Show Melee Splash status.")) {
+            Context->LogWarn(
+                "MeleeSplash: optional status command could not be registered.");
+        }
+        return true;
+    }
+    if (context->modDataVersionBuild != 0
+            && context->modDataVersionBuild != SupportedBuild) {
+        Context->LogError(
+            "MeleeSplash: supports only D2R 3.2 build 92777.");
+        return false;
+    }
+    ResolveNativeFunctions();
+    if (!ValidateOwnedSites()) return false;
+    if (!InstallHooks()) {
+        Operational.store(false, std::memory_order_release);
+        if (AnyMutationInstalled.load(std::memory_order_acquire)) {
+            Context->LogError(
+                "MeleeSplash: partial hook commit is inert; keep the DLL loaded "
+                "and cold-restart after resolving the ownership conflict.");
+            if (!Context->RegisterConsoleCommand(
+                    "melee-splash", Status, "Show Melee Splash status.")) {
+                Context->LogWarn(
+                    "MeleeSplash: partial status command could not be registered.");
+            }
+            return true;
+        }
+        if (RelayPage) {
+            VirtualFree(RelayPage, 0, MEM_RELEASE);
+            RelayPage = nullptr;
+        }
+        Context->LogError(
+            "MeleeSplash: hook installation failed before mutation.");
+        return false;
+    }
+    Operational.store(true, std::memory_order_release);
+    if (!Context->RegisterConsoleCommand(
+            "melee-splash", Status, "Show Melee Splash status.")) {
+        Context->LogWarn(
+            "MeleeSplash: optional status command could not be registered.");
+    }
+    try {
+        const auto path = ActiveConfigPath.empty()
+            ? std::string("<absent>")
+            : ActiveConfigPath.string();
+        char message[1024]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "MeleeSplash 0.1.0 by RuffnecKk active; config=%s.",
+            path.c_str());
+        Context->LogInfo(message);
+    } catch (...) {
+        Context->LogInfo(
+            "MeleeSplash 0.1.0 by RuffnecKk active; config path unavailable.");
+    }
+    return true;
+}
+
+D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
+    using namespace RuffnecKk::MeleeSplash;
+    Operational.store(false, std::memory_order_release);
+    try {
+        std::scoped_lock lock(SidecarMutex);
+        Sidecars.clear();
+    } catch (...) {
+    }
+    Context = nullptr;
+}

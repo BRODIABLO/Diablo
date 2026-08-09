@@ -7,6 +7,21 @@
 - Registre de preuve : `Mission/mechanics-native-proof-92777.md`
 - Effet gameplay autorisé dans ce lot : **aucun**
 
+> **Décision post-lot — 9 août 2026.** Les interdictions ci-dessous demeurent
+> le contrat historique de MEC-00/MEC-01 et ne sont pas réécrites comme des
+> preuves acquises. Vincent a ouvert séparément la mission publique autonome
+> `MeleeSplash.dll` v0.1 pour D2R 3.2.92777 offline/local single-player,
+> joueur contre monstres. L'ancien prototype reste non probant; la nouvelle
+> implantation doit redémontrer chaque surface utilisée, peut composer plusieurs
+> coutures strictement validées et fail-closed, mais ne sélectionne pas
+> `Pd2CombatCore`. Multijoueur et PvP sont hors portée actuelle. Critical/Deadly,
+> Crushing Blow/CBE, Open Wounds/DPS plat et résistances hybrides restent des
+> lots généraux ultérieurs dont MeleeSplash consommera les formules autoritaires.
+> La décision produit active roule toutefois Critical/Deadly, CB et OW
+> indépendamment par cible splash; seul le paquet offensif pré-critique est
+> partagé. L'adaptateur Critical/Deadly 92777 de la v0.1 est transitoire et ne
+> préjuge pas du resolver PD2 général à venir.
+
 ## 1. Décision et frontière
 
 MEC-00/MEC-01 établit la fondation technique d'un éventuel vrai melee splash
@@ -197,6 +212,12 @@ elle couvre :
 FloatingDamage à `0x427150` est un observateur post-résolution connu et ne peut
 pas être renommé « primitive d'application » sans preuve contraire.
 
+MEC-01A ferme positivement la chaîne melee canonique de préparation/queue puis
+consommation. Elle mêle toutefois Fill/CS-DS, défenses, events/leech/HP,
+durabilité, thorns, réactions, mort, packets et lifecycle du combat node. Aucune
+primitive secondaire sûre n'est prouvée; la disposition limitée est donc
+`LIKELY_FRAGMENTED`, sans sélection d'une architecture custom.
+
 ### MCT-AREA — unités, zone et rooms adjacentes
 
 Le contrat doit prouver l'ABI de l'énumérateur et de son callback, l'unité des
@@ -209,6 +230,11 @@ doublons aux frontières de rooms. Les témoins couvrent aussi obstacles,
 mort/despawn pendant l'énumération et déduplication d'une unité visible depuis
 plusieurs rooms. Aucun masque numérique du prototype n'est accepté sans
 décomposition 92777.
+
+MEC-01A confirme statiquement le noyau `0x4398B0`, son ABI, son callback, son
+ordre et ses filtres. Le contrat global reste `partial` tant que le writer de la
+room-list, sa membership adjacente et ses invariants d'unicité/dédup ne sont pas
+fermés.
 
 ### MCT-OW — lifecycle des statlists Open Wounds
 
@@ -282,6 +308,43 @@ peut pas être chargé dans un témoin qualifié du pipeline D2R natif.
 Si les breakpoints externes ne suffisent pas, une évolution observer-only du
 propriétaire existant est une décision séparée. Toute nouvelle DLL déclenche le
 gate d'incubation avant le premier changement de code.
+
+### 7.1 MEC-01A exploratoire du 8 août 2026
+
+Une courte session solo a été exécutée pendant que le gate cap 90 demeurait
+ouvert. Elle est conservée comme **preuve exploratoire**, pas comme témoin MEC-01
+qualifié. Les résultats utilisent les libellés `passed exploratory`, `observed`
+et `not run`; ils ne changent aucun des états de preuve natifs définis plus haut.
+
+La session a observé un miss et un hit acceptés, un Crushing Blow de 25 % sur
+une cible à 100 000 HP, le résultat Critical/Deadly aval partagé et la transition
+visuelle Open Wounds gris vers rouge puis rouge vers gris. Elle n'a capturé ni
+thread, caller, registres, stack, seed, pointeur `D2Damage`, handler ou statlist.
+
+La reprise statique post-session corrige toutefois l'exigence de corréler une
+adresse `D2Damage` littéralement identique sur les quatre étapes. Le chemin
+melee copie en profondeur le record conservé, de `combatNode+0x18` vers un record
+local, par `D2Damage_CopyConstructor` au callsite `0x44B37C`. `ExecuteEvents`
+(`0x44B3FA`) et `FinalizeDamage` (`0x44B4F4`) reçoivent cette copie. Un futur
+témoin doit donc prouver l'identité **logique** et la frontière de copie; exiger
+`pointer(Fill) == pointer(Execute)` serait un faux gate.
+
+Les artefacts bruts, le manifeste des fichiers runtime et la matrice détaillée
+sont sous
+`analysis-cache/mechanics-92777/20260808-223638-mec01a-exploratory/`. Le crash
+de fin de session est un assert TACT/CURL récurrent déjà observé deux fois avant
+MEC-01A; il n'est pas attribué au combat sans preuve supplémentaire.
+
+Conséquences gouvernées :
+
+- aucune promotion `confirmed_runtime`;
+- témoins gameplay réduits : positifs pour hit/miss, CB, résultat critique aval
+  et application/retrait visuels OW;
+- conclusion limitée d'architecture MEC-01A : `LIKELY_FRAGMENTED`; la chaîne
+  melee canonique est prouvée, mais ses responsabilités sont trop larges pour
+  une cible splash et aucune primitive secondaire sûre n'est prouvée;
+- verdict Mechanics 2.0 maintenu à `NON PROUVÉE`;
+- aucun choix de `Pd2CombatCore`, de DLL ou d'architecture.
 
 ## 8. Gate d'une couture autoritaire commune
 

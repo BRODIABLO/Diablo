@@ -2321,7 +2321,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/mechanics-native-proof-92777.md",
-      "notes": "Confirmed-static EventFunc14 ItemFreeze callback. Its strict 33-byte entry signature is unique in build 92777; zero direct xrefs are expected because the native dispatcher calls handlers indirectly. The D2R callback frame transports nine positions, not a seven-argument ABI copied from legacy D2MOO."
+      "notes": "Confirmed-static EventFunc14 ItemFreeze callback. Its strict 32-byte entry signature is unique in build 92777; zero direct xrefs are expected because the native dispatcher calls handlers indirectly. The D2R callback frame transports nine positions, not a seven-argument ABI copied from legacy D2MOO."
     },
     {
       "rva": "0x583B30",
@@ -2417,7 +2417,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/mechanics-native-proof-92777.md",
-      "notes": "Confirmed-static unique life/mana leech consumer with bounds 0x450C90..0x451380, unique 32-byte signature and ABI (game, attacker, defender, D2Damage*) -> void. Its only direct caller is ExecuteEvents at 0x44D038. It consumes raw percentages at D2Damage+0x120/+0x124, applies Drain, difficulty divisors, bases, truncations and caps, credits attacker stats and rewrites the fields with effective amounts."
+      "notes": "Confirmed-static unique life/mana leech consumer with bounds 0x450C90..0x451380, unique 32-byte signature and ABI (game, attacker, defender, D2Damage*) -> void. Its only direct caller is ExecuteEvents at 0x44D038. It consumes raw percentages at D2Damage+0x120/+0x124, applies Drain and difficulty divisors, and rewrites those fields with native-adjusted percentages. It then derives and caps the separately credited life/mana amounts; the rewritten fields are not direct witnesses of the credited amounts."
     },
     {
       "rva": "0x5881E0",
@@ -2450,6 +2450,126 @@
       "confidence": "high",
       "source": "Mission/mechanics-native-proof-92777.md",
       "notes": "Confirmed-static default curse/state removal callback with bounds 0x436240..0x4362DC and unique 24-byte signature. It unregisters the pending event, preserves dead/stay-death handling, disables the state and refreshes animation, passives and player state as required. It is shared by generic state lists and is not Open-Wounds-exclusive."
+    },
+    {
+      "rva": "0x44B600",
+      "name": "SUNITDMG_PrepareAndQueueCombatRecord",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static combat-record preparation wrapper with logical bounds 0x44B600..0x44B71B, a unique 33-byte signature, 31 direct callers and ABI (game, attacker, defender, D2Damage*, SrcDam:uint8) -> void. It conditionally runs FillDamageValues, runs CalculateTotalDamage, derives WILLDIE and calls the unique combat-node linker at 0x44B703. It prepares target-specific state and is not a safe secondary-damage primitive."
+    },
+    {
+      "rva": "0x4507B0",
+      "name": "SUNITDMG_AllocateAndLinkCombatRecord",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static combat-node allocator/linker with logical bounds 0x4507B0..0x4509A3, unique 32-byte signature and ABI (game, attacker, defender, const D2Damage*) -> void. Its only direct caller is 0x44B703. It allocates 0x1A0 bytes, records attacker/defender type and GUID, deep-copies D2Damage to node+0x18 and links the node under attacker+0x108; it applies no HP or reactions."
+    },
+    {
+      "rva": "0x44B2B0",
+      "name": "SUNITDMG_ConsumeMeleeCombatRecord",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static stored-melee-combat consumer with logical bounds 0x44B2B0..0x44B5F5, unique 34-byte signature, 36 direct callers and ABI (game, attacker, defender, rangeBonus) -> bool/uint8. It finds the node by type/GUID, deep-copies its D2Damage, validates range, calls ExecuteEvents with bMissile=0, performs additional melee events/durability/thorns work, calls FinalizeDamage and unlinks/frees the node. Its breadth makes it unsafe as a blind splash-target primitive."
+    },
+    {
+      "rva": "0x4398B0",
+      "name": "D2GAME_EnumerateUnitsInArea",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static area-enumeration core with logical bounds 0x4398B0..0x439C04, unique 18-byte signature and eight direct callers. Its ten-position ABI carries game, origin, room/x/y descriptor, radius, mask, callback, user context, a special monster filter and source provenance. It walks the supplied room array and each room unit list in native order, applies square and inclusive radius gates and invokes callback(ctx,candidate). MEC-W07 remains partial because the upstream room-list membership and uniqueness/dedup invariants are not yet proven."
+    },
+    {
+      "rva": "0x2EFDE0",
+      "name": "DUNGEON_GetRoomListAndCount",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static room-list accessor with bounds 0x2EFDE0..0x2EFDED, unique 13-byte body and ABI (room, roomListOut, roomCountOut) -> void. It returns room+0 and the count at room+0x40. Its use by the area enumerator is proven, but the exact adjacent-room membership is not promoted until the native writer/builder is identified."
+    },
+    {
+      "rva": "0x2EFD90",
+      "name": "DUNGEON_GetFirstUnitInRoom",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static one-argument room-unit-list accessor with bounds 0x2EFD90..0x2EFD98 and unique 8-byte body. It returns the pointer at room+0xA8 and is used by the governed area-enumeration traversal."
+    },
+    {
+      "rva": "0x34B4A0",
+      "name": "UNITS_GetNextUnitInRoom",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static room-list next-unit accessor with logical bounds 0x34B4A0..0x34B4DB and a unique strict 46-byte signature. It returns unit+0x160; the area enumerator reads this next pointer before filters and callback invocation."
+    },
+    {
+      "rva": "0x3256E0",
+      "name": "DUNGEON_DoesRoomIntersectSearchSquare",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static inclusive broad-phase test with bounds 0x3256E0..0x325760 and unique 30-byte signature. ABI (room, centerX, centerY, radius) -> bool compares the search square against the room rectangle before per-unit traversal."
+    },
+    {
+      "rva": "0x3412C0",
+      "name": "COORDS_GetSquaredDistance",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/mechanics-native-proof-92777.md",
+      "notes": "Confirmed-static squared-distance helper with bounds 0x3412C0..0x3412D3 and unique 19-byte body. ABI (x1, y1, x2, y2) -> int32 computes (x2-x1)^2 + (y2-y1)^2; the area enumerator accepts candidates when this value is less than or equal to radius squared."
+    },
+    {
+      "rva": "0x583E00",
+      "name": "D2GAME_EventFunc7_Knockback",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/MeleeSplash/NATIVE-HOOKS.md",
+      "notes": "Confirmed-static EventFunc7 Knockback handler with logical bounds 0x583E00..0x583F0F, a unique 30-byte entry signature and the governed nine-position event callback ABI. It has zero direct xrefs because the 92777 event-list dispatcher invokes callbacks indirectly. MeleeSplash filters this handler only while its thread-local synthetic-secondary guard is active."
+    },
+    {
+      "rva": "0x583400",
+      "name": "D2GAME_EventFunc9_Blind",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/MeleeSplash/NATIVE-HOOKS.md",
+      "notes": "Confirmed-static EventFunc9 Blind handler with logical bounds 0x583400..0x58357B, a unique 30-byte entry signature and the governed nine-position event callback ABI. It has zero direct xrefs because dispatch is indirect. MeleeSplash filters it only for synthetic secondary resolution."
+    },
+    {
+      "rva": "0x5849D0",
+      "name": "D2GAME_EventFunc19_Slow",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/MeleeSplash/NATIVE-HOOKS.md",
+      "notes": "Confirmed-static EventFunc19 Slow handler with logical bounds 0x5849D0..0x584B56, a unique 33-byte entry signature and the governed nine-position event callback ABI. It has zero direct xrefs because dispatch is indirect. MeleeSplash filters it only for synthetic secondary resolution."
+    },
+    {
+      "rva": "0x5837F0",
+      "name": "D2GAME_EventFunc21_SkillOnGetHit",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/MeleeSplash/NATIVE-HOOKS.md",
+      "notes": "Confirmed-static EventFunc21 SkillOnGetHit handler with logical bounds 0x5837F0..0x583995, a unique 31-byte entry signature and the governed nine-position event callback ABI. It has zero direct xrefs because dispatch is indirect. MeleeSplash filters it only for synthetic secondary resolution."
+    },
+    {
+      "rva": "0x44C2AC",
+      "name": "SUNITDMG_PreCriticalApplyDamageBonusesCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "addons/MeleeSplash/NATIVE-HOOKS.md",
+      "notes": "Confirmed-static call inside SUNITDMG_FillDamageValues to 0x44D710 ApplyDamageBonuses. The five bytes E8 5F 14 00 00 and unique 21-byte context are governed. Its continuation at 0x44C2B1 stores EAX to D2Damage+0x18 immediately before the native mode-gated Critical/Deadly sequence."
+    },
+    {
+      "rva": "0x44CB9E",
+      "name": "SUNITDMG_PreEvent3ApplyDamageEventCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "addons/MeleeSplash/NATIVE-HOOKS.md",
+      "notes": "Confirmed-static conditional Event 3 call inside SUNITDMG_FillDamageValues. The five bytes E8 CD 09 00 00 and unique 34-byte context from 0x44CB89 are governed. ABI is int32(game, event, defender, attacker, D2Damage*), with continuation 0x44CBA3."
     }
   ]
 }
