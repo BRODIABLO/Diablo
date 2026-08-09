@@ -8,6 +8,7 @@ expected bytes before any mutation. Disabled configuration installs no hooks.
 | Surface | Role |
 |---|---|
 | `0x44C030` | Capture the eligible `FillDamageValues` frame at the exact melee caller. |
+| `0x4300B6` | Governed direct-melee Fill call used by normal Attack; continuation `0x4300BB`. |
 | `0x44C2AC` | Narrow call owner: capture the exact pre-Critical physical return from `ApplyDamageBonuses`. |
 | `0x44CB9E` | Narrow call owner: snapshot before primary Event 3 when that conditional event executes. |
 | `0x4507B0` | Associate the snapshot with the exact newly linked combat node. |
@@ -40,6 +41,13 @@ contexts; their five written bytes are:
 | `0x44C2AC` | `E8 5F 14 00 00` (`21`-byte context unique) |
 | `0x44CB9E` | `E8 CD 09 00 00` (`34`-byte context from `0x44CB89`) |
 
+The direct normal-Attack caller is read-only but also fail-closed. Its unique
+29-byte context at `0x43009E` is:
+
+```text
+4C 8D 4C 24 70 C6 44 24 28 80 4C 8B C3 44 89 7C 24 20 48 8B D6 49 8B CE E8 75 BF 01 00
+```
+
 The exact governed entry signatures are:
 
 | RVA | Logical identity | Expected bytes |
@@ -68,7 +76,7 @@ not a recovered static callback table.
 
 | Surface | ABI and caller qualification |
 |---|---|
-| Fill | `void(game, attacker, defender, D2Damage*, mode, SrcDam)`; only return address `0x44B6A0` is captured. |
+| Fill | `void(game, attacker, defender, D2Damage*, mode, SrcDam)`; only governed melee continuations `0x4300BB` (direct normal-Attack path) and `0x44B6A0` (queued path) are captured. |
 | Allocate | `void(game, attacker, defender, const D2Damage*)`; only return address `0x44B708` is associated. |
 | Consume | `uint8(game, attacker, defender, rangeBonus)`; sidecars are keyed by game, node, thread, and both type/GUID pairs. |
 | Execute | `void(game, attacker, defender, bMissile, D2Damage*)`; only return address `0x44B3FF`, `bMissile=0`, and post-call `SUCCESS` trigger distribution. |
@@ -79,6 +87,14 @@ not a recovered static callback table.
 A mismatch means another owner or another build; the plugin does not overwrite
 it. The static caller/callee and damage-layout evidence for the shared combat
 surfaces remains governed in `Mission/mechanics-native-proof-92777.md`.
+
+The direct path keeps one stack `D2Damage` through `0x4300B6` Fill, the
+state-event helper at `0x4300C6`, and `PrepareAndQueueCombatRecord` at
+`0x4300DE`. That wrapper sees hit flag `0x02`, skips its internal second Fill,
+then performs the canonical Calculate/Allocate sequence; Consume follows at
+`0x430120` or `0x430156`. The 2026-08-09 runtime witness proved that the same
+capture is associated with the resulting combat node and reaches the
+authoritative successful-hit Execute seam.
 
 ## Synthetic-event policy
 

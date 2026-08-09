@@ -132,7 +132,9 @@ constexpr std::uintptr_t GetWeaponMasteryChanceRva = 0x33D4F0;
 constexpr std::uintptr_t GetPathXRva = 0x341A20;
 constexpr std::uintptr_t GetPathYRva = 0x341A30;
 
-constexpr std::uintptr_t FillMeleeReturnRva = 0x44B6A0;
+constexpr std::uintptr_t DirectMeleeFillContextRva = 0x43009E;
+constexpr std::uintptr_t DirectMeleeFillReturnRva = 0x4300BB;
+constexpr std::uintptr_t QueuedMeleeFillReturnRva = 0x44B6A0;
 constexpr std::uintptr_t AllocateMeleeReturnRva = 0x44B708;
 constexpr std::uintptr_t ExecuteMeleeReturnRva = 0x44B3FF;
 constexpr std::uintptr_t PreEvent3ReturnRva = 0x44CBA3;
@@ -140,6 +142,10 @@ constexpr std::uintptr_t PreEvent3ReturnRva = 0x44CBA3;
 constexpr auto FillExpected = std::to_array<std::uint8_t>({
     0x40,0x56,0x57,0x41,0x54,0x48,0x81,0xEC,0x10,0x05,0x00,0x00,0x48,0x8B,0x05,
     0x85,0xF2,0x57,0x02,0x48,0x33,0xC4,0x48,0x89,0x84,0x24,0xD0,0x04,0x00,0x00,
+});
+constexpr auto DirectMeleeFillContextExpected = std::to_array<std::uint8_t>({
+    0x4C,0x8D,0x4C,0x24,0x70,0xC6,0x44,0x24,0x28,0x80,0x4C,0x8B,0xC3,0x44,0x89,
+    0x7C,0x24,0x20,0x48,0x8B,0xD6,0x49,0x8B,0xCE,0xE8,0x75,0xBF,0x01,0x00,
 });
 constexpr auto AllocateExpected = std::to_array<std::uint8_t>({
     0x40,0x55,0x57,0x41,0x56,0x41,0x57,0x48,0x81,0xEC,0xC8,0x01,0x00,0x00,0x48,
@@ -298,6 +304,9 @@ std::atomic<std::uint64_t> SecondaryHits{};
 std::atomic<std::uint64_t> RejectedHits{};
 std::atomic<std::uint64_t> RejectedTargets{};
 std::atomic<std::uint64_t> DroppedSidecars{};
+std::atomic<std::uint32_t> FillDiagnosticLines{};
+
+constexpr std::uint32_t MaximumFillDiagnosticLines = 64;
 
 void* RelayPage{};
 constexpr std::size_t RelayStride = 16;
@@ -333,6 +342,11 @@ auto Identity(const void* unit) noexcept -> UnitIdentity {
         .type = Read<std::int32_t>(unit, UnitTypeOffset),
         .guid = Read<std::uint32_t>(unit, UnitGuidOffset),
     };
+}
+
+bool IsSupportedMeleeFillReturn(std::uintptr_t returnRva) noexcept {
+    return returnRva == DirectMeleeFillReturnRva
+        || returnRva == QueuedMeleeFillReturnRva;
 }
 
 void DiagnosticLog(const char* format, ...) noexcept {
@@ -614,12 +628,42 @@ auto BuildMetadata(
 }
 
 bool CaptureNormalizedPacket(FillFrame& frame, void* damage) {
-    if (!frame.candidate || frame.normalizedDamage || !frame.preCriticalSeen
-            || frame.damage != damage || !damage) {
+    if (!frame.candidate) {
+        DiagnosticLog("MeleeSplash capture reject reason=frame-not-candidate.");
         return false;
     }
-    if (Read<std::uint8_t>(damage, DamageConversionTypeOffset) != 0
-            || (frame.preCriticalFlags & CriticalDeadlyResultFlag) != 0) {
+    if (frame.normalizedDamage) {
+        DiagnosticLog("MeleeSplash capture skip reason=already-normalized.");
+        return true;
+    }
+    if (!frame.preCriticalSeen) {
+        DiagnosticLog(
+            "MeleeSplash capture reject reason=precritical-call-not-observed "
+            "event3=%s.",
+            frame.event3Seen ? "true" : "false");
+        return false;
+    }
+    if (frame.damage != damage || !damage) {
+        DiagnosticLog(
+            "MeleeSplash capture reject reason=damage-identity-mismatch "
+            "expected=%p actual=%p.",
+            frame.damage,
+            damage);
+        return false;
+    }
+    const auto conversionType = Read<std::uint8_t>(
+        damage, DamageConversionTypeOffset);
+    if (conversionType != 0) {
+        DiagnosticLog(
+            "MeleeSplash capture reject reason=damage-conversion type=%u.",
+            static_cast<unsigned>(conversionType));
+        return false;
+    }
+    if ((frame.preCriticalFlags & CriticalDeadlyResultFlag) != 0) {
+        DiagnosticLog(
+            "MeleeSplash capture reject reason=precritical-flag-already-set "
+            "flags=0x%04X.",
+            static_cast<unsigned>(frame.preCriticalFlags));
         return false;
     }
     const auto lateFlags = Read<std::uint16_t>(
@@ -627,12 +671,21 @@ bool CaptureNormalizedPacket(FillFrame& frame, void* damage) {
     const auto allowedLateFlags = static_cast<std::uint16_t>(
         frame.preCriticalFlags | CriticalDeadlyResultFlag);
     if (lateFlags != frame.preCriticalFlags && lateFlags != allowedLateFlags) {
+        DiagnosticLog(
+            "MeleeSplash capture reject reason=unexpected-late-flags "
+            "pre=0x%04X late=0x%04X allowed=0x%04X.",
+            static_cast<unsigned>(frame.preCriticalFlags),
+            static_cast<unsigned>(lateFlags),
+            static_cast<unsigned>(allowedLateFlags));
         return false;
     }
     frame.primaryCriticalDeadly =
         (lateFlags & CriticalDeadlyResultFlag) != 0;
     auto copy = OwnedDamage::Copy(damage);
-    if (!copy) return false;
+    if (!copy) {
+        DiagnosticLog("MeleeSplash capture reject reason=damage-copy-failed.");
+        return false;
+    }
     Write(copy->Get(), DamagePhysicalOffset, frame.preCriticalPhysical);
     Write(copy->Get(), DamageResultFlagsOffset, frame.preCriticalFlags);
     frame.normalizedDamage = std::move(copy);
@@ -1236,6 +1289,8 @@ void __fastcall HookFill(
         std::uint8_t sourceDamage) noexcept {
     const auto returnRva = reinterpret_cast<std::uintptr_t>(_ReturnAddress())
         - reinterpret_cast<std::uintptr_t>(Base);
+    const auto attackerId = Identity(attacker);
+    const auto defenderId = Identity(defender);
     if (Operational.load(std::memory_order_acquire) && SecondaryDepth != 0) {
         DiagnosticLog(
             "MeleeSplash recursion guard pass-through at Fill depth=%u.",
@@ -1243,12 +1298,48 @@ void __fastcall HookFill(
     }
     if (!Operational.load(std::memory_order_acquire)
             || SecondaryDepth != 0
-            || returnRva != FillMeleeReturnRva
+            || !IsSupportedMeleeFillReturn(returnRva)
             || !attacker || !defender || !damage
             || Identity(attacker).type != UnitPlayer
             || Identity(defender).type != UnitMonster) {
+        if (Operational.load(std::memory_order_acquire)
+                && SecondaryDepth == 0
+                && attacker && defender && damage
+                && attackerId.type == UnitPlayer
+                && defenderId.type == UnitMonster
+                && FillDiagnosticLines.fetch_add(
+                    1, std::memory_order_relaxed) < MaximumFillDiagnosticLines) {
+            DiagnosticLog(
+                "MeleeSplash Fill pass-through reason=%s returnRva=0x%llX "
+                "expectedDirect=0x%llX expectedQueued=0x%llX "
+                "attacker=%d/%u defender=%d/%u mode=%d.",
+                IsSupportedMeleeFillReturn(returnRva)
+                    ? "non-caller-guard" : "caller-mismatch",
+                static_cast<unsigned long long>(returnRva),
+                static_cast<unsigned long long>(DirectMeleeFillReturnRva),
+                static_cast<unsigned long long>(QueuedMeleeFillReturnRva),
+                attackerId.type,
+                attackerId.guid,
+                defenderId.type,
+                defenderId.guid,
+                mode);
+        }
         OriginalFill(game, attacker, defender, damage, mode, sourceDamage);
         return;
+    }
+
+    if (FillDiagnosticLines.fetch_add(
+            1, std::memory_order_relaxed) < MaximumFillDiagnosticLines) {
+        DiagnosticLog(
+            "MeleeSplash Fill candidate returnRva=0x%llX attacker=%d/%u "
+            "defender=%d/%u mode=%d damage=%p.",
+            static_cast<unsigned long long>(returnRva),
+            attackerId.type,
+            attackerId.guid,
+            defenderId.type,
+            defenderId.guid,
+            mode,
+            damage);
     }
 
     FillFrame frame{
@@ -1261,11 +1352,34 @@ void __fastcall HookFill(
     FillFrameScope scope(&frame);
     OriginalFill(game, attacker, defender, damage, mode, sourceDamage);
     try {
-        if (!frame.event3Seen) CaptureNormalizedPacket(frame, damage);
-        PushPendingCapture(
-            frame, BuildMetadata(attacker, defender, mode));
+        const auto captured = frame.event3Seen
+            ? static_cast<bool>(frame.normalizedDamage)
+            : CaptureNormalizedPacket(frame, damage);
+        auto metadata = BuildMetadata(attacker, defender, mode);
+        if (!metadata) {
+            DiagnosticLog(
+                "MeleeSplash metadata reject skill=%d enabled=%s mode=%d.",
+                SkillIdFromActualHit(attacker),
+                IsSkillEnabled(ActiveConfig, SkillIdFromActualHit(attacker))
+                    ? "true" : "false",
+                mode);
+        }
+        DiagnosticLog(
+            "MeleeSplash Fill result captured=%s event3=%s precritical=%s "
+            "gateSeen=%s preFlags=0x%04X lateFlags=0x%04X conversion=%u.",
+            captured ? "true" : "false",
+            frame.event3Seen ? "true" : "false",
+            frame.preCriticalSeen ? "true" : "false",
+            frame.gateSeen ? "true" : "false",
+            static_cast<unsigned>(frame.preCriticalFlags),
+            static_cast<unsigned>(Read<std::uint16_t>(
+                damage, DamageResultFlagsOffset)),
+            static_cast<unsigned>(Read<std::uint8_t>(
+                damage, DamageConversionTypeOffset)));
+        PushPendingCapture(frame, std::move(metadata));
     } catch (...) {
         RejectedHits.fetch_add(1, std::memory_order_relaxed);
+        DiagnosticLog("MeleeSplash capture reject reason=exception.");
     }
 }
 
@@ -1609,6 +1723,10 @@ bool CheckBytes(
 
 bool ValidateOwnedSites() noexcept {
     return CheckBytes(FillDamageValuesRva, FillExpected, "FillDamageValues")
+        && CheckBytes(
+            DirectMeleeFillContextRva,
+            DirectMeleeFillContextExpected,
+            "direct melee Fill call context")
         && CheckBytes(AllocateCombatRecordRva, AllocateExpected, "AllocateCombatRecord")
         && CheckBytes(ConsumeCombatRecordRva, ConsumeExpected, "ConsumeCombatRecord")
         && CheckBytes(ExecuteEventsRva, ExecuteExpected, "ExecuteEvents")
@@ -1868,6 +1986,7 @@ void ResetState() noexcept {
     RejectedHits.store(0, std::memory_order_relaxed);
     RejectedTargets.store(0, std::memory_order_relaxed);
     DroppedSidecars.store(0, std::memory_order_relaxed);
+    FillDiagnosticLines.store(0, std::memory_order_relaxed);
     try {
         std::scoped_lock lock(SidecarMutex);
         Sidecars.clear();

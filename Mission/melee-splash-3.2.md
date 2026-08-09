@@ -6,8 +6,10 @@
 > public et générique pour D2RLoader. La version `0.1.0` compile de façon
 > reproductible, sa qualification technique globale/mod-locale est consignée
 > et son ZIP public strict est audité. Tous les critères de livraison demandés
-> sont fermés; les scénarios gameplay A–H restent `prepared / not run` comme
-> qualification fonctionnelle ultérieure.
+> sont fermés. Le premier smoke a découvert un caller Fill manquant; la
+> correction gouvernée admet maintenant les deux continuations melee exactes.
+> Le smoke nominal passe avec un burst sur trois cibles secondaires. B, C, D et
+> le rollback visuel default-off de G restent explicitement `not run`.
 
 Auteur : `RuffnecKk`
 
@@ -22,8 +24,8 @@ CTest `1/1`. Le build gouverné et le package staged sont byte-identiques :
 
 ```text
 MeleeSplash.dll
-196608 bytes
-D9A49607C0BA7EFF2E52200ED480EF8381739161F4E4B2BDE066D548554921B0
+199168 bytes
+DBA0C40C191B2568A6B39D21324A45F770C1CBF8AD747B099AA3BCBEDEF8856C
 ```
 
 L'inspection PE confirme une DLL AMD64, l'API D2RLoader v2, exactement les trois
@@ -43,7 +45,7 @@ reste préparée sans résultat gameplay inféré.
 
 ## Qualification runtime technique — 9 août 2026
 
-Trois cold starts frais du même artefact
+Trois cold starts frais de l'artefact initial
 `D9A49607C0BA7EFF2E52200ED480EF8381739161F4E4B2BDE066D548554921B0`
 ferment le chargement technique sous D2R 3.2.92777 :
 
@@ -55,7 +57,10 @@ ferment le chargement technique sous D2R 3.2.92777 :
 - état final mod-local default-off : `MeleeSplash.dll` charge sans installer de
   hook, `18/18` patches, `17/17` plugins actifs, `24/24`, zéro rejet/échec.
 
-La DLL source, package, dépôt BKVince et runtime mod-local sont byte-identiques.
+Le build corrigé `DBA0C40C...8856C` a ensuite passé un cold start mod-local
+activé avec `18/18`, `17/17`, `24/24` et zéro disabled/rejected/failed avant le
+smoke réussi. La DLL source, package, dépôt BKVince et runtime mod-local sont
+byte-identiques sur ce hash corrigé.
 Le JSON final source/runtime vaut SHA-256
 `32747A94E8744C39813AEBC8EA32BD284AA12F10A5E898DA7272D3721D06E5E6` avec
 `enabled=false`; les copies globales temporaires de la DLL et du JSON sont
@@ -76,14 +81,14 @@ la racine :
 
 | Entrée | Taille | SHA-256 |
 |---|---:|---|
-| `MeleeSplash.dll` | 196608 | `D9A49607C0BA7EFF2E52200ED480EF8381739161F4E4B2BDE066D548554921B0` |
+| `MeleeSplash.dll` | 199168 | `DBA0C40C191B2568A6B39D21324A45F770C1CBF8AD747B099AA3BCBEDEF8856C` |
 | `MeleeSplash.json` | 601 | `6AA40B37051189ADE2CA5D60FE133765EE1D426E0B6DA5E2059B619E77030C20` |
 
 Le JSON archivé conserve `enabled=false`. Aucun README, source, symbole, log,
 fichier BKVince ou binaire tiers n'est inclus. SHA-256 du ZIP :
 
 ```text
-D53A36974A61B3909733F9F5CBFB496211EF820F36DBFEB788660A2FCF17183B
+F137F1B708A4C51C8A88EA68B49BFB85619F380693E63899B508EB1C342E35A9
 ```
 
 ## Décision active et frontière
@@ -180,11 +185,18 @@ doit rester atomique et réversible lorsque le plugin est désactivé ou retiré
 - [x] build, hashes, configuration et logs automatisables consignés sans inférer
   de résultat runtime voisin.
 
-Les livrables exigés pour la v0.1 sont fermés. L'exécution gameplay A–H demeure
-un suivi facultatif préparé, mais ne faisait pas partie du critère d'arrêt de
-cette mission; aucun comportement non exécuté n'est présenté comme validé. La
-compatibilité formelle de toutes les fonctionnalités simultanément actives
-reste bloquée par la baseline préexistante ci-dessus.
+Le premier smoke solo du 9 août a ouvert un **NO-GO gameplay** puis fourni sa
+cause exacte : Attack appelle Fill à `0x4300B6` et revient à `0x4300BB`, tandis
+que le plugin n'admettait que `0x44B6A0`. Le contexte de 29 octets est unique et
+la chaîne 92777 mène le même record vers Prepare/Allocate/Consume. Après
+correction, le coup réussi journalise une capture puis un burst sur trois
+secondaires. Chaque cible reçoit un roll Critical/Deadly et exactement un appel
+CB et OW réussi; la primaire est rejetée de l'aire et la profondeur de récursion
+revient à zéro. A, E, F, H et G-actif passent. B, C, D et le retour visuel
+default-off de G restent `not run`. La config et la famille QtyTester sont
+restaurées byte-exact et le jeu est arrêté. La compatibilité formelle de toutes
+les fonctionnalités simultanément actives reste bloquée par la baseline
+préexistante ci-dessus.
 
 Le backlog suivant est verrouillé : Critical/Deadly, Crushing Blow/CBE, Open
 Wounds/DPS plat, résistances hybrides, puis itemisation et équilibrage global.

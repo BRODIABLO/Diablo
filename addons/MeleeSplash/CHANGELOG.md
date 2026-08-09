@@ -13,3 +13,6 @@
 - Added a separate reversible BKVince profile and append-only stat reservations.
 - Added fail-closed build/signature/ownership validation and automated policy
   tests for D2R 3.2.92777.
+- Fixed normal Attack capture by governing the direct `FillDamageValues`
+  continuation used by the live 92777 melee handler, while retaining the queued
+  melee continuation and rejecting all other Fill callers.

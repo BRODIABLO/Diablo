@@ -2570,6 +2570,14 @@
       "confidence": "high",
       "source": "addons/MeleeSplash/NATIVE-HOOKS.md",
       "notes": "Confirmed-static conditional Event 3 call inside SUNITDMG_FillDamageValues. The five bytes E8 CD 09 00 00 and unique 34-byte context from 0x44CB89 are governed. ABI is int32(game, event, defender, attacker, D2Damage*), with continuation 0x44CBA3."
+    },
+    {
+      "rva": "0x4300B6",
+      "name": "SUNITDMG_DirectMeleeFillDamageValuesCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "addons/MeleeSplash/NATIVE-HOOKS.md",
+      "notes": "Confirmed-static direct melee call to SUNITDMG_FillDamageValues with continuation 0x4300BB. Its unique 29-byte context begins at 0x43009E. The same stack D2Damage at caller rsp+0x70 then passes through 0x56CBE0 and into SUNITDMG_PrepareAndQueueCombatRecord at 0x4300DE with hit flag 0x02, so the wrapper skips a second Fill and continues through canonical Calculate, Allocate and Consume. A 2026-08-09 runtime witness with normal Attack confirmed capture at return 0x4300BB and a three-target synthetic burst."
     }
   ]
 }
