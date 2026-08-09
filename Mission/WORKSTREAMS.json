@@ -505,10 +505,13 @@
         "Mission/pd2-inspiration-bkvince.catalog.json",
         "Mission/pd2-inspiration-bkvince.schema.json",
         "addons/StaticFieldRework/**",
+        "data-BKVince/BKVince.mpq/data/global/excel/missiles.txt",
         "data-BKVince/BKVince.mpq/data/global/excel/overlay.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/skilldesc.txt",
         "data-BKVince/d2rloader/config/StaticFieldRework.toml",
         "data-BKVince/d2rloader/plugins/StaticFieldRework.dll",
         "scripts/audit-pd2-bkvince/**",
+        "scripts/migrate-bkvince/apply-pd2-blizzard-prototype.js",
         "scripts/migrate-bkvince/apply-static-field-rework.js",
         "scripts/validate-pd2-catalog/**"
       ]

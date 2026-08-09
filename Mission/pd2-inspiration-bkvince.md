@@ -96,6 +96,48 @@ hôte et joiner. Cleansing doit aussi être observé séparément : sa composant
 soin dépend de Prayer et devrait rester nulle sur la variante Fire qui ne
 possède pas cette compétence.
 
+## Lot Skills — Warmth Attack Rating
+
+Le 8 août 2026, le second effet passif de Warmth a été adapté depuis PD2 dans
+BKVince sans copier les différences d'interface ou de coût de la source. La
+ligne `Warmth` de `skills.txt` conserve sa régénération de mana existante et
+reçoit exactement quatre cellules gameplay :
+
+- `passivestat2=item_tohit_percent`;
+- `passivecalc2=toht`;
+- `ToHit=20`;
+- `LevToHit=10`.
+
+La courbe calculée est donc `20 + (niveau - 1) × 10`, soit `20 %`, `110 %`,
+`210 %` et `410 %` d'Attack Rating aux niveaux 1, 10, 20 et 40. La ligne
+`warmth` de `skilldesc.txt` conserve sa première ligne D2R de régénération de
+mana et ajoute une seconde ligne adaptée aux conventions BKVince :
+`descline2=74`, `desctexta2=StrSkill22`, `desccalca2=toht`.
+
+`item_tohit_percent` existe déjà à l'ordinal 119 dans BKVince et dans la
+référence vanilla D2R 3.2; `itemstatcost.txt` n'a donc pas été modifié. Le coût
+de Warmth, `leftskill`, `rightskill`, les lignes, les headers et les sauvegardes
+restent inchangés. Les deux tables finales conservent CRLF et passent un
+round-trip byte-exact. Leurs SHA-256 sont :
+
+- `skills.txt` :
+  `83374AE6758ED48A36161DF5EE1BE81DD10643D88B83A68EF2E9601F8CAEEDA0`;
+- `skilldesc.txt` :
+  `2B632E4BD85E865443C328673A32AA0AF2C9F3D919493CA0C33F676F413D1373`.
+
+`npm run verify:data`, le catalogue PD2 et les 13 tests du rapport Skills ont
+été verts après la régénération gouvernée du rapport. Une assertion ciblée
+ferme également la formule BKVince au niveau 20, le stat passif, le calc et les
+six cellules de tooltip mana/Attack Rating. Un changement concurrent hors
+périmètre dans `missiles.txt` a ensuite rendu rouge le seul gate global de
+fraîcheur du rapport par changement de hash; il n'a pas été absorbé ni modifié
+par ce lot, et le test Warmth isolé reste vert.
+
+Le lot est **implanté statiquement**, mais pas encore validé en jeu. Gates
+runtime ouverts : affichage du tooltip; Attack Rating réel aux niveaux 1, 10,
+20 et 40; cumul avec Enchant; équipement/déséquipement; respec et
+sauvegarde/rechargement; solo puis hôte/joiner avec des tables identiques.
+
 ## Lot Skills — Enchant de groupe
 
 Le 8 août 2026, BKVince a repris uniquement l'architecture de lancement de
@@ -118,7 +160,7 @@ remplacés par leurs valeurs PD2.
 La table finale conserve ses 322 colonnes, ses 449 lignes, ses fins de ligne
 CRLF et son saut de ligne final, puis passe un round-trip byte-exact. Son
 SHA-256 source est
-`033084004BE58CB4AFCE20C74E96851C3DAC96087BED96FEB702648450DA4254`.
+`90FE55CB5B19C5B6275F5655411F42DBE6AF524E22629094F7C0B70E498C22B9`.
 
 `npm run verify:data` et les cinq tests du catalogue PD2 sont verts. Les 11
 tests sémantiques du rapport Skills sont également verts; ses deux gates de
@@ -132,6 +174,187 @@ mercenaires et les summons alliés dans le rayon, sans affecter les ennemis ni
 les unités hors rayon; vérifier aussi le recast, les transitions de zone, la
 persistance après sauvegarde/rechargement et le comportement solo, hôte et
 joiner avec des tables identiques.
+
+## Lot Skills — Nova, Lightning et Chain Lightning
+
+Le 8 août 2026, le prototype Sorcière demandé par Vincent a repris seulement
+les courbes PD2 explicitement retenues, sans copier les dégâts, les synergies ou
+le rayon de recherche de la source :
+
+- `Nova` : `mana=16` et `manashift=7`, soit 8 mana au niveau 1 et 17,5 au
+  niveau 20; la courbe de dégâts et la synergie BKVince avec Static Field
+  restent inchangées;
+- `Lightning` : `anim=SC` remplace `SQ`; `mana=16` et `manashift=7` restent
+  inchangés, soit 17,5 mana au niveau 20, afin d'isoler l'effet réel de
+  l'animation;
+- `Chain Lightning` : `mana=8`, `manashift=7`, `Param5=4` et
+  `calc1="min(ln34 / 4, 14)"`. La progression donne 6, 11 et 14 rebonds aux
+  niveaux 1, 20 et 40. `Param1=25`, `Param8=9` et la synergie additionnelle
+  avec Nova restent les valeurs BKVince;
+- `chain lightning[desccalca3]` reçoit la même formule plafonnée dans
+  `skilldesc.txt` afin que le nombre de rebonds affiché corresponde au calcul
+  gameplay.
+
+Le lot modifie exactement sept cellules de `skills.txt` et une cellule de
+`skilldesc.txt`. Les tables conservent respectivement 449 lignes × 322 colonnes
+et 269 lignes × 120 colonnes, leurs CRLF, leur saut de ligne final et leur
+round-trip byte-exact. Leurs SHA-256 sont :
+
+- `skills.txt` :
+  `4BAA984DAFF79AE5783F82DF500994B23C511DEC72A58D0736C67161CEA98683`;
+- `skilldesc.txt` :
+  `842162C5E5160AD16F9FB87A358BD28C93FCBD9ABD51CBD14569AA01E59D795E`.
+
+Le rapport exhaustif a été régénéré sur les tables finales et ses 15 tests sont
+verts. L'assertion dédiée ferme les coûts de mana au niveau 20, l'animation
+SC, la courbe et le plafond des rebonds, le rayon BKVince, les dégâts nus de
+Nova, les synergies conservées et la formule de tooltip. Ce jalon est donc
+**implanté statiquement**, sans modification de structure ni impact attendu sur
+les sauvegardes, mais pas encore validé en jeu.
+
+Gates runtime ouverts : mesurer les frames de cast, les breakpoints FCR, le DPS
+réel et la consommation de mana de Lightning avant toute réduction de son coût;
+vérifier Nova et Chain Lightning aux niveaux 1, 20 et 40, le plafond de 14
+rebonds, le rayon de 25, le tooltip, les respecs et sauvegarde/rechargement;
+terminer en solo puis hôte/joiner avec des tables identiques.
+
+## Lot Skills — Inferno shredder
+
+Le 8 août 2026, Vincent a autorisé le prototype data-only recommandé pour
+transformer l'Inferno partagé de BKVince en canalisation courte qui réduit la
+résistance au feu. La ligne `Inferno` conserve son ordinal runtime `41`, son
+niveau requis `6`, sa courbe de mana BKVince et ses contrôles D2R modernes :
+`KeepCursorStateOnKill=1`, `ContinueCastUnselected=1`,
+`ClearSelectedOnHold=1`, `seqinput=10` et `rightskill=1`.
+
+Le pipeline fonctionnel reprend celui de PD2 :
+
+- `srvdofunc=182`, `cltdofunc=111`;
+- `srvmissilea=infernodebuff`, `cltmissilea=infernodebuff` et
+  `cltmissileb=infernodebuff2`;
+- `auratargetstate=inferno_debuff`, `auralencalc=10`,
+  `aurastat1=fireresist` et `aurastatcalc1="-min(lvl,100)"`;
+- `Param1=22`, `Param2=2` et `aurarangecalc=ln12/4-2`, soit exactement
+  `3`, `8`, `13` et `23` grid sub-tiles aux niveaux 1, 10, 20 et 40;
+- la réduction vaut exactement `-1 %`, `-10 %`, `-20 %` et `-40 %` aux mêmes
+  niveaux, plafonnée à `-100 %`, et le state de 10 frames doit être rafraîchi
+  par les impacts continus du missile;
+- les paliers de dégâts, `HitShift=5`, le plafond de portée missile et le nombre
+  de missiles reprennent PD2; la synergie devient Fire Wall + Blaze à 20 % par
+  hard point. La mana, le coût marchand et le niveau requis restent BKVince.
+
+Trois missiles ont été ajoutés uniquement en fin de `missiles.txt` aux ordinals
+`756..758` : `infernodebuff`, `infernodebuff2` et `infernotrail`. Le state
+`inferno_debuff` est ajouté à l'ordinal `245` et son overlay visuel à l'ordinal
+`342`; aucun ordinal existant n'a été déplacé. Le tooltip `inferno` conserve
+ses lignes mana, portée et dégâts et reçoit une quatrième ligne explicite de
+réduction de résistance au feu. Les mercenaires Acte III qui consomment la
+même ligne `Inferno` reçoivent donc également ce prototype partagé.
+
+La migration gouvernée et réversible est portée par
+`scripts/migrate-bkvince/apply-pd2-inferno-shredder.js`; son mode `--check`
+est idempotent et son mode `--revert` refuse de retirer une ligne ou cellule
+devenue divergente. Les cinq tables finales conservent leurs headers, CRLF,
+saut de ligne final et round-trip byte-exact. Leurs SHA-256 déployés sont :
+
+- `skills.txt` :
+  `4BAA984DAFF79AE5783F82DF500994B23C511DEC72A58D0736C67161CEA98683`;
+- `missiles.txt` :
+  `D36CAF2988E3785C5C19D69C489A7FC6BDDDA8BBF0DECCF449DF1D3D382265CB`;
+- `states.txt` :
+  `A67B9B7B29DBC70AC53B8D68E2B0BFAA0C700F5BB30478EA88A50EA9CF1D2FF3`;
+- `overlay.txt` :
+  `3C0B9CC9BFBF47A459BAF8C4295DC84E8F88F693955700F4C4F73BC3D4D85188`;
+- `skilldesc.txt` :
+  `842162C5E5160AD16F9FB87A358BD28C93FCBD9ABD51CBD14569AA01E59D795E`.
+
+Les preuves statiques sont vertes : migration ciblée, références de démarrage,
+`npm run verify:data`, cadastre `VALID` et rapport exhaustif `15/15`, dont une
+assertion Inferno couvrant fonctions, missiles, state, contrôles modernes,
+mana conservée et vecteurs portée/shred/dégâts aux niveaux 1/10/20/40.
+
+Le déploiement mod-local a copié uniquement les cinq tables autorisées vers le
+profil BKVince et prouvé l'égalité de leurs hashes avant et après le lancement.
+Le cold start frais du 8 août 2026 à 17:10 EDT monte explicitement
+`mod="BKVince"` sur D2R `3.2.92777`, applique `18/18` patchsets, active
+`15/15` plugins avec zéro désactivation, rejet ou échec, puis atteint `24/24`.
+Le log ne contient aucune erreur, assertion ou entrée critique; son SHA-256 est
+`9BCDA77F247289B398D46127BBCB683385ECF18EFE53350D9FF5B1832974E52C`.
+La session a été arrêtée après la collecte.
+
+Le jalon est donc **implanté statiquement et chargé par le runtime**, mais pas
+encore validé fonctionnellement en jeu. Gates ouverts : vérifier le maintien de
+la canalisation après perte ou mort de la sélection; mesurer les portées et le
+shred réel aux niveaux 1/10/20/40; prouver le rafraîchissement continu et la
+disparition du debuff 10 frames après l'arrêt; contrôler dégâts, tooltip,
+overlay, consommation de mana, interaction avec Burn Fire Resistance et le
+comportement des mercenaires Acte III; terminer en solo puis hôte/joiner avec
+des tables identiques.
+
+## Lot Skills — Blizzard PD2-feel
+
+Le 8 août 2026, Vincent a demandé d’implanter dans BKVince la variante PD2 de
+Blizzard afin de tester son rythme plus actif et sa couverture plus permissive.
+Le lot retient l’équilibrage PD2 complet plutôt que de conserver les dégâts
+BKVince :
+
+- `localdelay=23`, `mana=26` et `manashift=7`, soit 13, 17,5, 22,5 et
+  32,5 mana aux niveaux 1, 10, 20 et 40;
+- `Param1=8` pour le rayon et conservation de `Param3=2` pour l’intervalle de
+  spawn déjà commun à PD2 et BKVince;
+- `Param8=12` et synergies limitées à Ice Bolt + Ice Blast via
+  `EDmgSymPerCalc=(skill('Ice Bolt'.blvl)+skill('Ice Blast'.blvl))*par8`;
+- paliers PD2 donnant exactement `17–24`, `64–89`, `132–181` et `376–515`
+  dégâts froids nus aux niveaux 1, 10, 20 et 40;
+- `blizzardcenter[Range]=50`, soit deux secondes à 25 FPS;
+- `blizzard1..4[Size]=3` au lieu de `2`, adaptation D2R 3.2 exacte du
+  changement de hitbox de 50 % annoncé par PD2;
+- tooltip D2R conservé, mais cooldown affiché à 23 frames et ligne de synergie
+  Glacial Spike retirée.
+
+Le callback PD2 `pSrvHitFunc=62` et son paramètre `sHitPar1=4` ne sont pas
+copiés : ils appartiennent au moteur PD2 et ne sont pas documentés comme ABI
+portable dans D2R 3.2. Les fonctions natives D2R de Blizzard, ses missiles, son
+ordinal runtime 59, `HitShift=8`, sa durée de froid et ses contrôles modernes
+restent inchangés. Le lot ne déplace aucune ligne et n’affecte pas le format des
+sauvegardes.
+
+La migration réversible
+`scripts/migrate-bkvince/apply-pd2-blizzard-prototype.js` possède uniquement la
+ligne `Blizzard`, `blizzardcenter`, `blizzard1..4` et cinq cellules du tooltip.
+Ses modes `--apply`, `--check` et `--revert` refusent toute cellule divergente;
+le cycle revert/apply puis le check idempotent sont verts. Les trois tables
+conservent leurs headers, leurs CRLF, leur saut de ligne final et leur
+round-trip byte-exact :
+
+- `skills.txt` : 449 lignes × 322 colonnes;
+- `missiles.txt` : 759 lignes × 172 colonnes;
+- `skilldesc.txt` : 269 lignes × 120 colonnes.
+
+La migration ciblée, `npm run verify:data`, les références de démarrage,
+`git diff --check` et le cadastre sont verts. Le rapport exhaustif reste
+volontairement non régénéré : son gate de fraîcheur détecte simultanément les
+travaux concurrents Static Field, Shiver Armor, Firewall et `states.txt`;
+le régénérer ici les absorberait hors du lot Blizzard. Les hashes de fichiers
+complets au moment du contrôle sont donc des snapshots composites, pas des
+empreintes attribuables au seul lot :
+
+- `skills.txt` :
+  `588D455E0F1386F3791E0D5A489206BD395CB65CB23CF48820D5BFDFD68267E5`;
+- `missiles.txt` :
+  `A1C7787689C647CE4A0F6CB7E15B3CB35FF7E0E4CFC0AC634749B7773E6E0DAF`;
+- `skilldesc.txt` :
+  `E998CDB316EEFAB36F542AAD646C50BE84A199C36DEE430F27AEB553D65339F4`.
+
+Le jalon est **implanté statiquement, mais pas encore déployé ni validé en
+jeu**. Le déploiement est retenu tant que les trois fichiers sources portent
+des cellules concurrentes absentes du runtime : une copie entière emporterait
+Shiver Armor et Firewall sans autorisation dans ce lot. Gates ouverts : égalité
+source/runtime hors Blizzard ou arbitrage explicite; hashes de déploiement;
+cold start complet; tooltip, cadence, durée, couverture et dégâts aux niveaux
+1/10/20/40; mobilité des cibles, empilement de plusieurs casts, consommation de
+mana et comparaison de ressenti avec la variante BKVince; solo puis hôte/joiner
+avec des tables identiques.
 
 ## Sources figées
 
@@ -239,6 +462,128 @@ chapitres restent explicitement planifiés et ne sont pas déclarés complets.
 Le dossier PD2/SP+ et les mods de référence restent read-only. La baseline
 initiale ne modifiait aucune table gameplay BKVince; l'implantation atomique
 Acte III phase 1 modifie désormais seulement `hireling.txt`.
+
+## Shiver Armor — Faster Block Rate PD2, durée et dégâts BKVince
+
+Le 8 août 2026, Vincent a autorisé l'implantation du prototype Shiver Armor.
+L'effet actif ajoute `item_fasterblockrate` par `aurastat2` avec la formule
+`10 + (blvl*2)` : 12 % au niveau 1, 30 % au niveau 10 et 50 % à partir du
+niveau 20. Le calcul emploie `blvl`; les bonus de niveaux ne dépassent donc pas
+le plafond de 50 %. La description utilise le slot 5 avec `descline5=2`,
+`desctexta5=StrFBR`, `desctextb5=StrSkill23` et la même formule dans
+`desccalca5`.
+
+La preuve gouvernée confirme que `item_fasterblockrate` existe déjà dans
+`ItemStatCost.txt` à l'ordinal 102, avec `*ID=102`, `Save Bits=7` et
+`Save Add=20`. Cette table n'a pas été modifiée; son SHA-256 reste
+`75E032F94F89C2304ACA6A045628F0DD0F30D5EFE21B22511A4C4925894B19BB`.
+Les 23 cellules BKVince qui déterminent la durée et les dégâts de Shiver Armor
+ont été contrôlées avant et après l'écriture et sont byte-identiques. Les dégâts
+calculés restent respectivement 6–8, 35–41,5, 79–90,5 et 209–230,5 aux niveaux
+1, 10, 20 et 40.
+
+Le différentiel est limité exactement à six cellules : deux dans `skills.txt`
+et quatre dans `skilldesc.txt`. Leur remise en mémoire à l'état antérieur
+reconstruit exactement les SHA-256 préimplantation
+`E39BF427270743E6AEC6FEB8E484305B4CA6E6E9F933686C00AFB5BAA83DC42E` et
+`05EE4F9E72C4AC8C12240A59E51BDDE0A4DD3D44B6E70C129953B5761399DF19`.
+Les SHA-256 gouvernés après implantation sont respectivement
+`588D455E0F1386F3791E0D5A489206BD395CB65CB23CF48820D5BFDFD68267E5` et
+`E998CDB316EEFAB36F542AAD646C50BE84A199C36DEE430F27AEB553D65339F4`.
+Les tables conservent leurs CRLF, leur saut de ligne final, leur forme et leur
+round-trip byte-exact.
+
+La validation statique passe : les 16 tests du rapport PD2, `verify:data`, le
+contrôle ItemStatCost et le cadastre sont `VALID`. Le rapport exhaustif a été
+régénéré et ne contient aucune ambiguïté de correspondance. Le déploiement
+runtime a synchronisé uniquement les deux tables autorisées; le rapport
+`analysis-cache/runtime-sync/20260808-214054073-apply.json` a le SHA-256
+`35E1F5CC2E2C29553CD4E949E2CDA1F9F2162FD3A076705FD3AA07DA1FB082BF`
+et son rollback se trouve sous
+`analysis-cache/runtime-sync-backups/20260808-214054073/`.
+
+Le cold start technique a chargé les tables avec des hashes source/runtime
+identiques. Les huit plugins ayant écrit des logs frais ne signalent aucune
+erreur fatale et le PluginPack a validé ses 36 opérations différées. Le log jeu
+ne cite ni `skills.txt`, ni `skilldesc.txt`, ni `ItemStatCost`, ni Shiver Armor,
+et ne contient aucun motif fatal lié à ce lot. Le processus a ensuite été fermé
+proprement. Cette preuve établit le chargement technique avec la configuration
+installée, pas encore la matrice complète de compatibilité : plusieurs fonctions
+du PluginPack étaient déjà désactivées dans cette configuration.
+
+Les gates fonctionnels restent ouverts : rendu de `StrFBR` dans l'infobulle,
+mesure réelle des frames de blocage aux niveaux 1/10/20, vérification du plafond
+avec bonus de niveaux, sauvegarde/respec/rechargement et témoin hôte/joiner. Le
+risque de migration de sauvegarde est néanmoins faible puisque la statistique
+existait déjà et qu'aucun schéma persistant n'a changé.
+
+## Chilling Armor — block PD2 isolé, riposte BKVince conservée
+
+Le 8 août 2026, Vincent a autorisé uniquement le premier lot Chilling Armor :
+le block PD2, sans reprendre la nouvelle riposte de mêlée. L'effet actif ajoute
+`toblock` par `aurastat2` avec `aurastatcalc2=5 + blvl`, soit 6 % au niveau 1,
+15 % au niveau 10 et 25 % à partir du niveau 20. L'infobulle emploie le slot 4
+avec `descline4=2`, `desctexta4=StrSkill110`, `desctextb4=StrSkill23` et
+`desccalca4=5+blvl`; les deux clés de localisation existaient déjà dans
+BKVince.
+
+La preuve source et runtime confirme que `toblock` existait avant ce lot dans
+`ItemStatCost.txt`, à l'ordinal 20 et avec `*ID=20`. Cette table n'a pas été
+modifiée et conserve le SHA-256
+`75E032F94F89C2304ACA6A045628F0DD0F30D5EFE21B22511A4C4925894B19BB`.
+La ligne PD2 ItemStatCost, dont les paramètres de sauvegarde diffèrent, n'a donc
+pas été copiée.
+
+Le différentiel est limité exactement à six cellules : deux dans `skills.txt`
+et quatre dans `skilldesc.txt`. La remise en mémoire de ces seules cellules à
+vide reconstruit exactement les SHA-256 préimplantation
+`588D455E0F1386F3791E0D5A489206BD395CB65CB23CF48820D5BFDFD68267E5` et
+`E998CDB316EEFAB36F542AAD646C50BE84A199C36DEE430F27AEB553D65339F4`.
+Après implantation, les hashes gouvernés sont respectivement
+`075EDF1867079FF307FB3066C84E05EDECDBE49C8E611896630E74016DA85ADB` et
+`40DDD3E0A297625F9A082C1D0AD670F5768687ED37672401D6C663E6E2B55D59`.
+Les CRLF, le saut de ligne final, les dimensions et le round-trip byte-exact
+sont préservés.
+
+La durée, l'armure et les dégâts BKVince sont inchangés. Les dégâts calculés
+restent 8–10, 46–52,5, 100–111,5 et 250–271,5 aux niveaux 1, 10, 20 et 40.
+La riposte existante reste strictement `auraevent1=hitbymissile` avec
+`auraeventfunc1=1`; `auraevent2`, `auraeventfunc2`, `LineOfSight`,
+`SearchEnemyNear` et `ItemTarget` restent vides. La branche PD2 de riposte
+directe en mêlée n'est donc ni partiellement ni implicitement activée.
+
+La validation statique passe : les 17 tests du rapport exhaustif, `verify:data`,
+le contrôle ItemStatCost et le cadastre sont `VALID`; le rapport régénéré couvre
+603 lignes PD2 et 449 lignes BKVince sans ambiguïté, avec 5 034 différences de
+cellules `Skills.txt` sur les 349 paires nominales.
+
+Le déploiement runtime a synchronisé uniquement `skills.txt` et `skilldesc.txt`.
+Le rapport `analysis-cache/runtime-sync/20260808-224505557-apply.json` a le
+SHA-256
+`F10E00710DF7B0ED2859626A96893DE53A058DFC7B7A79D3D96BD2A20AFE7738`;
+le rollback récupérable se trouve sous
+`analysis-cache/runtime-sync-backups/20260808-224505557/`. Les hashes
+source/runtime des deux tables et d'ItemStatCost sont identiques après le cold
+start.
+
+Le cold start technique a terminé avec 16 plugins actifs sur 16, 18 patches
+mémoire appliqués sur 18 et 36 opérations PluginPack différées validées sur 36.
+Les logs frais ne contiennent aucune sévérité `ERROR`, `CRITICAL` ou `FATAL`,
+aucun plugin rejeté et aucun échec non nul. Les 1 280 lignes fraîches du log jeu
+ne citent ni `skills.txt`, ni `skilldesc.txt`, ni `ItemStatCost`, ni Chilling
+Armor et ne contiennent aucun assert, exception, crash ou motif fatal. Les 65
+avertissements de matériaux HD observés appartiennent au bruit asset déjà connu
+et ne concernent pas ce lot. L'unique processus lancé pour le test a ensuite été
+fermé.
+
+Cette preuve ferme l'implantation et le chargement technique, mais pas encore la
+validation fonctionnelle. Restent `not run` : rendu de l'infobulle, évolution du
+blocage avec et sans bouclier aux niveaux 1/10/20, interaction dextérité/niveau
+et plafond de 75 %, bonus de niveaux, transitions entre les trois armures,
+sauvegarde/respec/rechargement et témoin hôte/joiner. La compatibilité complète
+du PluginPack n'est pas revendiquée tant que toutes ses fonctions configurables
+ne sont pas actives. Le risque de migration de sauvegarde reste faible puisque
+la stat existait déjà et qu'aucun schéma persistant n'a changé.
 
 ## Static Field — package PD2 hybride D2R 3.2
 

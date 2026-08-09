@@ -38305,6 +38305,11 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
+                                                                                "name":  "apply-pd2-blizzard-prototype.js",
+                                                                                "path":  "scripts/migrate-bkvince/apply-pd2-blizzard-prototype.js",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "apply-pd2-inferno-shredder.js",
                                                                                 "path":  "scripts/migrate-bkvince/apply-pd2-inferno-shredder.js",
                                                                                 "kind":  "file"
