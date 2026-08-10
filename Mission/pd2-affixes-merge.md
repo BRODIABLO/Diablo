@@ -9,9 +9,9 @@ chantier distinct mené en parallèle, puis a donné la directive explicite
 `IMPLEMENTE`. Cette autorisation ouvre l'implantation du comparateur, du
 manifeste et des lots de données décrits ici.
 
-Ce chantier ne remplace pas la priorité courante : la qualification gameplay de
-`ProgressiveAffixesPlugin` demeure prioritaire. Les deux missions possèdent des
-responsabilités différentes :
+Ce chantier parallèle ne remplace jamais la priorité désignée par
+`Mission/CURRENT.md`. La qualification gameplay de `ProgressiveAffixesPlugin`
+reste indépendante, avec des responsabilités différentes :
 
 - `ProgressiveAffixesPlugin` gouverne le **nombre** de préfixes et suffixes
   générés selon la qualité, le niveau et le type d'objet ;
@@ -22,6 +22,14 @@ responsabilités différentes :
 La directive `IMPLEMENTE` n'autorise ni le remplacement intégral des tables
 BKVince, ni la copie indifférenciée de la source, ni la réinterprétation des IDs
 d'affixes déjà enregistrés dans des objets.
+
+Vincent a clarifié le 10 août 2026 que la sélection produit devait précéder
+toute importation : identifier ce que PD2 ajoute, modifie ou supprime, comparer
+chaque occurrence avec vanilla et BKVince, puis choisir explicitement. Le
+prototype AFM-01/02 précédemment appliqué et poussé a donc été retiré des tables
+de développement et du profil runtime. Il demeure uniquement une projection
+technique et une simulation historique ; **aucun de ses affixes n'est approuvé
+pour importation**.
 
 ## Objectif produit
 
@@ -61,8 +69,9 @@ doit jamais devenir un prétexte pour fusionner sa table entière.
   portent pas les propriétés des affixes ;
 - la progression du nombre d'affixes, possédée par
   `ProgressiveAffixesPlugin` ;
-- les affixes réservés aux maps, quivers ou autres systèmes absents de
-  BKVince ;
+- les affixes réservés aux maps ou autres systèmes absents de BKVince ; les
+  quivers ne sont pas dans cette catégorie, car `Arrows` et `Bolts` sont des
+  bases spawnable BKVince, mais leur nouveau pool exige une décision produit ;
 - une nouvelle DLL ou un patch mémoire ;
 - toute migration destructive de sauvegardes ou renumérotation d'IDs.
 
@@ -193,8 +202,8 @@ manifeste.
 
 ### AFM-01 — Premier lot de retunes ID-neutres
 
-- application démontrée : **214 cellules sur 71 lignes** de
-  `magicprefix.txt` et `magicsuffix.txt` ont été retunées en place ;
+- projection technique : **214 cellules sur 71 lignes** de
+  `magicprefix.txt` et `magicsuffix.txt`, désormais restaurées à la baseline ;
 - retenir seulement des changements de cellules sur des lignes BKVince
   existantes ;
 - publier les distributions avant/après par famille d'objets et `ilvl` ;
@@ -203,11 +212,11 @@ manifeste.
 
 ### AFM-02 — Nouveaux préfixes et suffixes append-only
 
-- application démontrée : **107 préfixes** aux IDs **743–849** et
-  **93 suffixes** aux IDs **795–887**, tous ajoutés après les records BKVince
-  existants ;
-- les localisations ajoutées comptent **72 entrées modernes** et **79 entrées
-  legacy** ;
+- projection technique retirée : **107 préfixes** aux IDs **743–849** et
+  **93 suffixes** aux IDs **795–887** avaient été ajoutés après les records
+  BKVince existants, puis restaurés avant toute utilisation par Vincent ;
+- les **72 localisations modernes** et **79 legacy** projetées ont également
+  été restaurées à la baseline ;
 - sélectionner uniquement des concepts complets, indépendants des systèmes
   exclus ;
 - fermer ItemTypes, Properties, stats, paramètres et localisations dans le
@@ -252,12 +261,30 @@ Les exclusions explicites de ce lot sont :
 
 ### Gate de simulation
 
-- [ ] Les distributions Magic et Rare sont publiées aux `ilvl` 1, 45, 65, 85
+- [x] Les distributions Magic et Rare sont publiées aux `ilvl` 1, 45, 65, 85
   et 99 pour chaque famille touchée.
-- [ ] Les groupes, fréquences, exclusions et bornes min/max sont comparés avant
+- [x] Les groupes, fréquences, exclusions et bornes min/max sont comparés avant
   et après sur un nombre d'échantillons déclaré.
 - [ ] Le gain produit annoncé est visible dans la mesure et aucune famille non
   ciblée ne change sans décision explicite.
+
+Le rapport gouverné `Mission/pd2-affixes-merge.distribution.json`, SHA-256
+`A9ACD5594E68DF4F18D2E7B6AE182B2FEE0B4C9BE41C7E5B909DF79FD574DC83`,
+compare les commits `756df5f5…` et `9a9c1a1f…`. Le modèle mesure un slot de
+préfixe ou suffixe pondéré ; le nombre de slots demeure la responsabilité de
+`ProgressiveAffixesPlugin`. Il couvre 64 familles concrètes, dont 43 changent
+et 21 restent identiques, sur 698 pools Magic/Rare. Les probabilités exactes
+sont contrôlées par 34 900 000 tirages déterministes, avec une erreur absolue
+maximale de `0,0103678`, sous la tolérance gouvernée de `0,02`. Les 71 lignes
+retunées et 200 lignes ajoutées sont toutes retrouvées, sans retrait.
+
+La revue produit reste ouverte : `bowq` et `xboq` passent d'un pool vide à un
+pool non vide, soit une distance de variation totale de `1`; les suffixes Rare
+des orbes atteignent `0,504854` au niveau 65 et les préfixes Rare de `helm`
+atteignent `0,432836`. Ces écarts sont mesurés, mais ne constituent pas encore
+une approbation gameplay. Les quivers existent réellement dans BKVince comme
+bases `Arrows` et `Bolts` spawnable ; ils ne peuvent donc plus être décrits
+comme un système absent.
 
 ### Gate runtime
 
@@ -273,6 +300,14 @@ Les exclusions explicites de ce lot sont :
   compatible par tombstone.
 - [ ] Solo, hôte et joiner produisent les mêmes pools avec des données
   identiques ; aucune désynchronisation ni assertion.
+
+Le prototype a connu un cold start technique, mais cette exécution est
+supersédée par la restauration demandée par Vincent. Les quatre fichiers du
+profil installé correspondent de nouveau aux baselines BKVince ; le jeu a été
+arrêté et le seul personnage témoin contrôlé `PDTwoAffixes` a été retiré du
+profil. Sa copie locale reste disponible uniquement comme preuve récupérable
+sous `analysis-cache/`. Tous les gates runtime restent donc ouverts jusqu'à ce
+qu'une sélection produit soit approuvée et réimplantée.
 
 ## Rollback
 
@@ -297,36 +332,47 @@ Les exclusions explicites de ce lot sont :
 - Architecture de fusion sélective, ID-stable et manifestée : **retenue**.
 - Source officielle PD2 S13 et miroir hash-gaté des trois tables :
   **équivalence structurée vérifiée**.
-- AFM-01 appliqué : **214 cellules sur 71 lignes** ; hash final de
-  `magicprefix.txt` :
-  `BBA62664DDAE7A93C748B6E1B8AE09819132A5D1D21BF838104E1AFBC2B3EBC8`.
-- AFM-02 appliqué : **107 préfixes aux IDs 743–849** et **93 suffixes aux IDs
-  795–887**, avec **72 localisations modernes** et **79 legacy** ; hash final
-  de `magicsuffix.txt` :
-  `128BA6DBF9438024274DED2D5F03597CF027D43D388DE6B538232DB5D57E956E`.
+- AFM-01 et AFM-02 : **prototypes retirés**. `magicprefix.txt` est restauré au
+  SHA-256 `9A720A7A551489C19EEDF05FE0AF14317B774FEA66F9F13B418B68B05DA4A232`
+  et `magicsuffix.txt` au SHA-256
+  `71725CF1C0AAD191BB35074474EA1B7E08558851D097B3B7283C72A9BE7B0C97`.
+- Localisations moderne et legacy : **restaurées** aux SHA-256
+  `EAAE1BB9A69A944D5E451CA26D0D299FEFD7F5FAF33FBFD5D1F7105102E4E998`
+  et `6A9166FDA2CB3C50F1280BFEB8BCCD3BF8D9D0C7F88A2E4ADA41808164EE2C55`.
 - AutoMagic : **différé** avec 26 cellules sur 7 lignes et 11 candidats encore
   soumis à ses collisions et gates propres ; `automagic.txt` demeure
   byte-identique, SHA-256
   `ACB99D4F703FEC5DC486144DD8856A1E8566EAC859FE49E526209E6604991C6A`.
-- Application aux tables et invariants statiques : **démontrés** — IDs et
-  fingerprints historiques préservés, sentinelles `Expansion` inchangées,
-  CRLF et round-trip gouverné verts.
-- Validations du merge : **7/7**, `npm run verify:data` vert, test affixes du
-  Hero Editor **3/3** et build Vite de production vert.
+- Tables de développement et runtime : **baseline BKVince restaurée**, CRLF et
+  round-trip gouverné verts ; aucun affixe PD2 importé n'est actif.
+- Revue de sélection : **2 117 occurrences** comparées dans
+  `Mission/pd2-affixes-review.html` et son JSON gouverné — 755 communes, 447
+  modifiées par PD2, 134 supprimées/désactivées par PD2, 129 propres à
+  BKVince, 71 retunes candidates, 200 nouveaux candidats techniquement
+  portables, 363 nouveaux non retenus automatiquement, et 18 AutoMagic
+  différés. Toutes les décisions d'import restent à `À décider`.
+- Validations de la revue et de l'oracle : **11/11**.
 - La suite Hero globale conserve **six attentes hors périmètre déjà décalées**
   dans les baselines belt/monsters/sets/properties ; ce blocage n'est pas une
   régression du merge d'affixes.
 - AdvancedItemTooltips : build Release vert, CTest **6/6** et témoin BKVince
   **1/1**.
-- Simulation gameplay, validation runtime, sauvegarde/rechargement et
-  hôte/joiner : **encore ouverts**.
-- Priorité courante : **ProgressiveAffixesPlugin**, inchangée.
+- Distribution statique : **publiée et reproductible** — 64 familles, 698
+  pools modifiés et 34 900 000 tirages de contrôle ; le test de merge passe
+  désormais **8/8**.
+- Déploiement du prototype : **retiré** ; profil runtime revenu aux quatre
+  hashes de baseline et témoin contrôlé retiré sans toucher aux personnages de
+  Vincent.
+- Sélection produit, nouvelle implantation, validation runtime,
+  sauvegarde/rechargement et hôte/joiner : **encore ouverts**.
+- Positionnement : **chantier parallèle** ; `Mission/CURRENT.md` demeure
+  inchangé par ce workstream.
 
 ## Prochain gate
 
-Publier et valider les distributions/simulations gameplay, puis exécuter la
-matrice runtime avec la pile complète : anciens objets, nouveaux témoins
-Magic/Rare/Crafted, sauvegarde/rechargement et hôte/joiner. Aucun résultat
-gameplay ni aucune compatibilité de sauvegarde ne sera déclaré avant ces
-preuves. AFM-03 reste différé jusqu'à la fermeture explicite de ses collisions
-et gates propres.
+Vincent examine `Mission/pd2-affixes-review.html`, filtre par statut et choisit
+pour chaque occurrence `Importer PD2`, `Garder BKVince`, `Exclure` ou
+`À discuter`, puis exporte `pd2-affixes-decisions.json`. L'agent valide ensuite
+les dépendances et l'impact uniquement des lignes approuvées, présente le lot
+exact et attend une nouvelle autorisation avant toute mutation gameplay. Aucun
+runtime ne reprend avant ce gate. AFM-03 reste séparé et différé.

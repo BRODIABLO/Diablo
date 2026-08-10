@@ -142,13 +142,13 @@ Blanched	100	0		1	15	1				4	101	ac		5	8									whit	jewl												0	0
 Eburin	100	0		16	31	12				4	101	ac		9	20									whit	jewl												0	0
 Bone	100	0		32		24				4	101	ac		21	40									whit	jewl												0	0
 Ivory	100	0		64		56				4	101	ac		41	64									whit	jewl												0	0
-Sturdy	1	1	1	1	3	1				14	101	ac%		10	20										armo												0	0
-Sturdy	1	1	1	4	8	3				14	101	ac%		21	30										armo												0	0
-Strong	1	1	1	9	19	6				12	101	ac%		31	40										armo												0	0
-Glorious	1	1	1	19	25	14				12	101	ac%		41	50										armo												0	0
-Blessed	1	1	1	25	31	18				11	101	ac%		51	65										armo												0	0
-Saintly	1	1	1	31	36	23				11	101	ac%		66	80									dgld	armo												0	0
-Holy	1	1	1	36	45	27				9	101	ac%		81	100									dgld	armo												0	0
+Sturdy	1	1	1	1	3	1				9	101	ac%		10	20										armo												0	0
+Sturdy	1	1	1	4	8	3				9	101	ac%		21	30										armo												0	0
+Strong	1	1	1	9	19	6				8	101	ac%		31	40										armo												0	0
+Glorious	1	1	1	19	25	14				8	101	ac%		41	50										armo												0	0
+Blessed	1	1	1	25	31	18				7	101	ac%		51	65										armo												0	0
+Saintly	1	1	1	31	36	23				7	101	ac%		66	80									dgld	armo												0	0
+Holy	1	1	1	36	45	27				6	101	ac%		81	100									dgld	armo												0	0
 Godly	100	1		45	49	38				3	101	ac%		101	200									dgld	armo												0	0
 Devious	1	0	1	7		5				5	102	red-mag		1	1										shld	circ	orb	wand	staf								0	0
 Blank	1	0	1	14		10				4	102	red-mag		2	2										shld	circ	orb	wand	staf								0	0
@@ -613,40 +613,40 @@ Serrated	100	1		67		59				4	104	dmg-max		3	3									blac	lcha												0	0
 Jagged	100	1	1	22		16				4	104	dmg-max		1	1									blac	mcha												0	0
 Forked	100	1		52		44				4	104	dmg-max		2	2									blac	mcha												0	0
 Jagged	100	1	1	81		73				4	104	dmg-max		1	1									blac	scha												0	0
-Snowflake	100	1	1	27	14	20				2	137	cold-len		25	25	cold-min		3	5	cold-max		5	11		lcha												0	0
-Shivering	100	1	1	42	29	34				1	137	cold-len		25	25	cold-min		8	11	cold-max		12	22		lcha												0	0
+Snowflake	100	1	1	9	14	6				2	137	cold-len		25	25	cold-min		1	1	cold-max		2	3		lcha												0	0
+Shivering	100	1	1	15	29	11				1	137	cold-len		25	25	cold-min		2	4	cold-max		4	8		lcha												0	0
 Boreal	100	1	1	30		22				1	137	cold-len		25	25	cold-min		5	7	cold-max		9	15	lblu	lcha												0	0
 Hibernal	100	1		45		38				1	137	cold-len		25	25	cold-min		8	13	cold-max		16	25	lblu	lcha												0	0
-Snowflake	100	1	1	18	28	13				2	137	cold-len		25	25	cold-min		2	4	cold-max		4	8		mcha												0	0
-Shivering	100	1	1	29	48	21				1	137	cold-len		25	25	cold-min		6	8	cold-max		10	16		mcha												0	0
-Boreal	100	1	1	49		41				1	137	cold-len		25	25	cold-min		12	16	cold-max		20	30	lblu	mcha												0	0
-Hibernal	100	1		69		61				1	137	cold-len		25	25	cold-min		22	26	cold-max		40	54	lblu	mcha												0	0
-Snowflake	100	1	1	9	41	6				2	137	cold-len		25	25	cold-min		1	2	cold-max		2	4		scha												0	0
-Shivering	100	1	1	15	65	11				1	137	cold-len		25	25	cold-min		3	4	cold-max		5	8		scha												0	0
+Snowflake	100	1	1	18	28	13				2	137	cold-len		25	25	cold-min		2	3	cold-max		3	5		mcha												0	0
+Shivering	100	1	1	29	48	21				1	137	cold-len		25	25	cold-min		4	5	cold-max		6	10		mcha												0	0
+Boreal	100	1	1	49		41				1	137	cold-len		25	25	cold-min		6	10	cold-max		11	20	lblu	mcha												0	0
+Hibernal	100	1		69		61				1	137	cold-len		25	25	cold-min		11	15	cold-max		21	30	lblu	mcha												0	0
+Snowflake	100	1	1	27	41	20				2	137	cold-len		25	25	cold-min		1	2	cold-max		2	4		scha												0	0
+Shivering	100	1	1	42	65	34				1	137	cold-len		25	25	cold-min		3	4	cold-max		5	8		scha												0	0
 Boreal	100	1	1	66		58				1	137	cold-len		25	25	cold-min		5	7	cold-max		9	14	lblu	scha												0	0
 Hibernal	100	1		91		83				1	137	cold-len		25	25	cold-min		8	10	cold-max		15	20	lblu	scha												0	0
-Ember	100	1	1	21	14	15				2	138	fire-min		1	1	fire-max		2	3						lcha												0	0
-Smoldering	100	1	1	40	27	32				1	138	fire-min		5	8	fire-max		11	27						lcha												0	0
+Ember	100	1	1	5	14	3				2	138	fire-min		1	1	fire-max		2	3						lcha												0	0
+Smoldering	100	1	1	15	27	11				1	138	fire-min		2	3	fire-max		4	7						lcha												0	0
 Smoking	100	1	1	28		21				1	138	fire-min		4	7	fire-max		8	19					lred	lcha												0	0
 Flaming	100	1		43		35				1	138	fire-min		8	18	fire-max		20	36					lred	lcha												0	0
-Ember	100	1	1	13	26	9				2	138	fire-min		2	2	fire-max		4	6						mcha												0	0
-Smoldering	100	1	1	27	46	20				1	138	fire-min		4	6	fire-max		8	20						mcha												0	0
-Smoking	100	1	1	47		39				1	138	fire-min		8	18	fire-max		22	38					lred	mcha												0	0
-Flaming	100	1		67		59				1	138	fire-min		20	38	fire-max		40	58					lred	mcha												0	0
-Ember	100	1	1	5	39	3				2	138	fire-min		1	1	fire-max		2	3						scha												0	0
-Smoldering	100	1	1	15	63	11				1	138	fire-min		2	3	fire-max		4	10						scha												0	0
+Ember	100	1	1	13	26	9				2	138	fire-min		1	1	fire-max		2	3						mcha												0	0
+Smoldering	100	1	1	27	46	20				1	138	fire-min		2	3	fire-max		4	12						mcha												0	0
+Smoking	100	1	1	47		39				1	138	fire-min		4	9	fire-max		13	27					lred	mcha												0	0
+Flaming	100	1		67		59				1	138	fire-min		10	27	fire-max		28	43					lred	mcha												0	0
+Ember	100	1	1	21	39	15				2	138	fire-min		1	1	fire-max		2	3						scha												0	0
+Smoldering	100	1	1	40	63	32				1	138	fire-min		2	3	fire-max		4	10						scha												0	0
 Smoking	100	1	1	64		56				1	138	fire-min		4	9	fire-max		11	19					lred	scha												0	0
 Flaming	100	1		89		81				1	138	fire-min		10	19	fire-max		20	29					lred	scha												0	0
-Static	100	1	1	23	13	17				2	139	ltng-min		1	1	ltng-max		16	30						lcha												0	0
-Glowing	100	1	1	41	28	33				1	139	ltng-min		1	1	ltng-max		22	46						lcha												0	0
+Static	100	1	1	7	13	5				2	139	ltng-min		1	1	ltng-max		4	5						lcha												0	0
+Glowing	100	1	1	14	28	10				1	139	ltng-min		1	1	ltng-max		6	17						lcha												0	0
 Arcing	100	1	1	29		21				1	139	ltng-min		1	1	ltng-max		18	44					whit	lcha												0	0
 Shocking	100	1		44		36				1	139	ltng-min		1	1	ltng-max		45	79					whit	lcha												0	0
-Static	100	1	1	14	27	10				2	139	ltng-min		1	1	ltng-max		12	22						mcha												0	0
-Glowing	100	1	1	28	47	20				1	139	ltng-min		1	1	ltng-max		16	34						mcha												0	0
-Arcing	100	1	1	48		40				1	139	ltng-min		1	1	ltng-max		34	60					whit	mcha												0	0
-Shocking	100	1		68		60				1	139	ltng-min		1	1	ltng-max		62	100					whit	mcha												0	0
-Static	100	1	1	7	40	5				2	139	ltng-min		1	1	ltng-max		6	11						scha												0	0
-Glowing	100	1	1	14	64	10				1	139	ltng-min		1	1	ltng-max		8	17						scha												0	0
+Static	100	1	1	14	27	10				2	139	ltng-min		1	1	ltng-max		5	9						mcha												0	0
+Glowing	100	1	1	28	47	20				1	139	ltng-min		1	1	ltng-max		10	26						mcha												0	0
+Arcing	100	1	1	48		40				1	139	ltng-min		1	1	ltng-max		27	58					whit	mcha												0	0
+Shocking	100	1		68		60				1	139	ltng-min		1	1	ltng-max		59	90					whit	mcha												0	0
+Static	100	1	1	23	40	17				2	139	ltng-min		1	1	ltng-max		6	11						scha												0	0
+Glowing	100	1	1	41	64	33				1	139	ltng-min		1	1	ltng-max		12	24						scha												0	0
 Arcing	100	1	1	65		57				1	139	ltng-min		1	1	ltng-max		25	43					whit	scha												0	0
 Shocking	100	1		90		82				1	139	ltng-min		1	1	ltng-max		44	71					whit	scha												0	0
 Septic	100	1	1	1		1				2	140	dmg-pois	75	18	18										lcha												0	0
@@ -742,110 +742,3 @@ Numbing	100	1	1	42		42				2	201	pierce-cold		3	3										mcha												0	0
 Inferno	100	1	1	42		42				2	201	pierce-fire		3	3										mcha												0	0
 Infectious	100	1	1	42		42				2	201	pierce-pois		3	3										mcha												0	0
 White	100	1	1	42		42				2	201	pierce-mag		3	3										mcha												0	0
-Blood Letting	1	1	1	13	53	12				3	200	heal-kill		1	2										weap	circ	tors	helm	shld	misl	glov						0	0
-Murderous	100	1	1	51		44				1	200	heal-kill		3	5										weap	circ	tors	helm	shld	misl	glov						0	0
-Blood Sucking	100	1	1	32		26				2	200	heal-kill		2	3										jewl	tors	helm	shld	weap	misl	glov						0	0
-Discharging	100	1	1	28		28				3	201	extra-ltng		2	3										mcha												0	0
-Frigid	100	1	1	28		28				3	201	extra-cold		2	3										mcha												0	0
-Wildfire	100	1	1	28		28				3	201	extra-fire		2	3										mcha												0	0
-Malicious	100	1	1	28		28				3	201	extra-pois		2	3										mcha												0	0
-Conduit	100	1	1	42		42				3	201	extra-ltng		3	3										mcha												0	0
-Numbing	100	1	1	42		42				2	201	extra-cold		3	3										mcha												0	0
-Inferno	100	1	1	42		42				2	201	extra-fire		3	3										mcha												0	0
-Infectious	100	1	1	42		42				2	201	extra-pois		3	3										mcha												0	0
-Visceral	100	1	1	75		69				2	105	dmg%		301	400									blac	knif	club	mace	tkni	taxe	aspe							0	0
-Divine	100	1	1	45		37				1	142	att-undead		326	450	dmg-undead		276	350					lgld	miss												0	0
-Celestial	100	1	1	55		41				1	123	att-demon		301	400	dmg-demon		201	300					dgld	miss												0	0
-Grandmaster's	100	1	1	69		61				4	111	att		251	300	dmg%		151	200					dgld	miss												0	0
-Supporting	1	1	1	25		18				2	105	dmg%		10	20										tors	shld											0	0
-Reinforcing	1	1	1	35		28				2	105	dmg%		20	40										tors	shld											0	0
-Empowering	1	1	1	45		38				2	105	dmg%		40	60										tors	shld											0	0
-Bolstering	1	1	1	55		48				2	105	dmg%		60	80										tors	shld											0	0
-Fortifying	1	1	1	65		58				2	105	dmg%		80	120										tors	shld											0	0
-Embattled	1	1	1	75		68				2	105	dmg%		120	160										tors	shld											0	0
-Rampaging	1	1	1	85		78				1	105	dmg%		160	200										tors												0	0
-Lancer's	100	1	1	60		45	ama			1	125	skilltab	2	3	3									lgld	aspe												0	0
-Archer's	100	1	1	60		45	ama			1	125	skilltab	0	3	3									lgld	miss												0	0
-Lancer's	100	1		60		45	ama			1	125	skilltab	2	3	3									lgld	circ	glov											0	0
-Maiden's	1	1	1	36		27	ama			1	125	ama		1	1										tors	shld	helm										0	20000
-Monk's	1	1	1	36		27	pal			1	125	pal		1	1										tors	shld	helm										0	20000
-Summoner's	1	1	1	36		27	nec			1	125	nec		1	1										tors	shld	helm										0	20000
-Angel's	1	1	1	36		27	sor			1	125	sor		1	1										tors	shld	helm										0	20000
-Slayer's	1	1	1	36		27	bar			1	125	bar		1	1										tors	shld	helm										0	20000
-Shaman's	100	1	1	36		27	dru			1	125	dru		1	1										tors	shld	helm										0	20000
-Magekiller's	100	1	1	36		27	ass			1	125	ass		1	1										tors	shld	helm										0	20000
-Cerulean	100	1	1	49		41				2	115	mana		21	30									cblu	jewl												0	0
-Lancer's	100	1		60		45	ama			1	125	skilltab	2	3	3									lgld	amul												0	0
-Strange	100	1		32		24				5	110	att		151	300									lgld	misl												0	0
-Unearthly	100	1		25		18				1	123	att-demon		101	150	dmg-demon		51	100						misl												0	0
-Plague	100	1	1	50		37				1	140	dmg-pois	150	626	626									dgrn	weap	misl						orb	staf	wand			0	0
-Savage	1	1		26		19				7	105	dmg%		66	80									dgld	misl												0	0
-Cardinal	100	1	1	38		30				4	103	dmg-min		10	14									dred	jewl	misl											0	0
-Penetrating	100	1	1	15		10				4	143	pierce		5	10										misl												0	0
-Puncturing	100	1	1	30		25				3	143	pierce		11	20										misl												0	0
-Piercing	100	1	1	45		40				2	143	pierce		21	30										misl												0	0
-Impaling	100	1		60		55				2	143	pierce		31	40										misl												0	0
-Devout	100	1	1	3		1				4	142	att-undead		25	50	dmg-undead		10	25						misl												0	0
-Consecrated	100	1	1	15		11				4	142	att-undead		25	75	dmg-undead		25	75						misl												0	0
-Pure	100	1		25		18				3	142	att-undead		76	175	dmg-undead		76	125					lgld	misl												0	0
-Crimson	100	1	1	38		30				4	103	dmg-min		5	8									dred	misl												0	0
-Serpent's	1	1	1	14		10				3	115	mana		11	20										ring	amul	belt										0	0
-Serpent's	1	1	1	37		27				2	115	mana		11	20										boot	glov											0	0
-Jagged	1	1	1	1		1				9	105	dmg%		10	20										misl							staf	wand	orb			0	0
-Deadly	1	1	1	5		3				9	105	dmg%		21	30										misl							staf	wand	orb			0	0
-Vicious	1	1	1	8		6				8	105	dmg%		31	40										misl							staf	wand	orb			0	0
-Brutal	1	1	1	14		10				8	105	dmg%		41	50										misl							staf	wand	orb			0	0
-Massive	1	1	1	20		15				7	105	dmg%		51	65									dgld	misl							staf	wand	orb			0	0
-Assamic	100	1	1	3	43	1				2	123	att-demon		25	50	dmg-demon		10	25						misl							wand	orb				0	0
-Arcadian	100	1	1	15	55	11				2	123	att-demon		51	100	dmg-demon		26	50						misl							wand	orb				0	0
-Ember	100	1	1	25	65	18				3	138	fire-min		16	25	fire-max		31	60					dred	circ												0	0
-Snowflake	100	1	1	25	65	18				3	137	cold-len		25	25	cold-min		6	9	cold-max		19	30	lblu	circ												0	0
-Decaying	100	1	1	10	29	9				2	171	pierce-pois		2	4										jave	wand	assn										0	0
-Festering	100	1	1	30	59	26				2	171	pierce-pois		4	6										jave	wand	assn										0	0
-Necrotic	100	1	1	60		53				2	171	pierce-pois		6	10										jave	wand	assn										0	0
-Sizzling	100	1	1	10	29	8				2	171	pierce-fire		3	6										staf												0	0
-Singeing	100	1	1	30	59	26				2	171	pierce-fire		6	10										staf												0	0
-Infernal	100	1	1	60		53				2	171	pierce-fire		10	15										staf												0	0
-Frigid	100	1	1	10	29	8				2	171	pierce-cold		3	6										staf												0	0
-Frostbitten	100	1	1	30	59	26				2	171	pierce-cold		6	10										staf												0	0
-Subzero	100	1	1	60		53				2	171	pierce-cold		10	15										staf												0	0
-Crackling	100	1	1	10	29	8				2	171	pierce-ltng		3	6										staf	aspe											0	0
-Jolting	100	1	1	30	59	26				2	171	pierce-ltng		6	10										staf	aspe											0	0
-Surging	100	1	1	60		53				2	171	pierce-ltng		10	15										staf	aspe											0	0
-Felicitous	100	1	1	26		3				4	114	mag%		5	10										jewl												0	0
-Fortuitous	1	1	1	46		8				4	114	mag%		11	15										jewl												0	0
-Drake's	1	1	1	49		41				2	115	mana		21	30										jewl												0	0
-Tricky	1	1	1	29		21				3	107	dmg-to-mana		13	20									cblu	shld	amul	orb	staf									0	0
-Devious	1	1	1	49		41				3	107	dmg-to-mana		21	30									cblu	shld	amul	orb	staf									0	0
-Swift	100	1	1	28		28				3	202	swing2		4	5										mcha												0	0
-Quick	100	1	1	42		42				2	202	swing2		6	7										mcha												0	0
-Arcane	100	1	1	28		28				3	202	cast2		3	4										mcha												0	0
-Mystic	100	1	1	42		42				2	202	cast2		5	6										mcha												0	0
-Siphoning	100	1	1	38		55				5	121	mana-kill		5	8										orb	staf	wand										0	0
-Lifeforged	100	1	1	38		55				5	121	heal-kill		5	8										orb	staf	wand										0	0
-Ruby	1	1	1	25		18				3	118	res-fire		31	40									lred	shld												0	0
-Sapphire	1	1	1	25		18				3	117	res-cold		31	40									lblu	shld												0	0
-Amber	1	1	1	25		18				3	119	res-ltng		31	40									lyel	shld												0	0
-Emerald	1	1	1	25		18				3	120	res-pois		31	40									cgrn	shld												0	0
-Relentless	100	1	1	18	58	15				2	203	deadly		5	10										helm												0	0
-Rending	100	1	1	28		25				2	203	deadly		10	15										helm												0	0
-Rending	100	1	1	28		25				2	203	deadly		4	7										glov												0	0
-Ruthless	100	1	1	38		35				2	203	deadly		15	20										helm												0	0
-Ruthless	100	1	1	38		35				2	203	deadly		7	10										glov												0	0
-Cracking	100	1	1	18	58	15				2	203	crush		5	10										helm												0	0
-Shattering	100	1	1	28		25				2	203	crush		10	15										helm												0	0
-Shattering	100	1	1	28		25				2	203	crush		4	7										glov												0	0
-Sundering	100	1	1	38		35				2	203	crush		15	20										helm												0	0
-Sundering	100	1	1	38		35				2	203	crush		7	10										glov												0	0
-Angel's	1	1	1	30		22	sor			4	125	sor		1	1										orb												0	0
-Arch-Angel's	1	1	1	50		42	sor			2	125	sor		2	2									cgrn	orb												0	0
-Triumphant	1	1	1	3		2				4	121	mana-kill		1	2										ring	amul											0	0
-Victorious	100	1	1	17		12				4	121	mana-kill		3	5										ring	amul											0	0
-Aureolin	100	1	1	12		9				4	121	mana-kill		2	3										ring	amul											0	0
-Blood Letting	1	1	1	13		12				3	200	heal-kill		1	2										ring	amul											0	0
-Murderous	100	1	1	51		44				1	200	heal-kill		3	5										ring	amul											0	0
-Blood Sucking	100	1	1	32		26				2	200	heal-kill		2	3										ring	amul											0	0
-Slayer's	1	1	1	30		22	bar			4	125	bar		1	1										jave												0	0
-Berserker's	1	1	1	50		42	bar			1	125	bar		2	2									cgrn	jave												0	0
-Jagged	1	1	1	21		17				9	105	dmg%		10	20										helm												0	0
-Deadly	1	1	1	41		34				9	105	dmg%		21	30										helm												0	0

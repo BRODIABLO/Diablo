@@ -553,7 +553,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/pd2-affixes-merge.md",
-      "nextGate": "AFM-01 and AFM-02 are applied with stable legacy IDs and green static consumers. Keep ProgressiveAffixesPlugin as the current priority; next publish before/after pool distributions, then qualify gameplay, old and new save/reload witnesses, and host/joiner before closing this workstream. AutoMagic remains deferred to AFM-03.",
+      "nextGate": "The AFM-01/02 prototype is rolled back from development and runtime; all four files match the pre-merge BKVince baselines and no PD2 affix is approved. Vincent reviews the governed 2,117-entry comparison, including PD2 additions, modifications and deletions, then exports explicit import/keep/exclude/discuss decisions. Only that approved subset may proceed to dependency closure and a new implementation gate. Do not displace Mission/CURRENT.md; AutoMagic remains deferred.",
       "include": [
         "Mission/pd2-affixes-merge*",
         "scripts/*pd2-affix*/**",

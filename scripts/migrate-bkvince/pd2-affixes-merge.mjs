@@ -291,6 +291,13 @@ function sourceRootFromArgs(args) {
   );
 }
 
+function targetExcelRootFromArgs(args) {
+  const option = args.find((arg) => arg.startsWith('--target-excel-root='));
+  return option
+    ? path.resolve(option.slice('--target-excel-root='.length))
+    : targetExcelRoot;
+}
+
 function verifySourceTable(name, loaded, expected) {
   const acceptedHashes = [expected.officialSha256, expected.mirrorSha256].filter(Boolean);
   assert(
@@ -1266,7 +1273,7 @@ export function transactionalWriteFiles(operations) {
   }
 }
 
-function loadInputs(sourceRoot, catalog) {
+function loadInputs(sourceRoot, catalog, resolvedTargetExcelRoot = targetExcelRoot) {
   const source = {};
   const vanilla = {};
   const target = {};
@@ -1278,7 +1285,7 @@ function loadInputs(sourceRoot, catalog) {
       vanilla[name].sha256 === catalog.vanillaBaseline[name],
       `${name}: vanilla baseline hash drift`,
     );
-    target[name] = loadTable(targetExcelRoot, name);
+    target[name] = loadTable(resolvedTargetExcelRoot, name);
   }
 
   const sourceProperties = loadTable(sourceRoot, 'properties.txt');
@@ -1287,9 +1294,9 @@ function loadInputs(sourceRoot, catalog) {
   verifySourceTable('properties.txt', sourceProperties, catalog.source.tables['properties.txt']);
   verifySourceTable('itemtypes.txt', sourceItemTypes, catalog.source.tables['itemtypes.txt']);
   verifySourceTable('itemstatcost.txt', sourceItemStats, catalog.source.tables['itemstatcost.txt']);
-  const targetProperties = loadTable(targetExcelRoot, 'properties.txt');
-  const targetItemTypes = loadTable(targetExcelRoot, 'itemtypes.txt');
-  const targetItemStats = loadTable(targetExcelRoot, 'itemstatcost.txt');
+  const targetProperties = loadTable(resolvedTargetExcelRoot, 'properties.txt');
+  const targetItemTypes = loadTable(resolvedTargetExcelRoot, 'itemtypes.txt');
+  const targetItemStats = loadTable(resolvedTargetExcelRoot, 'itemstatcost.txt');
   for (const [name, loaded] of Object.entries({
     'properties.txt': targetProperties,
     'itemtypes.txt': targetItemTypes,
@@ -1458,13 +1465,22 @@ export function run(argv = process.argv.slice(2)) {
   const audit = argv.includes('--audit');
   const check = argv.includes('--check') || (!apply && !audit);
   assert([apply, audit, check].filter(Boolean).length === 1, 'Choose exactly one of --apply, --audit or --check');
+  assert(
+    !apply || catalog.status === 'implementation_approved',
+    'Affix import is not approved; complete and govern the selection review first',
+  );
   if (check) {
     checkFinal(catalog);
     return;
   }
 
   const sourceRoot = sourceRootFromArgs(argv);
-  const inputs = loadInputs(sourceRoot, catalog);
+  const resolvedTargetExcelRoot = targetExcelRootFromArgs(argv);
+  assert(
+    !apply || resolvedTargetExcelRoot === targetExcelRoot,
+    '--target-excel-root is audit-only and cannot redirect writes',
+  );
+  const inputs = loadInputs(sourceRoot, catalog, resolvedTargetExcelRoot);
   const { prepared, localization, properties } = prepareMerge(inputs, catalog);
   const selectionSha256 = buildSelectionFingerprint(prepared);
   const summary = outputSummary(prepared, localization, catalog);
@@ -1476,6 +1492,7 @@ export function run(argv = process.argv.slice(2)) {
     generatedAt: new Date().toISOString(),
     mode: apply ? 'apply' : 'audit',
     sourceRoot,
+    targetExcelRoot: resolvedTargetExcelRoot,
     sourceHashes: Object.fromEntries(Object.entries(inputs.source).map(([name, value]) => [name, value.sha256])),
     propertyAudit: {
       compatible: properties.compatible.size,
@@ -1502,6 +1519,7 @@ export function run(argv = process.argv.slice(2)) {
   console.log(JSON.stringify({
     mode: report.mode,
     sourceRoot,
+    targetExcelRoot: resolvedTargetExcelRoot,
     selectionSha256,
     summary,
     report: parseReportPath(argv),

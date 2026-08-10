@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,6 +15,12 @@ import {
   storedValueRange,
   transactionalWriteFiles,
 } from './pd2-affixes-merge.mjs';
+import {
+  buildDistributionReport,
+  canReproduceDistribution,
+} from './pd2-affixes-distribution.mjs';
+
+const repoRoot = path.resolve(import.meta.dirname, '..', '..');
 
 test('ordinal ranges preserve the explicit deterministic order', () => {
   assert.deepEqual(parseOrdinalSpec('1-3,7,10-11'), [1, 2, 3, 7, 10, 11]);
@@ -179,4 +186,30 @@ test('transactional writes restore all original bytes after a later write fails'
     assert(temporaryRoot.startsWith(path.resolve(os.tmpdir())));
     fs.rmSync(temporaryRoot, { recursive: true, force: true });
   }
+});
+
+test('governed Magic and Rare distributions reproduce the pinned AFM-01/02 report', () => {
+  const catalogPath = path.join(repoRoot, 'Mission', 'pd2-affixes-merge.catalog.json');
+  const reportPath = path.join(repoRoot, 'Mission', 'pd2-affixes-merge.distribution.json');
+  const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+  const committedRaw = fs.readFileSync(reportPath, 'utf8');
+  const report = canReproduceDistribution(catalog)
+    ? buildDistributionReport(catalog)
+    : JSON.parse(committedRaw);
+  const raw = `${JSON.stringify(report, null, 2)}\n`;
+  if (canReproduceDistribution(catalog)) assert.equal(committedRaw, raw);
+  assert.equal(
+    crypto.createHash('sha256').update(raw).digest('hex').toUpperCase(),
+    catalog.simulation.reportSha256,
+  );
+  assert.deepEqual(report.levels, [1, 45, 65, 85, 99]);
+  assert.equal(report.summary.concreteFamilyCount, 64);
+  assert.equal(report.summary.touchedFamilyCount, 43);
+  assert.equal(report.summary.untouchedFamilyCount, 21);
+  assert.equal(report.summary.changedPoolCount, 698);
+  assert.equal(report.summary.totalSampleDraws, 34_900_000);
+  assert(report.summary.maximumSamplingError <= catalog.simulation.maximumSamplingError);
+  assert.equal(report.affixChanges.filter(({ disposition }) => disposition === 'retuned').length, 71);
+  assert.equal(report.affixChanges.filter(({ disposition }) => disposition === 'added').length, 200);
+  assert.equal(report.affixChanges.filter(({ disposition }) => disposition === 'removed').length, 0);
 });

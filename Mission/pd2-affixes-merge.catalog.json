@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "catalogId": "pd2-affixes-merge",
   "updatedAt": "2026-08-10",
-  "status": "implementation",
+  "status": "selection_review_no_import_approved",
   "source": {
     "layer": "pd2_core",
     "season": "13 Betrayal",
@@ -224,6 +224,40 @@
       "automagic.txt": "ACB99D4F703FEC5DC486144DD8856A1E8566EAC859FE49E526209E6604991C6A",
       "modernLocalization": "A5EDACC6DE8757B0C2CD6C1E9A29532335162906E4C4D6442ED83B105CE536B8",
       "legacyLocalization": "4D607E60B949BC50E2B39D13CD797F8A78857D90436D0CE61F3ADED8E0EBB2CE"
+    }
+  },
+  "review": {
+    "state": "review_only_no_import_approved",
+    "entries": 2117,
+    "counts": {
+      "shared": 755,
+      "pd2_modified": 447,
+      "retune_deferred": 7,
+      "pd2_new_deferred": 11,
+      "pd2_new_review": 363,
+      "bkv_only": 129,
+      "pd2_deleted": 134,
+      "retune_candidate": 71,
+      "pd2_new_portable": 200
+    },
+    "jsonSha256": "4B72B64D76EAABE0E360C5C8342F76CAD41FDD52283D9C3C0E38C1BF93570681",
+    "htmlSha256": "B8961B0D608DB593C540165D7CC7B7CD497085F25740D3C05C69CF150A7AEB54"
+  },
+  "simulation": {
+    "beforeCommit": "756df5f53109729f16643b36aa459fead4cdbf94",
+    "afterCommit": "9a9c1a1f518f41ed5562a265f4974f69efd26aa8",
+    "levels": [1, 45, 65, 85, 99],
+    "drawsPerChangedPool": 25000,
+    "seed": "RuffnecKk/pd2-affixes-merge/afm-01-02/v1",
+    "maximumSamplingError": 0.02,
+    "reportSha256": "A9ACD5594E68DF4F18D2E7B6AE182B2FEE0B4C9BE41C7E5B909DF79FD574DC83",
+    "expectedSummary": {
+      "concreteFamilyCount": 64,
+      "touchedFamilyCount": 43,
+      "untouchedFamilyCount": 21,
+      "changedPoolCount": 698,
+      "drawsPerChangedPoolAndSide": 25000,
+      "totalSampleDraws": 34900000
     }
   },
   "credits": [
