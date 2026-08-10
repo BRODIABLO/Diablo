@@ -20,21 +20,25 @@ Description publique :
 ## Objectif joueur
 
 Rendre configurable la progression du nombre d’affixes générés pour les objets
-Magic, Rare et Crafted, par catégories ordonnées de codes `itemtypes.txt`. Le
-TOML livré reproduit par défaut la progression Project Diablo 2 :
+Magic, Rare et Crafted avec un TOML directement compréhensible par un joueur.
+Le profil v0.2.0 conserve les seuils PD2 comme base, mais fait progresser les
+Rare Jewels depuis leur distribution vanilla jusqu’au maximum :
 
 - Magic : deux affixes garantis pour armes/armures à ilvl 65, jewels/jewelry à
   85 et charms à 90 ;
-- Rare jewels : quatre affixes garantis ;
-- autres Rare : poids `1/3/3/1` pour 3/4/5/6 à ilvl 1, `0/1/2/1` à 45,
-  `0/0/1/1` à 65 et six garantis à 85 ;
-- Crafted : poids `2/1/1/1` pour 1/2/3/4 à ilvl 1, `0/3/1/1` à 31,
-  `0/0/4/1` à 51 et quatre garantis à 71, en plus des propriétés fixes de la
+- Rare Jewels : chances 3/4 affixes de `50/50` à ilvl 1, `37.5/62.5` à 45,
+  `25/75` à 65 et quatre garantis à 85 ;
+- autres Rare : chances 3/4/5/6 de `12.5/37.5/37.5/12.5` à ilvl 1,
+  `0/25/50/25` à 45, `0/0/50/50` à 65 et six garantis à 85 ;
+- Crafted : chances 1/2/3/4 de `40/20/20/20` à ilvl 1, `0/60/20/20` à 31,
+  `0/0/80/20` à 51 et quatre garantis à 71, en plus des propriétés fixes de la
   recette.
 
-Les catégories sont évaluées dans l’ordre de déclaration. Un fallback `*`
-termine chaque qualité configurée. Les poids sont des entiers exacts, sans
-arrondi flottant.
+Le format joueur expose uniquement `[magic]`, `[rare_jewels]`,
+`[regular_rare_items]` et `[crafted]`. Chaque ligne `from_level_N` contient des
+pourcentages totalisant exactement 100, convertis en centièmes de pourcentage
+sans arrondi flottant. Le parseur accepte toujours le format avancé v0.1.0 à
+catégories ordonnées et poids entiers, mais refuse de mélanger les deux formats.
 
 ## Preuves natives gouvernées
 
@@ -65,6 +69,11 @@ des cinq DLL ne possède les surfaces ci-dessous.
 Les signatures exactes des fonctions, prologues, calls et blocs écrits sont
 vérifiées avant toute allocation ou écriture. Un ancien patch force-max, un
 autre propriétaire ou un build différent provoque un refus fail-closed.
+
+La branche Rare Jewel native à `0x58BC65` calcule le compte avec un bit du seed,
+soit trois ou quatre affixes à chances égales, sans progression selon l’ilvl.
+Le premier palier v0.2.0 reproduit exactement ce comportement avant d’augmenter
+progressivement la chance de quatre affixes.
 
 ## Architecture implantée
 
@@ -113,11 +122,11 @@ change.
 |---|---|---|
 | Configure/build Release x64 | passed | Visual Studio 2022, SDK D2RLoader épinglé `efcfaaa…970` |
 | Warnings | passed | `/W4 /WX /permissive- /utf-8` |
-| Politique TOML | passed | CTest `1/1`, seuils, distributions et refus invalides |
+| Politique TOML | passed | CTest `1/1`, format joueur, compatibilité v0.1, pourcentages exacts, seuils, distributions et refus invalides |
 | Reproductibilité | passed | deux clean builds `/Brepro` identiques |
-| DLL | passed | 137 216 octets, SHA-256 `92481CF78DD3BAD2DAA33212A0561CD65CFAAFB786565BB6F62F527725EB9A8F` |
-| TOML | passed | SHA-256 `0C3B2617592F6871DF2A737D352108D702A1F14834AB9BDE720EA95A399A17C1` |
-| Métadonnées | passed | v0.1.0, RuffnecKk, description courte, trois exports D2RLoader exacts |
+| DLL | passed | 161 280 octets, SHA-256 `F88386D2839E996880F1C9EFBEE7891E8CF4CCADCAC109C65EE2F8B70671FC7C` |
+| TOML | passed | 1 145 octets, SHA-256 `2011929145203A6E2C2C06011376E774828C60676BD0311F70D1E5BE6D4AF41F` |
+| Métadonnées | passed | v0.2.0, RuffnecKk, description courte, trois exports D2RLoader exacts |
 | Hash build/package/BKVince | passed | DLL et TOML identiques dans les trois emplacements concernés |
 | Cold start mod-local | passed | build 92777, config mod-locale, `18/18` plugins et `15/15` patchsets, zéro rejet/échec |
 | Cold start global + repli config | passed | DLL `[global]`, config globale explicite, mêmes totaux `18/18` et `15/15` |
@@ -131,11 +140,9 @@ La compilation et les tests statiques ne ferment pas les cases gameplay.
 
 ## Qualification runtime du 10 août 2026
 
-Le profil installé a été qualifié sans processus Diablo préexistant. Les trois
-patchsets force-max actifs en portée globale ont été déplacés hors des dossiers
-chargés vers un backup récupérable sous `analysis-cache/runtime-sync-backups/`,
-puis la DLL et le TOML ont été synchronisés avec des hashes source/runtime
-identiques.
+La v0.2.0 remplace la DLL et le TOML v0.1.0 sans toucher aux autres composants.
+Les trois patchsets force-max restent archivés hors des dossiers chargés. La DLL
+et le TOML ont été synchronisés avec des hashes source/runtime identiques.
 
 Le cold start mod-local `D2RLoader.exe -mod BKVince -txt` donne :
 
@@ -152,8 +159,8 @@ même TOML vers la portée globale. Le loader rapporte
 `ProgressiveAffixesPlugin.dll [global]`, le log sélectionne
 `<D2R>/d2rloader/config/ProgressiveAffixesPlugin.toml`, et les totaux restent
 `18/18` plugins et `15/15` patchsets sans rejet ni échec. Le test global a ensuite
-été archivé et le profil mod-local BKVince restauré byte-identique. Aucun
-processus Diablo ne reste ouvert.
+été retiré et le profil mod-local BKVince restauré byte-identique. Une seule
+instance mod-locale stable a été relancée après la restauration.
 
 Ces témoins prouvent les deux portées et la coexistence de chargement avec la
 configuration active. Ils ne prouvent pas encore les distributions en jeu, la
@@ -174,8 +181,8 @@ Allowlist stricte :
 - `ProgressiveAffixesPlugin.dll` ;
 - `ProgressiveAffixesPlugin.toml`.
 
-Archive `ProgressiveAffixesPlugin-0.1.0.zip` : 58 833 octets, SHA-256
-`A08741294D62FE8BB62C0CD6E18874F165DE6C1B2E60E8E54423AEFB564B24E4`.
+Archive `ProgressiveAffixesPlugin-0.2.0.zip` : 70 068 octets, SHA-256
+`E1C3FDCA8D4384C97E1AB8A4D2C9A9010A5519580DF5DDC31E246B05E1D76DBD`.
 L'inspection confirme exactement deux entrées à la racine, la DLL et le TOML.
 
 Le README, les sources, symboles, logs et preuves restent hors ZIP. L’archive ne

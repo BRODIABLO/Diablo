@@ -65,16 +65,45 @@ int main(int argc, char** argv) {
     Check(FindStep(config.magic[0].steps, 64) == nullptr);
     Check(FindStep(config.magic[0].steps, 65)->minimumAffixes == 2);
 
-    CheckDistribution(config.rare[0], 1, {0, 1});
-    CheckDistribution(config.rare[1], 1, {1, 3, 3, 1});
-    CheckDistribution(config.rare[1], 44, {1, 3, 3, 1});
-    CheckDistribution(config.rare[1], 45, {0, 1, 2, 1});
-    CheckDistribution(config.rare[1], 65, {0, 0, 1, 1});
-    CheckDistribution(config.rare[1], 85, {0, 0, 0, 1});
-    CheckDistribution(config.crafted[0], 1, {2, 1, 1, 1});
-    CheckDistribution(config.crafted[0], 31, {0, 3, 1, 1});
-    CheckDistribution(config.crafted[0], 51, {0, 0, 4, 1});
-    CheckDistribution(config.crafted[0], 71, {0, 0, 0, 1});
+    Check(config.rare[0].name == "rare_jewels");
+    CheckDistribution(config.rare[0], 1, {5000, 5000});
+    CheckDistribution(config.rare[0], 44, {5000, 5000});
+    CheckDistribution(config.rare[0], 45, {3750, 6250});
+    CheckDistribution(config.rare[0], 64, {3750, 6250});
+    CheckDistribution(config.rare[0], 65, {2500, 7500});
+    CheckDistribution(config.rare[0], 84, {2500, 7500});
+    CheckDistribution(config.rare[0], 85, {0, 10000});
+    CheckDistribution(config.rare[1], 1, {1250, 3750, 3750, 1250});
+    CheckDistribution(config.rare[1], 44, {1250, 3750, 3750, 1250});
+    CheckDistribution(config.rare[1], 45, {0, 2500, 5000, 2500});
+    CheckDistribution(config.rare[1], 65, {0, 0, 5000, 5000});
+    CheckDistribution(config.rare[1], 85, {0, 0, 0, 10000});
+    CheckDistribution(config.crafted[0], 1, {4000, 2000, 2000, 2000});
+    CheckDistribution(config.crafted[0], 31, {0, 6000, 2000, 2000});
+    CheckDistribution(config.crafted[0], 51, {0, 0, 8000, 2000});
+    CheckDistribution(config.crafted[0], 71, {0, 0, 0, 10000});
+
+    const auto legacy = Parse(R"toml(
+[plugin]
+enabled = true
+diagnostics = false
+[[rare.categories]]
+name = "jewels"
+item_types = ["jewl"]
+counts = [3, 4]
+[[rare.categories.steps]]
+minimum_item_level = 1
+weights = [1, 1]
+[[rare.categories]]
+name = "all_other_items"
+item_types = ["*"]
+counts = [3, 4, 5, 6]
+[[rare.categories.steps]]
+minimum_item_level = 1
+weights = [1, 3, 3, 1]
+)toml");
+    Check(legacy.rare.size() == 2);
+    CheckDistribution(legacy.rare[0], 1, {1, 1});
 
     const auto disabled = Parse("[plugin]\nenabled = false\n");
     Check(!disabled.enabled);
@@ -83,6 +112,80 @@ int main(int argc, char** argv) {
     Check(Throws("[plugin]\nenabled = true\nunknown = false\n"));
     Check(Throws("[plugin]\nenabled = 1\n"));
     Check(Throws("[plugin]\nenabled = true\n"));
+    Check(Throws(R"toml(
+[plugin]
+enabled = true
+[magic]
+weapons_and_armor = 65
+jewels_rings_and_amulets = 85
+charms = 90
+[rare_jewels]
+from_level_1 = [50, 49.9]
+[regular_rare_items]
+from_level_1 = [12.5, 37.5, 37.5, 12.5]
+[crafted]
+from_level_1 = [40, 20, 20, 20]
+)toml"));
+    Check(Throws(R"toml(
+[plugin]
+enabled = true
+[magic]
+weapons_and_armor = 65
+jewels_rings_and_amulets = 85
+charms = 90
+[rare_jewels]
+from_level_1 = [50, 25, 25]
+[regular_rare_items]
+from_level_1 = [12.5, 37.5, 37.5, 12.5]
+[crafted]
+from_level_1 = [40, 20, 20, 20]
+)toml"));
+    Check(Throws(R"toml(
+[plugin]
+enabled = true
+[magic]
+weapons_and_armor = 65
+jewels_rings_and_amulets = 85
+charms = 90
+[rare_jewels]
+from_level_1 = [37.555, 62.445]
+[regular_rare_items]
+from_level_1 = [12.5, 37.5, 37.5, 12.5]
+[crafted]
+from_level_1 = [40, 20, 20, 20]
+)toml"));
+    Check(Throws(R"toml(
+[plugin]
+enabled = true
+[magic]
+weapons_and_armor = 65
+jewels_rings_and_amulets = 85
+charms = 90
+[rare_jewels]
+from_level_45 = [50, 50]
+[regular_rare_items]
+from_level_1 = [12.5, 37.5, 37.5, 12.5]
+[crafted]
+from_level_1 = [40, 20, 20, 20]
+)toml"));
+    Check(Throws(R"toml(
+[plugin]
+enabled = true
+[magic]
+weapons_and_armor = 65
+jewels_rings_and_amulets = 85
+charms = 90
+[rare_jewels]
+from_level_1 = [50, 50]
+[regular_rare_items]
+from_level_1 = [12.5, 37.5, 37.5, 12.5]
+[crafted]
+from_level_1 = [40, 20, 20, 20]
+[[rare.categories]]
+name = "fallback"
+item_types = ["*"]
+counts = [3, 4]
+)toml"));
     Check(Throws(R"toml(
 [plugin]
 enabled = true

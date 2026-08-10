@@ -1112,6 +1112,11 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
+                                                                                "name":  "ProgressiveAffixesPlugin-0.2.0.zip",
+                                                                                "path":  "addons/ProgressiveAffixesPlugin/ProgressiveAffixesPlugin-0.2.0.zip",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "README.md",
                                                                                 "path":  "addons/ProgressiveAffixesPlugin/README.md",
                                                                                 "kind":  "file"

@@ -1,94 +1,37 @@
 # Progressive Affixes Plugin
-# Categories are evaluated in declaration order. Keep the wildcard fallback last.
-# Item type codes come from the Code column of itemtypes.txt and include descendants.
+#
+# Item level (ilvl) is the hidden level of the generated item.
+# Change only the numbers below. Percentages on each row must total 100.
 
 [plugin]
 enabled = true
-diagnostics = false
 
-# Magic items receive at least one prefix and one suffix at the configured threshold.
-[[magic.categories]]
-name = "weapons_and_armor"
-item_types = ["weap", "armo"]
+[magic]
+# Force one prefix and one suffix from these item levels onward.
+weapons_and_armor = 65
+jewels_rings_and_amulets = 85
+charms = 90
 
-[[magic.categories.steps]]
-minimum_item_level = 65
-minimum_affixes = 2
+[rare_jewels]
+# Force the number of affixes rolled on a Rare Jewel. The maximum is 4.
+# Each row is [chance for 3 affixes, chance for 4 affixes].
+from_level_1  = [50,   50]
+from_level_45 = [37.5, 62.5]
+from_level_65 = [25,   75]
+from_level_85 = [0,    100]
 
-[[magic.categories]]
-name = "jewels_and_jewelry"
-item_types = ["jewl", "ring", "amul"]
+[regular_rare_items]
+# Applies to every Rare item except Rare Jewels.
+# Each row is [chance for 3, 4, 5, and 6 affixes].
+from_level_1  = [12.5, 37.5, 37.5, 12.5]
+from_level_45 = [0,    25,   50,   25]
+from_level_65 = [0,    0,    50,   50]
+from_level_85 = [0,    0,    0,    100]
 
-[[magic.categories.steps]]
-minimum_item_level = 85
-minimum_affixes = 2
-
-[[magic.categories]]
-name = "charms"
-item_types = ["char"]
-
-[[magic.categories.steps]]
-minimum_item_level = 90
-minimum_affixes = 2
-
-[[magic.categories]]
-name = "all_other_items"
-item_types = ["*"]
-
-[[magic.categories.steps]]
-minimum_item_level = 1
-minimum_affixes = 1
-
-# Rare jewels always receive four affixes with the PD2 defaults.
-[[rare.categories]]
-name = "jewels"
-item_types = ["jewl"]
-counts = [3, 4]
-
-[[rare.categories.steps]]
-minimum_item_level = 1
-weights = [0, 1]
-
-# Regular rare items use integer weights equivalent to the documented percentages.
-[[rare.categories]]
-name = "all_other_items"
-item_types = ["*"]
-counts = [3, 4, 5, 6]
-
-[[rare.categories.steps]]
-minimum_item_level = 1
-weights = [1, 3, 3, 1]
-
-[[rare.categories.steps]]
-minimum_item_level = 45
-weights = [0, 1, 2, 1]
-
-[[rare.categories.steps]]
-minimum_item_level = 65
-weights = [0, 0, 1, 1]
-
-[[rare.categories.steps]]
-minimum_item_level = 85
-weights = [0, 0, 0, 1]
-
-# Crafted item weights cover only the random affixes added to fixed recipe properties.
-[[crafted.categories]]
-name = "all_items"
-item_types = ["*"]
-counts = [1, 2, 3, 4]
-
-[[crafted.categories.steps]]
-minimum_item_level = 1
-weights = [2, 1, 1, 1]
-
-[[crafted.categories.steps]]
-minimum_item_level = 31
-weights = [0, 3, 1, 1]
-
-[[crafted.categories.steps]]
-minimum_item_level = 51
-weights = [0, 0, 4, 1]
-
-[[crafted.categories.steps]]
-minimum_item_level = 71
-weights = [0, 0, 0, 1]
+[crafted]
+# Covers only the random affixes added to the recipe's fixed properties.
+# Each row is [chance for 1, 2, 3, and 4 random affixes].
+from_level_1  = [40, 20, 20, 20]
+from_level_31 = [0,  60, 20, 20]
+from_level_51 = [0,  0,  80, 20]
+from_level_71 = [0,  0,  0,  100]

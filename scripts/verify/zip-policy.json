@@ -179,6 +179,22 @@
         "MeleeSplash.dll",
         "MeleeSplash.json"
       ]
+    },
+    "addons/ProgressiveAffixesPlugin/ProgressiveAffixesPlugin-0.1.0.zip": {
+      "kind": "plugin",
+      "allowToml": true,
+      "entries": [
+        "ProgressiveAffixesPlugin.dll",
+        "ProgressiveAffixesPlugin.toml"
+      ]
+    },
+    "addons/ProgressiveAffixesPlugin/ProgressiveAffixesPlugin-0.2.0.zip": {
+      "kind": "plugin",
+      "allowToml": true,
+      "entries": [
+        "ProgressiveAffixesPlugin.dll",
+        "ProgressiveAffixesPlugin.toml"
+      ]
     }
   }
 }

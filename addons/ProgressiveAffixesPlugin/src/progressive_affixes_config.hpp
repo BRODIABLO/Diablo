@@ -7,8 +7,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <initializer_list>
 #include <istream>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -235,6 +237,56 @@ inline std::vector<std::int32_t> ParseIntegerArray(std::string_view value) {
     return result;
 }
 
+inline std::uint32_t ParsePercentage(std::string_view value) {
+    if (value.empty()) throw std::invalid_argument("expected a percentage");
+    const auto decimal = value.find('.');
+    if (decimal != std::string_view::npos && value.find('.', decimal + 1) != std::string_view::npos) {
+        throw std::invalid_argument("percentages may contain only one decimal point");
+    }
+
+    const auto wholeText = decimal == std::string_view::npos ? value : value.substr(0, decimal);
+    const auto fractionText = decimal == std::string_view::npos ? std::string_view{} : value.substr(decimal + 1);
+    if (wholeText.empty() || (decimal != std::string_view::npos && fractionText.empty())) {
+        throw std::invalid_argument("percentages require digits before and after the decimal point");
+    }
+    if (fractionText.size() > 2) {
+        throw std::invalid_argument("percentages support at most two decimal places");
+    }
+
+    const auto whole = ParseInteger(wholeText);
+    if (whole < 0 || whole > 100) throw std::invalid_argument("percentages must be within 0..100");
+    std::uint32_t fraction{};
+    for (const auto character : fractionText) {
+        if (!std::isdigit(static_cast<unsigned char>(character))) {
+            throw std::invalid_argument("percentage decimals must contain only digits");
+        }
+        fraction = fraction * 10 + static_cast<std::uint32_t>(character - '0');
+    }
+    if (fractionText.size() == 1) fraction *= 10;
+    if (whole == 100 && fraction != 0) throw std::invalid_argument("percentages must be within 0..100");
+    return static_cast<std::uint32_t>(whole) * 100 + fraction;
+}
+
+inline std::vector<std::uint32_t> ParsePercentageArray(std::string_view value) {
+    if (value.size() < 2 || value.front() != '[' || value.back() != ']') {
+        throw std::invalid_argument("expected a percentage array");
+    }
+    value.remove_prefix(1);
+    value.remove_suffix(1);
+    std::vector<std::uint32_t> result;
+    std::size_t start{};
+    while (start < value.size()) {
+        const auto comma = value.find(',', start);
+        const auto end = comma == std::string_view::npos ? value.size() : comma;
+        const auto token = Trim(std::string(value.substr(start, end - start)));
+        if (!token.empty()) result.push_back(ParsePercentage(token));
+        else if (comma != std::string_view::npos) throw std::invalid_argument("empty percentage-array value");
+        if (comma == std::string_view::npos) break;
+        start = comma + 1;
+    }
+    return result;
+}
+
 inline std::size_t ArrayBalance(std::string_view value) {
     bool quoted{};
     bool escaped{};
@@ -304,6 +356,7 @@ public:
             }
         }
         if (!pending.empty()) throw std::invalid_argument("unterminated multiline array");
+        PrepareSimpleConfig();
         Validate();
         return std::move(config_);
     }
@@ -312,6 +365,10 @@ private:
     enum class Section {
         None,
         Plugin,
+        SimpleMagic,
+        SimpleRareJewels,
+        SimpleRegularRare,
+        SimpleCrafted,
         MagicCategory,
         MagicStep,
         RareCategory,
@@ -320,10 +377,28 @@ private:
         CraftedStep,
     };
 
+    enum class Format {
+        None,
+        Simple,
+        Advanced,
+    };
+
+    struct SimpleMagicSettings {
+        std::optional<std::int32_t> weaponsAndArmor;
+        std::optional<std::int32_t> jewelsRingsAndAmulets;
+        std::optional<std::int32_t> charms;
+    };
+
     Config config_;
     Section section_{Section::None};
+    Format format_{Format::None};
     bool pluginSeen_{};
     std::unordered_set<std::string> seen_;
+    std::unordered_set<std::string> simpleTables_;
+    SimpleMagicSettings simpleMagic_;
+    std::vector<WeightedStep> simpleRareJewels_;
+    std::vector<WeightedStep> simpleRegularRare_;
+    std::vector<WeightedStep> simpleCrafted_;
 
     void ParseLine(const std::string& line) {
         if (line.starts_with("[[") && line.ends_with("]]")) {
@@ -332,9 +407,7 @@ private:
         }
         if (line.front() == '[' && line.back() == ']') {
             const auto name = line.substr(1, line.size() - 2);
-            if (name != "plugin" || pluginSeen_) throw std::invalid_argument("unknown or duplicate table: " + name);
-            pluginSeen_ = true;
-            section_ = Section::Plugin;
+            StartTable(name);
             return;
         }
         const auto equal = FindAssignment(line);
@@ -345,7 +418,32 @@ private:
         ParseAssignment(key, value);
     }
 
+    void UseFormat(Format format) {
+        if (format_ != Format::None && format_ != format) {
+            throw std::invalid_argument("simple and advanced configuration formats cannot be mixed");
+        }
+        format_ = format;
+    }
+
+    void StartTable(const std::string& name) {
+        if (name == "plugin") {
+            if (pluginSeen_) throw std::invalid_argument("unknown or duplicate table: " + name);
+            pluginSeen_ = true;
+            section_ = Section::Plugin;
+            return;
+        }
+
+        UseFormat(Format::Simple);
+        if (!simpleTables_.insert(name).second) throw std::invalid_argument("duplicate table: " + name);
+        if (name == "magic") section_ = Section::SimpleMagic;
+        else if (name == "rare_jewels") section_ = Section::SimpleRareJewels;
+        else if (name == "regular_rare_items") section_ = Section::SimpleRegularRare;
+        else if (name == "crafted") section_ = Section::SimpleCrafted;
+        else throw std::invalid_argument("unknown table: " + name);
+    }
+
     void StartArrayTable(const std::string& name) {
+        UseFormat(Format::Advanced);
         if (name == "magic.categories") {
             if (config_.magic.size() >= MaxCategories) throw std::invalid_argument("too many magic categories");
             config_.magic.emplace_back();
@@ -385,6 +483,10 @@ private:
     std::string CurrentPath(const std::string& key) const {
         switch (section_) {
         case Section::Plugin: return "plugin." + key;
+        case Section::SimpleMagic: return "magic." + key;
+        case Section::SimpleRareJewels: return "rare_jewels." + key;
+        case Section::SimpleRegularRare: return "regular_rare_items." + key;
+        case Section::SimpleCrafted: return "crafted." + key;
         case Section::MagicCategory: return "magic." + std::to_string(config_.magic.size() - 1) + "." + key;
         case Section::MagicStep: return "magic." + std::to_string(config_.magic.size() - 1) + ".step." + std::to_string(config_.magic.back().steps.size() - 1) + "." + key;
         case Section::RareCategory: return "rare." + std::to_string(config_.rare.size() - 1) + "." + key;
@@ -425,6 +527,21 @@ private:
             else if (key == "diagnostics") config_.diagnostics = ParseBoolean(value);
             else throw std::invalid_argument("unknown plugin setting: " + key);
             break;
+        case Section::SimpleMagic:
+            if (key == "weapons_and_armor") simpleMagic_.weaponsAndArmor = ParseInteger(value);
+            else if (key == "jewels_rings_and_amulets") simpleMagic_.jewelsRingsAndAmulets = ParseInteger(value);
+            else if (key == "charms") simpleMagic_.charms = ParseInteger(value);
+            else throw std::invalid_argument("unknown magic setting: " + key);
+            break;
+        case Section::SimpleRareJewels:
+            ParseSimpleWeightedStep(simpleRareJewels_, "rare_jewels", key, value);
+            break;
+        case Section::SimpleRegularRare:
+            ParseSimpleWeightedStep(simpleRegularRare_, "regular_rare_items", key, value);
+            break;
+        case Section::SimpleCrafted:
+            ParseSimpleWeightedStep(simpleCrafted_, "crafted", key, value);
+            break;
         case Section::MagicCategory:
             if (key == "name") config_.magic.back().name = ParseString(value);
             else if (key == "item_types") config_.magic.back().itemTypes = ParseTypes(value);
@@ -450,6 +567,22 @@ private:
         default:
             throw std::invalid_argument("assignments must belong to a supported table");
         }
+    }
+
+    static void ParseSimpleWeightedStep(
+            std::vector<WeightedStep>& steps,
+            const char* table,
+            const std::string& key,
+            const std::string& value) {
+        constexpr std::string_view prefix = "from_level_";
+        if (!key.starts_with(prefix) || key.size() == prefix.size()) {
+            throw std::invalid_argument(std::string("unknown ") + table + " setting: " + key);
+        }
+        if (steps.size() >= MaxStepsPerCategory) throw std::invalid_argument(std::string("too many ") + table + " steps");
+        WeightedStep step{};
+        step.minimumItemLevel = ParseInteger(std::string_view(key).substr(prefix.size()));
+        step.weights = ParsePercentageArray(value);
+        steps.push_back(std::move(step));
     }
 
     static void ParseWeightedCategory(
@@ -483,6 +616,63 @@ private:
 
     static bool IsWildcard(const auto& category) {
         return category.itemTypes.size() == 1 && category.itemTypes.front().wildcard;
+    }
+
+    static std::vector<ItemTypeCode> MakeTypes(std::initializer_list<std::string_view> types) {
+        std::vector<ItemTypeCode> result;
+        result.reserve(types.size());
+        for (const auto type : types) result.push_back(NormalizeItemTypeCode(type));
+        return result;
+    }
+
+    static WeightedCategory MakeSimpleWeightedCategory(
+            std::string name,
+            std::vector<ItemTypeCode> itemTypes,
+            std::vector<std::int32_t> counts,
+            std::vector<WeightedStep> steps) {
+        if (steps.empty()) throw std::invalid_argument(name + " requires at least one from_level setting");
+        std::sort(steps.begin(), steps.end(), [](const auto& left, const auto& right) {
+            return left.minimumItemLevel < right.minimumItemLevel;
+        });
+        for (const auto& step : steps) {
+            if (step.weights.size() != counts.size()) {
+                throw std::invalid_argument(name + " percentages do not match the documented affix counts");
+            }
+            std::uint32_t total{};
+            for (const auto percentage : step.weights) total += percentage;
+            if (total != 10000) throw std::invalid_argument(name + " percentages must total 100");
+        }
+        return WeightedCategory{
+            .name = std::move(name),
+            .itemTypes = std::move(itemTypes),
+            .counts = std::move(counts),
+            .steps = std::move(steps),
+        };
+    }
+
+    void PrepareSimpleConfig() {
+        if (format_ != Format::Simple) return;
+        for (const auto* table : {"magic", "rare_jewels", "regular_rare_items", "crafted"}) {
+            if (!simpleTables_.contains(table)) throw std::invalid_argument(std::string("missing required table: ") + table);
+        }
+        if (!simpleMagic_.weaponsAndArmor
+                || !simpleMagic_.jewelsRingsAndAmulets
+                || !simpleMagic_.charms) {
+            throw std::invalid_argument("magic requires weapons_and_armor, jewels_rings_and_amulets, and charms");
+        }
+
+        config_.magic = {
+            MagicCategory{"weapons_and_armor", MakeTypes({"weap", "armo"}), {{*simpleMagic_.weaponsAndArmor, 2}}},
+            MagicCategory{"jewels_rings_and_amulets", MakeTypes({"jewl", "ring", "amul"}), {{*simpleMagic_.jewelsRingsAndAmulets, 2}}},
+            MagicCategory{"charms", MakeTypes({"char"}), {{*simpleMagic_.charms, 2}}},
+            MagicCategory{"all_other_items", MakeTypes({"*"}), {{1, 1}}},
+        };
+        config_.rare.push_back(MakeSimpleWeightedCategory(
+            "rare_jewels", MakeTypes({"jewl"}), {3, 4}, std::move(simpleRareJewels_)));
+        config_.rare.push_back(MakeSimpleWeightedCategory(
+            "all_other_items", MakeTypes({"*"}), {3, 4, 5, 6}, std::move(simpleRegularRare_)));
+        config_.crafted.push_back(MakeSimpleWeightedCategory(
+            "all_items", MakeTypes({"*"}), {1, 2, 3, 4}, std::move(simpleCrafted_)));
     }
 
     template <typename Category>

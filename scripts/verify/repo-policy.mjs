@@ -462,6 +462,7 @@ export function verifyZipContents(repoRoot) {
       if (definition.kind === 'plugin' && !definition.legacy) {
         const forbidden = names.filter((name) => (
           !/\.(?:dll|json)$/i.test(name)
+          && !(definition.allowToml === true && /\.toml$/i.test(name))
           && !(definition.allowReadme === true && name === 'README.md')
         ));
         if (forbidden.length) failures.push(`${filePath}: incubated plugin ZIP contains forbidden files: ${forbidden.join(', ')}`);

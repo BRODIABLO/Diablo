@@ -713,7 +713,7 @@ auto Status(
     std::snprintf(
         message,
         sizeof(message),
-        "ProgressiveAffixesPlugin 0.1.0: %s; config=%s; categories magic=%zu rare=%zu crafted=%zu; types resolved=%u unresolved=%u; selections magic=%llu rare=%llu crafted=%llu.",
+        "ProgressiveAffixesPlugin 0.2.0: %s; config=%s; categories magic=%zu rare=%zu crafted=%zu; types resolved=%u unresolved=%u; selections magic=%llu rare=%llu crafted=%llu.",
         RuntimeConfigRejected.load(std::memory_order_acquire)
             ? "runtime configuration rejected"
             : (Operational.load(std::memory_order_acquire) ? "active" : "disabled"),
@@ -740,7 +740,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "ruffneckk-progressive-affixes",
     .name = "Progressive Affixes",
-    .version = "0.1.0",
+    .version = "0.2.0",
     .author = "RuffnecKk",
     .description = "Increases generated item affix counts as item levels rise.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -766,7 +766,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     if (!LoadConfig()) return false;
     if (!Settings.enabled) {
         const auto message = std::string(
-            "ProgressiveAffixesPlugin 0.1.0 by RuffnecKk loaded disabled; config=")
+            "ProgressiveAffixesPlugin 0.2.0 by RuffnecKk loaded disabled; config=")
             + LoadedConfigPath + ".";
         Context->LogInfo(message.c_str());
         static_cast<void>(Context->RegisterConsoleCommand(
@@ -806,7 +806,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
             "ProgressiveAffixesPlugin: optional status command could not be registered.");
     }
     const auto message = std::string(
-        "ProgressiveAffixesPlugin 0.1.0 by RuffnecKk active; config=")
+        "ProgressiveAffixesPlugin 0.2.0 by RuffnecKk active; config=")
         + LoadedConfigPath + ".";
     Context->LogInfo(message.c_str());
     return true;
