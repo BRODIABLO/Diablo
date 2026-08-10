@@ -37811,6 +37811,11 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "monster-decisions.md",
+                                                           "path":  "Mission/monster-decisions.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "no-ethereal-item-types-3.2.md",
                                                            "path":  "Mission/no-ethereal-item-types-3.2.md",
                                                            "kind":  "file"
