@@ -64,11 +64,19 @@ probable est déjà dans le prototype HEAD. La liste n'est ni la taxonomie PD2 d
 
 Règles voulues pour ces 15 membres :
 
-- immunité à `Slows Target by X%`, Decrepify et Holy Freeze;
+- immunité universelle à **tout effet de ralentissement**, notamment le chill
+  causé par les dégâts de froid, `Slows Target by X%`, Decrepify, Holy Freeze,
+  Slow Movement, Clay Golem et les slows custom;
+- les dégâts de froid et les composantes qui ne ralentissent pas restent
+  applicables; seule toute réduction effective de vitesse est neutralisée;
 - immunité à Dim Vision, Terror, Confuse et Attract;
 - dégâts totaux ×2 contre mercenaires **et** invocations/pets;
-- aucune promesse « immunité à tous les slows »;
 - Sanctuary reste inchangé tant que son lot est différé.
+
+Cette immunité universelle est une décision produit BKVince qui applique la
+formulation littérale du wiki PD2. Elle ne dépend pas d'une preuve que chaque
+chemin runtime S13 produit effectivement ce résultat : aucun test runtime PD2
+n'est requis. La validation doit démontrer le résultat dans BKVince.
 
 Le flag `primeevil` ne produit pas ces effets à lui seul dans D2R 3.2.92777.
 Pour les quatre curses d'AI, la route la plus simple est de vérifier d'abord la
@@ -98,8 +106,10 @@ pas être masqué en ajoutant des flags sans consommateur prouvé.
 - **T3** : 1 000+ spawns uniques, distribution des auras, niveaux et exclusions.
 - **T4** : Dolls N/NM/H, délais/rayons/dégâts, morts variées, Revive, cadavre,
   loot/XP/kill credit et absence de double explosion.
-- **T5** : chacun des 15 Prime contre chaque effet, dégâts merc/pet, attaque,
-  missile, sort et DoT; aucun autre monstre ne doit être touché.
+- **T5** : chacun des 15 Prime contre chill/froid, item slow, Decrepify, Holy
+  Freeze, Slow Movement, Clay Golem et slows custom, puis contre chaque curse
+  approuvée; dégâts merc/pet par attaque, missile, sort et DoT; aucun autre
+  monstre ne doit être touché.
 - **T6** : carte solo, trois presets, pathing, collision et hash des couches.
 - **T7** : chaque Uber séparément, HP/AC/CTH/block/résistances/skills/AI/TTK.
 - **R0** : aucun rollback, no-op ou décision documentaire.
@@ -122,7 +132,7 @@ pas être masqué en ajoutant des flags sans consommateur prouvé.
 | 6 | Item Slow | **ACCEPT** : les 15 ignorent entièrement `Slows Target by X%` | EventFunc19/équivalent 92777 — **native** | point d'entrée et ABI prouvés | T0, T5 | R4 |
 | 7 | Decrepify | **ACCEPT** : aucune application d'état ni ralentissement sur les 15 | chemins skill 87/state 60 — **native** | deux chemins 92777 prouvés | T0, T5 | R4 |
 | 8 | Holy Freeze | **ACCEPT** : les 15 ne reçoivent pas l'effet de ralentissement Holy Freeze | `skills.txt.aurafilter` si bit équivalent prouvé, sinon guard — **TXT + native** | décodage `IGNPRIME` 92777 | T0, T5 | R1/R4 |
-| 9 | « Tous les slows » | **REJECT** : aucune immunité universelle; chill, Slow Movement et slows custom restent hors contrat sauf décision séparée | aucune | aucune | R0 | R0 |
+| 9 | « Tous les slows » | **ACCEPT — règle universelle** : les 15 ne subissent aucune réduction de vitesse, quelle qu'en soit la source; cela inclut chill des dégâts de froid, item slow, Decrepify, Holy Freeze, Slow Movement, Clay Golem et slows custom. Les dégâts et effets non ralentissants restent applicables | `monstats.txt.ColdEffect` pour le chill et guards/résolveur de slow 92777 pour les autres chemins — **TXT + native** | inventaire des sources BKV, point final d'application des vitesses et ABI 92777; aucun runtime PD2 requis | T0, T5 | R1/R4 |
 | 10 | Dim Vision/Terror/Confuse/Attract | **ACCEPT** : aucune des quatre curses ne doit affecter les 15. Première route : protection classe/AI existante si les 60 cas passent; fallback natif seulement en cas d'échec | AI switch/catégorie unique-superunique — **native/no-op à prouver** | matrice 15 × 4; ne pas créditer le seul flag `primeevil` | T0, T5 | R0 si no-op, sinon R4 |
 | 11 | Sanctuary | **DEFER** : conserver le comportement BKV actuel; aucune règle Prime ajoutée | resolver résistance physique — **native** future | preuve 92777 et politique gameplay | T0, T5 si rouvert | R4 |
 | 12 | Andariel stats | **ACCEPT** Hell : `Level=85`, `MinHP/MaxHP=1471/1471`, `AC=110`, `A1Min/A1Max=200/240`, `Crit=5` | `monstats.txt`, row `andariel` — **TXT** | aucune autre cellule Andy | T0, T1 | R1 |
@@ -186,8 +196,9 @@ pas. Les résultats S13 visés sont :
 4. **Aura Enchanted** : après réparation `MonHolyShock`; garder `upick(H)=12`,
    retirer le doublon Fanaticism, ajouter Holy Fire et Holy Shock réels.
 5. **Dolls** : huit classiques selon PD2; Rift Dolls et `ISREVIVE` préservés.
-6. **Règles Prime Evil** : flags exacts, puis chaque protection et multiplicateur
-   comme sous-lot isolé; jamais une règle globale « tous les slows ».
+6. **Règles Prime Evil** : flags exacts, puis immunité universelle à tous les
+   slows et chaque autre protection/multiplicateur comme sous-lot isolé. La
+   preuve recherchée porte sur le résultat BKVince, pas sur le runtime PD2.
 7. **Ubers/DClone** : mini-Ubers prototype à qualifier; trio Uber PD2 exact adapté
    à `MonLvl120`; DClone limité à sa présence dans la liste Prime et aux règles
    globales. Son encounter complet reste hors scope.
