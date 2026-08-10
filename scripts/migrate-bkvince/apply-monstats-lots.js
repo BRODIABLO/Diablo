@@ -61,6 +61,12 @@ const RESISTANCE_COLUMNS = Object.freeze([
 
 const EXPECTED = Object.freeze({ safety: 221, mercenaries: 8, resistances: 289 });
 
+// Cibles PD2 explicitement approuvees qui ne proviennent ni de BK ni de TCP.
+// Elles restent protegees cellule par cellule afin qu'une autre valeur bloque.
+const APPROVED_OVERRIDES = Object.freeze({
+  'uberandariel\0ResPo(H)': '90',
+});
+
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
@@ -109,6 +115,9 @@ function main() {
     let disposition;
     if (targetValue === bkValue) disposition = 'applicable';
     else if (targetValue === tcpValue) disposition = 'already-applied';
+    else if (targetValue === APPROVED_OVERRIDES[`${rowId}\0${column}`]) {
+      disposition = 'approved-override';
+    }
     else disposition = 'conflict';
     changes.push({
       lot,
@@ -149,6 +158,9 @@ function main() {
     )).length,
     alreadyApplied: changes.filter((change) => (
       change.lot === lot && change.disposition === 'already-applied'
+    )).length,
+    approvedOverride: changes.filter((change) => (
+      change.lot === lot && change.disposition === 'approved-override'
     )).length,
   })));
 
