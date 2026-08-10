@@ -8858,6 +8858,18 @@
                                                                                                                                                                                  ]
                                                                                                                                                                 },
                                                                                                                                                                 {
+                                                                                                                                                                    "name":  "travincal",
+                                                                                                                                                                    "path":  "data-BKVince/BKVince.mpq/data/global/tiles/act3/travincal",
+                                                                                                                                                                    "kind":  "directory",
+                                                                                                                                                                    "children":  [
+                                                                                                                                                                        {
+                                                                                                                                                                            "name":  "mephcomp.ds1",
+                                                                                                                                                                            "path":  "data-BKVince/BKVince.mpq/data/global/tiles/act3/travincal/mephcomp.ds1",
+                                                                                                                                                                            "kind":  "file"
+                                                                                                                                                                        }
+                                                                                                                                                                    ]
+                                                                                                                                                                },
+                                                                                                                                                                {
                                                                                                                                                                     "name":  "combined_ds1.bin",
                                                                                                                                                                     "path":  "data-BKVince/BKVince.mpq/data/global/tiles/act3/combined_ds1.bin",
                                                                                                                                                                     "kind":  "file"

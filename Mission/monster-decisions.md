@@ -91,10 +91,14 @@ pas être masqué en ajoutant des flags sans consommateur prouvé.
    bien vers `pk1` plutôt que `pk2/pk3`, mais c'est le design BKVince à clé
    universelle. `ACCEPT/no-op`; aucune correction de clé, y compris pour
    Countess ou Blood Raven.
-2. **`MonHolyShock` — anomalie réelle.** La row monster-only est
-   sémantiquement incohérente avec ses calcs de Fanaticism. Elle doit être
-   réparée et son ordinal runtime prouvé avant tout changement Aura Enchanted.
-   `DEFER`; ne pas la corriger dans le présent document.
+2. **`MonHolyShock` — nom trompeur, comportement BKV intentionnel.** La row
+   monster-only nommée `MonHolyShock` reproduit Fanaticism parce que BKVince a
+   volontairement réaffecté les outcomes historiques du sélecteur Aura
+   Enchanted (`MonHolyFire` donne Vigor et `MonHolyShock` donne Fanaticism).
+   Ce n'est donc pas une row corrompue à « réparer » isolément. `DEFER` : prouver
+   d'abord les huit ordinals consommés par le sélecteur 92777, puis construire
+   le pool final sans doublon Fanaticism, avec Vigor, Holy Fire et Holy Shock
+   réels.
 
 ## Légende des tests et rollbacks
 
@@ -124,7 +128,7 @@ pas être masqué en ajoutant des flags sans consommateur prouvé.
 
 | # | Changement audité | Décision et cible BKVince exacte | Cellules/ressources et route | Dépendances | Tests solo | Rollback |
 |---:|---|---|---|---|---|---|
-| 1 | Holy Shock dans Aura Enchanted | **ACCEPT conditionnel** : conserver `upick(H)=12`; retirer le doublon Fanaticism; préserver les outcomes BKV voulus, dont Vigor; ajouter un outcome Holy Fire réel et un Holy Shock réel; pool final et niveau PD2 `clamp(floor(mlvl/7),1,13)` | `monumod.txt`, `skills.txt`, sélecteur Aura Enchanted — **TXT + native** | réparer `MonHolyShock`; ordinals et sélecteur 92777; classifier les fixed mods | T0, T3 | R1 + R4 |
+| 1 | Holy Shock dans Aura Enchanted | **ACCEPT conditionnel** : conserver `upick(H)=12`; retirer le doublon Fanaticism; préserver les outcomes BKV voulus, dont Vigor; ajouter un outcome Holy Fire réel et un Holy Shock réel; pool final et niveau PD2 `clamp(floor(mlvl/7),1,13)` | `monumod.txt`, `skills.txt`, sélecteur Aura Enchanted — **TXT + native** | préserver les réaffectations BKV voulues; prouver ordinals et sélecteur 92777; classifier les fixed mods | T0, T3 | R1 + R4 |
 | 2 | Dolls PD2 | **ACCEPT** sur les huit Dolls classiques BKV : proc 100 %, délai visé 25 frames, rayon 4, dégâts physiques fixes N `18–30`, NM `54–96`, H `318–540`; conserver l'explosion BKV des Rift Dolls et le comportement `ISREVIVE` | `monstats.txt`, `monprop.txt`, `properties.txt`, `itemstatcost.txt`, `skills.txt`, `missiles.txt`, AnimData au besoin — **TXT + native** | funcs event/skill/missile 92777; classification classique/Rift; ownership | T0, T4 | R1 + R4 |
 | 3 | `primeevil` comme axe | **ACCEPT** : liste exacte de 15 ci-dessus; `uberizual=1`, `baalclone` vide; ne pas étendre aux 149 flags PD2 | `monstats.txt.primeevil` — **TXT**; consommateurs séparés — **native** | contrat stable `PrimeEvilRules` | T0, T5 | R1/R4 |
 | 4 | Taxonomies Act/Apex/Rift/etc. | **DEFER** : aucun sidecar ni taxonomie chargée dans ce merge | aucun fichier — route future **TXT/native** | définitions et loader futurs | aucun tant que différé | R0 |
@@ -170,6 +174,15 @@ pas. Les résultats S13 visés sont :
 | `uberdiablo` | `120; 6427/6427; 55; 5` | `40/40/60/60/60/60; 50` | A1 `370–380`; A2 `110–230` | DiabLight 16; DiabCold 2; DiabFire 14; DiabWall 12; DiabRun 5; PrimeFirewall 8; DiabPrison 1; Diablogeddon 10 |
 | `uberbaal` | `120; 6336/6336; 56; 5` | `40/40/60/60/60/60; 55` | A1 `500–550`; A2 `330–480` | Baal Nova 18; Baal Inferno 16; Baal Tentacle 15; Baal Cold Missiles 36; Baal Teleport 1; Baal Lowres 13; Blood Mana 3 |
 
+L'implantation BKV adapte ces cibles aux multiplicateurs de `MonLvl120` sans
+modifier `monlvl.txt`. Les cellules réellement écrites sont :
+
+| Boss | HP% BKV; AC% BKV | cellules de dégâts BKV | valeurs effectives de contrôle |
+|---|---|---|---|
+| `ubermephisto` | `5580/5580; 56` | A1 `487–572` | HP `569550`; AC `1270` |
+| `uberdiablo` | `6297/6297; 51` | A1 `481–494`; A2 `143–299` | HP `642734`; AC `1156` |
+| `uberbaal` | `6208/6208; 52` | A1 `651–714`; A2 `429–623` | HP `633650`; AC `1179` |
+
 ## Décisions additionnelles prises après l'audit
 
 | Sujet | Décision exacte | Route, dépendances, tests et rollback |
@@ -186,15 +199,17 @@ pas. Les résultats S13 visés sont :
 ## Lots atomiques obligatoires
 
 1. **Corrections indépendantes et baseline** : revalidation HEAD; consigner `pk1`
-   comme design; réparer `MonHolyShock` dans un lot séparé seulement après preuve
-   de son ordinal. Aucun autre changement ne dépend d'une supposition de nom/ID.
+   comme design; ne pas modifier les rows d'aura réaffectées avant preuve des
+   ordinals consommés par le sélecteur 92777. Aucun autre changement ne dépend
+   d'une supposition de nom/ID.
 2. **`MephComp.ds1`** : trois coordonnées seulement, hash de couches et fallback
    vérifiés; aucune table dans le même commit.
 3. **Statistiques et économie ciblée** : Andariel, Nihlathak, Countess, Summoner,
    Duriel, Blood Raven, puis adaptation TC Andy/Duriel/TZ et poids d'essences.
    Les changements de skill/summons Blood Raven peuvent être scindés du HP.
-4. **Aura Enchanted** : après réparation `MonHolyShock`; garder `upick(H)=12`,
-   retirer le doublon Fanaticism, ajouter Holy Fire et Holy Shock réels.
+4. **Aura Enchanted** : après preuve du sélecteur et des réaffectations BKV;
+   garder `upick(H)=12`, retirer le doublon Fanaticism, ajouter Holy Fire et Holy
+   Shock réels tout en conservant Vigor.
 5. **Dolls** : huit classiques selon PD2; Rift Dolls et `ISREVIVE` préservés.
 6. **Règles Prime Evil** : flags exacts, puis immunité universelle à tous les
    slows et chaque autre protection/multiplicateur comme sous-lot isolé. La
@@ -217,3 +232,30 @@ pas. Les résultats S13 visés sont :
   pile complète active. Le multijoueur reste non bloquant pour BKVince.
 - Le rollback s'exécute par lot : cellules, graphe TC, override DS1 ou guard
   natif; jamais par restauration globale d'une table ou désactivation d'un plugin.
+
+## État d'implantation — 2026-08-10
+
+`ACCEPT` demeure une décision de design dans la matrice; l'état technique réel
+du merge est le suivant.
+
+- **Implanté en TXT/DS1** : statistiques Andariel, Duriel, Nihlathak, Countess et
+  Summoner; Blood Raven hybride et ses summons/skills/missiles dédiés;
+  `MephComp.ds1`; liste Prime Evil de 15 et `ColdEffect=0`; graphes TC
+  Andy/Meph/Duriel/Baal, quest et TZ; poids d'essences; trio Uber recalibré;
+  `BKV Baal Lowres` niveau 13 dans le slot 6 d'Uber Baal.
+- **Non implanté, dépendance native ouverte** : pool Aura Enchanted; explosions
+  des huit Dolls; ralentissements Prime autres que chill/froid; quatre curses
+  d'AI; dégâts ×2 mercenaires/pets; Conviction spéciale d'Uber Mephisto. Aucun
+  sidecar, loader, plugin ou DLL n'a été créé pour contourner ces gates.
+- **Validation statique passée** : round-trip byte-exact CRLF, `verify:data`,
+  références de démarrage, stats effectives, `git diff --check`, cadastre
+  `VALID`, hash DS1 `768F0A06831ECF09F88FEA99D29FDCFE6BC599A0759F0D872DF9530DDFFA5279`.
+- **Économie p1 passée** : essence régulière/TZ `8,6942818 %`; quest
+  `9,7949614 %`. Les simulations informatives p3/p5/p8 montent respectivement à
+  `23,9051/36,6133/51,7919 %` pour la branche régulière et
+  `26,6281/40,3559/56,2736 %` pour la branche quest à cause du scaling NoDrop.
+- **Cold start passé** : profil `BKVince -txt -offline`, build 92777, pile de DLL
+  installée inchangée, aucune assertion de table et aucun crash. La qualification
+  « toutes les fonctionnalités du pack activées », les combats ciblés, la
+  sauvegarde/recharge et les tests T1/T3/T4/T5/T6/T7 restent `not run`; ils ne
+  sont pas implicitement validés par le démarrage.

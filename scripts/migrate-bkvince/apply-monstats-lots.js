@@ -65,6 +65,7 @@ const EXPECTED = Object.freeze({ safety: 221, mercenaries: 8, resistances: 289 }
 // Elles restent protegees cellule par cellule afin qu'une autre valeur bloque.
 const APPROVED_OVERRIDES = Object.freeze({
   'uberandariel\0ResPo(H)': '90',
+  'ubermephisto\0ResPo(H)': '60',
 });
 
 function assert(condition, message) {
@@ -148,7 +149,13 @@ function main() {
     assert(actual === expected, `${lot}: ${actual} cellules trouvees, ${expected} attendues`);
   }
   const conflicts = changes.filter((change) => change.disposition === 'conflict');
-  assert(conflicts.length === 0, `${conflicts.length} conflit(s) BKVince`);
+  assert(
+    conflicts.length === 0,
+    `${conflicts.length} conflit(s) BKVince: ${conflicts.map((change) => (
+      `${change.row}.${change.column}=${JSON.stringify(change.bkvince)}`
+      + ` (BK=${JSON.stringify(change.bk)}, TCP=${JSON.stringify(change.tcp)})`
+    )).join(', ')}`,
+  );
 
   console.table(Object.entries(EXPECTED).map(([lot, total]) => ({
     lot,

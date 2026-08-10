@@ -99,11 +99,13 @@ function main() {
     'Andariel Essence (H)',
     'treasureclassex.txt',
   );
-  assert(value(essence, treasureIndexes, 'Picks', 'treasureclassex.txt') === '1',
+  assert(value(essence, treasureIndexes, 'Picks', 'treasureclassex.txt') === '6',
     'treasureclassex.txt: Picks invalide pour Andariel Essence (H)');
+  assert(value(essence, treasureIndexes, 'NoDrop', 'treasureclassex.txt') === '982',
+    'treasureclassex.txt: NoDrop invalide pour Andariel Essence (H)');
   assert(value(essence, treasureIndexes, 'Item1', 'treasureclassex.txt') === 'tes',
     'treasureclassex.txt: Item1 invalide pour Andariel Essence (H)');
-  assert(value(essence, treasureIndexes, 'Prob1', 'treasureclassex.txt') === '1',
+  assert(value(essence, treasureIndexes, 'Prob1', 'treasureclassex.txt') === '15',
     'treasureclassex.txt: Prob1 invalide pour Andariel Essence (H)');
 
   const andarielHell = uniqueRow(treasureClasses, 'Andariel (H)', 'treasureclassex.txt');
@@ -133,7 +135,7 @@ function main() {
   console.log(`  Hireling skills -> ${hirelingSkillNames.size} skilldesc resolus`);
   console.log(`  Aura AI skills -> ${auraAiSkills.length} aurastate resolus`);
   console.log(`  Eruption -> ${missileMatch[1]}`);
-  console.log('  Andariel (H) -> Andariel Essence (H) -> tes');
+  console.log('  Andariel (H) -> Andariel Essence (H) -> tes (6 picks, NoDrop 982, poids 15)');
   console.log('  Rift Crafts (N) Premium precede Rift Crafts Premium');
 }
 
