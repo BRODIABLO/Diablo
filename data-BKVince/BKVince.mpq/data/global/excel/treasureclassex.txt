@@ -1416,6 +1416,7 @@ Rift (H) Champion			-4					0	Rift (H) Monster Misc	1	Rift (H) Good	1	Rift Crafts
 Rift (H) Unique			-4					0	Rift (H) Monster Misc	1	Rift (H) Good High	1	Rift Crafts (H) Premium	1	Rift Gold	1																						0
 Rift (H) Desecrated Champion			-5					0	Rift (H) Monster Misc	1	Rift (H) Good High	1	Rift Crafts (H) Premium	1	Rift Gold	2																						0
 Rift (H) Desecrated Unique			-5					0	Rift (H) Monster Misc	1	Rift (H) Good High	1	Rift Crafts (H) Premium	1	Rift Gold	2																						0
+Rift (H) Herald			-5					0	Rift (H) Monster Misc	1	Rift (H) Good High	1	Rift Crafts (H) Premium	1	Rift Gold	2																						0
 Rift (H) Herald Item 1 Extra	42		-1					0	Rift (H) Good High	1																												0
 Rift (H) Herald Item 2 Extra	42		-2					0	Rift (H) Good High	2																												0
 Rift (H) Herald A	42	95	-6					0	Rift (H) Monster Misc	1	Rift (H) Good High	1	Rift Crafts (H) Premium	1	Rift Gold	2	Rift (H) Herald Item 1 Extra	1																				0
