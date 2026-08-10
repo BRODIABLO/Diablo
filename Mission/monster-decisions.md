@@ -254,8 +254,15 @@ du merge est le suivant.
   `9,7949614 %`. Les simulations informatives p3/p5/p8 montent respectivement à
   `23,9051/36,6133/51,7919 %` pour la branche régulière et
   `26,6281/40,3559/56,2736 %` pour la branche quest à cause du scaling NoDrop.
-- **Cold start passé** : profil `BKVince -txt -offline`, build 92777, pile de DLL
-  installée inchangée, aucune assertion de table et aucun crash. La qualification
-  « toutes les fonctionnalités du pack activées », les combats ciblés, la
-  sauvegarde/recharge et les tests T1/T3/T4/T5/T6/T7 restent `not run`; ils ne
-  sont pas implicitement validés par le démarrage.
+- **Régression TC détectée et corrigée le 10 août** : le premier runtime réellement
+  probant a arrêté le chargement à `MonsterTbls.cpp:1279`, ligne TC 930, parce que
+  sept sous-TC quest avaient été placées après leurs parents. Les sept rows ont
+  été déplacées sans modifier leurs cellules ou probabilités; le validateur de
+  démarrage interdit désormais génériquement toute référence TC vers l'avant.
+- **Cold start correctif passé** : profil `BKVince -txt -offline`, build 92777,
+  gameplay tables franchies jusqu'à `24/24`, `18/18` plugins actifs, `15/15`
+  patches appliqués, zéro erreur/rejet/échec et aucun nouveau rapport de crash;
+  SHA-256 source/runtime de `treasureclassex.txt`
+  `AE8E8E8487CA34293221032E17E06168912A0482645F36F5336E0748D29F892F`.
+  Les combats ciblés, la sauvegarde/recharge et les tests T1/T3/T4/T5/T6/T7
+  restent `not run`; ils ne sont pas implicitement validés par le démarrage.

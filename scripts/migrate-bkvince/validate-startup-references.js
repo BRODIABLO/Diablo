@@ -47,6 +47,43 @@ function value(row, indexes, header, tableName) {
   return row[index] ?? '';
 }
 
+function assertTreasureClassOrdering(table, indexes, itemCodes, itemTypeTokens) {
+  const tableName = 'treasureclassex.txt';
+  const positions = new Map();
+
+  for (let rowIndex = 0; rowIndex < table.rows.length; rowIndex += 1) {
+    const name = value(table.rows[rowIndex], indexes, 'Treasure Class', tableName);
+    if (!name) continue;
+    assert(!positions.has(name), `${tableName}: Treasure Class dupliquee: ${name}`);
+    positions.set(name, rowIndex);
+  }
+
+  for (let rowIndex = 0; rowIndex < table.rows.length; rowIndex += 1) {
+    const row = table.rows[rowIndex];
+    const parent = value(row, indexes, 'Treasure Class', tableName);
+    for (let slot = 1; slot <= 10; slot += 1) {
+      const item = value(row, indexes, `Item${slot}`, tableName);
+      if (!item) continue;
+      const childIndex = positions.get(item);
+      if (childIndex !== undefined) {
+        assert(
+          childIndex < rowIndex,
+          `${tableName}: ${parent} reference ${item} avant sa declaration`,
+        );
+        continue;
+      }
+
+      const itemCode = item.split(',', 1)[0];
+      const generatedType = /^(.*?)(\d+)$/.exec(itemCode);
+      assert(
+        itemCodes.has(itemCode)
+          || (generatedType && itemTypeTokens.has(generatedType[1])),
+        `${tableName}: ${parent} contient une reference inconnue: ${item}`,
+      );
+    }
+  }
+}
+
 function main() {
   const hireling = load('hireling.txt');
   const skills = load('skills.txt');
@@ -54,10 +91,54 @@ function main() {
   const states = load('states.txt');
   const missiles = load('missiles.txt');
   const treasureClasses = load('treasureclassex.txt');
+  const armor = load('armor.txt');
+  const itemTypes = load('itemtypes.txt');
+  const misc = load('misc.txt');
+  const setItems = load('setitems.txt');
+  const uniqueItems = load('uniqueitems.txt');
+  const weapons = load('weapons.txt');
   const hirelingIndexes = headerIndexes(hireling);
   const skillsIndexes = headerIndexes(skills);
   const skilldescIndexes = headerIndexes(skilldesc);
   const treasureIndexes = headerIndexes(treasureClasses);
+  const itemCodes = new Set();
+  const itemTypeTokens = new Set();
+  for (const [table, tableName] of [
+    [armor, 'armor.txt'],
+    [misc, 'misc.txt'],
+    [weapons, 'weapons.txt'],
+  ]) {
+    const indexes = headerIndexes(table);
+    for (const row of table.rows) {
+      const code = value(row, indexes, 'code', tableName);
+      if (code) itemCodes.add(code);
+    }
+  }
+  for (const [table, tableName] of [
+    [setItems, 'setitems.txt'],
+    [uniqueItems, 'uniqueitems.txt'],
+  ]) {
+    const indexes = headerIndexes(table);
+    for (const row of table.rows) {
+      const index = value(row, indexes, 'index', tableName);
+      if (index) itemCodes.add(index);
+    }
+  }
+
+  const itemTypeIndexes = headerIndexes(itemTypes);
+  for (const row of itemTypes.rows) {
+    for (const header of ['Code', 'Equiv1', 'Equiv2']) {
+      const token = value(row, itemTypeIndexes, header, 'itemtypes.txt');
+      if (token) itemTypeTokens.add(token);
+    }
+  }
+
+  assertTreasureClassOrdering(
+    treasureClasses,
+    treasureIndexes,
+    itemCodes,
+    itemTypeTokens,
+  );
 
   const hirelingSkillNames = new Set();
   for (const row of hireling.rows) {
@@ -135,6 +216,7 @@ function main() {
   console.log(`  Hireling skills -> ${hirelingSkillNames.size} skilldesc resolus`);
   console.log(`  Aura AI skills -> ${auraAiSkills.length} aurastate resolus`);
   console.log(`  Eruption -> ${missileMatch[1]}`);
+  console.log(`  Treasure Classes -> toutes resolues dans l'ordre (${itemCodes.size} items resolvables)`);
   console.log('  Andariel (H) -> Andariel Essence (H) -> tes (6 picks, NoDrop 982, poids 15)');
   console.log('  Rift Crafts (N) Premium precede Rift Crafts Premium');
 }
