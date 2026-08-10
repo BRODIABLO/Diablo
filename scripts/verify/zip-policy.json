@@ -195,6 +195,13 @@
         "ProgressiveAffixesPlugin.dll",
         "ProgressiveAffixesPlugin.toml"
       ]
+    },
+    "addons/BKVCombat/BKVCombat-0.1.0.zip": {
+      "kind": "plugin",
+      "entries": [
+        "BKVCombat.dll",
+        "BKVCombat.json"
+      ]
     }
   }
 }

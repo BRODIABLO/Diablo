@@ -16,3 +16,7 @@
 - Fixed normal Attack capture by governing the direct `FillDamageValues`
   continuation used by the live 92777 melee handler, while retaining the queued
   melee continuation and rejecting all other Fill callers.
+- Added an optional, lazily discovered BKVCombat API v1 bridge so synthetic
+  targets consume its authoritative Critical/Deadly policy without a load-time
+  dependency; absent, inactive, or incompatible providers retain the exact
+  native 92777 fallback.

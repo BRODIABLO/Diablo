@@ -6781,5 +6781,22 @@
     "ruRU": "%+d%% к урону по области в ближнем бою",
     "zhCN": "%+d%% 近战溅射伤害",
     "zhTW": "%+d%% 近戰濺射傷害"
+  },
+  {
+    "id": 65030,
+    "Key": "ModCrushingBlowEfficiency",
+    "deDE": "%+d%% Crushing Blow Efficiency",
+    "enUS": "%+d%% Crushing Blow Efficiency",
+    "esES": "%+d%% Crushing Blow Efficiency",
+    "esMX": "%+d%% Crushing Blow Efficiency",
+    "frFR": "%+d%% Crushing Blow Efficiency",
+    "itIT": "%+d%% Crushing Blow Efficiency",
+    "jaJP": "%+d%% Crushing Blow Efficiency",
+    "koKR": "%+d%% Crushing Blow Efficiency",
+    "plPL": "%+d%% Crushing Blow Efficiency",
+    "ptBR": "%+d%% Crushing Blow Efficiency",
+    "ruRU": "%+d%% Crushing Blow Efficiency",
+    "zhCN": "%+d%% Crushing Blow Efficiency",
+    "zhTW": "%+d%% Crushing Blow Efficiency"
   }
 ]

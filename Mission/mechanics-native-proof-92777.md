@@ -522,10 +522,13 @@ table native retrouvée.
   cible player `/4`, encore `/2` pour event 6, monstre flag 12 `/2`. La valeur
   négative est fournie au helper avec state `62`.
 
-Le tuple `{skillId=0, skillLevel=1, duration=200, statId=7}` provient d'une
-constante runtime à `0x1D3EBD0`, dans la BSS nulle de l'image canonique. D2MOO
-et tout le CFG D2R concordent, mais ces quatre valeurs restent `pending` jusqu'à
-lecture mémoire MEC-01; elles ne sont pas présentées comme octets image.
+Le tuple runtime provient d'une constante à `0x1D3EBD0`, dans la BSS nulle de
+l'image canonique. Ses quatre valeurs restent `pending` jusqu'à lecture mémoire
+MEC-01 et ne sont pas présentées comme octets image. Correction de preuve : le
+tick natif `D2GAME_MONSTER_ApplyStatRegen 0x448C00` lit explicitement
+`STAT_HPREGEN` ID `74` à `0x448C2A`; l'ancienne transcription `statId=7` était
+erronée. Tout consommateur doit utiliser le stat ID transporté par l'argument du
+helper et exiger le témoin runtime `74`, jamais coder `7`.
 
 #### EventFunc16 Crushing Blow `0x583150`
 

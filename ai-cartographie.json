@@ -500,6 +500,117 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "BKVCombat",
+                                                           "path":  "addons/BKVCombat",
+                                                           "kind":  "directory",
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "package",
+                                                                                "path":  "addons/BKVCombat/package",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "BKVCombat.dll",
+                                                                                                     "path":  "addons/BKVCombat/package/BKVCombat.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "BKVCombat.json",
+                                                                                                     "path":  "addons/BKVCombat/package/BKVCombat.json",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/BKVCombat/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "bkv_combat_config.cpp",
+                                                                                                     "path":  "addons/BKVCombat/src/bkv_combat_config.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "bkv_combat_config.hpp",
+                                                                                                     "path":  "addons/BKVCombat/src/bkv_combat_config.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "bkv_combat_policy.cpp",
+                                                                                                     "path":  "addons/BKVCombat/src/bkv_combat_policy.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "bkv_combat_policy.hpp",
+                                                                                                     "path":  "addons/BKVCombat/src/bkv_combat_policy.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "bkv_combat_tests.cpp",
+                                                                                                     "path":  "addons/BKVCombat/src/bkv_combat_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "bkv_combat_version.hpp",
+                                                                                                     "path":  "addons/BKVCombat/src/bkv_combat_version.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/BKVCombat/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/BKVCombat/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/BKVCombat/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "BKVCombat-0.1.0.zip",
+                                                                                "path":  "addons/BKVCombat/BKVCombat-0.1.0.zip",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "CHANGELOG.md",
+                                                                                "path":  "addons/BKVCombat/CHANGELOG.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "NATIVE-CONTRACT.md",
+                                                                                "path":  "addons/BKVCombat/NATIVE-CONTRACT.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "OPTIONS.md",
+                                                                                "path":  "addons/BKVCombat/OPTIONS.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/BKVCombat/README.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "SMOKE-TEST.md",
+                                                                                "path":  "addons/BKVCombat/SMOKE-TEST.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "VALIDATION.md",
+                                                                                "path":  "addons/BKVCombat/VALIDATION.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "BulkSkillPointAllocation",
                                                            "path":  "addons/BulkSkillPointAllocation",
                                                            "kind":  "directory",
@@ -974,6 +1085,11 @@
                                                                                                  {
                                                                                                      "name":  "config_tests.cpp",
                                                                                                      "path":  "addons/MeleeSplash/src/config_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "melee_splash_bkvcombat_interop.hpp",
+                                                                                                     "path":  "addons/MeleeSplash/src/melee_splash_bkvcombat_interop.hpp",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -20377,6 +20493,11 @@
                                                                                 "kind":  "directory",
                                                                                 "children":  [
                                                                                                  {
+                                                                                                     "name":  "BKVCombat.json",
+                                                                                                     "path":  "data-BKVince/d2rloader/config/BKVCombat.json",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "charm-zone.toml",
                                                                                                      "path":  "data-BKVince/d2rloader/config/charm-zone.toml",
                                                                                                      "kind":  "file"
@@ -21788,6 +21909,11 @@
                                                                                                  {
                                                                                                      "name":  "AdvancedItemTooltips.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/AdvancedItemTooltips.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "BKVCombat.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/BKVCombat.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -37623,6 +37749,11 @@
                                                                     }
                                                        },
                                                        {
+                                                           "name":  "bkvcombat-0.1.md",
+                                                           "path":  "Mission/bkvcombat-0.1.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "bkvince-hero-editor.md",
                                                            "path":  "Mission/bkvince-hero-editor.md",
                                                            "kind":  "file",
@@ -38548,6 +38679,11 @@
                                                                             {
                                                                                 "name":  "analyze-staffmods-3.2.py",
                                                                                 "path":  "scripts/migrate-bkvince/analyze-staffmods-3.2.py",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "apply-bkvcombat-stats.js",
+                                                                                "path":  "scripts/migrate-bkvince/apply-bkvcombat-stats.js",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

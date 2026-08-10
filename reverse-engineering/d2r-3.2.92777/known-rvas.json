@@ -2449,7 +2449,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/mechanics-native-proof-92777.md",
-      "notes": "Confirmed-static Crushing Blow core with bounds 0x581BD0..0x581EC7, unique 24-byte signature and ABI (game, attacker, target, context) -> void. Its two callers are 0x51D950 and EventFunc16 at 0x583257. It selects target divisors, applies player-count and physical resistance, writes HP, sets D2Damage result bit 2 on lethal damage and applies overlay 147 when positive."
+      "notes": "Confirmed-static Crushing Blow core with bounds 0x581BD0..0x581EC7, unique 24-byte signature and ABI (game, attacker, target, context) -> int32. Its two callers are 0x51D950 and EventFunc16 at 0x583257. It selects target divisors, applies player-count and physical resistance, writes HP, sets D2Damage result bit 2 on lethal damage and applies overlay 147 when positive."
     },
     {
       "rva": "0x433D20",
@@ -2650,6 +2650,174 @@
       "confidence": "high",
       "source": "Mission/progressive-affixes-plugin-3.2.md",
       "notes": "Exact 30-byte block 0x58BC90..0x58BCAD loading bound 8, rolling the item seed and mapping the index through the native count table. ProgressiveAffixesPlugin replaces the full block with a rel32 call, moves EAX to R12D, restores R9=seed and rejoins the untouched loop at 0x58BCAE."
+    },
+    {
+      "rva": "0x44C2D3",
+      "name": "SUNITDMG_WeaponMasteryCriticalChanceCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Exact five-byte call E8 18 12 EF FF inside SUNITDMG_FillDamageValues to the weapon-mastery Critical chance helper. The governed context supplies attacker, active weapon, argument3=0 and argument4=2; BKVCombat preserves that callee ABI and caps only the returned chance when its Critical policy is operational."
+    },
+    {
+      "rva": "0x44C32B",
+      "name": "SUNITDMG_PassiveCriticalChanceCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Exact five-byte call E8 F0 8C EA FF inside SUNITDMG_FillDamageValues to STATLIST_GetUnitStat for passive_critical_strike stat 337, layer 0. It is reached only after the weapon-mastery Critical branch fails and retains the native (unit, statId, layer) -> int32 ABI."
+    },
+    {
+      "rva": "0x44C37F",
+      "name": "SUNITDMG_DeadlyStrikeChanceCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Exact five-byte call E8 DC 98 EA FF inside SUNITDMG_FillDamageValues to STATLIST_UnitGetStatValue for item_deadlystrike stat 141, layer 0. It is reached only after both Critical branches fail and retains the native layered-stat ABI."
+    },
+    {
+      "rva": "0x44C3C8",
+      "name": "SUNITDMG_DeadlyStrikeSuccessTail",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Exact 17-byte native success tail 8B 47 18 03 C0 89 47 18 B8 00 20 00 00 66 09 47 04. The unique branch context at 0x44C3C2 distinguishes the Deadly-success path from Critical success; BKVCombat redirects this block and rejoins at 0x44C3D9 so only Deadly uses the configured 1.5x multiplier."
+    },
+    {
+      "rva": "0x583257",
+      "name": "D2GAME_EventFunc16_CrushingBlowCoreCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Exact five-byte call E8 74 E9 FF FF from EventFunc16 to D2GAME_ApplyCrushingBlowCore at 0x581BD0. The preserved x64 ABI is int32(game, attacker, target, context); the int32 return is authoritative and EventFunc16 itself remains owned by MeleeSplash in the supported stack."
+    },
+    {
+      "rva": "0x5842F3",
+      "name": "D2GAME_EventFunc15_OpenWoundsStatListCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Exact five-byte call E8 28 FA EA FF from EventFunc15 to D2GAME_ApplyCurseStateStatList at 0x433D20. ABI is StatList* (ApplyArgs*), where the 0x30-byte argument record carries source, target, skill, duration, stat, state and optional removal callback; EventFunc15 itself remains owned by MeleeSplash."
+    },
+    {
+      "rva": "0x55BCD0",
+      "name": "D2GAME_EventFunc05_LifeTap",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Confirmed-static Life Tap handler with logical bounds 0x55BCD0..0x55BFAC and a validated 32-byte entry signature. It uses the native event-callback frame and derives a separate life credit from resolved physical damage; it is not ordinary stat-60 life steal and BKVCombat validates but never hooks it."
+    },
+    {
+      "rva": "0x4A53C0",
+      "name": "D2GAME_GetMinionOwner",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Confirmed-static monster-minion owner resolver with logical bounds 0x4A53C0..0x4A547C, validated 32-byte entry signature and ABI Unit* (Unit* monster). It validates unit type, reads the monster owner identity and re-resolves that owner through SUNIT_GetServerUnit; null is returned when no live owner is available."
+    },
+    {
+      "rva": "0x48FF00",
+      "name": "UNITS_GetGame",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Confirmed-static unit-to-game accessor with logical bounds 0x48FF00..0x48FF3A, validated 32-byte entry signature and ABI Game* (Unit*). For a valid unit it returns the pointer at unit+0xD8; BKVCombat uses it transiently while creating server-owned Open Wounds stat lists."
+    },
+    {
+      "rva": "0x2F5940",
+      "name": "STATLIST_GetStatListFromUnitAndState",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Confirmed-static state-list lookup with validated entry signature and ABI StatList* (Unit*, int32 state). The Open Wounds lifecycle uses it to detect state 62 before disabling that state in the custom removal callback."
+    },
+    {
+      "rva": "0x2F7300",
+      "name": "STATLIST_AllocStatList",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Confirmed-static stat-list allocator with validated 32-byte entry signature and ABI StatList* (uint32 flags, int32 expireFrame, int32 sourceType, uint32 sourceGuid). BKVCombat uses only the governed Open Wounds flags and immediately frees any partially initialized list on validation failure."
+    },
+    {
+      "rva": "0x2F72F0",
+      "name": "STATLIST_SetStatListState",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Exact nine-byte leaf setter 48 85 C9 74 03 89 51 20 C3 with ABI void (StatList*, int32 state). It stores the state at StatList+0x20 and is null-safe."
+    },
+    {
+      "rva": "0x2F79B0",
+      "name": "STATLIST_SetStatListSkillId",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Confirmed-static stat-list skill-ID setter with bounds 0x2F79B0..0x2F79F2, validated 32-byte signature and ABI void (StatList*, int32 skillId). It stores the value at StatList+0x28."
+    },
+    {
+      "rva": "0x2F7A00",
+      "name": "STATLIST_SetStatListSkillLevel",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Confirmed-static stat-list skill-level setter with bounds 0x2F7A00..0x2F7A42, validated 32-byte signature and ABI void (StatList*, int32 skillLevel). It stores the value at StatList+0x2C."
+    },
+    {
+      "rva": "0x2F7C00",
+      "name": "STATLIST_SetStatListStat",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Confirmed-static stat-list stat setter with bounds 0x2F7C00..0x2F7C14, validated 21-byte signature and ABI void (uint8 dataContext, StatList*, int32 statId, int32 value, uint16 layer). It tail-calls the native stat insertion primitive and is used for the negative stat-74 Open Wounds rate."
+    },
+    {
+      "rva": "0x2F7A50",
+      "name": "STATLIST_SetStatListRemoveCallback",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Exact 13-byte leaf setter 48 85 C9 74 07 48 89 91 80 00 00 00 C3 with ABI void (StatList*, RemoveCallback). It stores the callback at StatList+0x80 and is null-safe."
+    },
+    {
+      "rva": "0x2F7AB0",
+      "name": "STATLIST_SetStatListExpireFrame",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Exact expire-frame setter with bounds 0x2F7AB0..0x2F7AC9 and validated 26-byte signature. ABI is void (StatList*, int32 frame); a positive frame sets list flag 0x2 and stores the frame as float at StatList+0x24."
+    },
+    {
+      "rva": "0x2F2CB0",
+      "name": "STATLIST_PostStatList",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Confirmed-static stat-list posting primitive with validated 32-byte entry signature and ABI void (Unit* target, StatList*, int32 update). It links the list under the target's extended stat-list owner and updates the unit aggregate."
+    },
+    {
+      "rva": "0x2F7920",
+      "name": "STATLIST_UnlinkStatList",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Confirmed-static unlink wrapper with bounds 0x2F7920..0x2F7939, validated 26-byte signature and ABI void (Unit* target, StatList*). It derives the target data context before tail-calling the internal unlink primitive."
+    },
+    {
+      "rva": "0x2F4180",
+      "name": "STATLIST_FreeStatList",
+      "kind": "function",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Exact 16-byte stat-list free wrapper with bounds 0x2F4180..0x2F418F and ABI void (uint8 dataContext, StatList*). BKVCombat calls it only for a newly allocated unposted list or after explicit unlink, providing fail-closed rollback after allocation or post-validation failure."
+    },
+    {
+      "rva": "0x44D038",
+      "name": "SUNITDMG_ApplyLifeAndManaLeechCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
+      "notes": "Exact five-byte call E8 53 3C 00 00 from SUNITDMG_ExecuteEvents to the unique leech consumer at 0x450C90. The governed context starts at 0x44D02C and preserves ABI void (game, attacker, defender, D2Damage*); BKVCombat validates this baseline but installs no leech hook."
     }
   ]
 }

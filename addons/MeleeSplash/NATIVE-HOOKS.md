@@ -125,10 +125,16 @@ chain. `GetItemsTxtRecord 0x314110`, for example, is a legitimate hook surface
 for other workspace components. Strict runtime byte ownership is reserved for
 the sites MeleeSplash itself writes.
 
-The per-target Critical/Deadly adapter reproduces the current 92777 order:
-weapon mastery, passive Critical, then Deadly; each positive chance consumes
-its own attacker-seed roll and the first success short-circuits the rest. It is
-not the future PD2 cap/multiplier resolver.
+Without an active provider, the per-target Critical/Deadly adapter reproduces
+the current 92777 order: weapon mastery, passive Critical, then Deadly; each
+positive chance consumes its own attacker-seed roll and the first success
+short-circuits the rest. An optional BKVCombat API v1 provider is discovered
+lazily by module and export name. Its size, version, compiled capability,
+active capability, and function pointers are validated before MeleeSplash
+passes the exact game, attacker, target, damage record, captured damage mode,
+and synthetic-secondary flag. An absent, inactive, incompatible, or explicitly
+unavailable provider falls back to the exact adapter above. This API is used
+only for Critical/Deadly; CB and OW remain native EventFunc16/EventFunc15 calls.
 
 ## Ownership and coexistence
 

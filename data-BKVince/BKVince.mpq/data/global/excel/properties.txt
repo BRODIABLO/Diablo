@@ -311,3 +311,4 @@ readable-id	308	1	1	item_readable_message																												Readable me
 unused-bkv-merc-property-309	309	0																																			0
 splash-radius%	310	1	1	inc_splash_radius																												+#% Increased Melee Splash Radius		Min %	Max %		0
 splash-dmg%	311	1	1	item_melee_splash_damage_percent																												+#% Melee Splash Damage		Min %	Max %		0
+crush-efficiency	312	1	1	item_crushingblow_efficiency																												+#% Crushing Blow Efficiency		Min %	Max %		0

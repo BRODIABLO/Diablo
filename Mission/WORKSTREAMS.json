@@ -498,8 +498,8 @@
       "name": "PD2 and Single Player Plus Inspiration for BKVince",
       "status": "active",
       "owner": "Vincent + Codex",
-      "mission": "Mission/progressive-affixes-plugin-3.2.md",
-      "nextGate": "ProgressiveAffixesPlugin 0.2.0 is technically implemented as a permanent standalone RuffnecKk hybrid with a player-ready strict TOML and backward-compatible v0.1 advanced syntax. Rare Jewels now progress through configurable ilvl 1/45/65/85 percentage rows from vanilla 50/50 to guaranteed four affixes. Release x64, /W4 /WX, CTest 1/1, exact exports and two /Brepro clean builds pass; DLL SHA-256 is F88386D2839E996880F1C9EFBEE7891E8CF4CCADCAC109C65EE2F8B70671FC7C. Fresh mod-local and global cold starts both pass on build 92777 with 18/18 plugins active, 15/15 patchsets applied and zero disabled, rejected or failed components; the desired mod-local profile is restored byte-identical. Next collect late ItemType resolution and Magic/Rare/Crafted boundary/distribution witnesses, save/reload and host/joiner, then qualify every PluginPack feature currently disabled. Do not claim universal all-features compatibility while pre-existing full-stack conflicts at 0x589736, 0x314110 and 0x18885B/0x18887F remain open.",
+      "mission": "Mission/bkvcombat-0.1.md",
+      "nextGate": "BKVCombat 0.1 Release 1 is built and packaged: DLL SHA-256 3EFCEB7374E26207FE603FF5AC43DAFBC8246E85C37426B62D0AEF1F38663D50, strict ZIP A6E89B7B4B8723704A44F95386AB841A6ABD4AD9C2C27003EE61A4B90331BE24. Current-stack cold starts pass default-off, policies-on and both exact BKVCombat/MeleeSplash orders at 19/19 plugins, 15/15 patchsets and 24/24. Gameplay and lazy provider negotiation are NOT RUN. Next: solo Critical/Deadly, four-class Crushing Blow/CBE, three-stack Open Wounds and leech witnesses. Universal compatibility remains NO-GO until disabled PluginPack features and pre-existing render incidents are closed without neutralizing third-party components. Preserve ProgressiveAffixesPlugin as previous mission history.",
       "include": [
         "Mission/pd2-inspiration-bkvince.md",
         "Mission/pd2-monsters-bosses-vs-bkvince-audit.md",
@@ -539,7 +539,12 @@
         "scripts/migrate-bkvince/*melee-splash*",
         "scripts/migrate-bkvince/apply-pd2-blizzard-prototype.js",
         "scripts/migrate-bkvince/apply-static-field-rework.js",
-        "scripts/validate-pd2-catalog/**"
+        "scripts/validate-pd2-catalog/**",
+        "Mission/bkvcombat-0.1.md",
+        "addons/BKVCombat/**",
+        "data-BKVince/d2rloader/config/BKVCombat.json",
+        "data-BKVince/d2rloader/plugins/BKVCombat.dll",
+        "scripts/migrate-bkvince/apply-bkvcombat-stats.js"
       ]
     },
     {

@@ -55,12 +55,14 @@ For each secondary target independently, 0.1.0:
 The pre-critical physical, magic, elemental, burn, and poison packet is shared
 and scaled before the per-target Critical/Deadly roll; the Critical/Deadly,
 Crushing Blow, and Open Wounds outcomes are not. The
-92777 Critical/Deadly adapter is deliberately isolated so a future host-owned
-resolver can replace it without making this plugin the owner of general combat
-formulas. Because current D2R exposes no callable Critical/Deadly resolver, a
-future PD2 resolver will require a deliberate provider integration and a new
-MeleeSplash build; 0.1.0 cannot discover a new ×1.5 Deadly formula from the
-shared native result bit alone.
+92777 Critical/Deadly adapter is deliberately isolated so a host-owned resolver
+can replace it without making this plugin the owner of general combat formulas.
+When a compatible active `BKVCombat.dll` exposes its versioned API v1,
+MeleeSplash discovers it lazily and delegates each synthetic target's
+Critical/Deadly resolution, including the exact captured damage mode. There is
+no load-time dependency: an absent, inactive, or incompatible provider uses the
+existing exact 92777 fallback. Crushing Blow and Open Wounds are never called
+through this API and continue through their native event handlers.
 
 Synthetic splash resolution never launches a missile, creates Next Hit Delay,
 reruns durability or thorns, or recursively creates another splash. Knockback,
@@ -89,6 +91,12 @@ manifest, FloatingDamage owner, standalone addons, and active BKVince patches.
 No exact collision is accepted. Compatibility claims apply only to the
 explicitly tested versions and full active stack recorded for this release,
 not to unknown future plugins.
+
+The optional BKVCombat bridge uses only `GetModuleHandleW` and `GetProcAddress`.
+MeleeSplash neither links against nor controls BKVCombat, and either DLL may
+load first. The consumer validates the API version, structure size, compiled
+capability, active capability, and function pointers before every delegation
+decision.
 
 The generic DLL does not disable another mod's legacy splash. A host may opt
 into a narrowly configured EventFunc20 suppression token; BKVince's separate

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 2,
+  "enabled": false,
+  "diagnosticLogging": false,
+  "policies": {
+    "criticalStrike": false,
+    "deadlyStrike": false,
+    "crushingBlow": false,
+    "lifeSteal": false,
+    "manaSteal": false,
+    "openWounds": false
+  },
+  "stats": {
+    "crushingBlowEfficiencyStatId": 393
+  },
+  "classifications": {
+    "majorBosses": [
+      { "monstats": "ubermephisto", "expectedId": 704 },
+      { "monstats": "uberdiablo", "expectedId": 705 },
+      { "monstats": "uberbaal", "expectedId": 709 },
+      { "monstats": "uberizual", "expectedId": 706 },
+      { "monstats": "uberandariel", "expectedId": 707 },
+      { "monstats": "uberduriel", "expectedId": 708 },
+      { "monstats": "colossal1", "expectedId": 745 },
+      { "monstats": "colossal2", "expectedId": 746 },
+      { "monstats": "colossal3", "expectedId": 747 },
+      { "monstats": "diabloclone", "expectedId": 333 }
+    ]
+  }
+}

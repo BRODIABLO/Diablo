@@ -41,11 +41,12 @@ analysis-cache/native-build/MeleeSplash/Release/Testing/Temporary/LastTest.log
 1/1 melee-splash-config-policy: PASS
 ```
 
-Two consecutive builds of the corrected source both passed CTest and produced:
+Two consecutive builds of the BKVCombat-provider bridge source both passed
+CTest and produced:
 
 ```text
-DBA0C40C191B2568A6B39D21324A45F770C1CBF8AD747B099AA3BCBEDEF8856C
-199168 bytes
+77D3A7DC6C77B319A8E80C49F76DA84707F93DDFEBBC9E18F5E5D83CCE25F2DF
+200192 bytes
 ```
 
 One configure attempt made while another agent was building the same derived
@@ -60,13 +61,13 @@ These hashes describe the frozen build and packaging snapshot.
 
 | Artifact | Modified (-04:00) | SHA-256 | Status |
 |---|---|---|---|
-| `src/plugin.cpp` | 2026-08-09 13:09:42 | `01C77FFDF6CA478EFA711CBC9BD24985600D5D8855B85C2F5694E625FF767B7A` | Corrected source with the governed direct-melee Fill caller and bounded rejection diagnostics |
-| `package/MeleeSplash.dll` | 2026-08-09 13:09:53 | `DBA0C40C191B2568A6B39D21324A45F770C1CBF8AD747B099AA3BCBEDEF8856C` | Corrected build; byte-equal to build output and BKVince plugin copy |
-| BKVince plugin copy | 2026-08-09 13:09:53 | `DBA0C40C191B2568A6B39D21324A45F770C1CBF8AD747B099AA3BCBEDEF8856C` | Byte-equal to corrected build and package |
+| `src/plugin.cpp` | 2026-08-10 16:19:58 | `9C8968AEF2F8CBC209D90E3BCA6ED6FC53F2C82D3C14FA50C6DE1043E42465C6` | Governed direct-melee capture plus optional BKVCombat API v1 resolver |
+| `package/MeleeSplash.dll` | 2026-08-10 17:10:53 | `77D3A7DC6C77B319A8E80C49F76DA84707F93DDFEBBC9E18F5E5D83CCE25F2DF` | Reproducible bridge build; byte-equal to build output and BKVince plugin copy |
+| BKVince plugin copy | 2026-08-10 17:10:53 | `77D3A7DC6C77B319A8E80C49F76DA84707F93DDFEBBC9E18F5E5D83CCE25F2DF` | Byte-equal to corrected build and package |
 | `package/MeleeSplash.json` | 2026-08-09 05:37:00 | `6AA40B37051189ADE2CA5D60FE133765EE1D426E0B6DA5E2059B619E77030C20` | Generic, default-off |
 | Enabled generic example | 2026-08-09 05:37:00 | `CAE51A8A98F1BBA1278263DB7D3137D4DBFFC7DD8073670C65427F090A06B1EA` | Test/example only; excluded from ZIP |
 | BKVince configuration | 2026-08-09 16:34:48 | `0A7B1878C6D20CE3362F9B95055B7DBF9E56EDEC81C24001E2B88A400017802D` | Separate, active no-gate host profile; excluded from ZIP |
-| `MeleeSplash-0.1.0.zip` | 2026-08-09 16:05:28 | `F137F1B708A4C51C8A88EA68B49BFB85619F380693E63899B508EB1C342E35A9` | Strict two-file public archive, 89072 bytes |
+| `MeleeSplash-0.1.0.zip` | 2026-08-10 17:15:31 | `3B159EC80791A82AF7ED0A9BD40CDFAEEAED5BC656128CB7C5BEF1DD1D46CE9C` | Strict two-file public archive, 89547 bytes |
 
 ## PE and public ABI inspection
 
@@ -140,7 +141,11 @@ analysis-cache/meleesplash-runtime-validation/20260809-095701652/
 ```
 
 The original cold-start matrix used the frozen `D9A49607...21B0` artifact. The
-corrected gameplay build is `DBA0C40C...8856C`. Its historical default-off
+corrected gameplay build was `DBA0C40C...8856C`; the optional BKVCombat bridge
+build is `77D3A7DC...5F2DF`. The fresh BKVCombat matrix loaded both exact module
+orders at 19/19 plugins, 15/15 patchsets and frontend 24/24. The bridge lookup
+is lazy, so actual provider negotiation remains `NOT RUN` until a gameplay hit.
+Its historical default-off
 baseline used SHA-256 `32747A94...6E5E6`. Three D2R 3.2.92777 cold starts were
 recorded for that packaging matrix:
 
@@ -281,10 +286,10 @@ parsed from inside the ZIP and remains `enabled=false`. There are no directory
 entries or extra payloads. README, sources, examples, symbols, logs, BKVince
 files, and reverse-engineering evidence remain outside the public ZIP.
 
-Archive size is 89072 bytes and SHA-256 is:
+Archive size is 89547 bytes and SHA-256 is:
 
 ```text
-F137F1B708A4C51C8A88EA68B49BFB85619F380693E63899B508EB1C342E35A9
+3B159EC80791A82AF7ED0A9BD40CDFAEEAED5BC656128CB7C5BEF1DD1D46CE9C
 ```
 
 The repository-wide ZIP verifier reports no MeleeSplash policy failure. It

@@ -1,4 +1,5 @@
 #include "melee_splash_config.hpp"
+#include "melee_splash_bkvcombat_interop.hpp"
 #include "melee_splash_gameplay.hpp"
 
 #include <cstdlib>
@@ -35,6 +36,22 @@ bool ParseFileEnabled(const std::filesystem::path& path) {
     }
     return RuffnecKk::MeleeSplash::ParseConfig(
         nlohmann::json::parse(input)).enabled;
+}
+
+auto __fastcall ResolveCriticalDeadlyFixture(
+        void*, void*, void*, void*, std::int32_t, std::uint32_t) noexcept
+        -> RuffnecKk::MeleeSplash::BKVCombatInterop::CriticalDeadlyOutcome {
+    return RuffnecKk::MeleeSplash::BKVCombatInterop::
+        CriticalDeadlyOutcome::None;
+}
+
+std::uint64_t __cdecl ActiveCapabilitiesFixture() noexcept {
+    return RuffnecKk::MeleeSplash::BKVCombatInterop::
+        CriticalDeadlyResolverCapability;
+}
+
+std::uint64_t __cdecl InactiveCapabilitiesFixture() noexcept {
+    return 0;
 }
 
 } // namespace
@@ -275,6 +292,33 @@ int main(int argc, char** argv) {
     CHECK(!absent.found);
     CHECK(!absent.config.enabled);
     CHECK(absent.source.empty());
+
+    using namespace BKVCombatInterop;
+    const ApiV1 compatibleApi{
+        .size = sizeof(ApiV1),
+        .version = ApiVersion,
+        .compiledCapabilities = CriticalDeadlyResolverCapability,
+        .resolveCriticalDeadly = ResolveCriticalDeadlyFixture,
+        .getActiveCapabilities = ActiveCapabilitiesFixture,
+    };
+    CHECK(IsCompatibleApiV1(&compatibleApi));
+    CHECK(HasActiveCriticalDeadlyResolver(&compatibleApi));
+    auto incompatibleApi = compatibleApi;
+    incompatibleApi.size = static_cast<std::uint32_t>(sizeof(ApiV1) - 1);
+    CHECK(!IsCompatibleApiV1(&incompatibleApi));
+    incompatibleApi = compatibleApi;
+    incompatibleApi.version = ApiVersion + 1;
+    CHECK(!IsCompatibleApiV1(&incompatibleApi));
+    incompatibleApi = compatibleApi;
+    incompatibleApi.compiledCapabilities = 0;
+    CHECK(!IsCompatibleApiV1(&incompatibleApi));
+    incompatibleApi = compatibleApi;
+    incompatibleApi.resolveCriticalDeadly = nullptr;
+    CHECK(!IsCompatibleApiV1(&incompatibleApi));
+    incompatibleApi = compatibleApi;
+    incompatibleApi.getActiveCapabilities = InactiveCapabilitiesFixture;
+    CHECK(IsCompatibleApiV1(&incompatibleApi));
+    CHECK(!HasActiveCriticalDeadlyResolver(&incompatibleApi));
 
     CHECK(Throws([] { ParseConfig(nlohmann::json::array()); }));
     CHECK(Throws([] { ParseConfig({{"unknown", true}}); }));

@@ -3,6 +3,7 @@
 #include <D2RLPlugin/api.h>
 
 #include "melee_splash_config.hpp"
+#include "melee_splash_bkvcombat_interop.hpp"
 #include "melee_splash_gameplay.hpp"
 
 #include <Windows.h>
@@ -305,6 +306,8 @@ std::atomic<std::uint64_t> RejectedHits{};
 std::atomic<std::uint64_t> RejectedTargets{};
 std::atomic<std::uint64_t> DroppedSidecars{};
 std::atomic<std::uint32_t> FillDiagnosticLines{};
+std::atomic<const BKVCombatInterop::ApiV1*> BKVCombatApi{};
+std::atomic<bool> BKVCombatIncompatibleLogged{};
 
 constexpr std::uint32_t MaximumFillDiagnosticLines = 64;
 
@@ -985,6 +988,76 @@ auto RollCriticalForTarget(
     return Native92777CriticalOutcome::None;
 }
 
+struct CriticalResolution {
+    const char* outcome{"none"};
+    const char* resolver{"native92777"};
+};
+
+auto ResolveBKVCombatApi() noexcept -> const BKVCombatInterop::ApiV1* {
+    if (const auto* cached = BKVCombatApi.load(std::memory_order_acquire)) {
+        return cached;
+    }
+    const auto module = GetModuleHandleW(BKVCombatInterop::ModuleName);
+    if (!module) return nullptr;
+    const auto getApi = reinterpret_cast<BKVCombatInterop::GetApiFn>(
+        GetProcAddress(module, BKVCombatInterop::GetApiExportName));
+    const auto* api = getApi ? getApi(BKVCombatInterop::ApiVersion) : nullptr;
+    if (!BKVCombatInterop::IsCompatibleApiV1(api)) {
+        if (!BKVCombatIncompatibleLogged.exchange(
+                true, std::memory_order_relaxed)) {
+            DiagnosticLog(
+                "MeleeSplash: BKVCombat API unavailable or incompatible; "
+                "using the exact native 92777 Critical/Deadly resolver.");
+        }
+        return nullptr;
+    }
+    BKVCombatApi.store(api, std::memory_order_release);
+    DiagnosticLog(
+        "MeleeSplash: negotiated BKVCombat API v%u for optional "
+        "Critical/Deadly resolution.",
+        BKVCombatInterop::ApiVersion);
+    return api;
+}
+
+auto ResolveCriticalForTarget(
+        void* game,
+        void* attacker,
+        void* target,
+        void* damage,
+        std::int32_t damageMode) noexcept -> CriticalResolution {
+    const auto* api = ResolveBKVCombatApi();
+    if (BKVCombatInterop::HasActiveCriticalDeadlyResolver(api)) {
+        const auto outcome = api->resolveCriticalDeadly(
+            game,
+            attacker,
+            target,
+            damage,
+            damageMode,
+            BKVCombatInterop::SyntheticSecondaryFlag);
+        switch (outcome) {
+        case BKVCombatInterop::CriticalDeadlyOutcome::None:
+            return {.outcome = "none", .resolver = "BKVCombat"};
+        case BKVCombatInterop::CriticalDeadlyOutcome::Critical:
+            return {.outcome = "critical", .resolver = "BKVCombat"};
+        case BKVCombatInterop::CriticalDeadlyOutcome::Deadly:
+            return {.outcome = "deadly", .resolver = "BKVCombat"};
+        case BKVCombatInterop::CriticalDeadlyOutcome::AlreadyResolved:
+            return {.outcome = "alreadyResolved", .resolver = "BKVCombat"};
+        case BKVCombatInterop::CriticalDeadlyOutcome::Unavailable:
+            break;
+        }
+        DiagnosticLog(
+            "MeleeSplash: BKVCombat Critical/Deadly resolver became "
+            "unavailable; using the exact native 92777 fallback.");
+    }
+
+    const auto native = RollCriticalForTarget(attacker, damage, damageMode);
+    return {
+        .outcome = CriticalOutcomeName(native),
+        .resolver = "native92777",
+    };
+}
+
 void PrepareSyntheticRecord(void* target, void* damage) noexcept {
     Write(damage, DamageHitFlagsOffset, SyntheticHitFlags);
     // The synthetic target shares only the successful-hit decision.  Do not
@@ -1145,8 +1218,12 @@ bool ApplySplashToTarget(
             targetId.guid);
         return false;
     }
-    const auto critical = RollCriticalForTarget(
-        attacker, damage->Get(), metadata.damageMode);
+    const auto critical = ResolveCriticalForTarget(
+        game,
+        attacker,
+        target,
+        damage->Get(),
+        metadata.damageMode);
 
     SecondaryDiagnostics diagnostics{};
     std::int32_t normalLifeLeechPercent{};
@@ -1172,14 +1249,16 @@ bool ApplySplashToTarget(
 
     SecondaryHits.fetch_add(1, std::memory_order_relaxed);
     DiagnosticLog(
-        "MeleeSplash target=%d/%u crit=%s phys=%d fire=%d burn=%d lightning=%d "
+        "MeleeSplash target=%d/%u crit=%s critResolver=%s phys=%d fire=%d "
+        "burn=%d lightning=%d "
         "magic=%d cold=%d poison=%d postTotal=%d normalLifeLeechPct=%d "
         "splashLifeLeechPct=%d nativeAdjustedLifeLeechPct=%d normalManaLeechPct=%d "
         "splashManaLeechPct=%d nativeAdjustedManaLeechPct=%d "
         "CBcalls=%u CBresult=%d OWcalls=%u OWresult=%d.",
         targetId.type,
         targetId.guid,
-        CriticalOutcomeName(critical),
+        critical.outcome,
+        critical.resolver,
         Read<std::int32_t>(damage->Get(), DamagePhysicalOffset),
         Read<std::int32_t>(damage->Get(), DamageFireOffset),
         Read<std::int32_t>(damage->Get(), DamageBurnOffset),

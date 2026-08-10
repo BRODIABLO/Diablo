@@ -392,3 +392,4 @@ item_readable_message	389			16														16	0	16	0																											
 unused_bkv_merc_stat_390	390		1	7	16										190	256		21	0	7	0	16																													0
 inc_splash_radius	391		1	16														10	0	10	0																159	19		ModIncSplashRadius	ModIncSplashRadius									2	0
 item_melee_splash_damage_percent	392		1	16														10	0	10	0																160	19		ModMeleeSplashDamagePercent	ModMeleeSplashDamagePercent									2	0
+item_crushingblow_efficiency	393		1	16														10	0	10	0											1					161	19		ModCrushingBlowEfficiency	ModCrushingBlowEfficiency									2	0
