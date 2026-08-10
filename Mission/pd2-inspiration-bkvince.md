@@ -367,13 +367,15 @@ avec des tables identiques.
 
 ## Sources figées
 
-Le dossier local Single Player Plus correspond byte-exactement au dépôt public
-à la révision suivante :
+Le catalogue rattache le dossier local Single Player Plus à la révision
+publique suivante; le manifeste local prouve exactement les octets audités,
+mais le dossier ne contient pas de métadonnées `.git` permettant de reconstruire
+à lui seul une preuve cryptographique d'égalité avec le tree distant :
 
 - dépôt : <https://github.com/Lukaszpg/PD2-Single-Player-Plus-mod>;
 - commit : `3debc6781f33c3c1474a995b80369a4e618cd386`;
 - tree : `6f51e17e5f65abdd50b2fd33190c571fef296ccf`;
-- 198 fichiers contrôlés, sans écart local;
+- 198 fichiers inventoriés et contrôlés dans le snapshot local;
 - 93 tables TXT;
 - manifeste SHA-256 des tables :
   `AED5AC542E7B879FBF6BEB49F7F76A8ED40F5725DC830E82536CBA2A1C44A2B8`.
@@ -456,8 +458,12 @@ natives.
 8. différences hardcodées et routage memory patch/plugin/hybride;
 9. backlog de lots BKVince classés par valeur, risque et dépendances.
 
-L'inventaire est terminé. Le chapitre général/QoL est en cours; les autres
-chapitres restent explicitement planifiés et ne sont pas déclarés complets.
+L'inventaire est terminé. Le chapitre général/QoL est en cours. Le chapitre
+**Monsters, Bosses et Prime Evil** est fermé au niveau audit dans
+[`pd2-monsters-bosses-vs-bkvince-audit.md`](pd2-monsters-bosses-vs-bkvince-audit.md) :
+core S13, SP+, BKVince, cartes et preuves natives y restent séparés, sans
+autoriser de merge gameplay. Les autres chapitres restent explicitement
+planifiés et ne sont pas déclarés complets.
 
 ## Outillage reproductible
 

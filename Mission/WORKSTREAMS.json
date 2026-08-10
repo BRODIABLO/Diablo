@@ -502,6 +502,7 @@
       "nextGate": "ProgressiveAffixesPlugin 0.1.0 is technically implemented as a permanent standalone RuffnecKk hybrid with an independent strict TOML. Release x64, /W4 /WX, CTest 1/1, exact exports and two /Brepro clean builds pass; DLL SHA-256 is 92481CF78DD3BAD2DAA33212A0561CD65CFAAFB786565BB6F62F527725EB9A8F. BKVince source and runtime atomically replace the three force-affix patchsets with the DLL and PD2-default TOML. Fresh mod-local and global-config-fallback cold starts both pass on build 92777 with 18/18 plugins active, 15/15 patchsets applied and zero disabled, rejected or failed components; the desired mod-local profile is restored byte-identical. Next collect late ItemType resolution and Magic/Rare/Crafted boundary/distribution witnesses, save/reload and host/joiner, then qualify every PluginPack feature currently disabled. Do not claim universal all-features compatibility while pre-existing full-stack conflicts at 0x589736, 0x314110 and 0x18885B/0x18887F remain open.",
       "include": [
         "Mission/pd2-inspiration-bkvince.md",
+        "Mission/pd2-monsters-bosses-vs-bkvince-audit.md",
         "Mission/pd2-inspiration-bkvince.catalog.json",
         "Mission/pd2-inspiration-bkvince.schema.json",
         "Mission/pd2-game-mechanics-vs-bkvince-audit.md",
