@@ -540,12 +540,28 @@
       "notes": "Native durability-loss routine; 4 percent weapon and 10 percent armor thresholds. Throwing weapons used in melee enter this routine, and depleted internal durability can roll over into a one-point stack reduction."
     },
     {
+      "rva": "0x442C60",
+      "name": "D2GAME_ITEMS_GenerateMagicAffixes",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Build-92777 Magic affix generator with observed ABI (itemWrapper, generation) -> int32. The wrapper contains the item pointer at +0x00 and generation carries item level at +0x18 plus native prefix/suffix decision fields at +0xA8/+0xB4. ProgressiveAffixesPlugin leaves the entry and native affix application intact."
+    },
+    {
       "rva": "0x442C78",
-      "name": "ForceMagicPrefixSite",
+      "name": "MagicPrefixDecisionLoad",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/memory-patches-portage-3.2.json",
-      "notes": "Validated 3.2 equivalent of the legacy force-magic-prefix edit."
+      "source": "Mission/memory-patches-portage-3.2.json; Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Exact six-byte load 8B 82 A8 00 00 00 of the native Magic prefix decision. ProgressiveAffixesPlugin redirects only this load through a near relay that returns one when the ordered TOML category and item-level step require two affixes."
+    },
+    {
+      "rva": "0x442CDC",
+      "name": "MagicSuffixDecisionLoad",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Exact six-byte load 8B 86 B4 00 00 00 of the native Magic suffix decision. ProgressiveAffixesPlugin redirects only this load through a near relay; the following native CMOV and affix-selection call remain intact."
     },
     {
       "rva": "0x442CF0",
@@ -1320,8 +1336,8 @@
       "name": "SEED_RollLimitedRandomNumber",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/repair-costs-cap-3.2.md",
-      "notes": "Advances the supplied native seed and returns a value in [0, upperBound). Its 14-byte body prefix is unique in .text; RepairCostsCap rolls over 10000 basis points for 0.01-percent resolution."
+      "source": "Mission/repair-costs-cap-3.2.md; Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Advances the supplied native seed and returns a value in [0, upperBound). Its strict 32-byte prefix is governed. RepairCostsCap rolls over 10000 basis points; ProgressiveAffixesPlugin calls it once per configured Rare or Crafted count selection using the exact integer-weight total."
     },
     {
       "rva": "0x48FDE0",
@@ -2578,6 +2594,62 @@
       "confidence": "high",
       "source": "addons/MeleeSplash/NATIVE-HOOKS.md",
       "notes": "Confirmed-static direct melee call to SUNITDMG_FillDamageValues with continuation 0x4300BB. Its unique 29-byte context begins at 0x43009E. The same stack D2Damage at caller rsp+0x70 then passes through 0x56CBE0 and into SUNITDMG_PrepareAndQueueCombatRecord at 0x4300DE with hit flag 0x02, so the wrapper skips a second Fill and continues through canonical Calculate, Allocate and Consume. A 2026-08-09 runtime witness with normal Attack confirmed capture at return 0x4300BB and a three-target synthetic burst."
+    },
+    {
+      "rva": "0x367160",
+      "name": "SEED_RollPowerOfTwo",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Exact 35-byte leaf routine advancing the supplied native seed and returning nextLow & (upperBound - 1). The Rare generator calls it at 0x58BC98 with upperBound 8. ProgressiveAffixesPlugin validates it and uses it only for semantic vanilla fallback."
+    },
+    {
+      "rva": "0x58A120",
+      "name": "D2GAME_ITEMS_GenerateCraftedAffixes",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Build-92777 Crafted affix generator with observed ABI (item, generation) -> int32. The governed block reads item level at generation+0x18, computes minima at ilvl 1/31/51/71, rolls 0..4 through 0x153B00, then applies the selected count through native prefix/suffix selection and finalization."
+    },
+    {
+      "rva": "0x58A21B",
+      "name": "CraftedAffixCountRollCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Exact five-byte call E8 E0 98 BC FF to SEED_RollLimitedRandomNumber inside the Crafted generator. ProgressiveAffixesPlugin redirects it through a near relay receiving the existing seed in RCX, item in R15 and generation in R12."
+    },
+    {
+      "rva": "0x58A220",
+      "name": "CraftedAffixVanillaMinimumClamp",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Five-byte CMP/CMOVA sequence 3B D8 0F 47 C3 that clamps the Crafted RNG result to the vanilla ilvl minimum. ProgressiveAffixesPlugin NOPs it only after its relay has selected the complete configured 1..4 count."
+    },
+    {
+      "rva": "0x58BBA0",
+      "name": "D2GAME_ITEMS_GenerateRareAffixes",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Build-92777 Rare affix generator with observed ABI (item, generation) -> int32. It resolves existing affix state, obtains the native item seed, selects a 3..4 jewel count or regular eight-entry count, then uses native prefix/suffix selection with three-per-side limits and finalization."
+    },
+    {
+      "rva": "0x58BC65",
+      "name": "RareJewelAffixCountBranch",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Two-byte JNE +0x29 separating the native jewel 3..4 LCG path from the regular Rare table path. ProgressiveAffixesPlugin changes it to JMP so jewels and regular items reach one configured selector while still consuming exactly one seed step."
+    },
+    {
+      "rva": "0x58BC90",
+      "name": "RareAffixCountSelectionBlock",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Exact 30-byte block 0x58BC90..0x58BCAD loading bound 8, rolling the item seed and mapping the index through the native count table. ProgressiveAffixesPlugin replaces the full block with a rel32 call, moves EAX to R12D, restores R9=seed and rejoins the untouched loop at 0x58BCAE."
     }
   ]
 }

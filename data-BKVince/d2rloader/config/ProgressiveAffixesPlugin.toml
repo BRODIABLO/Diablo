@@ -1,0 +1,94 @@
+# Progressive Affixes Plugin
+# Categories are evaluated in declaration order. Keep the wildcard fallback last.
+# Item type codes come from the Code column of itemtypes.txt and include descendants.
+
+[plugin]
+enabled = true
+diagnostics = false
+
+# Magic items receive at least one prefix and one suffix at the configured threshold.
+[[magic.categories]]
+name = "weapons_and_armor"
+item_types = ["weap", "armo"]
+
+[[magic.categories.steps]]
+minimum_item_level = 65
+minimum_affixes = 2
+
+[[magic.categories]]
+name = "jewels_and_jewelry"
+item_types = ["jewl", "ring", "amul"]
+
+[[magic.categories.steps]]
+minimum_item_level = 85
+minimum_affixes = 2
+
+[[magic.categories]]
+name = "charms"
+item_types = ["char"]
+
+[[magic.categories.steps]]
+minimum_item_level = 90
+minimum_affixes = 2
+
+[[magic.categories]]
+name = "all_other_items"
+item_types = ["*"]
+
+[[magic.categories.steps]]
+minimum_item_level = 1
+minimum_affixes = 1
+
+# Rare jewels always receive four affixes with the PD2 defaults.
+[[rare.categories]]
+name = "jewels"
+item_types = ["jewl"]
+counts = [3, 4]
+
+[[rare.categories.steps]]
+minimum_item_level = 1
+weights = [0, 1]
+
+# Regular rare items use integer weights equivalent to the documented percentages.
+[[rare.categories]]
+name = "all_other_items"
+item_types = ["*"]
+counts = [3, 4, 5, 6]
+
+[[rare.categories.steps]]
+minimum_item_level = 1
+weights = [1, 3, 3, 1]
+
+[[rare.categories.steps]]
+minimum_item_level = 45
+weights = [0, 1, 2, 1]
+
+[[rare.categories.steps]]
+minimum_item_level = 65
+weights = [0, 0, 1, 1]
+
+[[rare.categories.steps]]
+minimum_item_level = 85
+weights = [0, 0, 0, 1]
+
+# Crafted item weights cover only the random affixes added to fixed recipe properties.
+[[crafted.categories]]
+name = "all_items"
+item_types = ["*"]
+counts = [1, 2, 3, 4]
+
+[[crafted.categories.steps]]
+minimum_item_level = 1
+weights = [2, 1, 1, 1]
+
+[[crafted.categories.steps]]
+minimum_item_level = 31
+weights = [0, 3, 1, 1]
+
+[[crafted.categories.steps]]
+minimum_item_level = 51
+weights = [0, 0, 4, 1]
+
+[[crafted.categories.steps]]
+minimum_item_level = 71
+weights = [0, 0, 0, 1]

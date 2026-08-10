@@ -3,6 +3,39 @@
 Ce document conserve uniquement les conclusions utiles aux prochaines sessions.
 Les sorties volumineuses demeurent sous `analysis-cache/corpus/`.
 
+## ProgressiveAffixesPlugin — sélection du nombre d’affixes
+
+- `0x442C60` est le générateur Magic appelé avec `(itemWrapper, generation)` ;
+  l’item est à `itemWrapper+0x00` et l’ilvl gouverné à `generation+0x18`.
+  `0x442C78` charge la décision prefix à `generation+0xA8` et `0x442CDC`
+  charge la décision suffix à `generation+0xB4`. Les valeurs positives exigent
+  les tentatives qui permettent de garantir un prefix et un suffix.
+- `0x58A120` est le générateur Crafted `(item, generation)`. Le bloc
+  `0x58A1E7..0x58A225` prouve les minima ilvl 1/31/51/71 et l’appel au RNG
+  général `0x153B00` avec borne 5. Les distributions vanilla correspondent
+  exactement aux poids PD2 `2/1/1/1`, `0/3/1/1`, `0/0/4/1`, `0/0/0/1`.
+- `0x58BBA0` est le générateur Rare `(item, generation)`. La branche jewel
+  `0x58BC65..0x58BC8E` avance directement le seed et produit 3 ou 4 ; la branche
+  ordinaire `0x58BC90..0x58BCAD` roule huit entrées avant la boucle native qui
+  respecte les limites de trois prefixes et trois suffixes.
+- `ProgressiveAffixesPlugin` possède uniquement les décisions de compte aux
+  plages `0x442C78`, `0x442CDC`, `0x58A21B`, `0x58A220`, `0x58BC65` et
+  `0x58BC90..0x58BCAD`. Le moteur conserve sélection, application, sérialisation
+  et synchronisation des affixes.
+- Le PluginPack épinglé `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` ne
+  contient aucun affix hook ni ces RVA. Les trois anciens patchsets BKVince sont
+  les seuls propriétaires locaux antérieurs et doivent être remplacés
+  atomiquement.
+
+Commandes de reprise :
+
+```powershell
+npm.cmd run re:d2r32 -- status
+npm.cmd run re:d2r32 -- xrefs 0x442C60
+npm.cmd run re:d2r32 -- xrefs 0x153B00
+npm.cmd run ref:d2rlplugins -- status
+```
+
 ## Base d'analyse
 
 - Image canonique gouvernee : SHA-256

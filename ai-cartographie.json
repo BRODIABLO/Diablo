@@ -1053,6 +1053,72 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "ProgressiveAffixesPlugin",
+                                                           "path":  "addons/ProgressiveAffixesPlugin",
+                                                           "kind":  "directory",
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "package",
+                                                                                "path":  "addons/ProgressiveAffixesPlugin/package",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "ProgressiveAffixesPlugin.dll",
+                                                                                                     "path":  "addons/ProgressiveAffixesPlugin/package/ProgressiveAffixesPlugin.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "ProgressiveAffixesPlugin.toml",
+                                                                                                     "path":  "addons/ProgressiveAffixesPlugin/package/ProgressiveAffixesPlugin.toml",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/ProgressiveAffixesPlugin/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/ProgressiveAffixesPlugin/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/ProgressiveAffixesPlugin/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/ProgressiveAffixesPlugin/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "progressive_affixes_config.hpp",
+                                                                                                     "path":  "addons/ProgressiveAffixesPlugin/src/progressive_affixes_config.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "progressive_affixes_tests.cpp",
+                                                                                                     "path":  "addons/ProgressiveAffixesPlugin/src/progressive_affixes_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "ProgressiveAffixesPlugin-0.1.0.zip",
+                                                                                "path":  "addons/ProgressiveAffixesPlugin/ProgressiveAffixesPlugin-0.1.0.zip",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/ProgressiveAffixesPlugin/README.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "QtyDisplayIssue",
                                                            "path":  "addons/QtyDisplayIssue",
                                                            "kind":  "directory",
@@ -20319,6 +20385,11 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "ProgressiveAffixesPlugin.toml",
+                                                                                                     "path":  "data-BKVince/d2rloader/config/ProgressiveAffixesPlugin.toml",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "ReviveOverhaul.toml",
                                                                                                      "path":  "data-BKVince/d2rloader/config/ReviveOverhaul.toml",
                                                                                                      "kind":  "file"
@@ -20388,21 +20459,6 @@
                                                                                                  {
                                                                                                      "name":  "example.json.template",
                                                                                                      "path":  "data-BKVince/d2rloader/patches/example.json.template",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "force-crafted-affixes.json",
-                                                                                                     "path":  "data-BKVince/d2rloader/patches/force-crafted-affixes.json",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "force-magic-prefix-suffix.json",
-                                                                                                     "path":  "data-BKVince/d2rloader/patches/force-magic-prefix-suffix.json",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "force-rare-affixes.json",
-                                                                                                     "path":  "data-BKVince/d2rloader/patches/force-rare-affixes.json",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -21770,6 +21826,11 @@
                                                                                                  {
                                                                                                      "name":  "PotionAutoPickup.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/PotionAutoPickup.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "ProgressiveAffixesPlugin.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/ProgressiveAffixesPlugin.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -37782,6 +37843,11 @@
                                                        {
                                                            "name":  "prevent-merc-death-in-town-3.2.md",
                                                            "path":  "Mission/prevent-merc-death-in-town-3.2.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "progressive-affixes-plugin-3.2.md",
+                                                           "path":  "Mission/progressive-affixes-plugin-3.2.md",
                                                            "kind":  "file"
                                                        },
                                                        {
