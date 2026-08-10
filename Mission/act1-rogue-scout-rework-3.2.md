@@ -1,21 +1,35 @@
-# Rework des Rogue Scouts de l’Acte I — BKVince 3.2
+# RogueScoutMovement — BKVince 3.2
 
-Dernière mise à jour : 6 août 2026
+Dernière mise à jour : 10 août 2026
 
 ## Statut
 
-Chantier actif en parallèle de la mission courante BaseMod. Vincent a confirmé
-le 1 août 2026 l’adaptation originale des idées de TDE 3.1d pour les Rogue
-Scouts de BKVince, sans branche Holy dans ce premier lot.
+`RogueScoutMovement` demeure actif. Le 10 août 2026, Vincent a demandé le
+rollback des refontes de tables mercenaires au jalon pré-TDE
+`e67e66d277230dcdd577e4f608ef293448cd07ea`, puis a explicitement confirmé que
+le plugin de mouvement ne faisait pas partie de ce retrait. Les anciennes
+sections Bow Mastery, Terror, Fire/Cold arrows et Ravens ci-dessous sont
+conservées comme preuves historiques et ne décrivent plus les tables actives.
 
 Vincent a retenu le 2 août 2026 un plugin autonome permanent pour le mouvement
 walk/run. `RogueScoutMovement` demeure une DLL RuffnecKk hybride, installable
 globalement ou sous un mod, avec une configuration TOML indépendante; aucune
 DLL d'eezstreet n'est modifiée, liée ou redistribuée.
 
-## Contrat joueur confirmé
+La réinstallation corrective du 10 août 2026 restaure exactement la DLL
+gouvernée SHA-256
+`F94340D3CD82E528B2EBDD727744A6EED1D2FCB7A14712BFD9048BE3A1997F01` et le
+TOML SHA-256
+`8A78583894B638B1B1FAD4CEB0441A3EDC57C5EF8E801C3068EF78D21B7CE7D6` dans
+la portée globale. Le build 92777 accepte les deux hooks `0x4473F0` et
+`0x5C1460`; le cold start complet atteint `24/24`, `18/18` patches et `17/17`
+plugins actifs, sans désactivation, rejet ni échec. Rapport :
+`analysis-cache/runtime-sync/20260810-082337827-apply.json`.
 
-- Les Rogues doivent utiliser la course pour leurs déplacements significatifs.
+## Contrat historique du rework retiré
+
+- Seul le premier point demeure actif : les Rogues utilisent la course pour
+  leurs déplacements significatifs grâce à `RogueScoutMovement`.
 - Lorsqu’elles sont frappées en mêlée, elles lancent `Terror` selon la courbe
   TDE : 25 % au niveau 5 en Normal, 33 % au niveau 10 en Nightmare et 50 % au
   niveau 15 en Hell.

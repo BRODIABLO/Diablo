@@ -6,6 +6,32 @@
 
 Source étudiée : `TDE_D2SE_3.1d.1.7z`, SHA-256 `671D0636EF96FF59D94192C3FF0DD73AB69CAAE1D41FC4563F796149AFBC9356`.
 
+Le 10 août 2026, Vincent a choisi de ramener les tables et comportements
+mercenaires BKVince à l'état du commit pré-TDE
+`e67e66d277230dcdd577e4f608ef293448cd07ea`. Le catalogue TDE demeure une
+étude sans effet gameplay; les prototypes data ouverts après ce jalon sont
+retirés et devront repartir d'une nouvelle conception avant toute reprise.
+`RogueScoutMovement` constitue l'exception explicitement confirmée par Vincent :
+le plugin autonome de déplacement demeure actif et indépendant des tables
+mercenaires retirées.
+
+Le rollback conserve uniquement des tombstones inertes aux ordinals déjà
+occupés (`ItemStatCost` 390, `Properties` 309, `Skills` 442–448, `States`
+243–244 et `MonStats` 797–798). Ils empêchent le décalage des IDs ajoutés
+ultérieurement et ne portent plus aucun comportement mercenaire. Les tables
+`hireling.txt` retrouvent exactement les groupes pré-TDE : 24 Rogue Scout,
+45 Desert Mercenary et 36 Eastern Sorceror.
+
+La preuve runtime finale du 10 août 2026 utilise
+`D2RLoader.exe -mod BKVince -txt -offline` sur le build 92777. `pettype.txt`
+reste retiré, tandis que `RogueScoutMovement 0.1.0` est réinstallé dans la
+portée globale avec son TOML; ses deux hooks sont acceptés à `0x4473F0` et
+`0x5C1460`. Le cold start atteint `24/24`, applique `18/18` memory patches et
+active `17/17` plugins, sans désactivation, rejet ni échec. Le rapport est
+`analysis-cache/runtime-sync/20260810-082337827-apply.json` et les logs frais
+sont figés sous
+`analysis-cache/rogue-scout-movement-reinstall/20260810-082337827/`.
+
 Le catalogue machine est [tde-inspiration-bkvince.catalog.json](tde-inspiration-bkvince.catalog.json), régi par [tde-inspiration-bkvince.schema.json](tde-inspiration-bkvince.schema.json) et `npm run validate:tde-catalog`.
 
 ## Intention

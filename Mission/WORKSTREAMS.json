@@ -534,28 +534,17 @@
       ]
     },
     {
-      "id": "act1-rogue-scout-rework",
-      "name": "Act I Rogue Scout Rework",
+      "id": "rogue-scout-movement",
+      "name": "RogueScoutMovement",
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/act1-rogue-scout-rework-3.2.md",
-      "nextGate": "Validate unchanged combat, recoil, warp and resurrection movement for RogueScoutMovement, then prove host/joiner behavior; keep the separate Fire/Cold, Terror, Raven and Druid coexistence gameplay gates open.",
+      "nextGate": "Validate unchanged combat, recoil, warp and resurrection movement, then prove host/joiner behavior; the separate post-TDE mercenary table reworks remain retired.",
       "include": [
         "Mission/act1-rogue-scout-rework-3.2.md",
         "data-BKVince/d2rloader/config/rogue-scout-movement.toml",
         "data-BKVince/d2rloader/plugins/RogueScoutMovement.dll",
-        "data-BKVince/d2rloader/plugins/RogueScoutMovement-src/**",
-        "scripts/migrate-bkvince/apply-act1-rogue-scout-rework.js",
-        "data-BKVince/BKVince.mpq/data/global/excel/hireling.txt",
-        "data-BKVince/BKVince.mpq/data/global/excel/itemstatcost.txt",
-        "data-BKVince/BKVince.mpq/data/global/excel/monprop.txt",
-        "data-BKVince/BKVince.mpq/data/global/excel/monstats.txt",
-        "data-BKVince/BKVince.mpq/data/global/excel/monstats2.txt",
-        "data-BKVince/BKVince.mpq/data/global/excel/pettype.txt",
-        "data-BKVince/BKVince.mpq/data/global/excel/properties.txt",
-        "data-BKVince/BKVince.mpq/data/global/excel/skills.txt",
-        "data-BKVince/BKVince.mpq/data/global/excel/states.txt",
-        "scripts/migrate-bkvince/port-storage-bag.js"
+        "data-BKVince/d2rloader/plugins/RogueScoutMovement-src/**"
       ]
     },
     {
@@ -710,7 +699,6 @@
         "rift-terror-zone-group",
         "tde-inspiration-bkvince",
         "pd2-inspiration-bkvince",
-        "act1-rogue-scout-rework",
         "workstream-registry"
       ],
       "reason": "Root commands serve governed data/plugin tests and repository organization."
@@ -861,48 +849,42 @@
     {
       "pattern": "data-BKVince/BKVince.mpq/data/global/excel/itemstatcost.txt",
       "workstreams": [
-        "readable-items-clue-scrolls",
-        "act1-rogue-scout-rework"
+        "readable-items-clue-scrolls"
       ],
-      "reason": "Readable Items and the Act I Rogue rework append independent custom runtime stats to the shared table."
+      "reason": "Readable Items owns its custom runtime stat in the shared table."
     },
     {
       "pattern": "data-BKVince/BKVince.mpq/data/global/excel/skills.txt",
       "workstreams": [
-        "pd2-inspiration-bkvince",
-        "act1-rogue-scout-rework"
+        "pd2-inspiration-bkvince"
       ],
-      "reason": "The PD2 inspiration workstream adapts selected player skills while the Act I Rogue rework owns independent mercenary skill mechanics in the same table."
+      "reason": "The PD2 inspiration workstream adapts selected player skills in the shared table."
     },
     {
       "pattern": "data-BKVince/BKVince.mpq/data/global/excel/states.txt",
       "workstreams": [
-        "pd2-inspiration-bkvince",
-        "act1-rogue-scout-rework"
+        "pd2-inspiration-bkvince"
       ],
-      "reason": "The PD2 inspiration workstream owns selected player-skill debuff states while the Act I Rogue rework owns independent mercenary states in the same table."
+      "reason": "The PD2 inspiration workstream owns selected player-skill debuff states in the shared table."
     },
     {
       "pattern": "data-BKVince/BKVince.mpq/data/global/excel/properties.txt",
       "workstreams": [
-        "readable-items-clue-scrolls",
-        "act1-rogue-scout-rework"
+        "readable-items-clue-scrolls"
       ],
-      "reason": "Readable Items and the Act I Rogue rework append independent properties backed by separate custom stats."
+      "reason": "Readable Items owns its custom property in the shared table."
     },
     {
       "pattern": "data-BKVince/BKVince.mpq/data/global/excel/monstats.txt",
       "workstreams": [
-        "act1-rogue-scout-rework",
         "sounds-of-variation-bkvince"
       ],
-      "reason": "The Act I Rogue rework owns independent combat fields while Sounds of Variation changes only MonSound and UMonSound on 27 skeleton-mage rows."
+      "reason": "Sounds of Variation changes only MonSound and UMonSound on 27 skeleton-mage rows."
     },
     {
       "pattern": "scripts/migrate-bkvince/port-storage-bag.js",
       "workstreams": [
-        "readable-items-clue-scrolls",
-        "act1-rogue-scout-rework"
+        "readable-items-clue-scrolls"
       ],
       "reason": "Storage Bag validates its contiguous governed block while permitting independent custom stats and properties after it."
     }

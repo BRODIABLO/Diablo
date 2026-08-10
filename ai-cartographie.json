@@ -8584,11 +8584,6 @@
                                                                                                                                                "kind":  "file"
                                                                                                                                            },
                                                                                                                                            {
-                                                                                                                                               "name":  "pettype.txt",
-                                                                                                                                               "path":  "data-BKVince/BKVince.mpq/data/global/excel/pettype.txt",
-                                                                                                                                               "kind":  "file"
-                                                                                                                                           },
-                                                                                                                                           {
                                                                                                                                                "name":  "properties.txt",
                                                                                                                                                "path":  "data-BKVince/BKVince.mpq/data/global/excel/properties.txt",
                                                                                                                                                "kind":  "file"
@@ -38445,11 +38440,6 @@
                                                                             {
                                                                                 "name":  "analyze-staffmods-3.2.py",
                                                                                 "path":  "scripts/migrate-bkvince/analyze-staffmods-3.2.py",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "apply-act1-rogue-scout-rework.js",
-                                                                                "path":  "scripts/migrate-bkvince/apply-act1-rogue-scout-rework.js",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

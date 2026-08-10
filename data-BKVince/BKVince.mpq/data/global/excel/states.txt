@@ -242,7 +242,7 @@ dyewhiteW	239																																																						weap	whit				
 dyeblackW	240																																																						weap	blac		74																0
 magicconviction	241					1																																					mconvictionfront	mconvictionfront																		paladin_aura_sanctuary												0
 splashdamage	242																																																																									0
-bkvbowmastery	243																																																																									0
-bkvrogueraven	244																																																																									0
+unused_bkv_merc_state_243	243																																																																									0
+unused_bkv_merc_state_244	244																																																																									0
 inferno_debuff	245																						1																				inferno_debuff																															0
 staticfield_debuff	246																																										staticfield_debuff																															0

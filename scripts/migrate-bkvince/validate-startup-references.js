@@ -53,12 +53,10 @@ function main() {
   const skilldesc = load('skilldesc.txt');
   const states = load('states.txt');
   const missiles = load('missiles.txt');
-  const monstats = load('monstats.txt');
   const treasureClasses = load('treasureclassex.txt');
   const hirelingIndexes = headerIndexes(hireling);
   const skillsIndexes = headerIndexes(skills);
   const skilldescIndexes = headerIndexes(skilldesc);
-  const monstatsIndexes = headerIndexes(monstats);
   const treasureIndexes = headerIndexes(treasureClasses);
 
   const hirelingSkillNames = new Set();
@@ -83,56 +81,6 @@ function main() {
     const auraState = value(skill, skillsIndexes, 'aurastate', 'skills.txt');
     assert(auraState, `skills.txt: ${skillName} utilise aitype=1 sans aurastate`);
     uniqueRow(states, auraState, 'states.txt');
-  }
-
-  for (const ravenName of ['BKV Fire Raven', 'BKV Cold Raven']) {
-    const raven = uniqueRow(skills, ravenName, 'skills.txt');
-    assert(value(raven, skillsIndexes, 'aitype', 'skills.txt') === '1',
-      `skills.txt: ${ravenName}.aitype doit rester un buff IA`);
-    assert(value(raven, skillsIndexes, 'aurastate', 'skills.txt') === 'bkvrogueraven',
-      `skills.txt: ${ravenName}.aurastate invalide`);
-    assert(value(raven, skillsIndexes, 'srvstfunc', 'skills.txt') === '28',
-      `skills.txt: ${ravenName}.srvstfunc invalide`);
-    assert(value(raven, skillsIndexes, 'srvdofunc', 'skills.txt') === '44',
-      `skills.txt: ${ravenName}.srvdofunc invalide`);
-    assert(value(raven, skillsIndexes, 'srvmissilea', 'skills.txt')
-      === 'blade shield attachment',
-    `skills.txt: ${ravenName}.srvmissilea invalide`);
-    assert(value(raven, skillsIndexes, 'sumskill1', 'skills.txt')
-      === 'BKV Rogue Raven Aura',
-    `skills.txt: ${ravenName}.sumskill1 invalide`);
-    assert(value(raven, skillsIndexes, 'sumsk1calc', 'skills.txt') === '1',
-      `skills.txt: ${ravenName}.sumsk1calc invalide`);
-    assert(value(raven, skillsIndexes, 'pettype', 'skills.txt') === 'bkvrogueraven',
-      `skills.txt: ${ravenName}.pettype invalide`);
-    assert(value(raven, skillsIndexes, 'petmax', 'skills.txt') === '1',
-      `skills.txt: ${ravenName}.petmax invalide`);
-    assert(value(raven, skillsIndexes, 'Param5', 'skills.txt') === '',
-      `skills.txt: ${ravenName}.Param5 doit rester vide sur le chemin Blade Sentinel`);
-  }
-  uniqueRow(states, 'bkvrogueraven', 'states.txt');
-  uniqueRow(missiles, 'blade shield attachment', 'missiles.txt');
-  const ravenAura = uniqueRow(skills, 'BKV Rogue Raven Aura', 'skills.txt');
-  assert(value(ravenAura, skillsIndexes, 'srvdofunc', 'skills.txt') === '65',
-    'skills.txt: BKV Rogue Raven Aura.srvdofunc invalide');
-  assert(value(ravenAura, skillsIndexes, 'aurastate', 'skills.txt') === 'bkvrogueraven',
-    'skills.txt: BKV Rogue Raven Aura.aurastate invalide');
-  assert(value(ravenAura, skillsIndexes, 'auratargetstate', 'skills.txt') === 'bkvrogueraven',
-    'skills.txt: BKV Rogue Raven Aura.auratargetstate invalide');
-
-  for (const [monsterName, skillName] of [
-    ['bkvfireraven', 'BKV Fire Raven'],
-    ['bkvcoldraven', 'BKV Cold Raven'],
-  ]) {
-    const monster = uniqueRow(monstats, monsterName, 'monstats.txt');
-    assert(value(monster, monstatsIndexes, 'AI', 'monstats.txt') === 'NecroPet',
-      `monstats.txt: ${monsterName}.AI invalide`);
-    assert(value(monster, monstatsIndexes, 'MonStatsEx', 'monstats.txt') === 'druidhawk',
-      `monstats.txt: ${monsterName}.MonStatsEx doit reutiliser le rendu vanilla druidhawk`);
-    assert(value(monster, monstatsIndexes, 'Skill1', 'monstats.txt') === '',
-      `monstats.txt: ${monsterName}.Skill1 doit rester vide avec NecroPet`);
-    assert(value(monster, monstatsIndexes, 'aip1', 'monstats.txt') === '90',
-      `monstats.txt: ${monsterName}.aip1 invalide`);
   }
 
   const eruption = uniqueRow(skilldesc, 'eruption', 'skilldesc.txt');
@@ -184,7 +132,6 @@ function main() {
   console.log('VALID : references BKVince de demarrage resolues');
   console.log(`  Hireling skills -> ${hirelingSkillNames.size} skilldesc resolus`);
   console.log(`  Aura AI skills -> ${auraAiSkills.length} aurastate resolus`);
-  console.log('  BKV Fire/Cold Raven -> cycle TDE + rendu vanilla druidhawk resolus');
   console.log(`  Eruption -> ${missileMatch[1]}`);
   console.log('  Andariel (H) -> Andariel Essence (H) -> tes');
   console.log('  Rift Crafts (N) Premium precede Rift Crafts Premium');

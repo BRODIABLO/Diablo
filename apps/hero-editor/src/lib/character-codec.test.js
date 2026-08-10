@@ -752,8 +752,12 @@ test('builds governed hireling definitions and round-trips native mercenary head
     skills: ['Exploding Arrow', 'Fire Arrow', 'Inner Sight'],
     rows: [2, 3],
   }]);
-  assert.equal(mercenaryDefinitions.length, 33);
-  assert.ok(mercenaryDefinitions.some(({ id, skills }) => id === 0 && skills.includes('BKV Fire Raven')));
+  assert.equal(mercenaryDefinitions.length, 39);
+  assert.ok(mercenaryDefinitions.some(({ id, skills }) => (
+    id === 0
+    && skills.includes('Exploding Arrow')
+    && !skills.includes('BKV Fire Raven')
+  )));
 
   const blank = await createBlankCharacter({ name: 'MercCodec', className: 'Warlock' });
   let playerEdit = addItemBatchSnapshot(editableSnapshot(blank.model), blank.model.items, {

@@ -1,6 +1,15 @@
 # PD2 / Single Player Plus — inspiration gouvernée pour BKVince
 
-Dernière mise à jour : 8 août 2026
+Dernière mise à jour : 10 août 2026
+
+> **Décision produit du 10 août 2026 — rollback mercenaires.** Vincent a
+> retiré les prototypes mercenaires postérieurs au jalon pré-TDE
+> `e67e66d277230dcdd577e4f608ef293448cd07ea`. Les refontes Rogue Scout,
+> Desert Mercenary et Eastern Sorceror ne sont plus actives dans BKVince.
+> `RogueScoutMovement` est explicitement conservé comme plugin autonome; il
+> reste indépendant des tables mercenaires retirées. Les autres sections
+> mercenaires ci-dessous restent des preuves historiques et ne décrivent plus
+> le runtime courant.
 
 ## But
 
