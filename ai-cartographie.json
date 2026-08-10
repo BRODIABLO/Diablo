@@ -1,8 +1,8 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-08T12:46:18.6041188+00:00",
+    "generatedAt":  "2026-08-10T21:16:29.5786621+00:00",
     "root":  {
-                 "name":  "ci-fix-20260806-094547",
+                 "name":  "pd2-affixes-index-7776be629d014bf58eb297d6a91ce01a",
                  "path":  ".",
                  "kind":  "directory",
                  "meta":  {
@@ -1550,7 +1550,7 @@
                                                                                 "kind":  "directory",
                                                                                 "meta":  {
                                                                                              "role":  "x-bkvince-hero-editor-ui-assets",
-                                                                                             "summary":  "Assets UI générés et versionnés utilisés par l'éditeur de sauvegardes BKVince.",
+                                                                                             "summary":  "Assets UI générés et versionnés utilisés par l\u0027éditeur de sauvegardes BKVince.",
                                                                                              "agentAccess":  "read-write"
                                                                                          },
                                                                                 "children":  [
@@ -5088,6 +5088,11 @@
                                                                                                                       {
                                                                                                                           "name":  "history.test.js",
                                                                                                                           "path":  "apps/hero-editor/src/lib/history.test.js",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "pd2-affix-catalog.test.js",
+                                                                                                                          "path":  "apps/hero-editor/src/lib/pd2-affix-catalog.test.js",
                                                                                                                           "kind":  "file"
                                                                                                                       },
                                                                                                                       {
@@ -8867,12 +8872,12 @@
                                                                                                                                                                     "path":  "data-BKVince/BKVince.mpq/data/global/tiles/act3/travincal",
                                                                                                                                                                     "kind":  "directory",
                                                                                                                                                                     "children":  [
-                                                                                                                                                                        {
-                                                                                                                                                                            "name":  "mephcomp.ds1",
-                                                                                                                                                                            "path":  "data-BKVince/BKVince.mpq/data/global/tiles/act3/travincal/mephcomp.ds1",
-                                                                                                                                                                            "kind":  "file"
-                                                                                                                                                                        }
-                                                                                                                                                                    ]
+                                                                                                                                                                                     {
+                                                                                                                                                                                         "name":  "mephcomp.ds1",
+                                                                                                                                                                                         "path":  "data-BKVince/BKVince.mpq/data/global/tiles/act3/travincal/mephcomp.ds1",
+                                                                                                                                                                                         "kind":  "file"
+                                                                                                                                                                                     }
+                                                                                                                                                                                 ]
                                                                                                                                                                 },
                                                                                                                                                                 {
                                                                                                                                                                     "name":  "combined_ds1.bin",
@@ -21669,11 +21674,6 @@
                                                                                                                   ]
                                                                                                  },
                                                                                                  {
-                                                                                                     "name":  "StaticFieldRework.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/StaticFieldRework.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
                                                                                                      "name":  "Transmogrify-src",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/Transmogrify-src",
                                                                                                      "kind":  "directory",
@@ -21873,6 +21873,11 @@
                                                                                                  {
                                                                                                      "name":  "RogueScoutMovement.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/RogueScoutMovement.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "StaticFieldRework.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/StaticFieldRework.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -37838,6 +37843,16 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "pd2-affixes-merge.catalog.json",
+                                                           "path":  "Mission/pd2-affixes-merge.catalog.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-affixes-merge.md",
+                                                           "path":  "Mission/pd2-affixes-merge.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "pd2-game-mechanics-vs-bkvince-audit.md",
                                                            "path":  "Mission/pd2-game-mechanics-vs-bkvince-audit.md",
                                                            "kind":  "file"
@@ -38618,6 +38633,16 @@
                                                                             {
                                                                                 "name":  "match-memory-edit-sites.py",
                                                                                 "path":  "scripts/migrate-bkvince/match-memory-edit-sites.py",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-affixes-merge.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-affixes-merge.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-affixes-merge.test.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-affixes-merge.test.mjs",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

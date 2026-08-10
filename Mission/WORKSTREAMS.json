@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-08",
+  "updatedAt": "2026-08-10",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -543,6 +543,24 @@
       ]
     },
     {
+      "id": "pd2-affixes-merge",
+      "name": "PD2 Affixes Merge",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/pd2-affixes-merge.md",
+      "nextGate": "AFM-01 and AFM-02 are applied with stable legacy IDs and green static consumers. Keep ProgressiveAffixesPlugin as the current priority; next publish before/after pool distributions, then qualify gameplay, old and new save/reload witnesses, and host/joiner before closing this workstream. AutoMagic remains deferred to AFM-03.",
+      "include": [
+        "Mission/pd2-affixes-merge*",
+        "scripts/*pd2-affix*/**",
+        "scripts/migrate-bkvince/*pd2-affix*",
+        "data-BKVince/BKVince.mpq/data/global/excel/magicprefix.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/magicsuffix.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/automagic.txt",
+        "data-BKVince/BKVince.mpq/data/local/lng/strings/item-nameaffixes.json",
+        "data-BKVince/BKVince.mpq/data/local/lng/strings-legacy/item-nameaffixes.json"
+      ]
+    },
+    {
       "id": "rogue-scout-movement",
       "name": "RogueScoutMovement",
       "status": "active",
@@ -708,6 +726,7 @@
         "rift-terror-zone-group",
         "tde-inspiration-bkvince",
         "pd2-inspiration-bkvince",
+        "pd2-affixes-merge",
         "workstream-registry"
       ],
       "reason": "Root commands serve governed data/plugin tests and repository organization."

@@ -25,6 +25,11 @@ get_filename_component(
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../data-BK/global/excel"
     ABSOLUTE
 )
+get_filename_component(
+    BKVINCE_EXCEL_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../../data-BKVince/BKVince.mpq/data/global/excel"
+    ABSOLUTE
+)
 set(ADVANCED_ITEM_TOOLTIPS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 configure_file(vanilla_tables.rc.in vanilla_tables.rc @ONLY)
 
@@ -70,6 +75,12 @@ if(IS_DIRECTORY "${INTERMOD_REFERENCE_EXCEL_DIR}")
     add_test(
         NAME advanced-item-tooltips-intermod-reference
         COMMAND AdvancedItemTooltipsRangeTests "${INTERMOD_REFERENCE_EXCEL_DIR}"
+    )
+endif()
+if(IS_DIRECTORY "${BKVINCE_EXCEL_DIR}")
+    add_test(
+        NAME advanced-item-tooltips-bkvince-data
+        COMMAND AdvancedItemTooltipsRangeTests "${BKVINCE_EXCEL_DIR}"
     )
 endif()
 add_test(NAME advanced-item-tooltips-config COMMAND AdvancedItemTooltipsConfigTests)

@@ -1592,8 +1592,8 @@ test('generates a deterministic fail-closed catalog from governed BKVince tables
     pick(itemCatalog.rareNameSuffixes[0], ['id', 'name']),
     { id: 1, name: 'Bite' },
   );
-  assert.equal(itemCatalog.prefixes.filter(({ rare }) => rare).length, 563);
-  assert.equal(itemCatalog.suffixes.filter(({ rare }) => rare).length, 614);
+  assert.equal(itemCatalog.prefixes.filter(({ rare }) => rare).length, 663);
+  assert.equal(itemCatalog.suffixes.filter(({ rare }) => rare).length, 704);
   assert.equal(itemCatalog.runewords.length, 112);
   assert.deepEqual(
     pick(itemCatalog.runewords.find(({ id }) => id === 155), ['name', 'runes', 'allowedTypes']),

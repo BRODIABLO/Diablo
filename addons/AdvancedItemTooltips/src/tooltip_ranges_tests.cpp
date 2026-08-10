@@ -136,6 +136,29 @@ std::size_t CompiledAffixIdForType(const std::filesystem::path& path,
     return 0;
 }
 
+std::size_t CompiledAffixIdForWitness(const std::filesystem::path& path,
+    std::string_view name, std::string_view itemType,
+    std::string_view property, std::string_view parameter,
+    std::string_view minimum, std::string_view maximum) {
+    std::size_t id = 1;
+    for (const auto& row : ReadAuditRows(path)) {
+        if (Lower(Value(row, "name")) == "expansion") continue;
+        bool typeMatches{};
+        for (std::size_t slot = 1; slot <= 7; ++slot)
+            if (Value(row, "itype" + std::to_string(slot)) == itemType) typeMatches = true;
+        if (Value(row, "name") == name
+            && typeMatches
+            && Value(row, "mod1code") == property
+            && Value(row, "mod1param") == parameter
+            && Value(row, "mod1min") == minimum
+            && Value(row, "mod1max") == maximum) {
+            return id;
+        }
+        ++id;
+    }
+    return 0;
+}
+
 std::size_t CompiledItemCount(const std::filesystem::path& path) {
     std::size_t count{};
     for (const auto& row : ReadAuditRows(path))
@@ -204,7 +227,8 @@ std::string RenderAuditLine(const ModifierRange& range) {
     return line;
 }
 
-bool AuditEveryRunewordAgainstMetadata(const tcp::tooltips::RangeCatalog& catalog) {
+bool AuditEveryRunewordAgainstMetadata(const tcp::tooltips::RangeCatalog& catalog,
+    const tcp::tooltips::ItemAffixIds& runtimePayload) {
     constexpr std::array metadata{
         "Defense: 689", "One-Hand Damage: 12 to 34",
         "Two-Hand Damage: 25 to 80", "Throw Damage: 20 to 60",
@@ -213,15 +237,9 @@ bool AuditEveryRunewordAgainstMetadata(const tcp::tooltips::RangeCatalog& catalo
         "Required Strength: 110", "Required Dexterity: 35",
         "Required Level: 47", "Item Level: 99", "Affix Level: 85",
         "Socketed (4)"};
-    tcp::tooltips::ItemAffixIds ids{};
+    auto ids = runtimePayload;
     ids.quality = 2;
     ids.runeword = true;
-    ids.magicPrefix[0] = 1389;
-    ids.magicPrefix[1] = 980;
-    ids.magicPrefix[2] = 1349;
-    ids.magicSuffix[0] = 745;
-    ids.magicSuffix[1] = 742;
-    ids.magicSuffix[2] = 195;
     std::size_t comparisons{};
     for (const auto& key : catalog.RunewordKeys()) {
         for (const auto code : {"hax", "gth", "buc"}) {
@@ -827,21 +845,75 @@ int main(int argc, char** argv) {
         + std::string(darkGreen) + "[10 - 20]" + blue) != std::string::npos);
 
     if (argc == 2) {
+        const auto excel = std::filesystem::path(argv[1]);
         tcp::tooltips::RangeCatalog catalog;
         std::string error;
-        CHECK(catalog.Load(std::filesystem::path(argv[1]), error));
+        CHECK(catalog.Load(excel, error));
         CHECK(catalog.PropertyCount() > 0);
         CHECK(catalog.FindArmor("ci3")->minimum == 50);
         CHECK(catalog.FindArmor("ci3")->maximum == 60);
-        CHECK(AuditEveryUniqueRecord(std::filesystem::path(argv[1])));
-        CHECK(AuditEveryRunewordRecord(std::filesystem::path(argv[1]), catalog));
-        CHECK(AuditEveryRunewordAgainstMetadata(catalog));
 
         // automagic.txt uses the unified suffix + prefix + automagic runtime
         // id space. Resolve a real BKVince Armor_fhr auto-affix dynamically
         // from the active tables and require its 5-10 FHR range.
-        const auto excel = std::filesystem::path(argv[1]);
         const auto suffixCount = CompiledAffixCount(excel / "magicsuffix.txt");
+        const auto prefixWitness = [&](std::string_view name,
+                std::string_view itemType, std::string_view property,
+                std::string_view parameter, std::string_view minimum,
+                std::string_view maximum) {
+            const auto localId = CompiledAffixIdForWitness(
+                excel / "magicprefix.txt", name, itemType, property,
+                parameter, minimum, maximum);
+            return localId == 0 ? std::size_t{} : suffixCount + localId;
+        };
+        const auto suffixWitness = [&](std::string_view name,
+                std::string_view itemType, std::string_view property,
+                std::string_view parameter, std::string_view minimum,
+                std::string_view maximum) {
+            return CompiledAffixIdForWitness(
+                excel / "magicsuffix.txt", name, itemType, property,
+                parameter, minimum, maximum);
+        };
+        const auto consecratedPrefix = prefixWitness(
+            "Consecrated", "weap", "att-undead", "", "25", "75");
+        const auto jaggedPrefix = prefixWitness(
+            "Jagged", "weap", "dmg%", "", "10", "20");
+        const auto septicPrefix = prefixWitness(
+            "Septic", "weap", "dmg-pois", "50", "31", "31");
+        const auto expertPrefix = prefixWitness(
+            "Expert's", "weap", "skilltab", "12", "1", "1");
+        const auto greatWyrmPrefix = prefixWitness(
+            "Great Wyrm's", "amul", "mana", "", "61", "90");
+        const auto shockSuffix = suffixWitness(
+            "of Shock", "weap", "dmg-ltng", "", "1", "3");
+        const auto frostSuffix = suffixWitness(
+            "of Frost", "weap", "dmg-cold", "25", "1", "1");
+        const auto craftsmanshipSuffix = suffixWitness(
+            "of Craftsmanship", "weap", "dmg-max", "", "1", "1");
+        const auto slaughterSuffix = suffixWitness(
+            "of Slaughter", "weap", "dmg-max", "", "15", "20");
+        const auto apprenticeSuffix = suffixWitness(
+            "of the Apprentice", "amul", "cast1", "", "10", "10");
+        const auto fortuneSuffix = suffixWitness(
+            "of Fortune", "amul", "mag%", "", "20", "35");
+        CHECK(consecratedPrefix && jaggedPrefix && septicPrefix
+            && expertPrefix && greatWyrmPrefix && shockSuffix && frostSuffix
+            && craftsmanshipSuffix && slaughterSuffix && apprenticeSuffix
+            && fortuneSuffix);
+        CHECK(std::max({consecratedPrefix, jaggedPrefix, septicPrefix,
+            expertPrefix, greatWyrmPrefix, shockSuffix, frostSuffix,
+            craftsmanshipSuffix, slaughterSuffix, apprenticeSuffix,
+            fortuneSuffix}) <= UINT16_MAX);
+        tcp::tooltips::ItemAffixIds runtimeAffixPayload{};
+        runtimeAffixPayload.magicPrefix[0] = static_cast<std::uint16_t>(consecratedPrefix);
+        runtimeAffixPayload.magicPrefix[1] = static_cast<std::uint16_t>(jaggedPrefix);
+        runtimeAffixPayload.magicPrefix[2] = static_cast<std::uint16_t>(septicPrefix);
+        runtimeAffixPayload.magicSuffix[0] = static_cast<std::uint16_t>(shockSuffix);
+        runtimeAffixPayload.magicSuffix[1] = static_cast<std::uint16_t>(frostSuffix);
+        runtimeAffixPayload.magicSuffix[2] = static_cast<std::uint16_t>(craftsmanshipSuffix);
+        CHECK(AuditEveryUniqueRecord(excel));
+        CHECK(AuditEveryRunewordRecord(excel, catalog));
+        CHECK(AuditEveryRunewordAgainstMetadata(catalog, runtimeAffixPayload));
         const auto englishLocalization = catalog.BuildLocalization(
             [](std::string_view key) {
                 static const std::unordered_map<std::string_view, std::string_view> strings{
@@ -865,55 +937,60 @@ int main(int argc, char** argv) {
                 return found == strings.end() ? std::string{} : std::string(found->second);
             });
         const auto autoId = CompiledAffixId(excel / "automagic.txt", "Armor_fhr");
-        const auto autoRuntimeId = CompiledAffixCount(excel / "magicsuffix.txt")
-            + CompiledAffixCount(excel / "magicprefix.txt") + autoId;
-        CHECK(autoId != 0 && autoRuntimeId <= UINT16_MAX);
-        tcp::tooltips::ItemAffixIds autoArmor{};
-        autoArmor.quality = 2;
-        autoArmor.autoPrefix = static_cast<std::uint16_t>(autoRuntimeId);
-        const auto autoCandidates = catalog.ResolveCandidates(autoArmor, "qui");
-        CHECK(FindRange(autoCandidates, "item_fastergethitrate")->minimum == 5);
-        CHECK(FindRange(autoCandidates, "item_fastergethitrate")->maximum == 10);
-        CHECK(AppendConsensusRanges(blue + std::string("+7% Faster Hit Recovery"),
-            autoCandidates).find("[5 - 10]") != std::string::npos);
+        const auto automagicOffset = CompiledAffixCount(excel / "magicsuffix.txt")
+            + CompiledAffixCount(excel / "magicprefix.txt");
+        const auto autoRuntimeId = autoId == 0 ? std::size_t{} : automagicOffset + autoId;
+        CHECK(autoRuntimeId <= UINT16_MAX);
+        if (autoId != 0) {
+            tcp::tooltips::ItemAffixIds autoArmor{};
+            autoArmor.quality = 2;
+            autoArmor.autoPrefix = static_cast<std::uint16_t>(autoRuntimeId);
+            const auto autoCandidates = catalog.ResolveCandidates(autoArmor, "qui");
+            CHECK(FindRange(autoCandidates, "item_fastergethitrate")->minimum == 5);
+            CHECK(FindRange(autoCandidates, "item_fastergethitrate")->maximum == 10);
+            CHECK(AppendConsensusRanges(blue + std::string("+7% Faster Hit Recovery"),
+                autoCandidates).find("[5 - 10]") != std::string::npos);
+        }
 
         // A superior armor can also carry an automagic property. Both table
         // sources must survive candidate resolution: qualityitems row 8 owns
         // 5-25 ED and 1-2 DR, while Armor_max_mana owns 1-8 maximum Mana.
         const auto maxManaAutoId = CompiledAffixId(excel / "automagic.txt", "Armor_max_mana");
-        const auto maxManaRuntimeId = CompiledAffixCount(excel / "magicsuffix.txt")
-            + CompiledAffixCount(excel / "magicprefix.txt") + maxManaAutoId;
-        CHECK(maxManaAutoId != 0 && maxManaRuntimeId <= UINT16_MAX);
-        tcp::tooltips::ItemAffixIds superiorAutoArmor{};
-        superiorAutoArmor.quality = 3;
-        superiorAutoArmor.fileIndex = 7;
-        superiorAutoArmor.autoPrefix = static_cast<std::uint16_t>(maxManaRuntimeId);
-        const auto superiorAutoCandidates = catalog.ResolveCandidates(superiorAutoArmor, "lea");
-        CHECK(FindRange(superiorAutoCandidates, "item_maxmana_percent")->minimum == 1);
-        CHECK(FindRange(superiorAutoCandidates, "item_maxmana_percent")->maximum == 8);
-        CHECK(FindRange(superiorAutoCandidates, "item_armor_percent")->minimum == 5);
-        CHECK(FindRange(superiorAutoCandidates, "item_armor_percent")->maximum == 25);
-        CHECK(FindRange(superiorAutoCandidates, "normal_damage_reduction")->minimum == 1);
-        CHECK(FindRange(superiorAutoCandidates, "normal_damage_reduction")->maximum == 2);
-        const auto superiorAutoTooltip = blue + std::string("+8% Enhanced Defense\n")
-            + blue + "Increase Maximum Mana 3%\n"
-            + blue + "Damage Reduced by 2";
-        const auto superiorAutoEnhanced = AppendConsensusRanges(
-            superiorAutoTooltip, superiorAutoCandidates);
-        CHECK(superiorAutoEnhanced.find("+8% Enhanced Defense "
-            + std::string(darkGreen) + "[5 - 25]" + blue) != std::string::npos);
-        CHECK(superiorAutoEnhanced.find("Increase Maximum Mana 3% "
-            + std::string(darkGreen) + "[1 - 8]" + blue) != std::string::npos);
-        CHECK(superiorAutoEnhanced.find("Damage Reduced by 2 "
-            + std::string(darkGreen) + "[1 - 2]" + blue) != std::string::npos);
-        const auto superiorAutoRuntime = catalog.ResolveCandidateSet(
-            superiorAutoArmor, "lea", {}, true, {}, superiorAutoTooltip,
-            &englishLocalization);
-        const auto superiorAutoRuntimeEnhanced = AppendConsensusRanges(
-            superiorAutoTooltip, superiorAutoRuntime.candidates, false,
-            &englishLocalization, &superiorAutoRuntime.intrinsicCandidates);
-        CHECK(superiorAutoRuntimeEnhanced.find("+8% Enhanced Defense "
-            + std::string(darkGreen) + "[5 - 25]" + blue) != std::string::npos);
+        const auto maxManaRuntimeId = maxManaAutoId == 0
+            ? std::size_t{} : automagicOffset + maxManaAutoId;
+        CHECK(maxManaRuntimeId <= UINT16_MAX);
+        if (maxManaAutoId != 0) {
+            tcp::tooltips::ItemAffixIds superiorAutoArmor{};
+            superiorAutoArmor.quality = 3;
+            superiorAutoArmor.fileIndex = 7;
+            superiorAutoArmor.autoPrefix = static_cast<std::uint16_t>(maxManaRuntimeId);
+            const auto superiorAutoCandidates = catalog.ResolveCandidates(superiorAutoArmor, "lea");
+            CHECK(FindRange(superiorAutoCandidates, "item_maxmana_percent")->minimum == 1);
+            CHECK(FindRange(superiorAutoCandidates, "item_maxmana_percent")->maximum == 8);
+            CHECK(FindRange(superiorAutoCandidates, "item_armor_percent")->minimum == 5);
+            CHECK(FindRange(superiorAutoCandidates, "item_armor_percent")->maximum == 25);
+            CHECK(FindRange(superiorAutoCandidates, "normal_damage_reduction")->minimum == 1);
+            CHECK(FindRange(superiorAutoCandidates, "normal_damage_reduction")->maximum == 2);
+            const auto superiorAutoTooltip = blue + std::string("+8% Enhanced Defense\n")
+                + blue + "Increase Maximum Mana 3%\n"
+                + blue + "Damage Reduced by 2";
+            const auto superiorAutoEnhanced = AppendConsensusRanges(
+                superiorAutoTooltip, superiorAutoCandidates);
+            CHECK(superiorAutoEnhanced.find("+8% Enhanced Defense "
+                + std::string(darkGreen) + "[5 - 25]" + blue) != std::string::npos);
+            CHECK(superiorAutoEnhanced.find("Increase Maximum Mana 3% "
+                + std::string(darkGreen) + "[1 - 8]" + blue) != std::string::npos);
+            CHECK(superiorAutoEnhanced.find("Damage Reduced by 2 "
+                + std::string(darkGreen) + "[1 - 2]" + blue) != std::string::npos);
+            const auto superiorAutoRuntime = catalog.ResolveCandidateSet(
+                superiorAutoArmor, "lea", {}, true, {}, superiorAutoTooltip,
+                &englishLocalization);
+            const auto superiorAutoRuntimeEnhanced = AppendConsensusRanges(
+                superiorAutoTooltip, superiorAutoRuntime.candidates, false,
+                &englishLocalization, &superiorAutoRuntime.intrinsicCandidates);
+            CHECK(superiorAutoRuntimeEnhanced.find("+8% Enhanced Defense "
+                + std::string(darkGreen) + "[5 - 25]" + blue) != std::string::npos);
+        }
 
         // Exact runtime trace for the socketed rare Stone Razor. The 8-bit
         // rare name ids 172/7 spell the generated name; they must never be
@@ -924,12 +1001,8 @@ int main(int argc, char** argv) {
         stoneRazor.quality = 6;
         stoneRazor.rarePrefix = 172;
         stoneRazor.rareSuffix = 7;
-        stoneRazor.magicPrefix[0] = 1389; // Consecrated
-        stoneRazor.magicPrefix[1] = 980;  // Jagged
-        stoneRazor.magicPrefix[2] = 1349; // Septic
-        stoneRazor.magicSuffix[0] = 745;  // of Shock
-        stoneRazor.magicSuffix[1] = 742;  // of Frost
-        stoneRazor.magicSuffix[2] = 195;  // of Craftsmanship
+        std::copy_n(runtimeAffixPayload.magicPrefix, 3, stoneRazor.magicPrefix);
+        std::copy_n(runtimeAffixPayload.magicSuffix, 3, stoneRazor.magicSuffix);
         const auto stoneCandidates = catalog.ResolveCandidates(stoneRazor, "ssd");
         CHECK(FindRange(stoneCandidates, "maxdamage")->minimum == 1);
         CHECK(FindRange(stoneCandidates, "maxdamage")->maximum == 1);
@@ -1058,7 +1131,7 @@ int main(int argc, char** argv) {
         normal.quality = 2;
         normal.runeword = true;
         auto unresolvedRuneword = normal;
-        unresolvedRuneword.magicPrefix[0] = 794 + 481;
+        unresolvedRuneword.magicPrefix[0] = static_cast<std::uint16_t>(expertPrefix);
         CHECK(catalog.ResolveCandidates(unresolvedRuneword, "hax").front().empty());
 
         const auto pledge = catalog.ResolveCandidates(normal, "buc", "Runeword1");
@@ -1099,12 +1172,8 @@ int main(int argc, char** argv) {
         // Runtime runeword payload may leave non-zero values in every field
         // that normally stores magic affix ids. A white runeword base cannot
         // own those affixes, so none may contaminate the Stone candidate.
-        stoneIds.magicPrefix[0] = 1389;
-        stoneIds.magicPrefix[1] = 980;
-        stoneIds.magicPrefix[2] = 1349;
-        stoneIds.magicSuffix[0] = 745;
-        stoneIds.magicSuffix[1] = 742;
-        stoneIds.magicSuffix[2] = 195;
+        std::copy_n(runtimeAffixPayload.magicPrefix, 3, stoneIds.magicPrefix);
+        std::copy_n(runtimeAffixPayload.magicSuffix, 3, stoneIds.magicSuffix);
         const auto stone = catalog.ResolveCandidates(stoneIds, "gth", "Runeword137");
         CHECK(FindRange(stone, "item_armor_percent")->minimum == 400);
         CHECK(FindRange(stone, "item_armor_percent")->maximum == 450);
@@ -1198,7 +1267,8 @@ int main(int argc, char** argv) {
         tcp::tooltips::ItemAffixIds superiorLeather{};
         superiorLeather.quality = 3;
         superiorLeather.fileIndex = 2;
-        superiorLeather.autoPrefix = static_cast<std::uint16_t>(maxManaRuntimeId);
+        if (maxManaAutoId != 0)
+            superiorLeather.autoPrefix = static_cast<std::uint16_t>(maxManaRuntimeId);
         const auto superiorLeatherCandidates = catalog.ResolveCandidates(superiorLeather, "lea");
         const auto superiorLeatherTooltip = std::string("Superior Leather Armor (99)\n")
             + "Defense: 39\n"
@@ -1212,8 +1282,10 @@ int main(int argc, char** argv) {
             superiorLeatherTooltip, superiorLeatherCandidates);
         CHECK(superiorLeatherEnhanced.find("+47% Enhanced Defense "
             + std::string(darkGreen) + "[5 - 50]" + blue) != std::string::npos);
-        CHECK(superiorLeatherEnhanced.find("Increase Maximum Mana 4% "
-            + std::string(darkGreen) + "[1 - 8]" + blue) != std::string::npos);
+        if (maxManaAutoId != 0) {
+            CHECK(superiorLeatherEnhanced.find("Increase Maximum Mana 4% "
+                + std::string(darkGreen) + "[1 - 8]" + blue) != std::string::npos);
+        }
 
         // The qualityitems roll remains part of the base after it becomes a
         // runeword. Dream + Pul therefore stacks fixed 50 ED with superior
@@ -1323,9 +1395,8 @@ int main(int argc, char** argv) {
         CHECK(FindRange(bone, "item_skillongethit") == nullptr);
         tcp::tooltips::ItemAffixIds slaughterMaul{};
         slaughterMaul.quality = 4;
-        // The compiled runtime ids omit the Expansion separator from each TXT.
-        slaughterMaul.magicPrefix[0] = 794 + 481; // Expert's: fixed +1 Combat Skills
-        slaughterMaul.magicSuffix[0] = 201; // of Slaughter: +15-20 Maximum Damage
+        slaughterMaul.magicPrefix[0] = static_cast<std::uint16_t>(expertPrefix);
+        slaughterMaul.magicSuffix[0] = static_cast<std::uint16_t>(slaughterSuffix);
         const auto slaughterCandidates = catalog.ResolveCandidates(slaughterMaul, "7gm");
         const auto slaughterTooltip = blue + std::string("+1 to Combat Skills (Barbarian Only)\n")
             + blue + "+18 to Maximum Damage\n"
@@ -1350,8 +1421,8 @@ int main(int argc, char** argv) {
 
         tcp::tooltips::ItemAffixIds casterAmulet{};
         casterAmulet.quality = 8;
-        casterAmulet.magicPrefix[0] = 794 + 312; // Great Wyrm's: +61-90 Mana
-        casterAmulet.magicSuffix[0] = 22; // of the Apprentice: fixed +10 FCR
+        casterAmulet.magicPrefix[0] = static_cast<std::uint16_t>(greatWyrmPrefix);
+        casterAmulet.magicSuffix[0] = static_cast<std::uint16_t>(apprenticeSuffix);
         const auto candidates = catalog.ResolveCandidates(casterAmulet, "amu");
         bool foundStackedFcr{};
         for (const auto& candidate : candidates) {
@@ -1404,7 +1475,7 @@ int main(int argc, char** argv) {
         // rejected by the complete tooltip.
         tcp::tooltips::ItemAffixIds augmentedAmulet{};
         augmentedAmulet.quality = 4;
-        augmentedAmulet.magicSuffix[0] = 74;
+        augmentedAmulet.magicSuffix[0] = static_cast<std::uint16_t>(fortuneSuffix);
         const auto augmentedCandidates = catalog.ResolveCandidates(
             augmentedAmulet, "amu", {}, true,
             [](std::int32_t statId, std::uint16_t) {
@@ -1475,7 +1546,7 @@ int main(int argc, char** argv) {
         }, syntheticError));
         tcp::tooltips::ItemAffixIds markerlessAmulet{};
         markerlessAmulet.quality = 4;
-        markerlessAmulet.magicPrefix[0] = 794 + 312;
+        markerlessAmulet.magicPrefix[0] = static_cast<std::uint16_t>(greatWyrmPrefix);
         const auto provenTooltip = blue + std::string("+103 to Mana");
         const auto provenResolution = syntheticCatalog.ResolveCandidateSet(
             markerlessAmulet, "amu", {}, true, {}, provenTooltip);
@@ -1563,7 +1634,7 @@ int main(int argc, char** argv) {
         }, craftedError));
         tcp::tooltips::ItemAffixIds mutatedCraft{};
         mutatedCraft.quality = 8;
-        mutatedCraft.magicPrefix[0] = 794 + 312;
+        mutatedCraft.magicPrefix[0] = static_cast<std::uint16_t>(greatWyrmPrefix);
         const auto mutatedCraftTooltip = blue + std::string("+8% Faster Cast Rate\n")
             + blue + "+112 to Mana";
         const auto mutatedCraftResolution = craftedCatalog.ResolveCandidateSet(
