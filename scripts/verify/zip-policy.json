@@ -135,6 +135,13 @@
         "mod-data/data/hd/global/ui/panel/inventory/remotestashbutton.sprite"
       ]
     },
+    "addons/RemoteStash/RemoteStash-1.1.7.zip": {
+      "kind": "plugin",
+      "entries": [
+        "d2rloader/config/RemoteStash.json",
+        "d2rloader/plugins/RemoteStash.dll"
+      ]
+    },
     "addons/NoEtherealItemTypes/NoEtherealItemTypes.zip": {
       "kind": "plugin",
       "legacy": true,
