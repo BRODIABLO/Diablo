@@ -53,29 +53,3 @@ jobs:
 
       - name: Verify repository
         run: npm run verify
-
-      - name: Diagnose governed Highest-Level drift
-        if: failure()
-        shell: pwsh
-        run: |
-          @'
-          import crypto from 'node:crypto';
-          import fs from 'node:fs';
-          import { buildHighestLevelReport, buildReport } from './scripts/migrate-bkvince/pd2-affixes-review.mjs';
-          const sourceRoot = process.env.PD2_AFFIX_SOURCE_ROOT;
-          const catalog = JSON.parse(fs.readFileSync('./Mission/pd2-affixes-merge.catalog.json', 'utf8'));
-          const actual = `${JSON.stringify(buildHighestLevelReport(buildReport(sourceRoot, catalog), sourceRoot), null, 2)}\n`;
-          const expected = fs.readFileSync('./Mission/pd2-affixes-highest-level.json', 'utf8');
-          const sha = (value) => crypto.createHash('sha256').update(value).digest('hex').toUpperCase();
-          const firstDifference = Array.from({ length: Math.max(actual.length, expected.length) }, (_, index) => index)
-            .find((index) => actual[index] !== expected[index]);
-          console.log(JSON.stringify({
-            expectedSha256: sha(expected),
-            actualSha256: sha(actual),
-            expectedLength: expected.length,
-            actualLength: actual.length,
-            firstDifference,
-            expectedContext: expected.slice(Math.max(0, firstDifference - 100), firstDifference + 100),
-            actualContext: actual.slice(Math.max(0, firstDifference - 100), firstDifference + 100),
-          }, null, 2));
-          '@ | node --input-type=module -
