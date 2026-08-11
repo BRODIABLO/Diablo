@@ -865,6 +865,10 @@ export function buildAffixDependencyAuditContext(sourceRoot, targetRoot = target
   const targetItemTypesLoaded = loadTable(targetRoot, 'itemtypes.txt');
   const sourceSkills = loadTable(sourceRoot, 'skills.txt');
   const targetSkills = loadTable(targetRoot, 'skills.txt');
+  const localizationSnapshots = {
+    modern: loadLocalizationSnapshot(modernStringsRoot),
+    legacy: loadLocalizationSnapshot(legacyStringsRoot),
+  };
   const tables = {};
   for (const name of Object.keys(TABLE_CONFIG)) {
     tables[name] = {
@@ -876,6 +880,30 @@ export function buildAffixDependencyAuditContext(sourceRoot, targetRoot = target
   return {
     sourceRoot,
     targetRoot,
+    dependencyHashes: {
+      source: {
+        'properties.txt': sourceProperties.sha256,
+        'itemtypes.txt': sourceItemTypesLoaded.sha256,
+        'itemstatcost.txt': sourceItemStatsLoaded.sha256,
+        'skills.txt': sourceSkills.sha256,
+      },
+      bkvince: {
+        'properties.txt': targetProperties.sha256,
+        'itemtypes.txt': targetItemTypesLoaded.sha256,
+        'itemstatcost.txt': targetItemStatsLoaded.sha256,
+        'skills.txt': targetSkills.sha256,
+        localization: {
+          modern: {
+            baseSha256: localizationSnapshots.modern.base.sha256,
+            manifestSha256: localizationSnapshots.modern.manifestSha256,
+          },
+          legacy: {
+            baseSha256: localizationSnapshots.legacy.base.sha256,
+            manifestSha256: localizationSnapshots.legacy.manifestSha256,
+          },
+        },
+      },
+    },
     properties,
     sourceItemTypes: itemTypeIndex(sourceItemTypesLoaded.table),
     targetItemTypes: itemTypeIndex(targetItemTypesLoaded.table),
@@ -888,8 +916,9 @@ export function buildAffixDependencyAuditContext(sourceRoot, targetRoot = target
     sourceSkills,
     targetSkills,
     tables,
-    modernLocalization: loadLocalizationBase(modernStringsRoot),
-    legacyLocalization: loadLocalizationBase(legacyStringsRoot),
+    localizationSnapshots,
+    modernLocalization: localizationSnapshots.modern.base,
+    legacyLocalization: localizationSnapshots.legacy.base,
   };
 }
 
@@ -1081,30 +1110,72 @@ export function auditAffixProjection(context, {
   };
 }
 
-function loadLocalizationBase(root) {
-  const filePath = path.join(root, 'item-nameaffixes.json');
+function loadLocalizationRecord(filePath, file = path.basename(filePath)) {
   const rawBuffer = fs.readFileSync(filePath);
-  const raw = fs.readFileSync(filePath, 'utf8');
-  const entries = readJson(filePath);
-  const byKey = new Map();
-  for (const entry of entries) {
-    assert(typeof entry.Key === 'string', `${filePath}: localization entry without Key`);
-    if (!byKey.has(entry.Key)) byKey.set(entry.Key, entry);
-  }
-  return { filePath, raw, entries, byKey, sha256: sha256(rawBuffer) };
+  const raw = rawBuffer.toString('utf8');
+  const entries = JSON.parse(raw.replace(/^\uFEFF/, ''));
+  assert(Array.isArray(entries), `${filePath}: localization root must be an array`);
+  return { file, filePath, raw, entries, sha256: sha256(rawBuffer) };
 }
 
-function allLocalizationIds(root) {
+function localizationBaseFromRecord(record) {
+  const byKey = new Map();
+  for (const entry of record.entries) {
+    assert(typeof entry.Key === 'string', `${record.filePath}: localization entry without Key`);
+    if (!byKey.has(entry.Key)) byKey.set(entry.Key, entry);
+  }
+  return {
+    filePath: record.filePath,
+    raw: record.raw,
+    entries: record.entries,
+    byKey,
+    sha256: record.sha256,
+  };
+}
+
+function loadLocalizationBase(root) {
+  return localizationBaseFromRecord(
+    loadLocalizationRecord(path.join(root, 'item-nameaffixes.json'), 'item-nameaffixes.json'),
+  );
+}
+
+function loadLocalizationRecords(root) {
+  return fs.readdirSync(root)
+    .filter((entry) => entry.toLowerCase().endsWith('.json'))
+    .sort()
+    .map((file) => loadLocalizationRecord(path.join(root, file), file));
+}
+
+function localizationIdsFromRecords(records) {
   const ids = new Map();
-  for (const name of fs.readdirSync(root).filter((entry) => entry.toLowerCase().endsWith('.json'))) {
-    const filePath = path.join(root, name);
-    for (const entry of readJson(filePath)) {
+  for (const record of records) {
+    for (const entry of record.entries) {
       if (!Number.isSafeInteger(entry.id)) continue;
       if (!ids.has(entry.id)) ids.set(entry.id, []);
-      ids.get(entry.id).push({ file: name, key: entry.Key });
+      ids.get(entry.id).push({ file: record.file, key: entry.Key });
     }
   }
   return ids;
+}
+
+function loadLocalizationSnapshot(root) {
+  const records = loadLocalizationRecords(root);
+  const baseRecords = records.filter((record) => record.file.toLowerCase() === 'item-nameaffixes.json');
+  assert(baseRecords.length === 1, `${root}: expected exactly one item-nameaffixes.json`);
+  // Governance hash: uppercase SHA-256 of the UTF-8 JSON.stringify output for this
+  // ordinal filename-sorted [{ file, sha256(raw file bytes) }] manifest.
+  const manifest = records.map((record) => ({ file: record.file, sha256: record.sha256 }));
+  return {
+    root,
+    base: localizationBaseFromRecord(baseRecords[0]),
+    ids: localizationIdsFromRecords(records),
+    manifest,
+    manifestSha256: stableSha(manifest),
+  };
+}
+
+function allLocalizationIds(root) {
+  return localizationIdsFromRecords(loadLocalizationRecords(root));
 }
 
 function localizedEntry(id, key, locales) {
@@ -1226,12 +1297,29 @@ function buildLocalization(selectedByTable, catalog) {
   };
 }
 
-export function planAffixLocalization(keys, catalog) {
+function localizationSnapshotsForPlan(context) {
+  if (context === undefined || context === null) {
+    return {
+      modern: loadLocalizationSnapshot(modernStringsRoot),
+      legacy: loadLocalizationSnapshot(legacyStringsRoot),
+    };
+  }
+  const snapshots = context.localizationSnapshots ?? context;
+  assert(
+    snapshots?.modern?.base && snapshots?.modern?.ids instanceof Map
+      && snapshots?.legacy?.base && snapshots?.legacy?.ids instanceof Map,
+    'Localization planning context is missing the modern or legacy governed snapshot',
+  );
+  return snapshots;
+}
+
+export function planAffixLocalization(keys, catalog, context = null) {
   const orderedKeys = uniqueValues(keys.filter(Boolean));
-  const modernBase = loadLocalizationBase(modernStringsRoot);
-  const legacyBase = loadLocalizationBase(legacyStringsRoot);
-  const modernIds = allLocalizationIds(modernStringsRoot);
-  const legacyIds = allLocalizationIds(legacyStringsRoot);
+  const snapshots = localizationSnapshotsForPlan(context);
+  const modernBase = snapshots.modern.base;
+  const legacyBase = snapshots.legacy.base;
+  const modernIds = snapshots.modern.ids;
+  const legacyIds = snapshots.legacy.ids;
   const reserved = new Map();
   const conflicts = [];
   let nextId = catalog.policy.localization.firstNewId;
@@ -1279,6 +1367,16 @@ export function planAffixLocalization(keys, catalog) {
   return {
     status: conflicts.length ? 'blocked' : 'planned',
     format: { encoding: 'UTF-8 BOM', lineEndings: 'LF', finalEol: false },
+    dependencyHashes: {
+      modern: {
+        baseSha256: snapshots.modern.base.sha256,
+        manifestSha256: snapshots.modern.manifestSha256,
+      },
+      legacy: {
+        baseSha256: snapshots.legacy.base.sha256,
+        manifestSha256: snapshots.legacy.manifestSha256,
+      },
+    },
     entries,
     conflicts,
   };

@@ -158,7 +158,25 @@ function documentationFor(documentationMap, identity, category) {
     && entry.sourceRow === identity.sourceRow && entry.fingerprint === identity.fingerprint);
   if (mapped) {
     const fragment = mapped.reference.url?.includes('#') ? `#${mapped.reference.url.split('#')[1]}` : '';
-    return { coverage: 'DOCUMENTED', ...mapped.reference, url: `${documentationMap.source.revisionUrl}${fragment}`, revisionId: documentationMap.source.revisionId, mapping: { table: mapped.table, sourceRow: mapped.sourceRow, fingerprint: mapped.fingerprint, name: mapped.name, properties: mapped.properties, itemTypes: mapped.itemTypes } };
+    const rules = (mapped.ruleIds ?? []).map((ruleId) => documentationMap.rules?.find((rule) => rule.id === ruleId)).filter(Boolean);
+    return {
+      coverage: 'DOCUMENTED',
+      ...mapped.reference,
+      url: `${documentationMap.source.revisionUrl}${fragment}`,
+      revisionId: documentationMap.source.revisionId,
+      claimIds: mapped.claimIds ?? [],
+      ruleIds: mapped.ruleIds ?? [],
+      documentedFields: [...new Set(rules.flatMap((rule) => rule.documentedFields ?? []))],
+      documentedFacets: [...new Set(rules.flatMap((rule) => rule.facets ?? []))],
+      mapping: {
+        table: mapped.table,
+        sourceRow: mapped.sourceRow,
+        fingerprint: mapped.fingerprint,
+        name: mapped.name,
+        properties: mapped.properties,
+        itemTypes: mapped.itemTypes,
+      },
+    };
   }
   if (['PD2_DELETED', 'PD2_MODIFIED', 'PD2_NEW_PORTABLE', 'PD2_NEW_REVIEW'].includes(category)) {
     return { coverage: 'TABLE_ONLY', url: null, section: null, category: 'Table difference', season: 'unknown', summary: 'Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte.' };
@@ -166,10 +184,42 @@ function documentationFor(documentationMap, identity, category) {
   return { coverage: 'UNMAPPED', url: null, section: null, category: 'No documented PD2 change', season: 'unknown', summary: 'Aucun changement PD2 documenté n’est revendiqué pour cette occurrence.' };
 }
 
+function assertDependencyPins(dependencyContext, catalog) {
+  const dependencyFiles = ['properties.txt', 'itemtypes.txt', 'itemstatcost.txt', 'skills.txt'];
+  for (const name of dependencyFiles) {
+    assert(
+      dependencyContext.dependencyHashes.source[name] === catalog.source.tables[name].officialSha256,
+      `${name}: PD2 dependency is not the governed official S13 source`,
+    );
+    assert(
+      dependencyContext.dependencyHashes.bkvince[name] === catalog.targetDependencies[name],
+      `${name}: BKVince dependency drift`,
+    );
+  }
+  const localization = dependencyContext.dependencyHashes.bkvince.localization;
+  assert(
+    localization.modern.baseSha256 === catalog.policy.localization.modernBaselineSha256,
+    'modern affix localization baseline drift',
+  );
+  assert(
+    localization.legacy.baseSha256 === catalog.policy.localization.legacyBaselineSha256,
+    'legacy affix localization baseline drift',
+  );
+  assert(
+    localization.modern.manifestSha256 === catalog.policy.localization.modernNamespaceManifestSha256,
+    'modern localization namespace drift',
+  );
+  assert(
+    localization.legacy.manifestSha256 === catalog.policy.localization.legacyNamespaceManifestSha256,
+    'legacy localization namespace drift',
+  );
+}
+
 export function buildReport(sourceRoot, catalog) {
   const entries = [], sourceHashes = {};
   const documentationMap = readJson(documentationMapPath);
   const dependencyContext = buildAffixDependencyAuditContext(sourceRoot, targetRoot);
+  assertDependencyPins(dependencyContext, catalog);
   for (const [tableName, config] of Object.entries(TABLES)) {
     const source = loadTable(sourceRoot, tableName), target = loadTable(targetRoot, tableName), vanillaTable = loadTable(vanillaRoot, tableName);
     assert(target.sha256 === catalog.targetBaseline[tableName].sha256, `${tableName}: BKVince is not at review baseline`);
@@ -250,6 +300,30 @@ export function buildReport(sourceRoot, catalog) {
     }
   }
   entries.sort((a, b) => a.table.localeCompare(b.table) || a.family.id.localeCompare(b.family.id) || (a.sourceRow ?? 99999) - (b.sourceRow ?? 99999));
+  assert(Array.isArray(documentationMap.claims), 'Documentation claims must be an array');
+  assert(Array.isArray(documentationMap.rules), 'Documentation rules must be an array');
+  const documentationClaimIds = new Set();
+  for (const claim of documentationMap.claims) {
+    assert(typeof claim.id === 'string' && claim.id.length > 0, 'Documentation claim ID is missing');
+    assert(!documentationClaimIds.has(claim.id), `Duplicate documentation claim ${claim.id}`);
+    assert(claim.sourceRevisionId === documentationMap.source.revisionId, `Documentation revision drift for claim ${claim.id}`);
+    documentationClaimIds.add(claim.id);
+  }
+  const documentationRuleIds = new Set();
+  const documentationRulesById = new Map();
+  for (const rule of documentationMap.rules) {
+    assert(typeof rule.id === 'string' && rule.id.length > 0, 'Documentation rule ID is missing');
+    assert(!documentationRuleIds.has(rule.id), `Duplicate documentation rule ${rule.id}`);
+    documentationRuleIds.add(rule.id);
+    documentationRulesById.set(rule.id, rule);
+    assert(documentationClaimIds.has(rule.claimId), `Unknown claim ${rule.claimId} for documentation rule ${rule.id}`);
+    assert(Number.isSafeInteger(rule.expectedOccurrenceCount), `Expected occurrence count missing for documentation rule ${rule.id}`);
+    assert(rule.expectedOccurrenceCount === rule.materializedOccurrenceCount, `Materialized occurrence count drift for documentation rule ${rule.id}`);
+    assert(/^[A-Fa-f0-9]{64}$/.test(rule.occurrenceSetSha256 ?? ''), `Occurrence-set hash missing for documentation rule ${rule.id}`);
+    assert(rule.predicate?.notNameOnly === true, `Name-only matching is not forbidden for documentation rule ${rule.id}`);
+    assert(Array.isArray(rule.documentedFields), `Documented fields missing for documentation rule ${rule.id}`);
+    assert(Array.isArray(rule.facets), `Documented facets missing for documentation rule ${rule.id}`);
+  }
   const documentationKeys = new Set();
   for (const mapped of documentationMap.entries) {
     const key = `${mapped.table}:${mapped.sourceRow}`;
@@ -262,15 +336,46 @@ export function buildReport(sourceRoot, catalog) {
     const properties = [1, 2, 3].map((slot) => entry.rows.pd2?.[`mod${slot}code`]).filter(Boolean);
     assert(JSON.stringify(properties) === JSON.stringify(mapped.properties), `Documentation properties drift: ${key}`);
     assert(JSON.stringify(entry.itemTypes) === JSON.stringify(mapped.itemTypes), `Documentation ItemTypes drift: ${key}`);
+    assert(Array.isArray(mapped.claimIds) && mapped.claimIds.length > 0, `Documentation claims missing: ${key}`);
+    assert(Array.isArray(mapped.ruleIds), `Documentation rules missing: ${key}`);
+    for (const claimId of mapped.claimIds) assert(documentationClaimIds.has(claimId), `Unknown documentation claim ${claimId}: ${key}`);
+    for (const ruleId of mapped.ruleIds) {
+      const rule = documentationRulesById.get(ruleId);
+      assert(rule, `Unknown documentation rule ${ruleId}: ${key}`);
+      assert(mapped.claimIds.includes(rule.claimId), `Rule claim ${rule.claimId} is not referenced: ${key}`);
+    }
+    assert(mapped.claimIds.includes(mapped.reference.claimId), `Primary claim is not referenced: ${key}`);
+    if (mapped.reference.section === 'Affix Changes Compilation') {
+      assert(mapped.ruleIds.length > 0, `Compilation mapping has no governed rule: ${key}`);
+    }
   }
+  for (const rule of documentationMap.rules) {
+    const actual = documentationMap.entries.filter((entry) => entry.ruleIds.includes(rule.id)).length;
+    assert(actual === rule.materializedOccurrenceCount, `Documentation rule cardinality drift ${rule.id}: ${actual}/${rule.materializedOccurrenceCount}`);
+  }
+  assert(
+    documentationMap.entries.filter((entry) => entry.reference.section === 'Removed Affixes').length === 125,
+    'Removed Affixes mapping must contain all 125 proven occurrences',
+  );
   const counts = {};
   for (const entry of entries) counts[entry.category] = (counts[entry.category] ?? 0) + 1;
   const core = {
     schemaVersion: 3, reviewId: 'pd2-affixes-review-v3', state: 'review_only_no_import_approved',
-    sourceAuthority: catalog.source.authority, sourceHashes, targetBaselineCommit: '756df5f53109729f16643b36aa459fead4cdbf94',
+    sourceAuthority: catalog.source.authority, sourceHashes, dependencyHashes: dependencyContext.dependencyHashes,
+    targetBaselineCommit: '756df5f53109729f16643b36aa459fead4cdbf94',
     targetBaselineHashes: Object.fromEntries(Object.entries(catalog.targetBaseline).map(([key, item]) => [key, item.sha256])),
     protectedFields: ['maxlevel'], fieldDecisionOptions: FIELD_DECISIONS, newAffixLineDecisionOptions: NEW_AFFIX_LINE_DECISIONS,
-    reviewRequiredCategories: REVIEW_REQUIRED_CATEGORIES, documentationMap: { schemaVersion: documentationMap.schemaVersion, mapId: documentationMap.mapId, sha256: sha256(fs.readFileSync(documentationMapPath)), source: documentationMap.source }, counts, entries,
+    reviewRequiredCategories: REVIEW_REQUIRED_CATEGORIES,
+    documentationMap: {
+      schemaVersion: documentationMap.schemaVersion,
+      mapId: documentationMap.mapId,
+      sha256: sha256(fs.readFileSync(documentationMapPath)),
+      source: documentationMap.source,
+      claims: documentationMap.claims ?? [],
+      rules: documentationMap.rules ?? [],
+    },
+    counts,
+    entries,
   };
   return { ...core, comparisonHash: sha256(JSON.stringify(core)) };
 }
@@ -424,6 +529,25 @@ export function run(args = process.argv.slice(2)) {
     assert(catalog.review.htmlSha256 === sha256(Buffer.from(outputs.get(outputHtml))), 'catalog review HTML hash is stale');
     assert(catalog.review.highestLevel.jsonSha256 === sha256(Buffer.from(outputs.get(highestJson))), 'catalog highest-level JSON hash is stale');
     assert(catalog.review.highestLevel.htmlSha256 === sha256(Buffer.from(outputs.get(highestHtml))), 'catalog highest-level HTML hash is stale');
+    const governedDocumentation = readJson(documentationMapPath);
+    const documentationPin = catalog.review.documentationMap;
+    const coverageCounts = Object.fromEntries(['DOCUMENTED', 'TABLE_ONLY', 'UNMAPPED'].map((coverage) => [
+      coverage,
+      report.entries.filter((entry) => entry.documentation.coverage === coverage).length,
+    ]));
+    const claimsById = new Map(governedDocumentation.claims.map((claim) => [claim.id, claim.section]));
+    const sectionOccurrenceCoverage = Object.fromEntries(governedDocumentation.source.sections.map((section) => [
+      section,
+      governedDocumentation.entries.filter((entry) => entry.claimIds.some((claimId) => claimsById.get(claimId) === section)).length,
+    ]));
+    assert(documentationPin.schemaVersion === governedDocumentation.schemaVersion, 'catalog documentation schema is stale');
+    assert(documentationPin.mapId === governedDocumentation.mapId, 'catalog documentation map identity is stale');
+    assert(documentationPin.entries === governedDocumentation.entries.length, 'catalog documentation entry count is stale');
+    assert(documentationPin.claims === governedDocumentation.claims.length, 'catalog documentation claim count is stale');
+    assert(documentationPin.rules === governedDocumentation.rules.length, 'catalog documentation rule count is stale');
+    assert(documentationPin.sha256 === sha256(fs.readFileSync(documentationMapPath)), 'catalog documentation map hash is stale');
+    assert(JSON.stringify(documentationPin.coverageCounts) === JSON.stringify(coverageCounts), 'catalog documentation coverage counts are stale');
+    assert(JSON.stringify(documentationPin.sectionOccurrenceCoverage) === JSON.stringify(sectionOccurrenceCoverage), 'catalog documentation section coverage is stale');
   }
   else for (const [file, raw] of outputs) fs.writeFileSync(file, raw, 'utf8');
   console.log(JSON.stringify({ mode: check ? 'check' : 'write', entries: report.entries.length, counts: report.counts, comparisonHash: report.comparisonHash, highestLevelEntries: highest.entries.length }, null, 2));

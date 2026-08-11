@@ -350,24 +350,32 @@ qu'une sélection produit soit approuvée et réimplantée.
   côte à côte, les trois comparaisons bilatérales, les effets complets et tous
   les champs divergents. Les catégories de revue sont séparées, les familles
   sont regroupées et AutoMagic demeure masqué par défaut et différé.
-- Documentation : carte gouvernée de **29 correspondances occurrence-exactes**
-  (`table`, `sourceRow`, `fingerprint`) vers les sections PD2 `Removed Affixes`,
-  `Affix Changes Compilation` et `Highest-Level Affixes`, figée sur la révision
-  MediaWiki **23938** du `2026-07-26T11:49:54Z` (SHA1 MediaWiki
-  `018f1d4a6ec618b5a52fcc5307be0e538366fa5a`). Tous les liens `DOCUMENTED`
-  visent `oldid=23938`. La couverture V3 distingue **29 `DOCUMENTED`**,
-  **1 182 `TABLE_ONLY`** et **906 `UNMAPPED`** ; aucune différence de table non
-  appariée n'est présentée comme documentée.
+- Documentation : carte gouvernée V2 de **510 correspondances
+  occurrence-exactes** (`table`, `sourceRow`, `fingerprint`, nom, propriétés et
+  types d'objet), matérialisées par **33 claims** et **33 règles**. La couverture
+  dédupliquée comprend les **125** occurrences prouvées de `Removed Affixes`,
+  **458** de `Affix Changes Compilation` et **19** de `Highest-Level Affixes`,
+  figées sur la révision MediaWiki **23938** du `2026-07-26T11:49:54Z` (SHA1
+  MediaWiki `018f1d4a6ec618b5a52fcc5307be0e538366fa5a`). Tous les liens
+  `DOCUMENTED` visent `oldid=23938`. La couverture V3 distingue désormais
+  **510 `DOCUMENTED`**, **701 `TABLE_ONLY`** et **906 `UNMAPPED`** ; aucun nom
+  seul ni aucune règle ambiguë ne suffit à déclarer une occurrence documentée.
 - Décisions : schéma V3 par champ et, pour chaque nouvel affixe, décision de
   ligne explicite (`IMPORT_PD2_AFFIX`, `EXCLUDE_PD2_AFFIX`, `DISCUSS` ou
   `IMPORT_CUSTOMIZED`), avec notes, reprise inter-machine et refus des exports
   dont le hash de comparaison, la source PD2, la baseline BKVince ou le
   fingerprint d'occurrence diffèrent. Tout `maxlevel` BKVince existant est
-  protégé et préservé par défaut.
+  protégé et préservé par défaut. Un champ `CUSTOM` rend
+  `IMPORT_PD2_AFFIX` invalide et l'interface bascule vers `IMPORT_CUSTOMIZED` ;
+  `UNCHANGED_BY_PD2` et `AUTOMAGIC_DEFERRED` sont en lecture seule et leurs
+  anciens choix éventuels sont ignorés par le preview.
 - Prévisualisation : `pd2-affixes-decisions-preview.mjs` produit seulement le
   manifeste proposé, les cellules, lignes, dépendances, localisations,
   conflits, décisions incomplètes et diff textuel. Il ne possède aucun chemin
-  d'application gameplay.
+  d'application gameplay. Avant toute projection, il exige les hashes exacts
+  de `properties.txt`, `itemtypes.txt`, `itemstatcost.txt` et `skills.txt` côté
+  PD2 officiel et BKVince, ainsi que les fichiers de localisation d'affixes et
+  les manifestes complets des espaces moderne et legacy.
 - Highest-Level Affixes V3 : rapport séparé de **147 occurrences** classé
   **PARTIALLY_RELEVANT**, avec analyse indépendante des versions vanilla,
   BKVince et PD2 selon présence, `spawnable`, `level`, `maxlevel`, catégories
@@ -377,9 +385,10 @@ qu'une sélection produit soit approuvée et réimplantée.
   il reste **informatif, en attente de confirmation historique**, et ne prouve
   aucune régression BKVince. Le rapport distingue drops, crafts, rerolls et
   gambling sans inventer un chemin d'acquisition non prouvé.
-- Suite gouvernée du comparateur V3 : **15/15**, y compris l'interdiction de
-  tous les chemins `--apply`.
-- Validations de la revue, du compilateur et de l'oracle : **18/18**.
+- Suite ciblée comparateur + preview V3 : **27/27**, y compris le runtime HTML
+  embarqué, les catégories en lecture seule, les conflits CUSTOM, tous les pins
+  de dépendances et l'interdiction de chaque chemin `--apply`.
+- Validation conjointe merge + preview + revue : **35/35**.
 - La suite Hero globale conserve **six attentes hors périmètre déjà décalées**
   dans les baselines belt/monsters/sets/properties ; ce blocage n'est pas une
   régression du merge d'affixes.

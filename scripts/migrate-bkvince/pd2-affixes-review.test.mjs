@@ -8,6 +8,7 @@ import vm from 'node:vm';
 
 import {
   applyLineFieldAction,
+  decisionExportPayload,
   effectiveFieldChoice,
   entryReviewState,
   fieldChoiceComplete,
@@ -25,6 +26,7 @@ const sourceRoot = fs.existsSync(officialSourceRoot) ? officialSourceRoot : mirr
 const report = JSON.parse(fs.readFileSync(path.join(missionRoot, 'pd2-affixes-review.json'), 'utf8'));
 const highest = JSON.parse(fs.readFileSync(path.join(missionRoot, 'pd2-affixes-highest-level.json'), 'utf8'));
 const catalog = JSON.parse(fs.readFileSync(path.join(missionRoot, 'pd2-affixes-merge.catalog.json'), 'utf8'));
+const documentationMap = JSON.parse(fs.readFileSync(path.join(missionRoot, 'pd2-affixes-documentation-map.json'), 'utf8'));
 const html = fs.readFileSync(path.join(missionRoot, 'pd2-affixes-review.html'), 'utf8');
 let sharedDependencyContext;
 
@@ -39,6 +41,7 @@ function exportFor(entries = {}, governedReport = report) {
     reviewId: governedReport.reviewId,
     comparisonHash: governedReport.comparisonHash,
     sourceHashes: governedReport.sourceHashes,
+    dependencyHashes: governedReport.dependencyHashes,
     targetBaselineCommit: governedReport.targetBaselineCommit,
     targetBaselineHashes: governedReport.targetBaselineHashes,
     exportedAt: '2026-08-10T00:00:00.000Z',
@@ -68,6 +71,27 @@ test('V3 governed artifacts expose three versions and all pairwise comparisons',
   assert.deepEqual(report.sourceHashes, Object.fromEntries([
     'magicprefix.txt', 'magicsuffix.txt', 'automagic.txt',
   ].map((table) => [table, catalog.source.tables[table].officialSha256])));
+  assert.deepEqual(report.dependencyHashes, dependencyContext().dependencyHashes);
+  assert.deepEqual(Object.keys(report.dependencyHashes.source).sort(), [
+    'itemstatcost.txt', 'itemtypes.txt', 'properties.txt', 'skills.txt',
+  ]);
+  assert.deepEqual(Object.keys(report.dependencyHashes.bkvince).sort(), [
+    'itemstatcost.txt', 'itemtypes.txt', 'localization', 'properties.txt', 'skills.txt',
+  ]);
+  const dependencyTxtHashes = [
+    ...Object.values(report.dependencyHashes.source),
+    ...Object.entries(report.dependencyHashes.bkvince)
+      .filter(([key]) => key !== 'localization')
+      .map(([, value]) => value),
+  ];
+  assert.equal(dependencyTxtHashes.length, 8);
+  assert.ok(dependencyTxtHashes.every((hash) => /^[A-F0-9]{64}$/.test(hash)));
+  assert.deepEqual(Object.keys(report.dependencyHashes.bkvince.localization).sort(), ['legacy', 'modern']);
+  for (const namespace of ['modern', 'legacy']) {
+    const hashes = report.dependencyHashes.bkvince.localization[namespace];
+    assert.deepEqual(Object.keys(hashes).sort(), ['baseSha256', 'manifestSha256']);
+    assert.ok(Object.values(hashes).every((hash) => /^[A-F0-9]{64}$/.test(hash)));
+  }
 
   const mapped = report.entries.filter((entry) => entry.sourceRow !== null && entry.targetRow !== null);
   assert.ok(mapped.length > 1000);
@@ -78,10 +102,34 @@ test('V3 governed artifacts expose three versions and all pairwise comparisons',
   assert.match(html, /pd2-affixes-review-decisions-v3/);
   assert.match(html, /pd2-affixes-decisions-v3\.json/);
   assert.match(html, /payload\?\.schemaVersion\s*!==\s*3/);
-  assert.match(html, /\['sourceHashes',\s*'targetBaselineHashes'\]/);
+  assert.match(html, /\['sourceHashes',\s*'dependencyHashes',\s*'targetBaselineHashes'\]/);
+  assert.match(html, /READ_ONLY_CATEGORIES=\["UNCHANGED_BY_PD2","AUTOMAGIC_DEFERRED"\]/);
+  assert.match(html, /Cat[^<]*gorie en lecture seule/);
+  assert.match(html, /if\(reviewState\(entry\)\.readOnly\)return/);
   const inlineScript = html.match(/<script>([\s\S]*)<\/script>/)?.[1];
   assert.ok(inlineScript);
   assert.doesNotThrow(() => new vm.Script(inlineScript));
+  const runtimeStart = inlineScript.indexOf('const FIELD_DECISIONS=');
+  const runtimeEnd = inlineScript.indexOf("const storageKey=");
+  assert.ok(runtimeStart >= 0 && runtimeEnd > runtimeStart);
+  const decisionRuntime = inlineScript.slice(runtimeStart, runtimeEnd);
+  const unknownFieldHelperIndex = decisionRuntime.indexOf('function selectedUnknownFields');
+  const entryReviewStateIndex = decisionRuntime.indexOf('function entryReviewState');
+  assert.ok(unknownFieldHelperIndex >= 0);
+  assert.ok(unknownFieldHelperIndex < entryReviewStateIndex);
+  const browserRuntime = {};
+  new vm.Script(`${decisionRuntime}\nglobalThis.entryReviewStateForTest=entryReviewState;`)
+    .runInNewContext(browserRuntime);
+  const embeddedState = browserRuntime.entryReviewStateForTest({
+    category: 'PD2_NEW_PORTABLE',
+    deferred: false,
+    fieldDifferences: [{ field: 'level', protected: false, defaultDecision: null, pd2: '80' }],
+  }, {
+    lineDecision: 'IMPORT_PD2_AFFIX',
+    fields: { unknownField: { decision: 'CUSTOM', customValue: '82', notes: 'injected' } },
+  });
+  assert.equal(embeddedState.complete, false);
+  assert.match(embeddedState.reasons.join(' '), /unknownField/);
 });
 
 test('status, pairwise comparisons and field differences share canonical normalization', () => {
@@ -118,16 +166,31 @@ test('UNCHANGED entries are automatically resolved and never enter actionable pr
   assert.ok(unchanged.every((entry) => entry.fieldDifferences.every((diff) => diff.defaultDecision === 'KEEP_BKVINCE')));
   assert.ok(unchanged.every((entry) => {
     const state = entryReviewState(entry, { fingerprint: entry.fingerprint, fields: {} });
-    return !state.required && state.complete && state.reasons.length === 0;
+    return !state.required && state.complete && state.readOnly && state.reasons.length === 0;
   }));
 
   const witnesses = unchanged.slice(0, 3);
-  const preview = compileEntries(witnesses, {});
+  const injected = Object.fromEntries(witnesses.map((entry) => [entry.id, {
+    fingerprint: entry.fingerprint,
+    lineDecision: 'IMPORT_CUSTOMIZED',
+    fields: {
+      __injected__: { decision: 'CUSTOM', customValue: 'must-not-apply', notes: 'legacy state injection' },
+    },
+    notes: 'must not survive export',
+  }]));
+  for (const entry of witnesses) {
+    assert.strictEqual(applyLineFieldAction(entry, injected[entry.id], 'ADOPT_PD2', true), injected[entry.id]);
+  }
+  const exported = decisionExportPayload(report, injected, '2026-08-10T00:00:00.000Z');
+  assert.deepEqual(exported.entries, {});
+
+  const preview = compileEntries(witnesses, injected);
   assert.equal(preview.autoResolved.length, witnesses.length);
   assert.ok(preview.autoResolved.every((entry) => entry.resolution === 'KEEP_BKVINCE'));
   assert.deepEqual(preview.incomplete, []);
   assert.deepEqual(preview.cells, []);
   assert.deepEqual(preview.rows, []);
+  assert.deepEqual(preview.dependencyAudit.occurrences, []);
   assert.equal(preview.ready, true);
 });
 
@@ -197,7 +260,25 @@ test('new affixes require an explicit line decision', () => {
   assert.equal(entryReviewState(entry, { lineDecision: 'EXCLUDE_PD2_AFFIX' }).complete, true);
   assert.equal(entryReviewState(entry, { lineDecision: 'IMPORT_PD2_AFFIX' }).complete, true);
   assert.equal(effectiveFieldChoice(entry, { lineDecision: 'IMPORT_PD2_AFFIX' }, diff).decision, 'ADOPT_PD2');
+  const exactWithCustom = entryReviewState(entry, {
+    lineDecision: 'IMPORT_PD2_AFFIX',
+    fields: { level: { decision: 'CUSTOM', customValue: '82', notes: 'custom tier' } },
+  });
+  assert.equal(exactWithCustom.complete, false);
+  assert.match(exactWithCustom.reasons.join(' '), /IMPORT_PD2_AFFIX.*CUSTOM/);
+  const exactWithUnknownCustom = entryReviewState(entry, {
+    lineDecision: 'IMPORT_PD2_AFFIX',
+    fields: { unknownField: { decision: 'CUSTOM', customValue: '82', notes: 'injected field' } },
+  });
+  assert.equal(exactWithUnknownCustom.complete, false);
+  assert.match(exactWithUnknownCustom.reasons.join(' '), /unknownField|unknown field|IMPORT_PD2_AFFIX.*CUSTOM/i);
   assert.equal(entryReviewState(entry, { lineDecision: 'IMPORT_CUSTOMIZED' }).complete, false);
+  const customizedWithUnknownOnly = entryReviewState(entry, {
+    lineDecision: 'IMPORT_CUSTOMIZED',
+    fields: { unknownField: { decision: 'CUSTOM', customValue: '82', notes: 'injected field' } },
+  });
+  assert.equal(customizedWithUnknownOnly.complete, false);
+  assert.match(customizedWithUnknownOnly.reasons.join(' '), /real CUSTOM field|unknownField|unknown field/i);
   assert.equal(entryReviewState(entry, {
     lineDecision: 'IMPORT_CUSTOMIZED',
     fields: { level: { decision: 'CUSTOM', customValue: '82', notes: 'custom tier' } },
@@ -309,10 +390,10 @@ test('AutoMagic remains deferred in review, preview and highest-level analysis',
   const auto = report.entries.filter((entry) => entry.table === 'automagic.txt');
   assert.ok(auto.length > 0);
   assert.ok(auto.every((entry) => entry.deferred && entry.category === 'AUTOMAGIC_DEFERRED'));
-  assert.ok(auto.every((entry) => !entryReviewState(entry, {
-    fingerprint: entry.fingerprint,
-    fields: {},
-  }).required));
+  assert.ok(auto.every((entry) => {
+    const state = entryReviewState(entry, { fingerprint: entry.fingerprint, fields: {} });
+    return !state.required && state.complete && state.readOnly;
+  }));
 
   const entry = auto.find((candidate) => candidate.fieldDifferences.length);
   assert.ok(entry);
@@ -323,8 +404,13 @@ test('AutoMagic remains deferred in review, preview and highest-level analysis',
   const preview = compileEntries([entry], {
     [entry.id]: { fingerprint: entry.fingerprint, fields, notes: 'still deferred' },
   });
+  assert.strictEqual(applyLineFieldAction(entry, { fingerprint: entry.fingerprint, fields }, 'KEEP_BKVINCE', true).fields, fields);
+  assert.deepEqual(decisionExportPayload(report, {
+    [entry.id]: { fingerprint: entry.fingerprint, fields, notes: 'still deferred' },
+  }, '2026-08-10T00:00:00.000Z').entries, {});
   assert.deepEqual(preview.cells, []);
   assert.deepEqual(preview.rows, []);
+  assert.deepEqual(preview.dependencyAudit.occurrences, []);
   assert.ok(preview.autoResolved.some((item) => item.id === entry.id));
   assert.ok(highest.entries.some((candidate) => candidate.table === 'automagic.txt'));
 });
@@ -372,6 +458,33 @@ test('decision exports reimport only with the complete V3 governed identity', ()
   }), /sourceHashes|source hashes/);
   assert.throws(() => validateDecisionExport(report, {
     ...valid,
+    dependencyHashes: undefined,
+  }), /dependencyHashes|dependency hashes/);
+  assert.throws(() => validateDecisionExport(report, {
+    ...valid,
+    dependencyHashes: {
+      ...valid.dependencyHashes,
+      source: { ...valid.dependencyHashes.source, 'skills.txt': 'BAD' },
+    },
+  }), /dependencyHashes|dependency hashes/);
+  assert.throws(() => validateDecisionExport(report, {
+    ...valid,
+    dependencyHashes: {
+      ...valid.dependencyHashes,
+      bkvince: {
+        ...valid.dependencyHashes.bkvince,
+        localization: {
+          ...valid.dependencyHashes.bkvince.localization,
+          modern: {
+            ...valid.dependencyHashes.bkvince.localization.modern,
+            manifestSha256: 'BAD',
+          },
+        },
+      },
+    },
+  }), /dependencyHashes|dependency hashes/);
+  assert.throws(() => validateDecisionExport(report, {
+    ...valid,
     targetBaselineHashes: { ...valid.targetBaselineHashes, 'magicprefix.txt': 'BAD' },
   }), /targetBaselineHashes|target baseline hashes/);
   assert.throws(() => validateDecisionExport(report, {
@@ -390,11 +503,106 @@ test('review categories and documentation evidence remain explicit', () => {
     'AUTOMAGIC_DEFERRED',
   ]) assert.ok(report.entries.some((entry) => entry.category === category));
   assert.ok(report.entries.every((entry) => entry.family?.id && entry.family?.label));
-  assert.ok(report.entries.some((entry) => entry.documentation.coverage === 'DOCUMENTED'));
+  const removedMappings = documentationMap.entries.filter((entry) => entry.reference.section === 'Removed Affixes');
+  const compilationMappings = documentationMap.entries.filter((entry) => entry.reference.section === 'Affix Changes Compilation');
+  assert.equal(removedMappings.length, 125);
+  assert.ok(compilationMappings.length > 0);
+  assert.ok(Array.isArray(documentationMap.claims) && documentationMap.claims.length > 0);
+  assert.ok(Array.isArray(documentationMap.rules) && documentationMap.rules.length > 0);
+  assert.deepEqual(report.documentationMap.claims, documentationMap.claims);
+  assert.deepEqual(report.documentationMap.rules, documentationMap.rules);
+  assert.equal(documentationMap.identityContract.nameOnlyMatchesForbidden, true);
+  assert.deepEqual(documentationMap.identityContract.required, [
+    'table', 'sourceRow', 'fingerprint', 'name', 'properties', 'itemTypes',
+  ]);
+
+  const claimsById = new Map();
+  for (const claim of documentationMap.claims) {
+    assert.equal(typeof claim.id, 'string');
+    assert.ok(claim.id.length > 0);
+    assert.ok(!claimsById.has(claim.id), `duplicate documentation claim ${claim.id}`);
+    claimsById.set(claim.id, claim);
+  }
+  const rulesById = new Map();
+  for (const rule of documentationMap.rules) {
+    assert.equal(typeof rule.id, 'string');
+    assert.ok(rule.id.length > 0);
+    assert.ok(!rulesById.has(rule.id), `duplicate documentation rule ${rule.id}`);
+    rulesById.set(rule.id, rule);
+    assert.ok(claimsById.has(rule.claimId), `${rule.id}: unknown claim ${rule.claimId}`);
+    assert.equal(rule.predicate?.notNameOnly, true, `${rule.id}: Name-only matching must be forbidden`);
+    assert.equal(rule.expectedOccurrenceCount, rule.materializedOccurrenceCount, `${rule.id}: count drift`);
+    assert.match(rule.occurrenceSetSha256, /^[a-f0-9]{64}$/i);
+  }
+  for (const rule of documentationMap.rules) {
+    const actualCount = documentationMap.entries.filter((entry) => entry.ruleIds.includes(rule.id)).length;
+    assert.equal(actualCount, rule.materializedOccurrenceCount, `${rule.id}: materialized occurrence count`);
+  }
+
+  const reportByOccurrence = new Map(report.entries
+    .filter((entry) => entry.sourceRow !== null)
+    .map((entry) => [`${entry.table}:${entry.sourceRow}`, entry]));
+  const mapOccurrenceKeys = new Set();
+  const exactMapKeys = new Set();
+  const mappedNames = new Set();
+  for (const mapped of documentationMap.entries) {
+    const occurrenceKey = `${mapped.table}:${mapped.sourceRow}`;
+    const exactKey = `${occurrenceKey}:${mapped.fingerprint}`;
+    assert.ok(!mapOccurrenceKeys.has(occurrenceKey), `duplicate documentation occurrence ${occurrenceKey}`);
+    mapOccurrenceKeys.add(occurrenceKey);
+    assert.ok(!exactMapKeys.has(exactKey), `duplicate exact documentation mapping ${exactKey}`);
+    exactMapKeys.add(exactKey);
+    mappedNames.add(mapped.name);
+    assert.ok(Array.isArray(mapped.claimIds) && mapped.claimIds.length > 0, `${exactKey}: claimIds`);
+    assert.ok(Array.isArray(mapped.ruleIds) && mapped.ruleIds.length > 0, `${exactKey}: ruleIds`);
+    for (const claimId of mapped.claimIds) assert.ok(claimsById.has(claimId), `${exactKey}: unknown claim ${claimId}`);
+    for (const ruleId of mapped.ruleIds) {
+      const rule = rulesById.get(ruleId);
+      assert.ok(rule, `${exactKey}: unknown rule ${ruleId}`);
+      assert.ok(mapped.claimIds.includes(rule.claimId), `${exactKey}: rule ${ruleId} claim is not referenced`);
+    }
+    assert.ok(mapped.claimIds.includes(mapped.reference.claimId), `${exactKey}: primary claim is not referenced`);
+    const governedRules = mapped.ruleIds.map((ruleId) => rulesById.get(ruleId));
+    const documentedFields = [...new Set(governedRules.flatMap((rule) => rule.documentedFields))];
+    const documentedFacets = [...new Set(governedRules.flatMap((rule) => rule.facets))];
+
+    const actual = reportByOccurrence.get(occurrenceKey);
+    assert.ok(actual, `${exactKey}: report occurrence missing`);
+    assert.equal(actual.fingerprint, mapped.fingerprint);
+    assert.equal(actual.name, mapped.name);
+    assert.deepEqual([1, 2, 3]
+      .map((slot) => actual.rows.pd2?.[`mod${slot}code`])
+      .filter(Boolean), mapped.properties);
+    assert.deepEqual(actual.itemTypes, mapped.itemTypes);
+    assert.equal(actual.documentation.coverage, 'DOCUMENTED');
+    assert.deepEqual(actual.documentation.mapping, {
+      table: mapped.table,
+      sourceRow: mapped.sourceRow,
+      fingerprint: mapped.fingerprint,
+      name: mapped.name,
+      properties: mapped.properties,
+      itemTypes: mapped.itemTypes,
+    });
+    assert.deepEqual(actual.documentation.claimIds, mapped.claimIds);
+    assert.deepEqual(actual.documentation.ruleIds, mapped.ruleIds);
+    assert.deepEqual(actual.documentation.documentedFields, documentedFields);
+    assert.deepEqual(actual.documentation.documentedFacets, documentedFacets);
+  }
+  assert.ok(compilationMappings.every((mapped) => mapped.ruleIds.every((ruleId) => (
+    claimsById.get(rulesById.get(ruleId).claimId).section === 'Affix Changes Compilation'
+  ))));
+
+  const documented = report.entries.filter((entry) => entry.documentation.coverage === 'DOCUMENTED');
+  assert.equal(documented.length, documentationMap.entries.length);
+  for (const entry of report.entries.filter((candidate) => mappedNames.has(candidate.name))) {
+    const exactKey = `${entry.table}:${entry.sourceRow}:${entry.fingerprint}`;
+    assert.equal(entry.documentation.coverage === 'DOCUMENTED', exactMapKeys.has(exactKey),
+      `${exactKey}: documentation must never match by Name only`);
+  }
   assert.equal(report.documentationMap.source.revisionId, 23938);
   assert.match(report.documentationMap.source.revisionUrl, /oldid=23938/);
-  assert.ok(report.entries.filter((entry) => entry.documentation.coverage === 'DOCUMENTED')
-    .every((entry) => entry.documentation.revisionId === 23938 && /oldid=23938/.test(entry.documentation.url)));
+  assert.ok(documented.every((entry) => entry.documentation.revisionId === 23938
+    && /oldid=23938/.test(entry.documentation.url)));
   assert.ok(report.entries.some((entry) => entry.documentation.coverage === 'TABLE_ONLY'));
   assert.ok(report.entries.filter((entry) => entry.documentation.coverage === 'TABLE_ONLY')
     .every((entry) => entry.documentation.url === null));

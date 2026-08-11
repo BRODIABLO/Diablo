@@ -1,7 +1,7 @@
 {
   "schemaVersion": 3,
   "reportId": "pd2-affixes-highest-level-v3",
-  "comparisonHash": "850CB7C87F74E3BDCF9B3254D0288F458375CEE3F3BDF54390EAFAD1BD908FE2",
+  "comparisonHash": "E06791B2A67BCCB52BB1159FEB770399A18A41285DD54D36688B24780F9F584A",
   "scope": "Affixes with alvl > 71; AutoMagic is reported but remains deferred.",
   "formula": {
     "normal": "Let i=max(ilvl,qlvl). If magic_lvl>0: alvl=min(99,i+magic_lvl). Otherwise if i<99-floor(qlvl/2): alvl=i-floor(qlvl/2), else alvl=2*i-99.",
@@ -622,7 +622,39 @@
         "summary": "Lists the +3 minimum-damage large-charm occurrence at alvl 75.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 604,
@@ -898,7 +930,39 @@
         "summary": "Lists the +1 minimum-damage small-charm occurrence at alvl 90.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 607,
@@ -1435,7 +1499,39 @@
         "summary": "Adds a level-75 301–400% enhanced-damage prefix to the documented rare-weapon families.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "specific-visceral",
         "revisionId": 23938,
+        "claimIds": [
+          "specific-visceral"
+        ],
+        "ruleIds": [
+          "rule-specific-visceral"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 753,
@@ -1662,11 +1758,44 @@
       "category": "PD2_NEW_PORTABLE",
       "documentation": {
         "coverage": "DOCUMENTED",
-        "section": "Affix Changes Compilation",
-        "summary": "Adds the documented 160–200% enhanced-damage armor tier at alvl 85.",
+        "section": "Highest-Level Affixes",
+        "category": "Governed affix documentation claim",
         "season": "unknown",
-        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "summary": "The governed highest-level list identifies the Embattled and Rampaging enhanced-damage armor occurrences.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "specific-armor-ed",
         "revisionId": 23938,
+        "claimIds": [
+          "specific-armor-ed"
+        ],
+        "ruleIds": [
+          "rule-specific-armor-ed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 763,
@@ -1878,11 +2007,44 @@
       "category": "PD2_NEW_PORTABLE",
       "documentation": {
         "coverage": "DOCUMENTED",
-        "section": "Affix Changes Compilation",
-        "summary": "Adds the documented 120–160% enhanced-damage armor/shield tier at alvl 75.",
+        "section": "Highest-Level Affixes",
+        "category": "Governed affix documentation claim",
         "season": "unknown",
-        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "summary": "The governed highest-level list identifies the Embattled and Rampaging enhanced-damage armor occurrences.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "specific-armor-ed",
         "revisionId": 23938,
+        "claimIds": [
+          "specific-armor-ed"
+        ],
+        "ruleIds": [
+          "rule-specific-armor-ed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 762,
@@ -2454,7 +2616,39 @@
         "summary": "Lists the +2 Amazon skills amulet/circlet occurrence at alvl 90.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 561,
@@ -2833,7 +3027,39 @@
         "summary": "Lists the +2 Assassin skills amulet/circlet occurrence at alvl 90.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 589,
@@ -3212,7 +3438,39 @@
         "summary": "Lists the +2 Barbarian skills amulet/circlet occurrence at alvl 90.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 579,
@@ -3704,7 +3962,39 @@
         "summary": "Lists the +2 Druid skills amulet/circlet occurrence at alvl 90.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 585,
@@ -4422,7 +4712,39 @@
         "summary": "Lists the +2 Necromancer skills amulet/circlet occurrence at alvl 90.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 571,
@@ -4801,7 +5123,39 @@
         "summary": "Lists the +2 Paladin skills amulet/circlet occurrence at alvl 90.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 565,
@@ -5293,7 +5647,39 @@
         "summary": "Lists the +2 Sorceress skills amulet/circlet occurrence at alvl 90.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 575,
@@ -7291,7 +7677,42 @@
         "summary": "Lists the high-tier cold-damage large-charm occurrence at alvl 91.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "s9-elemental-values",
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-s9-elemental-values",
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod2code",
+          "mod3code",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "modifier-values",
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 617,
@@ -7512,12 +7933,51 @@
       "status": "BKV_EQUALS_VANILLA_PD2_DIFFERS",
       "category": "PD2_MODIFIED",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 9",
+        "summary": "Season 9 increased elemental-damage prefix and suffix values, with a smaller cold adjustment.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s9-elemental-values",
+        "revisionId": 23938,
+        "claimIds": [
+          "s9-elemental-values"
+        ],
+        "ruleIds": [
+          "rule-s9-elemental-values"
+        ],
+        "documentedFields": [
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3param",
+          "mod3min",
+          "mod3max"
+        ],
+        "documentedFacets": [
+          "modifier-values"
+        ],
+        "mapping": {
+          "table": "magicprefix.txt",
+          "sourceRow": 625,
+          "fingerprint": "1FA71A950143392F412973A34C676CEB6B130BB431FAC78CB7718BA6C4928D93",
+          "name": "Hibernal",
+          "properties": [
+            "cold-len",
+            "cold-min",
+            "cold-max"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "scha"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -7752,7 +8212,42 @@
         "summary": "Lists the high-tier fire-damage large-charm occurrence at alvl 89.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "s9-elemental-values",
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-s9-elemental-values",
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod2code",
+          "mod3code",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "modifier-values",
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 629,
@@ -8207,12 +8702,60 @@
       "status": "BKV_EQUALS_VANILLA_PD2_DIFFERS",
       "category": "PD2_MODIFIED",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 9",
+        "summary": "Season 9 increased elemental-damage prefix and suffix values, with a smaller cold adjustment.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s9-elemental-values",
+        "revisionId": 23938,
+        "claimIds": [
+          "s9-elemental-values",
+          "s12-flat-elemental-rods"
+        ],
+        "ruleIds": [
+          "rule-s9-elemental-values",
+          "rule-s12-flat-elemental-rods"
+        ],
+        "documentedFields": [
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "modifier-values",
+          "item-type-eligibility"
+        ],
+        "mapping": {
+          "table": "magicprefix.txt",
+          "sourceRow": 549,
+          "fingerprint": "0E277E9B4BCD30CBF213393339D10E012D0A8C319797EB514C5896361BDC320C",
+          "name": "Scorching",
+          "properties": [
+            "fire-min",
+            "fire-max"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "weap",
+              "misl"
+            ],
+            "excluded": [
+              "staf",
+              "wand",
+              "orb"
+            ]
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -8747,7 +9290,42 @@
         "summary": "Lists the high-tier lightning-damage large-charm occurrence at alvl 90.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "s9-elemental-values",
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-s9-elemental-values",
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod2code",
+          "mod3code",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "modifier-values",
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 641,
@@ -8967,12 +9545,50 @@
       "status": "BKV_EQUALS_VANILLA_PD2_DIFFERS",
       "category": "PD2_MODIFIED",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 9",
+        "summary": "Season 9 increased elemental-damage prefix and suffix values, with a smaller cold adjustment.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s9-elemental-values",
+        "revisionId": 23938,
+        "claimIds": [
+          "s9-elemental-values"
+        ],
+        "ruleIds": [
+          "rule-s9-elemental-values"
+        ],
+        "documentedFields": [
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3param",
+          "mod3min",
+          "mod3max"
+        ],
+        "documentedFacets": [
+          "modifier-values"
+        ],
+        "mapping": {
+          "table": "magicprefix.txt",
+          "sourceRow": 649,
+          "fingerprint": "F87A61FDDE01B58CE215A555CC6FB2B8F51FEABCE866F19B43ED37C5FC9D7679",
+          "name": "Shocking",
+          "properties": [
+            "ltng-min",
+            "ltng-max"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "scha"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -9202,12 +9818,60 @@
       "status": "BKV_EQUALS_VANILLA_PD2_DIFFERS",
       "category": "PD2_MODIFIED",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 9",
+        "summary": "Season 9 increased elemental-damage prefix and suffix values, with a smaller cold adjustment.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s9-elemental-values",
+        "revisionId": 23938,
+        "claimIds": [
+          "s9-elemental-values",
+          "s12-flat-elemental-rods"
+        ],
+        "ruleIds": [
+          "rule-s9-elemental-values",
+          "rule-s12-flat-elemental-rods"
+        ],
+        "documentedFields": [
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "modifier-values",
+          "item-type-eligibility"
+        ],
+        "mapping": {
+          "table": "magicprefix.txt",
+          "sourceRow": 554,
+          "fingerprint": "6FD708B68E7D5A77268D442D2359A4EEDD6DD44F816828BCA108E4BF2D08FB3B",
+          "name": "Shocking",
+          "properties": [
+            "ltng-min",
+            "ltng-max"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "weap",
+              "misl"
+            ],
+            "excluded": [
+              "staf",
+              "wand",
+              "orb"
+            ]
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -9949,7 +10613,42 @@
         "summary": "Lists the high-tier poison large-charm occurrence at alvl 88.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "s9-elemental-values",
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-s9-elemental-values",
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod2code",
+          "mod3code",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "modifier-values",
+          "definition"
+        ],
         "mapping": {
           "table": "magicprefix.txt",
           "sourceRow": 653,
@@ -10168,12 +10867,49 @@
       "status": "BKV_EQUALS_VANILLA_PD2_DIFFERS",
       "category": "PD2_MODIFIED",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 9",
+        "summary": "Season 9 increased elemental-damage prefix and suffix values, with a smaller cold adjustment.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s9-elemental-values",
+        "revisionId": 23938,
+        "claimIds": [
+          "s9-elemental-values"
+        ],
+        "ruleIds": [
+          "rule-s9-elemental-values"
+        ],
+        "documentedFields": [
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3param",
+          "mod3min",
+          "mod3max"
+        ],
+        "documentedFacets": [
+          "modifier-values"
+        ],
+        "mapping": {
+          "table": "magicprefix.txt",
+          "sourceRow": 661,
+          "fingerprint": "3BFE1E31EAD9284A3B971AE87A53009C78E0AFFF7E6D0B7E048246F84730E0C0",
+          "name": "Pestilent",
+          "properties": [
+            "dmg-pois"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "scha"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -10403,12 +11139,65 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 9",
+        "summary": "Season 9 added Virulent and the level-70 Ashes, Maelstrom, Hypothermia and Contagion elemental tiers.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s9-new-elemental-tiers",
+        "revisionId": 23938,
+        "claimIds": [
+          "s9-new-elemental-tiers"
+        ],
+        "ruleIds": [
+          "rule-s9-new-elemental-tiers"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicprefix.txt",
+          "sourceRow": 814,
+          "fingerprint": "C7760D3B60D737FE2692A03B949146A3D7F6DD312BAFFAB0768EF8563ADB1B64",
+          "name": "Virulent",
+          "properties": [
+            "dmg-pois"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "weap",
+              "misl"
+            ],
+            "excluded": [
+              "orb",
+              "staf",
+              "wand"
+            ]
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -13271,7 +14060,39 @@
         "summary": "Lists the +1 maximum-damage small-charm occurrence at alvl 85.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicsuffix.txt",
           "sourceRow": 681,
@@ -13547,7 +14368,39 @@
         "summary": "Documents the 10–13 minimum-damage jewelry/headgear occurrence at alvl 81.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "specific-performance",
         "revisionId": 23938,
+        "claimIds": [
+          "specific-performance"
+        ],
+        "ruleIds": [
+          "rule-specific-performance"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicsuffix.txt",
           "sourceRow": 231,
@@ -15631,7 +16484,41 @@
         "summary": "Adds the documented 15–20% physical-damage-reduction armor/shield suffix at alvl 85.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "specific-guardianship",
         "revisionId": 23938,
+        "claimIds": [
+          "s13-percent-pdr",
+          "specific-guardianship"
+        ],
+        "ruleIds": [
+          "rule-s13-percent-pdr",
+          "rule-specific-guardianship"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicsuffix.txt",
           "sourceRow": 800,
@@ -15850,7 +16737,39 @@
         "summary": "Lists the 36–40 life large-charm occurrence at alvl 77.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicsuffix.txt",
           "sourceRow": 338,
@@ -16126,7 +17045,39 @@
         "summary": "Lists the 41–45 life large-charm occurrence at alvl 91.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicsuffix.txt",
           "sourceRow": 339,
@@ -16663,7 +17614,39 @@
         "summary": "Lists the 31–35 life medium-charm occurrence at alvl 74.",
         "season": "unknown",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Highest-Level_Affixes_(above_alvl_71)",
+        "claimId": "highest-level-listed",
         "revisionId": 23938,
+        "claimIds": [
+          "highest-level-listed"
+        ],
+        "ruleIds": [
+          "rule-highest-level-listed"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicsuffix.txt",
           "sourceRow": 346,
@@ -17470,7 +18453,39 @@
         "summary": "Season 3 lowered this life-leech occurrence to alvl 75 and required level 63.",
         "season": "Season 3",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "specific-leech-levels",
         "revisionId": 23938,
+        "claimIds": [
+          "specific-leech-levels"
+        ],
+        "ruleIds": [
+          "rule-specific-leech-levels"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicsuffix.txt",
           "sourceRow": 744,
@@ -18472,7 +19487,39 @@
         "summary": "Season 3 lowered this mana-leech occurrence to alvl 76 and required level 64.",
         "season": "Season 3",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "specific-leech-levels",
         "revisionId": 23938,
+        "claimIds": [
+          "specific-leech-levels"
+        ],
+        "ruleIds": [
+          "rule-specific-leech-levels"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "levelreq",
+          "frequency",
+          "group",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "mod2code",
+          "mod2param",
+          "mod2min",
+          "mod2max",
+          "mod3code",
+          "mod3param",
+          "mod3min",
+          "mod3max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicsuffix.txt",
           "sourceRow": 747,
@@ -23649,7 +24696,28 @@
         "summary": "Season 7 documents the alvl 76 level-30 Fireball cast-on-casting tier for staves.",
         "season": "Season 7",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s7-elemental-procs",
         "revisionId": 23938,
+        "claimIds": [
+          "s7-elemental-procs"
+        ],
+        "ruleIds": [
+          "rule-s7-elemental-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicsuffix.txt",
           "sourceRow": 858,
@@ -23865,7 +24933,28 @@
         "summary": "Season 7 documents the alvl 76 level-30 Lightning cast-on-casting tier for staves.",
         "season": "Season 7",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s7-elemental-procs",
         "revisionId": 23938,
+        "claimIds": [
+          "s7-elemental-procs"
+        ],
+        "ruleIds": [
+          "rule-s7-elemental-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
         "mapping": {
           "table": "magicsuffix.txt",
           "sourceRow": 864,
@@ -24076,12 +25165,49 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 7",
+        "summary": "Season 7 added three governed cast-on-casting staff tiers and three on-striking weapon tiers for seven elemental skills.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s7-elemental-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s7-elemental-procs"
+        ],
+        "ruleIds": [
+          "rule-s7-elemental-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 870,
+          "fingerprint": "8D1570F3CD0BE6EBEB94794ACE9BAE3807716F4DC6847B49CF43D8CE89889963",
+          "name": "of Nova",
+          "properties": [
+            "cast-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "staf"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -24277,12 +25403,49 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 7",
+        "summary": "Season 7 added three governed cast-on-casting staff tiers and three on-striking weapon tiers for seven elemental skills.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s7-elemental-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s7-elemental-procs"
+        ],
+        "ruleIds": [
+          "rule-s7-elemental-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 876,
+          "fingerprint": "DE4DDF00FC8A91E1C4D580D8F89C94A251550BCFD571D16D6E69797593426774",
+          "name": "of Chain Lightning",
+          "properties": [
+            "cast-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "staf"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -24478,12 +25641,49 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 7",
+        "summary": "Season 7 added three governed cast-on-casting staff tiers and three on-striking weapon tiers for seven elemental skills.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s7-elemental-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s7-elemental-procs"
+        ],
+        "ruleIds": [
+          "rule-s7-elemental-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 882,
+          "fingerprint": "E535E94365F111C9EC9BB3F02C5BF3EA2A2AEF8B4CE8E013AABAFE951FF03649",
+          "name": "of Charged Bolt",
+          "properties": [
+            "cast-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "staf"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -24679,12 +25879,49 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 7",
+        "summary": "Season 7 added three governed cast-on-casting staff tiers and three on-striking weapon tiers for seven elemental skills.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s7-elemental-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s7-elemental-procs"
+        ],
+        "ruleIds": [
+          "rule-s7-elemental-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 888,
+          "fingerprint": "C1A5DF1AA10FB72E1D6B39A73CD378B6D534CC93C2ADF4AD89DA607646F73C0B",
+          "name": "of Frost Nova",
+          "properties": [
+            "cast-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "staf"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -24880,12 +26117,49 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 7",
+        "summary": "Season 7 added three governed cast-on-casting staff tiers and three on-striking weapon tiers for seven elemental skills.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s7-elemental-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s7-elemental-procs"
+        ],
+        "ruleIds": [
+          "rule-s7-elemental-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 894,
+          "fingerprint": "2604FDD91740CF258F983E9DA910BEC4BA36C6700A7DE55B8AFAA6D6A5FF0333",
+          "name": "of Ice Barrage",
+          "properties": [
+            "cast-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "staf"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -25081,12 +26355,49 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 9",
+        "summary": "Season 9 added three Amplify Damage and Lower Resist tiers for both casting and striking triggers.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s9-curse-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s9-curse-procs"
+        ],
+        "ruleIds": [
+          "rule-s9-curse-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 906,
+          "fingerprint": "1F7450218D14661D0BB788620BEE1CB1A6C60EEEABDA4D7ADD4B2C1A2CE9A314",
+          "name": "of Damage Amplification",
+          "properties": [
+            "cast-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "staf"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -25282,12 +26593,49 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 9",
+        "summary": "Season 9 added three Amplify Damage and Lower Resist tiers for both casting and striking triggers.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s9-curse-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s9-curse-procs"
+        ],
+        "ruleIds": [
+          "rule-s9-curse-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 912,
+          "fingerprint": "9B5D105AD8C3843246CCA374317B8420004C5E7A8D52706291C3E0E148A7EC24",
+          "name": "of Lower Resist",
+          "properties": [
+            "cast-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "staf"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -25842,7 +27190,22 @@
         "summary": "Season 3 removed ordinary skill-charge affixes except governed curse and teleport exceptions.",
         "season": "Season 3",
         "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Removed_Affixes",
+        "claimId": "removed-explicit-table",
         "revisionId": 23938,
+        "claimIds": [
+          "removed-explicit-table",
+          "s3-skill-charges"
+        ],
+        "ruleIds": [
+          "rule-removed-explicit",
+          "rule-s3-skill-charges"
+        ],
+        "documentedFields": [
+          "spawnable"
+        ],
+        "documentedFacets": [
+          "removal"
+        ],
         "mapping": {
           "table": "magicsuffix.txt",
           "sourceRow": 599,
@@ -26592,12 +27955,43 @@
       "status": "PD2_DELETED",
       "category": "PD2_DELETED",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
+        "coverage": "DOCUMENTED",
+        "section": "Removed Affixes",
+        "category": "Governed affix documentation claim",
         "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "summary": "The Removed Affixes table explicitly lists this former occurrence as removed.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Removed_Affixes",
+        "claimId": "removed-explicit-table",
+        "revisionId": 23938,
+        "claimIds": [
+          "removed-explicit-table",
+          "s3-skill-charges"
+        ],
+        "ruleIds": [
+          "rule-removed-explicit",
+          "rule-s3-skill-charges"
+        ],
+        "documentedFields": [
+          "spawnable"
+        ],
+        "documentedFacets": [
+          "removal"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 483,
+          "fingerprint": "7A39BFE490BE4C666E8EA5554D61FD53ADEE7F8B117169EB71381D746DD1F1B5",
+          "name": "of Ice Arrows",
+          "properties": [
+            "charged"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "glov"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -27369,12 +28763,43 @@
       "status": "PD2_DELETED",
       "category": "PD2_DELETED",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
+        "coverage": "DOCUMENTED",
+        "section": "Removed Affixes",
+        "category": "Governed affix documentation claim",
         "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "summary": "The Removed Affixes table explicitly lists this former occurrence as removed.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Removed_Affixes",
+        "claimId": "removed-explicit-table",
+        "revisionId": 23938,
+        "claimIds": [
+          "removed-explicit-table",
+          "s3-skill-charges"
+        ],
+        "ruleIds": [
+          "rule-removed-explicit",
+          "rule-s3-skill-charges"
+        ],
+        "documentedFields": [
+          "spawnable"
+        ],
+        "documentedFacets": [
+          "removal"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 495,
+          "fingerprint": "082673AFF3EDD0172AC8361897E3B9952899F7868989BAFD911A48C10799E816",
+          "name": "of Freezing Arrows",
+          "properties": [
+            "charged"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "glov"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -27780,12 +29205,43 @@
       "status": "PD2_DELETED",
       "category": "PD2_DELETED",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
+        "coverage": "DOCUMENTED",
+        "section": "Removed Affixes",
+        "category": "Governed affix documentation claim",
         "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "summary": "The Removed Affixes table explicitly lists this former occurrence as removed.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Removed_Affixes",
+        "claimId": "removed-explicit-table",
+        "revisionId": 23938,
+        "claimIds": [
+          "removed-explicit-table",
+          "s3-skill-charges"
+        ],
+        "ruleIds": [
+          "rule-removed-explicit",
+          "rule-s3-skill-charges"
+        ],
+        "documentedFields": [
+          "spawnable"
+        ],
+        "documentedFacets": [
+          "removal"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 497,
+          "fingerprint": "808B4CA8C044D3B0D9C550CD29D3B3F80A67AB25537E58244ABA3227C8DEFF94",
+          "name": "of Lightning Strike",
+          "properties": [
+            "charged"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "glov"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -28374,12 +29830,43 @@
       "status": "PD2_DELETED",
       "category": "PD2_DELETED",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
+        "coverage": "DOCUMENTED",
+        "section": "Removed Affixes",
+        "category": "Governed affix documentation claim",
         "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "summary": "The Removed Affixes table explicitly lists this former occurrence as removed.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Removed_Affixes",
+        "claimId": "removed-explicit-table",
+        "revisionId": 23938,
+        "claimIds": [
+          "removed-explicit-table",
+          "s3-skill-charges"
+        ],
+        "ruleIds": [
+          "rule-removed-explicit",
+          "rule-s3-skill-charges"
+        ],
+        "documentedFields": [
+          "spawnable"
+        ],
+        "documentedFacets": [
+          "removal"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 597,
+          "fingerprint": "330C8C4B9657240960A68D21FCD07FF7924E546AA0762C7536793AE27256AC2E",
+          "name": "of Poison Novas",
+          "properties": [
+            "charged"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "glov"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -29151,12 +30638,43 @@
       "status": "PD2_DELETED",
       "category": "PD2_DELETED",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
+        "coverage": "DOCUMENTED",
+        "section": "Removed Affixes",
+        "category": "Governed affix documentation claim",
         "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "summary": "The Removed Affixes table explicitly lists this former occurrence as removed.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Removed_Affixes",
+        "claimId": "removed-explicit-table",
+        "revisionId": 23938,
+        "claimIds": [
+          "removed-explicit-table",
+          "s3-skill-charges"
+        ],
+        "ruleIds": [
+          "rule-removed-explicit",
+          "rule-s3-skill-charges"
+        ],
+        "documentedFields": [
+          "spawnable"
+        ],
+        "documentedFacets": [
+          "removal"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 549,
+          "fingerprint": "550A19BA34A97DA9640424E6A8028CC7D0D9CF7100CDDB3C36D70C0A7A9A034E",
+          "name": "of Frozen Orbs",
+          "properties": [
+            "charged"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "knif"
+            ],
+            "excluded": []
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -30453,12 +31971,53 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 7",
+        "summary": "Season 7 added three governed cast-on-casting staff tiers and three on-striking weapon tiers for seven elemental skills.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s7-elemental-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s7-elemental-procs"
+        ],
+        "ruleIds": [
+          "rule-s7-elemental-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 861,
+          "fingerprint": "8CD6344D049C7070DDCE08FFBED8E296A36FA43F7D59BEF04F90747DAF308399",
+          "name": "of Fireball",
+          "properties": [
+            "hit-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "weap"
+            ],
+            "excluded": [
+              "staf",
+              "wand",
+              "orb"
+            ]
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -30662,12 +32221,53 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 7",
+        "summary": "Season 7 added three governed cast-on-casting staff tiers and three on-striking weapon tiers for seven elemental skills.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s7-elemental-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s7-elemental-procs"
+        ],
+        "ruleIds": [
+          "rule-s7-elemental-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 867,
+          "fingerprint": "E0A3173C2070FEA6507C1134D3CE5E595B855CB8521357349250689DD60A1EA2",
+          "name": "of Lightning",
+          "properties": [
+            "hit-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "weap"
+            ],
+            "excluded": [
+              "staf",
+              "wand",
+              "orb"
+            ]
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -30871,12 +32471,53 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 7",
+        "summary": "Season 7 added three governed cast-on-casting staff tiers and three on-striking weapon tiers for seven elemental skills.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s7-elemental-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s7-elemental-procs"
+        ],
+        "ruleIds": [
+          "rule-s7-elemental-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 873,
+          "fingerprint": "D4C8270FCB90BE33991A4100B9F593C554EF4224EA1CBB2F83E082E275B8D522",
+          "name": "of Nova",
+          "properties": [
+            "hit-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "weap"
+            ],
+            "excluded": [
+              "staf",
+              "wand",
+              "orb"
+            ]
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -31080,12 +32721,53 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 7",
+        "summary": "Season 7 added three governed cast-on-casting staff tiers and three on-striking weapon tiers for seven elemental skills.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s7-elemental-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s7-elemental-procs"
+        ],
+        "ruleIds": [
+          "rule-s7-elemental-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 879,
+          "fingerprint": "236469EF2DED056334BE7F275A1342F9938C83313D26C784ED612934F65C20E8",
+          "name": "of Chain Lightning",
+          "properties": [
+            "hit-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "weap"
+            ],
+            "excluded": [
+              "staf",
+              "wand",
+              "orb"
+            ]
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -31289,12 +32971,53 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 7",
+        "summary": "Season 7 added three governed cast-on-casting staff tiers and three on-striking weapon tiers for seven elemental skills.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s7-elemental-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s7-elemental-procs"
+        ],
+        "ruleIds": [
+          "rule-s7-elemental-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 885,
+          "fingerprint": "2E3F812AC80D82273A970DEEB1E03E7A98DE304E3C39635EC1B31E54AA849051",
+          "name": "of Charged Bolt",
+          "properties": [
+            "hit-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "weap"
+            ],
+            "excluded": [
+              "staf",
+              "wand",
+              "orb"
+            ]
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -31498,12 +33221,53 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 7",
+        "summary": "Season 7 added three governed cast-on-casting staff tiers and three on-striking weapon tiers for seven elemental skills.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s7-elemental-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s7-elemental-procs"
+        ],
+        "ruleIds": [
+          "rule-s7-elemental-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 891,
+          "fingerprint": "5A162611445E9C3F931B3C8D22E466A491BF178E4E61CEE01F993C9B81867397",
+          "name": "of Frost Nova",
+          "properties": [
+            "hit-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "weap"
+            ],
+            "excluded": [
+              "staf",
+              "wand",
+              "orb"
+            ]
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -31707,12 +33471,53 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 7",
+        "summary": "Season 7 added three governed cast-on-casting staff tiers and three on-striking weapon tiers for seven elemental skills.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s7-elemental-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s7-elemental-procs"
+        ],
+        "ruleIds": [
+          "rule-s7-elemental-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 897,
+          "fingerprint": "5C279E872928FC4FF046685238C7BFBE7E16916454AB06B41C0E544C78AD6540",
+          "name": "of Ice Barrage",
+          "properties": [
+            "hit-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "weap"
+            ],
+            "excluded": [
+              "staf",
+              "wand",
+              "orb"
+            ]
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -31916,12 +33721,53 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 9",
+        "summary": "Season 9 added three Amplify Damage and Lower Resist tiers for both casting and striking triggers.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s9-curse-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s9-curse-procs"
+        ],
+        "ruleIds": [
+          "rule-s9-curse-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 899,
+          "fingerprint": "A34232E4DB48B69E0BD16FD3C266FB3FD8957F826A761C1FAAEEC5A539D131E6",
+          "name": "of Damage Amplification",
+          "properties": [
+            "hit-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "weap"
+            ],
+            "excluded": [
+              "staf",
+              "wand",
+              "orb"
+            ]
+          }
+        }
       },
       "versions": {
         "vanilla": {
@@ -32125,12 +33971,53 @@
       "status": "PD2_NEW",
       "category": "PD2_NEW_REVIEW",
       "documentation": {
-        "coverage": "TABLE_ONLY",
-        "url": null,
-        "section": null,
-        "category": "Table difference",
-        "season": "unknown",
-        "summary": "Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte."
+        "coverage": "DOCUMENTED",
+        "section": "Affix Changes Compilation",
+        "category": "Governed affix documentation claim",
+        "season": "Season 9",
+        "summary": "Season 9 added three Amplify Damage and Lower Resist tiers for both casting and striking triggers.",
+        "url": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938#Affix_Changes_Compilation",
+        "claimId": "s9-curse-procs",
+        "revisionId": 23938,
+        "claimIds": [
+          "s9-curse-procs"
+        ],
+        "ruleIds": [
+          "rule-s9-curse-procs"
+        ],
+        "documentedFields": [
+          "Name",
+          "level",
+          "maxlevel",
+          "mod1code",
+          "mod1param",
+          "mod1min",
+          "mod1max",
+          "itype*",
+          "etype*"
+        ],
+        "documentedFacets": [
+          "definition"
+        ],
+        "mapping": {
+          "table": "magicsuffix.txt",
+          "sourceRow": 909,
+          "fingerprint": "630C1DF3873AC37521ED4773F36B1DD99C10286A52EA82330D0B0593B5D0CD90",
+          "name": "of Lower Resist",
+          "properties": [
+            "hit-skill"
+          ],
+          "itemTypes": {
+            "allowed": [
+              "weap"
+            ],
+            "excluded": [
+              "staf",
+              "wand",
+              "orb"
+            ]
+          }
+        }
       },
       "versions": {
         "vanilla": {

@@ -66,6 +66,7 @@ function scopedReport(reviewEntry) {
     comparisonHash: 'TEST-COMPARISON-HASH',
     targetBaselineCommit: 'TEST-TARGET-COMMIT',
     sourceHashes: report.sourceHashes,
+    dependencyHashes: context.dependencyHashes,
     targetBaselineHashes: currentTargetHashes,
     entries: [reviewEntry],
   };
@@ -78,6 +79,7 @@ function decisionsFor(scoped, reviewEntry, selection) {
     comparisonHash: scoped.comparisonHash,
     targetBaselineCommit: scoped.targetBaselineCommit,
     sourceHashes: scoped.sourceHashes,
+    dependencyHashes: scoped.dependencyHashes,
     targetBaselineHashes: scoped.targetBaselineHashes,
     entries: {
       [reviewEntry.id]: {
@@ -118,12 +120,19 @@ function directAudit(reviewEntry, projected = reviewEntry.rows.pd2) {
   });
 }
 
+function setAtPath(value, pathParts, replacement) {
+  const cloned = structuredClone(value);
+  let cursor = cloned;
+  for (const part of pathParts.slice(0, -1)) cursor = cursor[part];
+  cursor[pathParts.at(-1)] = replacement;
+  return cloned;
+}
+
 test('a compatible retune emits only its completed governed cell', () => {
   const reviewEntry = entry('magicprefix.txt:143');
   const preview = previewFor(reviewEntry, {
     fields: {
       frequency: { decision: 'ADOPT_PD2' },
-      multiply: { decision: 'KEEP_BKVINCE' },
     },
   });
   assert.equal(preview.ready, true);
@@ -155,12 +164,138 @@ test('a compatible append audits both itype and etype and normalizes multiply', 
   )));
 });
 
+test('new-affix line decisions reject exact-import CUSTOM conflicts and accept a real customization', () => {
+  const reviewEntry = entry('magicsuffix.txt:865');
+  const realCustom = {
+    level: { decision: 'CUSTOM', customValue: '37', notes: 'intentional customized tier' },
+  };
+
+  const exactWithCustom = previewFor(reviewEntry, {
+    lineDecision: 'IMPORT_PD2_AFFIX',
+    fields: realCustom,
+  });
+  assert.equal(exactWithCustom.ready, false);
+  assert.deepEqual(exactWithCustom.cells, []);
+  assert.deepEqual(exactWithCustom.rows, []);
+  assert.deepEqual(exactWithCustom.dependencyAudit.occurrences, []);
+  assert(exactWithCustom.incomplete.some((item) => (
+    item.id === reviewEntry.id && item.reasons.some((reason) => /IMPORT_PD2_AFFIX.*CUSTOM/.test(reason))
+  )));
+
+  const exactWithUnknownCustom = previewFor(reviewEntry, {
+    lineDecision: 'IMPORT_PD2_AFFIX',
+    fields: {
+      unknownField: { decision: 'CUSTOM', customValue: 'injected', notes: 'must be rejected' },
+    },
+  });
+  assert.equal(exactWithUnknownCustom.ready, false);
+  assert.deepEqual(exactWithUnknownCustom.cells, []);
+  assert.deepEqual(exactWithUnknownCustom.rows, []);
+  assert.deepEqual(exactWithUnknownCustom.dependencyAudit.occurrences, []);
+  assert(exactWithUnknownCustom.incomplete.some((item) => (
+    item.id === reviewEntry.id && item.reasons.some((reason) => /unknownField|unknown field|IMPORT_PD2_AFFIX.*CUSTOM/i.test(reason))
+  )));
+
+  const customizedWithUnknownOnly = previewFor(reviewEntry, {
+    lineDecision: 'IMPORT_CUSTOMIZED',
+    fields: {
+      unknownField: { decision: 'CUSTOM', customValue: 'injected', notes: 'not a governed field' },
+    },
+  });
+  assert.equal(customizedWithUnknownOnly.ready, false);
+  assert.deepEqual(customizedWithUnknownOnly.rows, []);
+  assert(customizedWithUnknownOnly.incomplete.some((item) => (
+    item.id === reviewEntry.id && item.reasons.some((reason) => /real CUSTOM field|unknownField|unknown field/i.test(reason))
+  )));
+
+  const customized = previewFor(reviewEntry, {
+    lineDecision: 'IMPORT_CUSTOMIZED',
+    fields: realCustom,
+  });
+  assert.equal(customized.ready, true);
+  assert.deepEqual(customized.incomplete, []);
+  assert.deepEqual(customized.conflicts, []);
+  assert.equal(customized.rows.length, 1);
+  assert.equal(customized.rows[0].row.level, '37');
+  assert.equal(customized.rows[0].provenanceByField.level, 'CUSTOM');
+  assert.equal(customized.rows[0].lineDecision, 'IMPORT_CUSTOMIZED');
+});
+
+test('read-only UNCHANGED and AutoMagic occurrences ignore every injected decision', () => {
+  const witnesses = [
+    report.entries.find((candidate) => candidate.category === 'UNCHANGED_BY_PD2'),
+    report.entries.find((candidate) => candidate.category === 'AUTOMAGIC_DEFERRED' && candidate.fieldDifferences.length > 0),
+  ];
+  assert(witnesses.every(Boolean));
+
+  const scoped = {
+    ...scopedReport(witnesses[0]),
+    entries: witnesses,
+  };
+  const injectedEntries = Object.fromEntries(witnesses.map((reviewEntry) => [reviewEntry.id, {
+    fingerprint: reviewEntry.fingerprint,
+    lineDecision: 'IMPORT_CUSTOMIZED',
+    fields: Object.fromEntries([
+      ...reviewEntry.fieldDifferences.map((difference) => [difference.field, {
+        decision: 'CUSTOM',
+        customValue: 'injected',
+        notes: 'must never be projected',
+        protectedOverride: true,
+      }]),
+      ['unknownField', { decision: 'CUSTOM', customValue: 'injected', notes: 'must never be projected' }],
+    ]),
+    notes: 'must never be projected',
+  }]));
+  const decisions = {
+    ...decisionsFor(scoped, witnesses[0], {}),
+    entries: injectedEntries,
+  };
+  const preview = compilePreview(scoped, decisions, { catalog, context });
+  assert.equal(preview.ready, true);
+  assert.equal(preview.autoResolved.length, 2);
+  assert.deepEqual(preview.cells, []);
+  assert.deepEqual(preview.rows, []);
+  assert.deepEqual(preview.rejectedRows, []);
+  assert.deepEqual(preview.dependencyAudit.occurrences, []);
+  assert.deepEqual(preview.incomplete, []);
+  assert.deepEqual(preview.conflicts, []);
+});
+
+test('all eight TXT dependencies and both localization namespaces fail before projection', () => {
+  const reviewEntry = entry('magicsuffix.txt:865');
+  const scoped = scopedReport(reviewEntry);
+  const decisions = decisionsFor(scoped, reviewEntry, { lineDecision: 'IMPORT_PD2_AFFIX' });
+  const dependencyPaths = [
+    ...['properties.txt', 'itemtypes.txt', 'itemstatcost.txt', 'skills.txt'].map((table) => ['source', table]),
+    ...['properties.txt', 'itemtypes.txt', 'itemstatcost.txt', 'skills.txt'].map((table) => ['bkvince', table]),
+    ['bkvince', 'localization', 'modern', 'baseSha256'],
+    ['bkvince', 'localization', 'modern', 'manifestSha256'],
+    ['bkvince', 'localization', 'legacy', 'baseSha256'],
+    ['bkvince', 'localization', 'legacy', 'manifestSha256'],
+  ];
+  assert.equal(dependencyPaths.filter((parts) => parts.at(-1).endsWith('.txt')).length, 8);
+
+  for (const dependencyPath of dependencyPaths) {
+    const mismatchedHashes = setAtPath(context.dependencyHashes, dependencyPath, 'BAD');
+    const failBeforeProjection = new Proxy({ dependencyHashes: mismatchedHashes }, {
+      get(target, property) {
+        if (property === 'dependencyHashes') return target.dependencyHashes;
+        throw new Error(`projection phase reached through ${String(property)}`);
+      },
+    });
+    assert.throws(
+      () => compilePreview(scoped, decisions, { catalog, context: failBeforeProjection }),
+      /dependencyHashes do not match/,
+      dependencyPath.join('.'),
+    );
+  }
+});
+
 test('Property and ItemType failures never leak partial retune or append outputs', () => {
   const propertyEntry = withPd2Field(entry('magicprefix.txt:143'), 'mod1code', 'splash');
   const propertyPreview = previewFor(propertyEntry, {
     fields: {
       frequency: { decision: 'KEEP_BKVINCE' },
-      multiply: { decision: 'KEEP_BKVINCE' },
       mod1code: { decision: 'ADOPT_PD2' },
     },
   });

@@ -42,6 +42,14 @@ function assertCurrentBaseline(report) {
   }
 }
 
+function assertDependencyHashes(report, context) {
+  if (!report.dependencyHashes) fail('review dependencyHashes are missing');
+  if (!context?.dependencyHashes) fail('dependency audit context hashes are missing');
+  if (JSON.stringify(context.dependencyHashes) !== JSON.stringify(report.dependencyHashes)) {
+    fail('source or BKVince dependencyHashes do not match the governed review');
+  }
+}
+
 function applyFields(entry, selection, projected) {
   const provenanceByField = Object.fromEntries(Object.keys(projected).map((field) => [field, entry.rows.bkvince ? 'BKVINCE' : 'PD2']));
   const changed = [];
@@ -69,6 +77,7 @@ export function compilePreview(report, decisions, { catalog = readJson(catalogPa
   validateDecisionExport(report, decisions);
   if (verifyBaseline) assertCurrentBaseline(report);
   const auditContext = context ?? buildAffixDependencyAuditContext(sourceRoot(), targetRoot);
+  assertDependencyHashes(report, auditContext);
   const cells = [], rows = [], conflicts = [], incomplete = [], rejectedRows = [], autoResolved = [], audits = [];
   for (const entry of report.entries) {
     const selection = decisions.entries?.[entry.id] ?? { fingerprint: entry.fingerprint, fields: {}, notes: '' };
@@ -121,7 +130,7 @@ export function compilePreview(report, decisions, { catalog = readJson(catalogPa
       summary[key].push(dependency);
       return summary;
     }, {});
-  const localizationPlan = planAffixLocalization(audits.map((audit) => audit.localization.key), catalog);
+  const localizationPlan = planAffixLocalization(audits.map((audit) => audit.localization.key), catalog, auditContext);
   if (localizationPlan.conflicts.length) conflicts.push(...localizationPlan.conflicts);
   const appendCounts = Object.groupBy(rows, (row) => row.table);
   const serializationPlan = Object.fromEntries(Object.entries(report.targetBaselineHashes).map(([table]) => {
@@ -139,6 +148,7 @@ export function compilePreview(report, decisions, { catalog = readJson(catalogPa
     ready,
     reviewId: report.reviewId,
     comparisonHash: report.comparisonHash,
+    dependencyHashes: report.dependencyHashes,
     targetBaselineCommit: report.targetBaselineCommit,
     targetBaselineHashes: report.targetBaselineHashes,
     proposedManifest: { changedCells: cells.length, appendedRows: rows.length, rejectedRows: rejectedRows.length, auditedOccurrences: audits.length, conflicts: conflicts.length, incomplete: incomplete.length },
