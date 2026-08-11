@@ -1592,8 +1592,8 @@ test('generates a deterministic fail-closed catalog from governed BKVince tables
     pick(itemCatalog.rareNameSuffixes[0], ['id', 'name']),
     { id: 1, name: 'Bite' },
   );
-  assert.equal(itemCatalog.prefixes.filter(({ rare }) => rare).length, 663);
-  assert.equal(itemCatalog.suffixes.filter(({ rare }) => rare).length, 704);
+  assert.equal(itemCatalog.prefixes.filter(({ rare }) => rare).length, 563);
+  assert.equal(itemCatalog.suffixes.filter(({ rare }) => rare).length, 614);
   assert.equal(itemCatalog.runewords.length, 112);
   assert.deepEqual(
     pick(itemCatalog.runewords.find(({ id }) => id === 155), ['name', 'runes', 'allowedTypes']),
@@ -1625,7 +1625,7 @@ test('generates a deterministic fail-closed catalog from governed BKVince tables
 });
 
 test('generates governed BKVince Bound Demon catalogs with native row indexes', () => {
-  assert.equal(demonCatalog.monsters.length, 799);
+  assert.equal(demonCatalog.monsters.length, 802);
   assert.equal(demonCatalog.superUniques.length, 70);
   assert.equal(demonCatalog.modifiers.length, 45);
   assert.deepEqual(
@@ -1639,6 +1639,14 @@ test('generates governed BKVince Bound Demon catalogs with native row indexes', 
   assert.deepEqual(
     pick(demonCatalog.modifiers.find(({ id }) => id === 17), ['internalName', 'label', 'enabled']),
     { internalName: 'lightning', label: 'Lightning Enchanted', enabled: true },
+  );
+  assert.deepEqual(
+    demonCatalog.monsters.slice(-3).map((entry) => pick(entry, ['index', 'row', 'id'])),
+    [
+      { index: 800, row: 801, id: 'bkvbloodravenzombie' },
+      { index: 801, row: 802, id: 'bkvbloodravennestzombie' },
+      { index: 802, row: 803, id: 'bkvbloodravenarcher' },
+    ],
   );
   assert.equal(demonDefinitions.monsters.length, demonCatalog.monsters.length);
 
@@ -2158,7 +2166,7 @@ test('exposes and atomically adds governed Sets, Uniques, and Runewords from the
   const namedItems = availableNamedItems();
   const runewords = availableRunewordItems();
   assert.equal(namedItems.filter(({ kind }) => kind === 'set').length, 215);
-  assert.equal(namedItems.filter(({ kind }) => kind === 'unique').length, 473);
+  assert.equal(namedItems.filter(({ kind }) => kind === 'unique').length, 472);
   assert.equal(runewords.length, 112);
 
   const annihilus = namedItems.find(({ kind, id }) => kind === 'unique' && id === 381);
@@ -3622,8 +3630,12 @@ test('drives every supported manual property through a semantic form and D2S rou
   editable = editItemSnapshot(editable, document.model.items, itemIndex, { quality: 4 });
   const edit = editable.itemEdits[itemIndex];
   const options = itemEditorOptions(item, edit);
-  assert.equal(options.manualProperties.length, 236);
+  assert.equal(options.manualProperties.length, 238);
   assert.ok(options.manualProperties.every(({ fields }) => Array.isArray(fields)));
+  assert.ok(options.manualProperties.some(({ code }) => code === 'splash-radius%'));
+  assert.ok(options.manualProperties.some(({ code }) => code === 'splash-dmg%'));
+  assert.ok(options.manualProperties.some(({ code }) => code === 'crush-efficiency'));
+  assert.equal(options.manualProperties.some(({ code }) => code === 'splash'), false);
   assert.ok(options.manualSelectOptions.skill.some(({ value, label }) => value === 151 && label === 'Whirlwind'));
   assert.ok(options.manualSelectOptions.skill.some(({ value, group }) => value === 373 && group === 'Warlock'));
   assert.ok(options.manualSelectOptions.skillTab.some(({ value, group }) => value === 23 && group === 'Warlock'));
@@ -3885,19 +3897,18 @@ test('compiles every governed Set item and the encodable BKVince Unique catalog 
   });
 
   assert.deepEqual(results[0], { total: 215, compiled: 215, failures: [] });
-  assert.equal(results[1].total, 473);
-  assert.equal(results[1].compiled, 473);
+  assert.equal(results[1].total, 472);
+  assert.equal(results[1].compiled, 472);
   assert.deepEqual(results[1].failures, []);
 });
 
-test('writes runtime-canonical uncommon named properties and partial elemental groups', async () => {
+test('writes active uncommon named properties without reviving the retired splash Unique', async () => {
   const document = await createBlankCharacter({ name: 'NamedEdges', className: 'Warlock' });
   let editable = editableSnapshot(document.model);
   const cases = [
     { id: 60, type: 'hbw', x: 0 },
     { id: 224, type: 'xuc', x: 2 },
     { id: 298, type: '7pa', x: 4 },
-    { id: 473, type: 'jew', x: 8 },
   ];
 
   for (const entry of cases) {
@@ -3918,14 +3929,21 @@ test('writes runtime-canonical uncommon named properties and partial elemental g
   }
 
   const exported = await exportCharacter(document, editable);
-  const [witherstring, visceratuant, tombReaver, titansEcho] = exported.reparsed.items.slice(-cases.length);
+  const [witherstring, visceratuant, tombReaver] = exported.reparsed.items.slice(-cases.length);
   assert.deepEqual(witherstring.magic_attributes.find(({ id }) => id === 54).values, [50, 50, 0]);
   assert.deepEqual(visceratuant.magic_attributes.find(({ id }) => id === 59).values, [100]);
   assert.deepEqual(tombReaver.magic_attributes.find(({ id }) => id === 151).values, [122, 18]);
   assert.deepEqual(tombReaver.magic_attributes.find(({ id }) => id === 155).values, [1, 10]);
-  assert.deepEqual(titansEcho.magic_attributes, [
-    { id: 384, values: [430, 100], name: 'item_splashonhit' },
-  ]);
+  assert.equal(exported.reparsed.items.some(({ magic_attributes: attributes = [] }) => (
+    attributes.some(({ id }) => id === 384)
+  )), false);
+
+  const retiredSplashUnique = itemCatalog.uniqueItems.find(({ id }) => id === 473);
+  assert.deepEqual(
+    pick(retiredSplashUnique, ['name', 'spawnable', 'disabled', 'mods']),
+    { name: "Titan's Echo", spawnable: false, disabled: false, mods: [] },
+  );
+  assert.equal(availableNamedItems().some(({ kind, id }) => kind === 'unique' && id === 473), false);
 
   const reopened = await openCharacter(exported.bytes, 'NamedEdges.d2s');
   const noOp = await exportCharacter(reopened, editableSnapshot(reopened.model));
