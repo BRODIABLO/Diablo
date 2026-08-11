@@ -7,6 +7,7 @@ import {
   buildAffixDependencyAuditContext,
   loadTable,
   planAffixLocalization,
+  resolvePd2AffixSourceRoot,
 } from './pd2-affixes-merge.mjs';
 import {
   effectiveFieldChoice,
@@ -23,11 +24,6 @@ const targetRoot = path.join(repoRoot, 'data-BKVince', 'BKVince.mpq', 'data', 'g
 
 function fail(message) { throw new Error(message); }
 function readJson(file) { return JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '')); }
-function sourceRoot() {
-  const official = path.join(repoRoot, 'analysis-cache', 'pd2-affixes-merge', 'official-s13');
-  if (fs.existsSync(official)) return official;
-  return path.resolve(repoRoot, '..', 'PD2 Single PLayer', 'PD2-Single-Player-Plus-mod-main', 'data', 'global', 'excel');
-}
 
 export function validateDecisionExport(report, decisions) {
   validateDecisionEnvelope(report, decisions);
@@ -73,10 +69,10 @@ function applyFields(entry, selection, projected) {
   return { projected, provenanceByField, changed, conflicts };
 }
 
-export function compilePreview(report, decisions, { catalog = readJson(catalogPath), context = null, verifyBaseline = false } = {}) {
+export function compilePreview(report, decisions, { catalog = readJson(catalogPath), context = null, verifyBaseline = false, sourceRoot = null } = {}) {
   validateDecisionExport(report, decisions);
   if (verifyBaseline) assertCurrentBaseline(report);
-  const auditContext = context ?? buildAffixDependencyAuditContext(sourceRoot(), targetRoot);
+  const auditContext = context ?? buildAffixDependencyAuditContext(sourceRoot ?? resolvePd2AffixSourceRoot(), targetRoot);
   assertDependencyHashes(report, auditContext);
   const cells = [], rows = [], conflicts = [], incomplete = [], rejectedRows = [], autoResolved = [], audits = [];
   for (const entry of report.entries) {
@@ -170,7 +166,10 @@ function run(args = process.argv.slice(2)) {
   const input = args.find((arg) => !arg.startsWith('--'));
   if (!input) fail('usage: node pd2-affixes-decisions-preview.mjs <decisions.json> [--output=file]');
   const report = readJson(reportPath), decisions = readJson(path.resolve(input));
-  const preview = compilePreview(report, decisions, { verifyBaseline: true }), raw = `${JSON.stringify(preview, null, 2)}\n`;
+  const preview = compilePreview(report, decisions, {
+    verifyBaseline: true,
+    sourceRoot: resolvePd2AffixSourceRoot(args),
+  }), raw = `${JSON.stringify(preview, null, 2)}\n`;
   const output = args.find((arg) => arg.startsWith('--output='));
   if (output) fs.writeFileSync(path.resolve(output.slice('--output='.length)), raw, 'utf8'); else process.stdout.write(raw);
 }

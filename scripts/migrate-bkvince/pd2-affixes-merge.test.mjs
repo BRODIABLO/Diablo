@@ -7,11 +7,14 @@ import test from 'node:test';
 
 import {
   assertPinnedOutput,
+  buildAffixDependencyAuditContext,
   canonicalPropertySignature,
   headerIndexes,
   itemTypeReaches,
   parseOrdinalSpec,
   propertyFunctionValues,
+  REQUIRED_PD2_AFFIX_SOURCE_TABLES,
+  resolvePd2AffixSourceRoot,
   storedValueRange,
   transactionalWriteFiles,
 } from './pd2-affixes-merge.mjs';
@@ -21,6 +24,71 @@ import {
 } from './pd2-affixes-distribution.mjs';
 
 const repoRoot = path.resolve(import.meta.dirname, '..', '..');
+
+test('PD2 affix source resolution honors explicit, environment, official and mirror precedence', () => {
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pd2-affix-source-resolution-'));
+  const makeRoot = (name) => {
+    const root = path.join(temporaryRoot, name);
+    fs.mkdirSync(root, { recursive: true });
+    for (const table of REQUIRED_PD2_AFFIX_SOURCE_TABLES) fs.writeFileSync(path.join(root, table), 'fixture');
+    return root;
+  };
+  try {
+    const explicit = makeRoot('explicit');
+    const environment = makeRoot('environment');
+    const repository = path.join(temporaryRoot, 'repository');
+    const official = path.join(repository, 'analysis-cache', 'pd2-affixes-merge', 'official-s13');
+    fs.mkdirSync(official, { recursive: true });
+    for (const table of REQUIRED_PD2_AFFIX_SOURCE_TABLES) fs.writeFileSync(path.join(official, table), 'fixture');
+    assert.equal(resolvePd2AffixSourceRoot([`--source-root=${explicit}`], {
+      environment: { PD2_AFFIX_SOURCE_ROOT: environment }, repositoryRoot: repository,
+    }), explicit);
+    assert.equal(resolvePd2AffixSourceRoot([], {
+      environment: { PD2_AFFIX_SOURCE_ROOT: environment }, repositoryRoot: repository,
+    }), environment);
+    assert.equal(resolvePd2AffixSourceRoot([], { environment: {}, repositoryRoot: repository }), official);
+    fs.rmSync(official, { recursive: true, force: true });
+    const historical = path.join(
+      temporaryRoot,
+      'PD2 Single PLayer',
+      'PD2-Single-Player-Plus-mod-main',
+      'data',
+      'global',
+      'excel',
+    );
+    fs.mkdirSync(historical, { recursive: true });
+    for (const table of REQUIRED_PD2_AFFIX_SOURCE_TABLES) fs.writeFileSync(path.join(historical, table), 'fixture');
+    assert.equal(resolvePd2AffixSourceRoot([], { environment: {}, repositoryRoot: repository }), historical);
+    assert.throws(() => resolvePd2AffixSourceRoot([], {
+      environment: {}, repositoryRoot: path.join(temporaryRoot, 'isolated', 'repository'),
+    }), /PD2 affix source unavailable/);
+  } finally {
+    assert(temporaryRoot.startsWith(path.resolve(os.tmpdir())));
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('the governed public mirror normalizes only New Orbs and retains official dependency identities', () => {
+  const mirrorRoot = process.env.PD2_AFFIX_SOURCE_ROOT
+    ? path.resolve(process.env.PD2_AFFIX_SOURCE_ROOT)
+    : path.resolve(
+      repoRoot,
+      '..',
+      'PD2 Single PLayer',
+      'PD2-Single-Player-Plus-mod-main',
+      'data',
+      'global',
+      'excel',
+    );
+  assert(fs.existsSync(mirrorRoot), `governed public mirror is unavailable: ${mirrorRoot}`);
+  const targetRoot = path.join(repoRoot, 'data-BKVince', 'BKVince.mpq', 'data', 'global', 'excel');
+  const catalog = JSON.parse(fs.readFileSync(path.join(repoRoot, 'Mission', 'pd2-affixes-merge.catalog.json'), 'utf8'));
+  const context = buildAffixDependencyAuditContext(mirrorRoot, targetRoot);
+  assert.equal(context.sourceItemTypes.has('norb'), false);
+  for (const table of ['properties.txt', 'itemtypes.txt', 'itemstatcost.txt', 'skills.txt']) {
+    assert.equal(context.dependencyHashes.source[table], catalog.source.tables[table].officialSha256);
+  }
+});
 
 test('ordinal ranges preserve the explicit deterministic order', () => {
   assert.deepEqual(parseOrdinalSpec('1-3,7,10-11'), [1, 2, 3, 7, 10, 11]);

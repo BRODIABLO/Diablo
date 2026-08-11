@@ -8,6 +8,8 @@ import {
   auditAffixProjection,
   buildAffixDependencyAuditContext,
   parseOrdinalSpec,
+  resolvePd2BaseSourceRoot,
+  resolvePd2AffixSourceRoot,
 } from './pd2-affixes-merge.mjs';
 import {
   FIELD_DECISIONS,
@@ -118,13 +120,6 @@ function blockedRows(expected) {
   const result = new Map();
   for (const [reason, spec] of Object.entries(expected.blocked ?? {})) for (const row of parseOrdinalSpec(spec)) result.set(row, reason);
   return result;
-}
-function sourceRootFromArgs(args) {
-  const option = args.find((arg) => arg.startsWith('--source-root='));
-  if (option) return path.resolve(option.slice('--source-root='.length));
-  const official = path.join(repoRoot, 'analysis-cache', 'pd2-affixes-merge', 'official-s13');
-  if (fs.existsSync(official)) return official;
-  return path.resolve(repoRoot, '..', 'PD2 Single PLayer', 'PD2-Single-Player-Plus-mod-main', 'data', 'global', 'excel');
 }
 function statusFor({ mapped, pd2Deleted, vanilla, bkvince, pd2 }) {
   if (!mapped) return 'PD2_NEW';
@@ -380,10 +375,6 @@ export function buildReport(sourceRoot, catalog) {
   return { ...core, comparisonHash: sha256(JSON.stringify(core)) };
 }
 
-function portablePd2Root() {
-  return path.resolve(repoRoot, '..', 'PD2 Single PLayer', 'PD2-Single-Player-Plus-mod-main', 'data', 'global', 'excel');
-}
-
 function baseCatalog(typeRoot, baseRoot, label) {
   const itemTypesTable = loadTable(typeRoot, 'itemtypes.txt');
   const typeParents = new Map(itemTypesTable.table.rows.map((_, row) => [value(itemTypesTable, row, 'Code'), [value(itemTypesTable, row, 'Equiv1'), value(itemTypesTable, row, 'Equiv2')].filter(Boolean)]));
@@ -411,7 +402,7 @@ export function buildHighestLevelReport(report, sourceRoot) {
   const catalogs = {
     vanilla: baseCatalog(vanillaRoot, vanillaRoot, 'Vanilla D2R 3.2'),
     bkvince: baseCatalog(targetRoot, targetRoot, 'BKVince'),
-    pd2: baseCatalog(sourceRoot, fs.existsSync(path.join(sourceRoot, 'armor.txt')) ? sourceRoot : portablePd2Root(), 'PD2 S13'),
+    pd2: baseCatalog(sourceRoot, resolvePd2BaseSourceRoot(sourceRoot), 'PD2 S13'),
   };
   const alvlFor = (ilvl, qlvl, magicLvl) => {
     const i = Math.max(ilvl, qlvl);
@@ -519,7 +510,7 @@ export function buildHtml(report) { return buildReviewHtml(report); }
 function highestHtmlPage(report) { return buildHighestHtml(report); }
 
 export function run(args = process.argv.slice(2)) {
-  const check = args.includes('--check'), sourceRoot = sourceRootFromArgs(args), catalog = readJson(catalogPath);
+  const check = args.includes('--check'), sourceRoot = resolvePd2AffixSourceRoot(args), catalog = readJson(catalogPath);
   const report = buildReport(sourceRoot, catalog), highest = buildHighestLevelReport(report, sourceRoot);
   const outputs = new Map([[outputJson, `${JSON.stringify(report, null, 2)}\n`], [outputHtml, buildHtml(report)], [highestJson, `${JSON.stringify(highest, null, 2)}\n`], [highestHtml, highestHtmlPage(highest)]]);
   if (check) {

@@ -55,6 +55,27 @@ const defaultReportPath = path.join(
   'merge-report.json',
 );
 
+export const PD2_AFFIX_MIRROR_COMMIT = '3debc6781f33c3c1474a995b80369a4e618cd386';
+export const REQUIRED_PD2_AFFIX_SOURCE_TABLES = Object.freeze([
+  'magicprefix.txt',
+  'magicsuffix.txt',
+  'automagic.txt',
+  'properties.txt',
+  'itemtypes.txt',
+  'itemstatcost.txt',
+  'skills.txt',
+]);
+
+const OFFICIAL_CANONICAL_TABLE_SHA256 = Object.freeze({
+  'magicprefix.txt': '183B99E4915E12FC8A7C18631EA26B1ED6CCE245D45515A3E6D5A4FA97C1EB9F',
+  'magicsuffix.txt': 'B1238C4DB515BBC5AEA64B28BC7482CACD526FB2EC0F29B9C9E7CD02BB9039E6',
+  'automagic.txt': 'CB7FD1B7D0784CACC30A822B504146C4ED67E19992699A9FB231F25E522521D4',
+  'properties.txt': '10C5F0FBBA472103BC7ED229FB35B07104C09BBDE497FCE6964E06EB6726988F',
+  'itemtypes.txt': 'DEB42FD667E641E668C81DC1E0FC44DA01C72ED3CDE21509A9862D3B82E9AC53',
+  'itemstatcost.txt': '6181F28A760C8C98225B8A46AE3B25E6B947837C0802BD35DFB1D49C4D295F27',
+  'skills.txt': '34BDFCDD4A2787006B34CFBFAD5AEB823739857414FD552F4E9743108B1E322E',
+});
+
 const TABLE_CONFIG = Object.freeze({
   'magicprefix.txt': Object.freeze({
     mappedRows: 670,
@@ -172,6 +193,10 @@ function stableSha(value) {
   return sha256(Buffer.from(JSON.stringify(value), 'utf8'));
 }
 
+export function canonicalTableSha256(table) {
+  return stableSha({ headers: table.headers, rows: table.rows });
+}
+
 function readJson(filePath) {
   const raw = fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '');
   return JSON.parse(raw);
@@ -183,6 +208,67 @@ function findFile(root, normalizedName) {
     .filter((name) => name.toLowerCase() === normalizedName.toLowerCase());
   assert(matches.length === 1, `${root}: expected one ${normalizedName}, found ${matches.length}`);
   return path.join(root, matches[0]);
+}
+
+function sourceRootContainsRequiredTables(root) {
+  if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) return false;
+  const names = new Set(fs.readdirSync(root).map((name) => name.toLowerCase()));
+  return REQUIRED_PD2_AFFIX_SOURCE_TABLES.every((name) => names.has(name));
+}
+
+export function resolvePd2AffixSourceRoot(
+  args = [],
+  { environment = process.env, repositoryRoot = repoRoot } = {},
+) {
+  const option = args.find((arg) => arg.startsWith('--source-root='));
+  const explicit = option ? option.slice('--source-root='.length) : null;
+  const candidates = [
+    explicit && { label: '--source-root', root: path.resolve(explicit), required: true },
+    !explicit && environment.PD2_AFFIX_SOURCE_ROOT && {
+      label: 'PD2_AFFIX_SOURCE_ROOT', root: path.resolve(environment.PD2_AFFIX_SOURCE_ROOT), required: true,
+    },
+    !explicit && !environment.PD2_AFFIX_SOURCE_ROOT && {
+      label: 'official local extraction',
+      root: path.join(repositoryRoot, 'analysis-cache', 'pd2-affixes-merge', 'official-s13'),
+      required: false,
+    },
+    !explicit && !environment.PD2_AFFIX_SOURCE_ROOT && {
+      label: 'historical local mirror',
+      root: path.resolve(repositoryRoot, '..', 'PD2 Single PLayer', 'PD2-Single-Player-Plus-mod-main', 'data', 'global', 'excel'),
+      required: false,
+    },
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (sourceRootContainsRequiredTables(candidate.root)) return candidate.root;
+    if (candidate.required) {
+      throw new Error(`${candidate.label} does not contain all seven required PD2 affix source tables: ${candidate.root}`);
+    }
+  }
+  throw new Error(`PD2 affix source unavailable. Set --source-root=<path> or PD2_AFFIX_SOURCE_ROOT; checked: ${candidates.map((candidate) => candidate.root).join(', ')}`);
+}
+
+export function resolvePd2BaseSourceRoot(
+  sourceRoot,
+  { repositoryRoot = repoRoot } = {},
+) {
+  const required = ['armor.txt', 'weapons.txt', 'misc.txt'];
+  const hasBases = (root) => {
+    if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) return false;
+    const names = new Set(fs.readdirSync(root).map((name) => name.toLowerCase()));
+    return required.every((name) => names.has(name));
+  };
+  if (hasBases(sourceRoot)) return sourceRoot;
+  const historicalMirror = path.resolve(
+    repositoryRoot,
+    '..',
+    'PD2 Single PLayer',
+    'PD2-Single-Player-Plus-mod-main',
+    'data',
+    'global',
+    'excel',
+  );
+  if (hasBases(historicalMirror)) return historicalMirror;
+  throw new Error(`PD2 base-item source unavailable for Highest-Level analysis: ${sourceRoot}`);
 }
 
 export function loadTable(root, normalizedName) {
@@ -267,30 +353,6 @@ function assertExactOrdinals(actual, spec, label) {
   );
 }
 
-function sourceRootFromArgs(args) {
-  const option = args.find((arg) => arg.startsWith('--source-root='));
-  if (option) return path.resolve(option.slice('--source-root='.length));
-  if (process.env.PD2_AFFIX_SOURCE_ROOT) return path.resolve(process.env.PD2_AFFIX_SOURCE_ROOT);
-  if (process.env.PD2_SP_ROOT) return path.resolve(process.env.PD2_SP_ROOT);
-
-  const officialExtraction = path.join(
-    repoRoot,
-    'analysis-cache',
-    'pd2-affixes-merge',
-    'official-s13',
-  );
-  if (fs.existsSync(officialExtraction)) return officialExtraction;
-  return path.resolve(
-    repoRoot,
-    '..',
-    'PD2 Single PLayer',
-    'PD2-Single-Player-Plus-mod-main',
-    'data',
-    'global',
-    'excel',
-  );
-}
-
 function targetExcelRootFromArgs(args) {
   const option = args.find((arg) => arg.startsWith('--target-excel-root='));
   return option
@@ -304,12 +366,35 @@ function verifySourceTable(name, loaded, expected) {
     acceptedHashes.includes(loaded.sha256),
     `${name}: unrecognized PD2 source hash ${loaded.sha256}`,
   );
+  let semanticTable = loaded.table;
+  if (name === 'itemtypes.txt' && loaded.sha256 === expected.mirrorSha256) {
+    const indexes = headerIndexes(loaded.table);
+    const itemTypeIndex = indexes.get('itemtype');
+    const codeIndex = indexes.get('code');
+    const norbRows = loaded.table.rows
+      .map((row, rowIndex) => ({ row, rowIndex }))
+      .filter(({ row }) => row[itemTypeIndex] === 'New Orbs' && row[codeIndex] === 'norb');
+    assert(norbRows.length === 1, `${name}: expected the single governed New Orbs/norb mirror-only row`);
+    semanticTable = cloneTable(loaded.table);
+    semanticTable.rows.splice(norbRows[0].rowIndex, 1);
+  }
+  assert(
+    canonicalTableSha256(semanticTable) === OFFICIAL_CANONICAL_TABLE_SHA256[name],
+    `${name}: mirror headers/cells are not semantically identical to official PD2 S13`,
+  );
   if (expected.rows !== undefined) {
-    assert(loaded.table.rows.length === expected.rows, `${name}: source row count drift`);
+    assert(semanticTable.rows.length === expected.rows, `${name}: source row count drift`);
   }
   if (expected.columns !== undefined) {
     assert(loaded.table.headers.length === expected.columns, `${name}: source column count drift`);
   }
+  return {
+    ...loaded,
+    table: semanticTable,
+    sourceTransportSha256: loaded.sha256,
+    sha256: expected.officialSha256,
+    canonicalSha256: OFFICIAL_CANONICAL_TABLE_SHA256[name],
+  };
 }
 
 export function canonicalPropertySignature(row, indexes) {
@@ -856,14 +941,19 @@ function auditGroups(name, config, source, target, selected, catalog) {
 }
 
 export function buildAffixDependencyAuditContext(sourceRoot, targetRoot = targetExcelRoot) {
-  const sourceProperties = loadTable(sourceRoot, 'properties.txt');
+  const catalog = readJson(catalogPath);
+  const verifiedSource = Object.fromEntries(REQUIRED_PD2_AFFIX_SOURCE_TABLES.map((name) => [
+    name,
+    verifySourceTable(name, loadTable(sourceRoot, name), catalog.source.tables[name]),
+  ]));
+  const sourceProperties = verifiedSource['properties.txt'];
   const targetProperties = loadTable(targetRoot, 'properties.txt');
   const properties = propertyCompatibility(sourceProperties.table, targetProperties.table);
-  const sourceItemStatsLoaded = loadTable(sourceRoot, 'itemstatcost.txt');
+  const sourceItemStatsLoaded = verifiedSource['itemstatcost.txt'];
   const targetItemStatsLoaded = loadTable(targetRoot, 'itemstatcost.txt');
-  const sourceItemTypesLoaded = loadTable(sourceRoot, 'itemtypes.txt');
+  const sourceItemTypesLoaded = verifiedSource['itemtypes.txt'];
   const targetItemTypesLoaded = loadTable(targetRoot, 'itemtypes.txt');
-  const sourceSkills = loadTable(sourceRoot, 'skills.txt');
+  const sourceSkills = verifiedSource['skills.txt'];
   const targetSkills = loadTable(targetRoot, 'skills.txt');
   const localizationSnapshots = {
     modern: loadLocalizationSnapshot(modernStringsRoot),
@@ -872,7 +962,7 @@ export function buildAffixDependencyAuditContext(sourceRoot, targetRoot = target
   const tables = {};
   for (const name of Object.keys(TABLE_CONFIG)) {
     tables[name] = {
-      source: loadTable(sourceRoot, name),
+      source: verifiedSource[name],
       target: loadTable(targetRoot, name),
       vanilla: loadTable(vanillaExcelRoot, name),
     };
@@ -1687,8 +1777,7 @@ function loadInputs(sourceRoot, catalog, resolvedTargetExcelRoot = targetExcelRo
   const vanilla = {};
   const target = {};
   for (const name of Object.keys(TABLE_CONFIG)) {
-    source[name] = loadTable(sourceRoot, name);
-    verifySourceTable(name, source[name], catalog.source.tables[name]);
+    source[name] = verifySourceTable(name, loadTable(sourceRoot, name), catalog.source.tables[name]);
     vanilla[name] = loadTable(vanillaExcelRoot, name);
     assert(
       vanilla[name].sha256 === catalog.vanillaBaseline[name],
@@ -1697,12 +1786,10 @@ function loadInputs(sourceRoot, catalog, resolvedTargetExcelRoot = targetExcelRo
     target[name] = loadTable(resolvedTargetExcelRoot, name);
   }
 
-  const sourceProperties = loadTable(sourceRoot, 'properties.txt');
-  const sourceItemTypes = loadTable(sourceRoot, 'itemtypes.txt');
-  const sourceItemStats = loadTable(sourceRoot, 'itemstatcost.txt');
-  verifySourceTable('properties.txt', sourceProperties, catalog.source.tables['properties.txt']);
-  verifySourceTable('itemtypes.txt', sourceItemTypes, catalog.source.tables['itemtypes.txt']);
-  verifySourceTable('itemstatcost.txt', sourceItemStats, catalog.source.tables['itemstatcost.txt']);
+  const sourceProperties = verifySourceTable('properties.txt', loadTable(sourceRoot, 'properties.txt'), catalog.source.tables['properties.txt']);
+  const sourceItemTypes = verifySourceTable('itemtypes.txt', loadTable(sourceRoot, 'itemtypes.txt'), catalog.source.tables['itemtypes.txt']);
+  const sourceItemStats = verifySourceTable('itemstatcost.txt', loadTable(sourceRoot, 'itemstatcost.txt'), catalog.source.tables['itemstatcost.txt']);
+  const sourceSkills = verifySourceTable('skills.txt', loadTable(sourceRoot, 'skills.txt'), catalog.source.tables['skills.txt']);
   const targetProperties = loadTable(resolvedTargetExcelRoot, 'properties.txt');
   const targetItemTypes = loadTable(resolvedTargetExcelRoot, 'itemtypes.txt');
   const targetItemStats = loadTable(resolvedTargetExcelRoot, 'itemstatcost.txt');
@@ -1720,6 +1807,7 @@ function loadInputs(sourceRoot, catalog, resolvedTargetExcelRoot = targetExcelRo
     sourceProperties,
     sourceItemTypes,
     sourceItemStats,
+    sourceSkills,
     targetProperties,
     targetItemTypes,
     targetItemStats,
@@ -1883,7 +1971,7 @@ export function run(argv = process.argv.slice(2)) {
     return;
   }
 
-  const sourceRoot = sourceRootFromArgs(argv);
+  const sourceRoot = resolvePd2AffixSourceRoot(argv);
   const resolvedTargetExcelRoot = targetExcelRootFromArgs(argv);
   assert(
     !apply || resolvedTargetExcelRoot === targetExcelRoot,

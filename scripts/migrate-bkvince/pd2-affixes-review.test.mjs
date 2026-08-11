@@ -15,14 +15,12 @@ import {
   NEW_AFFIX_LINE_DECISIONS,
 } from './pd2-affixes-decision-rules.mjs';
 import { compilePreview, validateDecisionExport } from './pd2-affixes-decisions-preview.mjs';
-import { buildAffixDependencyAuditContext } from './pd2-affixes-merge.mjs';
+import { buildAffixDependencyAuditContext, resolvePd2AffixSourceRoot } from './pd2-affixes-merge.mjs';
 
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 const missionRoot = path.join(repoRoot, 'Mission');
 const targetRoot = path.join(repoRoot, 'data-BKVince', 'BKVince.mpq', 'data', 'global', 'excel');
-const officialSourceRoot = path.join(repoRoot, 'analysis-cache', 'pd2-affixes-merge', 'official-s13');
-const mirrorSourceRoot = path.resolve(repoRoot, '..', 'PD2 Single PLayer', 'PD2-Single-Player-Plus-mod-main', 'data', 'global', 'excel');
-const sourceRoot = fs.existsSync(officialSourceRoot) ? officialSourceRoot : mirrorSourceRoot;
+const sourceRoot = resolvePd2AffixSourceRoot();
 const report = JSON.parse(fs.readFileSync(path.join(missionRoot, 'pd2-affixes-review.json'), 'utf8'));
 const highest = JSON.parse(fs.readFileSync(path.join(missionRoot, 'pd2-affixes-highest-level.json'), 'utf8'));
 const catalog = JSON.parse(fs.readFileSync(path.join(missionRoot, 'pd2-affixes-merge.catalog.json'), 'utf8'));

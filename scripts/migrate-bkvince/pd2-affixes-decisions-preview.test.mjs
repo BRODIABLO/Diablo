@@ -7,11 +7,12 @@ import {
   auditAffixProjection,
   buildAffixDependencyAuditContext,
   loadTable,
+  resolvePd2AffixSourceRoot,
 } from './pd2-affixes-merge.mjs';
 import { compilePreview } from './pd2-affixes-decisions-preview.mjs';
 
 const repoRoot = path.resolve(import.meta.dirname, '..', '..');
-const sourceRoot = path.join(repoRoot, 'analysis-cache', 'pd2-affixes-merge', 'official-s13');
+const sourceRoot = resolvePd2AffixSourceRoot();
 const targetRoot = path.join(
   repoRoot,
   'data-BKVince',
