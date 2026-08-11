@@ -228,8 +228,8 @@
   },
   "review": {
     "state": "review_only_no_import_approved",
-    "schemaVersion": 2,
-    "reviewId": "pd2-affixes-review-v2",
+    "schemaVersion": 3,
+    "reviewId": "pd2-affixes-review-v3",
     "entries": 2117,
     "counts": {
       "AUTOMAGIC_DEFERRED": 67,
@@ -240,17 +240,46 @@
       "PD2_NEW_REVIEW": 352,
       "BKV_ONLY": 120
     },
-    "comparisonHash": "AF951C498F21BE3CBC6E9A38F674056040DBA1FE779B4700D8A5EDE6C70286D2",
-    "jsonSha256": "7E6756D5436D7DF77710341DD92B1417CAE780EA0F3CA3C6A63AC08E76A6DC9D",
-    "htmlSha256": "32686D1155F5A5C928D498F87FF34CF8076D6709761468222294E5280D35D0C2",
-    "decisionSchemaVersion": 2,
+    "comparisonHash": "850CB7C87F74E3BDCF9B3254D0288F458375CEE3F3BDF54390EAFAD1BD908FE2",
+    "jsonSha256": "FBADEF9FB10C4E13DF474C5F3FD8FE2E8FBD5CB67EDF349CA1D35AC029F45FE2",
+    "htmlSha256": "41DC3D9D8EE2447D74C8270A71D39B9221F322BAABD2A64B990C9AF54AC6AB64",
+    "decisionSchemaVersion": 3,
     "protectedFields": ["maxlevel"],
     "previewOnly": true,
+    "documentationMap": {
+      "schemaVersion": 1,
+      "mapId": "pd2-affixes-documentation-map-v1",
+      "entries": 29,
+      "coverageCounts": {
+        "DOCUMENTED": 29,
+        "TABLE_ONLY": 1182,
+        "UNMAPPED": 906
+      },
+      "sha256": "BBAFD2E8B979F3AEC0A3239CEBA21B604DA2FB434AFA917C84DF25ECF051A8FD",
+      "source": {
+        "title": "Project Diablo 2 Item Affixes",
+        "url": "https://wiki.projectdiablo2.com/wiki/Item_Affixes",
+        "revisionId": 23938,
+        "revisionUrl": "https://wiki.projectdiablo2.com/w/index.php?title=Item_Affixes&oldid=23938",
+        "revisionTimestamp": "2026-07-26T11:49:54Z",
+        "mediaWikiSha1": "018f1d4a6ec618b5a52fcc5307be0e538366fa5a",
+        "retrievedAt": "2026-08-10",
+        "sections": [
+          "Removed Affixes",
+          "Affix Changes Compilation",
+          "Highest-Level Affixes"
+        ],
+        "policy": "Only exact table/sourceRow/fingerprint mappings are DOCUMENTED; unmatched table changes are TABLE_ONLY and unchanged/unrelated rows are UNMAPPED."
+      }
+    },
     "highestLevel": {
-      "entries": 143,
-      "conclusion": "ACTION_REQUIRED",
-      "jsonSha256": "2FDA76C21C0C6564D0C28B8AE05DA42EABED36E5884424CC4AD261D1399DA77B",
-      "htmlSha256": "20835AC2C12A76388088A0E95DE9B15EA7F6D419647B6CCD5A5093B6608F2298"
+      "schemaVersion": 3,
+      "reportId": "pd2-affixes-highest-level-v3",
+      "entries": 147,
+      "conclusion": "PARTIALLY_RELEVANT",
+      "comparisonHash": "850CB7C87F74E3BDCF9B3254D0288F458375CEE3F3BDF54390EAFAD1BD908FE2",
+      "jsonSha256": "60FCDDAB5AEBCEB534A253C52804D45451559B2C17F9F3AAFA2E3A646369B038",
+      "htmlSha256": "3B90332668A35423B19BE76D2811A316E6DF995AFD59215675E4BA4273ECE91F"
     }
   },
   "simulation": {

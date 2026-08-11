@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-11T00:22:17.5378151+00:00",
+    "generatedAt":  "2026-08-11T02:01:40.3252340+00:00",
     "root":  {
                  "name":  "pd2-affixes-index-7776be629d014bf58eb297d6a91ce01a",
                  "path":  ".",
@@ -37974,8 +37974,28 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "pd2-affixes-documentation-map.json",
+                                                           "path":  "Mission/pd2-affixes-documentation-map.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-affixes-highest-level.html",
+                                                           "path":  "Mission/pd2-affixes-highest-level.html",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-affixes-highest-level.json",
+                                                           "path":  "Mission/pd2-affixes-highest-level.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "pd2-affixes-merge.catalog.json",
                                                            "path":  "Mission/pd2-affixes-merge.catalog.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-affixes-merge.distribution.json",
+                                                           "path":  "Mission/pd2-affixes-merge.distribution.json",
                                                            "kind":  "file"
                                                        },
                                                        {
@@ -37991,16 +38011,6 @@
                                                        {
                                                            "name":  "pd2-affixes-review.json",
                                                            "path":  "Mission/pd2-affixes-review.json",
-                                                           "kind":  "file"
-                                                       },
-                                                       {
-                                                           "name":  "pd2-affixes-highest-level.html",
-                                                           "path":  "Mission/pd2-affixes-highest-level.html",
-                                                           "kind":  "file"
-                                                       },
-                                                       {
-                                                           "name":  "pd2-affixes-highest-level.json",
-                                                           "path":  "Mission/pd2-affixes-highest-level.json",
                                                            "kind":  "file"
                                                        },
                                                        {
@@ -38792,6 +38802,26 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
+                                                                                "name":  "pd2-affixes-decision-rules.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-affixes-decision-rules.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-affixes-decisions-preview.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-affixes-decisions-preview.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-affixes-decisions-preview.test.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-affixes-decisions-preview.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-affixes-distribution.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-affixes-distribution.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "pd2-affixes-merge.mjs",
                                                                                 "path":  "scripts/migrate-bkvince/pd2-affixes-merge.mjs",
                                                                                 "kind":  "file"
@@ -38812,8 +38842,8 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
-                                                                                "name":  "pd2-affixes-decisions-preview.mjs",
-                                                                                "path":  "scripts/migrate-bkvince/pd2-affixes-decisions-preview.mjs",
+                                                                                "name":  "pd2-affixes-review-ui.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-affixes-review-ui.mjs",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

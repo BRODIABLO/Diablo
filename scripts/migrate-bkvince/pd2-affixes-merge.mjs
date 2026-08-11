@@ -185,7 +185,7 @@ function findFile(root, normalizedName) {
   return path.join(root, matches[0]);
 }
 
-function loadTable(root, normalizedName) {
+export function loadTable(root, normalizedName) {
   const filePath = findFile(root, normalizedName);
   const rawBuffer = fs.readFileSync(filePath);
   const rawText = fs.readFileSync(filePath, ENCODING);
@@ -345,7 +345,7 @@ function keyedRows(table, keyHeader, signatureBuilder) {
   return result;
 }
 
-function propertyCompatibility(sourceTable, targetTable) {
+export function propertyCompatibility(sourceTable, targetTable) {
   const source = keyedRows(sourceTable, 'code', canonicalPropertySignature);
   const target = keyedRows(targetTable, 'code', canonicalPropertySignature);
   const compatible = new Set();
@@ -364,7 +364,7 @@ function propertyCompatibility(sourceTable, targetTable) {
   return { source, target, compatible, incompatible, missing };
 }
 
-function itemStatIndex(table) {
+export function itemStatIndex(table) {
   return keyedRows(table, 'Stat', null);
 }
 
@@ -416,7 +416,7 @@ export function propertyFunctionValues(func, minimum, maximum, parameter, fixedV
   return [minimum, maximum, fixedValue].filter((value) => value !== null);
 }
 
-function rowItemStatAudit(row, rowIndexes, properties, itemStats, label) {
+export function rowItemStatAudit(row, rowIndexes, properties, itemStats, label) {
   const reasons = [];
   for (let slot = 1; slot <= 3; slot += 1) {
     const rawProperty = rowCell(row, rowIndexes, `mod${slot}code`);
@@ -451,6 +451,20 @@ function rowItemStatAudit(row, rowIndexes, properties, itemStats, label) {
           }
         }
 
+        const sendBits = optionalInteger(
+          rowCell(targetStat.row, itemStats.targetIndexes, 'Send Bits'),
+          `${rawStat} Send Bits`,
+        );
+        if (sendBits) {
+          assert(sendBits > 0 && sendBits <= 32, `${rawStat}: unsupported Send Bits ${sendBits}`);
+          const signed = rowCell(targetStat.row, itemStats.targetIndexes, 'Signed') === '1' && sendBits < 32;
+          const sendMinimum = signed ? -Number(2n ** BigInt(sendBits - 1)) : 0;
+          const sendMaximum = signed ? Number((2n ** BigInt(sendBits - 1)) - 1n) : Number((2n ** BigInt(sendBits)) - 1n);
+          for (const value of values) {
+            if (value < sendMinimum || value > sendMaximum) reasons.push(`${rawProperty}:${rawStat}:${value} outside send ${sendMinimum}..${sendMaximum}`);
+          }
+        }
+
         const parameterBits = optionalInteger(
           rowCell(targetStat.row, itemStats.targetIndexes, 'Save Param Bits'),
           `${rawStat} Save Param Bits`,
@@ -464,13 +478,26 @@ function rowItemStatAudit(row, rowIndexes, properties, itemStats, label) {
             }
           }
         }
+        const sendParameterBits = optionalInteger(
+          rowCell(targetStat.row, itemStats.targetIndexes, 'Send Param Bits'),
+          `${rawStat} Send Param Bits`,
+        );
+        if (sendParameterBits) {
+          assert(sendParameterBits > 0 && sendParameterBits <= 32, `${rawStat}: unsupported Send Param Bits ${sendParameterBits}`);
+          const parameterCandidates = [parameter, fixedValue].filter((value) => value !== null);
+          const minimumParameter = sendParameterBits < 32 ? -Number(2n ** BigInt(sendParameterBits - 1)) : -2147483648;
+          const maximumParameter = sendParameterBits < 32 ? Number((2n ** BigInt(sendParameterBits - 1)) - 1n) : 2147483647;
+          for (const value of parameterCandidates) {
+            if (value < minimumParameter || value > maximumParameter) reasons.push(`${rawProperty}:${rawStat}:param ${value} outside send ${minimumParameter}..${maximumParameter}`);
+          }
+        }
       }
     }
   }
   return { ok: reasons.length === 0, reasons: uniqueValues(reasons) };
 }
 
-function itemTypeIndex(table) {
+export function itemTypeIndex(table) {
   const indexes = headerIndexes(table);
   const codeColumn = indexes.get('code');
   assert(codeColumn !== undefined, 'ItemTypes is missing Code');
@@ -517,7 +544,7 @@ function rowIdentity(row, indexes) {
   return JSON.stringify(EXISTING_IDENTITY_HEADERS.map((header) => rowCell(row, indexes, header)));
 }
 
-function isMapRow(row, indexes, sourceItemTypes) {
+export function isMapRow(row, indexes, sourceItemTypes) {
   if (rowProperties(row, indexes).some((code) => /^map-/.test(code))) return true;
   return usedValues(row, indexes, ITEM_TYPE_HEADERS)
     .some((code) => itemTypeReaches(sourceItemTypes, code, 'map'));
@@ -828,6 +855,232 @@ function auditGroups(name, config, source, target, selected, catalog) {
   return groups;
 }
 
+export function buildAffixDependencyAuditContext(sourceRoot, targetRoot = targetExcelRoot) {
+  const sourceProperties = loadTable(sourceRoot, 'properties.txt');
+  const targetProperties = loadTable(targetRoot, 'properties.txt');
+  const properties = propertyCompatibility(sourceProperties.table, targetProperties.table);
+  const sourceItemStatsLoaded = loadTable(sourceRoot, 'itemstatcost.txt');
+  const targetItemStatsLoaded = loadTable(targetRoot, 'itemstatcost.txt');
+  const sourceItemTypesLoaded = loadTable(sourceRoot, 'itemtypes.txt');
+  const targetItemTypesLoaded = loadTable(targetRoot, 'itemtypes.txt');
+  const sourceSkills = loadTable(sourceRoot, 'skills.txt');
+  const targetSkills = loadTable(targetRoot, 'skills.txt');
+  const tables = {};
+  for (const name of Object.keys(TABLE_CONFIG)) {
+    tables[name] = {
+      source: loadTable(sourceRoot, name),
+      target: loadTable(targetRoot, name),
+      vanilla: loadTable(vanillaExcelRoot, name),
+    };
+  }
+  return {
+    sourceRoot,
+    targetRoot,
+    properties,
+    sourceItemTypes: itemTypeIndex(sourceItemTypesLoaded.table),
+    targetItemTypes: itemTypeIndex(targetItemTypesLoaded.table),
+    itemStats: {
+      source: itemStatIndex(sourceItemStatsLoaded.table),
+      target: itemStatIndex(targetItemStatsLoaded.table),
+      sourceIndexes: headerIndexes(sourceItemStatsLoaded.table),
+      targetIndexes: headerIndexes(targetItemStatsLoaded.table),
+    },
+    sourceSkills,
+    targetSkills,
+    tables,
+    modernLocalization: loadLocalizationBase(modernStringsRoot),
+    legacyLocalization: loadLocalizationBase(legacyStringsRoot),
+  };
+}
+
+function objectAsTargetRow(object, targetTable) {
+  return targetTable.headers.map((header) => object?.[header] ?? '');
+}
+
+function skillNameAt(loaded, id) {
+  if (!Number.isSafeInteger(id) || id < 0) return null;
+  const indexes = headerIndexes(loaded.table);
+  const idColumn = indexes.get('*id') ?? indexes.get('id');
+  const nameColumn = indexes.get('skill');
+  if (idColumn === undefined || nameColumn === undefined) return null;
+  const matches = loaded.table.rows.filter((row) => Number(row[idColumn]) === id);
+  if (matches.length !== 1) return null;
+  return matches[0][nameColumn] ?? null;
+}
+
+export function auditAffixProjection(context, {
+  tableName,
+  sourceRow,
+  targetRow,
+  projected,
+  sourceOriginal,
+  kind,
+  catalog,
+  provenanceByField = {},
+}) {
+  const tableContext = context.tables[tableName];
+  assert(tableContext, `Unknown affix table ${tableName}`);
+  const targetIndexes = headerIndexes(tableContext.target.table);
+  const projectedRow = objectAsTargetRow(projected, tableContext.target.table);
+  if (kind === 'append') projectedRow[targetIndexes.get('multiply')] = '0';
+  const provenance = new Map(Object.entries(provenanceByField).map(([field, origin]) => [field.toLowerCase(), origin]));
+  const adoptsPd2 = (field) => kind === 'append' || provenance.get(field.toLowerCase()) === 'PD2';
+  const dependencies = [];
+  const conflicts = [];
+  const propertyCodes = rowProperties(projectedRow, targetIndexes);
+  const supportedFunctions = new Set([
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '36',
+  ]);
+  for (let slot = 1; slot <= 3; slot += 1) {
+    const code = rowCell(projectedRow, targetIndexes, `mod${slot}code`).toLowerCase();
+    if (!code) continue;
+    const sourceRecord = context.properties.source.get(code);
+    const targetRecord = context.properties.target.get(code);
+    const sourceSemantics = adoptsPd2(`mod${slot}code`);
+    let status = 'compatible-existing';
+    let reason = 'Property exists in BKVince with target runtime semantics.';
+    if (!targetRecord) {
+      status = 'absent';
+      reason = 'Property is absent from BKVince.';
+    } else if (sourceSemantics && !sourceRecord) {
+      status = 'absent-source-definition';
+      reason = 'The adopted PD2 Property has no unique source definition.';
+    } else if (sourceSemantics && JSON.stringify(sourceRecord.signature) !== JSON.stringify(targetRecord.signature)) {
+      status = 'incompatible';
+      reason = 'PD2 and BKVince Property function/stat signatures differ.';
+    } else if (sourceSemantics) {
+      status = 'compatible';
+      reason = 'PD2 and BKVince Property signatures are identical.';
+    }
+    dependencies.push({ kind: 'Property', code, slot, provenance: sourceSemantics ? 'PD2' : 'BKVINCE_OR_CUSTOM', status, reason, signature: targetRecord?.signature ?? null });
+    if (['absent', 'absent-source-definition', 'incompatible'].includes(status)) conflicts.push({ kind: 'Property', code, reason });
+    const property = targetRecord;
+    if (property) {
+      for (const [func, stat] of property.signature) {
+        if (!func) continue;
+        const functionStatus = supportedFunctions.has(func) ? 'supported' : 'unsupported';
+        dependencies.push({ kind: 'PropertyFunction', code: func, property: code, slot, status: functionStatus });
+        if (functionStatus === 'unsupported') conflicts.push({ kind: 'PropertyFunction', code: func, reason: `Property ${code} uses an unsupported function.` });
+        if (!stat) continue;
+        const statCode = stat.toLowerCase();
+        const statRecord = context.itemStats.target.get(statCode);
+        const statStatus = statRecord ? 'compatible-existing' : 'absent';
+        dependencies.push({ kind: 'ItemStatCost', code: statCode, status: statStatus, property: code, func });
+        if (!statRecord) conflicts.push({ kind: 'ItemStatCost', code: statCode, reason: `Required by ${code} func ${func}` });
+      }
+    }
+  }
+  for (const header of ITEM_TYPE_HEADERS) {
+    const code = rowCell(projectedRow, targetIndexes, header).toLowerCase();
+    if (!code) continue;
+    const sourceType = context.sourceItemTypes.get(code);
+    const targetType = context.targetItemTypes.get(code);
+    const sourceSemantics = adoptsPd2(header);
+    let status = 'compatible-existing';
+    let reason = 'ItemType exists in BKVince.';
+    if (!targetType) { status = 'absent'; reason = 'ItemType is absent from BKVince.'; }
+    else if (sourceSemantics && !sourceType) { status = 'absent-source-definition'; reason = 'The adopted PD2 ItemType has no unique source definition.'; }
+    else if (sourceSemantics && (sourceType.equiv1 !== targetType.equiv1 || sourceType.equiv2 !== targetType.equiv2)) {
+      status = 'incompatible'; reason = 'PD2 and BKVince ItemType ancestry differs.';
+    } else if (sourceSemantics) { status = 'compatible'; reason = 'PD2 and BKVince ItemType ancestry matches.'; }
+    dependencies.push({ kind: 'ItemType', code, field: header, provenance: sourceSemantics ? 'PD2' : 'BKVINCE_OR_CUSTOM', status, reason });
+    if (['absent', 'absent-source-definition', 'incompatible'].includes(status)) conflicts.push({ kind: 'ItemType', code, reason });
+  }
+  if (isMapRow(projectedRow, targetIndexes, context.targetItemTypes)) {
+    conflicts.push({ kind: 'system', code: 'map', reason: 'Map affixes require a separate governed system.' });
+  }
+  const targetPropertyContext = { source: context.properties.target };
+  const targetStatContext = {
+    source: context.itemStats.target,
+    target: context.itemStats.target,
+    sourceIndexes: context.itemStats.targetIndexes,
+    targetIndexes: context.itemStats.targetIndexes,
+  };
+  const serialization = propertyCodes.every((code) => context.properties.target.has(code))
+    ? rowItemStatAudit(
+      projectedRow,
+      targetIndexes,
+      targetPropertyContext,
+      targetStatContext,
+      `${tableName} ${kind} source ${sourceRow ?? '-'} target ${targetRow ?? '-'}`,
+    )
+    : { ok: false, reasons: ['serialization audit blocked by absent target Property'] };
+  for (const reason of serialization.reasons) conflicts.push({ kind: 'serialization', code: 'ItemStatCost', reason });
+
+  const skillProperties = new Set(catalog.policy.skillParamProperties.map((code) => code.toLowerCase()));
+  for (let slot = 1; slot <= 3; slot += 1) {
+    const code = rowCell(projectedRow, targetIndexes, `mod${slot}code`).toLowerCase();
+    const property = context.properties.target.get(code);
+    const functions = new Set(property?.signature.map(([func]) => func).filter(Boolean) ?? []);
+    const rawParameter = rowCell(projectedRow, targetIndexes, `mod${slot}param`);
+    const parameter = optionalInteger(rawParameter, `${tableName} mod${slot}param`);
+    if (functions.has('10')) {
+      const valid = parameter !== null && parameter >= 0 && parameter <= 20;
+      dependencies.push({ kind: 'SkillTabParameter', code: rawParameter, status: valid ? 'compatible' : 'out-of-range', property: code });
+      if (!valid) conflicts.push({ kind: 'SkillTabParameter', code: rawParameter, reason: 'Skill-tab parameter must be a D2R class tab ID in 0..20.' });
+    }
+    if (functions.has('18')) {
+      const valid = parameter !== null && parameter >= 0 && parameter <= 3;
+      dependencies.push({ kind: 'TimeParameter', code: rawParameter, status: valid ? 'compatible' : 'out-of-range', property: code });
+      if (!valid) conflicts.push({ kind: 'TimeParameter', code: rawParameter, reason: 'Time-of-day parameter must be in 0..3.' });
+    }
+    if (!skillProperties.has(code) && !['9', '11', '19'].some((func) => functions.has(func))) continue;
+    const sourceSemantics = kind === 'append' || adoptsPd2(`mod${slot}code`) || adoptsPd2(`mod${slot}param`);
+    const sourceSkill = skillNameAt(context.sourceSkills, parameter);
+    const targetSkill = skillNameAt(context.targetSkills, parameter);
+    const status = !targetSkill ? 'absent' : !sourceSemantics ? 'compatible-existing' : sourceSkill === targetSkill ? 'compatible' : 'incompatible';
+    dependencies.push({ kind: 'SkillParameter', code: rawParameter, provenance: sourceSemantics ? 'PD2' : 'BKVINCE_OR_CUSTOM', status, property: code, sourceSkill, targetSkill });
+    if (!['compatible', 'compatible-existing'].includes(status)) conflicts.push({ kind: 'SkillParameter', code: rawParameter, reason: `Numeric skill parameter is not name-stable (${sourceSkill ?? 'missing'} / ${targetSkill ?? 'missing'}).` });
+  }
+
+  const group = rowCell(projectedRow, targetIndexes, 'group');
+  let groupAudit = { group, status: 'none' };
+  if (group) {
+    const targetGroups = new Set(tableContext.target.table.rows.map((row) => rowCell(row, targetIndexes, 'group')).filter(Boolean));
+    if (kind === 'existing' && targetRow !== null && group === cell(tableContext.target.table, targetIndexes, targetRow, 'group')) {
+      groupAudit = { group, status: 'existing-compatible' };
+    } else if (!targetGroups.has(group)) groupAudit = { group, status: 'free' };
+    else {
+      const config = TABLE_CONFIG[tableName];
+      const sourceIndexes = headerIndexes(tableContext.source.table);
+      const anchored = new Set();
+      for (let row = 0; row < config.mappedRows; row += 1) {
+        if (cell(tableContext.source.table, sourceIndexes, row, 'group') === group
+          && cell(tableContext.target.table, targetIndexes, config.targetRow(row), 'group') === group) anchored.add(group);
+      }
+      const safe = new Set(catalog.policy.safeUnmappedGroupCollisions[tableName] ?? []);
+      groupAudit = { group, status: anchored.has(group) ? 'anchored' : safe.has(group) ? 'explicit-safe' : 'incompatible-collision' };
+      if (groupAudit.status === 'incompatible-collision') conflicts.push({ kind: 'Group', code: group, reason: 'Unanchored target group collision.' });
+    }
+  }
+
+  const name = rowCell(projectedRow, targetIndexes, 'Name');
+  const localization = {
+    key: name,
+    modern: context.modernLocalization.byKey.has(name) ? 'existing-compatible' : 'missing-addition-required',
+    legacy: context.legacyLocalization.byKey.has(name) ? 'existing-compatible' : 'missing-addition-required',
+  };
+  if (kind === 'append' && tableContext.target.table.rows.some((row) => sameArrays(row, projectedRow))) {
+    conflicts.push({ kind: 'duplicate', code: name, reason: 'Projected row is an exact duplicate of a BKVince row.' });
+  }
+  if (kind === 'append') {
+    const vanillaIndexes = headerIndexes(tableContext.vanilla.table);
+    const projectedIdentity = rowIdentity(projectedRow, targetIndexes);
+    if (tableContext.vanilla.table.rows.some((row) => rowIdentity(row, vanillaIndexes) === projectedIdentity)) {
+      conflicts.push({ kind: 'relocatedVanilla', code: name, reason: 'Source identity already exists in vanilla at another ordinal.' });
+    }
+  }
+  return {
+    status: conflicts.length ? 'blocked' : 'compatible',
+    kind,
+    dependencies,
+    serialization,
+    group: groupAudit,
+    localization,
+    conflicts,
+  };
+}
+
 function loadLocalizationBase(root) {
   const filePath = path.join(root, 'item-nameaffixes.json');
   const rawBuffer = fs.readFileSync(filePath);
@@ -970,6 +1223,64 @@ function buildLocalization(selectedByTable, catalog) {
       baselineRows: legacyBase.entries.length,
       serialized: legacySerialized,
     },
+  };
+}
+
+export function planAffixLocalization(keys, catalog) {
+  const orderedKeys = uniqueValues(keys.filter(Boolean));
+  const modernBase = loadLocalizationBase(modernStringsRoot);
+  const legacyBase = loadLocalizationBase(legacyStringsRoot);
+  const modernIds = allLocalizationIds(modernStringsRoot);
+  const legacyIds = allLocalizationIds(legacyStringsRoot);
+  const reserved = new Map();
+  const conflicts = [];
+  let nextId = catalog.policy.localization.firstNewId;
+  const idConflicts = (index, id, key) => (index.get(id) ?? []).filter((entry) => entry.key !== key);
+  const allocate = (key) => {
+    const modern = modernBase.byKey.get(key);
+    const legacy = legacyBase.byKey.get(key);
+    if (modern && legacy && modern.id !== legacy.id) {
+      conflicts.push({ kind: 'Localization', code: key, reason: `Modern and legacy IDs differ (${modern.id}/${legacy.id}).` });
+      return null;
+    }
+    let id = modern?.id ?? legacy?.id ?? null;
+    if (id === null) {
+      while (modernIds.has(nextId) || legacyIds.has(nextId) || reserved.has(nextId)) nextId += 1;
+      id = nextId;
+      nextId += 1;
+    }
+    if (!Number.isSafeInteger(id)) {
+      conflicts.push({ kind: 'Localization', code: key, reason: 'No stable numeric localization ID is available.' });
+      return null;
+    }
+    const collisions = [...idConflicts(modernIds, id, key), ...idConflicts(legacyIds, id, key)];
+    if (collisions.length || (reserved.has(id) && reserved.get(id) !== key)) {
+      conflicts.push({ kind: 'Localization', code: key, reason: `Localization ID ${id} is already used by another key.` });
+      return null;
+    }
+    reserved.set(id, key);
+    return id;
+  };
+  const entries = orderedKeys.map((key) => {
+    const modern = modernBase.byKey.get(key);
+    const legacy = legacyBase.byKey.get(key);
+    let id;
+    if (modern && legacy) {
+      id = modern.id;
+      if (modern.id !== legacy.id) conflicts.push({ kind: 'Localization', code: key, reason: `Modern and legacy IDs differ (${modern.id}/${legacy.id}).` });
+    } else id = allocate(key);
+    return {
+      key,
+      id,
+      modern: modern ? { status: 'existing-compatible', id: modern.id } : { status: 'addition-planned', entry: id === null ? null : localizedEntry(id, key, MODERN_LOCALES) },
+      legacy: legacy ? { status: 'existing-compatible', id: legacy.id } : { status: 'addition-planned', entry: id === null ? null : localizedEntry(id, key, LEGACY_LOCALES) },
+    };
+  });
+  return {
+    status: conflicts.length ? 'blocked' : 'planned',
+    format: { encoding: 'UTF-8 BOM', lineEndings: 'LF', finalEol: false },
+    entries,
+    conflicts,
   };
 }
 

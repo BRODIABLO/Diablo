@@ -345,24 +345,40 @@ qu'une sélection produit soit approuvée et réimplantée.
   `ACB99D4F703FEC5DC486144DD8856A1E8566EAC859FE49E526209E6604991C6A`.
 - Tables de développement et runtime : **baseline BKVince restaurée**, CRLF et
   round-trip gouverné verts ; aucun affixe PD2 importé n'est actif.
-- Comparateur produit V2 : **2 117 occurrences** dans
+- Comparateur produit V3 : **2 117 occurrences** dans
   `Mission/pd2-affixes-review.html`, avec Vanilla D2R 3.2, BKVince et PD2 S13
   côte à côte, les trois comparaisons bilatérales, les effets complets et tous
   les champs divergents. Les catégories de revue sont séparées, les familles
   sont regroupées et AutoMagic demeure masqué par défaut et différé.
-- Décisions : schéma V2 par champ avec notes, reprise inter-machine et refus des
-  exports dont le hash de comparaison, la source PD2, la baseline BKVince ou le
+- Documentation : carte gouvernée de **29 correspondances occurrence-exactes**
+  (`table`, `sourceRow`, `fingerprint`) vers les sections PD2 `Removed Affixes`,
+  `Affix Changes Compilation` et `Highest-Level Affixes`, figée sur la révision
+  MediaWiki **23938** du `2026-07-26T11:49:54Z` (SHA1 MediaWiki
+  `018f1d4a6ec618b5a52fcc5307be0e538366fa5a`). Tous les liens `DOCUMENTED`
+  visent `oldid=23938`. La couverture V3 distingue **29 `DOCUMENTED`**,
+  **1 182 `TABLE_ONLY`** et **906 `UNMAPPED`** ; aucune différence de table non
+  appariée n'est présentée comme documentée.
+- Décisions : schéma V3 par champ et, pour chaque nouvel affixe, décision de
+  ligne explicite (`IMPORT_PD2_AFFIX`, `EXCLUDE_PD2_AFFIX`, `DISCUSS` ou
+  `IMPORT_CUSTOMIZED`), avec notes, reprise inter-machine et refus des exports
+  dont le hash de comparaison, la source PD2, la baseline BKVince ou le
   fingerprint d'occurrence diffèrent. Tout `maxlevel` BKVince existant est
   protégé et préservé par défaut.
 - Prévisualisation : `pd2-affixes-decisions-preview.mjs` produit seulement le
   manifeste proposé, les cellules, lignes, dépendances, localisations,
   conflits, décisions incomplètes et diff textuel. Il ne possède aucun chemin
   d'application gameplay.
-- Highest-Level Affixes : rapport séparé de **143 occurrences** classé
-  **ACTION_REQUIRED** parce que `of Vita` à `alvl=110` n'est atteignable sur
-  aucune base par la formule bornée à 99. Le rapport calcule aussi les seuils
-  théoriques par base pour `ilvl`/`qlvl`/`magic_lvl`/`alvl` et distingue drops,
-  crafts, rerolls et gambling sans inventer un chemin d'acquisition non prouvé.
+- Highest-Level Affixes V3 : rapport séparé de **147 occurrences** classé
+  **PARTIALLY_RELEVANT**, avec analyse indépendante des versions vanilla,
+  BKVince et PD2 selon présence, `spawnable`, `level`, `maxlevel`, catégories
+  d'objets et accessibilité théorique. `of Vita` à la ligne source 340 est
+  identique et `spawnable` dans les trois versions, mais son `alvl=110` dépasse
+  la borne 99 :
+  il reste **informatif, en attente de confirmation historique**, et ne prouve
+  aucune régression BKVince. Le rapport distingue drops, crafts, rerolls et
+  gambling sans inventer un chemin d'acquisition non prouvé.
+- Suite gouvernée du comparateur V3 : **15/15**, y compris l'interdiction de
+  tous les chemins `--apply`.
 - Validations de la revue, du compilateur et de l'oracle : **18/18**.
 - La suite Hero globale conserve **six attentes hors périmètre déjà décalées**
   dans les baselines belt/monsters/sets/properties ; ce blocage n'est pas une
@@ -383,9 +399,10 @@ qu'une sélection produit soit approuvée et réimplantée.
 ## Prochain gate
 
 Vincent examine `Mission/pd2-affixes-review.html`, décide chaque champ divergent
-avec `KEEP_BKVINCE`, `ADOPT_PD2`, `CUSTOM` ou `DISCUSS`, ajoute ses notes puis
-exporte `pd2-affixes-decisions-v2.json`. L'agent lance ensuite uniquement le
-compilateur de prévisualisation, résout les conflits et dépendances, présente le
-lot exact et attend une nouvelle directive `IMPLEMENTE` avant toute mutation
-gameplay. Aucun runtime ne reprend avant ce gate. AutoMagic reste séparé et
-différé.
+avec `KEEP_BKVINCE`, `ADOPT_PD2`, `CUSTOM` ou `DISCUSS`, tranche explicitement
+chaque nouvelle ligne, ajoute ses notes puis exporte
+`pd2-affixes-decisions-v3.json`. L'agent lance ensuite uniquement le compilateur
+de prévisualisation, résout les conflits et dépendances, présente le lot exact et
+attend une nouvelle directive `IMPLEMENTE` avant toute mutation gameplay. Les
+chemins `--apply` restent interdits, aucun runtime ne reprend avant ce gate et
+AutoMagic reste séparé et différé.
