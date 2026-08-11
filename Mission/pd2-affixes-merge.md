@@ -345,13 +345,25 @@ qu'une sélection produit soit approuvée et réimplantée.
   `ACB99D4F703FEC5DC486144DD8856A1E8566EAC859FE49E526209E6604991C6A`.
 - Tables de développement et runtime : **baseline BKVince restaurée**, CRLF et
   round-trip gouverné verts ; aucun affixe PD2 importé n'est actif.
-- Revue de sélection : **2 117 occurrences** comparées dans
-  `Mission/pd2-affixes-review.html` et son JSON gouverné — 755 communes, 447
-  modifiées par PD2, 134 supprimées/désactivées par PD2, 129 propres à
-  BKVince, 71 retunes candidates, 200 nouveaux candidats techniquement
-  portables, 363 nouveaux non retenus automatiquement, et 18 AutoMagic
-  différés. Toutes les décisions d'import restent à `À décider`.
-- Validations de la revue et de l'oracle : **11/11**.
+- Comparateur produit V2 : **2 117 occurrences** dans
+  `Mission/pd2-affixes-review.html`, avec Vanilla D2R 3.2, BKVince et PD2 S13
+  côte à côte, les trois comparaisons bilatérales, les effets complets et tous
+  les champs divergents. Les catégories de revue sont séparées, les familles
+  sont regroupées et AutoMagic demeure masqué par défaut et différé.
+- Décisions : schéma V2 par champ avec notes, reprise inter-machine et refus des
+  exports dont le hash de comparaison, la source PD2, la baseline BKVince ou le
+  fingerprint d'occurrence diffèrent. Tout `maxlevel` BKVince existant est
+  protégé et préservé par défaut.
+- Prévisualisation : `pd2-affixes-decisions-preview.mjs` produit seulement le
+  manifeste proposé, les cellules, lignes, dépendances, localisations,
+  conflits, décisions incomplètes et diff textuel. Il ne possède aucun chemin
+  d'application gameplay.
+- Highest-Level Affixes : rapport séparé de **143 occurrences** classé
+  **ACTION_REQUIRED** parce que `of Vita` à `alvl=110` n'est atteignable sur
+  aucune base par la formule bornée à 99. Le rapport calcule aussi les seuils
+  théoriques par base pour `ilvl`/`qlvl`/`magic_lvl`/`alvl` et distingue drops,
+  crafts, rerolls et gambling sans inventer un chemin d'acquisition non prouvé.
+- Validations de la revue, du compilateur et de l'oracle : **18/18**.
 - La suite Hero globale conserve **six attentes hors périmètre déjà décalées**
   dans les baselines belt/monsters/sets/properties ; ce blocage n'est pas une
   régression du merge d'affixes.
@@ -370,9 +382,10 @@ qu'une sélection produit soit approuvée et réimplantée.
 
 ## Prochain gate
 
-Vincent examine `Mission/pd2-affixes-review.html`, filtre par statut et choisit
-pour chaque occurrence `Importer PD2`, `Garder BKVince`, `Exclure` ou
-`À discuter`, puis exporte `pd2-affixes-decisions.json`. L'agent valide ensuite
-les dépendances et l'impact uniquement des lignes approuvées, présente le lot
-exact et attend une nouvelle autorisation avant toute mutation gameplay. Aucun
-runtime ne reprend avant ce gate. AFM-03 reste séparé et différé.
+Vincent examine `Mission/pd2-affixes-review.html`, décide chaque champ divergent
+avec `KEEP_BKVINCE`, `ADOPT_PD2`, `CUSTOM` ou `DISCUSS`, ajoute ses notes puis
+exporte `pd2-affixes-decisions-v2.json`. L'agent lance ensuite uniquement le
+compilateur de prévisualisation, résout les conflits et dépendances, présente le
+lot exact et attend une nouvelle directive `IMPLEMENTE` avant toute mutation
+gameplay. Aucun runtime ne reprend avant ce gate. AutoMagic reste séparé et
+différé.

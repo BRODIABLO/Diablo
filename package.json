@@ -41,6 +41,7 @@
     "test:bkvince-itemtypes": "node scripts/migrate-bkvince/rebuild-itemtypes.js --check",
     "generate:bkvince-pd2-affixes": "node scripts/migrate-bkvince/pd2-affixes-review.mjs",
     "generate:bkvince-pd2-affixes-review": "node scripts/migrate-bkvince/pd2-affixes-review.mjs",
+    "preview:bkvince-pd2-affix-decisions": "node scripts/migrate-bkvince/pd2-affixes-decisions-preview.mjs",
     "test:bkvince-pd2-affixes": "node --test scripts/migrate-bkvince/pd2-affixes-merge.test.mjs scripts/migrate-bkvince/pd2-affixes-review.test.mjs && node scripts/migrate-bkvince/pd2-affixes-review.mjs --check",
     "generate:bkvince-rift-levelgroups": "node scripts/migrate-bkvince/rift-terror-zone-group.js",
     "test:bkvince-rift-levelgroups": "node scripts/migrate-bkvince/rift-terror-zone-group.js --check",

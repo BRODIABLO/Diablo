@@ -553,7 +553,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/pd2-affixes-merge.md",
-      "nextGate": "The AFM-01/02 prototype is rolled back from development and runtime; all four files match the pre-merge BKVince baselines and no PD2 affix is approved. Vincent reviews the governed 2,117-entry comparison, including PD2 additions, modifications and deletions, then exports explicit import/keep/exclude/discuss decisions. Only that approved subset may proceed to dependency closure and a new implementation gate. Do not displace Mission/CURRENT.md; AutoMagic remains deferred.",
+      "nextGate": "The AFM-01/02 prototype remains rolled back and no PD2 affix is approved. Vincent uses the governed V2 three-way comparator to decide each differing field, with every existing BKVince MaxLevel protected by default, then exports the hash-bound decision file. Run only the preview compiler, resolve incomplete choices, conflicts, dependencies and localizations, and present the exact proposed lot before requesting a new IMPLEMENTE directive. Do not displace Mission/CURRENT.md; AutoMagic remains deferred.",
       "include": [
         "Mission/pd2-affixes-merge*",
         "scripts/*pd2-affix*/**",

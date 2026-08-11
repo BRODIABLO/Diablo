@@ -228,20 +228,30 @@
   },
   "review": {
     "state": "review_only_no_import_approved",
+    "schemaVersion": 2,
+    "reviewId": "pd2-affixes-review-v2",
     "entries": 2117,
     "counts": {
-      "shared": 755,
-      "pd2_modified": 447,
-      "retune_deferred": 7,
-      "pd2_new_deferred": 11,
-      "pd2_new_review": 363,
-      "bkv_only": 129,
-      "pd2_deleted": 134,
-      "retune_candidate": 71,
-      "pd2_new_portable": 200
+      "AUTOMAGIC_DEFERRED": 67,
+      "UNCHANGED_BY_PD2": 730,
+      "PD2_MODIFIED": 514,
+      "PD2_DELETED": 134,
+      "PD2_NEW_PORTABLE": 200,
+      "PD2_NEW_REVIEW": 352,
+      "BKV_ONLY": 120
     },
-    "jsonSha256": "4B72B64D76EAABE0E360C5C8342F76CAD41FDD52283D9C3C0E38C1BF93570681",
-    "htmlSha256": "B8961B0D608DB593C540165D7CC7B7CD497085F25740D3C05C69CF150A7AEB54"
+    "comparisonHash": "AF951C498F21BE3CBC6E9A38F674056040DBA1FE779B4700D8A5EDE6C70286D2",
+    "jsonSha256": "7E6756D5436D7DF77710341DD92B1417CAE780EA0F3CA3C6A63AC08E76A6DC9D",
+    "htmlSha256": "32686D1155F5A5C928D498F87FF34CF8076D6709761468222294E5280D35D0C2",
+    "decisionSchemaVersion": 2,
+    "protectedFields": ["maxlevel"],
+    "previewOnly": true,
+    "highestLevel": {
+      "entries": 143,
+      "conclusion": "ACTION_REQUIRED",
+      "jsonSha256": "2FDA76C21C0C6564D0C28B8AE05DA42EABED36E5884424CC4AD261D1399DA77B",
+      "htmlSha256": "20835AC2C12A76388088A0E95DE9B15EA7F6D419647B6CCD5A5093B6608F2298"
+    }
   },
   "simulation": {
     "beforeCommit": "756df5f53109729f16643b36aa459fead4cdbf94",

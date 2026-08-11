@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-10T22:40:05.0325124+00:00",
+    "generatedAt":  "2026-08-11T00:22:17.5378151+00:00",
     "root":  {
                  "name":  "pd2-affixes-index-7776be629d014bf58eb297d6a91ce01a",
                  "path":  ".",
@@ -37994,6 +37994,16 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "pd2-affixes-highest-level.html",
+                                                           "path":  "Mission/pd2-affixes-highest-level.html",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-affixes-highest-level.json",
+                                                           "path":  "Mission/pd2-affixes-highest-level.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "pd2-game-mechanics-vs-bkvince-audit.md",
                                                            "path":  "Mission/pd2-game-mechanics-vs-bkvince-audit.md",
                                                            "kind":  "file"
@@ -38799,6 +38809,11 @@
                                                                             {
                                                                                 "name":  "pd2-affixes-review.test.mjs",
                                                                                 "path":  "scripts/migrate-bkvince/pd2-affixes-review.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-affixes-decisions-preview.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-affixes-decisions-preview.mjs",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

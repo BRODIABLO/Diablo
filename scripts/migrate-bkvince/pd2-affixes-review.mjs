@@ -8,37 +8,36 @@ import { parseOrdinalSpec } from './pd2-affixes-merge.mjs';
 
 const require = createRequire(import.meta.url);
 const { ENCODING, parseTable, serializeTable } = require('../build-data/tsv.js');
-const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
+export const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 const catalogPath = path.join(repoRoot, 'Mission', 'pd2-affixes-merge.catalog.json');
 const outputJson = path.join(repoRoot, 'Mission', 'pd2-affixes-review.json');
 const outputHtml = path.join(repoRoot, 'Mission', 'pd2-affixes-review.html');
+const highestJson = path.join(repoRoot, 'Mission', 'pd2-affixes-highest-level.json');
+const highestHtml = path.join(repoRoot, 'Mission', 'pd2-affixes-highest-level.html');
 const targetRoot = path.join(repoRoot, 'data-BKVince', 'BKVince.mpq', 'data', 'global', 'excel');
 const vanillaRoot = path.join(repoRoot, 'data-vanilla3.2', 'data', 'data', 'global', 'excel');
 
-const TABLES = {
+export const TABLES = {
   'magicprefix.txt': { label: 'Préfixe', mapped: 670, targetRow: (row) => row },
   'magicsuffix.txt': { label: 'Suffixe', mapped: 748, targetRow: (row) => (row <= 662 ? row : row + 7) },
   'automagic.txt': { label: 'AutoMagic', mapped: 36, targetRow: (row) => row },
 };
+export const FIELD_DECISIONS = ['KEEP_BKVINCE', 'ADOPT_PD2', 'CUSTOM', 'DISCUSS'];
+const WIKI_URL = 'https://wiki.projectdiablo2.com/wiki/Item_Affixes';
+const DOCUMENTED_NAMES = new Set([
+  'Performance', 'Carnage', 'Giant', 'Titan', 'Precision', 'Perfection', 'Chromatic',
+  "Grandmaster's", 'Celestial', 'Divine', 'Swiftness', 'Quickness', 'Blood Sucking',
+  'Ruby', 'Visceral', 'Guardianship', 'Rampaging', 'Embattled', 'Scorching', 'Shocking',
+]);
 
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
-}
-
-function sha256(value) {
-  return crypto.createHash('sha256').update(value).digest('hex').toUpperCase();
-}
-
-function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, ''));
-}
-
+function assert(condition, message) { if (!condition) throw new Error(message); }
+export function sha256(value) { return crypto.createHash('sha256').update(value).digest('hex').toUpperCase(); }
+function readJson(filePath) { return JSON.parse(fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '')); }
 function findFile(root, wanted) {
   const matches = fs.readdirSync(root).filter((name) => name.toLowerCase() === wanted.toLowerCase());
   assert(matches.length === 1, `${root}: expected exactly one ${wanted}`);
   return path.join(root, matches[0]);
 }
-
 function loadTable(root, name) {
   const filePath = findFile(root, name);
   const raw = fs.readFileSync(filePath, ENCODING);
@@ -47,80 +46,64 @@ function loadTable(root, name) {
   const indexes = new Map(table.headers.map((header, index) => [header.toLowerCase(), index]));
   return { filePath, raw, table, indexes, sha256: sha256(Buffer.from(raw, ENCODING)) };
 }
-
 function value(loaded, row, header) {
+  if (row === null || row === undefined) return null;
   const index = loaded.indexes.get(header.toLowerCase());
-  return index === undefined ? '' : (loaded.table.rows[row]?.[index] ?? '');
+  return index === undefined ? null : (loaded.table.rows[row]?.[index] ?? '');
 }
-
-function rowName(loaded, row) {
-  return value(loaded, row, 'Name');
+function rowName(loaded, row) { return value(loaded, row, 'Name') ?? ''; }
+function isRealRow(loaded, row) { const name = rowName(loaded, row); return name !== '' && name !== 'Expansion'; }
+function normalize(header, cell) { return header.toLowerCase() === 'multiply' ? (cell || '0') : cell; }
+function rowObject(loaded, row, headers) {
+  if (row === null || row === undefined) return null;
+  return Object.fromEntries(headers.map((header) => [header, value(loaded, row, header) ?? '']));
 }
-
-function isRealRow(loaded, row) {
-  const name = rowName(loaded, row);
-  return name !== '' && name !== 'Expansion';
+function pairDiff(headers, left, right, leftKey, rightKey) {
+  if (!left || !right) return [];
+  return headers.filter((header) => normalize(header, left[header]) !== normalize(header, right[header]))
+    .map((field) => ({ field, [leftKey]: left[field], [rightKey]: right[field] }));
 }
-
-function differences(left, leftRow, right, rightRow) {
-  const rightHeaders = new Set(right.table.headers.map((header) => header.toLowerCase()));
-  return left.table.headers
-    .filter((header) => rightHeaders.has(header.toLowerCase()))
-    .filter((header) => {
-      const leftValue = value(left, leftRow, header);
-      const rightValue = value(right, rightRow, header);
-      if (header.toLowerCase() === 'multiply') {
-        return (leftValue || '0') !== (rightValue || '0');
-      }
-      return leftValue !== rightValue;
-    })
-    .map((header) => ({
-      column: header,
-      left: value(left, leftRow, header),
-      right: value(right, rightRow, header),
-    }));
+function threeWayDiff(headers, vanilla, bkvince, pd2) {
+  return headers.filter((header) => {
+    const values = [vanilla?.[header] ?? null, bkvince?.[header] ?? null, pd2?.[header] ?? null];
+    return !(values[0] === values[1] && values[1] === values[2]);
+  }).map((field) => {
+    const protectedField = field.toLowerCase() === 'maxlevel' && Boolean(bkvince?.[field]);
+    return {
+      field,
+      vanilla: vanilla?.[field] ?? null,
+      bkvince: bkvince?.[field] ?? null,
+      pd2: pd2?.[field] ?? null,
+      protected: protectedField,
+      defaultDecision: protectedField || (bkvince?.[field] ?? null) === (pd2?.[field] ?? null) ? 'KEEP_BKVINCE' : null,
+    };
+  });
 }
-
-function compactDiffs(diffs, leftLabel, rightLabel) {
-  return diffs.map(({ column, left, right }) => ({ column, [leftLabel]: left, [rightLabel]: right }));
-}
-
-function effect(loaded, row) {
+function effect(row) {
+  if (!row) return '—';
   const parts = [];
   for (let slot = 1; slot <= 3; slot += 1) {
-    const code = value(loaded, row, `mod${slot}code`);
+    const code = row[`mod${slot}code`];
     if (!code) continue;
-    const parameter = value(loaded, row, `mod${slot}param`);
-    const minimum = value(loaded, row, `mod${slot}min`);
-    const maximum = value(loaded, row, `mod${slot}max`);
-    const range = minimum || maximum ? `${minimum || '?'}–${maximum || minimum || '?'}` : '';
-    parts.push([code, parameter ? `(${parameter})` : '', range].filter(Boolean).join(' '));
+    const param = row[`mod${slot}param`];
+    const min = row[`mod${slot}min`];
+    const max = row[`mod${slot}max`];
+    parts.push(`${code}${param ? `(${param})` : ''}${min || max ? ` ${min || '?'}–${max || min || '?'}` : ''}`);
   }
   return parts.join(' · ') || 'Aucun mod direct';
 }
-
-function itemTypes(loaded, row) {
-  const allowed = [];
-  const excluded = [];
-  for (let slot = 1; slot <= 7; slot += 1) {
-    const code = value(loaded, row, `itype${slot}`);
-    if (code) allowed.push(code);
-  }
-  for (let slot = 1; slot <= 5; slot += 1) {
-    const code = value(loaded, row, `etype${slot}`);
-    if (code) excluded.push(code);
-  }
+function types(row) {
+  if (!row) return { allowed: [], excluded: [] };
+  const allowed = [], excluded = [];
+  for (let i = 1; i <= 7; i += 1) if (row[`itype${i}`]) allowed.push(row[`itype${i}`]);
+  for (let i = 1; i <= 5; i += 1) if (row[`etype${i}`]) excluded.push(row[`etype${i}`]);
   return { allowed, excluded };
 }
-
 function blockedRows(expected) {
   const result = new Map();
-  for (const [reason, spec] of Object.entries(expected.blocked ?? {})) {
-    for (const row of parseOrdinalSpec(spec)) result.set(row, reason);
-  }
+  for (const [reason, spec] of Object.entries(expected.blocked ?? {})) for (const row of parseOrdinalSpec(spec)) result.set(row, reason);
   return result;
 }
-
 function sourceRootFromArgs(args) {
   const option = args.find((arg) => arg.startsWith('--source-root='));
   if (option) return path.resolve(option.slice('--source-root='.length));
@@ -128,214 +111,224 @@ function sourceRootFromArgs(args) {
   if (fs.existsSync(official)) return official;
   return path.resolve(repoRoot, '..', 'PD2 Single PLayer', 'PD2-Single-Player-Plus-mod-main', 'data', 'global', 'excel');
 }
-
-function buildReport(sourceRoot, catalog) {
-  const entries = [];
-  const counts = {};
-  for (const [tableName, config] of Object.entries(TABLES)) {
-    const source = loadTable(sourceRoot, tableName);
-    const target = loadTable(targetRoot, tableName);
-    const vanilla = loadTable(vanillaRoot, tableName);
-    assert(target.sha256 === catalog.targetBaseline[tableName].sha256, `${tableName}: BKVince is not at review baseline`);
-    assert(vanilla.sha256 === catalog.vanillaBaseline[tableName], `${tableName}: vanilla baseline drift`);
-    const selectedRetunes = new Set(parseOrdinalSpec(catalog.expected.retunes[tableName].sourceRows));
-    const selectedAppends = new Set(parseOrdinalSpec(catalog.expected.appends[tableName].sourceRows));
-    const blocked = blockedRows(catalog.expected.appends[tableName]);
-    const mappedTargets = new Set();
-
-    for (let sourceRow = 0; sourceRow < source.table.rows.length; sourceRow += 1) {
-      if (!isRealRow(source, sourceRow)) continue;
-      const mapped = sourceRow < config.mapped;
-      const targetRow = mapped ? config.targetRow(sourceRow) : null;
-      if (mapped) mappedTargets.add(targetRow);
-      const pd2VsVanilla = mapped
-        ? differences(source, sourceRow, vanilla, sourceRow)
-        : [];
-      const bkvVsVanilla = mapped
-        ? differences(target, targetRow, vanilla, sourceRow)
-        : [];
-      const pd2Deleted = mapped
-        && value(vanilla, sourceRow, 'spawnable') === '1'
-        && value(source, sourceRow, 'spawnable') !== '1';
-      const selectedRetune = selectedRetunes.has(sourceRow);
-      const selectedAppend = selectedAppends.has(sourceRow);
-      const blockedReason = blocked.get(sourceRow) ?? null;
-      let status;
-      let statusLabel;
-      let rationale;
-      if (mapped && pd2Deleted) {
-        status = 'pd2_deleted';
-        statusLabel = 'Supprimé/désactivé par PD2';
-        rationale = 'Vanilla le faisait apparaître; PD2 ne le fait plus apparaître.';
-      } else if (mapped && selectedRetune) {
-        status = tableName === 'automagic.txt' ? 'retune_deferred' : 'retune_candidate';
-        statusLabel = tableName === 'automagic.txt' ? 'Retune PD2 différée' : 'Retune PD2 candidate';
-        rationale = 'Différence techniquement portable, mais jamais approuvée produit.';
-      } else if (mapped && pd2VsVanilla.length > 0) {
-        status = 'pd2_modified';
-        statusLabel = 'Modifié par PD2';
-        rationale = 'PD2 change cette ligne vanilla; comparer avant toute adoption.';
-      } else if (mapped) {
-        status = 'shared';
-        statusLabel = 'Commun';
-        rationale = 'La ligne PD2 reste identique à vanilla sur les colonnes communes.';
-      } else if (selectedAppend) {
-        status = tableName === 'automagic.txt' ? 'pd2_new_deferred' : 'pd2_new_portable';
-        statusLabel = tableName === 'automagic.txt' ? 'Nouveau PD2 différé' : 'Nouveau PD2 techniquement portable';
-        rationale = tableName === 'automagic.txt'
-          ? 'AutoMagic reste un lot séparé; aucune importation automatique.'
-          : 'Les dépendances techniques connues ferment, mais Vincent doit choisir.';
-      } else {
-        status = 'pd2_new_review';
-        statusLabel = blockedReason ? 'Nouveau PD2 bloqué' : 'Nouveau PD2 non retenu automatiquement';
-        rationale = blockedReason
-          ? `Blocage connu : ${blockedReason}.`
-          : 'Hors allowlist conservatrice : dépendances, système map, compatibilité ou portée à examiner.';
-      }
-      const types = itemTypes(source, sourceRow);
-      entries.push({
-        id: `${tableName}:${sourceRow}`,
-        table: tableName,
-        tableLabel: config.label,
-        source: 'PD2',
-        sourceRow,
-        targetRow,
-        name: rowName(source, sourceRow),
-        status,
-        statusLabel,
-        rationale,
-        defaultDecision: ['shared'].includes(status) ? 'keep_bkvince' : 'undecided',
-        level: value(source, sourceRow, 'level'),
-        levelRequirement: value(source, sourceRow, 'levelreq'),
-        frequency: value(source, sourceRow, 'frequency'),
-        spawnable: value(source, sourceRow, 'spawnable'),
-        rare: value(source, sourceRow, 'rare'),
-        group: value(source, sourceRow, 'group'),
-        effect: effect(source, sourceRow),
-        allowedTypes: types.allowed,
-        excludedTypes: types.excluded,
-        pd2VsVanilla: compactDiffs(pd2VsVanilla, 'pd2', 'vanilla'),
-        bkvVsVanilla: compactDiffs(bkvVsVanilla, 'bkvince', 'vanilla'),
-      });
-    }
-
-    for (let targetRow = 0; targetRow < target.table.rows.length; targetRow += 1) {
-      if (mappedTargets.has(targetRow) || !isRealRow(target, targetRow)) continue;
-      const types = itemTypes(target, targetRow);
-      entries.push({
-        id: `${tableName}:bkv:${targetRow}`,
-        table: tableName,
-        tableLabel: config.label,
-        source: 'BKVince',
-        sourceRow: null,
-        targetRow,
-        name: rowName(target, targetRow),
-        status: 'bkv_only',
-        statusLabel: 'Propre à BKVince',
-        rationale: 'Aucune ligne PD2 mappée ne possède cet ordinal BKVince.',
-        defaultDecision: 'keep_bkvince',
-        level: value(target, targetRow, 'level'),
-        levelRequirement: value(target, targetRow, 'levelreq'),
-        frequency: value(target, targetRow, 'frequency'),
-        spawnable: value(target, targetRow, 'spawnable'),
-        rare: value(target, targetRow, 'rare'),
-        group: value(target, targetRow, 'group'),
-        effect: effect(target, targetRow),
-        allowedTypes: types.allowed,
-        excludedTypes: types.excluded,
-        pd2VsVanilla: [],
-        bkvVsVanilla: [],
-      });
-    }
-  }
-  entries.sort((a, b) => a.table.localeCompare(b.table)
-    || (a.sourceRow ?? Number.MAX_SAFE_INTEGER) - (b.sourceRow ?? Number.MAX_SAFE_INTEGER)
-    || (a.targetRow ?? 0) - (b.targetRow ?? 0));
-  for (const entry of entries) counts[entry.status] = (counts[entry.status] ?? 0) + 1;
-  return {
-    schemaVersion: 1,
-    reviewId: 'pd2-affixes-review',
-    state: 'review_only_no_import_approved',
-    sourceAuthority: catalog.source.authority,
-    sourceRoot,
-    targetBaselineCommit: '756df5f53109729f16643b36aa459fead4cdbf94',
-    decisionOptions: [
-      { id: 'undecided', label: 'À décider' },
-      { id: 'import_pd2', label: 'Importer PD2' },
-      { id: 'keep_bkvince', label: 'Garder BKVince' },
-      { id: 'exclude', label: 'Exclure' },
-      { id: 'discuss', label: 'À discuter' },
-    ],
-    counts,
-    entries,
+function statusFor({ mapped, pd2Deleted, vanilla, bkvince, pd2 }) {
+  if (!mapped) return 'PD2_NEW';
+  if (pd2Deleted) return 'PD2_DELETED';
+  const equal = (a, b) => a && b && Object.keys(a).every((header) => normalize(header, a[header]) === normalize(header, b[header]));
+  if (equal(vanilla, bkvince) && equal(bkvince, pd2)) return 'ALL_THREE_IDENTICAL';
+  if (equal(vanilla, pd2)) return 'PD2_EQUALS_VANILLA_BKV_DIFFERS';
+  if (equal(vanilla, bkvince)) return 'BKV_EQUALS_VANILLA_PD2_DIFFERS';
+  if (equal(bkvince, pd2)) return 'BKV_EQUALS_PD2';
+  return 'ALL_THREE_DIFFER';
+}
+const STATUS_LABELS = {
+  ALL_THREE_IDENTICAL: 'Vanilla, BKVince et PD2 identiques',
+  PD2_EQUALS_VANILLA_BKV_DIFFERS: 'PD2 = vanilla; BKVince diffère',
+  BKV_EQUALS_VANILLA_PD2_DIFFERS: 'BKVince = vanilla; PD2 diffère',
+  BKV_EQUALS_PD2: 'BKVince = PD2; vanilla diffère',
+  ALL_THREE_DIFFER: 'Les trois versions diffèrent',
+  PD2_DELETED: 'Supprimé ou désactivé par PD2',
+  PD2_NEW: 'Nouveau dans PD2',
+  BKV_ONLY: 'Propre à BKVince',
+};
+function familyFor(table, row, name) {
+  if (!row) return { id: `${table}:bkv-only:${name}`, label: name || 'Sans nom' };
+  const group = row.group || 'ungrouped';
+  const codes = [row.mod1code, row.mod2code, row.mod3code].filter(Boolean).join('+') || 'no-direct-mod';
+  const type = [row.itype1, row.itype2].filter(Boolean).join('/') || 'all-items';
+  return { id: `${table}:${group}:${codes}:${type}`, label: `Groupe ${group} · ${codes} · ${type}` };
+}
+function documentationFor(name, status) {
+  const documented = DOCUMENTED_NAMES.has(name);
+  return documented ? {
+    coverage: 'DOCUMENTED', url: WIKI_URL, section: 'Affix Changes Compilation (Patch Notes)',
+    category: status === 'PD2_DELETED' ? 'Removed Affixes' : 'Affix changes',
+    seasonHistory: 'Compilation PD2 disponible; saison exacte à confirmer dans l’historique.',
+    summary: `${name} est explicitement cité dans la compilation documentaire PD2; les valeurs restent vérifiées par la table S13.`,
+  } : {
+    coverage: 'TABLE_ONLY', url: null, section: null, category: 'Table difference', seasonHistory: null,
+    summary: 'Différence prouvée par les tables officielles S13, sans correspondance documentaire gouvernée attachée.',
   };
 }
 
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (character) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[character]);
+export function buildReport(sourceRoot, catalog) {
+  const entries = [], sourceHashes = {};
+  for (const [tableName, config] of Object.entries(TABLES)) {
+    const source = loadTable(sourceRoot, tableName), target = loadTable(targetRoot, tableName), vanillaTable = loadTable(vanillaRoot, tableName);
+    assert(target.sha256 === catalog.targetBaseline[tableName].sha256, `${tableName}: BKVince is not at review baseline`);
+    assert(vanillaTable.sha256 === catalog.vanillaBaseline[tableName], `${tableName}: vanilla baseline drift`);
+    assert(source.sha256 === catalog.source.tables[tableName].mirrorSha256 || source.sha256 === catalog.source.tables[tableName].officialSha256, `${tableName}: PD2 source drift`);
+    sourceHashes[tableName] = source.sha256;
+    const headers = target.table.headers.filter((header) => source.indexes.has(header.toLowerCase()) && vanillaTable.indexes.has(header.toLowerCase()));
+    const portable = new Set(parseOrdinalSpec(catalog.expected.appends[tableName].sourceRows));
+    const blocked = blockedRows(catalog.expected.appends[tableName]);
+    const mappedTargets = new Set();
+    for (let sourceRow = 0; sourceRow < source.table.rows.length; sourceRow += 1) {
+      if (!isRealRow(source, sourceRow)) continue;
+      const mapped = sourceRow < config.mapped, targetRow = mapped ? config.targetRow(sourceRow) : null;
+      if (mapped) mappedTargets.add(targetRow);
+      const vanilla = mapped ? rowObject(vanillaTable, sourceRow, headers) : null;
+      const bkvince = mapped ? rowObject(target, targetRow, headers) : null;
+      const pd2 = rowObject(source, sourceRow, headers);
+      const pd2Deleted = mapped && vanilla.spawnable === '1' && pd2.spawnable !== '1';
+      const status = statusFor({ mapped, pd2Deleted, vanilla, bkvince, pd2 });
+      const deferred = tableName === 'automagic.txt';
+      const category = deferred ? 'AUTOMAGIC_DEFERRED' : mapped
+        ? (pd2Deleted ? 'PD2_DELETED' : status === 'ALL_THREE_IDENTICAL' || status === 'PD2_EQUALS_VANILLA_BKV_DIFFERS' ? 'UNCHANGED_BY_PD2' : 'PD2_MODIFIED')
+        : (portable.has(sourceRow) ? 'PD2_NEW_PORTABLE' : 'PD2_NEW_REVIEW');
+      const changes = threeWayDiff(headers, vanilla, bkvince, pd2);
+      const id = `${tableName}:${sourceRow}`;
+      const name = rowName(source, sourceRow);
+      const sourceTypes = types(pd2);
+      entries.push({
+        id, fingerprint: sha256(JSON.stringify({ tableName, sourceRow, targetRow, vanilla, bkvince, pd2 })),
+        table: tableName, tableLabel: config.label, sourceRow, targetRow, name, status, statusLabel: STATUS_LABELS[status], category,
+        portable: portable.has(sourceRow), blockedReason: blocked.get(sourceRow) ?? null, deferred,
+        family: familyFor(tableName, pd2, name), documentation: documentationFor(name, status),
+        rows: { vanilla, bkvince, pd2 }, effects: { vanilla: effect(vanilla), bkvince: effect(bkvince), pd2: effect(pd2) },
+        itemTypes: sourceTypes,
+        comparisons: {
+          pd2VsVanilla: pairDiff(headers, pd2, vanilla, 'pd2', 'vanilla'),
+          bkvVsVanilla: pairDiff(headers, bkvince, vanilla, 'bkvince', 'vanilla'),
+          bkvVsPd2: pairDiff(headers, bkvince, pd2, 'bkvince', 'pd2'),
+        },
+        fieldDifferences: changes,
+      });
+    }
+    for (let targetRow = 0; targetRow < target.table.rows.length; targetRow += 1) {
+      if (mappedTargets.has(targetRow) || !isRealRow(target, targetRow)) continue;
+      const headers = target.table.headers;
+      const bkvince = rowObject(target, targetRow, headers), name = rowName(target, targetRow), id = `${tableName}:bkv:${targetRow}`;
+      entries.push({
+        id, fingerprint: sha256(JSON.stringify({ tableName, targetRow, bkvince })), table: tableName, tableLabel: config.label,
+        sourceRow: null, targetRow, name, status: 'BKV_ONLY', statusLabel: STATUS_LABELS.BKV_ONLY, category: tableName === 'automagic.txt' ? 'AUTOMAGIC_DEFERRED' : 'BKV_ONLY', portable: false,
+        blockedReason: null, deferred: tableName === 'automagic.txt', family: familyFor(tableName, bkvince, name), documentation: documentationFor(name, 'BKV_ONLY'),
+        rows: { vanilla: null, bkvince, pd2: null }, effects: { vanilla: '—', bkvince: effect(bkvince), pd2: '—' }, itemTypes: types(bkvince),
+        comparisons: { pd2VsVanilla: [], bkvVsVanilla: [], bkvVsPd2: [] }, fieldDifferences: [],
+      });
+    }
+  }
+  entries.sort((a, b) => a.table.localeCompare(b.table) || a.family.id.localeCompare(b.family.id) || (a.sourceRow ?? 99999) - (b.sourceRow ?? 99999));
+  const counts = {};
+  for (const entry of entries) counts[entry.category] = (counts[entry.category] ?? 0) + 1;
+  const core = {
+    schemaVersion: 2, reviewId: 'pd2-affixes-review-v2', state: 'review_only_no_import_approved',
+    sourceAuthority: catalog.source.authority, sourceHashes, targetBaselineCommit: '756df5f53109729f16643b36aa459fead4cdbf94',
+    targetBaselineHashes: Object.fromEntries(Object.entries(catalog.targetBaseline).map(([key, item]) => [key, item.sha256])),
+    protectedFields: ['maxlevel'], fieldDecisionOptions: FIELD_DECISIONS, counts, entries,
+  };
+  return { ...core, comparisonHash: sha256(JSON.stringify(core)) };
 }
 
-function buildHtml(report) {
+export function buildHighestLevelReport(report) {
+  const itemTypesTable = loadTable(targetRoot, 'itemtypes.txt');
+  const typeParents = new Map(itemTypesTable.table.rows.map((_, row) => [value(itemTypesTable, row, 'Code'), [value(itemTypesTable, row, 'Equiv1'), value(itemTypesTable, row, 'Equiv2')].filter(Boolean)]));
+  const ancestors = (code, seen = new Set()) => {
+    if (!code || seen.has(code)) return seen;
+    seen.add(code);
+    for (const parent of typeParents.get(code) ?? []) ancestors(parent, seen);
+    return seen;
+  };
+  const bases = [];
+  for (const file of ['armor.txt', 'weapons.txt', 'misc.txt']) {
+    const table = loadTable(targetRoot, file);
+    for (let row = 0; row < table.table.rows.length; row += 1) {
+      const code = value(table, row, 'code');
+      if (!code) continue;
+      const typeCodes = [value(table, row, 'type'), value(table, row, 'type2')].filter(Boolean);
+      const lineage = new Set(typeCodes.flatMap((type) => [...ancestors(type, new Set())]));
+      bases.push({ file, row, code, qlvl: Number(value(table, row, 'level') || 0), magicLvl: Number(value(table, row, 'magic lvl') || 0), lineage: [...lineage] });
+    }
+  }
+  const alvlFor = (ilvl, qlvl, magicLvl) => {
+    const i = Math.max(ilvl, qlvl);
+    if (magicLvl > 0) return Math.min(99, i + magicLvl);
+    return i < 99 - Math.floor(qlvl / 2) ? i - Math.floor(qlvl / 2) : 2 * i - 99;
+  };
+  const accessFor = (entry) => {
+    const allowed = new Set(entry.itemTypes.allowed), excluded = new Set(entry.itemTypes.excluded);
+    const eligible = bases.filter((base) => (!allowed.size || base.lineage.some((type) => allowed.has(type))) && !base.lineage.some((type) => excluded.has(type)));
+    const wanted = Number(entry.rows.pd2?.level ?? entry.rows.bkvince?.level ?? 0);
+    const reachable = eligible.map((base) => {
+      let minimumIlvl = null;
+      for (let ilvl = 1; ilvl <= 99; ilvl += 1) if (alvlFor(ilvl, base.qlvl, base.magicLvl) >= wanted) { minimumIlvl = ilvl; break; }
+      return { file: base.file, code: base.code, qlvl: base.qlvl, magicLvl: base.magicLvl, minimumIlvl, alvlAt99: alvlFor(99, base.qlvl, base.magicLvl) };
+    }).sort((a, b) => (a.minimumIlvl ?? 999) - (b.minimumIlvl ?? 999) || a.code.localeCompare(b.code));
+    const possible = reachable.filter((base) => base.minimumIlvl !== null);
+    return {
+      eligibleBaseCount: eligible.length, theoreticallyReachableBaseCount: possible.length,
+      minimumRequiredIlvl: possible.length ? Math.min(...possible.map((base) => base.minimumIlvl)) : null,
+      representativeBases: reachable.slice(0, 12),
+      paths: {
+        drops: possible.length ? 'POTENTIALLY_ACCESSIBLE_WHEN_DROP_ILVL_REACHES_BASE_THRESHOLD' : 'NOT_REACHABLE_BY_ALVL_FORMULA',
+        crafts: possible.length ? 'POTENTIALLY_ACCESSIBLE_IF_CRAFT_OUTPUT_ILVL_REACHES_THRESHOLD' : 'NOT_REACHABLE_BY_ALVL_FORMULA',
+        rerolls: possible.length ? 'RECIPE_DEPENDENT_OUTPUT_ILVL' : 'NOT_REACHABLE_BY_ALVL_FORMULA',
+        gambling: possible.length ? 'CHARACTER_LEVEL_AND_BASE_OFFER_DEPENDENT' : 'NOT_REACHABLE_BY_ALVL_FORMULA',
+      },
+    };
+  };
+  const entries = report.entries.filter((entry) => Number(entry.rows.pd2?.level ?? entry.rows.bkvince?.level ?? 0) > 71);
+  const analyzedEntries = entries.map((entry) => { const accessibility = accessFor(entry); return ({ id: entry.id, fingerprint: entry.fingerprint, table: entry.table, name: entry.name,
+    alvl: entry.rows.pd2?.level ?? entry.rows.bkvince?.level, status: entry.status, itemTypes: entry.itemTypes,
+    maxlevel: { vanilla: entry.rows.vanilla?.maxlevel ?? null, bkvince: entry.rows.bkvince?.maxlevel ?? null, pd2: entry.rows.pd2?.maxlevel ?? null },
+    accessibility,
+    conclusion: accessibility.theoreticallyReachableBaseCount === 0 ? 'ACTION_REQUIRED' : entry.status === 'ALL_THREE_IDENTICAL' ? 'INFORMATIONAL_ONLY' : 'PARTIALLY_RELEVANT' }); });
+  return {
+    schemaVersion: 1, reportId: 'pd2-affixes-highest-level-v1', comparisonHash: report.comparisonHash,
+    scope: 'Affixes with alvl > 71; AutoMagic is reported but remains deferred.',
+    formula: {
+      normal: 'Let i=max(ilvl,qlvl). If magic_lvl>0: alvl=min(99,i+magic_lvl). Otherwise if i<99-floor(qlvl/2): alvl=i-floor(qlvl/2), else alvl=2*i-99.',
+      drops: 'Drop accessibility depends on the dropped base qlvl, monster/item ilvl and eligible item types.',
+      crafts: 'Craft output ilvl and the base qlvl determine alvl; ilvl 71 guarantees four craft affixes but does not itself guarantee every alvl>71 affix.',
+      rerolls: 'The reroll recipe determines output ilvl; qlvl and magic_lvl still participate in alvl.',
+      gambling: 'Gambled ilvl varies around character level; base upgrades and qlvl affect the resulting alvl.',
+    },
+    conclusion: analyzedEntries.some((entry) => entry.conclusion === 'ACTION_REQUIRED') ? 'ACTION_REQUIRED'
+      : analyzedEntries.some((entry) => entry.conclusion === 'PARTIALLY_RELEVANT') ? 'PARTIALLY_RELEVANT' : 'INFORMATIONAL_ONLY',
+    limitations: [
+      'This report proves table eligibility and three-way differences.',
+      'It does not claim complete drop/craft/reroll/gambling reachability without a governed acquisition-path simulation for every eligible base.',
+      'No gameplay change is authorized by this classification.',
+    ],
+    entries: analyzedEntries,
+  };
+}
+
+const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+export function buildHtml(report) {
   const embedded = JSON.stringify(report).replace(/</g, '\\u003c');
-  return `<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Revue des affixes PD2 pour BKVince</title>
-<style>
-:root{color-scheme:dark;--bg:#101318;--panel:#191f27;--line:#303946;--text:#edf2f7;--muted:#a9b4c2;--accent:#f0a54a}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,sans-serif}header{position:sticky;top:0;z-index:2;background:rgba(16,19,24,.97);padding:18px 24px;border-bottom:1px solid var(--line)}h1{margin:0 0 6px;font-size:24px}p{margin:4px 0;color:var(--muted)}.controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.controls input,.controls select,.controls button,td select{background:#222a34;color:var(--text);border:1px solid #455264;border-radius:7px;padding:8px}.controls input{min-width:260px}.controls button{cursor:pointer;border-color:#8c6537}.stats{padding:14px 24px;display:flex;flex-wrap:wrap;gap:8px}.badge{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 10px}main{padding:0 24px 32px;overflow:auto}table{width:100%;border-collapse:collapse;background:var(--panel)}th,td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}th{position:sticky;top:153px;background:#222a34;z-index:1}tr:hover{background:#202833}.name{font-weight:700}.muted{color:var(--muted);font-size:13px}.status{white-space:nowrap}.diff{max-width:340px}.hidden{display:none}.warning{color:#ffd28c}.ok{color:#9dd6a5}@media(max-width:900px){th:nth-child(5),td:nth-child(5),th:nth-child(7),td:nth-child(7){display:none}header{position:static}th{top:0}}
-</style></head><body>
-<header><h1>Revue des affixes PD2 pour BKVince</h1><p><strong>Aucun import n'est approuvé.</strong> Cette page compare vanilla, PD2 S13 et la baseline BKVince restaurée.</p>
-<div class="controls"><input id="search" placeholder="Rechercher un nom, effet ou type d'objet"><select id="status"><option value="">Tous les statuts</option></select><select id="decision"><option value="">Toutes les décisions</option></select><button id="export">Exporter mes décisions</button><button id="reset">Réinitialiser</button></div></header>
-<div class="stats" id="stats"></div><main><table><thead><tr><th>Décision</th><th>Affixe</th><th>Statut</th><th>Effet PD2/BKV</th><th>Objets</th><th>Niveaux</th><th>Comparaison</th></tr></thead><tbody id="rows"></tbody></table></main>
-<script>const report=${embedded};const key='pd2-affixes-review-decisions-v1';let decisions=JSON.parse(localStorage.getItem(key)||'{}');
-const labels=Object.fromEntries(report.decisionOptions.map(x=>[x.id,x.label]));const status=document.querySelector('#status'),decision=document.querySelector('#decision'),search=document.querySelector('#search'),rows=document.querySelector('#rows');
-Object.entries(report.counts).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([id,count])=>{const e=report.entries.find(x=>x.status===id);status.add(new Option(e.statusLabel+' ('+count+')',id))});report.decisionOptions.forEach(x=>decision.add(new Option(x.label,x.id)));
-document.querySelector('#stats').innerHTML='<span class="badge">'+report.entries.length+' lignes comparées</span>'+Object.entries(report.counts).map(([id,n])=>'<span class="badge">'+report.entries.find(x=>x.status===id).statusLabel+': '+n+'</span>').join('');
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function current(e){return decisions[e.id]||e.defaultDecision}function render(){const q=search.value.trim().toLowerCase();const visible=report.entries.filter(e=>(!status.value||e.status===status.value)&&(!decision.value||current(e)===decision.value)&&(!q||[e.name,e.effect,e.statusLabel,...e.allowedTypes,...e.excludedTypes].join(' ').toLowerCase().includes(q)));rows.innerHTML=visible.map(e=>{const opts=report.decisionOptions.map(o=>'<option value="'+o.id+'" '+(current(e)===o.id?'selected':'')+'>'+esc(o.label)+'</option>').join('');const changes=e.pd2VsVanilla.slice(0,6).map(d=>esc(d.column)+': '+esc(d.vanilla||'∅')+' → '+esc(d.pd2||'∅')).join('<br>');return '<tr><td><select data-id="'+esc(e.id)+'">'+opts+'</select></td><td><div class="name">'+esc(e.name)+'</div><div class="muted">'+esc(e.tableLabel)+' · PD2 '+esc(e.sourceRow??'—')+' · BKV '+esc(e.targetRow??'—')+'</div></td><td class="status"><div>'+esc(e.statusLabel)+'</div><div class="muted">'+esc(e.rationale)+'</div></td><td>'+esc(e.effect)+'</td><td>'+esc(e.allowedTypes.join(', ')||'—')+(e.excludedTypes.length?'<div class="muted">exclut '+esc(e.excludedTypes.join(', '))+'</div>':'')+'</td><td>alvl '+esc(e.level||'—')+'<div class="muted">req '+esc(e.levelRequirement||'—')+' · freq '+esc(e.frequency||'—')+'</div></td><td class="diff">'+(changes||'<span class="muted">aucun changement vanilla détecté</span>')+'</td></tr>'}).join('');rows.querySelectorAll('select').forEach(s=>s.onchange=()=>{decisions[s.dataset.id]=s.value;localStorage.setItem(key,JSON.stringify(decisions));render()})}
-[search,status,decision].forEach(x=>x.oninput=render);document.querySelector('#reset').onclick=()=>{if(confirm('Réinitialiser toutes les décisions locales ?')){decisions={};localStorage.removeItem(key);render()}};document.querySelector('#export').onclick=()=>{const payload={schemaVersion:1,reviewId:report.reviewId,decisions:Object.fromEntries(report.entries.map(e=>[e.id,current(e)]).filter(([,v])=>v!=='undecided'))};const blob=new Blob([JSON.stringify(payload,null,2)+'\\n'],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pd2-affixes-decisions.json';a.click();URL.revokeObjectURL(a.href)};render();</script></body></html>\n`;
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Comparateur PD2 / BKVince / Vanilla</title>
+<style>:root{color-scheme:dark;--bg:#0e1218;--panel:#18202a;--line:#344150;--text:#eef3f8;--muted:#aab5c3;--accent:#edae55;--protect:#633}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui}header{position:sticky;top:0;z-index:5;background:#0e1218f5;padding:16px 22px;border-bottom:1px solid var(--line)}h1{margin:0;font-size:23px}p{margin:4px 0;color:var(--muted)}button,input,select,textarea{background:#222c38;color:var(--text);border:1px solid #526174;border-radius:6px;padding:7px}button{cursor:pointer}.controls,.tabs,.progress{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.tabs button.active{border-color:var(--accent);color:var(--accent)}main{padding:16px 22px}.family{margin:0 0 18px;border:1px solid var(--line);border-radius:9px;overflow:hidden}.family>h2{font-size:15px;margin:0;padding:10px 12px;background:#222c38}.entry{padding:12px;border-top:1px solid var(--line)}.entry h3{margin:0 0 6px}.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{border:1px solid var(--line);border-radius:99px;padding:2px 7px;color:var(--muted)}.effects{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:9px 0}.effects div{background:var(--panel);padding:8px;border-radius:6px}.actions{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}details{margin-top:7px}table{width:100%;border-collapse:collapse;margin-top:7px}th,td{padding:6px;border:1px solid var(--line);text-align:left;vertical-align:top}.protected{background:#3b2527}.protected strong{color:#ffb9ae}.notes{width:100%;min-height:46px;margin-top:7px}.custom-note{width:180px}.hidden{display:none}.doc{color:#9bd1ff}@media(max-width:800px){.effects{grid-template-columns:1fr}header{position:static}}</style></head><body>
+<header><h1>Comparateur d’affixes à trois voies</h1><p><strong>Aucun import n’est approuvé.</strong> Vanilla D2R 3.2, BKVince restauré et PD2 S13 sont affichés côte à côte.</p>
+<div class="tabs" id="tabs"></div><div class="controls"><input id="search" placeholder="Nom, effet, famille, type"><select id="table"><option value="">Toutes les tables</option><option>magicprefix.txt</option><option>magicsuffix.txt</option><option>automagic.txt</option></select><label><input type="checkbox" id="incomplete"> décisions incomplètes seulement</label><button id="import">Importer décisions</button><input type="file" id="file" accept="application/json" hidden><button id="export">Exporter décisions</button><button id="reset">Réinitialiser</button><a href="pd2-affixes-highest-level.html">Highest-Level Affixes</a></div><div class="progress" id="progress"></div></header><main id="content"></main>
+<script>const report=${embedded};const storage='pd2-affixes-review-decisions-v2';let state=JSON.parse(localStorage.getItem(storage)||'{"entries":{}}');const cats=[['PD2_DELETED','1. Supprimés par PD2'],['PD2_MODIFIED','2. Existants modifiés'],['PD2_NEW_PORTABLE','3. Nouveaux portables'],['PD2_NEW_REVIEW','4. Nouveaux bloqués/à examiner'],['BKV_ONLY','5. Propres à BKVince'],['AUTOMAGIC_DEFERRED','6. AutoMagic différé']];let active='PD2_DELETED';
+const E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const save=()=>localStorage.setItem(storage,JSON.stringify(state));function item(e){return state.entries[e.id]||(state.entries[e.id]={fingerprint:e.fingerprint,fields:{},notes:''})}function decision(e,d){return item(e).fields[d.field]?.decision||d.defaultDecision||''}function incomplete(e){return e.fieldDifferences.some(d=>!decision(e,d)||decision(e,d)==='DISCUSS'||(decision(e,d)==='CUSTOM'&&!item(e).fields[d.field]?.customValue))}
+function apply(e,mode){const x=item(e);for(const d of e.fieldDifferences){if(x.fields[d.field])continue;if(mode==='KEEP'||mode==='DISCUSS')x.fields[d.field]={decision:mode==='KEEP'?'KEEP_BKVINCE':'DISCUSS'};else if(mode==='ADOPT_SAFE')x.fields[d.field]={decision:d.protected?'KEEP_BKVINCE':'ADOPT_PD2'};else if(mode==='ADOPT_ALL'&&!d.protected)x.fields[d.field]={decision:'ADOPT_PD2'}}save();render()}
+function render(){document.querySelector('#tabs').innerHTML=cats.map(([id,l])=>'<button data-cat="'+id+'" class="'+(active===id?'active':'')+'">'+l+' ('+(report.counts[id]||0)+')</button>').join('');document.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{active=b.dataset.cat;render()});const q=document.querySelector('#search').value.toLowerCase(),t=document.querySelector('#table').value,inc=document.querySelector('#incomplete').checked;const visible=report.entries.filter(e=>e.category===active&&(!t||e.table===t)&&(!inc||incomplete(e))&&(!q||[e.name,e.family.label,e.effects.pd2,e.effects.bkvince,...e.itemTypes.allowed].join(' ').toLowerCase().includes(q)));const groups=Map.groupBy(visible,e=>e.family.id);document.querySelector('#content').innerHTML=[...groups.values()].map(g=>'<section class="family"><h2>'+E(g[0].family.label)+'</h2>'+g.map(row).join('')+'</section>').join('')||'<p>Aucune occurrence.</p>';bind();const all=report.entries.filter(e=>e.category!=='AUTOMAGIC_DEFERRED'),done=all.filter(e=>!incomplete(e)).length;document.querySelector('#progress').innerHTML='<span>'+done+' / '+all.length+' occurrences complètes ('+Math.round(done*100/Math.max(1,all.length))+'%)</span><span>AutoMagic masqué par défaut et différé</span>'}
+function row(e){const x=item(e);const diffs=e.fieldDifferences.map(d=>{const f=x.fields[d.field]||{},v=decision(e,d);return '<tr class="'+(d.protected?'protected':'')+'"><td>'+E(d.field)+(d.protected?' <strong>PROTÉGÉ</strong>':'')+'</td><td>'+E(d.vanilla===''?'vide':d.vanilla)+'</td><td>'+E(d.bkvince===''?'vide':d.bkvince)+'</td><td>'+E(d.pd2===''?'vide':d.pd2)+'</td><td><select data-field="'+E(d.field)+'" data-id="'+E(e.id)+'"><option value="">À décider</option>'+report.fieldDecisionOptions.map(o=>'<option '+(v===o?'selected':'')+'>'+o+'</option>').join('')+'</select> '+(v==='CUSTOM'?'<input class="custom-note" data-custom="'+E(d.field)+'" data-id="'+E(e.id)+'" value="'+E(f.customValue||'')+'" placeholder="valeur personnalisée"><input class="custom-note" data-note="'+E(d.field)+'" data-id="'+E(e.id)+'" value="'+E(f.notes||'')+'" placeholder="note obligatoire">':'')+'</td></tr>'}).join('');const doc=e.documentation;return '<article class="entry"><h3>'+E(e.name)+' <span class="chip">'+E(e.statusLabel)+'</span></h3><div class="chips"><span class="chip">'+E(e.table)+' · PD2 '+E(e.sourceRow??'—')+' · BKV '+E(e.targetRow??'—')+'</span><span class="chip">'+E(doc.coverage)+'</span></div><div class="effects"><div><b>Vanilla</b><br>'+E(e.effects.vanilla)+'</div><div><b>BKVince</b><br>'+E(e.effects.bkvince)+'</div><div><b>PD2 S13</b><br>'+E(e.effects.pd2)+'</div></div><div class="actions"><button data-action="KEEP" data-id="'+E(e.id)+'">Garder toute la ligne BKVince</button><button data-action="ADOPT_ALL" data-id="'+E(e.id)+'">Adopter tous les champs PD2 admissibles</button><button data-action="ADOPT_SAFE" data-id="'+E(e.id)+'">Adopter PD2 sauf champs protégés</button><button data-action="DISCUSS" data-id="'+E(e.id)+'">Tout envoyer à discussion</button></div><details open><summary>'+e.fieldDifferences.length+' champs différents — tout afficher</summary><table><thead><tr><th>Champ</th><th>Vanilla</th><th>BKVince</th><th>PD2</th><th>Décision</th></tr></thead><tbody>'+diffs+'</tbody></table></details><details><summary>Comparaisons bilatérales et lignes complètes</summary><pre>'+E(JSON.stringify({comparisons:e.comparisons,rows:e.rows},null,2))+'</pre></details><p class="doc">'+E(doc.coverage)+' · '+E(doc.section||'tables officielles S13')+' · '+E(doc.summary)+'</p><textarea class="notes" data-row-note="'+E(e.id)+'" placeholder="Notes de ligne">'+E(x.notes||'')+'</textarea></article>'}
+function bind(){document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>apply(report.entries.find(e=>e.id===b.dataset.id),b.dataset.action));document.querySelectorAll('[data-field]').forEach(s=>s.onchange=()=>{const e=report.entries.find(e=>e.id===s.dataset.id),d=e.fieldDifferences.find(d=>d.field===s.dataset.field),x=item(e);x.fields[d.field]={...(x.fields[d.field]||{}),decision:s.value};if(d.protected&&s.value==='ADOPT_PD2')x.fields[d.field].protectedOverride=true;save();render()});document.querySelectorAll('[data-custom]').forEach(i=>i.onchange=()=>{item(report.entries.find(e=>e.id===i.dataset.id)).fields[i.dataset.custom].customValue=i.value;save()});document.querySelectorAll('[data-note]').forEach(i=>i.onchange=()=>{item(report.entries.find(e=>e.id===i.dataset.id)).fields[i.dataset.note].notes=i.value;save()});document.querySelectorAll('[data-row-note]').forEach(i=>i.onchange=()=>{item(report.entries.find(e=>e.id===i.dataset.rowNote)).notes=i.value;save()})}
+['search','table','incomplete'].forEach(id=>document.querySelector('#'+id).oninput=render);document.querySelector('#reset').onclick=()=>{if(confirm('Réinitialiser les décisions locales ?')){state={entries:{}};save();render()}};document.querySelector('#import').onclick=()=>document.querySelector('#file').click();document.querySelector('#file').onchange=async ev=>{try{const p=JSON.parse(await ev.target.files[0].text());if(p.schemaVersion!==2||p.reviewId!==report.reviewId||p.comparisonHash!==report.comparisonHash||p.targetBaselineCommit!==report.targetBaselineCommit||JSON.stringify(p.sourceHashes)!==JSON.stringify(report.sourceHashes))throw Error('hash, source PD2 ou baseline BKVince incompatible');for(const [id,x] of Object.entries(p.entries||{})){const e=report.entries.find(e=>e.id===id);if(!e||e.fingerprint!==x.fingerprint)throw Error('occurrence ou fingerprint incompatible: '+id)}state={entries:p.entries||{}};save();render()}catch(err){alert('Import refusé: '+err.message)}};document.querySelector('#export').onclick=()=>{const payload={schemaVersion:2,reviewId:report.reviewId,comparisonHash:report.comparisonHash,sourceHashes:report.sourceHashes,targetBaselineCommit:report.targetBaselineCommit,exportedAt:new Date().toISOString(),entries:Object.fromEntries(report.entries.map(e=>[e.id,{fingerprint:e.fingerprint,...item(e)}]))};const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)+'\\n'],{type:'application/json'}));a.download='pd2-affixes-decisions-v2.json';a.click();URL.revokeObjectURL(a.href)};render();</script></body></html>\n`;
+}
+function highestHtmlPage(report) {
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Highest-Level Affixes</title><style>body{font:15px system-ui;max-width:1400px;margin:auto;padding:24px;background:#101318;color:#eee}table{border-collapse:collapse;width:100%}th,td{border:1px solid #455;padding:6px;text-align:left}code{color:#fc9}</style></head><body><h1>Highest-Level Affixes — analyse séparée</h1><p><b>Conclusion : ${esc(report.conclusion)}</b></p><p>${esc(report.formula.normal)}</p><ul>${Object.entries(report.formula).slice(1).map(([k,v])=>`<li><b>${esc(k)}</b> : ${esc(v)}</li>`).join('')}</ul><p>Cette vue calcule le seuil ilvl théorique pour chaque base BKVince éligible. Elle ne prétend pas qu’un monstre, une recette ou un marchand précis produit effectivement ce seuil avant la simulation gouvernée des chemins d’acquisition.</p><table><thead><tr><th>Affixe</th><th>Table</th><th>alvl</th><th>Statut</th><th>Conclusion</th><th>Bases accessibles</th><th>ilvl minimum</th><th>Drops / crafts / rerolls / gamble</th><th>MaxLevel V/B/P</th></tr></thead><tbody>${report.entries.map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.table)}</td><td>${esc(e.alvl)}</td><td>${esc(e.status)}</td><td>${esc(e.conclusion)}</td><td>${esc(e.accessibility.theoreticallyReachableBaseCount)} / ${esc(e.accessibility.eligibleBaseCount)}</td><td>${esc(e.accessibility.minimumRequiredIlvl)}</td><td>${esc(Object.values(e.accessibility.paths).join(' · '))}</td><td>${esc(e.maxlevel.vanilla)} / ${esc(e.maxlevel.bkvince)} / ${esc(e.maxlevel.pd2)}</td></tr>`).join('')}</tbody></table></body></html>\n`;
 }
 
-function run(args = process.argv.slice(2)) {
-  const check = args.includes('--check');
-  const sourceRoot = sourceRootFromArgs(args);
-  const catalog = readJson(catalogPath);
-  if (check && !fs.existsSync(sourceRoot)) {
-    const expected = catalog.review;
-    assert(expected, 'Catalog has no pinned review artifact expectations');
-    const json = fs.readFileSync(outputJson);
-    const html = fs.readFileSync(outputHtml);
-    const stored = JSON.parse(json.toString('utf8'));
-    assert(stored.entries.length === expected.entries, 'Stored review entry count drift');
-    assert(JSON.stringify(stored.counts) === JSON.stringify(expected.counts), 'Stored review counts drift');
-    assert(sha256(json) === expected.jsonSha256, 'Stored review JSON hash drift');
-    assert(sha256(html) === expected.htmlSha256, 'Stored review HTML hash drift');
-    console.log(JSON.stringify({ mode: 'check-pinned', entries: stored.entries.length, counts: stored.counts }, null, 2));
-    return;
-  }
-  const report = buildReport(sourceRoot, catalog);
-  const json = `${JSON.stringify(report, null, 2)}\n`;
-  const html = buildHtml(report);
+export function run(args = process.argv.slice(2)) {
+  const check = args.includes('--check'), sourceRoot = sourceRootFromArgs(args), catalog = readJson(catalogPath);
+  const report = buildReport(sourceRoot, catalog), highest = buildHighestLevelReport(report);
+  const outputs = new Map([[outputJson, `${JSON.stringify(report, null, 2)}\n`], [outputHtml, buildHtml(report)], [highestJson, `${JSON.stringify(highest, null, 2)}\n`], [highestHtml, highestHtmlPage(highest)]]);
   if (check) {
-    assert(fs.existsSync(outputJson) && fs.readFileSync(outputJson, 'utf8') === json, 'Review JSON is stale');
-    assert(fs.existsSync(outputHtml) && fs.readFileSync(outputHtml, 'utf8') === html, 'Review HTML is stale');
-  } else {
-    fs.writeFileSync(outputJson, json, 'utf8');
-    fs.writeFileSync(outputHtml, html, 'utf8');
+    for (const [file, raw] of outputs) assert(fs.existsSync(file) && fs.readFileSync(file, 'utf8') === raw, `${path.basename(file)} is stale`);
+    assert(catalog.review.schemaVersion === 2 && catalog.review.comparisonHash === report.comparisonHash, 'catalog review identity is stale');
+    assert(catalog.review.jsonSha256 === sha256(Buffer.from(outputs.get(outputJson))), 'catalog review JSON hash is stale');
+    assert(catalog.review.htmlSha256 === sha256(Buffer.from(outputs.get(outputHtml))), 'catalog review HTML hash is stale');
+    assert(catalog.review.highestLevel.jsonSha256 === sha256(Buffer.from(outputs.get(highestJson))), 'catalog highest-level JSON hash is stale');
+    assert(catalog.review.highestLevel.htmlSha256 === sha256(Buffer.from(outputs.get(highestHtml))), 'catalog highest-level HTML hash is stale');
   }
-  console.log(JSON.stringify({
-    mode: check ? 'check' : 'write',
-    entries: report.entries.length,
-    counts: report.counts,
-    jsonSha256: sha256(Buffer.from(json)),
-    htmlSha256: sha256(Buffer.from(html)),
-  }, null, 2));
+  else for (const [file, raw] of outputs) fs.writeFileSync(file, raw, 'utf8');
+  console.log(JSON.stringify({ mode: check ? 'check' : 'write', entries: report.entries.length, counts: report.counts, comparisonHash: report.comparisonHash, highestLevelEntries: highest.entries.length }, null, 2));
 }
 
-try {
-  run();
-} catch (error) {
-  console.error(`INVALID PD2 Affixes Review: ${error.message}`);
-  process.exitCode = 1;
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try { run(); } catch (error) { console.error(`INVALID PD2 Affixes Review: ${error.message}`); process.exitCode = 1; }
 }
