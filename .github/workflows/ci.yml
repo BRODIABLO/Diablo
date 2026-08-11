@@ -37,7 +37,9 @@ jobs:
         shell: pwsh
         run: |
           $mirrorRoot = Join-Path $env:RUNNER_TEMP 'pd2-affix-source'
-          git clone --filter=blob:none --no-checkout https://github.com/Lukaszpg/PD2-Single-Player-Plus-mod.git $mirrorRoot
+          git -c core.autocrlf=false -c core.eol=lf clone --filter=blob:none --no-checkout https://github.com/Lukaszpg/PD2-Single-Player-Plus-mod.git $mirrorRoot
+          git -C $mirrorRoot config core.autocrlf false
+          git -C $mirrorRoot config core.eol lf
           git -C $mirrorRoot sparse-checkout init --cone
           git -C $mirrorRoot sparse-checkout set data/global/excel
           git -C $mirrorRoot fetch --depth=1 origin 3debc6781f33c3c1474a995b80369a4e618cd386
