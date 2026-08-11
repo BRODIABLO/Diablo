@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "name": "Crafted Items Use Rare Level Requirements",
+  "description": "Makes crafted items use the same level requirements as rare items.",
+  "patches": [
+    {
+      "description": "Remove the fixed +10 required-level bonus from crafted items",
+      "op": "bytes",
+      "rva": "0x376EBA",
+      "expected": "44 8D 61 09",
+      "bytes": "45 33 E4 90"
+    },
+    {
+      "description": "Remove the +3 required-level bonus for each crafted prefix",
+      "op": "bytes",
+      "rva": "0x377089",
+      "expected": "41 83 C4 03",
+      "bytes": "90 90 90 90"
+    },
+    {
+      "description": "Remove the +3 required-level bonus for each crafted suffix",
+      "op": "bytes",
+      "rva": "0x377092",
+      "expected": "41 83 C4 03",
+      "bytes": "90 90 90 90"
+    }
+  ]
+}

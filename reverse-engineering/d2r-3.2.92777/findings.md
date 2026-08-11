@@ -671,6 +671,34 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   son entrée, ses huit callers, son descriptor room/x/y et son callback sont
   observés, mais ses bornes, rooms adjacentes, doublons et LOS restent ouverts.
 
+## Crafted — niveau requis identique au Rare
+
+- `ITEMS_GetRequiredLevel 0x376DE0` possède l'ABI observée
+  `(item, unit) -> int32`. Ses trois xrefs indexées sont le wrapper exporté en
+  tail jump `0x371AA0`, l'appel du prédicat partagé d'équipement à `0x36C06D`
+  et l'appel récursif des objets socketés à `0x3771D3`.
+- Le dispatch lit la qualité à `ItemData+0x00`, puis sépare Magic `4`, Set `5`,
+  Rare `6`, Unique `7` et Crafted `8`. Le chemin Crafted initialise `r12d` à
+  `10` à `0x376EBA`, parcourt les trois couples préfixe/suffixe et ajoute `3`
+  à `0x377089` ou `0x377092` lorsque le record correspondant existe.
+- Le témoin `44 8D 61 09 44 8D 79 4D` de l'initialisation Crafted est unique
+  dans `.text`. Le témoin de boucle de 24 octets commençant à `0x377084` et
+  contenant les deux `ADD r12d,3` est également unique sous 92777.
+- Après la boucle, le moteur ajoute le bonus à l'exigence maximale des affixes,
+  conserve le cap `maxLevel-1`, puis rejoint le chemin commun. Celui-ci conserve
+  les exigences des socketables et skills, ajoute la stat `item_levelreq=92` à
+  `0x3779E4`, borne le résultat à zéro et applique l'ajustement dépendant du
+  personnage. Le patch ne modifie aucun de ces consommateurs.
+- La référence sémantique épinglée
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`,
+  `source/D2Common/src/Items/Items.cpp:1306-1334`, porte exactement le même
+  triplet `10`, `+3 prefix`, `+3 suffix`; aucune adresse ni structure 32 bits
+  n'est transposée.
+- `crafted-rare-level-requirements.json` neutralise seulement les trois
+  instructions gouvernées. Le nombre d'affixes reste entièrement propriétaire
+  de `ProgressiveAffixesPlugin`, les recettes restent inchangées et les objets
+  Rare ne deviennent pas des entrées de crafting.
+
 ## Discipline de promotion
 
 Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de

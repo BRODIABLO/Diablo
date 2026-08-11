@@ -420,6 +420,38 @@
       "notes": "Initializes the 0x28-byte bit-buffer, invokes the item serializer at 0x37FFD0, returns zero when the overflow field at +0x20 is set, and otherwise returns the written byte count. Its 20 direct callers include save paths using a 0x4000-byte capacity and item-action packet paths using 0xF4. The 29-byte prologue/signature beginning 48 89 5C 24 08 57 48 83 EC 60 48 8B D9 41 8B F9 is unique in build 92777."
     },
     {
+      "rva": "0x376DE0",
+      "name": "ITEMS_GetRequiredLevel",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Computes an item's effective required level with observed x64 ABI (item, unit) -> int32. The quality dispatch reads ItemData+0x00 and routes Magic 4, Set 5, Rare 6, Unique 7 and Crafted 8 separately. Its three indexed xrefs are the exported tail wrapper at 0x371AA0, the authoritative requirement predicate call at 0x36C06D and its recursive socketable-item call at 0x3771D3. The common tail preserves socketed-item and skill requirements, adds stat item_levelreq (92) at 0x3779E4, clamps at zero and applies the player-specific adjustment before returning."
+    },
+    {
+      "rva": "0x376EBA",
+      "name": "CraftedRequiredLevelBaseBonus",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Unique eight-byte witness 44 8D 61 09 44 8D 79 4D at the Crafted quality branch. ECX is exactly 1 after the quality-8 dispatch, so LEA r12d,[rcx+9] initializes the vanilla crafted required-level bonus to 10. The BKVince companion patch replaces the four-byte instruction with XOR r12d,r12d plus one NOP."
+    },
+    {
+      "rva": "0x377089",
+      "name": "CraftedPrefixRequiredLevelBonus",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Conditional ADD r12d,3 reached only when the current crafted prefix record resolves. It belongs to the unique 24-byte crafted-affix witness beginning at 0x377084. The BKVince companion patch replaces exactly these four bytes with NOPs while preserving affix required-level comparison."
+    },
+    {
+      "rva": "0x377092",
+      "name": "CraftedSuffixRequiredLevelBonus",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/progressive-affixes-plugin-3.2.md",
+      "notes": "Conditional ADD r12d,3 reached only when the current crafted suffix record resolves. It belongs to the unique 24-byte crafted-affix witness beginning at 0x377084. The BKVince companion patch replaces exactly these four bytes with NOPs while preserving affix required-level comparison."
+    },
+    {
       "rva": "0x382D20",
       "name": "ITEMS_CapturePacketState",
       "kind": "function",

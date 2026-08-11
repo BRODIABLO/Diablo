@@ -167,6 +167,41 @@ configuration active. Ils ne prouvent pas encore les distributions en jeu, la
 résolution tardive des six ItemTypes, les fonctions PluginPack actuellement
 désactivées, ni le multijoueur.
 
+## Patch compagnon BKVince — niveau requis Crafted
+
+Vincent confirme le 10 août 2026 que les objets Rare ne doivent pas servir
+d'entrées aux recettes de crafting, puis autorise uniquement les phases de
+preuve native, d'implantation du patch et de validation statique. Aucun fichier
+TXT, aucune recette et aucune entrée `rar` ne sont ajoutés.
+
+Le calcul 92777 est fermé statiquement dans `ITEMS_GetRequiredLevel 0x376DE0`.
+Le chemin qualité Crafted `8` ajoute séparément un bonus fixe de `10`, puis `3`
+par préfixe et par suffixe présents. Le chemin commun conserve ensuite les
+exigences des affixes, socketables et skills, ajoute `item_levelreq=92`, borne
+le résultat à zéro et applique l'ajustement dépendant du personnage.
+
+Le patch BKVince distinct
+`data-BKVince/d2rloader/patches/crafted-rare-level-requirements.json` neutralise
+uniquement :
+
+- `0x376EBA` — initialisation du bonus fixe `+10` ;
+- `0x377089` — incrément `+3` pour un préfixe Crafted ;
+- `0x377092` — incrément `+3` pour un suffixe Crafted.
+
+Les signatures étendues de l'initialisation et de la boucle sont uniques dans
+le `.text` 92777. Le patch ne chevauche aucune des six surfaces de
+ProgressiveAffixesPlugin et ne modifie ni sa DLL, ni son TOML, ni son ZIP
+public. Il s'agit d'une règle BKVince indépendante et réversible; retirer le
+JSON restaure immédiatement la formule vanilla sans migration de sauvegarde.
+
+La validation statique du 10 août 2026 confirme les octets `expected` sur
+l'image canonique vérifiée, l'unicité des deux témoins `.text`, la cohérence
+des 53 opérations contenues dans les 17 patchsets actifs et zéro chevauchement.
+Les deux JSON sont valides, le self-test du workbench passe, l'index reconstruit
+reconnaît les quatre entrées gouvernées et le cadastre est conforme à son
+schéma. Aucun succès gameplay ou multijoueur n'est déduit de ces preuves
+statiques.
+
 ## Rollback
 
 Le rollback BKVince est atomique : retirer DLL et TOML, puis restaurer ensemble
