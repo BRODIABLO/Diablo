@@ -2866,6 +2866,22 @@
       "confidence": "high",
       "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
       "notes": "Exact five-byte call E8 53 3C 00 00 from SUNITDMG_ExecuteEvents to the unique leech consumer at 0x450C90. The governed context starts at 0x44D02C and preserves ABI void (game, attacker, defender, D2Damage*); BKVCombat validates this baseline but installs no leech hook."
+    },
+    {
+      "rva": "0x3B0BA0",
+      "name": "SOUNDENVIRON_GetRecord",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/D2RMM-D2RLoader-integration.md",
+      "notes": "Receives the sound-environment index in ECX, resolves data context 3, reads the compiled row count at DataTables+0x508 and returns the indexed record only when 0 <= index < count. An index equal to the count reaches the native assertion at 0x3B0C82. This proves that deleting stable row 75 while the Terror Zone resolver can still request index 75 is invalid."
+    },
+    {
+      "rva": "0x20C4EF",
+      "name": "InheritedSoundEnvironmentSongStore",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "data-BKVince/d2rloader/patches/preserve-terror-zone-area-music.json; Mission/D2RMM-D2RLoader-integration.md",
+      "notes": "Unique six-byte store 89 05 1F B5 88 02 in build 92777. It copies only the inherited sound-environment Song field loaded from record+0x34 into the active environment. NOPing this store preserves the base area's current music while leaving the ten adjacent inherited ambience and event assignments native."
     }
   ]
 }

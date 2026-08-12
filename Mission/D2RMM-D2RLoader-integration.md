@@ -66,7 +66,7 @@ Dans D2RMM Custom :
 - tester un démarrage à froid sous D2RLoader et le build D2R ciblé;
 - ne conserver dans Git que les changements explicitement validés.
 
-## Adoption sélective — No Terror Zone Music 1.0
+## Adoption sélective — No Terror Zone Music 1.0 (prototype remplacé)
 
 Décision de Vincent du 2 août 2026 : intégrer à BKVince l'effet data-only du mod
 de NDState, dont le manifeste local crédite `salzgaard`, sans recopier le
@@ -98,6 +98,67 @@ Validation runtime du 2 août 2026 sur D2R `3.2.92777` et D2RLoader
 | Musique en Terror Zone | Musique normale de la zone audible | not run |
 
 Les quatre assertions d'items déjà connues surviennent après le frontend et ne
-concernent pas cette table. La livraison fonctionnelle reste conditionnée à une
-observation auditive dans une Terror Zone BKVince; elle ne doit pas être inférée
-du seul cold start.
+concernaient pas cette table. Cette conclusion du 2 août est remplacée par
+l'incident et la preuve native ci-dessous.
+
+### Correctif hybride du 12 août 2026
+
+Le prototype data-only a provoqué l'assertion
+`BC_ASSERT: !SoundGetNumSoundEnviron()` dans
+`D2Common/src/DataTbls/SoundTbls.cpp:228` lors d'une transition de jeu. Le cold
+start initial ne couvrait pas l'accès tardif à l'environnement réservé aux
+Terror Zones.
+
+Preuves natives gouvernées pour D2R `3.2.92777` :
+
+- `SOUNDENVIRON_GetRecord` à `0x3B0BA0` reçoit l'index en `ECX`, lit le nombre
+  de lignes compilées à `DataTables+0x508` et déclenche son assertion si
+  `index >= count`;
+- avec la ligne supprimée, le moteur demandait l'index stable `75` alors que
+  le compteur valait également `75`, ce qui reproduit exactement le chemin
+  d'échec à `0x3B0C82`;
+- dans le résolveur d'environnement hérité, l'instruction unique
+  `89 05 1F B5 88 02` à `0x20C4EF` copie seulement le champ `Song` de la ligne
+  héritée dans l'environnement actif. Les dix autres champs copiés par cette
+  branche restent indépendants.
+
+Implantation retenue :
+
+- restauration byte-exacte de la ligne vanilla
+  `ESOUNDENVIRON_INHERIT_DESECRATED` comme 76e ligne de `soundenviron.txt`;
+- patch strict `preserve-terror-zone-area-music.json`, limité aux six octets
+  de la copie `Song` à `0x20C4EF` et gardé par les octets attendus;
+- conservation du morceau normal déjà hérité de la zone, tout en conservant
+  les ambiances et événements propres aux environnements terrorisés.
+
+Intégrité statique :
+
+- table de 76 lignes et 37 colonnes, CRLF, saut final et round-trip byte-exact
+  via `scripts/build-data/tsv.js`;
+- SHA-256 de `soundenviron.txt` :
+  `F7C4F82380D239A82DCE54E2987B8F624933C16A4FB100150B7CEC7243A00F78`;
+- SHA-256 du patch JSON :
+  `4E23E7E032A176D18B2FEB2BF9F45C187EADFC992ABAEF7CDCCFA43B8C50D9A6`;
+- la signature stricte du site `0x20C4EF` possède une seule occurrence dans
+  la section `.text` du build 92777.
+
+| Domaine | Résultat attendu | Statut |
+|---|---|---|
+| Déploiement ciblé | Table et patch copiés avec hashes identiques | passed |
+| Chargement du patch | Site `0x20C4EF` accepté, aucun mismatch | passed |
+| Table sonore | Étape `Loading sound data tables` franchie sans assertion | passed |
+| Cold start | `16/16` patchsets, `19/19` plugins et D2R `24/24` | passed |
+| Musique en Terror Zone | Musique normale de la zone audible sans assertion | not run |
+
+Le cold start du 12 août 2026 a utilisé D2RLoader `1.0.1-beta`, D2R
+`3.2.92777`, les extensions globales et mod-locales actives, sans désactivation :
+`scanned=16 applied=16 disabled=0 failed=0` pour les patchsets et
+`scanned=19 active=19 disabled=0 rejected=0 failed=0` pour les plugins. Les
+24 étapes se terminent en 5,610 secondes, sans ligne `[ERROR]` ni assertion.
+Le journal frais est
+`C:\Games\Diablo II Resurrected\d2rloader\logs\d2rloader.log`, SHA-256
+`84D39CD903E04D7A66B073C5F3763099AEDCDC3DF67700DB1EE177204077C2CB`.
+
+La validation fonctionnelle reste volontairement ouverte : elle exige une
+entrée réelle dans une Terror Zone pour confirmer auditivement le morceau de
+la zone et l'absence d'assertion pendant la transition tardive.

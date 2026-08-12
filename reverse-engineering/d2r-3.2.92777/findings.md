@@ -705,6 +705,27 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   de `ProgressiveAffixesPlugin`, les recettes restent inchangées et les objets
   Rare ne deviennent pas des entrées de crafting.
 
+## Environnements sonores — héritage des Terror Zones
+
+- `SOUNDENVIRON_GetRecord 0x3B0BA0` reçoit l'index demandé en `ECX`, résout le
+  contexte data `3`, lit le compteur compilé à `DataTables+0x508`, puis rejette
+  les index négatifs ou supérieurs ou égaux au compteur. Le bloc d'échec à
+  `0x3B0C46` rejoint l'assertion à `0x3B0C82` lorsque le compteur est non nul.
+- Le prototype No Terror Zone Music supprimait la ligne stable 75 de
+  `soundenviron.txt`. Une demande native de l'environnement 75 confrontée au
+  compteur 75 satisfait donc exactement `index >= count`; le texte
+  `!SoundGetNumSoundEnviron()` affiché par l'assertion ne signifie pas que le
+  compteur devait être nul.
+- Dans le résolveur d'environnement hérité autour de `0x20C370`, la ligne
+  marquée `InheritEnvrionment=1` part de l'environnement normal courant, puis
+  remplace onze champs. La paire commençant à `0x20C4EC` charge `Song` depuis
+  `record+0x34`; le store de six octets `89 05 1F B5 88 02` à `0x20C4EF` est
+  le seul write du morceau dans cette séquence.
+- Cette séquence stricte possède une seule occurrence dans `.text` du build
+  92777. Le patch BKVince restaure la ligne vanilla 75 et neutralise uniquement
+  ce store, de sorte que le morceau de la zone de base reste actif tandis que
+  les dix autres champs hérités continuent d'être copiés nativement.
+
 ## Discipline de promotion
 
 Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de

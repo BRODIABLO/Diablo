@@ -68,11 +68,13 @@ les crédits.
 
 - **No Terror Zone Music 1.0** — créé et publié par **NDState** sur
   [Nexus Mods](https://www.nexusmods.com/diablo2resurrected/mods/404); le
-  manifeste local crédite également `salzgaard`. BKVince réimplémente
-  sélectivement son effet data-only depuis la référence D2R 3.2 : la seule ligne
-  `ESOUNDENVIRON_INHERIT_DESECRATED` est retirée de `soundenviron.txt` afin que
-  chaque Terror Zone conserve la musique normale de sa zone, sans importer le
-  MPQ cumulatif produit par D2RMM.
+  manifeste local crédite également `salzgaard`. BKVince en conserve l'effet
+  visible sans supprimer la ligne stable
+  `ESOUNDENVIRON_INHERIT_DESECRATED` : la ligne vanilla D2R 3.2 reste présente
+  dans `soundenviron.txt`, tandis que le patch gouverné
+  `preserve-terror-zone-area-music.json` neutralise uniquement la copie de
+  `music_desecrated`. Les ambiances et événements hérités restent natifs, et le
+  MPQ cumulatif produit par D2RMM n'est pas importé.
 
 - **SpecialNavi 1.1** — créé par **Porory** et **HeoHeo**, puis publié sur
   [Diablo II Inven](https://www.inven.co.kr/board/diablo2/5842/4283). BKVince

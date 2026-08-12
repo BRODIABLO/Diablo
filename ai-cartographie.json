@@ -20680,6 +20680,11 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "preserve-terror-zone-area-music.json",
+                                                                                                     "path":  "data-BKVince/d2rloader/patches/preserve-terror-zone-area-music.json",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "README.txt",
                                                                                                      "path":  "data-BKVince/d2rloader/patches/README.txt",
                                                                                                      "kind":  "file"
