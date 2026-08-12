@@ -1,4 +1,4 @@
-# Advanced Item Tooltips 3.2.4
+# Advanced Item Tooltips 3.3.0
 
 ## Install
 
@@ -22,6 +22,9 @@ The mod-local JSON overrides the global JSON.
 - `showBaseDefenseRange`: shows base-defense rolls. Default: `true`.
 - `showPropertyRanges`: shows property roll ranges. Default: `true`.
 - `includeSocketedContributionsInRanges`: includes gems, runes, and jewels in ranges. Default: `false`.
+- `rangeDisplayMode`: accepts `Always` or `HoldShift`. `HoldShift` shows
+  property ranges and `Base Defense` only while Shift is held. `Max Sockets`
+  remains controlled separately. Default: `Always`.
 - `propertyRangeColor`: accepts `ChronicleColor` for Chronicle's default
   teal/light blue or `BHDarkGreen` for BH's dark green from the first plugin
   iterations. Default: `ChronicleColor`.

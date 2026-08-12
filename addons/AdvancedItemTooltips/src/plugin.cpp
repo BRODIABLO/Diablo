@@ -41,6 +41,14 @@ extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsFindSoc
     const char* tooltip,
     std::size_t tooltipLength
 ) noexcept;
+std::size_t EnhanceTooltipForVisibility(
+    void* item,
+    const char* tooltip,
+    std::size_t tooltipLength,
+    char* output,
+    std::size_t outputCapacity,
+    bool rangesVisible
+) noexcept;
 
 namespace {
 constexpr std::uint32_t SupportedBuild = 92777;
@@ -155,6 +163,7 @@ struct CachedAffixState {
 
 struct TooltipCacheState {
     CachedAffixState item;
+    bool rangesVisible{};
     std::int32_t socketCount{};
     std::int32_t defense{};
     std::uint8_t maximumSockets{};
@@ -185,7 +194,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "advanced-item-tooltips",
     .name = "Advanced Item Tooltips",
-    .version = "3.2.4",
+    .version = "3.3.0",
     .author = "RuffnecKk",
     .description = "Shows maximum sockets and exact item roll ranges.",
     .flags = D2RL::PluginFlags::None,
@@ -369,15 +378,24 @@ bool CaptureAffixState(void* item, CachedAffixState& state) noexcept {
     return true;
 }
 
-bool CaptureTooltipCacheState(void* item, TooltipCacheState& state) noexcept {
+bool RangesVisibleNow() noexcept {
+    const auto shiftDown = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+    return ruffneckk::advanced_item_tooltips::ShouldDisplayRanges(
+        Settings.rangeDisplayMode, shiftDown);
+}
+
+bool CaptureTooltipCacheState(
+    void* item, TooltipCacheState& state, bool rangesVisible) noexcept {
     if (!CaptureAffixState(item, state.item)) return false;
+    state.rangesVisible = rangesVisible;
     if (GetUnitStat) {
         state.socketCount = GetUnitStat(item, SocketCountStat, 0);
         state.defense = GetUnitStat(item, ArmorClassStat, 0);
     }
     if (GetMaxSockets) state.maximumSockets = GetMaxSockets(item);
 
-    if (!Settings.includeSocketedContributionsInRanges
+    if (!rangesVisible
+        || !Settings.includeSocketedContributionsInRanges
         || (state.item.flags & ItemFlagRuneword) != 0
         || !GetInventory || !GetFirstInventoryItem || !GetNextInventoryItem) return true;
     const auto inventory = GetInventory(item);
@@ -509,8 +527,8 @@ std::string ResolveRunewordKey(
 }
 
 std::string InsertBaseDefense(std::string tooltip, void* item, const std::uint8_t* itemData,
-    const tcp::tooltips::TooltipLocalization& localization) {
-    if (!Settings.showBaseDefenseRange || !GetUnitStat) return tooltip;
+    const tcp::tooltips::TooltipLocalization& localization, bool rangesVisible) {
+    if (!rangesVisible || !Settings.showBaseDefenseRange || !GetUnitStat) return tooltip;
     const auto armor = Catalog.FindArmor(ItemCode(item));
     if (!armor) return tooltip;
     std::size_t duplicateStart{};
@@ -587,8 +605,9 @@ void* TransformOwnedTooltip(void* result, void* item) noexcept {
         if (length == 0 || length > 16 * 1024 || !IsReadable(data, length + 1)) return result;
 
         const std::string_view originalView(data, length);
+        const auto rangesVisible = RangesVisibleNow();
         TooltipCacheState state;
-        const auto cacheable = CaptureTooltipCacheState(item, state);
+        const auto cacheable = CaptureTooltipCacheState(item, state, rangesVisible);
         const std::string* enhanced = cacheable
             ? FindCachedTooltip(state, originalView)
             : nullptr;
@@ -596,9 +615,9 @@ void* TransformOwnedTooltip(void* result, void* item) noexcept {
         if (!enhanced) {
             std::string original(originalView);
             uncached = original;
-            const auto enhancedLength = AdvancedItemTooltipsEnhanceTooltip(
+            const auto enhancedLength = EnhanceTooltipForVisibility(
                 item, original.data(), original.size(),
-                TooltipScratch.data(), TooltipScratch.size());
+                TooltipScratch.data(), TooltipScratch.size(), rangesVisible);
             if (enhancedLength > 0 && enhancedLength < TooltipScratch.size()) {
                 uncached.assign(TooltipScratch.data(), enhancedLength);
             }
@@ -694,12 +713,14 @@ auto Status(
     std::snprintf(
         message,
         sizeof(message),
-        "AdvancedItemTooltips 3.2.4: enabled=%s; maxSockets=%s; maxSocketsOnSocketed=%s; baseDefense=%s; propertyRanges=%s; rangeColor=%s; socketContributions=%s; cubeMutations=ignored; catalog=%s; config=%s.",
+        "AdvancedItemTooltips 3.3.0: enabled=%s; maxSockets=%s; maxSocketsOnSocketed=%s; baseDefense=%s; propertyRanges=%s; rangeDisplayMode=%s; rangeColor=%s; socketContributions=%s; cubeMutations=ignored; catalog=%s; config=%s.",
         Settings.enabled ? "yes" : "no",
         Settings.showMaxSockets ? "yes" : "no",
         Settings.showMaxSocketsOnSocketedItems ? "yes" : "no",
         Settings.showBaseDefenseRange ? "yes" : "no",
         Settings.showPropertyRanges ? "yes" : "no",
+        ruffneckk::advanced_item_tooltips::RangeDisplayModeName(
+            Settings.rangeDisplayMode).data(),
         ruffneckk::advanced_item_tooltips::PropertyRangeColorName(
             Settings.propertyRangeColor).data(),
         Settings.includeSocketedContributionsInRanges ? "included" : "intrinsic only",
@@ -710,13 +731,15 @@ auto Status(
 }
 } // namespace
 
-extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsEnhanceTooltip(
+std::size_t EnhanceTooltipForVisibility(
     void* item,
     const char* tooltip,
     std::size_t tooltipLength,
     char* output,
-    std::size_t outputCapacity
+    std::size_t outputCapacity,
+    bool rangesVisible
 ) noexcept {
+    if (!rangesVisible) return 0;
     if (!Settings.enabled || !item || !tooltip || !output || outputCapacity == 0 || !CatalogLoaded
         || tooltipLength == 0 || tooltipLength > 16 * 1024 || !GetItemData) return 0;
     try {
@@ -764,7 +787,7 @@ extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsEnhance
             }
         }
         const std::string original(tooltip, tooltipLength);
-        auto enhanced = Settings.showPropertyRanges
+        auto enhanced = rangesVisible && Settings.showPropertyRanges
             ? tcp::tooltips::AppendConsensusRanges(original, resolution.candidates,
                 !Settings.includeSocketedContributionsInRanges && hasSocketFillers,
                 &localization, &resolution.intrinsicCandidates,
@@ -772,7 +795,7 @@ extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsEnhance
                     Settings.propertyRangeColor))
             : original;
         enhanced = InsertBaseDefense(
-            std::move(enhanced), item, itemData, localization);
+            std::move(enhanced), item, itemData, localization, rangesVisible);
         if (enhanced == original || enhanced.size() + 1 > outputCapacity) return 0;
         std::memcpy(output, enhanced.data(), enhanced.size());
         output[enhanced.size()] = '\0';
@@ -780,6 +803,17 @@ extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsEnhance
     } catch (...) {
         return 0;
     }
+}
+
+extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsEnhanceTooltip(
+    void* item,
+    const char* tooltip,
+    std::size_t tooltipLength,
+    char* output,
+    std::size_t outputCapacity
+) noexcept {
+    return EnhanceTooltipForVisibility(
+        item, tooltip, tooltipLength, output, outputCapacity, RangesVisibleNow());
 }
 
 extern "C" __declspec(dllexport) std::size_t __cdecl AdvancedItemTooltipsBuildSocketLine(
@@ -846,7 +880,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         context->LogWarn("AdvancedItemTooltips: status command could not be registered.");
     }
     if (!Settings.enabled) {
-        context->LogInfo("AdvancedItemTooltips 3.2.4 disabled by JSON config; no hooks installed.");
+        context->LogInfo("AdvancedItemTooltips 3.3.0 disabled by JSON config; no hooks installed.");
         return true;
     }
 
@@ -1013,7 +1047,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         return false;
     }
     const auto activation = std::string(
-        "AdvancedItemTooltips 3.2.4 active for D2R 3.2.92777 (7/7 call-sites); catalog=")
+        "AdvancedItemTooltips 3.3.0 active for D2R 3.2.92777 (7/7 call-sites); catalog=")
         + CatalogSource
         + "; config="
         + LoadedConfigPath
@@ -1022,6 +1056,9 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         + "; rangeColor="
         + std::string(ruffneckk::advanced_item_tooltips::PropertyRangeColorName(
             Settings.propertyRangeColor))
+        + "; rangeDisplayMode="
+        + std::string(ruffneckk::advanced_item_tooltips::RangeDisplayModeName(
+            Settings.rangeDisplayMode))
         + "; socketContributions="
         + (Settings.includeSocketedContributionsInRanges ? "included" : "intrinsic only")
         + "; cubeMutations=ignored"

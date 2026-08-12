@@ -18,6 +18,29 @@ enum class PropertyRangeColor {
     BHDarkGreen,
 };
 
+enum class RangeDisplayMode {
+    Always,
+    HoldShift,
+};
+
+inline RangeDisplayMode ParseRangeDisplayMode(std::string_view value) {
+    if (value == "Always") return RangeDisplayMode::Always;
+    if (value == "HoldShift") return RangeDisplayMode::HoldShift;
+    throw std::invalid_argument(
+        "rangeDisplayMode must be Always or HoldShift");
+}
+
+inline constexpr std::string_view RangeDisplayModeName(RangeDisplayMode value) noexcept {
+    return value == RangeDisplayMode::Always
+        ? std::string_view{"Always"}
+        : std::string_view{"HoldShift"};
+}
+
+inline constexpr bool ShouldDisplayRanges(
+    RangeDisplayMode mode, bool shiftDown) noexcept {
+    return mode == RangeDisplayMode::Always || shiftDown;
+}
+
 inline PropertyRangeColor ParsePropertyRangeColor(std::string_view value) {
     if (value == "ChronicleColor") return PropertyRangeColor::ChronicleColor;
     if (value == "BHDarkGreen") return PropertyRangeColor::BHDarkGreen;
@@ -45,6 +68,7 @@ struct Config {
     bool showPropertyRanges{true};
     bool includeSocketedContributionsInRanges{false};
     PropertyRangeColor propertyRangeColor{PropertyRangeColor::ChronicleColor};
+    RangeDisplayMode rangeDisplayMode{RangeDisplayMode::Always};
 };
 
 inline Config ParseConfig(const nlohmann::json& root) {
@@ -57,6 +81,8 @@ inline Config ParseConfig(const nlohmann::json& root) {
         "showBaseDefenseRange",
         "showPropertyRanges",
         "includeSocketedContributionsInRanges",
+        "_rangeDisplayModeHelp",
+        "rangeDisplayMode",
         "_propertyRangeColorHelp",
         "propertyRangeColor",
     };
@@ -64,15 +90,17 @@ inline Config ParseConfig(const nlohmann::json& root) {
         if (std::find(allowed.begin(), allowed.end(), entry.key()) == allowed.end()) {
             throw std::invalid_argument("unknown configuration key: " + entry.key());
         }
-        if (entry.key() == "_propertyRangeColorHelp") {
+        if (entry.key() == "_propertyRangeColorHelp"
+            || entry.key() == "_rangeDisplayModeHelp") {
             if (!entry.value().is_string()) {
-                throw std::invalid_argument("_propertyRangeColorHelp must be a string");
+                throw std::invalid_argument(entry.key() + " must be a string");
             }
             continue;
         }
-        if (entry.key() == "propertyRangeColor") {
+        if (entry.key() == "propertyRangeColor"
+            || entry.key() == "rangeDisplayMode") {
             if (!entry.value().is_string()) {
-                throw std::invalid_argument("propertyRangeColor must be a string");
+                throw std::invalid_argument(entry.key() + " must be a string");
             }
             continue;
         }
@@ -94,6 +122,9 @@ inline Config ParseConfig(const nlohmann::json& root) {
         config.includeSocketedContributionsInRanges);
     if (const auto entry = root.find("propertyRangeColor"); entry != root.end()) {
         config.propertyRangeColor = ParsePropertyRangeColor(entry->get<std::string>());
+    }
+    if (const auto entry = root.find("rangeDisplayMode"); entry != root.end()) {
+        config.rangeDisplayMode = ParseRangeDisplayMode(entry->get<std::string>());
     }
     return config;
 }

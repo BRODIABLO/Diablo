@@ -37,6 +37,9 @@ int main() {
     CHECK(defaults.showPropertyRanges);
     CHECK(!defaults.includeSocketedContributionsInRanges);
     CHECK(defaults.propertyRangeColor == PropertyRangeColor::ChronicleColor);
+    CHECK(defaults.rangeDisplayMode == RangeDisplayMode::Always);
+    CHECK(ShouldDisplayRanges(defaults.rangeDisplayMode, false));
+    CHECK(ShouldDisplayRanges(defaults.rangeDisplayMode, true));
     CHECK(PropertyRangeColorCode(defaults.propertyRangeColor) == 'U');
     CHECK(PropertyRangeColorName(defaults.propertyRangeColor) == "ChronicleColor");
 
@@ -49,20 +52,28 @@ int main() {
         {"includeSocketedContributionsInRanges", true},
         {"_propertyRangeColorHelp", "ChronicleColor uses Chronicle teal; BHDarkGreen uses BH dark green."},
         {"propertyRangeColor", "BHDarkGreen"},
+        {"_rangeDisplayModeHelp", "Always shows ranges; HoldShift shows them only while Shift is held."},
+        {"rangeDisplayMode", "HoldShift"},
     });
     CHECK(!combined.showMaxSockets);
     CHECK(combined.showMaxSocketsOnSocketedItems);
     CHECK(!combined.showBaseDefenseRange);
     CHECK(combined.includeSocketedContributionsInRanges);
     CHECK(combined.propertyRangeColor == PropertyRangeColor::BHDarkGreen);
+    CHECK(combined.rangeDisplayMode == RangeDisplayMode::HoldShift);
+    CHECK(!ShouldDisplayRanges(combined.rangeDisplayMode, false));
+    CHECK(ShouldDisplayRanges(combined.rangeDisplayMode, true));
     CHECK(PropertyRangeColorCode(combined.propertyRangeColor) == ':');
     CHECK(PropertyRangeColorName(combined.propertyRangeColor) == "BHDarkGreen");
 
     CHECK(Throws([] { ParseConfig(nlohmann::json::array()); }));
     CHECK(Throws([] { ParseConfig({{"enabled", 1}}); }));
     CHECK(Throws([] { ParseConfig({{"_propertyRangeColorHelp", true}}); }));
+    CHECK(Throws([] { ParseConfig({{"_rangeDisplayModeHelp", true}}); }));
     CHECK(Throws([] { ParseConfig({{"propertyRangeColor", true}}); }));
+    CHECK(Throws([] { ParseConfig({{"rangeDisplayMode", true}}); }));
     CHECK(Throws([] { ParseConfig({{"propertyRangeColor", "Blue"}}); }));
+    CHECK(Throws([] { ParseConfig({{"rangeDisplayMode", "Toggle"}}); }));
     CHECK(Throws([] { ParseConfig({{"unknown", true}}); }));
 
     const auto paths = ConfigCandidates(

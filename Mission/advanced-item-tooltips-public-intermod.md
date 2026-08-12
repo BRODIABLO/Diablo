@@ -487,3 +487,42 @@ catalogue runtime BKVince, les contributions socketed incluses et `Max Sockets`
 masqué sur les objets socketed. Le résumé reste à
 `scanned=13 active=12 disabled=0 rejected=0 failed=1`; l'échec unique demeure
 le problème préexistant et distinct de `RepeatableServices.dll`.
+
+## Extension 3.3.0 — affichage des plages avec Shift
+
+La configuration publique accepte désormais `rangeDisplayMode` avec les
+valeurs strictes `Always` et `HoldShift`. Le défaut `Always` conserve le
+comportement 3.2.4. En mode `HoldShift`, les plages de propriétés et la ligne
+`Base Defense` ne sont ajoutées que pendant que Shift est maintenu; la ligne
+`Max Sockets` demeure gouvernée séparément par ses options existantes.
+
+L'état visible/caché appartient à la clé du cache exact du tooltip. Les deux
+variantes ne peuvent donc pas se contaminer après une pression ou un
+relâchement de Shift. La variante cachée retourne avant toute résolution des
+tables, affixes, runewords ou socket fillers afin de ne pas réintroduire le
+délai de hover corrigé en 3.2.4. Aucun nouveau hook D2R ni aucune nouvelle ABI
+n'est ajouté : les sept call-sites 92777 existants restent les seuls points
+d'intégration.
+
+Le build Release x64 passe les six suites CTest (policy, ranges, catalogue
+vanilla embarqué, référence intermod, BKVince et configuration). La DLL Release
+et la copie de package sont byte-identiques au SHA-256
+`2A704B77B1FF4973DABCD8C7913F807A3E0F968B6672F860513381FEE8621FD7`.
+La validation visuelle en jeu des transitions press/release et de la
+comparaison Shift reste `not run`; aucune installation runtime 3.3.0 n'a encore
+été effectuée.
+
+## Archive publique 3.3.0
+
+L'archive publique autonome
+`addons/AdvancedItemTooltips/AdvancedItemTooltips-3.3.0.zip` contient uniquement
+`AdvancedItemTooltips.dll` et `AdvancedItemTooltips.json`. Son SHA-256 est
+`82CFF21427E5605AD63360081F83EDA6CA67D9A26CC661F0BD9C7702605DAFEF`.
+La DLL embarquée est byte-identique au build Release 3.3.0 et conserve le
+SHA-256
+`2A704B77B1FF4973DABCD8C7913F807A3E0F968B6672F860513381FEE8621FD7`;
+la configuration publique par défaut a le SHA-256
+`44BBD4CC9E27CA98BBD7014AB9208BA629A8F5EB4C40CDBA4EBB7E34DD6C37B1`.
+Les six suites CTest Release avaient passé avant la création de l'archive;
+aucun cold start ni test visuel en jeu supplémentaire n'a été exécuté pour
+cette livraison.

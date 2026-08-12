@@ -496,6 +496,11 @@
                                                                                 "name":  "AdvancedItemTooltips-3.0.0.zip",
                                                                                 "path":  "addons/AdvancedItemTooltips/AdvancedItemTooltips-3.0.0.zip",
                                                                                 "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "AdvancedItemTooltips-3.3.0.zip",
+                                                                                "path":  "addons/AdvancedItemTooltips/AdvancedItemTooltips-3.3.0.zip",
+                                                                                "kind":  "file"
                                                                             }
                                                                         ]
                                                        },
