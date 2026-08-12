@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import zlib from 'node:zlib';
 
 import {
   FROZEN_CONTRACT_HASH,
@@ -12,6 +13,7 @@ import {
   OUTPUT_PATHS,
   buildDocumentationMap,
   checkSkillReviewArtifacts,
+  compressOracleForHtml,
   generateSkillReviewArtifacts,
 } from './pd2-skills-review.mjs';
 
@@ -25,6 +27,24 @@ test('orchestration preserves the frozen contract and deterministic comparison i
   assert.deepEqual(second.hashes, generated.hashes);
   assert.equal(second.raw.report, generated.raw.report);
   assert.equal(second.raw.html, generated.raw.html);
+});
+
+test('standalone oracle uses deterministic compact JSON without changing its logical model', () => {
+  assert.equal(generated.raw.report[0], '{');
+  assert.equal(generated.raw.report.at(-2), '}');
+  assert.equal(generated.raw.report.indexOf('\n'), generated.raw.report.length - 1);
+  assert(generated.raw.report.includes(`"comparisonHash":"${generated.report.comparisonHash}"`));
+  assert(!generated.raw.report.includes('\n  "'), 'generated oracle must not contain presentation indentation');
+});
+
+test('HTML oracle gzip is deterministic and rehydrates the exact canonical model', () => {
+  const first = compressOracleForHtml(generated.report);
+  const second = compressOracleForHtml(generated.report);
+  assert(first.equals(second));
+  assert.equal(first[9], 0xFF, 'gzip OS header byte must be platform-neutral');
+  const inflated = zlib.gunzipSync(first).toString('utf8');
+  assert.equal(inflated, JSON.stringify(generated.report));
+  assert(inflated.includes(`"comparisonHash":"${generated.report.comparisonHash}"`));
 });
 
 test('all governed enums exposed by the oracle belong to the frozen contracts', () => {

@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-12T06:44:36.5005074+00:00",
+    "generatedAt":  "2026-08-12T11:12:03.8819168+00:00",
     "root":  {
                  "name":  "pd2-affixes-index-7776be629d014bf58eb297d6a91ce01a",
                  "path":  ".",
@@ -361,6 +361,11 @@
                                                                             {
                                                                                 "name":  "ci.yml",
                                                                                 "path":  ".github/workflows/ci.yml",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-workbench.yml",
+                                                                                "path":  ".github/workflows/pd2-skills-workbench.yml",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
@@ -38914,6 +38919,11 @@
                                                                             {
                                                                                 "name":  "pd2-skills-decisions-preview.test.mjs",
                                                                                 "path":  "scripts/migrate-bkvince/pd2-skills-decisions-preview.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-review-browser-smoke.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-review-browser-smoke.mjs",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

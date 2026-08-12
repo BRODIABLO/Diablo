@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import vm from 'node:vm';
+import zlib from 'node:zlib';
 
 import { buildSkillReviewHtml } from './pd2-skills-review-ui.mjs';
 import { buildBrowserRuntimeSource } from './pd2-skills-review-runtime.mjs';
@@ -40,7 +41,10 @@ function mockReport(overrides = {}) {
     status: 'MODIFIED',
     collisionIds: ['collision:47'],
     summary: { player: 'Davantage de projectiles; formule multishot malformée conservée.' },
-    evidence: { proofStatus: 'MALFORMED_SOURCE' },
+    evidence: {
+      overall: 'MALFORMED_SOURCE',
+      statuses: ['EXACT_FORMULA', 'MALFORMED_SOURCE', 'EXACT_TABLE', 'NATIVE_UNPROVEN'],
+    },
     portability: {
       categories: ['NATIVE_UNPROVEN'], reasons: ['Fonction native différente'], tables: ['skills.txt', 'missiles.txt'],
       missingDependencies: ['missile:test'], requiredProof: ['callback D2R 3.2'], effort: 'élevé',
@@ -78,7 +82,11 @@ function mockReport(overrides = {}) {
       newSkillLineDecisions: ['IMPORT_APPEND_ONLY', 'IMPORT_CUSTOMIZED', 'REJECT_PD2_SKILL', 'DEFER_NATIVE_PROOF', 'DISCUSS'],
       implementationStatuses: ['NOT_REVIEWED', 'DECISION_COMPLETE', 'SELECTED_FOR_PROTOTYPE', 'IMPLEMENTATION_NOT_AUTHORIZED'],
     },
-    coverage: {},
+    coverage: {
+      historicalBaseline: { bkvinceRows: 449, collisions: 108 },
+      currentBaseline: { bkvinceRows: 451, collisions: 110 },
+      nextAppendOrdinal: 451,
+    },
     navigation: [{ id: 'sor', label: 'Sorceress', classCode: 'sor', trees: [{ id: 'fire', label: 'Fire Spells', skillIds: [skill.stableId] }], skillIds: [skill.stableId] }],
     nodes: [
       { id: 'vanilla32:skills.txt:47', source: 'vanilla32', ordinal: 47, name: 'Fire Ball', raw: { skill: 'Fire Ball' } },
@@ -98,8 +106,13 @@ function embeddedScript(html) {
   return match[1];
 }
 
+function buildHtml(report, source = runtimeSource) {
+  const compressedOracleBase64 = zlib.gzipSync(Buffer.from(JSON.stringify(report)), { level: 9, mtime: 0 }).toString('base64');
+  return buildSkillReviewHtml(report, source, { compressedOracleBase64 });
+}
+
 test('builds one standalone file:// compatible document with the complete workbench controls', () => {
-  const html = buildSkillReviewHtml(mockReport(), runtimeSource);
+  const html = buildHtml(mockReport());
   assert.match(html, /^<!doctype html>/);
   assert.match(html, /PD2 Skills Merge Workbench/);
   assert.match(html, /Recherche globale/);
@@ -126,7 +139,7 @@ test('builds one standalone file:// compatible document with the complete workbe
 });
 
 test('embeds accessible local SVG curves with underlying tables and tri-way labels', () => {
-  const html = buildSkillReviewHtml(mockReport(), runtimeSource);
+  const html = buildHtml(mockReport());
   assert.match(html, /<svg viewBox=/);
   assert.match(html, /role=\\?"img\\?"/);
   assert.match(html, /<desc id=/);
@@ -138,7 +151,7 @@ test('embeds accessible local SVG curves with underlying tables and tri-way labe
 });
 
 test('contains no external script, stylesheet, module, fetch, XHR, CDN or network loader', () => {
-  const html = buildSkillReviewHtml(mockReport(), runtimeSource);
+  const html = buildHtml(mockReport());
   assert.doesNotMatch(html, /<script[^>]+src=/i);
   assert.doesNotMatch(html, /<link[^>]+rel=["']?stylesheet/i);
   assert.doesNotMatch(html, /type=["']module["']/i);
@@ -147,12 +160,12 @@ test('contains no external script, stylesheet, module, fetch, XHR, CDN or networ
 });
 
 test('embedded application JavaScript compiles as a classic script', () => {
-  const html = buildSkillReviewHtml(mockReport(), runtimeSource);
+  const html = buildHtml(mockReport());
   assert.doesNotThrow(() => new vm.Script(embeddedScript(html), { filename: 'pd2-skills-review.html' }));
 });
 
-test('boots against a minimal file document and renders expanded governed content', () => {
-  const html = buildSkillReviewHtml(mockReport(), runtimeSource);
+test('boots asynchronously from the deterministic local gzip oracle and renders governed content', async () => {
+  const html = buildHtml(mockReport());
   const listeners = {};
   const root = {
     innerHTML: '',
@@ -161,6 +174,10 @@ test('boots against a minimal file document and renders expanded governed conten
   const context = {
     console,
     Blob,
+    Response,
+    DecompressionStream,
+    Uint8Array,
+    atob,
     URL,
     document: {
       body: { innerHTML: '' },
@@ -178,10 +195,29 @@ test('boots against a minimal file document and renders expanded governed conten
   };
   context.window = context;
   vm.runInNewContext(embeddedScript(html), context, { filename: 'pd2-skills-review.html' });
+  await context.__PD2_SKILLS_WORKBENCH_READY__;
+  assert.deepEqual(JSON.parse(JSON.stringify(context.__PD2_SKILLS_REPORT__)), mockReport());
+  assert.equal(context.__PD2_SKILLS_ORACLE_GZIP_BASE64__, undefined, 'compressed transport is released after bootstrap');
   assert.match(root.innerHTML, /Fire Ball/);
   assert.match(root.innerHTML, /Sorceress/);
+  assert.match(root.innerHTML, /Baseline courante \(HEAD\).*451 lignes BKVince.*110 collisions.*prochain ordinal 451/s);
+  assert.match(root.innerHTML, /Audit historique du 8 août.*449 lignes.*108 collisions.*prochain ordinal 449/s);
+  for (const proof of ['EXACT_FORMULA', 'MALFORMED_SOURCE', 'EXACT_TABLE', 'NATIVE_UNPROVEN']) {
+    assert.match(root.innerHTML, new RegExp(proof));
+  }
   assert.match(root.innerHTML, /Décision globale de Vincent/);
   assert.equal(typeof listeners.click, 'function');
+  assert.equal(typeof listeners.change, 'function');
+
+  const malformedFilter = {
+    dataset: { filter: 'proof' },
+    type: 'select-one',
+    value: 'MALFORMED_SOURCE',
+    matches(selector) { return selector === '[data-filter]'; },
+  };
+  listeners.change({ target: malformedFilter });
+  assert.match(root.innerHTML, /Fire Ball/);
+  assert.match(root.innerHTML, /proof: MALFORMED_SOURCE/);
 
   const button = { dataset: { action: 'toggle-skill', skillId: 'skill:sor:fire-ball' } };
   listeners.click({ target: { closest() { return button; } } });
@@ -193,12 +229,16 @@ test('boots against a minimal file document and renders expanded governed conten
   assert.match(root.innerHTML, /Références Wiki PD2 épinglées/);
 });
 
-test('integrates with the canonical browser decision runtime API', () => {
-  const html = buildSkillReviewHtml(mockReport(), buildBrowserRuntimeSource());
+test('integrates with the canonical browser decision runtime API', async () => {
+  const html = buildHtml(mockReport(), buildBrowserRuntimeSource());
   const root = { innerHTML: '', addEventListener() {} };
   const context = {
     console,
     Blob,
+    Response,
+    DecompressionStream,
+    Uint8Array,
+    atob,
     URL,
     document: {
       body: { innerHTML: '' },
@@ -215,17 +255,44 @@ test('integrates with the canonical browser decision runtime API', () => {
     confirm() { return true; },
   };
   context.window = context;
-  assert.doesNotThrow(() => vm.runInNewContext(embeddedScript(html), context, { filename: 'pd2-skills-review.html' }));
+  vm.runInNewContext(embeddedScript(html), context, { filename: 'pd2-skills-review.html' });
+  await context.__PD2_SKILLS_WORKBENCH_READY__;
   assert.match(root.innerHTML, /Fire Ball/);
   assert.doesNotMatch(root.innerHTML, /moteur de décisions embarqué est incomplet/);
+});
+
+test('shows an explicit local compatibility error when gzip decompression is unavailable', async () => {
+  const html = buildHtml(mockReport());
+  const details = { textContent: '' };
+  const root = {
+    innerHTML: '',
+    querySelector(selector) { return selector === 'pre' ? details : null; },
+  };
+  const context = {
+    console,
+    Blob,
+    Response,
+    Uint8Array,
+    atob,
+    document: {
+      body: root,
+      querySelector(selector) { return selector === '#workbench' ? root : null; },
+    },
+  };
+  context.window = context;
+  vm.runInNewContext(embeddedScript(html), context, { filename: 'pd2-skills-review.html' });
+  await assert.rejects(context.__PD2_SKILLS_WORKBENCH_READY__, /DecompressionStream/);
+  assert.match(root.innerHTML, /Impossible de décompresser l’oracle local/);
+  assert.match(details.textContent, /version récente de Chromium, Edge ou Firefox/);
+  assert.match(context.__PD2_SKILLS_WORKBENCH_ERROR__, /DecompressionStream/);
 });
 
 test('escapes report and runtime closing-script injection without losing deterministic output', () => {
   const report = mockReport();
   report.skills[0].canonicalName = '</script><script>globalThis.pwned=true</script>';
   const hostileRuntime = runtimeSource + '\n/* </script><script>globalThis.runtimePwned=true</script> */';
-  const first = buildSkillReviewHtml(report, hostileRuntime);
-  const second = buildSkillReviewHtml(report, hostileRuntime);
+  const first = buildHtml(report, hostileRuntime);
+  const second = buildHtml(report, hostileRuntime);
   assert.equal(first, second);
   assert.doesNotMatch(first, /<script>globalThis\.pwned/);
   assert.doesNotMatch(first, /<script>globalThis\.runtimePwned/);
@@ -234,7 +301,7 @@ test('escapes report and runtime closing-script injection without losing determi
 });
 
 test('includes protected override, CUSTOM governance, bulk safety and read-only wording', () => {
-  const html = buildSkillReviewHtml(mockReport(), runtimeSource);
+  const html = buildHtml(mockReport());
   for (const expected of [
     'Valeur ou formule CUSTOM', 'Justification', 'Objectif de gameplay', 'Plan de test',
     'Override protégé obligatoire', 'J’autorise explicitement cette exception',
@@ -248,4 +315,5 @@ test('rejects invalid generator inputs', () => {
   assert.throws(() => buildSkillReviewHtml(null, runtimeSource), /report/);
   assert.throws(() => buildSkillReviewHtml({}, runtimeSource), /report\.skills/);
   assert.throws(() => buildSkillReviewHtml({ skills: [], comparisonHash: 'x' }, ''), /browserRuntimeSource/);
+  assert.throws(() => buildSkillReviewHtml({ skills: [], comparisonHash: 'x' }, runtimeSource), /compressedOracleBase64/);
 });

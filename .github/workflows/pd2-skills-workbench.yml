@@ -1,0 +1,176 @@
+name: PD2 Skills Workbench Gate
+
+on:
+  push:
+    paths:
+      - ".github/workflows/pd2-skills-workbench.yml"
+      - ".gitattributes"
+      - "Mission/pd2-skills-*"
+      - "scripts/audit-pd2-bkvince/skill-report*.mjs"
+      - "scripts/build-data/tsv.js"
+      - "scripts/migrate-bkvince/pd2-skills-*"
+      - "data-BKVince/BKVince.mpq/data/global/excel/**"
+      - "data-BKVince/BKVince.mpq/data/local/lng/strings/skills.json"
+      - "data-vanilla3.2/data/data/global/excel/**"
+      - "package.json"
+      - "package-lock.json"
+  pull_request:
+    paths:
+      - ".github/workflows/pd2-skills-workbench.yml"
+      - ".gitattributes"
+      - "Mission/pd2-skills-*"
+      - "scripts/audit-pd2-bkvince/skill-report*.mjs"
+      - "scripts/build-data/tsv.js"
+      - "scripts/migrate-bkvince/pd2-skills-*"
+      - "data-BKVince/BKVince.mpq/data/global/excel/**"
+      - "data-BKVince/BKVince.mpq/data/local/lng/strings/skills.json"
+      - "data-vanilla3.2/data/data/global/excel/**"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pd2-skills-workbench-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  governed-validation:
+    name: Generate, validate and smoke (Ubuntu Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Provision pinned PD2/SP+ source
+        shell: pwsh
+        run: |
+          $snapshotParent = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) 'PD2 Single PLayer'
+          $snapshotRoot = Join-Path $snapshotParent 'PD2-Single-Player-Plus-mod-main'
+          New-Item -ItemType Directory -Path $snapshotParent -Force | Out-Null
+
+          git -c core.autocrlf=false -c core.eol=lf clone --filter=blob:none --no-checkout https://github.com/Lukaszpg/PD2-Single-Player-Plus-mod.git $snapshotRoot
+          git -C $snapshotRoot config core.autocrlf false
+          git -C $snapshotRoot config core.eol lf
+          git -C $snapshotRoot sparse-checkout init --cone
+          git -C $snapshotRoot sparse-checkout set data/global/excel data/local/LNG/ENG
+          git -C $snapshotRoot fetch --depth=1 origin 3debc6781f33c3c1474a995b80369a4e618cd386
+          git -C $snapshotRoot checkout --detach FETCH_HEAD
+
+          $actualCommit = git -C $snapshotRoot rev-parse HEAD
+          $actualTree = git -C $snapshotRoot rev-parse 'HEAD^{tree}'
+          if ($actualCommit -ne '3debc6781f33c3c1474a995b80369a4e618cd386') {
+            throw "PD2/SP+ commit drift: $actualCommit"
+          }
+          if ($actualTree -ne '6f51e17e5f65abdd50b2fd33190c571fef296ccf') {
+            throw "PD2/SP+ tree drift: $actualTree"
+          }
+
+          $sourceRoot = Join-Path $snapshotRoot 'data/global/excel'
+          $skillsHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $sourceRoot 'Skills.txt')).Hash
+          $patchstringHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $snapshotRoot 'data/local/LNG/ENG/patchstring.tbl')).Hash
+          if ($skillsHash -ne 'AEEFC3F2C0C80811D62FC1A17C3B031DE2164E5606BF9779F34024B35BC87B8B') {
+            throw "PD2 Skills.txt hash drift: $skillsHash"
+          }
+          if ($patchstringHash -ne 'EC023659BFA1BA0E3FFADFBEECAD344D750E21E18DBDA1AA287D6D2835DC1107') {
+            throw "PD2 patchstring.tbl hash drift: $patchstringHash"
+          }
+
+          "PD2_SP_ROOT=$sourceRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "PD2_SKILLS_SNAPSHOT_ROOT=$snapshotRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Capture governed gameplay hashes
+        shell: pwsh
+        run: |
+          $roots = @(
+            'data-BKVince/BKVince.mpq/data/global/excel',
+            'data-BKVince/BKVince.mpq/data/local/lng/strings/skills.json',
+            'data-vanilla3.2/data/data/global/excel'
+          )
+          $tracked = @(git ls-files -- $roots | Sort-Object)
+          if ($tracked.Count -eq 0) {
+            throw 'No governed gameplay sources were found.'
+          }
+          $manifest = Join-Path $env:RUNNER_TEMP 'pd2-skills-gameplay-before.sha256'
+          $hashes = foreach ($relativePath in $tracked) {
+            if (-not (Test-Path -LiteralPath $relativePath -PathType Leaf)) {
+              throw "Missing governed gameplay source: $relativePath"
+            }
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $relativePath).Hash
+            "$hash`t$relativePath"
+          }
+          $hashes | Set-Content -LiteralPath $manifest -Encoding utf8
+          "PD2_SKILLS_GAMEPLAY_HASH_MANIFEST=$manifest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Captured $($tracked.Count) governed gameplay file hashes."
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate deterministic Workbench artifacts
+        run: npm run generate:pd2-skills-workbench
+
+      - name: Reject stale generated artifacts
+        shell: pwsh
+        run: |
+          git diff --exit-code -- Mission/pd2-skills-review.json Mission/pd2-skills-review.html Mission/pd2-skills-documentation-map.json
+
+      - name: Run complete structured validation
+        run: npm run validate:pd2-skills-workbench
+
+      - name: Verify preview compiler is read-only
+        run: node --test scripts/migrate-bkvince/pd2-skills-decisions-preview.test.mjs
+
+      - name: Run real Chromium file smoke and performance gates
+        run: npm run smoke:pd2-skills-workbench
+
+      - name: Verify gameplay sources stayed byte-identical
+        if: always()
+        shell: pwsh
+        run: |
+          $roots = @(
+            'data-BKVince/BKVince.mpq/data/global/excel',
+            'data-BKVince/BKVince.mpq/data/local/lng/strings/skills.json',
+            'data-vanilla3.2/data/data/global/excel'
+          )
+          $tracked = @(git ls-files -- $roots | Sort-Object)
+          $after = foreach ($relativePath in $tracked) {
+            if (-not (Test-Path -LiteralPath $relativePath -PathType Leaf)) {
+              throw "Missing governed gameplay source after validation: $relativePath"
+            }
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $relativePath).Hash
+            "$hash`t$relativePath"
+          }
+          $before = @(Get-Content -LiteralPath $env:PD2_SKILLS_GAMEPLAY_HASH_MANIFEST)
+          $delta = @(Compare-Object -ReferenceObject $before -DifferenceObject $after)
+          if ($delta.Count -ne 0) {
+            $delta | Format-Table | Out-String | Write-Host
+            throw 'Governed gameplay source hashes changed during the Workbench gate.'
+          }
+
+          $repositoryChanges = @(git status --porcelain=v1 --untracked-files=all -- $roots)
+          if ($repositoryChanges.Count -ne 0) {
+            $repositoryChanges | Write-Host
+            throw 'The Workbench gate changed or created a gameplay source file.'
+          }
+
+          $pd2Changes = @(git -C $env:PD2_SKILLS_SNAPSHOT_ROOT status --porcelain=v1 --untracked-files=all)
+          if ($pd2Changes.Count -ne 0) {
+            $pd2Changes | Write-Host
+            throw 'The Workbench gate changed the pinned PD2/SP+ snapshot.'
+          }
+          Write-Host "Gameplay source gate passed: $($tracked.Count) repository files and the pinned PD2 snapshot are unchanged."

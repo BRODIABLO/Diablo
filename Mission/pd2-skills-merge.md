@@ -24,6 +24,10 @@ n'expose aucun mode `--apply`.
 
 - Autorité au gel initial : HEAD `948fc130ecbf726f9c791f4e09491aaeb678d02c`.
 - Autorité finale revalidée : HEAD `357ac120b53de9539cf5774b851e806dab57926d`; les commits concurrents intervenus pendant le chantier n'ont modifié aucune source, table ni contrat V3 consommé par le Workbench, et les 45 hashes de sources sont inchangés.
+- Base architecturale acceptée pour le gate opérationnel : commit
+  `a22fad7bb3a5da15619bc86c7dc06b3d358fbe94`. Le durcissement de transport,
+  le smoke Chromium et le gate CI ne changent ni son modèle logique, ni le
+  `comparisonHash`, ni les fingerprints.
 - Baseline PD2/SP+ : commit documenté
   `3debc6781f33c3c1474a995b80369a4e618cd386`, tree
   `6f51e17e5f65abdd50b2fd33190c571fef296ccf`; le snapshot local n'a pas de
@@ -53,6 +57,46 @@ n'expose aucun mode `--apply`.
   image d'analyse SHA-256
   `673E8C0B2E89563E75525B24D137098EFD07B2DB4ED42ADEC56AA1ADDF0E63AB`.
   Une absence de preuve reste `NATIVE_UNPROVEN`.
+
+### Dérive gouvernée de la baseline du 8 août
+
+L'audit analytique du 8 août reste une **baseline historique immuable** : son
+SHA-256 est
+`BE9385A532CBD3DF80D94E83F04293FB9238DFD10101C5A9F442DB8DAC07D565` et
+son état observé s'arrêtait à l'ordinal BKVince 448. Il comptait donc 449
+lignes, 108 occupations d'ordinal en collision avec PD2 et proposait 449 comme
+prochain ordinal append-only. Le Workbench ne réinterprète pas ces nombres comme
+la baseline courante et ne régénère pas silencieusement cet audit historique.
+
+Le commit BKVince
+`b731e9a2d2f53f1fbb9fc60078880bb7d817888f` du 10 août 2026
+(`Implement PD2 monster merge lots (prototype)`) a ensuite ajouté exactement
+deux lignes à la fin de `skills.txt`, sans déplacer les 449 lignes existantes :
+
+| Ordinal runtime | Ligne physique | Skill BKVince | `*Id` documentaire | `charclass` | `skilldesc` | Occupant PD2 du même ordinal |
+|---:|---:|---|---:|---|---|---|
+| 449 | 451 | `BKV BloodRaven Immo` | 10000 | vide, technique/classless | `immolation arrow` | `Iceboss Blizzard` |
+| 450 | 452 | `BKV Baal Lowres` | 10001 | vide, technique/classless | `lower resist` | `Lightning Strike Cowboss` |
+
+Les fingerprints de lignes BKVince sont respectivement
+`29C2448FBC6EB6C1DEDF95C9405E41EB3773AA3C213019BD7C454314A88B47F7` et
+`37376A66ACB06D91AC352EF8590FCCC9E2D88368B5DAD06DEEF2A3651CE9963D`.
+
+Ces deux occupations sont deux nouvelles collisions techniques
+`SAME_ORDINAL_DIFFERENT_SKILL`, respectivement
+`collision:pd2-bkvince:449` et `collision:pd2-bkvince:450`. Elles restent
+`UNRESOLVED_NO_AUTOMATIC_MERGE`; les deux lignes BKVince ne sont ni des skills
+joueurs ni de nouveaux candidats PD2. Elles expliquent exactement le passage de
+449/108/prochain 449 à **451 lignes / 110 collisions / prochain ordinal 451**.
+Leurs fingerprints de collision sont
+`CBAEA1B2B85E31B1D676062E84207FA567CFE480D4002E11E13A25406CE49B12` et
+`37076F81903A90B62B69D54250036C94D47684F624155F89BB121906A6A1CF7B`.
+
+L'interface et les exports doivent toujours qualifier 449/108 de
+`historicalBaseline` et 451/110 de `currentBaseline`. L'allocation append-only
+utilise exclusivement `coverage.nextAppendOrdinal`, calculé depuis la longueur
+de la baseline courante; le champ `*Id` 10000/10001 ne participe jamais au
+calcul.
 
 ## Choix d'architecture
 
@@ -438,14 +482,24 @@ La génération finale gouvernée porte le `comparisonHash`
 contrat gelé
 `3A0C347476D16366FE1557446E03BD33705AC7AF14CA6BBA4F172935B675A69C`.
 
-Les artefacts déterministes sont :
+Le durcissement opérationnel conserve exactement ce `comparisonHash`, les
+fingerprints, les preuves et les exports logiques. Seul le transport des deux
+gros artefacts change : JSON compact pour l'oracle autonome et oracle JSON gzip
+déterministe embarqué dans le HTML. Les tailles et hashes avant → après sont :
 
-- `Mission/pd2-skills-review.json` — SHA-256
-  `E9125DB0A10D6F70EA6644AF8BFAE4226FBEAFA6230FFC4FC50AF4DE75B397E0`;
-- `Mission/pd2-skills-review.html` — SHA-256
-  `150B9D798D90CDF4CFE335D0223E49327A584370E9C49F15F06EBC7D3E776649`;
-- `Mission/pd2-skills-documentation-map.json` — SHA-256
-  `37516AB117716D1BF2C4B59B2FAEE82F058A422AFFD3B4D669F92F0098BDA7CF`.
+| Artefact | Taille avant | Taille durcie | SHA-256 durci |
+|---|---:|---:|---|
+| `Mission/pd2-skills-review.json` | 100 552 008 octets | 48 655 229 octets | `D3F44D871BDD0B685B2BDEB58A87A33C60D33973AADC3FB73B03C6730BAA6D4F` |
+| `Mission/pd2-skills-review.html` | 48 790 054 octets | 6 234 332 octets | `D09A17D62133BCBDDF6E1E1F33DA5A82D7E813DA91DF98BD3294ABC89093F8C4` |
+| `Mission/pd2-skills-documentation-map.json` | 401 017 octets | 401 017 octets | `37516AB117716D1BF2C4B59B2FAEE82F058A422AFFD3B4D669F92F0098BDA7CF` |
+
+Cette réduction supprime seulement indentation et duplication de transport.
+L'oracle complet reste exportable, rehydraté octet-logiquement dans Chromium et
+vérifié contre le modèle canonique. Les options de dictionnaire global de
+chaînes, de cellules indexées, de fragmentation par classe et d'artefact
+technique séparé ont été différées : elles auraient accru la complexité des
+fingerprints, des exports ou du chargement `file://` sans gain nécessaire après
+la compression locale. Aucune donnée, preuve ou dépendance n'a été supprimée.
 
 La couverture finale est de 429 lignes Vanilla, 451 lignes BKVince et 603
 lignes PD2, toutes représentées exactement une fois dans 707 entités
@@ -464,11 +518,48 @@ Validation officielle :
 ```powershell
 npm.cmd run generate:pd2-skills-workbench
 npm.cmd run validate:pd2-skills-workbench
+npm.cmd run smoke:pd2-skills-workbench
 ```
 
-La suite finale exécute 66 tests structurés, tous réussis, puis un `--check`
-byte-identical du générateur. Le cadastre est régénéré et valide. Pour produire
-un preview documentaire à partir d'un export de décisions :
+Le workflow `.github/workflows/pd2-skills-workbench.yml` applique le même gate
+sur Ubuntu avec Node 24 et un vrai Chromium. Pour chaque changement du
+Workbench, de son générateur ou d'une source gouvernée, il provisionne le
+snapshot PD2/SP+ au commit et au tree épinglés, contrôle les hashes de
+`Skills.txt` et `patchstring.tbl`, régénère les artefacts, refuse tout diff
+généré, exécute la validation structurée, le smoke `file://` et les seuils de
+performance. Un manifeste SHA-256 avant/après de tous les fichiers gameplay
+suivis dans les racines gouvernées, complété par l'état Git du snapshot PD2,
+fait échouer le job à la moindre écriture. La suite ciblée du preview est
+rejouée séparément comme gate read-only.
+
+La suite finale exécute **69 tests structurés, 69 réussis, zéro échec**, puis
+un `--check` byte-identical du générateur. Son run local de référence dure
+18,1 s au total, dont 13,660 s pour `node --test`, sous Node v24.18.0 sur
+Windows x64. Le cadastre est régénéré et valide.
+
+Le smoke réel Playwright 1.62.1 ouvre directement l'URL `file://` sous Chromium
+151.0.7922.34. Sur la machine locale Windows x64 de validation, il passe ses
+18 checkpoints en 27,617 s, sans erreur JavaScript :
+
+| Mesure Chromium | Résultat | Seuil bloquant |
+|---|---:|---:|
+| Chargement à froid | 971,47 ms | 20 000 ms |
+| Première interaction | 1 044,76 ms | 20 000 ms |
+| Recherche globale | 7,12 ms | 3 000 ms |
+| Filtre | 951,38 ms | 3 000 ms |
+| Changement de classe | Sorceress 593,76 ms; Necromancer 621,06 ms | 3 000 ms |
+| Export des décisions | 203,37 ms | 10 000 ms |
+| Pic RSS Chromium | 889,37 MiB (932 569 088 octets) | 1 500 MiB |
+| Pic heap JavaScript | 68,21 MiB (71 523 764 octets) | 512 MiB |
+
+Le parcours couvre Sorceress, Necromancer, Amplify Damage hybride et CUSTOM,
+autosave/rechargement, export/import JSON, export Markdown de classe, prochain
+skill incomplet, nouveau skill append-only, collision Warlock et preuve
+`MALFORMED_SOURCE` de Fire Ball. Le bandeau du dashboard distingue sans
+ambiguïté la baseline courante 451/110/prochain 451 de l'audit historique du
+8 août 449/108/prochain 449.
+
+Pour produire un preview documentaire à partir d'un export de décisions :
 
 ```powershell
 npm.cmd run preview:pd2-skills-decisions -- <decisions.json>

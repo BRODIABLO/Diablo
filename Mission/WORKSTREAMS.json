@@ -501,6 +501,7 @@
       "mission": "Mission/bkvcombat-0.1.md",
       "nextGate": "BKVCombat 0.1 Release 1 is built and packaged: DLL SHA-256 3EFCEB7374E26207FE603FF5AC43DAFBC8246E85C37426B62D0AEF1F38663D50, strict ZIP A6E89B7B4B8723704A44F95386AB841A6ABD4AD9C2C27003EE61A4B90331BE24. Current-stack cold starts pass default-off, policies-on and both exact BKVCombat/MeleeSplash orders at 19/19 plugins, 15/15 patchsets and 24/24. Gameplay and lazy provider negotiation are NOT RUN. Next: solo Critical/Deadly, four-class Crushing Blow/CBE, three-stack Open Wounds and leech witnesses. Universal compatibility remains NO-GO until disabled PluginPack features and pre-existing render incidents are closed without neutralizing third-party components. Preserve ProgressiveAffixesPlugin as previous mission history.",
       "include": [
+        ".github/workflows/pd2-skills-workbench.yml",
         "Mission/pd2-inspiration-bkvince.md",
         "Mission/pd2-monsters-bosses-vs-bkvince-audit.md",
         "Mission/pd2-skills-*",

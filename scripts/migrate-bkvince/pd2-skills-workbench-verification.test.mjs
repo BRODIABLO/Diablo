@@ -616,8 +616,17 @@ test('generator, comparison hash, fingerprints and standalone HTML are determini
   for (const text of [
     'Recherche globale', 'Décisions incomplètes seulement', 'Skill suivant à décider',
     'Vue joueur', 'Vue technique', 'Copier le briefing du skill', 'Exporter ce skill en Markdown',
-    'Exporter le dossier de révision de cette classe', '<svg viewBox=',
+    'Exporter le dossier de révision de cette classe', 'Baseline courante (HEAD)',
+    'Audit historique du 8 août',
+    '<svg viewBox=',
   ]) assert(html.includes(text), `HTML omits ${text}`);
+  const fireBall = report.skills.find((skill) => skill.canonicalName === 'Fire Ball');
+  assert(fireBall, 'Fire Ball witness must exist');
+  assert.equal(fireBall.evidence?.overall, 'MALFORMED_SOURCE');
+  assert(fireBall.evidence?.statuses?.includes('MALFORMED_SOURCE'));
+  const uiSource = fs.readFileSync(path.join(repoRoot, 'scripts', 'migrate-bkvince', 'pd2-skills-review-ui.mjs'), 'utf8');
+  assert.match(uiSource, /asArray\(skill\.evidence\?\.overall\)/);
+  assert.match(uiSource, /asArray\(skill\.evidence\?\.statuses\)/);
 });
 
 test('preview CLI is strictly read-only, rejects --apply, and cannot write to gameplay roots', async () => {

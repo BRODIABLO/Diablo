@@ -12,6 +12,7 @@
     "audit:pd2-bkvince": "node scripts/audit-pd2-bkvince/audit.mjs",
     "generate:pd2-skills-workbench": "node scripts/migrate-bkvince/pd2-skills-review.mjs",
     "validate:pd2-skills-workbench": "node --test scripts/migrate-bkvince/pd2-skills-review-data.test.mjs scripts/migrate-bkvince/pd2-skills-review-runtime.test.mjs scripts/migrate-bkvince/pd2-skills-review-ui.test.mjs scripts/migrate-bkvince/pd2-skills-decisions-preview.test.mjs scripts/migrate-bkvince/pd2-skills-workbench-verification.test.mjs scripts/migrate-bkvince/pd2-skills-review.test.mjs && node scripts/migrate-bkvince/pd2-skills-review.mjs --check",
+    "smoke:pd2-skills-workbench": "node scripts/migrate-bkvince/pd2-skills-review-browser-smoke.mjs",
     "preview:pd2-skills-decisions": "node scripts/migrate-bkvince/pd2-skills-decisions-preview.mjs",
     "validate:pd2-catalog": "node scripts/validate-pd2-catalog/validate.mjs --require-source",
     "test:pd2-catalog": "node --test scripts/validate-pd2-catalog/validate.test.mjs",
@@ -70,6 +71,7 @@
   },
   "devDependencies": {
     "@d2runewizard/d2s": "2.0.132",
+    "@playwright/test": "1.62.1",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "concurrently": "^9.1.2",

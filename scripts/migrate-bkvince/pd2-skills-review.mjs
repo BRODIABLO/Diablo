@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -22,6 +23,15 @@ export const OUTPUT_PATHS = Object.freeze({
 
 function sha256(value) {
   return crypto.createHash('sha256').update(value).digest('hex').toUpperCase();
+}
+
+export function compressOracleForHtml(report) {
+  const compact = Buffer.from(JSON.stringify(report), 'utf8');
+  const compressed = zlib.gzipSync(compact, { level: 9, mtime: 0 });
+  // RFC 1952 byte 9 is only an OS hint and is not covered by the CRC. zlib
+  // emits a platform-specific value, so normalize it for Windows/Linux CI.
+  compressed[9] = 0xFF;
+  return compressed;
 }
 
 function assertOracle(report) {
@@ -83,9 +93,14 @@ export function generateSkillReviewArtifacts(options = {}) {
   assertOracle(report);
   const documentation = buildDocumentationMap(report);
   const runtimeSource = buildBrowserRuntimeSource();
-  const html = buildSkillReviewHtml(report, runtimeSource);
+  const compressedOracle = compressOracleForHtml(report);
+  const html = buildSkillReviewHtml(report, runtimeSource, {
+    compressedOracleBase64: compressedOracle.toString('base64'),
+  });
   const raw = Object.freeze({
-    report: `${JSON.stringify(report, null, 2)}\n`,
+    // Keep the governed oracle complete while avoiding more than 50 MiB of
+    // deterministic presentation whitespace in the checked-in artifact.
+    report: `${JSON.stringify(report)}\n`,
     documentation: `${JSON.stringify(documentation, null, 2)}\n`,
     html,
   });
