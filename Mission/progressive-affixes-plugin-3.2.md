@@ -1,6 +1,6 @@
 # ProgressiveAffixesPlugin autonome — D2R 3.2.92777
 
-Dernière mise à jour : 10 août 2026
+Dernière mise à jour : 11 août 2026
 
 ## Décision produit et destination
 
@@ -21,7 +21,7 @@ Description publique :
 
 Rendre configurable la progression du nombre d’affixes générés pour les objets
 Magic, Rare et Crafted avec un TOML directement compréhensible par un joueur.
-Le profil v0.2.0 conserve les seuils PD2 comme base, mais fait progresser les
+Le profil v0.2.1 conserve les seuils PD2 comme base, mais fait progresser les
 Rare Jewels depuis leur distribution vanilla jusqu’au maximum :
 
 - Magic : deux affixes garantis pour armes/armures à ilvl 65, jewels/jewelry à
@@ -42,14 +42,15 @@ catégories ordonnées et poids entiers, mais refuse de mélanger les deux forma
 
 ## Preuves natives gouvernées
 
-Le gate obligatoire `npm.cmd run re:d2r32 -- status` du 10 août 2026 vérifie :
+Le gate obligatoire `npm.cmd run re:d2r32 -- status`, rejoué le 11 août 2026,
+vérifie :
 
 - image canonique SHA-256
   `CC59119DC2A6C7D43D088098FC162EAFA4AE1299B2079126AEF43C1ACA914715` ;
 - image d’analyse SHA-256
   `673E8C0B2E89563E75525B24D137098EFD07B2DB4ED42ADEC56AA1ADDF0E63AB` ;
-- index vérifié : 105 850 fonctions, 1 057 329 références, 57 patch-sites et
-  352 connaissances.
+- index vérifié : 105 850 fonctions, 1 057 329 références, 53 patch-sites et
+  372 connaissances.
 
 La référence PluginPack est épinglée et propre au commit
 `eezstreet/D2RL-Plugins@dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`.
@@ -91,6 +92,12 @@ La DLL n’implémente pas la génération d’affixes. Quatre relais alloués �
 4. D2R choisit ensuite les affixes légaux, applique les limites trois prefixes /
    trois suffixes, écrit les stats, sérialise l’objet et assure la synchronisation.
 
+Le relais du load prefix `0x442C78` est appelé avant que le prologue Magic
+copie `RCX/RDX` vers `RDI/RSI`. Depuis la v0.2.1, il appelle donc le sélecteur
+C++ avec un cadre Windows x64 complet, puis restaure exactement `RCX` et `RDX`
+avant de rendre la main à D2R. Les relais suffix, Rare et Crafted restent
+inchangés parce que leurs points d’injection n’exposent pas cette contrainte.
+
 La résolution des codes d’ItemType réutilise les records compilés actifs
 (`dataTables+0x1348`, compteur `+0x1350`, stride `0xE8`) et la LUT native. Une
 configuration absente laisse le plugin chargé mais désactivé. Une configuration
@@ -116,7 +123,7 @@ change.
 
 ## Validation technique
 
-État du 10 août 2026 :
+État du 11 août 2026 :
 
 | Gate | Statut | Preuve |
 |---|---|---|
@@ -124,19 +131,53 @@ change.
 | Warnings | passed | `/W4 /WX /permissive- /utf-8` |
 | Politique TOML | passed | CTest `1/1`, format joueur, compatibilité v0.1, pourcentages exacts, seuils, distributions et refus invalides |
 | Reproductibilité | passed | deux clean builds `/Brepro` identiques |
-| DLL | passed | 161 280 octets, SHA-256 `F88386D2839E996880F1C9EFBEE7891E8CF4CCADCAC109C65EE2F8B70671FC7C` |
+| DLL | passed | 161 280 octets, SHA-256 `6F70AB9EAA6238DAB8CE685B7C4C2E3E6A961326F71A82C566B86CFBD684DD0D` |
 | TOML | passed | 1 145 octets, SHA-256 `2011929145203A6E2C2C06011376E774828C60676BD0311F70D1E5BE6D4AF41F` |
-| Métadonnées | passed | v0.2.0, RuffnecKk, description courte, trois exports D2RLoader exacts |
+| Métadonnées | passed | v0.2.1, RuffnecKk, description courte, trois exports D2RLoader exacts |
 | Hash build/package/BKVince | passed | DLL et TOML identiques dans les trois emplacements concernés |
-| Cold start mod-local | passed | build 92777, config mod-locale, `18/18` plugins et `15/15` patchsets, zéro rejet/échec |
-| Cold start global + repli config | passed | DLL `[global]`, config globale explicite, mêmes totaux `18/18` et `15/15` |
+| Cold start mod-local | passed | v0.2.1, build 92777, config mod-locale, `19/19` plugins, `15/15` patchsets et `24/24` tâches de démarrage |
+| Cold start global + repli config | historical | v0.2.0 validée `[global]` avec `18/18` et `15/15`; non rejoué pour le hotfix v0.2.1 |
 | Coexistence, configuration BKVince active | passed | cinq DLL PluginPack et tous les plugins actuellement chargés conservés, aucun composant retiré pour les deux cold starts |
 | Coexistence PluginPack toutes fonctions | blocked | fonctions volontairement désactivées dans `D2RPlugins.json` et conflits full-stack préexistants `0x589736`, `0x314110`, `0x18885B/0x18887F` à fermer sans neutraliser de composant |
-| Résolution runtime des ItemTypes | not run | la résolution tardive exige une génération Magic/Rare/Crafted en jeu |
-| Matrice gameplay | not run | bornes Magic/Rare/Crafted, distributions, save/reload |
+| Résolution runtime des ItemTypes | partial | le chemin de création d’un nouveau personnage passe; les six codes et les trois qualités ne sont pas encore couverts |
+| Matrice gameplay | partial | création neuve et entrée en jeu sans crash; bornes, distributions et save/reload restent à exécuter |
 | Hôte/joiner | not run | témoin multijoueur requis |
 
-La compilation et les tests statiques ne ferment pas les cases gameplay.
+La création neuve ferme la régression de crash, mais pas la matrice statistique.
+
+## Incident v0.2.0 et hotfix v0.2.1 — 11 août 2026
+
+La création d’un Necromancer sous la v0.2.0 a produit une violation d’accès
+`C0000005` dans `UNITS_GetUnitType`, pendant `Game::AddPlayerToGame`. Le rapport
+`d2r-crash-report (2026_08_12 00_46_06 UTC).log`, SHA-256
+`B84B217432ED082F1CF4F78DE9DE8098FB6B9FC7DDABCE0909362FCCE508EC46`,
+contient deux adresses de retour dans `ProgressiveAffixesPlugin.dll`, après
+`ITEMS_CheckItemTypeId` et `FindCategory`.
+
+La preuve binaire gouvernée ferme la cause : le hook prefix à `0x442C78` était
+placé avant `mov rsi, rdx` et `mov rdi, rcx`. Le relais v0.2.0 effectuait un
+tail-jump vers un helper C++ autorisé par l’ABI Windows x64 à écraser les deux
+registres volatils. D2R sauvegardait ensuite des arguments corrompus, jusqu’à
+présenter le faux pointeur `0x8C001753B395D4B6` au test d’ItemType.
+
+La v0.2.1 remplace uniquement ce relais par une séquence de 25 octets qui :
+
+1. empile `RCX` et `RDX` ;
+2. réserve `0x28` octets pour l’alignement et le shadow space ;
+3. appelle le helper ;
+4. restaure la pile, `RDX`, puis `RCX` ;
+5. retourne au prologue natif.
+
+Un test de non-régression vérifie octet par octet la séquence et le remplissage
+`0xCC` du slot de 32 octets. Deux clean builds Release x64 passent CTest `1/1`
+et produisent la même DLL. Le déploiement ciblé ne remplace que la DLL; le TOML
+reste byte-identique.
+
+Le cold start corrigé charge `ProgressiveAffixesPlugin 0.2.1 [mod]` avec
+`19/19` plugins, `15/15` patchsets et `24/24` tâches de démarrage, sans rejet ni
+échec. Aucun rapport de crash postérieur à 20:46:06 n’est apparu. Vincent a
+ensuite créé un nouveau personnage et confirmé l’entrée en jeu sans crash. La
+session D2R stable reste ouverte à sa demande implicite d’usage.
 
 ## Qualification runtime du 10 août 2026
 
@@ -216,10 +257,11 @@ Allowlist stricte :
 - `ProgressiveAffixesPlugin.dll` ;
 - `ProgressiveAffixesPlugin.toml`.
 
-Archive `ProgressiveAffixesPlugin-0.2.0.zip` : 70 068 octets, SHA-256
-`E1C3FDCA8D4384C97E1AB8A4D2C9A9010A5519580DF5DDC31E246B05E1D76DBD`.
+Archive `ProgressiveAffixesPlugin-0.2.1.zip` : 70 144 octets, SHA-256
+`F95D4BBDA94D296B3632E9F44B87B2B9137B4177079191D9CEC0B3D77DE6A82E`.
 L'inspection confirme exactement deux entrées à la racine, la DLL et le TOML.
 
 Le README, les sources, symboles, logs et preuves restent hors ZIP. L’archive ne
-peut être déclarée validée en jeu tant que les gates runtime et fonctionnels
-restent ouverts.
+est validée pour le démarrage complet et la création d’un personnage. Les
+distributions, les seuils, le multijoueur et la compatibilité universelle
+PluginPack restent hors de cette conclusion.

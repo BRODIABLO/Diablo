@@ -577,7 +577,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/progressive-affixes-plugin-3.2.md",
-      "notes": "Build-92777 Magic affix generator with observed ABI (itemWrapper, generation) -> int32. The wrapper contains the item pointer at +0x00 and generation carries item level at +0x18 plus native prefix/suffix decision fields at +0xA8/+0xB4. ProgressiveAffixesPlugin leaves the entry and native affix application intact."
+      "notes": "Build-92777 Magic affix generator with observed ABI (itemWrapper, generation) -> int32. The wrapper contains the item pointer at +0x00 and generation carries item level at +0x18 plus native prefix/suffix decision fields at +0xA8/+0xB4. The prologue saves RDX/RCX into RSI/RDI only after the 0x442C78 prefix load, so any helper injected there must preserve both volatile arguments. ProgressiveAffixesPlugin leaves the entry and native affix application intact."
     },
     {
       "rva": "0x442C78",
@@ -585,7 +585,7 @@
       "kind": "patch-site",
       "confidence": "high",
       "source": "Mission/memory-patches-portage-3.2.json; Mission/progressive-affixes-plugin-3.2.md",
-      "notes": "Exact six-byte load 8B 82 A8 00 00 00 of the native Magic prefix decision. ProgressiveAffixesPlugin redirects only this load through a near relay that returns one when the ordered TOML category and item-level step require two affixes."
+      "notes": "Exact six-byte load 8B 82 A8 00 00 00 of the native Magic prefix decision, located before the prologue saves RDX/RCX into RSI/RDI. ProgressiveAffixesPlugin 0.2.1 redirects only this load through a near relay that call-preserves both arguments and returns one when the ordered TOML category and item-level step require two affixes."
     },
     {
       "rva": "0x442CDC",

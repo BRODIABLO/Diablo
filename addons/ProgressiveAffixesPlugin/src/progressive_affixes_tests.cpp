@@ -1,5 +1,7 @@
 #include "progressive_affixes_config.hpp"
+#include "progressive_affixes_relay.hpp"
 
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -259,5 +261,26 @@ minimum_affixes = 1
     Check(candidates.size() == 2);
     Check(candidates[0].filename() == L"ProgressiveAffixesPlugin.toml");
     Check(candidates[1].filename() == L"ProgressiveAffixesPlugin.toml");
+
+    constexpr auto target = std::uintptr_t{0x1122334455667788ULL};
+    std::array<std::uint8_t, RelayStride> relay{};
+    BuildPreservingFirstTwoArgumentsRelay(relay, target);
+    constexpr std::array<std::uint8_t, 25> expected{
+        0x51,
+        0x52,
+        0x48, 0x83, 0xEC, 0x28,
+        0x48, 0xB8,
+        0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11,
+        0xFF, 0xD0,
+        0x48, 0x83, 0xC4, 0x28,
+        0x5A,
+        0x59,
+        0xC3,
+    };
+    Check(std::equal(expected.begin(), expected.end(), relay.begin()));
+    Check(std::all_of(
+        relay.begin() + static_cast<std::ptrdiff_t>(expected.size()),
+        relay.end(),
+        [](std::uint8_t byte) { return byte == 0xCC; }));
     return 0;
 }

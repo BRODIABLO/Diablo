@@ -1216,6 +1216,11 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "progressive_affixes_relay.hpp",
+                                                                                                     "path":  "addons/ProgressiveAffixesPlugin/src/progressive_affixes_relay.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "progressive_affixes_tests.cpp",
                                                                                                      "path":  "addons/ProgressiveAffixesPlugin/src/progressive_affixes_tests.cpp",
                                                                                                      "kind":  "file"
@@ -1230,6 +1235,11 @@
                                                                             {
                                                                                 "name":  "ProgressiveAffixesPlugin-0.2.0.zip",
                                                                                 "path":  "addons/ProgressiveAffixesPlugin/ProgressiveAffixesPlugin-0.2.0.zip",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "ProgressiveAffixesPlugin-0.2.1.zip",
+                                                                                "path":  "addons/ProgressiveAffixesPlugin/ProgressiveAffixesPlugin-0.2.1.zip",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

@@ -10,6 +10,12 @@ Les sorties volumineuses demeurent sous `analysis-cache/corpus/`.
   `0x442C78` charge la décision prefix à `generation+0xA8` et `0x442CDC`
   charge la décision suffix à `generation+0xB4`. Les valeurs positives exigent
   les tentatives qui permettent de garantir un prefix et un suffix.
+- Le site prefix `0x442C78` précède `mov rsi, rdx` et `mov rdi, rcx` dans le
+  prologue Magic. Un helper appelé depuis ce site doit donc préserver les deux
+  arguments volatils malgré l’ABI Windows x64. La v0.2.0 ne le faisait pas et
+  pouvait transmettre un faux pointeur à `UNITS_GetUnitType` pendant
+  `Game::AddPlayerToGame`; la v0.2.1 appelle le helper avec shadow space et
+  restaure `RDX/RCX` avant le retour au prologue natif.
 - `0x58A120` est le générateur Crafted `(item, generation)`. Le bloc
   `0x58A1E7..0x58A225` prouve les minima ilvl 1/31/51/71 et l’appel au RNG
   général `0x153B00` avec borne 5. Les distributions vanilla correspondent

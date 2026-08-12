@@ -1,4 +1,4 @@
-# ProgressiveAffixesPlugin 0.2.0
+# ProgressiveAffixesPlugin 0.2.1
 
 Increases generated item affix counts as item levels rise.
 
@@ -42,7 +42,7 @@ The four visible gameplay sections are:
 
 Every percentage row must total exactly 100. Whole numbers and values with up to two decimals are accepted. A key such as `from_level_45` becomes active at item level 45 and remains active until the next configured level. Every Rare and Crafted progression must include `from_level_1`.
 
-Version 0.2.0 still accepts the advanced array-table syntax shipped with 0.1.0, including custom ordered `itemtypes.txt` categories and integer weights. Simple and advanced formats cannot be mixed in one file.
+Version 0.2.1 still accepts the advanced array-table syntax shipped with 0.1.0, including custom ordered `itemtypes.txt` categories and integer weights. Simple and advanced formats cannot be mixed in one file.
 
 The built-in fallback is disabled when the TOML is absent. A present but invalid TOML is refused before any hook is installed. Unknown item-type codes in an advanced configuration disable progressive selection and produce an explicit error instead of silently matching another category.
 
@@ -51,6 +51,8 @@ The `progressive-affixes` console command reports the loaded configuration, cate
 ## Compatibility and evidence
 
 The DLL validates build 92777, native RNG and item-type ABIs, all three generator entries, and every replaced instruction range before writing code. Its owned ranges are the Magic count loads at `0x442C78` and `0x442CDC`, the Crafted count roll/clamp at `0x58A21B` and `0x58A220`, and the Rare count branch/block at `0x58BC65` and `0x58BC90..0x58BCAD`.
+
+Version 0.2.1 preserves the Magic generator's wrapper and generation arguments across the prefix selector call. This is required because `0x442C78` runs before D2R saves those volatile argument registers.
 
 The pinned PluginPack reference at commit `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` owns none of those ranges. BKVince's older force-max JSON patchsets must not coexist with this plugin; the BKVince integration replaces them atomically with the DLL and TOML.
 

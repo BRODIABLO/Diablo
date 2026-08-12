@@ -203,6 +203,14 @@
         "ProgressiveAffixesPlugin.toml"
       ]
     },
+    "addons/ProgressiveAffixesPlugin/ProgressiveAffixesPlugin-0.2.1.zip": {
+      "kind": "plugin",
+      "allowToml": true,
+      "entries": [
+        "ProgressiveAffixesPlugin.dll",
+        "ProgressiveAffixesPlugin.toml"
+      ]
+    },
     "addons/BKVCombat/BKVCombat-0.1.0.zip": {
       "kind": "plugin",
       "entries": [

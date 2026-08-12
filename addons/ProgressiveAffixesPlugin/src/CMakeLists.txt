@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(ProgressiveAffixesPlugin VERSION 0.2.0 LANGUAGES CXX RC)
+project(ProgressiveAffixesPlugin VERSION 0.2.1 LANGUAGES CXX RC)
 
 include(FetchContent)
 FetchContent_Declare(

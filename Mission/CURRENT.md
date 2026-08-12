@@ -1,6 +1,6 @@
 # Mission courante
 
-Dernière mise à jour : 10 août 2026
+Dernière mise à jour : 11 août 2026
 
 ## Priorité active
 
@@ -50,7 +50,7 @@ Aucun commit ni push n’est effectué sans demande explicite de Vincent.
 
 [ProgressiveAffixesPlugin autonome — D2R 3.2.92777](progressive-affixes-plugin-3.2.md)
 
-État : **TOML joueur v0.2.0 et double cold start terminés, qualification gameplay ouverte**.
+État : **hotfix v0.2.1 déployé; création neuve sans crash; qualification statistique ouverte**.
 Vincent avait placé le plugin en option B dans la phase itemisation, puis a
 donné le 10 août 2026 la directive explicite `Implemente`. Cette directive ouvre
 le lot immédiatement sans modifier la destination confirmée : plugin autonome
@@ -59,9 +59,9 @@ mutation d’une DLL eezstreet.
 
 La DLL Release x64 et le TOML joueur PD2-inspired sont présents dans `addons/` et dans le profil
 source BKVince. Les trois anciens patchsets force Magic/Rare/Crafted sont retirés
-atomiquement. Deux clean builds `/Brepro` produisent la même DLL de 161 280
-octets, SHA-256
-`F88386D2839E996880F1C9EFBEE7891E8CF4CCADCAC109C65EE2F8B70671FC7C`.
+atomiquement. Deux clean builds `/Brepro` du hotfix produisent la même DLL de
+161 280 octets, SHA-256
+`6F70AB9EAA6238DAB8CE685B7C4C2E3E6A961326F71A82C566B86CFBD684DD0D`.
 La suite CTest passe `1/1`; les métadonnées, trois exports D2RLoader et hashes
 build/package/BKVince sont cohérents.
 
@@ -79,11 +79,20 @@ et zéro échec. La portée globale de test a été retirée et le profil BKVinc
 mod-local restauré avec les hashes source/runtime exacts; une seule instance
 mod-locale stable a été relancée.
 
+Le 11 août, le rapport de crash de création Necromancer a révélé que le relais
+prefix `0x442C78` de la v0.2.0 écrasait `RCX/RDX` avant leur sauvegarde par le
+prologue natif. La v0.2.1 appelle le helper avec shadow space et alignement,
+puis restaure les deux arguments. Le cold start complet passe avec `19/19`
+plugins, `15/15` patchsets et `24/24`; aucun nouveau rapport de crash n’est
+apparu. Vincent a créé un nouveau personnage et confirmé l’entrée en jeu sans
+crash. L’archive publique stricte v0.2.1 vaut SHA-256
+`F95D4BBDA94D296B3632E9F44B87B2B9137B4177079191D9CEC0B3D77DE6A82E`.
+
 ### Gates encore ouverts de ProgressiveAffixesPlugin
 
-Produire les témoins gameplay qui déclenchent la résolution tardive des codes
-`weap`, `armo`, `jewl`, `ring`, `amul`, `char`, puis vérifier les bornes et les
-distributions réelles.
+La régression de création est fermée. Produire encore les témoins gameplay qui
+couvrent explicitement chacun des codes `weap`, `armo`, `jewl`, `ring`, `amul`,
+`char`, puis vérifier les bornes et les distributions réelles.
 
 La qualification complète exige ensuite :
 

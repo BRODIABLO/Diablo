@@ -3,6 +3,7 @@
 #include <D2RLPlugin/api.h>
 
 #include "progressive_affixes_config.hpp"
+#include "progressive_affixes_relay.hpp"
 
 #include <Windows.h>
 
@@ -52,7 +53,6 @@ constexpr std::uintptr_t ItemTypesCountOffset = 0x1350;
 constexpr std::size_t GenerationItemLevelOffset = 0x18;
 constexpr std::int32_t VanillaRareJewelTypeId = 0x3A;
 
-constexpr std::size_t RelayStride = 32;
 constexpr std::size_t RelayCount = 4;
 constexpr std::size_t MagicPrefixRelayIndex = 0;
 constexpr std::size_t MagicSuffixRelayIndex = 1;
@@ -427,16 +427,25 @@ bool WriteBridge(
         const std::uint8_t* setup,
         std::size_t setupSize,
         const void* target) noexcept {
-    if (!RelayPage || index >= RelayCount || setupSize + 12 > RelayStride) return false;
+    if (!RelayPage || index >= RelayCount) return false;
     std::array<std::uint8_t, RelayStride> relay{};
-    relay.fill(0xCC);
-    std::memcpy(relay.data(), setup, setupSize);
-    relay[setupSize] = 0x48;
-    relay[setupSize + 1] = 0xB8;
     const auto address = reinterpret_cast<std::uintptr_t>(target);
-    std::memcpy(relay.data() + setupSize + 2, &address, sizeof(address));
-    relay[setupSize + 10] = 0xFF;
-    relay[setupSize + 11] = 0xE0;
+    if (!BuildTailRelay(relay, setup, setupSize, address)) return false;
+    std::memcpy(
+        static_cast<std::uint8_t*>(RelayPage) + index * RelayStride,
+        relay.data(),
+        relay.size());
+    return true;
+}
+
+bool WritePreservingArgumentBridge(
+        std::size_t index,
+        const void* target) noexcept {
+    if (!RelayPage || index >= RelayCount) return false;
+    std::array<std::uint8_t, RelayStride> relay{};
+    BuildPreservingFirstTwoArgumentsRelay(
+        relay,
+        reinterpret_cast<std::uintptr_t>(target));
     std::memcpy(
         static_cast<std::uint8_t*>(RelayPage) + index * RelayStride,
         relay.data(),
@@ -451,7 +460,6 @@ bool CreateRelays() noexcept {
         Context->LogError("ProgressiveAffixesPlugin: could not allocate rel32 relay memory.");
         return false;
     }
-    constexpr std::array<std::uint8_t, 0> prefixSetup{};
     constexpr std::array<std::uint8_t, 6> suffixSetup{
         0x48, 0x8B, 0xCF, // mov rcx, rdi
         0x48, 0x8B, 0xD6, // mov rdx, rsi
@@ -465,10 +473,8 @@ bool CreateRelays() noexcept {
         0x49, 0x8B, 0xD7, // mov rdx, r15 (rcx already holds the seed)
         0x4D, 0x8B, 0xC4, // mov r8, r12
     };
-    if (!WriteBridge(
+    if (!WritePreservingArgumentBridge(
             MagicPrefixRelayIndex,
-            prefixSetup.data(),
-            prefixSetup.size(),
             reinterpret_cast<const void*>(&SelectMagicPrefixValue))
         || !WriteBridge(
             MagicSuffixRelayIndex,
@@ -713,7 +719,7 @@ auto Status(
     std::snprintf(
         message,
         sizeof(message),
-        "ProgressiveAffixesPlugin 0.2.0: %s; config=%s; categories magic=%zu rare=%zu crafted=%zu; types resolved=%u unresolved=%u; selections magic=%llu rare=%llu crafted=%llu.",
+        "ProgressiveAffixesPlugin 0.2.1: %s; config=%s; categories magic=%zu rare=%zu crafted=%zu; types resolved=%u unresolved=%u; selections magic=%llu rare=%llu crafted=%llu.",
         RuntimeConfigRejected.load(std::memory_order_acquire)
             ? "runtime configuration rejected"
             : (Operational.load(std::memory_order_acquire) ? "active" : "disabled"),
@@ -740,7 +746,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "ruffneckk-progressive-affixes",
     .name = "Progressive Affixes",
-    .version = "0.2.0",
+    .version = "0.2.1",
     .author = "RuffnecKk",
     .description = "Increases generated item affix counts as item levels rise.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -766,7 +772,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     if (!LoadConfig()) return false;
     if (!Settings.enabled) {
         const auto message = std::string(
-            "ProgressiveAffixesPlugin 0.2.0 by RuffnecKk loaded disabled; config=")
+            "ProgressiveAffixesPlugin 0.2.1 by RuffnecKk loaded disabled; config=")
             + LoadedConfigPath + ".";
         Context->LogInfo(message.c_str());
         static_cast<void>(Context->RegisterConsoleCommand(
@@ -806,7 +812,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
             "ProgressiveAffixesPlugin: optional status command could not be registered.");
     }
     const auto message = std::string(
-        "ProgressiveAffixesPlugin 0.2.0 by RuffnecKk active; config=")
+        "ProgressiveAffixesPlugin 0.2.1 by RuffnecKk active; config=")
         + LoadedConfigPath + ".";
     Context->LogInfo(message.c_str());
     return true;
