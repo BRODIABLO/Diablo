@@ -20,7 +20,7 @@ import {
   physicalNodeId,
   sha256Canonical,
 } from './pd2-skills-review-contracts.mjs';
-import { generateOracleData } from './pd2-skills-review-data.mjs';
+import { DEFAULT_SOURCE_ROOTS, generateOracleData } from './pd2-skills-review-data.mjs';
 import {
   applyBulk,
   createEmptyEnvelope,
@@ -39,7 +39,7 @@ const missionPath = path.join(repoRoot, 'Mission', 'pd2-skills-merge.md');
 
 const EXPECTED_SKILLS_SOURCES = Object.freeze({
   pd2: Object.freeze({
-    path: path.resolve(repoRoot, '..', 'PD2 Single PLayer', 'PD2-Single-Player-Plus-mod-main', 'data', 'global', 'excel', 'skills.txt'),
+    path: path.join(DEFAULT_SOURCE_ROOTS.pd2, 'Skills.txt'),
     rows: 603,
     columns: 256,
     eol: '\n',
@@ -207,6 +207,17 @@ test('skills TSV authorities round-trip byte-exact with frozen row counts and ha
     'PD2 patchstring.tbl': 'EC023659BFA1BA0E3FFADFBEECAD344D750E21E18DBDA1AA287D6D2835DC1107',
   })) assert(governedHashes.has(hash), `${label} is missing from governed sourceHashes`);
   assert.match(JSON.stringify(report.sourceManifest?.bkvince?.tables?.['pettype.txt']), /INHERITED_VANILLA32/);
+});
+
+test('PD2_SP_ROOT and canonical Skills.txt casing are honored', () => {
+  if (process.env.PD2_SP_ROOT) {
+    assert.equal(path.resolve(DEFAULT_SOURCE_ROOTS.pd2), path.resolve(process.env.PD2_SP_ROOT));
+  }
+  assert.equal(EXPECTED_SKILLS_SOURCES.pd2.path, path.join(DEFAULT_SOURCE_ROOTS.pd2, 'Skills.txt'));
+  assert(fs.readdirSync(DEFAULT_SOURCE_ROOTS.pd2).includes('Skills.txt'), 'PD2 source must expose canonical Skills.txt');
+  if (process.platform !== 'win32') {
+    assert.equal(fs.existsSync(path.join(DEFAULT_SOURCE_ROOTS.pd2, 'skills.txt')), false, 'lowercase compatibility path must not be required');
+  }
 });
 
 test('oracle covers every physical ordinal exactly once and never uses documentary Id as identity', () => {
