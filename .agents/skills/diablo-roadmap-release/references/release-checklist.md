@@ -11,9 +11,11 @@
 ## Archive publique
 
 - Une allowlist exacte a été définie avant création.
+- Le README a été créé ou actualisé et placé à côté du ZIP dans le dossier de livraison pour la relecture et la modification humaines de Vincent.
+- Le README n'est pas inclus dans le ZIP généré par l'agent; Vincent l'ajoutera lui-même au ZIP final après sa révision.
 - Les fichiers proviennent du build et de la configuration réellement validés.
 - La liste des entrées du ZIP a été inspectée après création.
-- Aucun README, source, symbole, log ou fichier de preuve interdit n'est inclus pour un plugin incubé; seul le fichier de configuration indépendant confirmé, JSON ou TOML, accompagne la DLL.
+- Aucun README, source, symbole, log ou fichier de preuve interdit n'est inclus dans le ZIP généré par l'agent; pour un plugin incubé, seul le fichier de configuration indépendant confirmé, JSON ou TOML, accompagne la DLL.
 - Aucune DLL tierce n'est redistribuée sans autorisation et crédits appropriés.
 - Le SHA-256 du ZIP et des artefacts distribués est consigné dans la mission.
 

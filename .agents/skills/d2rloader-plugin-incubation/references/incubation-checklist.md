@@ -38,7 +38,7 @@ Relever le commit épinglé, les fichiers du module, les clés existantes de `D2
 
 - Manifeste v2 et trois exports attendus vérifiés.
 - Auteur exact `RuffnecKk`; crédits tiers conservés séparément.
-- Si le plugin a nécessité des connaissances acquises grâce à D2MOO, crédit explicite à D2MOO présent dans le README du plugin conservé hors du ZIP public strict.
+- Si le plugin a nécessité des connaissances acquises grâce à D2MOO, crédit explicite à D2MOO présent dans le README du plugin conservé à côté du ZIP généré par l'agent.
 - Description anglaise courte, visible par le joueur et sans détails internes.
 - Build ciblé, signatures complètes, ABI et erreurs de chargement strictement contrôlés.
 - Installation globale et mod-locale démontrée, sans `ModScopedOnly`.
@@ -49,6 +49,8 @@ Relever le commit épinglé, les fichiers du module, les clés existantes de `D2
 - Coexistence démontrée avec les cinq DLL du PluginPack, sans plugin rejeté ou en échec.
 
 ## Gate du ZIP public
+
+Créer ou actualiser le README et le déposer à côté du ZIP dans le dossier de livraison. Ne pas l'inclure dans l'archive générée par l'agent : Vincent le relit et le modifie humainement avant de l'ajouter lui-même au ZIP final.
 
 Autoriser uniquement :
 

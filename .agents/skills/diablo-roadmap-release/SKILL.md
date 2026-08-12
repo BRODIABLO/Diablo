@@ -30,10 +30,11 @@ description: Maintenir la mission courante et ROADMAP.html, séquencer une nouve
 ## Préparer une livraison
 
 1. Définir une allowlist explicite du contenu public. Pour un plugin incubé, appliquer le skill `d2rloader-plugin-incubation`.
-2. Construire l'archive depuis des artefacts validés, inspecter ses entrées réelles et vérifier l'absence de sources, secrets, logs ou preuves non destinés au public.
-3. Calculer les SHA-256 des artefacts et prouver leur égalité avec les fichiers testés dans le runtime.
-4. Exécuter les tests ciblés, le build, la validation du cadastre si nécessaire, le cold start et la matrice fonctionnelle requise.
-5. Examiner `git status`, `git diff --check` et le diff complet. Ne changer jamais de branche et ne jamais commit/push de sa propre initiative; une demande explicite de l’utilisateur courant suffit, sans formule `GO` dédiée ni identité particulière.
-6. Rappeler à Vincent de commit et push par petits lots cohérents avec des messages clairs lorsque le travail est prêt.
+2. Créer ou actualiser le README de la release et le déposer à côté du ZIP dans le dossier de livraison. Ne jamais l'inclure dans l'archive générée par l'agent : Vincent le relit et le modifie humainement avant de l'ajouter lui-même au ZIP final.
+3. Construire l'archive depuis des artefacts validés, inspecter ses entrées réelles et vérifier l'absence de README, sources, secrets, logs ou preuves non destinés au public.
+4. Calculer les SHA-256 des artefacts et prouver leur égalité avec les fichiers testés dans le runtime.
+5. Exécuter les tests ciblés, le build, la validation du cadastre si nécessaire, le cold start et la matrice fonctionnelle requise.
+6. Examiner `git status`, `git diff --check` et le diff complet. Ne changer jamais de branche et ne jamais commit/push de sa propre initiative; une demande explicite de l’utilisateur courant suffit, sans formule `GO` dédiée ni identité particulière.
+7. Rappeler à Vincent de commit et push par petits lots cohérents avec des messages clairs lorsque le travail est prêt.
 
 Lire [references/release-checklist.md](references/release-checklist.md) pour le contrôle final d'archive, de mission, de ROADMAP et de Git.
