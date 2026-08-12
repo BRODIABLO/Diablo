@@ -48,7 +48,6 @@ constexpr std::uintptr_t ConfigurePlayerInventoryRva = 0x22BA70;
 constexpr std::uintptr_t DispatchUiMessageRva = 0x843D90;
 constexpr std::uintptr_t ButtonDispatchUiMessageCallRva = 0x8F1069;
 constexpr std::uintptr_t QueueOutgoingPacketRva = 0xEE2A0;
-constexpr std::uintptr_t QueueSerializedPacketRva = 0xEE360;
 constexpr std::uintptr_t SharedGoldDepositRva = 0x14F5330;
 constexpr std::uintptr_t SharedGoldDepositCallRva = 0x14F5895;
 constexpr std::uintptr_t RemoveItemHandlerRva = 0x4AA100;
@@ -105,7 +104,6 @@ constexpr std::int32_t StashInterfaceState = 0x18;
 constexpr std::int32_t InventoryInterfaceState = 1;
 constexpr std::uint64_t CompanionInventoryCloseWindowMs = 2000;
 constexpr std::uint64_t HotkeyOpenTransitionWindowMs = 2000;
-constexpr std::uint64_t GoldPacketDiagnosticLimit = 256;
 
 constexpr std::array<std::uint8_t, 32> ConfigurePlayerInventoryExpected{
     0x4C, 0x8B, 0xDC, 0x49, 0x89, 0x5B, 0x20, 0x55,
@@ -118,12 +116,6 @@ constexpr std::array<std::uint8_t, 32> DispatchUiMessageExpected{
     0x4C, 0x89, 0x7C, 0x24, 0x58, 0x4C, 0x8B, 0xF9,
     0xE8, 0x7B, 0x1C, 0xA6, 0x00, 0x0F, 0xB6, 0x90,
     0x18, 0x01, 0x00, 0x00, 0x84, 0xD2, 0x74, 0x6F
-};
-constexpr std::array<std::uint8_t, 32> QueueSerializedPacketExpected{
-    0x48, 0x89, 0x5C, 0x24, 0x18, 0x57, 0x48, 0x81,
-    0xEC, 0x50, 0x02, 0x00, 0x00, 0x48, 0x8B, 0x05,
-    0x54, 0xCF, 0x8D, 0x02, 0x48, 0x33, 0xC4, 0x48,
-    0x89, 0x84, 0x24, 0x40, 0x02, 0x00, 0x00, 0x48,
 };
 constexpr std::array<std::uint8_t, 32> InsertItemHandlerExpected{
     0x40, 0x55, 0x53, 0x56, 0x57, 0x41, 0x56, 0x48,
@@ -295,10 +287,6 @@ constexpr std::array<RelativeCallSite, 8> TransferItemToInventoryPageCallSites{{
 using ConfigurePlayerInventoryFn = void(__fastcall*)(void* panel) noexcept;
 using DispatchUiMessageFn = void(__fastcall*)(void* message) noexcept;
 using QueueOutgoingPacketFn = void(__fastcall*)(const std::uint8_t* packet, std::int32_t size) noexcept;
-using QueueSerializedPacketFn = void(__fastcall*)(
-    const std::uint8_t* packet,
-    std::int32_t size
-) noexcept;
 using SharedGoldDepositFn = std::int32_t(__fastcall*)(
     void* panel,
     std::int32_t amount
@@ -372,7 +360,6 @@ std::uint8_t* Base{};
 ConfigurePlayerInventoryFn OriginalConfigurePlayerInventory{};
 DispatchUiMessageFn OriginalDispatchUiMessage{};
 QueueOutgoingPacketFn QueueOutgoingPacket{};
-QueueSerializedPacketFn OriginalQueueSerializedPacket{};
 SharedGoldDepositFn OriginalSharedGoldDeposit{};
 ServerPacketHandlerFn OriginalRemoveItemHandler{};
 ServerPacketHandlerFn OriginalInsertItemHandler{};
@@ -447,8 +434,6 @@ std::atomic<std::uint64_t> RemoteSharedTransferOperations{};
 std::atomic<std::uint64_t> RemoteSharedTransferFailures{};
 std::atomic<std::uint64_t> RemoteGoldTransactions{};
 std::atomic<std::uint64_t> RemoteGoldFailures{};
-std::atomic<std::uint64_t> GoldPacketDiagnosticCount{};
-std::atomic<std::uint64_t> GoldRangeBypassDiagnosticCount{};
 std::atomic<std::uint64_t> RemoteQuickMoveUiBypasses{};
 std::atomic<std::uint64_t> RemoteAutomaticCloseSuppressions{};
 std::atomic<std::uint64_t> RemoteGeneralUiCloseSuppressions{};
@@ -501,7 +486,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "remote-stash",
     .name = "Remote Stash",
-    .version = "1.2.0",
+    .version = "1.2.1",
     .author = "RuffnecKk",
     .description = "Toggles the player stash remotely from a button or configurable hotkey.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -603,10 +588,6 @@ bool ValidateRuntime() noexcept {
         // QueueOutgoingPacket is a composable live entry. PluginPack's Equipped
         // Item to Cube may own its prologue, while RemoteStash calls through it.
         && IsExecutableAddress(Base + QueueOutgoingPacketRva)
-        && Matches(
-            QueueSerializedPacketRva,
-            QueueSerializedPacketExpected
-        )
         && MatchesAll(SharedGoldDepositCallSites)
         && IsExecutableAddress(Base + SharedGoldDepositRva)
         && Matches(RemoveItemHandlerRva, RemoveItemHandlerExpected)
@@ -676,56 +657,6 @@ bool IsRemoteCloseRequest(
     std::int32_t size
 ) noexcept {
     return IsRemoteControlRequest(packet, size, RemoteCloseRequest);
-}
-
-bool IsStashOpenForPacketDiagnostic() noexcept {
-    if (!OriginalGetUiState) return false;
-    __try {
-        return OriginalGetUiState(StashInterfaceState) != 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-}
-
-void __fastcall HookQueueSerializedPacket(
-    const std::uint8_t* packet,
-    std::int32_t size
-) noexcept {
-    if (packet
-        && size > 0
-        && size <= 64
-        && IsStashOpenForPacketDiagnostic()) {
-        const auto sequence = GoldPacketDiagnosticCount.fetch_add(
-            1,
-            std::memory_order_relaxed
-        ) + 1;
-        if (sequence <= GoldPacketDiagnosticLimit && Context) {
-            char bytes[64 * 3]{};
-            constexpr char HexDigits[] = "0123456789ABCDEF";
-            for (std::int32_t index = 0; index < size; ++index) {
-                const auto value = packet[index];
-                const auto output = static_cast<std::size_t>(index) * 3;
-                bytes[output] = HexDigits[value >> 4];
-                bytes[output + 1] = HexDigits[value & 0x0F];
-                bytes[output + 2] = index + 1 < size ? ' ' : '\0';
-            }
-
-            char message[420]{};
-            std::snprintf(
-                message,
-                sizeof(message),
-                "RemoteStash: GOLD-PROBE packet=%llu scope=%s size=%d bytes=%s",
-                static_cast<unsigned long long>(sequence),
-                RemoteClientSessionActive.load(std::memory_order_acquire)
-                    ? "remote"
-                    : "physical",
-                size,
-                bytes
-            );
-            Context->LogInfo(message);
-        }
-    }
-    OriginalQueueSerializedPacket(packet, size);
 }
 
 bool HasRemoteSession(void* game, void* player) noexcept {
@@ -836,17 +767,7 @@ bool OpenRemoteSession(void* game, void* player) noexcept {
         return false;
     }
 
-    const auto count = ServerSessionsOpened.fetch_add(1, std::memory_order_relaxed) + 1;
-    if (Context) {
-        char message[190]{};
-        std::snprintf(
-            message,
-            sizeof(message),
-            "RemoteStash: authoritative server session opened (sessionsOpened=%llu).",
-            static_cast<unsigned long long>(count)
-        );
-        Context->LogInfo(message);
-    }
+    ServerSessionsOpened.fetch_add(1, std::memory_order_relaxed);
     return true;
 }
 
@@ -1365,9 +1286,6 @@ void __fastcall HookCloseInterfaceState(
 }
 
 bool ShouldBypassGoldRange() noexcept {
-    if (RemoteGoldScope) {
-        GoldRangeBypassDiagnosticCount.fetch_add(1, std::memory_order_relaxed);
-    }
     return RemoteGoldScope;
 }
 
@@ -1389,27 +1307,6 @@ std::int32_t __fastcall HookGoldButtonHandler(
     RemoteGoldScope = remote;
     const auto result = OriginalGoldButtonHandler(game, player, packet, size);
     RemoteGoldScope = previousScope;
-
-    if (packet && size == 17 && packet[0] == 0x27 && Context) {
-        std::int32_t delta{};
-        std::memcpy(&delta, packet + 13, sizeof(delta));
-        char message[260]{};
-        std::snprintf(
-            message,
-            sizeof(message),
-            "RemoteStash: GOLD-SERVER-PROBE remote=%s clientScope=%s delta=%d result=%d rangeBypasses=%llu",
-            remote ? "true" : "false",
-            RemoteClientSessionActive.load(std::memory_order_acquire)
-                ? "remote"
-                : "physical",
-            delta,
-            result,
-            static_cast<unsigned long long>(
-                GoldRangeBypassDiagnosticCount.load(std::memory_order_relaxed)
-            )
-        );
-        Context->LogInfo(message);
-    }
 
     if (!remote) return result;
     RemoteGoldTransactions.fetch_add(1, std::memory_order_relaxed);
@@ -1655,7 +1552,6 @@ bool IsCurrentRemoteStashMessage(void* message) noexcept {
 }
 
 bool TryQueueRemoteOpenRequest(
-    const char* source,
     bool closeCompanionInventory = false,
     bool smoothHotkeyTransition = false
 ) noexcept {
@@ -1684,18 +1580,7 @@ bool TryQueueRemoteOpenRequest(
             RemoteOpenRequest.data(),
             static_cast<std::int32_t>(RemoteOpenRequest.size())
         );
-        const auto count = OpenRequests.fetch_add(1, std::memory_order_relaxed) + 1;
-        if (Context) {
-            char message[210]{};
-            std::snprintf(
-                message,
-                sizeof(message),
-                "RemoteStash: %s server open request queued (requests=%llu).",
-                source,
-                static_cast<unsigned long long>(count)
-            );
-            Context->LogInfo(message);
-        }
+        OpenRequests.fetch_add(1, std::memory_order_relaxed);
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         DeactivateRemoteClientSession(false);
@@ -1706,7 +1591,7 @@ bool TryQueueRemoteOpenRequest(
     }
 }
 
-bool TryQueueRemoteCloseRequest(const char* source) noexcept {
+bool TryQueueRemoteCloseRequest() noexcept {
     if (!QueueOutgoingPacket || !LocalPlayerIsAvailable()) return false;
     __try {
         QueueOutgoingPacket(
@@ -1714,18 +1599,7 @@ bool TryQueueRemoteCloseRequest(const char* source) noexcept {
             static_cast<std::int32_t>(RemoteCloseRequest.size())
         );
         DeactivateRemoteClientSession(false);
-        const auto count = CloseRequests.fetch_add(1, std::memory_order_relaxed) + 1;
-        if (Context) {
-            char message[210]{};
-            std::snprintf(
-                message,
-                sizeof(message),
-                "RemoteStash: %s server close request queued (requests=%llu).",
-                source,
-                static_cast<unsigned long long>(count)
-            );
-            Context->LogInfo(message);
-        }
+        CloseRequests.fetch_add(1, std::memory_order_relaxed);
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         if (Context) {
@@ -1762,9 +1636,6 @@ bool TryCloseStashUiFromHotkey() noexcept {
             IndependentInventoryRestores.fetch_add(1, std::memory_order_relaxed);
         }
         MarkUiDirty();
-        if (Context) {
-            Context->LogInfo("RemoteStash: hotkey native UI close dispatched.");
-        }
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         if (Context) {
@@ -1792,11 +1663,6 @@ bool TryOpenStashUiFromHotkey() noexcept {
             }
             return false;
         }
-        if (Context) {
-            Context->LogInfo(
-                "RemoteStash: hotkey native UI open dispatched immediately."
-            );
-        }
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         if (Context) {
@@ -1810,7 +1676,7 @@ bool TryOpenStashUiFromHotkey() noexcept {
 
 bool __fastcall InterceptUiMessage(void* message) noexcept {
     if (!IsCurrentRemoteStashMessage(message)) return false;
-    (void)TryQueueRemoteOpenRequest("button");
+    (void)TryQueueRemoteOpenRequest();
     return true;
 }
 
@@ -1893,14 +1759,14 @@ void ProcessQueuedHotkeyRequest() noexcept {
         }
     }
     const auto queued = closing
-        ? TryQueueRemoteCloseRequest("hotkey")
-        : TryQueueRemoteOpenRequest("hotkey", closeCompanionInventory, true);
+        ? TryQueueRemoteCloseRequest()
+        : TryQueueRemoteOpenRequest(closeCompanionInventory, true);
     if (queued && closing && !TryCloseStashUiFromHotkey()) {
         HotkeyFailedRequests.fetch_add(1, std::memory_order_relaxed);
         return;
     }
     if (queued && !closing && !TryOpenStashUiFromHotkey()) {
-        (void)TryQueueRemoteCloseRequest("hotkey-open-rollback");
+        (void)TryQueueRemoteCloseRequest();
         HotkeyFailedRequests.fetch_add(1, std::memory_order_relaxed);
         return;
     }
@@ -2341,7 +2207,7 @@ auto Status(D2R::Game::Client*, const D2RL::ConsoleCommandContext* command, void
     std::snprintf(
         message,
         sizeof(message),
-        "RemoteStash 1.2.0: hotkeyEnabled=%s; hotkey=%s; hotkeyInput=%s; "
+        "RemoteStash 1.2.1: hotkeyEnabled=%s; hotkey=%s; hotkeyInput=%s; "
         "hotkeyUiDispatch=%s; consume=%s; config=%s; hotkeyAccepted=%llu; "
         "hotkeyCoalesced=%llu; hotkeyDispatched=%llu; hotkeyRefused=%llu; "
         "hotkeyFailed=%llu; companionCloseTickets=%llu; "
@@ -2515,8 +2381,6 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     RemoteSharedTransferFailures.store(0, std::memory_order_relaxed);
     RemoteGoldTransactions.store(0, std::memory_order_relaxed);
     RemoteGoldFailures.store(0, std::memory_order_relaxed);
-    GoldPacketDiagnosticCount.store(0, std::memory_order_relaxed);
-    GoldRangeBypassDiagnosticCount.store(0, std::memory_order_relaxed);
     RemoteQuickMoveUiBypasses.store(0, std::memory_order_relaxed);
     HotkeySettings = {};
     LoadedConfigPath = "built-in disabled defaults";
@@ -2582,7 +2446,6 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     GoldRangeStub = nullptr;
     GoldRangeTrampoline = nullptr;
     CallSiteRelayPage = nullptr;
-    OriginalQueueSerializedPacket = nullptr;
     OriginalSharedGoldDeposit = nullptr;
     try {
         const std::lock_guard lock(RemoteSessionsMutex);
@@ -2699,16 +2562,6 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
             &OriginalGetUiState
         )) {
         context->LogError("RemoteStash: scoped quick-move UI-state hook failed.");
-        return false;
-    }
-    if (!context->InstallInlineHook(
-            QueueSerializedPacketRva,
-            QueueSerializedPacketExpected.data(),
-            static_cast<std::uint32_t>(QueueSerializedPacketExpected.size()),
-            HookQueueSerializedPacket,
-            &OriginalQueueSerializedPacket
-        )) {
-        context->LogError("RemoteStash: temporary gold packet probe hook failed.");
         return false;
     }
     if (!context->InstallInlineHook(
@@ -2847,7 +2700,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     std::snprintf(
         message,
         sizeof(message),
-        "RemoteStash 1.2.0 active for D2R 3.2.92777; button UI broker=%s; "
+        "RemoteStash 1.2.1 active for D2R 3.2.92777; button UI broker=%s; "
         "hotkey=%s; binding=%s; input=%s; consume=%s; config=%s.",
         UsingUiMessageBroker.load(std::memory_order_acquire)
             ? "PluginPack"
@@ -2890,7 +2743,6 @@ D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
     OriginalStashInterfaceTransition = nullptr;
     OriginalResetMouseInputState = nullptr;
     OriginalResetMouseInputStateWithFinalize = nullptr;
-    OriginalQueueSerializedPacket = nullptr;
     OriginalSharedGoldDeposit = nullptr;
     MarkUiDirty = nullptr;
     HotkeySettings = {};
