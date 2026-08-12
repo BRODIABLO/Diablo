@@ -1,5 +1,6 @@
 import {
   COMPONENT_DECISIONS,
+  DECISION_BUNDLE_SCOPES,
   DECISION_EXPORT_KIND,
   DECISION_SCHEMA_VERSION,
   FROZEN_CONTRACT_HASH,
@@ -11,6 +12,7 @@ import {
   PROOF_STATUSES,
   REVIEW_ID,
   STORAGE_KEY_PREFIX,
+  TECHNICAL_AUTO_RESOLUTIONS,
 } from './pd2-skills-review-contracts.mjs';
 import {
   buildBrowserPolicyRuntimeSource,
@@ -19,6 +21,7 @@ import {
 
 const RUNTIME_CONSTANTS = Object.freeze({
   componentDecisions: COMPONENT_DECISIONS,
+  decisionBundleScopes: DECISION_BUNDLE_SCOPES,
   decisionExportKind: DECISION_EXPORT_KIND,
   decisionSchemaVersion: DECISION_SCHEMA_VERSION,
   frozenContractHash: FROZEN_CONTRACT_HASH,
@@ -30,6 +33,7 @@ const RUNTIME_CONSTANTS = Object.freeze({
   proofStatuses: PROOF_STATUSES,
   reviewId: REVIEW_ID,
   storageKeyPrefix: STORAGE_KEY_PREFIX,
+  technicalAutoResolutions: TECHNICAL_AUTO_RESOLUTIONS,
 });
 
 function decisionRuntimeFactory(constants, policyRuntime) {
@@ -47,6 +51,15 @@ function decisionRuntimeFactory(constants, policyRuntime) {
     'globalDecision',
     'newSkillLineDecision',
     'implementationStatus',
+    'bundleDecisions',
+    'fieldDecisions',
+    'notes',
+  ]);
+  const LEGACY_ENTRY_KEYS = new Set([
+    'fingerprint',
+    'globalDecision',
+    'newSkillLineDecision',
+    'implementationStatus',
     'componentDecisions',
     'fieldDecisions',
     'notes',
@@ -54,10 +67,12 @@ function decisionRuntimeFactory(constants, policyRuntime) {
   const CHOICE_KEYS = new Set([
     'decision',
     'customValue',
+    'customValues',
     'justification',
     'gameplayObjective',
     'testPlan',
     'protectedOverride',
+    'expertOverride',
   ]);
   const OVERRIDE_KEYS = new Set([
     'approved',
@@ -66,6 +81,7 @@ function decisionRuntimeFactory(constants, policyRuntime) {
     'nativeRiskAccepted',
     'malformedResolution',
   ]);
+  const EXPERT_OVERRIDE_KEYS = new Set(['enabled', 'justification']);
   const NOTE_KEYS = new Set(Object.keys(EMPTY_NOTES));
   const ENVELOPE_KEYS = new Set([
     'schemaVersion',
@@ -149,11 +165,15 @@ function decisionRuntimeFactory(constants, policyRuntime) {
     return new Map((skill?.components ?? []).map((component) => [component.id, component]));
   }
 
+  function bundleMap(skill) {
+    return new Map((skill?.decisionBundles ?? []).map((bundle) => [bundle.id, bundle]));
+  }
+
   function fieldMap(skill) {
     const result = new Map();
     for (const component of skill?.components ?? []) {
       for (const field of component.fields ?? []) {
-        result.set(field.id, { component, field });
+        result.set(field.id, { component, field, bundleId: field.decisionOwnerBundleId ?? null });
       }
     }
     return result;
@@ -167,7 +187,7 @@ function decisionRuntimeFactory(constants, policyRuntime) {
       fingerprint: skill.fingerprint,
       globalDecision: null,
       implementationStatus: 'NOT_REVIEWED',
-      componentDecisions: {},
+      bundleDecisions: {},
       fieldDecisions: {},
       notes: { ...EMPTY_NOTES },
     };
@@ -190,9 +210,11 @@ function decisionRuntimeFactory(constants, policyRuntime) {
       sourceHashes: clone(report.sourceHashes ?? {}),
       exportedAt: new Date().toISOString(),
       exportScope: 'ALL',
-      schemaPolicy: report.schemaOrientation
-        ? policyRuntime.createPolicyEnvelope(report.schemaOrientation)
-        : null,
+      schemaPolicy: report.schemaPolicy?.envelope
+        ? clone(report.schemaPolicy.envelope)
+        : report.schemaOrientation
+          ? policyRuntime.createPolicyEnvelope(report.schemaOrientation)
+          : null,
       entries,
     };
   }
@@ -215,7 +237,7 @@ function decisionRuntimeFactory(constants, policyRuntime) {
 
   function schemaPolicyFor(report, explicit = undefined) {
     if (!report?.schemaOrientation) return null;
-    return explicit ?? null;
+    return explicit ?? report.schemaPolicy?.envelope ?? null;
   }
 
   function schemaPolicyGate(report, explicit = undefined) {
@@ -292,21 +314,56 @@ function decisionRuntimeFactory(constants, policyRuntime) {
     return errors;
   }
 
-  function validateChoice(choice, { field = null, component = null, path = 'choice' } = {}) {
+  function validateExpertOverride(override, path) {
+    const errors = [];
+    if (!isObject(override)) return [`${path}: an explicit expert override is required`];
+    addUnknownKeyErrors(override, EXPERT_OVERRIDE_KEYS, path, errors);
+    if (override.enabled !== true) errors.push(`${path}.enabled: must be true`);
+    if (!nonBlank(override.justification)) errors.push(`${path}.justification: a justification is required`);
+    return errors;
+  }
+
+  function validateChoice(choice, {
+    field = null,
+    component = null,
+    bundle = null,
+    expert = false,
+    path = 'choice',
+  } = {}) {
     const errors = [];
     if (!isObject(choice)) return { valid: false, errors: [`${path}: choice must be an object`] };
     addUnknownKeyErrors(choice, CHOICE_KEYS, path, errors);
     if (!constants.componentDecisions.includes(choice.decision)) {
-      errors.push(`${path}.decision: unknown component/field decision`);
+      errors.push(`${path}.decision: unknown bundle/field decision`);
       return { valid: false, errors };
     }
     if (choice.decision === 'CUSTOM') {
-      if (!nonBlank(choice.customValue)) errors.push(`${path}.customValue: CUSTOM requires an explicit value or formula`);
+      if (bundle) {
+        if (!isObject(choice.customValues) || Object.keys(choice.customValues).length === 0) {
+          errors.push(`${path}.customValues: bundle CUSTOM requires an explicit non-empty value/formula map`);
+        } else {
+          for (const [key, value] of Object.entries(choice.customValues)) {
+            if (!nonBlank(String(value ?? ''))) errors.push(`${path}.customValues.${key}: an explicit value or formula is required`);
+          }
+          const requiredCustomKeys = bundle?.customSchema?.required ?? [];
+          for (const key of requiredCustomKeys) {
+            if (!Object.hasOwn(choice.customValues, key) || !nonBlank(String(choice.customValues[key] ?? ''))) {
+              errors.push(`${path}.customValues.${key}: required by the bundle custom schema`);
+            }
+          }
+        }
+        if (choice.customValue !== undefined) errors.push(`${path}.customValue: bundle CUSTOM uses customValues, not customValue`);
+      } else if (!nonBlank(choice.customValue)) {
+        errors.push(`${path}.customValue: field CUSTOM requires an explicit value or formula`);
+      }
       if (!nonBlank(choice.justification)) errors.push(`${path}.justification: CUSTOM requires a justification`);
       if (!nonBlank(choice.testPlan)) errors.push(`${path}.testPlan: CUSTOM requires a test plan`);
-    } else if (choice.customValue !== undefined) {
-      errors.push(`${path}.customValue: is permitted only for CUSTOM`);
+    } else {
+      if (choice.customValue !== undefined) errors.push(`${path}.customValue: is permitted only for CUSTOM`);
+      if (choice.customValues !== undefined) errors.push(`${path}.customValues: is permitted only for CUSTOM`);
     }
+    if (expert || field) errors.push(...validateExpertOverride(choice.expertOverride, `${path}.expertOverride`));
+    else if (choice.expertOverride !== undefined) errors.push(`${path}.expertOverride: is permitted only for field decisions`);
     const requiresOverride = field?.protected === true
       && (choice.decision === 'ADOPT_PD2' || choice.decision === 'CUSTOM');
     if (requiresOverride) {
@@ -317,13 +374,22 @@ function decisionRuntimeFactory(constants, policyRuntime) {
     return { valid: errors.length === 0, errors };
   }
 
-  function validateChoiceShape(choice, path = 'choice') {
+  function validateChoiceShape(choice, path = 'choice', options = {}) {
     const errors = [];
     if (!isObject(choice)) return { valid: false, errors: [`${path}: choice must be an object`] };
     addUnknownKeyErrors(choice, CHOICE_KEYS, path, errors);
     if (!constants.componentDecisions.includes(choice.decision)) errors.push(`${path}.decision: unknown component/field decision`);
     for (const key of ['customValue', 'justification', 'gameplayObjective', 'testPlan']) {
       if (choice[key] !== undefined && typeof choice[key] !== 'string') errors.push(`${path}.${key}: must be a string`);
+    }
+    if (choice.customValues !== undefined && !isObject(choice.customValues)) {
+      errors.push(`${path}.customValues: must be an object`);
+    } else if (isObject(choice.customValues)) {
+      for (const [key, value] of Object.entries(choice.customValues)) {
+        if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean' && value !== null) {
+          errors.push(`${path}.customValues.${key}: must be a scalar value or formula`);
+        }
+      }
     }
     if (choice.protectedOverride !== undefined) {
       const override = choice.protectedOverride;
@@ -339,7 +405,49 @@ function decisionRuntimeFactory(constants, policyRuntime) {
         if (override.malformedResolution !== undefined && typeof override.malformedResolution !== 'string') errors.push(`${path}.protectedOverride.malformedResolution: must be a string`);
       }
     }
+    if (choice.expertOverride !== undefined) {
+      const override = choice.expertOverride;
+      if (!isObject(override)) errors.push(`${path}.expertOverride: must be an object`);
+      else {
+        addUnknownKeyErrors(override, EXPERT_OVERRIDE_KEYS, `${path}.expertOverride`, errors);
+        if (override.enabled !== undefined && typeof override.enabled !== 'boolean') errors.push(`${path}.expertOverride.enabled: must be a boolean`);
+        if (override.justification !== undefined && typeof override.justification !== 'string') errors.push(`${path}.expertOverride.justification: must be a string`);
+      }
+    }
+    if (options.expert === true) errors.push(...validateExpertOverride(choice.expertOverride, `${path}.expertOverride`));
     return { valid: errors.length === 0, errors };
+  }
+
+  function bundleAutoResolution(bundle) {
+    const resolution = bundle?.autoResolution ?? bundle?.defaultResolution ?? null;
+    if (!constants.technicalAutoResolutions.includes(resolution)) return null;
+    if (resolution === 'NOT_APPLICABLE') return { decision: 'NOT_APPLICABLE', autoResolution: resolution };
+    return { decision: 'KEEP_BKVINCE', autoResolution: resolution };
+  }
+
+  function resolveBundleChoice(skill, entry, bundleOrId) {
+    const bundle = typeof bundleOrId === 'string' ? bundleMap(skill).get(bundleOrId) : bundleOrId;
+    if (!bundle) return null;
+    if (bundle.scope === 'TECHNICAL' || bundle.manualDecisionRequired === false) {
+      return bundleAutoResolution(bundle);
+    }
+    return entry?.bundleDecisions?.[bundle.id] ?? null;
+  }
+
+  function bundleForField(skill, field) {
+    if (!field) return null;
+    const direct = field.decisionOwnerBundleId ? bundleMap(skill).get(field.decisionOwnerBundleId) : null;
+    if (direct) return direct;
+    const matches = (skill?.decisionBundles ?? []).filter((bundle) => (bundle.fieldIds ?? []).includes(field.id));
+    return matches.length === 1 ? matches[0] : null;
+  }
+
+  function customValueForField(choice, field) {
+    if (!isObject(choice?.customValues)) return undefined;
+    for (const key of [field?.id, field?.header, field?.locator?.header, field?.target?.header]) {
+      if (key && Object.hasOwn(choice.customValues, key)) return choice.customValues[key];
+    }
+    return undefined;
   }
 
   function resolveFieldChoice(skill, entry, componentOrId, fieldOrId) {
@@ -350,7 +458,121 @@ function decisionRuntimeFactory(constants, policyRuntime) {
     const field = found?.field ?? fieldOrId;
     const owner = found?.component ?? component;
     if (!field || !owner) return null;
-    return entry?.fieldDecisions?.[field.id] ?? entry?.componentDecisions?.[owner.id] ?? null;
+    const expertChoice = entry?.fieldDecisions?.[field.id];
+    if (expertChoice) return expertChoice;
+    const bundle = bundleForField(skill, field);
+    const choice = resolveBundleChoice(skill, entry, bundle);
+    if (!choice) return null;
+    if (choice.decision !== 'CUSTOM') return choice;
+    return { ...choice, customValue: customValueForField(choice, field) };
+  }
+
+  function rawEvidenceValue(field, source) {
+    const evidence = field?.rawEvidence?.[source];
+    if (isObject(evidence) && Object.hasOwn(evidence, 'rawValue')) return evidence.rawValue;
+    if (isObject(evidence) && Object.hasOwn(evidence, 'value')) return evidence.value;
+    if (evidence !== undefined && !isObject(evidence)) return evidence;
+    return field?.values?.[source];
+  }
+
+  function projectProposedResult(report, skillOrId, entry) {
+    const skill = typeof skillOrId === 'string' ? skillMap(report).get(skillOrId) : skillOrId;
+    if (!skill) return { valid: false, stableId: null, errors: ['Unknown canonical skill'], cells: [], changedCells: [], keptCells: [] };
+    const fields = fieldMap(skill);
+    const errors = [];
+    const ownerCounts = new Map();
+    for (const bundle of skill.decisionBundles ?? []) {
+      for (const fieldId of bundle.fieldIds ?? []) ownerCounts.set(fieldId, (ownerCounts.get(fieldId) ?? 0) + 1);
+    }
+    const cells = [];
+    for (const [fieldId, known] of fields) {
+      const { field, component } = known;
+      const bundle = bundleForField(skill, field);
+      const decisionRelevant = field.decisionRelevant !== false
+        && (field.rawChanged === true || field.semanticChanged === true || field.changed !== false || Boolean(bundle));
+      if (decisionRelevant && (!bundle || ownerCounts.get(fieldId) !== 1)) {
+        errors.push(`${fieldId}: decision-relevant field must have exactly one decision owner bundle`);
+      }
+      const before = rawEvidenceValue(field, 'bkvince');
+      let after = before;
+      let decision = 'KEEP_BKVINCE';
+      let source = 'BKVINCE_BASELINE';
+      let choice = null;
+      if (bundle) {
+        choice = resolveBundleChoice(skill, entry, bundle);
+        if (choice) {
+          decision = choice.decision;
+          source = bundle.scope === 'TECHNICAL' || bundle.manualDecisionRequired === false
+            ? 'TECHNICAL_AUTO_RESOLUTION'
+            : 'PLAYER_BUNDLE_DECISION';
+          if (choice.decision === 'ADOPT_PD2') after = rawEvidenceValue(field, 'pd2');
+          else if (choice.decision === 'CUSTOM') {
+            const customValue = customValueForField(choice, field);
+            if (customValue === undefined) errors.push(`${bundle.id}.${fieldId}: CUSTOM has no projected value`);
+            else after = customValue;
+          }
+          if ((choice.decision === 'ADOPT_PD2' || choice.decision === 'CUSTOM') && field.protected === true) {
+            errors.push(`${fieldId}: protected field requires an explicit expert field override`);
+            after = before;
+            decision = 'KEEP_BKVINCE';
+            source = 'PROTECTED_BKVINCE_BASELINE';
+          }
+        }
+      }
+      const expertChoice = entry?.fieldDecisions?.[fieldId];
+      if (expertChoice) {
+        const validation = validateChoice(expertChoice, {
+          field,
+          component,
+          expert: true,
+          path: `fieldDecisions.${fieldId}`,
+        });
+        if (!validation.valid) errors.push(...validation.errors);
+        else {
+          choice = expertChoice;
+          decision = expertChoice.decision;
+          source = 'EXPERT_FIELD_OVERRIDE';
+          if (decision === 'ADOPT_PD2') after = rawEvidenceValue(field, 'pd2');
+          else if (decision === 'CUSTOM') after = expertChoice.customValue;
+          else after = before;
+        }
+      }
+      if (decision === 'ADOPT_PD2' && after === undefined) errors.push(`${fieldId}: selected PD2 value is absent`);
+      cells.push({
+        stableId: skill.stableId,
+        fieldId,
+        componentId: component.id,
+        bundleId: bundle?.id ?? null,
+        bundleScope: bundle?.scope ?? null,
+        table: field.table ?? field.locator?.table ?? null,
+        header: field.header ?? field.locator?.header ?? null,
+        rowKey: field.rowKey ?? field.locator?.rowKey ?? field.target?.rowKey ?? null,
+        rowOrdinal: field.rowOrdinal ?? field.locator?.rowOrdinal ?? field.target?.rowOrdinal ?? null,
+        locator: clone(field.locator ?? field.target ?? null),
+        before,
+        after,
+        decision,
+        source,
+        choice: clone(choice),
+        autoResolution: choice?.autoResolution ?? null,
+        proofStatus: proofStatusFor(field, component),
+        protected: field.protected === true,
+        protectionReasons: clone(field.protectionReasons ?? []),
+        rawEvidence: clone(field.rawEvidence ?? field.values ?? {}),
+      });
+    }
+    const changedCells = cells.filter((cell) => !sameValue(cell.before, cell.after));
+    return {
+      valid: errors.length === 0,
+      stableId: skill.stableId,
+      fingerprint: skill.fingerprint,
+      baseline: 'BKVINCE',
+      errors: [...new Set(errors)],
+      cells,
+      byField: Object.fromEntries(cells.map((cell) => [cell.fieldId, cell])),
+      changedCells,
+      keptCells: cells.filter((cell) => sameValue(cell.before, cell.after)),
+    };
   }
 
   function shouldRequireDetails(skill, entry) {
@@ -471,108 +693,74 @@ function decisionRuntimeFactory(constants, policyRuntime) {
     }
 
     const detailsRequired = shouldRequireDetails(skill, current);
-    let customFields = 0;
-    for (const component of skill.components ?? []) {
-      const changedFields = (component.fields ?? []).filter((field) => field.changed !== false);
-      const componentRequired = detailsRequired && component.changed !== false
-        && (changedFields.length > 0 || component.changed === true);
-      const state = {
-        id: component.id,
-        required: componentRequired,
-        complete: !componentRequired,
-        fields: [],
-        reasons: [],
-      };
-
-      if (componentRequired && changedFields.length === 0) {
+    let customChoices = 0;
+    const bundleStates = [];
+    for (const bundle of skill.decisionBundles ?? []) {
+      const technical = bundle.scope === 'TECHNICAL' || bundle.manualDecisionRequired === false;
+      const required = detailsRequired && !technical && bundle.manualDecisionRequired !== false;
+      const choice = resolveBundleChoice(skill, current, bundle);
+      const validation = required
+        ? validateChoice(choice, { bundle, path: `bundleDecisions.${bundle.id}` })
+        : { valid: true, errors: [] };
+      const choiceErrors = [];
+      if (required) {
         total += 1;
-        const choice = current.componentDecisions?.[component.id];
-        const validation = validateChoice(choice, { component, path: `componentDecisions.${component.id}` });
-        if (validation.valid && choice.decision !== 'DISCUSS') {
-          completed += 1;
-          state.complete = true;
-        } else {
-          const choiceErrors = choice?.decision === 'DISCUSS'
-            ? [`componentDecisions.${component.id}: decision remains DISCUSS`]
-            : validation.errors;
-          state.reasons.push(...choiceErrors);
+        if (validation.valid && choice?.decision !== 'DISCUSS') completed += 1;
+        else {
+          choiceErrors.push(...(choice?.decision === 'DISCUSS'
+            ? [`bundleDecisions.${bundle.id}: decision remains DISCUSS`]
+            : validation.errors));
           reasons.push(...choiceErrors);
         }
       }
-
-      for (const field of changedFields) {
-        const required = componentRequired;
-        const choice = resolveFieldChoice(skill, current, component, field);
-        const validation = required
-          ? validateChoice(choice, { field, component, path: `fieldDecisions.${field.id}` })
-          : { valid: true, errors: [] };
-        const completeChoice = validation.valid && choice?.decision !== 'DISCUSS';
-        if (required) {
-          total += 1;
-          if (completeChoice) completed += 1;
-          else {
-            const choiceErrors = choice?.decision === 'DISCUSS'
-              ? [`fieldDecisions.${field.id}: decision remains DISCUSS`]
-              : validation.errors;
-            state.reasons.push(...choiceErrors);
-            reasons.push(...choiceErrors);
-          }
-        }
-        if (choice?.decision === 'CUSTOM') customFields += 1;
-        const derivedField = newSkillDerivedField(skill, field);
-        if (required && isNewPlayerSkill(skill)
-          && ['IMPORT_APPEND_ONLY', 'IMPORT_CUSTOMIZED'].includes(current.newSkillLineDecision)
-          && (choice?.decision === 'KEEP_BKVINCE'
-            || (choice?.decision === 'NOT_APPLICABLE' && !derivedField))) {
-          const choiceError = `fieldDecisions.${field.id}: ${choice.decision} is invalid because no BKVince row exists for an imported new skill`;
-          if (completeChoice) completed -= 1;
-          state.reasons.push(choiceError);
-          reasons.push(choiceError);
-        }
-        if (required && derivedField && choice?.decision === 'ADOPT_PD2') {
-          const choiceError = `fieldDecisions.${field.id}: a derived documentary target value cannot adopt the PD2 source ordinal`;
-          if (completeChoice) completed -= 1;
-          state.reasons.push(choiceError);
-          reasons.push(choiceError);
-        }
-        if (required && derivedField && choice?.decision === 'CUSTOM'
-          && String(choice.customValue) !== String(derivedField.proposal.targetOrdinal)) {
-          const choiceError = `fieldDecisions.${field.id}: documentary Id must remain equal to proposed append ordinal ${derivedField.proposal.targetOrdinal}`;
-          if (completeChoice) completed -= 1;
-          state.reasons.push(choiceError);
-          reasons.push(choiceError);
-        }
-        state.fields.push({
-          id: field.id,
-          required,
-          complete: !required || (completeChoice && !(isNewPlayerSkill(skill)
-            && ['IMPORT_APPEND_ONLY', 'IMPORT_CUSTOMIZED'].includes(current.newSkillLineDecision)
-            && (choice?.decision === 'KEEP_BKVINCE'
-              || (choice?.decision === 'NOT_APPLICABLE' && !derivedField)))
-            && !(derivedField && choice?.decision === 'ADOPT_PD2')
-            && !(derivedField && choice?.decision === 'CUSTOM'
-              && String(choice.customValue) !== String(derivedField.proposal.targetOrdinal))),
-          effectiveChoice: clone(choice),
-          source: current.fieldDecisions?.[field.id] ? 'FIELD' : choice ? 'COMPONENT' : null,
-          errors: validation.errors,
-        });
-      }
-      if (componentRequired && changedFields.length > 0) {
-        state.complete = state.fields.every((field) => field.complete);
-      }
-      componentStates.push(state);
+      if (choice?.decision === 'CUSTOM') customChoices += 1;
+      bundleStates.push({
+        id: bundle.id,
+        scope: bundle.scope,
+        required,
+        complete: !required || (validation.valid && choice?.decision !== 'DISCUSS'),
+        technicalAutoResolution: technical ? (bundle.autoResolution ?? bundle.defaultResolution ?? null) : null,
+        effectiveChoice: clone(choice),
+        fieldIds: clone(bundle.fieldIds ?? []),
+        reasons: choiceErrors,
+      });
     }
 
-    if (isNewPlayerSkill(skill) && current.newSkillLineDecision === 'IMPORT_APPEND_ONLY' && customFields > 0) {
-      reasons.push('IMPORT_APPEND_ONLY cannot contain CUSTOM field decisions; use IMPORT_CUSTOMIZED');
+    const knownFields = fieldMap(skill);
+    for (const [fieldId, choice] of Object.entries(current.fieldDecisions ?? {})) {
+      const known = knownFields.get(fieldId);
+      if (!known) continue;
+      const validation = validateChoice(choice, {
+        field: known.field,
+        component: known.component,
+        expert: true,
+        path: `fieldDecisions.${fieldId}`,
+      });
+      if (!validation.valid) reasons.push(...validation.errors);
+      if (choice?.decision === 'CUSTOM') customChoices += 1;
+      const derivedField = newSkillDerivedField(skill, known.field);
+      if (derivedField && choice?.decision === 'ADOPT_PD2') {
+        reasons.push(`fieldDecisions.${fieldId}: a derived documentary target value cannot adopt the PD2 source ordinal`);
+      }
+      if (derivedField && choice?.decision === 'CUSTOM'
+        && String(choice.customValue) !== String(derivedField.proposal.targetOrdinal)) {
+        reasons.push(`fieldDecisions.${fieldId}: documentary Id must remain equal to proposed append ordinal ${derivedField.proposal.targetOrdinal}`);
+      }
     }
-    if (isNewPlayerSkill(skill) && current.newSkillLineDecision === 'IMPORT_CUSTOMIZED' && customFields === 0) {
-      reasons.push('IMPORT_CUSTOMIZED requires at least one governed CUSTOM field');
+
+    if (isNewPlayerSkill(skill) && current.newSkillLineDecision === 'IMPORT_APPEND_ONLY' && customChoices > 0) {
+      reasons.push('IMPORT_APPEND_ONLY cannot contain CUSTOM decisions; use IMPORT_CUSTOMIZED');
     }
+    if (isNewPlayerSkill(skill) && current.newSkillLineDecision === 'IMPORT_CUSTOMIZED' && customChoices === 0) {
+      reasons.push('IMPORT_CUSTOMIZED requires at least one governed CUSTOM value');
+    }
+
+    const projection = projectProposedResult(report, skill, current);
+    if (detailsRequired && !projection.valid) reasons.push(...projection.errors.map((error) => `proposedResult: ${error}`));
 
     const maps = [
-      ['componentDecisions', componentMap(skill)],
-      ['fieldDecisions', fieldMap(skill)],
+      ['bundleDecisions', bundleMap(skill)],
+      ['fieldDecisions', knownFields],
     ];
     for (const [key, known] of maps) {
       for (const id of Object.keys(current[key] ?? {})) {
@@ -592,7 +780,9 @@ function decisionRuntimeFactory(constants, policyRuntime) {
         remaining: Math.max(0, total - completed),
         percent: total === 0 ? 100 : Math.round((completed / total) * 100),
       },
+      bundles: bundleStates,
       components: componentStates,
+      proposedResult: projection,
       schemaPolicyGate: phase0Gate ? clone(phase0Gate) : null,
     };
   }
@@ -603,7 +793,7 @@ function decisionRuntimeFactory(constants, policyRuntime) {
     return {
       ...base,
       ...clone(value),
-      componentDecisions: clone(value.componentDecisions ?? {}),
+      bundleDecisions: clone(value.bundleDecisions ?? {}),
       fieldDecisions: clone(value.fieldDecisions ?? {}),
       notes: { ...EMPTY_NOTES, ...(clone(value.notes) ?? {}) },
     };
@@ -628,7 +818,7 @@ function decisionRuntimeFactory(constants, policyRuntime) {
       if (action === 'CLEAR_UNRESOLVED') {
         if (current.globalDecision === 'DISCUSS') current.globalDecision = null;
         if (current.newSkillLineDecision === 'DISCUSS') current.newSkillLineDecision = null;
-        for (const key of ['componentDecisions', 'fieldDecisions']) {
+        for (const key of ['bundleDecisions', 'fieldDecisions']) {
           for (const [decisionId, choice] of Object.entries(current[key])) {
             if (choice?.decision === 'DISCUSS') delete current[key][decisionId];
           }
@@ -638,7 +828,7 @@ function decisionRuntimeFactory(constants, policyRuntime) {
       }
 
       if (replace) {
-        current.componentDecisions = {};
+        current.bundleDecisions = {};
         current.fieldDecisions = {};
         current.globalDecision = null;
         if (isNewPlayerSkill(skill)) current.newSkillLineDecision = null;
@@ -656,27 +846,14 @@ function decisionRuntimeFactory(constants, policyRuntime) {
             : 'DISCUSS';
       }
 
-      for (const component of skill.components ?? []) {
-        if (component.changed === false) continue;
-        const componentChoice = action === 'KEEP_BKVINCE'
+      for (const bundle of skill.decisionBundles ?? []) {
+        if (bundle.scope === 'TECHNICAL' || bundle.manualDecisionRequired === false) continue;
+        const bundleChoice = action === 'KEEP_BKVINCE'
           ? { decision: 'KEEP_BKVINCE' }
           : action === 'DISCUSS'
             ? { decision: 'DISCUSS' }
             : { decision: 'ADOPT_PD2' };
-        setIfOpen(current.componentDecisions, component.id, componentChoice);
-
-        if (action === 'ADOPT_PD2') {
-          for (const field of component.fields ?? []) {
-            if (field.changed === false) continue;
-            if (field.protected === true) {
-              setIfOpen(current.fieldDecisions, field.id, {
-                decision: isNewPlayerSkill(skill) && newSkillDerivedField(skill, field)
-                  ? 'NOT_APPLICABLE'
-                  : 'KEEP_BKVINCE',
-              });
-            }
-          }
-        }
+        setIfOpen(current.bundleDecisions, bundle.id, bundleChoice);
       }
       result[id] = current;
     }
@@ -779,12 +956,35 @@ function decisionRuntimeFactory(constants, policyRuntime) {
     if (!constants.implementationStatuses.includes(entry.implementationStatus)) {
       errors.push(`${path}.implementationStatus: invalid status`);
     }
-    for (const key of ['componentDecisions', 'fieldDecisions']) {
+    for (const key of ['bundleDecisions', 'fieldDecisions']) {
       if (!isObject(entry[key])) {
         errors.push(`${path}.${key}: must be an object`);
         continue;
       }
       for (const [id, choice] of Object.entries(entry[key])) {
+        const validation = validateChoiceShape(choice, `${path}.${key}.${id}`, { expert: key === 'fieldDecisions' });
+        errors.push(...validation.errors);
+      }
+    }
+    validateNotes(entry.notes, `${path}.notes`, errors);
+  }
+
+  function validateLegacyEntryShape(entry, path, errors) {
+    if (!isObject(entry)) {
+      errors.push(`${path}: legacy entry must be an object`);
+      return;
+    }
+    addUnknownKeyErrors(entry, LEGACY_ENTRY_KEYS, path, errors);
+    if (!isSha256(entry.fingerprint)) errors.push(`${path}.fingerprint: a SHA-256 digest is required`);
+    if (entry.globalDecision !== null && !constants.globalDecisions.includes(entry.globalDecision)) {
+      errors.push(`${path}.globalDecision: invalid decision`);
+    }
+    if (!constants.implementationStatuses.includes(entry.implementationStatus)) {
+      errors.push(`${path}.implementationStatus: invalid status`);
+    }
+    for (const key of ['componentDecisions', 'fieldDecisions']) {
+      if (!isObject(entry[key])) errors.push(`${path}.${key}: must be an object`);
+      else for (const [id, choice] of Object.entries(entry[key])) {
         const validation = validateChoiceShape(choice, `${path}.${key}.${id}`);
         errors.push(...validation.errors);
       }
@@ -811,14 +1011,17 @@ function decisionRuntimeFactory(constants, policyRuntime) {
     }
     if (!['ALL', 'COMPLETE_ONLY'].includes(payload.exportScope)) errors.push('$.exportScope: invalid scope');
     if (payload.schemaVersion === constants.decisionSchemaVersion && !Object.hasOwn(payload, 'schemaPolicy')) {
-      errors.push('$.schemaPolicy: required in decision schema v2');
+      errors.push('$.schemaPolicy: required in decision schema v3');
     }
     if (payload.schemaPolicy !== undefined && payload.schemaPolicy !== null && !isObject(payload.schemaPolicy)) {
       errors.push('$.schemaPolicy: must be an object or null');
     }
     if (!isObject(payload.entries)) errors.push('$.entries: must be an object');
     else {
-      for (const [id, entry] of Object.entries(payload.entries)) validateEntryShape(entry, `$.entries.${id}`, errors);
+      for (const [id, entry] of Object.entries(payload.entries)) {
+        if (legacyAllowed) validateLegacyEntryShape(entry, `$.entries.${id}`, errors);
+        else validateEntryShape(entry, `$.entries.${id}`, errors);
+      }
     }
     return { valid: errors.length === 0, errors };
   }
@@ -856,17 +1059,21 @@ function decisionRuntimeFactory(constants, policyRuntime) {
         continue;
       }
       if (entry.fingerprint !== skill.fingerprint) errors.push(`$.entries.${id}.fingerprint: stale fingerprint`);
-      const components = componentMap(skill);
+      const bundles = bundleMap(skill);
       const fields = fieldMap(skill);
-      for (const [componentId, choice] of Object.entries(entry.componentDecisions ?? {})) {
-        const component = components.get(componentId);
-        if (!component) {
-          errors.push(`$.entries.${id}.componentDecisions.${componentId}: unknown component`);
+      for (const [bundleId, choice] of Object.entries(entry.bundleDecisions ?? {})) {
+        const bundle = bundles.get(bundleId);
+        if (!bundle) {
+          errors.push(`$.entries.${id}.bundleDecisions.${bundleId}: unknown bundle`);
+          continue;
+        }
+        if (bundle.scope === 'TECHNICAL' || bundle.manualDecisionRequired === false) {
+          errors.push(`$.entries.${id}.bundleDecisions.${bundleId}: technical packages are auto-resolved and cannot carry a manual decision`);
           continue;
         }
         const choiceValidation = validateChoice(choice, {
-          component,
-          path: `$.entries.${id}.componentDecisions.${componentId}`,
+          bundle,
+          path: `$.entries.${id}.bundleDecisions.${bundleId}`,
         });
         if (payload.exportScope === 'COMPLETE_ONLY') errors.push(...choiceValidation.errors);
       }
@@ -879,6 +1086,7 @@ function decisionRuntimeFactory(constants, policyRuntime) {
         const choiceValidation = validateChoice(choice, {
           field: known.field,
           component: known.component,
+          expert: true,
           path: `$.entries.${id}.fieldDecisions.${fieldId}`,
         });
         if (payload.exportScope === 'COMPLETE_ONLY') errors.push(...choiceValidation.errors);
@@ -946,6 +1154,73 @@ function decisionRuntimeFactory(constants, policyRuntime) {
     return envelope;
   }
 
+  function sameStringSet(left, right) {
+    const a = [...new Set(left ?? [])].sort();
+    const b = [...new Set(right ?? [])].sort();
+    return a.length === b.length && a.every((value, index) => value === b[index]);
+  }
+
+  function migrateLegacyEntry(skill, raw) {
+    const conflicts = [];
+    const transformations = [];
+    const candidate = createEntry(skill);
+    candidate.globalDecision = raw.globalDecision ?? null;
+    candidate.implementationStatus = raw.implementationStatus ?? 'NOT_REVIEWED';
+    candidate.notes = { ...EMPTY_NOTES, ...(clone(raw.notes) ?? {}) };
+    if (isNewPlayerSkill(skill)) candidate.newSkillLineDecision = raw.newSkillLineDecision ?? null;
+
+    for (const fieldId of Object.keys(raw.fieldDecisions ?? {})) {
+      conflicts.push({
+        code: 'LEGACY_FIELD_DECISION_REQUIRES_EXPERT_RECONFIRMATION',
+        fieldId,
+        reason: 'v1/v2 field decisions cannot become v3 expert overrides without explicit enabled=true and a new justification',
+      });
+    }
+
+    const components = componentMap(skill);
+    const bundles = [...bundleMap(skill).values()];
+    for (const [componentId, choice] of Object.entries(raw.componentDecisions ?? {})) {
+      const component = components.get(componentId);
+      if (!component) {
+        conflicts.push({ code: 'LEGACY_COMPONENT_REMOVED', componentId });
+        continue;
+      }
+      if (choice?.decision === 'CUSTOM') {
+        conflicts.push({
+          code: 'LEGACY_CUSTOM_REQUIRES_BUNDLE_VALUE_MAP',
+          componentId,
+          reason: 'A scalar legacy CUSTOM value cannot be silently projected onto an atomic bundle',
+        });
+        continue;
+      }
+      const changedFieldIds = (component.fields ?? [])
+        .filter((field) => field.decisionRelevant !== false && (field.changed !== false || field.semanticChanged === true || field.rawChanged === true))
+        .map((field) => field.id);
+      const matches = bundles.filter((bundle) => (
+        bundle.scope !== 'TECHNICAL'
+        && bundle.manualDecisionRequired !== false
+        && (bundle.id === componentId
+          || bundle.componentId === componentId
+          || sameStringSet(bundle.fieldIds, changedFieldIds))
+      ));
+      if (matches.length !== 1) {
+        conflicts.push({
+          code: matches.length === 0 ? 'LEGACY_COMPONENT_HAS_NO_EXACT_BUNDLE' : 'LEGACY_COMPONENT_BUNDLE_AMBIGUOUS',
+          componentId,
+          candidateBundleIds: matches.map((bundle) => bundle.id),
+        });
+        continue;
+      }
+      candidate.bundleDecisions[matches[0].id] = clone(choice);
+      transformations.push({
+        code: 'LEGACY_COMPONENT_TO_EXACT_BUNDLE',
+        from: componentId,
+        to: matches[0].id,
+      });
+    }
+    return { candidate, conflicts, transformations };
+  }
+
   function migrateEnvelope(report, previous, options = {}) {
     const shape = validateEnvelopeShape(previous, { allowLegacy: true });
     if (!shape.valid) throw new Error(`Cannot migrate an invalid decision envelope:\n${shape.errors.join('\n')}`);
@@ -956,7 +1231,17 @@ function decisionRuntimeFactory(constants, policyRuntime) {
     let migratedSchemaPolicy = null;
     let policyMigration = null;
     if (report.schemaOrientation) {
-      if (previous.schemaPolicy) {
+      if (report.schemaPolicy?.envelope) {
+        migratedSchemaPolicy = clone(report.schemaPolicy.envelope);
+        policyMigration = {
+          envelope: migratedSchemaPolicy,
+          report: {
+            reason: 'CANONICAL_PROJECT_POLICY_SEEDED',
+            fromOrientationHash: previous.schemaPolicy?.orientationHash ?? null,
+            toOrientationHash: report.schemaOrientation.orientationHash,
+          },
+        };
+      } else if (previous.schemaPolicy) {
         policyMigration = policyRuntime.migratePolicyEnvelope(report.schemaOrientation, previous.schemaPolicy, {
           exportedAt: options.exportedAt,
         });
@@ -974,7 +1259,7 @@ function decisionRuntimeFactory(constants, policyRuntime) {
             stale: [],
             dropped: [],
             counts: { retained: 0, stale: 0, dropped: 0 },
-            reason: legacySource ? 'LEGACY_V1_HAS_NO_SCHEMA_POLICY' : 'SCHEMA_POLICY_MISSING',
+            reason: legacySource ? 'LEGACY_ENVELOPE_HAS_NO_SCHEMA_POLICY' : 'SCHEMA_POLICY_MISSING',
           },
         };
       }
@@ -983,6 +1268,8 @@ function decisionRuntimeFactory(constants, policyRuntime) {
     const retained = [];
     const stale = [];
     const dropped = [];
+    const conflicts = [];
+    const transformations = [];
     const entries = {};
     for (const [stableId, raw] of Object.entries(previous.entries ?? {})) {
       const skill = currentSkills.get(stableId);
@@ -1003,7 +1290,22 @@ function decisionRuntimeFactory(constants, policyRuntime) {
         });
         continue;
       }
-      const candidate = normalizeEntry(skill, raw);
+      let candidate;
+      if (legacySource) {
+        const migration = migrateLegacyEntry(skill, raw);
+        candidate = migration.candidate;
+        transformations.push(...migration.transformations.map((item) => ({ stableId, ...item })));
+        if (migration.conflicts.length > 0) {
+          const conflict = {
+            stableId,
+            reason: 'LEGACY_DECISION_REQUIRES_REVIEW',
+            conflicts: migration.conflicts,
+          };
+          conflicts.push(conflict);
+          stale.push(conflict);
+          continue;
+        }
+      } else candidate = normalizeEntry(skill, raw);
       const scoped = createEmptyEnvelope(report);
       scoped.schemaPolicy = clone(migratedSchemaPolicy);
       scoped.entries = { [stableId]: candidate };
@@ -1035,7 +1337,15 @@ function decisionRuntimeFactory(constants, policyRuntime) {
         retained,
         stale,
         dropped,
-        counts: { retained: retained.length, stale: stale.length, dropped: dropped.length },
+        conflicts,
+        transformations,
+        counts: {
+          retained: retained.length,
+          stale: stale.length,
+          dropped: dropped.length,
+          conflicts: conflicts.length,
+          transformations: transformations.length,
+        },
       },
     };
   }
@@ -1049,7 +1359,9 @@ function decisionRuntimeFactory(constants, policyRuntime) {
     schemaPolicyGate,
     validateChoice,
     validateChoiceShape,
+    resolveBundleChoice,
     resolveFieldChoice,
+    projectProposedResult,
     entryState,
     applyBulk,
     progress,
@@ -1070,7 +1382,9 @@ export const legacyStorageKeys = runtime.legacyStorageKeys;
 export const schemaPolicyGate = runtime.schemaPolicyGate;
 export const validateChoice = runtime.validateChoice;
 export const validateChoiceShape = runtime.validateChoiceShape;
+export const resolveBundleChoice = runtime.resolveBundleChoice;
 export const resolveFieldChoice = runtime.resolveFieldChoice;
+export const projectProposedResult = runtime.projectProposedResult;
 export const entryState = runtime.entryState;
 export const applyBulk = runtime.applyBulk;
 export const progress = runtime.progress;

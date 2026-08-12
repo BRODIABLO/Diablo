@@ -24,6 +24,7 @@ import {
   FROZEN_CONTRACT_HASH,
   NON_MUTATION_RULES,
   SCHEMA_ORIENTATION_INTERFACE,
+  sha256Canonical,
 } from './pd2-skills-review-contracts.mjs';
 import {
   createEmptyEnvelope,
@@ -46,6 +47,7 @@ const ORIENTATION_PATH = ORIENTATION_ARTIFACT_PATHS.orientationJson;
 const ORIENTATION_HTML_PATH = ORIENTATION_ARTIFACT_PATHS.orientationHtml;
 const DICTIONARY_PATH = ORIENTATION_ARTIFACT_PATHS.fieldDictionary;
 const POLICY_PATH = ORIENTATION_ARTIFACT_PATHS.policyCurrent;
+const POLICY_EXAMPLE_PATH = ORIENTATION_ARTIFACT_PATHS.policyExample;
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -72,6 +74,7 @@ const report = readJson(REPORT_PATH);
 const orientation = readJson(ORIENTATION_PATH);
 const dictionary = readJson(DICTIONARY_PATH);
 const policyDocument = readJson(POLICY_PATH);
+const policyExample = readJson(POLICY_EXAMPLE_PATH);
 const columns = new Map(orientation.columns.map((column) => [column.canonicalHeader, column]));
 
 test('independent Phase 0 artifact audit binds one deterministic orientation to the Workbench', () => {
@@ -225,25 +228,30 @@ test('Fire Bolt accounting reduces 82 raw changes to six explicit behavior bundl
   assert.equal(impact.reductions.bundled.count, 17);
 });
 
-test('all eight policies are fingerprinted, pending by default and atomically gate mutable skills', () => {
+test('all eight policies keep a pending example while the canonical 8/8 approval opens the skill gate', () => {
   assert.equal(orientation.policies.length, 8);
   assert.deepEqual(orientation.policies.map((policy) => policy.id), GLOBAL_SCHEMA_POLICIES.map((policy) => policy.id));
   assert.ok(orientation.policies.every((policy) => policy.decision === 'PENDING'));
   assert.ok(orientation.policies.every((policy) => policy.requiredForSkillCompletion === true));
-  assert.deepEqual(policyDocument.decisions, createPolicyEnvelope(orientation, {
-    exportedAt: policyDocument.exportedAt,
+  assert.deepEqual(policyExample.decisions, createPolicyEnvelope(orientation, {
+    exportedAt: policyExample.exportedAt,
   }).decisions);
+  assert.ok(Object.values(policyExample.decisions).every((decision) => decision.decision === 'PENDING'));
+  assert.ok(Object.values(policyDocument.decisions).every((decision) => (
+    decision.decision === 'APPROVE' && decision.justification.trim()
+  )));
 
   const decisions = createEmptyEnvelope(report);
-  const pendingGate = policyGate(orientation, decisions.schemaPolicy);
+  const pendingGate = policyGate(orientation, policyExample);
   assert.equal(pendingGate.complete, false);
   assert.equal(pendingGate.required, 8);
   assert.equal(pendingGate.closed, 0);
-  assert.equal(progress(report, decisions).schemaPolicyGate.complete, false);
+  assert.equal(policyGate(orientation, decisions.schemaPolicy).complete, true);
+  assert.equal(progress(report, decisions).schemaPolicyGate.complete, true);
 
   const mutableSkill = report.skills.find((skill) => !skill.readOnly);
   assert.ok(mutableSkill);
-  const state = entryState(report, mutableSkill, decisions.entries[mutableSkill.stableId], decisions.schemaPolicy);
+  const state = entryState(report, mutableSkill, decisions.entries[mutableSkill.stableId], policyExample);
   assert.equal(state.complete, false);
   assert.ok(state.reasons.some((reason) => reason.startsWith('Phase 0 policy gate:')));
 
@@ -257,14 +265,19 @@ test('all eight policies are fingerprinted, pending by default and atomically ga
   assert.equal(policyGate(orientation, decisions.schemaPolicy).complete, true);
 });
 
-test('integration preserves every legacy skill fingerprint and all governed Skills.txt bytes', () => {
+test('integration derives every Phase 1 fingerprint from the legacy skill and preserves all governed Skills.txt bytes', () => {
   const sources = loadWorkbenchSources(DEFAULT_SOURCE_ROOTS);
   const base = buildOracleData(sources);
   assert.equal(report.skills.length, base.skills.length);
-  assert.deepEqual(
-    report.skills.map((skill) => [skill.stableId, skill.fingerprint]),
-    base.skills.map((skill) => [skill.stableId, skill.fingerprint]),
-  );
+  const baseById = new Map(base.skills.map((skill) => [skill.stableId, skill]));
+  for (const skill of report.skills) {
+    assert.equal(skill.fingerprint, sha256Canonical({
+      previousFingerprint: baseById.get(skill.stableId).fingerprint,
+      decisionBundles: skill.decisionBundles,
+      policyApplication: skill.policyApplication,
+      curves: skill.curves,
+    }), skill.stableId);
+  }
   assert.deepEqual(gameplaySkillsPaths.map(sha256File), gameplayHashesBefore);
   assert.equal(path.basename(sources.sourceManifest.pd2.tables['skills.txt'].path), 'Skills.txt');
   assert.ok(ORIENTATION_NON_MUTATION_RULES.forbiddenWriteRoots.includes('data-BKVince/'));

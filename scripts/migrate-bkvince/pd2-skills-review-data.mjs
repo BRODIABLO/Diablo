@@ -948,10 +948,49 @@ function indexedConsumerReferences(group, consumerIndex) {
   return result.sort((left, right) => left.id.localeCompare(right.id, 'en'));
 }
 
-function curvePoint(record, level) {
+function damageWithSynergy(record, level, elemental, scenario) {
+  const base = damageAtLevel(record, level, elemental);
+  if (!base || !scenario.applySynergies) return { damage: base, synergy: null };
+  const field = elemental ? 'edmgsympercalc' : 'dmgsympercalc';
+  const raw = record.get(field);
+  if (raw === undefined || String(raw).trim() === '') return { damage: base, synergy: null };
+  const evaluated = evaluateSimpleFormula(raw, record, level, {
+    statValue: 0,
+    referencedSkillLevel: 0,
+    referencedSkillLevels: scenario.referencedSkillLevels ?? {},
+    applyDerivedSynergy: false,
+  });
+  if (!evaluated.ok) {
+    return {
+      damage: { ...base, min: null, max: null },
+      synergy: { value: null, raw, proofStatus: evaluated.status, reason: evaluated.reason },
+    };
+  }
+  const apply = (rawValue) => {
+    if (rawValue === null) return null;
+    const fixed = rawValue * (2 ** base.hitShift);
+    return (fixed + Math.trunc((fixed * evaluated.value) / 100)) / 256;
+  };
+  return {
+    damage: {
+      ...base,
+      min: apply(base.minRaw),
+      max: apply(base.maxRaw),
+    },
+    synergy: {
+      value: evaluated.value,
+      raw,
+      proofStatus: 'EXACT_FORMULA',
+    },
+  };
+}
+
+function curvePoint(record, level, scenario = {}) {
   if (!record) return null;
-  const damage = damageAtLevel(record, level, false);
-  const elementalDamage = damageAtLevel(record, level, true);
+  const physical = damageWithSynergy(record, level, false, scenario);
+  const elemental = damageWithSynergy(record, level, true, scenario);
+  const damage = physical.damage;
+  const elementalDamage = elemental.damage;
   const mana = manaCostAtLevel(record, level);
   const length = elementalLengthAtLevel(record, level);
   const evaluate = (field) => {
@@ -1005,6 +1044,10 @@ function curvePoint(record, level) {
     damage: {
       physical: damage,
       elemental: elementalDamage ? { ...elementalDamage, type: record.get('etype') || null } : null,
+      synergies: {
+        physical: physical.synergy,
+        elemental: elemental.synergy,
+      },
       min,
       max,
       average: min !== null && max !== null ? (min + max) / 2 : null,
@@ -1049,15 +1092,16 @@ function buildCurves(group, sources) {
     return [source, LEVELS.map((level) => curvePoint(record, level))];
   }));
   const inputs = synergyInputs(group);
-  const metric = (id, label, pick, proofStatus = 'EXACT_DERIVED') => ({
+  const metricFor = (points, id, label, pick, proofStatus = 'EXACT_DERIVED') => ({
     id,
     label,
     values: Object.fromEntries(SOURCE_ORDER.map((source) => [
       source,
-      standard[source].map((point) => point === null ? null : pick(point)),
+      points[source].map((point) => point === null ? null : (pick(point) ?? null)),
     ])),
     proofStatus,
   });
+  const metric = (id, label, pick, proofStatus = 'EXACT_DERIVED') => metricFor(standard, id, label, pick, proofStatus);
   const standardSeries = [
     metric('damage_min', 'Minimum damage', (point) => point.damage.min),
     metric('damage_max', 'Maximum damage', (point) => point.damage.max),
@@ -1079,7 +1123,7 @@ function buildCurves(group, sources) {
     metric('poison_dps_max', 'Poison damage per second maximum', (point) => point.poison?.damagePerSecond.max ?? null, 'SYMBOLIC'),
     metric('poison_total_min', 'Poison total damage minimum', (point) => point.poison?.totalDamage.min ?? null, 'SYMBOLIC'),
     metric('poison_total_max', 'Poison total damage maximum', (point) => point.poison?.totalDamage.max ?? null, 'SYMBOLIC'),
-  ];
+  ].filter((item) => SOURCE_ORDER.some((source) => item.values[source].some((value) => value !== null && value !== undefined)));
   const standardScenario = {
     id: 'standard',
     label: 'Sans synergie',
@@ -1100,23 +1144,50 @@ function buildCurves(group, sources) {
       ] : [])),
     ],
   };
-  const synergies20Scenario = {
-    id: 'synergies20',
-    label: 'Synergies à 20 hard points',
-    levels: LEVELS,
-    synergyInputs: inputs.map((input) => ({ ...input, hardPoints: 20 })),
-    proofStatus: inputs.length ? 'SYMBOLIC' : 'NOT_APPLICABLE',
-    series: [],
-    symbolic: inputs.length ? [{ reason: 'Cross-skill/native values are not fabricated by the generic evaluator.' }] : [],
+  const buildSynergyScenario = (id, label, hardPoints) => {
+    const hardPointsBySkill = Object.fromEntries(SOURCE_ORDER.map((source) => [
+      source,
+      Object.fromEntries(inputs.filter((input) => input.source === source).map((input) => [normalizeSkillName(input.skill), hardPoints])),
+    ]));
+    const points = Object.fromEntries(SOURCE_ORDER.map((source) => {
+      const record = sourceRecord(group, source, sources);
+      return [source, LEVELS.map((level) => curvePoint(record, level, {
+        applySynergies: true,
+        referencedSkillLevels: hardPointsBySkill[source],
+      }))];
+    }));
+    const candidates = [
+      metricFor(points, 'damage_min', 'Minimum damage', (point) => point.damage.min),
+      metricFor(points, 'damage_max', 'Maximum damage', (point) => point.damage.max),
+      metricFor(points, 'damage_average', 'Average damage', (point) => point.damage.average),
+      metricFor(points, 'mana', 'Mana', (point) => point.mana?.value),
+    ];
+    const series = candidates.filter((item) => SOURCE_ORDER.some((source) => item.values[source].some((value) => value !== null)));
+    const symbolic = SOURCE_ORDER.flatMap((source) => points[source].flatMap((point) => (
+      point ? Object.entries(point.damage.synergies)
+        .filter(([, synergy]) => synergy?.value === null)
+        .map(([kind, synergy]) => ({ source, level: point.level, metric: `${kind}DamageSynergy`, ...synergy })) : []
+    )));
+    return {
+      id,
+      label,
+      labelFr: label,
+      levels: LEVELS,
+      synergyInputs: inputs.map((input) => ({ ...input, hardPoints })),
+      hardPointsBySkill,
+      proofStatus: inputs.length === 0 ? 'NOT_APPLICABLE' : symbolic.length ? 'SYMBOLIC' : 'EXACT_FORMULA',
+      series,
+      symbolic,
+    };
   };
+  const synergies20Scenario = buildSynergyScenario('synergies20', 'Synergies à 20 hard points', 20);
   const customScenario = {
-    id: 'custom',
-    label: 'Synergies personnalisées',
-    levels: LEVELS,
-    synergyInputs: inputs,
-    proofStatus: inputs.length ? 'SYMBOLIC' : 'NOT_APPLICABLE',
-    series: [],
-    symbolic: inputs.length ? [{ reason: 'Provide governed hard points; unresolved formulas remain symbolic.' }] : [],
+    ...buildSynergyScenario('custom', 'Synergies personnalisées', 0),
+    calculationModel: {
+      id: 'HARD_POINT_MAP_V1',
+      evaluator: 'GOVERNED_SKILLCALC_FORMULA',
+      unresolvedValuesRemainSymbolic: true,
+    },
     formulas: Object.fromEntries(SOURCE_ORDER.map((source) => [
       source,
       group[source]?.formulaFindings.filter((finding) => /skill\s*\(/i.test(finding.raw)) ?? [],

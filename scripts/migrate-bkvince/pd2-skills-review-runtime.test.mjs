@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
 
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
-import fs from 'node:fs';
-import path from 'node:path';
 
 import {
   applyBulk,
@@ -13,9 +13,11 @@ import {
   createEntry,
   entryState,
   exportEnvelope,
-  migrateEnvelope,
   legacyStorageKeys,
+  migrateEnvelope,
   progress,
+  projectProposedResult,
+  resolveBundleChoice,
   resolveFieldChoice,
   storageKey,
   validateChoice,
@@ -27,135 +29,13 @@ import {
   GLOBAL_SCHEMA_POLICIES,
   ORIENTATION_ID,
 } from './pd2-skills-schema-orientation-contracts.mjs';
-import {
-  createPolicyEnvelope,
-  policyGate,
-} from './pd2-skills-schema-policy-runtime.mjs';
+import { createPolicyEnvelope } from './pd2-skills-schema-policy-runtime.mjs';
 
 const HASH_A = 'A'.repeat(64);
 const HASH_B = 'B'.repeat(64);
 const HASH_C = 'C'.repeat(64);
 
-function field(id, values, extra = {}) {
-  return {
-    id,
-    table: 'skills.txt',
-    header: id,
-    label: id,
-    values: { vanilla32: values[0], bkvince: values[1], pd2: values[2] },
-    displayValues: { vanilla32: values[0], bkvince: values[1], pd2: values[2] },
-    changed: values[1] !== values[2],
-    protected: false,
-    protectionReasons: [],
-    proofStatus: 'EXACT_TABLE',
-    dependencyIds: [],
-    ...extra,
-  };
-}
-
-function component(id, fields, extra = {}) {
-  return {
-    id,
-    label: id,
-    fingerprint: HASH_C,
-    proofStatus: 'EXACT_TABLE',
-    portability: { categories: ['DATA_ONLY_PROVEN'] },
-    changed: fields.some((candidate) => candidate.changed),
-    fields,
-    ...extra,
-  };
-}
-
-function skill(stableId, canonicalName, components, extra = {}) {
-  return {
-    stableId,
-    fingerprint: HASH_B,
-    canonicalName,
-    classCode: 'nec',
-    scope: 'nec',
-    playerSkill: true,
-    newPd2PlayerSkill: false,
-    bkvinceOnlyPlayerSkill: false,
-    identical: false,
-    readOnly: false,
-    components,
-    ...extra,
-  };
-}
-
-function fixtureReport() {
-  const amplify = skill('skill:nec:amplify-damage', 'Amplify Damage', [
-    component('damage_model', [field('power', ['-100', '-100', '-50'])]),
-    component('area_targeting', [field('radius', ['4', '5', '7'])]),
-    component('cost_timing', [field('mana', ['4', '4', '8'])]),
-    component('buffs_debuffs_auras_passives', [field('duration', ['200', '200', '300'])]),
-    component('synergies', [field('curse_mastery', ['', '', "skill('Curse Mastery'.blvl)"])]),
-  ]);
-  const fireBall = skill('skill:sor:fire-ball', 'Fire Ball', [
-    component('projectiles_collisions', [field('multishot', ['', '', '(lvl>10?2:1'], {
-      protected: true,
-      protectionReasons: ['malformedFormula'],
-      proofStatus: 'MALFORMED_SOURCE',
-    })], { proofStatus: 'MALFORMED_SOURCE' }),
-  ], { classCode: 'sor', scope: 'sor' });
-  const fireWall = skill('skill:sor:fire-wall', 'Fire Wall', [
-    component('cost_timing', [
-      field('localdelay', ['25', '20', undefined], { protected: true, protectionReasons: ['delay'] }),
-      field('delay', [undefined, undefined, '12'], { protected: true, protectionReasons: ['delay'] }),
-    ]),
-    component('damage_model', [field('calc4', ['1', '1', '(par1+lvl'], {
-      protected: true,
-      proofStatus: 'MALFORMED_SOURCE',
-      protectionReasons: ['malformedFormula'],
-    })], { proofStatus: 'MALFORMED_SOURCE' }),
-  ], { classCode: 'sor', scope: 'sor' });
-  const coldEnchant = skill('skill:sor:cold-enchant', 'Cold Enchant', [
-    component('identity_availability', [field('runtimeOrdinal', ['-', '408', '40'], {
-      protected: true,
-      protectionReasons: ['runtimeOrdinal', 'ordinalCollision'],
-    })]),
-  ], { classCode: 'sor', scope: 'sor', ordinals: { bkvince: 408, pd2: 40 }, collisionIds: ['collision:40'] });
-  const combustion = skill('skill:sor:combustion', 'Combustion', [
-    component('identity_availability', [field('charclass', [undefined, undefined, 'sor'], { protected: true, protectionReasons: ['charclass'] })]),
-    component('engine_functions', [field('srvdofunc', [undefined, undefined, '75'], {
-      protected: true,
-      proofStatus: 'NATIVE_UNPROVEN',
-      protectionReasons: ['native callback'],
-    })], { proofStatus: 'NATIVE_UNPROVEN' }),
-  ], {
-    classCode: 'sor',
-    scope: 'sor',
-    newPd2PlayerSkill: true,
-    ordinals: { bkvince: null, pd2: 376 },
-    collisionIds: ['collision:376'],
-  });
-  const raven = skill('skill:dru:raven', 'Raven', [
-    component('summons', [field('calc2', ['lvl', 'lvl', 'ulvl + par1 + lvl'], { proofStatus: 'UNSUPPORTED_IDENTIFIER' })], { proofStatus: 'UNSUPPORTED_IDENTIFIER' }),
-  ], { classCode: 'dru', scope: 'dru' });
-  const hydra = skill('skill:sor:hydra', 'Hydra', [
-    component('summons', [field('pettype', ['hydra', 'hydra', 'hydra2'], { dependencyIds: ['pettype:hydra2'] })]),
-  ], { classCode: 'sor', scope: 'sor' });
-  const warlock = skill('skill:war:bkv-fire-raven', 'BKV Fire Raven', [
-    component('identity_availability', [field('warlockExistingRow', ['-', '1', '-'], { protected: true, protectionReasons: ['warlockExistingRow'] })]),
-  ], { classCode: 'war', scope: 'war', bkvinceOnlyPlayerSkill: true });
-  const identical = skill('skill:ama:critical-strike', 'Critical Strike', [], {
-    classCode: 'ama',
-    scope: 'ama',
-    identical: true,
-    readOnly: true,
-    fingerprint: HASH_A,
-  });
-  return {
-    schemaVersion: 1,
-    reviewId: REVIEW_ID,
-    comparisonHash: HASH_A,
-    frozenContractHash: FROZEN_CONTRACT_HASH,
-    sourceHashes: { vanilla32: HASH_A, bkvince: HASH_B, pd2: HASH_C },
-    skills: [amplify, fireBall, fireWall, coldEnchant, combustion, raven, hydra, warlock, identical],
-  };
-}
-
-function fixtureOrientation() {
+function orientation() {
   return {
     schemaVersion: 1,
     orientationId: ORIENTATION_ID,
@@ -169,396 +49,320 @@ function fixtureOrientation() {
   };
 }
 
-function approvedSchemaPolicy(orientation) {
-  const envelope = createPolicyEnvelope(orientation);
-  for (const policy of orientation.policies) {
+function approvedPolicy(schemaOrientation) {
+  const envelope = createPolicyEnvelope(schemaOrientation, { exportedAt: '2026-08-12T00:00:00.000Z' });
+  for (const policy of schemaOrientation.policies) {
     envelope.decisions[policy.id] = {
       fingerprint: policy.fingerprint,
       decision: 'APPROVE',
-      justification: `Approve ${policy.id} for governed review.`,
+      justification: `Approved ${policy.id}.`,
     };
   }
   return envelope;
 }
 
-function completeKeepEntry(report, canonicalSkill) {
-  const entry = createEntry(canonicalSkill);
-  entry.globalDecision = 'KEEP_BKVINCE';
-  entry.notes.finalJustification = 'Keep the current BKVince behavior after governed review.';
-  for (const group of canonicalSkill.components) {
-    if (group.changed !== false) entry.componentDecisions[group.id] = { decision: 'KEEP_BKVINCE' };
-  }
+function rawField(id, values, bundleId, extra = {}) {
+  return {
+    id,
+    table: 'skills.txt',
+    header: id.replace(/^skills\.txt:/, ''),
+    label: id,
+    values: { vanilla32: values[0], bkvince: values[1], pd2: values[2] },
+    rawEvidence: {
+      vanilla32: { presence: 'VALUE', value: values[0] },
+      bkvince: { presence: 'VALUE', value: values[1] },
+      pd2: values[2] === undefined
+        ? { presence: 'ABSENT' }
+        : { presence: 'VALUE', value: values[2] },
+    },
+    rawChanged: values[1] !== values[2],
+    semanticChanged: values[1] !== values[2],
+    decisionRelevant: true,
+    decisionOwnerBundleId: bundleId,
+    changed: values[1] !== values[2],
+    protected: false,
+    protectionReasons: [],
+    proofStatus: 'EXACT_TABLE',
+    dependencyIds: [],
+    ...extra,
+  };
+}
+
+function bundle(id, scope, fieldIds, extra = {}) {
+  return {
+    id,
+    scope,
+    fieldIds,
+    playerLabelFr: id,
+    shortHelpFr: id,
+    manualDecisionRequired: scope === 'PLAYER',
+    proofStatus: scope === 'TECHNICAL' ? 'NATIVE_UNPROVEN' : 'EXACT_TABLE',
+    fingerprint: HASH_C,
+    ...extra,
+  };
+}
+
+function component(id, fields) {
+  return {
+    id,
+    label: id,
+    fingerprint: HASH_C,
+    proofStatus: fields.some((field) => field.proofStatus === 'NATIVE_UNPROVEN') ? 'NATIVE_UNPROVEN' : 'EXACT_TABLE',
+    portability: { categories: ['DATA_ONLY_PROVEN'] },
+    changed: fields.some((field) => field.changed),
+    fields,
+  };
+}
+
+function fireBoltSkill() {
+  const fields = [
+    rawField('skills.txt:emin', ['3', '3', '6'], 'ELEMENTAL_DAMAGE_CURVE'),
+    rawField('skills.txt:emax', ['6', '6', '10'], 'ELEMENTAL_DAMAGE_CURVE'),
+    rawField('skills.txt:mana', ['3', '3', '4'], 'MANA_CURVE'),
+    rawField('skills.txt:edmgsympercalc', ['Fire Ball', 'Fire Ball', 'Fire Ball+Combustion'], 'DAMAGE_SYNERGIES'),
+    rawField('missiles.txt:vel', ['24', '24', '30'], 'PROJECTILE_PHYSICS'),
+    rawField('skills.txt:itemeffect', ['1', '1', '2'], 'ITEM_TRIGGER_EXECUTION'),
+    rawField('skills.txt:srvdofunc', ['8', '8', '62'], 'NATIVE_EXECUTION', {
+      protected: true,
+      protectionReasons: ['native callback'],
+      proofStatus: 'NATIVE_UNPROVEN',
+    }),
+  ];
+  return {
+    stableId: 'skill:sor:fire-bolt',
+    fingerprint: HASH_B,
+    canonicalName: 'Fire Bolt',
+    classCode: 'sor',
+    scope: 'sor',
+    playerSkill: true,
+    newPd2PlayerSkill: false,
+    identical: false,
+    readOnly: false,
+    components: [
+      component('damage_model', fields.slice(0, 2)),
+      component('cost_timing', fields.slice(2, 3)),
+      component('synergies', fields.slice(3, 4)),
+      component('projectiles_collisions', fields.slice(4, 5)),
+      component('interface_localization', fields.slice(5, 6)),
+      component('engine_functions', fields.slice(6, 7)),
+    ],
+    decisionBundles: [
+      bundle('ELEMENTAL_DAMAGE_CURVE', 'PLAYER', fields.slice(0, 2).map((field) => field.id)),
+      bundle('MANA_CURVE', 'PLAYER', [fields[2].id]),
+      bundle('DAMAGE_SYNERGIES', 'PLAYER', [fields[3].id]),
+      bundle('PROJECTILE_PHYSICS', 'PLAYER', [fields[4].id]),
+      bundle('ITEM_TRIGGER_EXECUTION', 'TECHNICAL', [fields[5].id], { autoResolution: 'PRESERVE_BKVINCE' }),
+      bundle('NATIVE_EXECUTION', 'TECHNICAL', [fields[6].id], { autoResolution: 'DEFER_NATIVE_PROOF' }),
+    ],
+  };
+}
+
+function identicalSkill() {
+  return {
+    stableId: 'skill:ama:critical-strike',
+    fingerprint: HASH_A,
+    canonicalName: 'Critical Strike',
+    classCode: 'ama',
+    scope: 'ama',
+    playerSkill: true,
+    identical: true,
+    readOnly: true,
+    components: [],
+    decisionBundles: [],
+  };
+}
+
+function fixtureReport() {
+  const schemaOrientation = orientation();
+  const policy = approvedPolicy(schemaOrientation);
+  return {
+    schemaVersion: 2,
+    reviewId: REVIEW_ID,
+    comparisonHash: HASH_A,
+    frozenContractHash: FROZEN_CONTRACT_HASH,
+    sourceHashes: { vanilla32: HASH_A, bkvince: HASH_B, pd2: HASH_C },
+    schemaOrientation,
+    schemaPolicy: {
+      envelope: policy,
+      canonicalPolicyHash: HASH_A,
+      approvedExportHash: HASH_B,
+      provenance: {},
+      migrationReport: {},
+    },
+    navigation: [{ id: 'sor', skillIds: ['skill:sor:fire-bolt'] }],
+    skills: [fireBoltSkill(), identicalSkill()],
+  };
+}
+
+function completeFireBolt(report, overrides = {}) {
+  const skill = report.skills[0];
+  const entry = createEntry(skill);
+  entry.globalDecision = 'ADAPT_PD2_SELECTIVELY';
   entry.implementationStatus = 'DECISION_COMPLETE';
-  assert.equal(entryState(report, canonicalSkill, entry).complete, true);
+  entry.notes.finalJustification = 'Governed Fire Bolt behavior bundle review complete.';
+  entry.notes.testPlan = 'Compare levels 1, 20 and 40 in the preview only.';
+  for (const bundle of skill.decisionBundles.filter((candidate) => candidate.scope === 'PLAYER')) {
+    entry.bundleDecisions[bundle.id] = { decision: 'KEEP_BKVINCE' };
+  }
+  Object.assign(entry, overrides);
   return entry;
 }
 
-test('formal Draft 2020-12 schema accepts a full default governed envelope', () => {
+test('schema v3 accepts the canonical empty envelope and uses hash-bound v3 storage', () => {
   const report = fixtureReport();
   const envelope = createEmptyEnvelope(report);
-  const schemaPath = path.resolve(import.meta.dirname, '..', '..', 'Mission', 'pd2-skills-decisions.schema.json');
-  const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+  const schema = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '..', '..', 'Mission', 'pd2-skills-decisions.schema.json'), 'utf8'));
   const ajv = new Ajv2020({ allErrors: true, strict: true });
   addFormats(ajv);
   const validate = ajv.compile(schema);
   assert.equal(validate(envelope), true, JSON.stringify(validate.errors));
-  assert.equal(envelope.entries['skill:ama:critical-strike'], undefined, 'identical skills must not receive mutable entries');
-  assert.equal(envelope.entries['skill:sor:combustion'].newSkillLineDecision, null);
-  assert.equal(storageKey(report), `pd2-skills-review-decisions-v2:${HASH_A}`);
-  assert.deepEqual(legacyStorageKeys(report), [`pd2-skills-review-decisions-v1:${HASH_A}`]);
-
-  const inProgress = structuredClone(envelope);
-  inProgress.entries['skill:nec:amplify-damage'].globalDecision = 'ADAPT_PD2_SELECTIVELY';
-  inProgress.entries['skill:nec:amplify-damage'].fieldDecisions.mana = {
-    decision: 'CUSTOM',
-    customValue: '',
-    protectedOverride: { approved: false },
-  };
-  assert.equal(validate(inProgress), true, JSON.stringify(validate.errors));
-  const imported = validateImport(report, inProgress);
-  assert.equal(imported.valid, true, imported.errors.join('\n'));
-  assert(imported.warnings.some((warning) => warning.stableId === 'skill:nec:amplify-damage'));
-  assert.doesNotThrow(() => exportEnvelope(report, inProgress.entries, { scope: 'ALL' }));
-  inProgress.exportScope = 'COMPLETE_ONLY';
-  assert.equal(validate(inProgress), false, 'the same partial CUSTOM is structurally forbidden in COMPLETE_ONLY');
+  assert.equal(envelope.schemaVersion, 3);
+  assert.deepEqual(envelope.schemaPolicy, report.schemaPolicy.envelope);
+  assert.equal(envelope.entries['skill:ama:critical-strike'], undefined);
+  assert.equal(storageKey(report), `pd2-skills-review-decisions-v3:${HASH_A}`);
+  assert.deepEqual(legacyStorageKeys(report), [
+    `pd2-skills-review-decisions-v1:${HASH_A}`,
+    `pd2-skills-review-decisions-v2:${HASH_A}`,
+  ]);
 });
 
-test('Amplify Damage supports a complete hybrid through component fallback plus a field override', () => {
+test('Fire Bolt completion counts four player decisions and auto-resolves two technical packages', () => {
   const report = fixtureReport();
-  const amplify = report.skills[0];
-  const entry = createEntry(amplify);
-  entry.globalDecision = 'ADAPT_PD2_SELECTIVELY';
-  entry.notes.finalJustification = 'Keep BKVince power while adopting selected PD2 quality-of-life changes.';
-  entry.notes.testPlan = 'Compare power, radius, mana, duration and Curse Mastery interaction at levels 1/20/40.';
-  for (const group of amplify.components) entry.componentDecisions[group.id] = { decision: 'KEEP_BKVINCE' };
-  entry.fieldDecisions.radius = { decision: 'ADOPT_PD2' };
-  entry.fieldDecisions.mana = {
-    decision: 'CUSTOM',
-    customValue: '6',
-    justification: 'Split the PD2 cost increase for the first prototype.',
-    gameplayObjective: 'Pay for the larger radius without doubling mana.',
-    testPlan: 'Measure casts-to-empty at skill levels 1, 20 and 40.',
-  };
-  const state = entryState(report, amplify, entry);
+  const entry = completeFireBolt(report);
+  const state = entryState(report, report.skills[0], entry);
   assert.equal(state.complete, true, state.reasons.join('\n'));
-  assert.equal(resolveFieldChoice(amplify, entry, 'area_targeting', 'radius').decision, 'ADOPT_PD2');
-  assert.equal(resolveFieldChoice(amplify, entry, 'damage_model', 'power').decision, 'KEEP_BKVINCE');
+  assert.equal(state.bundles.filter((item) => item.required).length, 4);
+  assert.equal(state.bundles.filter((item) => item.scope === 'TECHNICAL').length, 2);
+  assert.equal(resolveBundleChoice(report.skills[0], entry, 'ITEM_TRIGGER_EXECUTION').decision, 'KEEP_BKVINCE');
+  assert.equal(resolveBundleChoice(report.skills[0], entry, 'NATIVE_EXECUTION').autoResolution, 'DEFER_NATIVE_PROOF');
 });
 
-test('CUSTOM, native proof, malformed source, ordinal collision and delay protections are strict', () => {
+test('pure projection applies player bundles then technical preservation', () => {
   const report = fixtureReport();
-  const fireBall = report.skills.find((candidate) => candidate.canonicalName === 'Fire Ball');
-  const malformed = fireBall.components[0].fields[0];
-  let validation = validateChoice({ decision: 'CUSTOM', customValue: '(lvl>10?2:1)' }, { field: malformed, component: fireBall.components[0] });
-  assert.equal(validation.valid, false);
-  assert(validation.errors.some((error) => /justification/.test(error)));
-  assert(validation.errors.some((error) => /testPlan/.test(error)));
-  assert(validation.errors.some((error) => /protected override/.test(error)));
+  const entry = completeFireBolt(report);
+  entry.bundleDecisions.ELEMENTAL_DAMAGE_CURVE = { decision: 'ADOPT_PD2' };
+  const projected = projectProposedResult(report, report.skills[0], entry);
+  assert.equal(projected.valid, true, projected.errors.join('\n'));
+  assert.equal(projected.byField['skills.txt:emin'].after, '6');
+  assert.equal(projected.byField['skills.txt:emax'].after, '10');
+  assert.equal(projected.byField['skills.txt:itemeffect'].after, '1');
+  assert.equal(projected.byField['skills.txt:srvdofunc'].after, '8');
+  assert.equal(projected.byField['skills.txt:srvdofunc'].source, 'TECHNICAL_AUTO_RESOLUTION');
+});
 
-  validation = validateChoice({
+test('bundle CUSTOM requires and projects a governed customValues map', () => {
+  const report = fixtureReport();
+  const skill = report.skills[0];
+  const entry = completeFireBolt(report);
+  entry.bundleDecisions.ELEMENTAL_DAMAGE_CURVE = {
     decision: 'CUSTOM',
-    customValue: '(lvl>10?2:1)',
-    justification: 'Resolve the malformed PD2 source explicitly.',
-    testPlan: 'Verify one and two projectile thresholds.',
-    protectedOverride: {
-      approved: true,
-      justification: 'Use a reviewed replacement, never a silent repair.',
-      acknowledgedProofStatus: 'MALFORMED_SOURCE',
-      malformedResolution: 'Replace with the explicitly reviewed balanced expression.',
-    },
-  }, { field: malformed, component: fireBall.components[0] });
-  assert.equal(validation.valid, true, validation.errors.join('\n'));
-
-  const combustion = report.skills.find((candidate) => candidate.canonicalName === 'Combustion');
-  const native = combustion.components[1].fields[0];
-  validation = validateChoice({
-    decision: 'ADOPT_PD2',
-    protectedOverride: {
-      approved: true,
-      justification: 'Native behavior will be isolated in a proof prototype.',
-      acknowledgedProofStatus: 'NATIVE_UNPROVEN',
-    },
-  }, { field: native, component: combustion.components[1] });
-  assert.equal(validation.valid, false);
-  assert(validation.errors.some((error) => /nativeRiskAccepted/.test(error)));
-
-  const coldEnchant = report.skills.find((candidate) => candidate.canonicalName === 'Cold Enchant');
-  const movedOrdinal = coldEnchant.components[0].fields[0];
-  assert.equal(validateChoice({ decision: 'ADOPT_PD2' }, { field: movedOrdinal, component: coldEnchant.components[0] }).valid, false);
-
-  const fireWall = report.skills.find((candidate) => candidate.canonicalName === 'Fire Wall');
-  assert.notEqual(fireWall.components[0].fields[0].id, fireWall.components[0].fields[1].id, 'PD2 delay remains separate from BKVince localdelay');
-});
-
-test('DISCUSS stays incomplete, identical skills auto-resolve read-only, and implementation is never authorized automatically', () => {
-  const report = fixtureReport();
-  const raven = report.skills.find((candidate) => candidate.canonicalName === 'Raven');
-  const entry = createEntry(raven);
-  entry.globalDecision = 'DISCUSS';
-  entry.componentDecisions.summons = { decision: 'DISCUSS' };
-  const state = entryState(report, raven, entry);
-  assert.equal(state.complete, false);
-  assert(state.reasons.some((reason) => /DISCUSS/.test(reason)));
-  assert.equal(entry.implementationStatus, 'NOT_REVIEWED');
-
-  const identical = report.skills.find((candidate) => candidate.identical);
-  assert.deepEqual(entryState(report, identical, undefined), {
-    required: false,
-    complete: true,
-    readOnly: true,
-    autoResolved: 'KEEP_BKVINCE',
-    reasons: [],
-    requirements: { total: 0, complete: 0 },
-    components: [],
-  });
-});
-
-test('new PD2 skills require a coherent line decision before fields', () => {
-  const report = fixtureReport();
-  const combustion = report.skills.find((candidate) => candidate.canonicalName === 'Combustion');
-  const entry = createEntry(combustion);
-  entry.globalDecision = 'IMPORT_NEW_PD2_SKILL';
-  entry.notes.finalJustification = 'Review the new player skill as an append-only candidate.';
-  entry.notes.testPlan = 'Verify dependency closure, ordinal remaps and client/server behavior.';
-  for (const group of combustion.components) entry.componentDecisions[group.id] = { decision: 'KEEP_BKVINCE' };
-  entry.newSkillLineDecision = 'IMPORT_APPEND_ONLY';
-  assert(entryState(report, combustion, entry).reasons.some((reason) => /no BKVince row exists/.test(reason)));
-  for (const group of combustion.components) entry.componentDecisions[group.id] = { decision: 'ADOPT_PD2' };
-  entry.fieldDecisions.charclass = {
-    decision: 'ADOPT_PD2',
-    protectedOverride: {
-      approved: true,
-      justification: 'Explicitly govern the new player class.',
-      acknowledgedProofStatus: 'EXACT_TABLE',
-    },
+    customValues: { 'skills.txt:emin': '5', 'skills.txt:emax': '9' },
+    justification: 'Use an intermediate curve.',
+    testPlan: 'Compare the six governed levels.',
   };
-  entry.fieldDecisions.srvdofunc = {
-    decision: 'ADOPT_PD2',
-    protectedOverride: {
-      approved: true,
-      justification: 'Explicit native proof prototype gate.',
-      acknowledgedProofStatus: 'NATIVE_UNPROVEN',
-      nativeRiskAccepted: true,
-    },
-  };
-  entry.newSkillLineDecision = null;
-  assert.equal(entryState(report, combustion, entry).complete, false);
-  entry.newSkillLineDecision = 'IMPORT_APPEND_ONLY';
-  assert.equal(entryState(report, combustion, entry).complete, true);
-  entry.fieldDecisions.charclass = {
-    decision: 'CUSTOM',
-    customValue: 'sor',
-    justification: 'Explicit player-class target.',
-    testPlan: 'Verify tree placement.',
-    protectedOverride: {
-      approved: true,
-      justification: 'Explicitly govern the protected class field.',
-      acknowledgedProofStatus: 'EXACT_TABLE',
-    },
-  };
-  assert.equal(entryState(report, combustion, entry).complete, false);
-  assert(entryState(report, combustion, entry).reasons.some((reason) => /IMPORT_APPEND_ONLY.*CUSTOM/.test(reason)));
-  entry.newSkillLineDecision = 'IMPORT_CUSTOMIZED';
-  assert.equal(entryState(report, combustion, entry).complete, true);
-});
-
-test('bulk actions fill safely, preserve CUSTOM and notes, protect Warlock/native fields, and require confirmed replacement', () => {
-  const report = fixtureReport();
-  const amplify = report.skills[0];
-  const existing = createEntry(amplify);
-  existing.notes.general = 'Vincent note must survive every bulk action.';
-  existing.fieldDecisions.mana = {
-    decision: 'CUSTOM',
-    customValue: '6',
-    justification: 'Intentional hybrid.',
-    testPlan: 'Mana test.',
-  };
-  let entries = applyBulk(report, [amplify.stableId], { [amplify.stableId]: existing }, 'ADOPT_PD2');
-  assert.equal(entries[amplify.stableId].fieldDecisions.mana.decision, 'CUSTOM');
-  assert.equal(entries[amplify.stableId].notes.general, existing.notes.general);
-  assert.throws(() => applyBulk(report, [amplify.stableId], entries, 'KEEP_BKVINCE', { replace: true }), /confirmed:true/);
-  entries = applyBulk(report, [amplify.stableId], entries, 'KEEP_BKVINCE', { replace: true, confirmed: true });
-  assert.equal(entries[amplify.stableId].fieldDecisions.mana, undefined);
-  assert.equal(entries[amplify.stableId].notes.general, existing.notes.general);
-
-  const combustion = report.skills.find((candidate) => candidate.canonicalName === 'Combustion');
-  combustion.components[0].fields.unshift(field('Id', [undefined, undefined, '376'], {
-    protected: true,
-    protectionReasons: ['runtimeOrdinal'],
-  }));
-  combustion.newSkillPlan = {
-    proposedTargetOrdinal: 451,
-    proposedRow: {
-      sourceNodeId: 'pd2:skills.txt:376',
-      targetTable: 'skills.txt',
-      targetOrdinal: 451,
-      targetHeaders: ['*Id', 'skill'],
-      values: { '*Id': '451', skill: 'Combustion' },
-      mappingProvenance: {
-        '*Id': {
-          mode: 'APPEND_PREVIEW_DOCUMENTARY_VALUE',
-          statement: 'Generated append preview value; no sourceHeader because PD2 Id never allocates the ordinal.',
-        },
-        skill: { mode: 'EXACT_CANONICAL_HEADER', sourceHeader: 'skill' },
-      },
-    },
-  };
-  entries = applyBulk(report, [combustion.stableId], {}, 'ADOPT_PD2');
-  assert.equal(entries[combustion.stableId].fieldDecisions.Id.decision, 'NOT_APPLICABLE');
-  assert.equal(entries[combustion.stableId].fieldDecisions.srvdofunc.decision, 'KEEP_BKVINCE');
-  const warlock = report.skills.find((candidate) => candidate.classCode === 'war');
-  entries = applyBulk(report, [warlock.stableId], {}, 'ADOPT_PD2');
-  assert.equal(entries[warlock.stableId].fieldDecisions.warlockExistingRow.decision, 'KEEP_BKVINCE');
-
-  entries[warlock.stableId].componentDecisions.identity_availability = { decision: 'DISCUSS' };
-  entries = applyBulk(report, [warlock.stableId], entries, 'CLEAR_UNRESOLVED');
-  assert.equal(entries[warlock.stableId].componentDecisions.identity_availability, undefined);
-});
-
-test('strict import validates hashes, fingerprints, unknown fields, read-only injection and COMPLETE_ONLY completeness', () => {
-  const report = fixtureReport();
-  const amplify = report.skills[0];
-  const valid = exportEnvelope(report, { [amplify.stableId]: completeKeepEntry(report, amplify) }, { scope: 'COMPLETE_ONLY' });
-  assert.equal(validateImport(report, valid).valid, true);
-
-  const staleHash = structuredClone(valid);
-  staleHash.comparisonHash = HASH_B;
-  assert(validateImport(report, staleHash).errors.some((error) => /stale comparison hash/.test(error)));
-  const staleFingerprint = structuredClone(valid);
-  staleFingerprint.entries[amplify.stableId].fingerprint = HASH_A;
-  assert(validateImport(report, staleFingerprint).errors.some((error) => /stale fingerprint/.test(error)));
-  const unknown = structuredClone(valid);
-  unknown.entries[amplify.stableId].unknown = true;
-  assert(validateImport(report, unknown).errors.some((error) => /unknown property/.test(error)));
-  const readOnly = structuredClone(valid);
-  readOnly.entries['skill:ama:critical-strike'] = { ...completeKeepEntry(report, amplify), fingerprint: HASH_A };
-  assert(validateImport(report, readOnly).errors.some((error) => /read-only identical/.test(error)));
-  const incomplete = structuredClone(valid);
-  incomplete.entries[amplify.stableId].globalDecision = 'DISCUSS';
-  assert(validateImport(report, incomplete).errors.some((error) => /COMPLETE_ONLY.*incomplete/.test(error)));
-});
-
-test('migration reports retained, stale and dropped entries explicitly by stableId plus fingerprint', () => {
-  const oldReport = fixtureReport();
-  const amplify = oldReport.skills[0];
-  const raven = oldReport.skills.find((candidate) => candidate.canonicalName === 'Raven');
-  const oldEntries = {
-    [amplify.stableId]: completeKeepEntry(oldReport, amplify),
-    [raven.stableId]: completeKeepEntry(oldReport, raven),
-  };
-  const previous = exportEnvelope(oldReport, oldEntries, { scope: 'ALL' });
-  previous.entries['skill:sor:removed-skill'] = {
-    ...structuredClone(oldEntries[amplify.stableId]),
-    fingerprint: HASH_C,
-  };
-
-  const current = fixtureReport();
-  current.comparisonHash = HASH_C;
-  current.skills.find((candidate) => candidate.stableId === raven.stableId).fingerprint = HASH_A;
-  const migration = migrateEnvelope(current, previous);
-  const retainedIds = migration.report.retained.map((item) => item.stableId);
-  assert(retainedIds.includes(amplify.stableId));
-  assert(!retainedIds.includes(raven.stableId));
-  assert.equal(
-    retainedIds.length,
-    current.skills.filter((skill) => !skill.readOnly && skill.stableId !== raven.stableId).length,
-    'ALL exports carry explicit default entries that can be retained when their fingerprints still match',
-  );
-  assert.deepEqual(migration.report.stale.map((item) => item.stableId), [raven.stableId]);
-  assert.deepEqual(migration.report.dropped.map((item) => item.stableId), ['skill:sor:removed-skill']);
-  assert.equal(migration.envelope.comparisonHash, HASH_C);
-  assert.equal(migration.envelope.entries[raven.stableId].globalDecision, null, 'stale current skills restart as explicit default entries');
-  assert(Object.keys(migration.envelope.entries).length > migration.report.retained.length, 'the migrated ALL envelope remains complete for the current report');
-});
-
-test('progress is global/class-aware and browser-injected runtime matches Node completion', () => {
-  const report = fixtureReport();
-  report.navigation = [{ id: 'pd2_new', skillIds: ['skill:sor:combustion'] }];
-  const amplify = report.skills[0];
-  const entries = { [amplify.stableId]: completeKeepEntry(report, amplify) };
-  const global = progress(report, entries);
-  assert.equal(global.autoResolved, 1);
-  assert(global.complete >= 2);
-  const nec = progress(report, entries, 'nec');
-  assert.equal(nec.total, 1);
-  assert.equal(nec.complete, 1);
-  const newSkills = progress(report, entries, 'pd2_new');
-  assert.equal(newSkills.total, 1);
-
-  const isolated = {};
-  new Function('globalThis', buildBrowserRuntimeSource())(isolated);
-  assert(isolated.decisionRuntime);
-  assert.deepEqual(
-    isolated.decisionRuntime.entryState(report, amplify, entries[amplify.stableId]),
-    entryState(report, amplify, entries[amplify.stableId]),
-  );
-});
-
-test('Phase 0 policies gate every mutable skill but never disturb identical read-only auto-resolution', () => {
-  const report = fixtureReport();
-  report.schemaOrientation = fixtureOrientation();
-  const amplify = report.skills[0];
-  const complete = completeKeepEntry({ ...report, schemaOrientation: undefined }, amplify);
-  const pending = createPolicyEnvelope(report.schemaOrientation);
-
-  let state = entryState(report, amplify, complete, pending);
-  assert.equal(state.complete, false);
-  assert.equal(state.schemaPolicyGate.open, true);
-  assert.equal(state.requirements.remaining, 1, 'the eight global policies project as one atomic skill gate');
-  assert(state.reasons.some((reason) => /Phase 0 policy gate/.test(reason)));
-
-  const approved = approvedSchemaPolicy(report.schemaOrientation);
-  assert.equal(policyGate(report.schemaOrientation, approved).complete, true);
-  state = entryState(report, amplify, complete, approved);
+  const state = entryState(report, skill, entry);
   assert.equal(state.complete, true, state.reasons.join('\n'));
-  const governedProgress = progress(report, { entries: { [amplify.stableId]: complete }, schemaPolicy: approved });
-  assert.equal(governedProgress.complete >= 2, true);
-  assert.equal(governedProgress.schemaPolicyGate.required, 8, 'progress exposes global policies once');
-  assert.equal(governedProgress.schemaPolicyGate.closed, 8);
-
-  const identical = report.skills.find((candidate) => candidate.readOnly);
-  assert.equal(entryState(report, identical, undefined, pending).complete, true);
-  assert.equal(entryState(report, identical, undefined, pending).readOnly, true);
+  assert.equal(resolveFieldChoice(skill, entry, 'damage_model', 'skills.txt:emin').customValue, '5');
+  assert.equal(projectProposedResult(report, skill, entry).byField['skills.txt:emax'].after, '9');
 });
 
-test('formal v2 decision schema accepts the autonomous Phase 0 policy envelope', () => {
+test('raw field decisions require an explicit justified expert override', () => {
   const report = fixtureReport();
-  report.schemaOrientation = fixtureOrientation();
+  const skill = report.skills[0];
+  const entry = completeFireBolt(report);
+  entry.fieldDecisions['skills.txt:mana'] = { decision: 'ADOPT_PD2' };
+  let state = entryState(report, skill, entry);
+  assert.equal(state.complete, false);
+  assert(state.reasons.some((reason) => /expertOverride/.test(reason)));
+  entry.fieldDecisions['skills.txt:mana'].expertOverride = {
+    enabled: true,
+    justification: 'Expert override intentionally separates mana from its bundle.',
+  };
+  state = entryState(report, skill, entry);
+  assert.equal(state.complete, true, state.reasons.join('\n'));
+  assert.equal(projectProposedResult(report, skill, entry).byField['skills.txt:mana'].source, 'EXPERT_FIELD_OVERRIDE');
+});
+
+test('protected native callbacks remain preserved unless the full expert and proof override is explicit', () => {
+  const report = fixtureReport();
+  const skill = report.skills[0];
+  const entry = completeFireBolt(report);
+  entry.fieldDecisions['skills.txt:srvdofunc'] = {
+    decision: 'ADOPT_PD2',
+    expertOverride: { enabled: true, justification: 'Explicit native experiment.' },
+  };
+  let state = entryState(report, skill, entry);
+  assert.equal(state.complete, false);
+  assert(state.reasons.some((reason) => /protectedOverride/.test(reason)));
+  entry.fieldDecisions['skills.txt:srvdofunc'].protectedOverride = {
+    approved: true,
+    justification: 'Native behavior was separately proven for this governed preview.',
+    acknowledgedProofStatus: 'NATIVE_UNPROVEN',
+    nativeRiskAccepted: true,
+  };
+  state = entryState(report, skill, entry);
+  assert.equal(state.complete, true, state.reasons.join('\n'));
+  assert.equal(projectProposedResult(report, skill, entry).byField['skills.txt:srvdofunc'].after, '62');
+});
+
+test('strict import validates v3 hashes, policy, fingerprints and COMPLETE_ONLY completion', () => {
+  const report = fixtureReport();
   const envelope = createEmptyEnvelope(report);
-  const schemaPath = path.resolve(import.meta.dirname, '..', '..', 'Mission', 'pd2-skills-decisions.schema.json');
-  const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
-  const ajv = new Ajv2020({ allErrors: true, strict: true });
-  addFormats(ajv);
-  const validate = ajv.compile(schema);
-  assert.equal(validate(envelope), true, JSON.stringify(validate.errors));
-  const imported = validateImport(report, envelope);
-  assert.equal(imported.valid, true, imported.errors.join('\n'));
-  assert.equal(imported.warnings.length, report.skills.filter((skill) => !skill.readOnly).length);
+  envelope.entries[report.skills[0].stableId] = completeFireBolt(report);
+  envelope.exportScope = 'COMPLETE_ONLY';
+  assert.equal(validateImport(report, envelope).valid, true);
+  const stale = structuredClone(envelope);
+  stale.comparisonHash = HASH_B;
+  assert.equal(validateImport(report, stale).valid, false);
+  const expertless = structuredClone(envelope);
+  expertless.entries[report.skills[0].stableId].fieldDecisions['skills.txt:mana'] = { decision: 'ADOPT_PD2' };
+  assert.equal(validateImport(report, expertless).valid, false);
 });
 
-test('v2 exports carry autonomous schemaPolicy and legacy v1 is migration-only with open fresh policies', () => {
+test('bulk actions target player bundles only and preserve expert choices unless replacement is confirmed', () => {
   const report = fixtureReport();
-  report.schemaOrientation = fixtureOrientation();
-  const amplify = report.skills[0];
-  const entry = completeKeepEntry({ ...report, schemaOrientation: undefined }, amplify);
-  const approved = approvedSchemaPolicy(report.schemaOrientation);
-  const exported = exportEnvelope(report, { [amplify.stableId]: entry }, {
-    scope: 'COMPLETE_ONLY',
-    schemaPolicy: approved,
-  });
-  assert.equal(exported.schemaVersion, 2);
-  assert.deepEqual(exported.schemaPolicy, approved);
-  assert.equal(validateImport(report, exported).valid, true);
+  const skill = report.skills[0];
+  const original = createEntry(skill);
+  original.fieldDecisions['skills.txt:mana'] = {
+    decision: 'CUSTOM',
+    customValue: '3.5',
+    justification: 'Existing expert value.',
+    testPlan: 'Existing test.',
+    expertOverride: { enabled: true, justification: 'Existing expert override.' },
+  };
+  let entries = applyBulk(report, [skill.stableId], { [skill.stableId]: original }, 'ADOPT_PD2');
+  assert.equal(Object.keys(entries[skill.stableId].bundleDecisions).length, 4);
+  assert.equal(entries[skill.stableId].fieldDecisions['skills.txt:mana'].decision, 'CUSTOM');
+  assert.throws(() => applyBulk(report, [skill.stableId], entries, 'KEEP_BKVINCE', { replace: true }), /confirmed/);
+  entries = applyBulk(report, [skill.stableId], entries, 'KEEP_BKVINCE', { replace: true, confirmed: true });
+  assert.deepEqual(entries[skill.stableId].fieldDecisions, {});
+});
 
-  const legacy = structuredClone(exported);
-  legacy.schemaVersion = 1;
-  legacy.frozenContractHash = '3A0C347476D16366FE1557446E03BD33705AC7AF14CA6BBA4F172935B675A69C';
-  delete legacy.schemaPolicy;
-  assert.equal(validateImport(report, legacy).valid, false, 'legacy v1 must never be imported directly');
-  const migrated = migrateEnvelope(report, legacy);
-  assert.equal(migrated.envelope.schemaVersion, 2);
-  assert.equal(migrated.report.fromSchemaVersion, 1);
-  assert.equal(migrated.report.policyMigration.reason, 'LEGACY_V1_HAS_NO_SCHEMA_POLICY');
-  assert(Object.values(migrated.envelope.schemaPolicy.decisions).every((decision) => decision.decision === 'PENDING'));
-  assert.equal(entryState(report, amplify, migrated.envelope.entries[amplify.stableId], migrated.envelope.schemaPolicy).complete, false);
+test('controlled v2 migration never silently turns field decisions into expert overrides', () => {
+  const report = fixtureReport();
+  const legacy = createEmptyEnvelope(report);
+  legacy.schemaVersion = 2;
+  legacy.frozenContractHash = HASH_C;
+  const raw = legacy.entries[report.skills[0].stableId];
+  delete raw.bundleDecisions;
+  raw.componentDecisions = { damage_model: { decision: 'ADOPT_PD2' } };
+  raw.fieldDecisions = { 'skills.txt:mana': { decision: 'ADOPT_PD2' } };
+  const migration = migrateEnvelope(report, legacy, { exportedAt: '2026-08-12T01:00:00.000Z' });
+  assert.equal(migration.envelope.schemaVersion, 3);
+  assert.equal(migration.report.counts.conflicts, 1);
+  assert(migration.report.stale.some((item) => item.reason === 'LEGACY_DECISION_REQUIRES_REVIEW'));
+  assert.deepEqual(migration.envelope.entries[report.skills[0].stableId].fieldDecisions, {});
+});
+
+test('progress and browser source consume the same bundle runtime', () => {
+  const report = fixtureReport();
+  const envelope = createEmptyEnvelope(report);
+  envelope.entries[report.skills[0].stableId] = completeFireBolt(report);
+  const result = progress(report, envelope, 'sor');
+  assert.equal(result.total, 1);
+  assert.equal(result.complete, 1);
+  assert.match(buildBrowserRuntimeSource(), /projectProposedResult/);
+  const exported = exportEnvelope(report, envelope, { scope: 'COMPLETE_ONLY', exportedAt: '2026-08-12T02:00:00.000Z' });
+  assert.equal(exported.schemaVersion, 3);
+  assert.equal(Object.keys(exported.entries).length, 1);
 });

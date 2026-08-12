@@ -18,6 +18,11 @@ import {
 import { buildSkillReviewHtml } from './pd2-skills-review-ui.mjs';
 import { buildBrowserRuntimeSource } from './pd2-skills-review-runtime.mjs';
 import {
+  PHASE1_MODEL_ID,
+  applyPhase1DataModel,
+  loadCanonicalSchemaPolicy,
+} from './pd2-skills-phase1.mjs';
+import {
   ORIENTATION_ARTIFACT_PATHS,
   buildSchemaOrientationArtifacts,
   buildWorkbenchOrientationBinding,
@@ -61,6 +66,12 @@ function assertOracle(report) {
   if (!report.schemaOrientation || report.schemaOrientation.orientationHash !== report.policyHashes?.schemaOrientation) {
     throw new Error('oracle must embed the governed Phase 0 schema orientation');
   }
+  if (report.phase1Model !== PHASE1_MODEL_ID) {
+    throw new Error('oracle must apply the governed Phase 1 behavior-bundle model');
+  }
+  if (!report.schemaPolicy?.envelope || report.schemaPolicy.canonicalPolicyHash !== report.policyHashes?.canonicalSchemaPolicy) {
+    throw new Error('oracle must embed the canonical approved Phase 0 policy wrapper');
+  }
   if (report.schemaOrientation.workbenchBinding?.comparisonHash !== report.comparisonHash) {
     throw new Error('schema orientation workbench binding must match the final comparisonHash');
   }
@@ -86,15 +97,15 @@ function assertOracle(report) {
 export function buildIntegratedWorkbenchReport(roots = DEFAULT_SOURCE_ROOTS) {
   const sources = loadWorkbenchSources(roots);
   const baseReport = buildOracleData(sources);
-  const phase0 = buildSchemaOrientationArtifacts(roots, { sources, skillReport: baseReport });
-  const orientation = phase0.orientation;
+  const initialPhase0 = buildSchemaOrientationArtifacts(roots, { sources, skillReport: baseReport });
+  const orientation = initialPhase0.orientation;
   const {
     sourceManifest,
     sourceHashes,
     policyHashes,
     comparisonHash,
   } = buildWorkbenchOrientationBinding(baseReport, orientation);
-  const report = {
+  const phase0Report = {
     ...baseReport,
     comparisonHash,
     sourceManifest,
@@ -105,7 +116,18 @@ export function buildIntegratedWorkbenchReport(roots = DEFAULT_SOURCE_ROOTS) {
       workbenchBinding: { reviewId: baseReport.reviewId, comparisonHash },
     },
   };
-  return { report, orientationArtifacts: phase0 };
+  const schemaPolicy = loadCanonicalSchemaPolicy(orientation);
+  const report = applyPhase1DataModel(phase0Report, {
+    orientation,
+    schemaPolicy,
+    sources,
+  });
+  const orientationArtifacts = buildSchemaOrientationArtifacts(roots, {
+    sources,
+    skillReport: report,
+  });
+  report.schemaOrientation = orientationArtifacts.orientation;
+  return { report, orientationArtifacts };
 }
 
 export function buildDocumentationMap(report) {

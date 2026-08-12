@@ -49,14 +49,14 @@
       },
       "nativeFindings": {
         "path": "reverse-engineering/d2r-3.2.92777/findings.md",
-        "sha256": "0A8854BF1151CE4CE2FEA4F77EACE73C96C968C4D4132E05E4BCE29AD5D7E620",
-        "bytes": 46913,
+        "sha256": "7A4E737FECA37F8213C31F808113E0321AC55EE7252B891F5F982CD556C67131",
+        "bytes": 59571,
         "role": "Governed D2R 3.2 native evidence; only explicitly promoted findings close a proof gate."
       },
       "knownRvas": {
         "path": "reverse-engineering/d2r-3.2.92777/known-rvas.json",
-        "sha256": "4AB3FF680C128F5E7D12520CD0ACAA97800AA1DE491141B65593BE9AF3941A5B",
-        "bytes": 191296,
+        "sha256": "F19DB68098A5CD5F3568305FB6C12F9CA48374FFBFBF856099DB8510027CD26A",
+        "bytes": 220551,
         "role": "Governed D2R 3.2 native evidence; only explicitly promoted findings close a proof gate."
       }
     }
@@ -70,8 +70,8 @@
     "references": {
       "skillsSchema": "944A40AA17BF44C8D5B262482925FAD26CF3B20FBE0B941D779D6E60F36DE742",
       "analyticalAudit": "BE9385A532CBD3DF80D94E83F04293FB9238DFD10101C5A9F442DB8DAC07D565",
-      "nativeFindings": "0A8854BF1151CE4CE2FEA4F77EACE73C96C968C4D4132E05E4BCE29AD5D7E620",
-      "knownRvas": "4AB3FF680C128F5E7D12520CD0ACAA97800AA1DE491141B65593BE9AF3941A5B"
+      "nativeFindings": "7A4E737FECA37F8213C31F808113E0321AC55EE7252B891F5F982CD556C67131",
+      "knownRvas": "F19DB68098A5CD5F3568305FB6C12F9CA48374FFBFBF856099DB8510027CD26A"
     }
   },
   "semanticBlankDefinition": "value === null || value === undefined || String(value).trim() === \"\"",
@@ -86713,9 +86713,9 @@
       "completionGate": "non-read-only skill decisions remain incomplete while required Phase 0 policies are not approved or explicitly modified"
     }
   },
-  "orientationHash": "019FA5F148559A4B197166075F064110127FEE9C66228D0A12A1C9DE63542E06",
+  "orientationHash": "9EBAA7737422C0F07DF039CD78197C42BFD8E574A1185B8E79234F5D5F97C2B4",
   "workbenchBinding": {
     "reviewId": "pd2-skills-review-v1",
-    "comparisonHash": "B21D9A28781DF636C9F97B7A7CE01BED1C4D9741E2F4BF38B221EF88D4F42D32"
+    "comparisonHash": "B4C52C7FACAB5DEDE191ED4F01CFEB41F18707998A1D4DA73AC056F2E7ABF2D3"
   }
 }

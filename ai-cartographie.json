@@ -38119,6 +38119,11 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "pd2-skills-schema-policy-approved.json",
+                                                           "path":  "Mission/pd2-skills-schema-policy-approved.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "pd2-skills-schema-policy.example.json",
                                                            "path":  "Mission/pd2-skills-schema-policy.example.json",
                                                            "kind":  "file"
@@ -38959,6 +38964,21 @@
                                                                             {
                                                                                 "name":  "pd2-skills-decisions-preview.test.mjs",
                                                                                 "path":  "scripts/migrate-bkvince/pd2-skills-decisions-preview.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-phase1.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-phase1.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-phase1.test.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-phase1.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-phase1-verification.test.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-phase1-verification.test.mjs",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

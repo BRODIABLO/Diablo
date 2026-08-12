@@ -146,26 +146,19 @@ async function main() {
 
     await page.locator('[data-view="architecture"].active').waitFor();
     assert.match(await page.locator('.schema-hero').innerText(), /PD2 Skills Schema and Engine Orientation/u);
-    assert.match(await page.locator('.schema-hero .schema-gate').innerText(), /0 \/ 8/u);
+    assert.match(await page.locator('.schema-hero .schema-gate').innerText(), /8 \/ 8/u);
     assert.match(await page.locator('#schema-fire-bolt-impact').innerText(), /82[\s\S]*83[\s\S]*6/u);
     assert.match(await page.locator('#schema-witnesses').innerText(), /auraevent4[\s\S]*ABSENT_COLUMN/u);
     const policyIds = await page.locator('[data-schema-policy-decision]').evaluateAll((controls) => controls.map((control) => control.dataset.policyId));
     assert.equal(policyIds.length, 8, 'Phase 0 must expose eight governed policies');
-    for (const policyId of policyIds) {
-      await page.locator(`[data-schema-policy-decision][data-policy-id="${policyId}"]`).selectOption('APPROVE');
-      await page.locator(`[data-schema-policy-property="justification"][data-policy-id="${policyId}"]`).fill(`Browser smoke approval for ${policyId}.`);
-    }
-    await page.waitForFunction(() => {
-      const key = Object.keys(localStorage).find((item) => item.startsWith('pd2-skills-review-decisions-v2:'));
-      const policy = key ? JSON.parse(localStorage.getItem(key))?.schemaPolicy : null;
-      return policy && Object.values(policy.decisions || {}).length === 8
-        && Object.values(policy.decisions).every((entry) => entry.decision === 'APPROVE' && entry.justification?.trim());
+    const canonicalPolicies = await page.evaluate(() => {
+      const canonical = globalThis.__PD2_SKILLS_REPORT__?.schemaPolicy?.envelope;
+      return Object.values(canonical?.decisions || {}).map((entry) => ({ decision: entry.decision, justification: entry.justification, fingerprint: entry.fingerprint }));
     });
-    // The final justification is an input event without a full render. Re-fire
-    // one governed select change so the visible gate reflects the saved model.
-    await page.locator('[data-schema-policy-decision]').first().selectOption('APPROVE');
-    assert.match(await page.locator('.schema-hero .schema-gate').innerText(), /8 \/ 8/u);
-    checkpoints.push('Phase 0 architecture and eight policy approvals verified');
+    assert.equal(canonicalPolicies.length, 8, 'The canonical Phase 0 policy must contain all eight decisions');
+    assert.ok(canonicalPolicies.every((entry) => entry.decision === 'APPROVE' && entry.justification?.trim() && entry.fingerprint), 'Every canonical policy must retain its approval, justification and fingerprint');
+    assert.ok((await page.locator('[data-schema-policy-decision]').evaluateAll((controls) => controls.map((control) => control.value))).every((value) => value === 'APPROVE'));
+    checkpoints.push('canonical Phase 0 policy verified at 8/8');
     await sampleMemory('cold-ready');
     checkpoints.push('initial memory sampled');
 
@@ -199,25 +192,31 @@ async function main() {
     await amplifyCard.locator('.skill-card-body').waitFor();
 
     await amplifyCard.locator('[data-global-decision]').selectOption('ADAPT_PD2_SELECTIVELY');
-    await amplifyCard.locator('[data-component-decision][data-component-id="cost_timing"]').selectOption('KEEP_BKVINCE');
-    await amplifyCard.locator('[data-component-decision][data-component-id="area_targeting"]').selectOption('ADOPT_PD2');
-    await amplifyCard.locator('[data-component-decision][data-component-id="buffs_debuffs_auras_passives"]').selectOption('CUSTOM');
-    const customValue = 'Hybrid smoke value: max(8, 4 + lvl / 2)';
+    const amplifyPlayerBundleIds = await amplifyCard.locator('[data-decision-bundle][data-bundle-scope="PLAYER"]').evaluateAll((bundles) => bundles.map((bundle) => bundle.dataset.bundleId));
+    assert.ok(amplifyPlayerBundleIds.length >= 3, 'Amplify Damage must expose enough governed player bundles for a hybrid witness');
+    const [keepBundleId, adoptBundleId, customBundleId] = amplifyPlayerBundleIds;
+    await amplifyCard.locator(`[data-bundle-decision][data-bundle-id="${keepBundleId}"]`).selectOption('KEEP_BKVINCE');
+    await amplifyCard.locator(`[data-bundle-decision][data-bundle-id="${adoptBundleId}"]`).selectOption('ADOPT_PD2');
+    await amplifyCard.locator(`[data-bundle-decision][data-bundle-id="${customBundleId}"]`).selectOption('CUSTOM');
+    const customValue = '42';
     const customJustification = 'Smoke test: preserve BKVince power while reviewing PD2 curse behaviour.';
-    await amplifyCard.locator('[data-choice-level="component"][data-component-id="buffs_debuffs_auras_passives"][data-choice-property="customValue"]').fill(customValue);
-    await amplifyCard.locator('[data-choice-level="component"][data-component-id="buffs_debuffs_auras_passives"][data-choice-property="justification"]').fill(customJustification);
-    await page.waitForFunction(({ skillId, expectedValue, expectedJustification }) => {
-      const key = Object.keys(localStorage).find((item) => item.startsWith('pd2-skills-review-decisions-v2:'));
+    const customValueControls = amplifyCard.locator(`[data-bundle-custom-value][data-bundle-id="${customBundleId}"]`);
+    assert.ok(await customValueControls.count() > 0, 'CUSTOM bundle must expose one explicit value per projected field');
+    for (let index = 0; index < await customValueControls.count(); index += 1) await customValueControls.nth(index).fill(customValue);
+    await amplifyCard.locator(`[data-choice-level="bundle"][data-bundle-id="${customBundleId}"][data-choice-property="justification"]`).fill(customJustification);
+    await page.waitForFunction(({ skillId, keepId, adoptId, customId, expectedValue, expectedJustification }) => {
+      const key = Object.keys(localStorage).find((item) => item.startsWith('pd2-skills-review-decisions-v3:'));
       if (!key) return false;
       const entry = JSON.parse(localStorage.getItem(key))?.entries?.[skillId];
-      const custom = entry?.componentDecisions?.buffs_debuffs_auras_passives;
+      const custom = entry?.bundleDecisions?.[customId];
       return entry?.globalDecision === 'ADAPT_PD2_SELECTIVELY'
-        && entry?.componentDecisions?.cost_timing?.decision === 'KEEP_BKVINCE'
-        && entry?.componentDecisions?.area_targeting?.decision === 'ADOPT_PD2'
+        && entry?.bundleDecisions?.[keepId]?.decision === 'KEEP_BKVINCE'
+        && entry?.bundleDecisions?.[adoptId]?.decision === 'ADOPT_PD2'
         && custom?.decision === 'CUSTOM'
-        && custom?.customValue === expectedValue
+        && Object.values(custom?.customValues || {}).length > 0
+        && Object.values(custom.customValues).every((value) => value === expectedValue)
         && custom?.justification === expectedJustification;
-    }, { skillId: 'skill:nec:amplify-damage', expectedValue: customValue, expectedJustification: customJustification });
+    }, { skillId: 'skill:nec:amplify-damage', keepId: keepBundleId, adoptId: adoptBundleId, customId: customBundleId, expectedValue: customValue, expectedJustification: customJustification });
     checkpoints.push('Amplify Damage hybrid and CUSTOM decisions saved');
     await sampleMemory('decisions-saved');
 
@@ -234,10 +233,10 @@ async function main() {
     await amplifyCard.locator('[data-action="toggle-skill"]').click();
     await amplifyCard.locator('.skill-card-body').waitFor();
     assert.equal(await amplifyCard.locator('[data-global-decision]').inputValue(), 'ADAPT_PD2_SELECTIVELY');
-    assert.equal(await amplifyCard.locator('[data-component-decision][data-component-id="cost_timing"]').inputValue(), 'KEEP_BKVINCE');
-    assert.equal(await amplifyCard.locator('[data-component-decision][data-component-id="area_targeting"]').inputValue(), 'ADOPT_PD2');
-    assert.equal(await amplifyCard.locator('[data-choice-property="customValue"][data-component-id="buffs_debuffs_auras_passives"]').inputValue(), customValue);
-    assert.equal(await amplifyCard.locator('[data-choice-property="justification"][data-component-id="buffs_debuffs_auras_passives"]').inputValue(), customJustification);
+    assert.equal(await amplifyCard.locator(`[data-bundle-decision][data-bundle-id="${keepBundleId}"]`).inputValue(), 'KEEP_BKVINCE');
+    assert.equal(await amplifyCard.locator(`[data-bundle-decision][data-bundle-id="${adoptBundleId}"]`).inputValue(), 'ADOPT_PD2');
+    assert.ok((await amplifyCard.locator(`[data-bundle-custom-value][data-bundle-id="${customBundleId}"]`).evaluateAll((controls) => controls.map((control) => control.value))).every((value) => value === customValue));
+    assert.equal(await amplifyCard.locator(`[data-choice-property="justification"][data-bundle-id="${customBundleId}"]`).inputValue(), customJustification);
     checkpoints.push('localStorage restored after reload');
 
     const decisionsExportStart = performance.now();
@@ -248,7 +247,7 @@ async function main() {
     assert.equal(decisionsDownload.suggestedFilename(), 'pd2-skills-decisions-all.json');
     const decisionsPath = await decisionsDownload.path();
     const exportedDecisions = JSON.parse(await readFile(decisionsPath, 'utf8'));
-    assert.equal(exportedDecisions.schemaVersion, 2);
+    assert.equal(exportedDecisions.schemaVersion, 3);
     assert.equal(Object.values(exportedDecisions.schemaPolicy.decisions).filter((entry) => entry.decision === 'APPROVE').length, 8);
     assert.equal(exportedDecisions.entries['skill:nec:amplify-damage'].globalDecision, 'ADAPT_PD2_SELECTIVELY');
     checkpoints.push('decisions exported');
@@ -262,7 +261,7 @@ async function main() {
     // importFile renders immediately after its transient success notice, so the
     // governed envelope in localStorage is the durable success witness.
     await page.waitForFunction((skillId) => {
-      const key = Object.keys(localStorage).find((item) => item.startsWith('pd2-skills-review-decisions-v2:'));
+      const key = Object.keys(localStorage).find((item) => item.startsWith('pd2-skills-review-decisions-v3:'));
       return Boolean(key && JSON.parse(localStorage.getItem(key))?.entries?.[skillId]?.globalDecision === 'ADAPT_PD2_SELECTIVELY');
     }, 'skill:nec:amplify-damage');
     checkpoints.push('decisions reimported');
@@ -306,6 +305,40 @@ async function main() {
     await fireBallCard.waitFor({ state: 'visible', timeout: PERFORMANCE_THRESHOLDS.globalSearchMs });
     assert.match(await fireBallCard.innerText(), /MALFORMED_SOURCE/u);
     checkpoints.push('Fire Ball MALFORMED_SOURCE displayed');
+
+    await page.locator('#global-search').fill('Fire Bolt');
+    const fireBoltCard = page.locator('article[data-skill-id="skill:sor:fire-bolt"]');
+    await fireBoltCard.waitFor({ state: 'visible', timeout: PERFORMANCE_THRESHOLDS.globalSearchMs });
+    await fireBoltCard.locator('[data-action="toggle-skill"]').click();
+    await fireBoltCard.locator('.skill-card-body').waitFor();
+    const fireBoltPlayerIds = await fireBoltCard.locator('[data-decision-bundle][data-bundle-scope="PLAYER"]').evaluateAll((bundles) => bundles.map((bundle) => bundle.dataset.bundleId));
+    const fireBoltTechnicalIds = await fireBoltCard.locator('[data-decision-bundle][data-bundle-scope="TECHNICAL"]').evaluateAll((bundles) => bundles.map((bundle) => bundle.dataset.bundleId));
+    assert.deepEqual(fireBoltPlayerIds.sort(), ['DAMAGE_SYNERGIES', 'ELEMENTAL_DAMAGE_CURVE', 'MANA_CURVE', 'PROJECTILE_PHYSICS'].sort());
+    assert.deepEqual(fireBoltTechnicalIds.sort(), ['ITEM_TRIGGER_EXECUTION', 'NATIVE_EXECUTION'].sort());
+    assert.equal(await fireBoltCard.locator('[data-bundle-scope="PLAYER"] [data-bundle-decision]').count(), 4);
+    assert.equal(await fireBoltCard.locator('[data-bundle-scope="TECHNICAL"] [data-bundle-decision]').count(), 0, 'Technical packages must never request a normal player decision');
+    assert.equal(await fireBoltCard.locator('[data-bundle-scope="TECHNICAL"] [data-bundle-auto-resolution]').count(), 2);
+    assert.equal(await fireBoltCard.locator('[data-field-decision]').count(), 0, 'Raw field choices must be absent outside an explicit expert override');
+    const fireBoltCurvesText = await fireBoltCard.locator('.curves').innerText();
+    assert.doesNotMatch(fireBoltCurvesText, /poison|délai PD2|PD2 delay/iu, 'Inapplicable poison and delay metrics must be hidden');
+    await fireBoltCard.locator('[data-scenario]').selectOption('synergies20');
+    const synergyCurves = fireBoltCard.locator('.curves');
+    await synergyCurves.locator('svg polyline').first().waitFor();
+    assert.ok(await synergyCurves.locator('svg polyline').count() > 0, 'Synergies at 20 hard points must produce numeric curves');
+    const synergyText = await synergyCurves.innerText();
+    assert.match(synergyText, /Synergies à 20 hard points/u);
+    assert.doesNotMatch(synergyText, /undefined(?:: undefined)?/iu);
+    assert.match(synergyText, /\d/u, 'Numeric synergy results must be visible');
+    await fireBoltCard.locator('[data-global-decision]').selectOption('ADAPT_PD2_SELECTIVELY');
+    await fireBoltCard.locator('[data-bundle-decision][data-bundle-id="ELEMENTAL_DAMAGE_CURVE"]').selectOption('ADOPT_PD2');
+    await fireBoltCard.locator('[data-proposed-result]').waitFor();
+    assert.match(await fireBoltCard.locator('[data-proposed-result]').innerText(), /Résultat proposé en direct[\s\S]*Aucune écriture gameplay/u);
+    await page.locator('[data-mode="expert"]').click();
+    assert.ok(await fireBoltCard.locator('[data-expert-field]').count() > 0, 'Expert mode must preserve raw evidence');
+    assert.ok(await fireBoltCard.locator('[data-expert-override-enabled]').count() > 0, 'Expert overrides must require explicit activation');
+    assert.equal(await fireBoltCard.locator('[data-field-decision]').count(), 0, 'Expert fields remain read-only until their override is enabled');
+    assert.match(await fireBoltCard.textContent(), /ABSENT_COLUMN|EMPTY_STRING|NULL_VALUE/u);
+    checkpoints.push('Fire Bolt Phase 1 bundles, relevant metrics, synergy curves, proposal and expert evidence verified');
 
     await sampleMemory('final-smoke-state');
 

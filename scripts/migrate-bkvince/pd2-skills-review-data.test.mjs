@@ -214,15 +214,22 @@ test('formula evidence preserves malformed and symbolic witnesses without repair
   assert.ok(raven.curves.standard.symbolic.some((finding) => finding.header?.toLowerCase() === 'calc2'));
 });
 
-test('curves expose six levels and never fabricate symbolic synergy scenarios', () => {
+test('curves expose six levels, calculate resolvable synergies, and omit inapplicable metrics', () => {
   for (const candidate of [skill('Amplify Damage'), skill('Fire Ball'), skill('Frozen Orb'), skill('Hydra'), skill('Raven')]) {
     assert.deepEqual(candidate.curves.levels, [1, 5, 10, 20, 30, 40]);
     assert.deepEqual(candidate.curves.scenarios.map((scenario) => scenario.id), ['standard', 'synergies20', 'custom']);
     for (const series of candidate.curves.standard.series) {
       for (const source of SOURCE_ORDER) assert.equal(series.values[source].length, 6);
     }
-    assert.deepEqual(candidate.curves.synergies20.series, []);
-    assert.deepEqual(candidate.curves.custom.series, []);
+    for (const scenario of candidate.curves.scenarios) {
+      for (const series of scenario.series) {
+        for (const source of SOURCE_ORDER) {
+          assert.equal(series.values[source].length, 6);
+          assert.ok(series.values[source].every((value) => value === null || Number.isFinite(value)));
+        }
+        assert.ok(Object.values(series.values).flat().some((value) => value !== null), `${candidate.canonicalName}/${scenario.id}/${series.id}`);
+      }
+    }
   }
   assert.equal(skill('Fire Ball').curves.standard.series.find((series) => series.id === 'mana').values.bkvince[0], 5);
   const fireWallSeries = Object.fromEntries(skill('Fire Wall').curves.standard.series.map((series) => [series.id, series]));
@@ -233,8 +240,8 @@ test('curves expose six levels and never fabricate symbolic synergy scenarios', 
   assert.equal(fireWallSeries.pd2_delay.values.bkvince[0], null);
   const guidedArrowProjectiles = skill('Guided Arrow').curves.standard.series
     .find((series) => series.id === 'projectiles_targets');
-  assert.ok(Object.values(guidedArrowProjectiles.values).flat().every((value) => value === null),
-    'a generic calc1 damage formula must not be presented as a projectile count');
+  assert.equal(guidedArrowProjectiles, undefined,
+    'a generic calc1 damage formula must not be presented as an applicable projectile-count metric');
   const chargedStrikeProjectiles = skill('Charged Strike').curves.standard.series
     .find((series) => series.id === 'projectiles_targets');
   assert.equal(chargedStrikeProjectiles.values.vanilla32[0], 3,
@@ -244,8 +251,7 @@ test('curves expose six levels and never fabricate symbolic synergy scenarios', 
   assert.equal(poison.series.find((series) => series.id === 'poison_duration_frames').values.pd2[0], 25);
   for (const id of ['poison_dps_min', 'poison_dps_max', 'poison_total_min', 'poison_total_max']) {
     const series = poison.series.find((candidate) => candidate.id === id);
-    assert.equal(series.proofStatus, 'SYMBOLIC');
-    assert.ok(Object.values(series.values).flat().every((value) => value === null), id);
+    assert.equal(series, undefined, `${id} is entirely inapplicable and must not render a metric`);
   }
   assert.ok(poison.symbolic.some((finding) => finding.metric === 'poisonDamagePerSecond'
     && /does not prove/.test(finding.reason)));

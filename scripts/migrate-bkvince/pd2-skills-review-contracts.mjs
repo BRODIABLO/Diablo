@@ -1,14 +1,52 @@
 import crypto from 'node:crypto';
 
-export const ORACLE_SCHEMA_VERSION = 1;
-export const DECISION_SCHEMA_VERSION = 2;
+export const ORACLE_SCHEMA_VERSION = 2;
+export const DECISION_SCHEMA_VERSION = 3;
 export const PREVIEW_SCHEMA_VERSION = 1;
 export const REVIEW_ID = 'pd2-skills-review-v1';
 export const PREVIEW_ID = 'pd2-skills-decisions-preview-v1';
 export const DECISION_EXPORT_KIND = 'pd2-skills-review-decisions';
-export const STORAGE_KEY_PREFIX = 'pd2-skills-review-decisions-v2:';
-export const LEGACY_DECISION_SCHEMA_VERSIONS = Object.freeze([1]);
-export const LEGACY_STORAGE_KEY_PREFIXES = Object.freeze(['pd2-skills-review-decisions-v1:']);
+export const STORAGE_KEY_PREFIX = 'pd2-skills-review-decisions-v3:';
+export const LEGACY_DECISION_SCHEMA_VERSIONS = Object.freeze([1, 2]);
+export const LEGACY_STORAGE_KEY_PREFIXES = Object.freeze([
+  'pd2-skills-review-decisions-v1:',
+  'pd2-skills-review-decisions-v2:',
+]);
+
+export const PHASE1_DECISION_MODEL = 'behavior-bundles-v1';
+export const DECISION_BUNDLE_SCOPES = Object.freeze(['PLAYER', 'TECHNICAL']);
+export const TECHNICAL_AUTO_RESOLUTIONS = Object.freeze([
+  'PRESERVE_BKVINCE',
+  'DEFER_NATIVE_PROOF',
+  'NOT_APPLICABLE',
+]);
+export const PHASE1_DECISION_INTERFACE = Object.freeze({
+  canonicalPolicyField: 'schemaPolicy',
+  canonicalPolicyShape: Object.freeze({
+    envelope: 'strict pd2-skills-schema-policy envelope',
+    canonicalPolicyHash: 'SHA-256 of the canonical strict envelope',
+    approvedExportHash: 'SHA-256 of the Vincent-approved exported envelope',
+    provenance: 'controlled source-drift audit',
+    migrationReport: 'retained/stale/dropped policy decisions',
+  }),
+  skillBundlesField: 'decisionBundles',
+  skillPolicyApplicationField: 'policyApplication',
+  decisionEntryField: 'bundleDecisions',
+  expertOverrideField: 'fieldDecisions',
+  projectionOrder: Object.freeze([
+    'FULL_BKVINCE_TARGET',
+    'PLAYER_BUNDLE_DECISIONS',
+    'TECHNICAL_AUTO_RESOLUTIONS',
+    'EXPLICIT_EXPERT_FIELD_OVERRIDES',
+  ]),
+  invariants: Object.freeze([
+    'Every decision-relevant raw field has exactly one decisionOwnerBundleId.',
+    'Technical packages are visible and auto-resolved without a manual decision unless expert override is explicit.',
+    'Absent columns, null cells, empty strings, zeroes, and non-empty values remain distinct raw evidence.',
+    'Player metrics omit only NOT_APPLICABLE series; raw evidence is never discarded.',
+    'The live proposed result and preview compiler consume the same pure field projection.',
+  ]),
+});
 
 export const SCHEMA_ORIENTATION_INTERFACE = Object.freeze({
   contractHash: '3133A16AD42315181599DBB5DE29C4C7DAEBC5DFB7F1110639C2CEBFEA13EC6B',
@@ -239,6 +277,10 @@ export const FROZEN_CONTRACT_HASH = sha256Canonical({
   LEGACY_DECISION_SCHEMA_VERSIONS,
   LEGACY_STORAGE_KEY_PREFIXES,
   SCHEMA_ORIENTATION_INTERFACE,
+  PHASE1_DECISION_MODEL,
+  DECISION_BUNDLE_SCOPES,
+  TECHNICAL_AUTO_RESOLUTIONS,
+  PHASE1_DECISION_INTERFACE,
   SOURCE_ORDER,
   CLASS_ORDER,
   PLAYER_CLASS_CODES,

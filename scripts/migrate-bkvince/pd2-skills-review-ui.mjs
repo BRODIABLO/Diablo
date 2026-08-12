@@ -10,7 +10,9 @@
  * - migrateEnvelope(report, payload)
  * - exportEnvelope(report, entries, { scope })
  * Optional helpers used when present: storageKey(report), progress(report, entries),
- * resolveFieldChoice(skill, entry, component, field), validateChoice(...), constants.
+ * resolveBundleChoice(skill, entry, bundle), projectProposedResult(report, skill, entry),
+ * resolveFieldChoice(skill, entry, component, field), evaluateSkillScenario(...),
+ * validateChoice(...), constants.
  *
  * The UI deliberately delegates decision semantics, completion, migration and bulk
  * protection rules to that runtime. It only owns rendering and browser I/O.
@@ -77,6 +79,15 @@ function skillReviewBrowserApplication() {
   const skillById = new Map(report.skills.map((skill) => [skill.stableId, skill]));
   const nodeById = new Map((report.nodes || []).map((node) => [node.id, node]));
   const collisionById = new Map((report.collisions || []).map((collision) => [collision.id, collision]));
+  const fieldDictionaryByHeader = new Map();
+  for (const item of [
+    ...asArray(report.fieldDictionary?.fields),
+    ...asArray(report.schemaOrientation?.fieldDictionary?.fields),
+    ...asArray(report.schemaOrientation?.columns),
+  ]) {
+    const header = String(item?.rawHeader || item?.canonicalHeader || item?.header || '').trim().toLowerCase();
+    if (header && !fieldDictionaryByHeader.has(header)) fieldDictionaryByHeader.set(header, item);
+  }
   const normalizedNavigation = normalizeNavigation(report.navigation || [], report.skills);
   const navById = new Map(normalizedNavigation.map((view) => [view.id, view]));
   const schemaOrientation = report.schemaOrientation && typeof report.schemaOrientation === 'object'
@@ -440,7 +451,7 @@ function skillReviewBrowserApplication() {
       + '<button type="button" data-action="next-incomplete">Skill suivant à décider</button>'
       + '<button type="button" data-action="expand-all">Développer tout</button>'
       + '<button type="button" data-action="collapse-all">Réduire tout</button>'
-      + '<div class="segmented" role="group" aria-label="Mode de comparaison"><button type="button" data-mode="player" class="' + (ui.mode === 'player' ? 'active' : '') + '">Vue joueur</button><button type="button" data-mode="technical" class="' + (ui.mode === 'technical' ? 'active' : '') + '">Vue technique</button></div>'
+      + '<div class="segmented" role="group" aria-label="Mode de comparaison"><button type="button" data-mode="player" class="' + (ui.mode === 'player' ? 'active' : '') + '">Vue joueur</button><button type="button" data-mode="technical" class="' + (ui.mode === 'technical' ? 'active' : '') + '">Vue technique</button><button type="button" data-mode="expert" class="' + (ui.mode === 'expert' ? 'active' : '') + '">Mode expert</button></div>'
       + '<span id="save-status" data-status="' + (ui.storageAvailable ? 'saved' : 'error') + '" role="status">' + (ui.storageAvailable ? 'Autosave actif' : 'Autosave indisponible') + '</span>'
       + '</div>' + renderFilters() + renderPersistenceToolbar() + '</header>';
   }
@@ -608,13 +619,119 @@ function skillReviewBrowserApplication() {
       + '<section class="comparison-section"><h3>Comparaison à trois voies</h3>' + renderTriWay(skill) + '</section>'
       + renderCurves(skill)
       + (skill.newPd2PlayerSkill ? renderNewSkillPlan(skill, current) : '')
-      + '<section><div class="section-title"><h3>Composantes de gameplay</h3><span>Décisions par composante et par champ</span></div>' + (skill.components || []).map((component) => renderComponent(skill, component, current)).join('') + '</section>'
+      + renderDecisionBundles(skill, current)
+      + renderProposedResult(skill, current)
       + renderDependencies(skill)
       + renderPortability(skill)
       + renderCollisions(skill)
       + renderDocumentation(skill)
       + renderTechnicalRaw(skill)
       + (skill.readOnly ? '' : '<section class="scope-bulk"><strong>Actions en lot — skill</strong>' + bulkControls([skill.stableId], 'skill') + '</section>' + renderNotes(skill, current, state));
+  }
+
+  function decisionBundlesOf(skill) {
+    return Array.isArray(skill.decisionBundles) ? skill.decisionBundles : [];
+  }
+
+  function fieldsOfSkill(skill) {
+    return (skill.components || []).flatMap((component) => (component.fields || []).map((field) => ({ ...field, component })));
+  }
+
+  function fieldForId(skill, fieldId) {
+    return fieldsOfSkill(skill).find((field) => field.id === fieldId || field.stableId === fieldId);
+  }
+
+  function dictionaryForField(field) {
+    const header = String(field?.header || field?.rawHeader || '').trim().toLowerCase();
+    return fieldDictionaryByHeader.get(header) || {};
+  }
+
+  function fieldPlayerLabel(field) {
+    const dictionary = dictionaryForField(field);
+    return field?.playerLabelFr || dictionary.playerLabelFr || field?.label || friendly(field?.header || field?.id);
+  }
+
+  function fieldShortHelp(field) {
+    const dictionary = dictionaryForField(field);
+    return field?.shortHelpFr || dictionary.shortHelpFr || '';
+  }
+
+  function bundleChoice(current, bundle) {
+    return current.bundleDecisions?.[bundle.id] || {};
+  }
+
+  function renderDecisionBundles(skill, current) {
+    const bundles = decisionBundlesOf(skill);
+    if (!bundles.length) {
+      return '<section class="decision-bundles legacy-components"><div class="section-title"><h3>Composantes de gameplay</h3><span>Oracle antérieur aux bundles Phase 1</span></div>'
+        + (skill.components || []).map((component) => renderComponent(skill, component, current)).join('') + '</section>';
+    }
+    const playerBundles = bundles.filter((bundle) => bundle.scope === 'PLAYER');
+    const technicalBundles = bundles.filter((bundle) => bundle.scope === 'TECHNICAL');
+    return '<section class="decision-bundles" data-phase1-decision-model="behavior-bundles-v1"><div class="section-title"><div><p class="eyebrow">Phase 1</p><h3>Décisions de comportement</h3></div><span>' + playerBundles.length + ' décision(s) joueur · ' + technicalBundles.length + ' package(s) technique(s)</span></div>'
+      + '<div class="bundle-group player-bundles" data-bundle-group="PLAYER"><h4>Décisions joueur</h4>'
+      + (playerBundles.length ? playerBundles.map((bundle) => renderDecisionBundle(skill, bundle, current)).join('') : '<p class="empty-inline">Aucune décision joueur pertinente.</p>') + '</div>'
+      + '<div class="bundle-group technical-bundles" data-bundle-group="TECHNICAL"><h4>Packages techniques préremplis</h4><p class="result-summary">Visibles pour audit, ils ne demandent aucune décision manuelle. Une exception passe exclusivement par un override explicite en mode expert.</p>'
+      + (technicalBundles.length ? technicalBundles.map((bundle) => renderDecisionBundle(skill, bundle, current)).join('') : '<p class="empty-inline">Aucun package technique applicable.</p>') + '</div></section>';
+  }
+
+  function renderDecisionBundle(skill, bundle, current) {
+    const manual = bundle.scope === 'PLAYER' && bundle.manualDecisionRequired !== false;
+    const choice = bundleChoice(current, bundle);
+    const automatic = bundle.autoResolution || bundle.defaultResolution || 'NOT_APPLICABLE';
+    const fields = asArray(bundle.fieldIds).map((id) => fieldForId(skill, id)).filter(Boolean);
+    const identifiers = ' data-skill-id="' + escapeAttribute(skill.stableId) + '" data-bundle-id="' + escapeAttribute(bundle.id) + '"';
+    const label = bundle.playerLabelFr || bundle.labelFr || bundle.label || friendly(bundle.id);
+    const help = bundle.shortHelpFr || bundle.descriptionFr || '';
+    return '<article class="decision-bundle ' + (manual ? 'manual' : 'automatic') + '" data-decision-bundle data-bundle-id="' + escapeAttribute(bundle.id) + '" data-bundle-scope="' + escapeAttribute(bundle.scope || 'PLAYER') + '" data-manual-required="' + manual + '">'
+      + '<header><div><strong>' + escapeHtml(label) + '</strong><small><code>' + escapeHtml(bundle.id) + '</code>' + (help ? ' · ' + escapeHtml(help) : '') + '</small></div><div>' + chip(bundle.proofStatus || 'EXACT_TABLE', 'proof') + chip(bundle.scope || 'PLAYER', manual ? 'player' : 'technical') + '</div></header>'
+      + (manual && !skill.readOnly
+        ? '<label class="bundle-decision"><span>Décision de comportement</span><select data-bundle-decision' + identifiers + '>' + optionList(COMPONENT_DECISIONS, choice.decision) + '</select></label>' + renderChoiceDetails('bundle', skill, bundle, null, choice)
+        : '<div class="automatic-resolution" data-bundle-auto-resolution="' + escapeAttribute(automatic) + '"><strong>Résolution automatique :</strong> ' + escapeHtml(friendly(automatic)) + '</div>')
+      + '<p class="bundle-field-count">' + fields.length + ' cellule(s) source gouvernée(s) projetée(s) atomiquement.</p>'
+      + (ui.mode === 'expert' ? '<details class="expert-bundle-fields"><summary>Preuves brutes et overrides techniques (' + fields.length + ')</summary><div class="field-list">' + fields.map((field) => renderExpertField(skill, bundle, field, current)).join('') + '</div></details>' : '')
+      + '</article>';
+  }
+
+  function renderExpertField(skill, bundle, field, current) {
+    const explicit = current.fieldDecisions?.[field.id] || {};
+    const expertOverride = explicit.expertOverride || {};
+    const evidence = field.rawEvidence || {};
+    const values = field.displayValues || field.values || {};
+    const identifiers = ' data-choice-level="field" data-skill-id="' + escapeAttribute(skill.stableId) + '" data-component-id="' + escapeAttribute(field.component?.id || '') + '" data-bundle-id="' + escapeAttribute(bundle.id) + '" data-field-id="' + escapeAttribute(field.id) + '"';
+    return '<div class="field-row expert-field ' + (field.protected ? 'protected' : '') + '" data-expert-field data-field-id="' + escapeAttribute(field.id) + '"><div class="field-title"><div><strong>' + escapeHtml(fieldPlayerLabel(field)) + '</strong><small>' + escapeHtml(fieldShortHelp(field)) + '</small><small>' + escapeHtml(field.table || 'skills.txt') + ' · <code>' + escapeHtml(field.header || field.id) + '</code></small></div><div>' + (field.protected ? chip('Champ protégé', 'protected') : '') + chip(field.proofStatus || 'EXACT_TABLE', 'proof') + '</div></div>'
+      + '<div class="field-values">' + SOURCE_KEYS.map((source) => {
+        const raw = evidence[source];
+        const value = raw && Object.prototype.hasOwnProperty.call(raw, 'rawValue') ? raw.rawValue : raw && Object.prototype.hasOwnProperty.call(raw, 'value') ? raw.value : values[source];
+        const rawState = raw?.rawState || ({ ABSENT: 'ABSENT_COLUMN', EMPTY: 'EMPTY_STRING', NULL: 'NULL_VALUE' })[raw?.presence] || raw?.presence || (raw?.columnPresent === false ? 'ABSENT_COLUMN' : value === '' ? 'EMPTY_STRING' : value === null || value === undefined ? 'NULL_VALUE' : String(value) === '0' ? 'ZERO' : 'VALUE');
+        return '<div><span>' + SOURCE_LABELS[source] + '</span><code>' + escapeHtml(display(value)) + '</code><small>' + escapeHtml(rawState) + '</small></div>';
+      }).join('') + '</div>'
+      + '<div class="expert-override"><label class="check"><input type="checkbox" data-expert-override-enabled' + identifiers + (expertOverride.enabled ? ' checked' : '') + '> Activer un override technique explicite</label>'
+      + (expertOverride.enabled ? '<div class="field-decision"><label><span>Décision de cellule brute</span><select data-field-decision' + identifiers + '>' + optionList(COMPONENT_DECISIONS, explicit.decision) + '</select></label><label><span>Justification de l’override *</span><textarea data-expert-override-justification' + identifiers + '>' + escapeHtml(expertOverride.justification || '') + '</textarea></label></div>' + renderChoiceDetails('field', skill, field.component || bundle, field, explicit) : '') + '</div></div>';
+  }
+
+  function renderProposedResult(skill, current) {
+    if (typeof runtime.projectProposedResult !== 'function') return '';
+    let projection;
+    try {
+      projection = runtime.projectProposedResult(report, skill, current) || {};
+    } catch (error) {
+      return '<section class="proposed-result warning-box" data-proposed-result><h3>Résultat proposé en direct</h3><p>Projection indisponible : ' + escapeHtml(error.message) + '</p></section>';
+    }
+    const candidates = asArray(projection.changedCells || projection.cells || projection.fields || projection.projectedFields || projection.changes);
+    const rows = candidates.filter((item) => item && (item.changed !== false || item.decisionRelevant !== false));
+    const errors = asArray(projection.errors || projection.conflicts);
+    return '<section class="proposed-result" data-proposed-result><div class="section-title"><h3>Résultat proposé en direct</h3>' + chip(errors.length ? errors.length + ' conflit(s)' : 'Projection read-only', errors.length ? 'warning' : 'ok') + '</div>'
+      + '<p>Projection pure : ligne BKVince complète, bundles joueur, résolutions techniques, puis overrides experts. Aucune écriture gameplay.</p>'
+      + (rows.length ? '<div class="table-wrap"><table><thead><tr><th>Comportement</th><th>Valeur BKVince</th><th>Valeur proposée</th><th>Origine</th></tr></thead><tbody>' + rows.map((item) => {
+        const field = item.fieldId ? fieldForId(skill, item.fieldId) : null;
+        const label = item.playerLabelFr || (field ? fieldPlayerLabel(field) : item.label || item.header || item.fieldId || 'Cellule');
+        const before = item.bkvinceValue ?? item.before ?? item.values?.bkvince ?? item.sourceValue;
+        const after = item.proposedValue ?? item.value ?? item.after ?? item.result;
+        const source = item.bundleId || item.decisionOwnerBundleId || item.source || item.resolution || 'BKVince';
+        return '<tr><th>' + escapeHtml(label) + '</th><td><code>' + escapeHtml(display(before)) + '</code></td><td><code>' + escapeHtml(display(after)) + '</code></td><td>' + escapeHtml(display(source)) + '</td></tr>';
+      }).join('') + '</tbody></table></div>' : '<p class="empty-inline">Aucune cellule ne diverge encore du résultat BKVince proposé.</p>')
+      + (errors.length ? '<ul class="validation-errors">' + errors.map((error) => '<li>' + escapeHtml(typeof error === 'string' ? error : error.message || JSON.stringify(error)) + '</li>').join('') + '</ul>' : '') + '</section>';
   }
 
   function renderTriWay(skill) {
@@ -629,15 +746,34 @@ function skillReviewBrowserApplication() {
 
   function playerMetrics(skill) {
     const direct = skill.playerComparison || skill.playerMetrics || skill.summary?.metrics;
-    if (Array.isArray(direct)) return direct;
-    if (direct && typeof direct === 'object') return Object.entries(direct).map(([id, value]) => ({ id, label: value.label || friendly(id), values: value.values || value }));
+    if (Array.isArray(direct)) return direct.filter(metricIsApplicable);
+    if (direct && typeof direct === 'object') return Object.entries(direct).map(([id, value]) => ({ id, label: value.playerLabelFr || value.label || friendly(id), values: value.values || value, proofStatus: value.proofStatus })).filter(metricIsApplicable);
     const rows = [];
     for (const component of skill.components || []) for (const field of component.fields || []) {
-      if (!field.changed || field.technicalOnly) continue;
-      rows.push({ label: field.label || field.header || field.id, values: field.displayValues || field.values || {} });
+      if (!field.changed || field.technicalOnly || field.decisionRelevant === false) continue;
+      const row = { label: fieldPlayerLabel(field), values: field.displayValues || field.values || {}, proofStatus: field.proofStatus };
+      if (!metricIsApplicable(row)) continue;
+      rows.push(row);
       if (rows.length >= 12) return rows;
     }
     return rows;
+  }
+
+  function isSemanticBlank(value) {
+    return value === null || value === undefined || String(value).trim() === '';
+  }
+
+  function metricIsApplicable(metric) {
+    if (!metric || metric.proofStatus === 'NOT_APPLICABLE' || metric.applicable === false || metric.status === 'NOT_APPLICABLE') return false;
+    const values = metric.values ?? metric.points ?? metric.seriesBySource;
+    const flattened = [];
+    const visit = (value) => {
+      if (Array.isArray(value)) for (const item of value) visit(item);
+      else if (value && typeof value === 'object') for (const item of Object.values(value)) visit(item);
+      else flattened.push(value);
+    };
+    visit(values);
+    return flattened.some((value) => !isSemanticBlank(value));
   }
 
   function scenariosOf(skill) {
@@ -651,26 +787,66 @@ function skillReviewBrowserApplication() {
 
   function seriesOfScenario(scenario) {
     if (Array.isArray(scenario.series)) return scenario.series;
+    if (scenario.seriesBySource && typeof scenario.seriesBySource === 'object') {
+      const byMetric = new Map();
+      for (const [source, sourceSeries] of Object.entries(scenario.seriesBySource)) {
+        const entries = Array.isArray(sourceSeries) ? sourceSeries.map((item, index) => [item.id || item.metricId || 'metric-' + index, item]) : Object.entries(sourceSeries || {});
+        for (const [id, item] of entries) {
+          const metric = byMetric.get(id) || { id, label: item?.playerLabelFr || item?.labelFr || item?.label || friendly(id), values: {}, proofStatus: item?.proofStatus };
+          metric.values[source] = Array.isArray(item) ? item : Array.isArray(item?.values) ? item.values : Array.isArray(item?.points) ? item.points.map((point) => point?.value ?? point?.average ?? point?.max ?? point?.min ?? null) : [];
+          byMetric.set(id, metric);
+        }
+      }
+      return [...byMetric.values()];
+    }
     const metrics = scenario.metrics || scenario.values || {};
     return Object.entries(metrics).map(([id, value]) => ({ id, label: value.label || friendly(id), values: value.values || value }));
+  }
+
+  function synergyInputsOf(scenario) {
+    if (Array.isArray(scenario.synergyInputs)) return scenario.synergyInputs;
+    if (scenario.hardPointsBySkill && typeof scenario.hardPointsBySkill === 'object') {
+      return Object.entries(scenario.hardPointsBySkill).map(([id, hardPoints]) => ({ id, skill: id.split(':').at(-1), hardPoints, maximum: 20 }));
+    }
+    return [];
+  }
+
+  function synergyValuesFor(skill, scenario) {
+    return Object.fromEntries(synergyInputsOf(scenario).map((input) => {
+      const id = input.id || input.skill || input.name;
+      const key = skill.stableId + '::' + (scenario.id || 'custom') + '::' + id;
+      return [id, ui.synergyInputs.has(key) ? ui.synergyInputs.get(key) : (input.hardPoints ?? input.defaultHardPoints ?? 0)];
+    }));
+  }
+
+  function evaluatedScenario(skill, scenario) {
+    const evaluator = runtime.evaluateSkillScenario || runtime.evaluateScenario;
+    if (typeof evaluator !== 'function') return scenario;
+    try {
+      const result = evaluator(report, skill, scenario, synergyValuesFor(skill, scenario));
+      return result?.scenario || result || scenario;
+    } catch (error) {
+      return { ...scenario, series: [], symbolic: [...asArray(scenario.symbolic), { reason: 'Simulation conservée symboliquement : ' + error.message }] };
+    }
   }
 
   function renderCurves(skill) {
     const scenarios = scenariosOf(skill);
     if (!scenarios.length) return '<section><h3>Courbes et simulation</h3><p class="empty-inline">Aucune courbe numérique gouvernée. Les dépendances symboliques, malformées ou natives ne sont pas extrapolées.</p></section>';
     const selectedId = ui.scenario.get(skill.stableId) || scenarios[0].id || 'standard';
-    const scenario = scenarios.find((item) => item.id === selectedId) || scenarios[0];
-    const series = seriesOfScenario(scenario);
+    const selectedScenario = scenarios.find((item) => item.id === selectedId) || scenarios[0];
+    const scenario = evaluatedScenario(skill, selectedScenario);
+    const series = seriesOfScenario(scenario).filter(metricIsApplicable);
     const levels = scenario.levels || report.levels || [1, 5, 10, 20, 30, 40];
-    return '<section class="curves"><div class="section-title"><div><h3>Courbes et simulation</h3><p>Niveau effectif L; hard points B=min(L,maxlvl). Une valeur non prouvée reste symbolique.</p></div><label><span>Scénario</span><select data-scenario data-skill-id="' + escapeAttribute(skill.stableId) + '">' + scenarios.map((item) => '<option value="' + escapeAttribute(item.id || 'standard') + '"' + (item === scenario ? ' selected' : '') + '>' + escapeHtml(item.label || friendly(item.id)) + '</option>').join('') + '</select></label></div>'
+    return '<section class="curves"><div class="section-title"><div><h3>Courbes et simulation</h3><p>Niveau effectif L; hard points B=min(L,maxlvl). Une valeur non prouvée reste symbolique.</p></div><label><span>Scénario</span><select data-scenario data-skill-id="' + escapeAttribute(skill.stableId) + '">' + scenarios.map((item) => '<option value="' + escapeAttribute(item.id || 'standard') + '"' + ((item.id || 'standard') === selectedId ? ' selected' : '') + '>' + escapeHtml(item.labelFr || item.label || friendly(item.id)) + '</option>').join('') + '</select></label></div>'
       + (scenario.description ? '<p>' + escapeHtml(scenario.description) + '</p>' : '')
       + renderSynergyInputs(skill, scenario)
-      + '<div class="charts">' + series.map((item, index) => renderCurve(skill, item, levels, index)).join('') + '</div>'
-      + (scenario.symbolic?.length ? '<div class="symbolic"><strong>Valeurs conservées symboliquement</strong><ul>' + scenario.symbolic.map((item) => '<li>' + escapeHtml(typeof item === 'string' ? item : item.label + ': ' + item.value) + '</li>').join('') + '</ul></div>' : '') + '</section>';
+      + (series.length ? '<div class="charts">' + series.map((item, index) => renderCurve(skill, item, levels, index)).join('') + '</div>' : '<p class="empty-inline">Aucune métrique applicable à ce skill dans ce scénario.</p>')
+      + (scenario.symbolic?.length ? '<div class="symbolic"><strong>Valeurs conservées symboliquement</strong><ul>' + scenario.symbolic.map((item) => '<li>' + escapeHtml(symbolicReason(item)) + '</li>').join('') + '</ul></div>' : '') + '</section>';
   }
 
   function renderSynergyInputs(skill, scenario) {
-    const inputs = asArray(scenario.synergyInputs);
+    const inputs = synergyInputsOf(scenario);
     if (!inputs.length) return '';
     return '<fieldset class="synergy-inputs"><legend>Hard points de synergies</legend><p>Ces entrées documentent le scénario; une formule symbolique ou non prouvée ne devient jamais numérique.</p><div class="filters">'
       + inputs.map((input) => {
@@ -687,11 +863,20 @@ function skillReviewBrowserApplication() {
     return SOURCE_KEYS.map((source) => ({ source, values: Array.isArray(values[source]) ? values[source] : [] })).filter((item) => item.values.length);
   }
 
+  function symbolicReason(value) {
+    if (typeof value === 'string' && value.trim()) return value;
+    if (!value || typeof value !== 'object') return 'Valeur symbolique : les données disponibles ne permettent pas un résultat numérique prouvé.';
+    const label = value.label || value.metric || value.id;
+    const reason = value.reason || value.semanticDifferenceReason || value.message || value.formula?.reason || value.proofStatus || value.status;
+    if (label && reason) return label + ' : ' + reason;
+    return reason || label || 'Valeur symbolique : les données disponibles ne permettent pas un résultat numérique prouvé.';
+  }
+
   function renderCurve(skill, metric, levels, index) {
     const sourceSeriesValues = sourceSeries(metric);
     const numeric = sourceSeriesValues.flatMap((item) => item.values.filter((value) => Number.isFinite(Number(value))).map(Number));
     const chartId = 'chart-' + safeDomId(skill.stableId) + '-' + index;
-    if (!numeric.length) return '<div class="chart-card"><h4>' + escapeHtml(metric.label || metric.id) + '</h4><p class="symbolic-value">' + escapeHtml(display(metric.formula || metric.values || 'SYMBOLIC')) + '</p></div>';
+    if (!numeric.length) return '<div class="chart-card"><h4>' + escapeHtml(metric.playerLabelFr || metric.label || metric.id) + '</h4><p class="symbolic-value">' + escapeHtml(symbolicReason(metric)) + '</p></div>';
     const min = Math.min(...numeric);
     const max = Math.max(...numeric);
     const width = 440;
@@ -773,10 +958,18 @@ function skillReviewBrowserApplication() {
 
   function renderChoiceDetails(level, skill, component, field, choice) {
     const decision = choice?.decision;
-    const identifiers = ' data-choice-level="' + level + '" data-skill-id="' + escapeAttribute(skill.stableId) + '" data-component-id="' + escapeAttribute(component.id) + '"' + (field ? ' data-field-id="' + escapeAttribute(field.id) + '"' : '');
+    const identifiers = ' data-choice-level="' + level + '" data-skill-id="' + escapeAttribute(skill.stableId) + '"'
+      + (level === 'bundle' ? ' data-bundle-id="' + escapeAttribute(component.id) + '"' : ' data-component-id="' + escapeAttribute(component.id) + '"')
+      + (field ? ' data-field-id="' + escapeAttribute(field.id) + '"' : '');
     let result = '';
     if (decision === 'CUSTOM') {
-      result += '<div class="custom-fields"><label><span>Valeur ou formule CUSTOM *</span><textarea data-choice-property="customValue"' + identifiers + ' placeholder="Valeur ou formule explicite">' + escapeHtml(choice.customValue || '') + '</textarea></label><label><span>Justification *</span><textarea data-choice-property="justification"' + identifiers + ' placeholder="Pourquoi cette valeur ?">' + escapeHtml(choice.justification || '') + '</textarea></label><label><span>Objectif de gameplay</span><textarea data-choice-property="gameplayObjective"' + identifiers + '>' + escapeHtml(choice.gameplayObjective || '') + '</textarea></label><label><span>Plan de test</span><textarea data-choice-property="testPlan"' + identifiers + '>' + escapeHtml(choice.testPlan || '') + '</textarea></label></div>';
+      const customFieldIds = level === 'bundle' ? asArray(component.fieldIds) : [];
+      result += '<div class="custom-fields">'
+        + (customFieldIds.length ? '<fieldset class="bundle-custom-values"><legend>Valeurs ou formules CUSTOM *</legend>' + customFieldIds.map((fieldId) => {
+          const target = fieldForId(skill, fieldId);
+          return '<label><span>' + escapeHtml(target ? fieldPlayerLabel(target) : fieldId) + '</span><textarea data-bundle-custom-value data-custom-field-id="' + escapeAttribute(fieldId) + '"' + identifiers + ' placeholder="Valeur ou formule explicite">' + escapeHtml(choice.customValues?.[fieldId] || '') + '</textarea></label>';
+        }).join('') + '</fieldset>' : '<label><span>Valeur ou formule CUSTOM *</span><textarea data-choice-property="customValue"' + identifiers + ' placeholder="Valeur ou formule explicite">' + escapeHtml(choice.customValue || '') + '</textarea></label>')
+        + '<label><span>Justification *</span><textarea data-choice-property="justification"' + identifiers + ' placeholder="Pourquoi cette valeur ?">' + escapeHtml(choice.justification || '') + '</textarea></label><label><span>Objectif de gameplay</span><textarea data-choice-property="gameplayObjective"' + identifiers + '>' + escapeHtml(choice.gameplayObjective || '') + '</textarea></label><label><span>Plan de test</span><textarea data-choice-property="testPlan"' + identifiers + '>' + escapeHtml(choice.testPlan || '') + '</textarea></label></div>';
     }
     const protectedTarget = field?.protected && ['ADOPT_PD2', 'CUSTOM'].includes(decision);
     if (protectedTarget) {
@@ -827,7 +1020,7 @@ function skillReviewBrowserApplication() {
   }
 
   function renderTechnicalRaw(skill) {
-    if (ui.mode !== 'technical') return '';
+    if (ui.mode !== 'expert') return '';
     const rawNodes = Object.fromEntries(SOURCE_KEYS.map((source) => [source, nodeFor(skill, source)]));
     return '<section class="technical"><h3>Données techniques brutes</h3><p>Les cellules, formules, fonctions moteur et lignes liées restent exactement celles de l’oracle.</p><details><summary>Nœuds physiques et cellules brutes</summary><pre>' + escapeHtml(JSON.stringify(rawNodes, null, 2)) + '</pre></details><details><summary>Objet canonique du skill</summary><pre>' + escapeHtml(JSON.stringify(skill, null, 2)) + '</pre></details></section>';
   }
@@ -946,6 +1139,10 @@ function skillReviewBrowserApplication() {
       entryFor(skill, true).globalDecision = target.value || undefined;
     } else if (target.matches('[data-line-decision]')) {
       entryFor(skill, true).newSkillLineDecision = target.value || undefined;
+    } else if (target.matches('[data-bundle-decision]')) {
+      const entry = entryFor(skill, true);
+      entry.bundleDecisions ||= {};
+      setDecision(entry.bundleDecisions, target.dataset.bundleId, target.value);
     } else if (target.matches('[data-component-decision]')) {
       const entry = entryFor(skill, true);
       entry.componentDecisions ||= {};
@@ -956,6 +1153,13 @@ function skillReviewBrowserApplication() {
       setDecision(entry.fieldDecisions, target.dataset.fieldId, target.value);
     } else if (target.matches('[data-implementation-status]')) {
       entryFor(skill, true).implementationStatus = target.value || 'NOT_REVIEWED';
+    } else if (target.matches('[data-expert-override-enabled]')) {
+      const entry = entryFor(skill, true);
+      entry.fieldDecisions ||= {};
+      const choice = entry.fieldDecisions[target.dataset.fieldId] ||= {};
+      choice.expertOverride ||= {};
+      choice.expertOverride.enabled = target.checked;
+      if (!target.checked && !choice.decision && !choice.expertOverride.justification) delete entry.fieldDecisions[target.dataset.fieldId];
     } else if (target.matches('[data-override-approved], [data-override-property]')) {
       updateOverride(target, skill);
     } else {
@@ -983,6 +1187,16 @@ function skillReviewBrowserApplication() {
     } else if (target.matches('[data-choice-property]')) {
       const choice = mutableChoice(target, skill);
       choice[target.dataset.choiceProperty] = target.value;
+    } else if (target.matches('[data-bundle-custom-value]')) {
+      const choice = mutableChoice(target, skill);
+      choice.customValues ||= {};
+      choice.customValues[target.dataset.customFieldId] = target.value;
+    } else if (target.matches('[data-expert-override-justification]')) {
+      const entry = entryFor(skill, true);
+      entry.fieldDecisions ||= {};
+      const choice = entry.fieldDecisions[target.dataset.fieldId] ||= {};
+      choice.expertOverride ||= { enabled: true };
+      choice.expertOverride.justification = target.value;
     } else if (target.matches('[data-override-property]')) {
       updateOverride(target, skill);
     } else {
@@ -1000,6 +1214,7 @@ function skillReviewBrowserApplication() {
     container[id] = { ...previous, decision };
     if (decision !== 'CUSTOM') {
       delete container[id].customValue;
+      delete container[id].customValues;
       delete container[id].justification;
       delete container[id].gameplayObjective;
       delete container[id].testPlan;
@@ -1010,8 +1225,9 @@ function skillReviewBrowserApplication() {
   function mutableChoice(target, skill) {
     const entry = entryFor(skill, true);
     const isField = target.dataset.choiceLevel === 'field';
-    const container = isField ? (entry.fieldDecisions ||= {}) : (entry.componentDecisions ||= {});
-    const id = isField ? target.dataset.fieldId : target.dataset.componentId;
+    const isBundle = target.dataset.choiceLevel === 'bundle';
+    const container = isField ? (entry.fieldDecisions ||= {}) : isBundle ? (entry.bundleDecisions ||= {}) : (entry.componentDecisions ||= {});
+    const id = isField ? target.dataset.fieldId : isBundle ? target.dataset.bundleId : target.dataset.componentId;
     return container[id] ||= {};
   }
 
@@ -1177,7 +1393,18 @@ function skillReviewBrowserApplication() {
   }
 
   function markdownComponents(skill) {
-    return (skill.components || []).map((component) => '### ' + (component.label || component.id) + '\n\n' + (component.fields || []).map((field) => '- **' + (field.label || field.header || field.id) + '** (`' + (field.table || 'skills.txt') + '.' + (field.header || field.id) + '`): ' + SOURCE_KEYS.map((source) => (SOURCE_LABELS[source] + '=' + display((field.displayValues || field.values || {})[source]))).join(' · ') + (field.formula ? ' · formule `' + display(field.formula.raw || field.formula.expression || field.formula) + '`' : '') + (field.protected ? ' · **PROTÉGÉ**' : '')).join('\n')).join('\n\n');
+    return (skill.components || []).map((component) => '### ' + (component.label || component.id) + '\n\n' + (component.fields || []).map((field) => {
+      const values = field.displayValues || field.values || {};
+      const evidence = field.rawEvidence || {};
+      return '- **' + fieldPlayerLabel(field) + '** (`' + (field.table || 'skills.txt') + '.' + (field.header || field.id) + '`): '
+        + SOURCE_KEYS.map((source) => {
+          const raw = evidence[source];
+          const value = raw && Object.prototype.hasOwnProperty.call(raw, 'rawValue') ? raw.rawValue : raw && Object.prototype.hasOwnProperty.call(raw, 'value') ? raw.value : values[source];
+          return SOURCE_LABELS[source] + '=' + display(value) + (raw?.rawState ? ' [' + raw.rawState + ']' : '');
+        }).join(' · ')
+        + (field.formula ? ' · formule `' + display(field.formula.raw || field.formula.expression || field.formula) + '`' : '')
+        + (field.protected ? ' · **PROTÉGÉ**' : '');
+    }).join('\n')).join('\n\n');
   }
 
   function markdownObjects(items) {
@@ -1233,7 +1460,7 @@ function skillReviewBrowserApplication() {
 
 const STYLE =
 `:root{color-scheme:dark;--bg:#091018;--panel:#111c28;--panel-2:#172536;--panel-3:#213247;--line:#344a61;--text:#eef5fb;--muted:#9fb0c1;--gold:#f0bd6b;--blue:#72c8ff;--green:#6ed49a;--red:#ff8d88;--violet:#b9a1ff;--shadow:0 12px 35px #0006}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 75% -20%,#17304c 0,transparent 42%),var(--bg);color:var(--text);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}button,input,select,textarea{font:inherit}button,select,input,textarea{border:1px solid var(--line);border-radius:7px;background:var(--panel-2);color:var(--text);padding:8px 10px}button{cursor:pointer}button:hover,button:focus-visible{border-color:var(--gold);outline:none}button.active{background:#2d3e55;color:#fff;border-color:var(--gold)}button.danger{border-color:#74454a;color:#ffc0bd}label>span{display:block;color:var(--muted);font-size:12px;margin-bottom:3px}textarea{width:100%;min-height:68px;resize:vertical}code,pre{font:12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#09131e;padding:12px;border-radius:8px;border:1px solid var(--line);max-height:520px;overflow:auto}.topbar{position:sticky;top:0;z-index:20;padding:13px 20px 11px;background:#091018f2;backdrop-filter:blur(15px);border-bottom:1px solid var(--line);box-shadow:0 4px 18px #0005}.title-row{display:flex;justify-content:space-between;gap:20px;align-items:center}.title-row h1{font-size:23px;margin:0}.title-row p{margin:1px 0;color:var(--muted)}.global-progress{display:grid;grid-template-columns:auto auto;gap:2px 10px;align-items:center}.global-progress progress{grid-column:1/-1;width:220px;height:7px}.non-mutation{margin:8px 0;padding:7px 10px;border-left:3px solid var(--gold);background:#302615;color:#ffdfa8}.primary-controls,.persistence-toolbar,.filters,.chips,.card-actions,.bulk-controls,.dashboard-actions{display:flex;gap:7px;align-items:end;flex-wrap:wrap}.primary-controls .search{flex:1;min-width:230px}.primary-controls .search input{width:100%}.segmented{display:flex}.segmented button{border-radius:0}.segmented button:first-child{border-radius:7px 0 0 7px}.segmented button:last-child{border-radius:0 7px 7px 0}.filter-panel{margin-top:8px}.filter-panel summary{cursor:pointer;color:var(--muted)}.filters{padding-top:8px}.filters label:not(.check){min-width:145px}.check{align-self:center}.persistence-toolbar{margin-top:8px}.hash{color:var(--muted);font:11px ui-monospace,monospace}#save-status{padding:5px 8px;border-radius:99px;color:var(--muted)}#save-status[data-status=saved]{color:var(--green)}#save-status[data-status=error]{color:var(--red)}.notice{position:fixed;right:18px;bottom:18px;z-index:50;max-width:520px;padding:12px 15px;background:var(--panel-3);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}.notice.ok{border-color:var(--green)}.notice.error{border-color:var(--red)}.notice.warning{border-color:var(--gold)}.layout{display:grid;grid-template-columns:230px minmax(0,1fr);max-width:1800px;margin:auto}.sidebar{position:sticky;top:var(--workbench-sticky-top,420px);align-self:start;max-height:calc(100vh - var(--workbench-sticky-top,420px) - 18px);overflow:auto;padding:18px 12px;border-right:1px solid var(--line)}.sidebar nav{display:grid;gap:5px}.sidebar button{display:flex;justify-content:space-between;text-align:left}.sidebar small{color:var(--muted)}.sidebar h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:18px 5px 7px}#main-content{min-width:0;padding:20px}.dashboard,.tree{margin-bottom:24px}.section-title,.tree-heading{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.eyebrow{text-transform:uppercase;letter-spacing:.12em;color:var(--gold);font-size:11px;margin:0}.section-title h2,.tree-heading h2{margin:1px 0}.metrics{display:grid;grid-template-columns:repeat(6,minmax(105px,1fr));gap:8px;margin:12px 0}.metric{background:linear-gradient(145deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:9px;padding:10px}.metric strong{font-size:22px;display:block}.metric span{color:var(--muted);font-size:12px}.metric.ok strong{color:var(--green)}.metric.warning strong{color:var(--gold)}.metric.danger strong{color:var(--red)}.scope-bulk,.tree-bulk{padding:9px;background:var(--panel);border:1px solid var(--line);border-radius:9px}.tree-bulk>span{display:block;color:var(--muted);font-size:11px}.result-summary{padding:8px 11px;background:#0d1722;border:1px solid var(--line);border-radius:7px;margin-bottom:14px;color:var(--muted)}.tree{scroll-margin-top:calc(var(--workbench-sticky-top,420px) + 12px)}.tree-heading{border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:10px}.skill-card{scroll-margin-top:calc(var(--workbench-sticky-top,420px) + 12px);border:1px solid var(--line);border-radius:11px;background:linear-gradient(150deg,#132131,#0f1925);margin:10px 0;overflow:hidden;box-shadow:0 6px 20px #0003}.skill-card.incomplete{border-left:4px solid var(--gold)}.skill-card.complete{border-left:4px solid var(--green)}.skill-card.read-only{border-left-color:#72849a}.skill-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px}.expander{display:flex;align-items:center;gap:8px;background:none;border:0;text-align:left;padding:0;flex:1}.expander strong{display:block;font-size:18px}.expander small{display:block;color:var(--muted)}.chevron{font-size:20px;color:var(--gold)}.decision-progress{font-size:12px;color:var(--gold)}.decision-progress.done{color:var(--green)}.identity-strip{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.identity-strip>div{padding:9px 13px;border-right:1px solid var(--line)}.identity-strip>div:last-child{border:0}.identity-strip span,.identity-strip small{display:block;color:var(--muted);font-size:11px}.identity-strip strong{display:block}.skill-card>.chips,.player-summary,.card-decision{margin:10px 14px}.chip{display:inline-block;border:1px solid var(--line);border-radius:99px;padding:2px 7px;color:#c2cfdb;font-size:11px}.chip.portability{border-color:#5a5184;color:#cfbfff}.chip.proof{border-color:#3f6a67;color:#9fe2da}.chip.collision,.chip.warning,.chip.danger{border-color:#8a524c;color:#ffafa7}.chip.new{border-color:#85693e;color:#ffd28c}.chip.ok{border-color:#477a58;color:#8be5a8}.player-summary{font-size:15px}.card-decision{display:flex;align-items:start;gap:10px}.card-decision>label{min-width:290px}.read-only-banner,.warning-box,.validation-errors,.protection-warning,.symbolic{padding:9px 11px;border-radius:7px;background:#1d2834;border-left:3px solid #71859a}.warning-box,.protection-warning{background:#302619;border-left-color:var(--gold)}.validation-errors{background:#321f23;border-left-color:var(--red)}.validation-errors ul,.protection-warning ul{margin:5px 0}.skill-card-body{border-top:1px solid var(--line);padding:14px}.card-actions{margin-bottom:14px}.comparison-section,.curves,.new-skill-plan,.skill-card-body>section{margin:18px 0}.tri-way{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.tri-way>div{padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{border:1px solid var(--line);padding:7px;text-align:left;vertical-align:top}th{background:#172536}caption{text-align:left;color:var(--muted);padding:4px}.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.chart-card{margin:0;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}.chart-card figcaption,.chart-card h4{font-weight:700;margin:0 0 5px}.chart-card svg{width:100%;height:auto;background:#0b1520;border-radius:6px}.chart-card .axis{stroke:#52667b;fill:none}.chart-legend{display:flex;gap:12px;flex-wrap:wrap}.chart-legend span:before{content:"";display:inline-block;width:10px;height:3px;background:var(--legend);margin-right:4px;vertical-align:middle}.curve-table{font-size:11px}.symbolic-value{color:var(--gold);font-family:ui-monospace,monospace}.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.facts div,.list-grid>div{background:var(--panel);padding:8px;border-radius:7px}.facts dt,.list-grid strong{color:var(--muted);font-size:11px}.facts dd{margin:2px 0}.list-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.list-grid h4{grid-column:1/-1}.list-grid span{display:block}.component{border:1px solid var(--line);border-radius:9px;margin:8px 0;background:#0f1a26}.component>summary{cursor:pointer;display:flex;justify-content:space-between;gap:10px;padding:10px}.component>summary strong,.component>summary small{display:block}.component>summary small{color:var(--muted)}.component-body{padding:0 10px 10px}.component-decision{display:block;max-width:340px;margin:5px 0 9px}.field-list{display:grid;gap:7px}.field-row{padding:9px;border:1px solid #2b3f53;border-radius:8px;background:var(--panel)}.field-row.changed{border-left:3px solid var(--blue)}.field-row.protected{border-left-color:var(--red);background:#211b21}.field-title{display:flex;justify-content:space-between;gap:8px}.field-title small{display:block;color:var(--muted)}.field-values{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:7px 0}.field-values>div{padding:6px;background:#0b1520;border-radius:5px}.field-values span{display:block;color:var(--muted);font-size:10px}.field-values code{overflow-wrap:anywhere}.formula{display:flex;gap:8px;align-items:start;background:#0a141e;padding:7px;border-radius:6px}.formula code{flex:1;overflow-wrap:anywhere}.field-decision{display:grid;grid-template-columns:minmax(180px,300px) 1fr;gap:8px;margin-top:8px}.custom-fields,.override-fields{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}.override-fields{border:1px solid var(--red);border-radius:7px;padding:8px}.override-fields legend{color:var(--red)}.two-column{display:grid;grid-template-columns:1fr 1fr;gap:14px}.structured-list{list-style:none;padding:0}.structured-list li{display:flex;justify-content:space-between;gap:8px;padding:7px;border-bottom:1px solid var(--line)}.structured-list span{color:var(--muted)}.collision-grid,.documentation{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.collision-grid article,.documentation article{padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}.documentation a{display:block;color:var(--blue);margin-top:5px}.technical{border-top:1px dashed var(--line);padding-top:10px}.notes-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.notes-grid label:last-child{grid-column:1/-1}.empty-state,.empty-inline{color:var(--muted);padding:14px;border:1px dashed var(--line);border-radius:8px}.fatal{max-width:760px;margin:60px auto;padding:24px}.fatal pre{border-color:var(--red)}@media(max-width:1200px){.metrics{grid-template-columns:repeat(4,1fr)}.topbar{position:relative}.sidebar{top:12px}.skill-card,.tree{scroll-margin-top:12px}}@media(max-width:850px){.layout{display:block}.sidebar{position:relative;top:0;max-height:none;border-right:0;border-bottom:1px solid var(--line)}.sidebar nav{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:repeat(2,1fr)}.identity-strip,.tri-way,.field-values,.facts,.two-column,.charts,.collision-grid,.documentation,.notes-grid{grid-template-columns:1fr}.field-decision,.custom-fields,.list-grid{grid-template-columns:1fr}.title-row,.tree-heading,.section-title{display:block}.topbar{padding:12px}.skill-card-heading{align-items:flex-start}.decision-progress{max-width:130px}.list-grid h4{grid-column:auto}}@media print{.topbar,.sidebar,.bulk-controls,.card-actions,button,select,input[type=checkbox],#notice{display:none!important}.layout{display:block}.skill-card-body{display:block!important}.skill-card{break-inside:avoid}.technical pre{max-height:none}}
-` + SCHEMA_ORIENTATION_STYLE;
+` + `.bundle-group{margin:15px 0}.decision-bundle{border:1px solid var(--line);border-radius:9px;margin:8px 0;padding:11px;background:#0f1a26}.decision-bundle.automatic{border-left:3px solid var(--violet)}.decision-bundle.manual{border-left:3px solid var(--blue)}.decision-bundle>header{display:flex;justify-content:space-between;gap:12px}.decision-bundle>header strong,.decision-bundle>header small{display:block}.decision-bundle>header small,.bundle-field-count{color:var(--muted)}.bundle-decision{display:block;max-width:360px;margin:10px 0}.automatic-resolution{margin:10px 0;padding:8px;border-radius:7px;background:#1d2834}.expert-bundle-fields{margin-top:8px}.expert-bundle-fields>summary{cursor:pointer;color:var(--gold)}.expert-field small{display:block;color:var(--muted)}.expert-override{margin-top:8px}.bundle-custom-values{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.proposed-result{padding:12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);margin:18px 0}@media(max-width:850px){.bundle-custom-values{grid-template-columns:1fr}}` + SCHEMA_ORIENTATION_STYLE;
 
 function compressedOracleBootstrap() {
   'use strict';

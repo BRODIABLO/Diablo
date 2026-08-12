@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ruffneckk.local/schemas/pd2-skills-decisions-v2.schema.json",
+  "$id": "https://ruffneckk.local/schemas/pd2-skills-decisions-v3.schema.json",
   "title": "PD2 Skills Merge Workbench decision envelope",
   "description": "Governed, preview-only design decisions. ALL may retain structurally valid work in progress; the runtime enforces semantic completion for COMPLETE_ONLY and preview. This document grants no gameplay implementation authority.",
   "type": "object",
@@ -18,12 +18,12 @@
     "entries"
   ],
   "properties": {
-    "schemaVersion": { "const": 2 },
+    "schemaVersion": { "const": 3 },
     "kind": { "const": "pd2-skills-review-decisions" },
     "reviewId": { "const": "pd2-skills-review-v1" },
     "comparisonHash": { "$ref": "#/$defs/sha256" },
     "frozenContractHash": {
-      "const": "2234738A730732960C9B86AD8EECF56929AEBDD07EF4AAFC04A4C5717947C599"
+      "const": "E27F45EB00D0AB1BD9A39053FD4E9CD4A3D0001792CCAA2E7ED38374E8D9676F"
     },
     "sourceHashes": { "$ref": "#/$defs/hashObject" },
     "exportedAt": { "type": "string", "format": "date-time" },
@@ -197,22 +197,63 @@
     },
     "choice": {
       "type": "object",
-      "description": "Partial CUSTOM and override values are permitted for autosave; completion is enforced by the governed decision runtime.",
+      "description": "Base choice shape. Bundle CUSTOM uses customValues; expert field CUSTOM uses customValue.",
       "additionalProperties": false,
       "required": ["decision"],
       "properties": {
         "decision": { "$ref": "#/$defs/componentDecision" },
         "customValue": { "type": "string" },
+        "customValues": {
+          "type": "object",
+          "propertyNames": { "minLength": 1 },
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" },
+              { "type": "null" }
+            ]
+          }
+        },
         "justification": { "type": "string" },
         "gameplayObjective": { "type": "string" },
         "testPlan": { "type": "string" },
-        "protectedOverride": { "$ref": "#/$defs/protectedOverride" }
+        "protectedOverride": { "$ref": "#/$defs/protectedOverride" },
+        "expertOverride": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "justification"],
+          "properties": {
+            "enabled": { "const": true },
+            "justification": { "type": "string", "minLength": 1 }
+          }
+        }
       }
     },
-    "completeChoice": {
-      "type": "object",
+    "bundleChoice": {
       "allOf": [
         { "$ref": "#/$defs/choice" },
+        {
+          "not": {
+            "anyOf": [
+              { "type": "object", "properties": { "customValue": {} }, "required": ["customValue"] },
+              { "type": "object", "properties": { "expertOverride": {} }, "required": ["expertOverride"] }
+            ]
+          }
+        }
+      ]
+    },
+    "expertFieldChoice": {
+      "allOf": [
+        { "$ref": "#/$defs/choice" },
+        { "type": "object", "properties": { "expertOverride": { "type": "object" } }, "required": ["expertOverride"] },
+        { "not": { "type": "object", "properties": { "customValues": {} }, "required": ["customValues"] } }
+      ]
+    },
+    "completeBundleChoice": {
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/$defs/bundleChoice" },
         {
           "properties": {
             "decision": { "enum": ["KEEP_BKVINCE", "ADOPT_PD2", "CUSTOM", "NOT_APPLICABLE"] }
@@ -224,6 +265,30 @@
             "properties": { "decision": { "const": "CUSTOM" } },
             "required": ["decision"]
           },
+          "then": {
+            "properties": {
+              "customValues": { "type": "object", "minProperties": 1 },
+              "justification": { "type": "string", "minLength": 1 },
+              "testPlan": { "type": "string", "minLength": 1 }
+            },
+            "required": ["customValues", "justification", "testPlan"]
+          }
+        }
+      ]
+    },
+    "completeExpertFieldChoice": {
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/$defs/expertFieldChoice" },
+        {
+          "properties": {
+            "decision": { "enum": ["KEEP_BKVINCE", "ADOPT_PD2", "CUSTOM", "NOT_APPLICABLE"] },
+            "expertOverride": { "$ref": "#/$defs/choice/properties/expertOverride" }
+          },
+          "required": ["decision", "expertOverride"]
+        },
+        {
+          "if": { "properties": { "decision": { "const": "CUSTOM" } }, "required": ["decision"] },
           "then": {
             "properties": {
               "customValue": { "type": "string", "minLength": 1 },
@@ -254,7 +319,7 @@
         "fingerprint",
         "globalDecision",
         "implementationStatus",
-        "componentDecisions",
+        "bundleDecisions",
         "fieldDecisions",
         "notes"
       ],
@@ -273,15 +338,15 @@
           ]
         },
         "implementationStatus": { "$ref": "#/$defs/implementationStatus" },
-        "componentDecisions": {
+        "bundleDecisions": {
           "type": "object",
           "propertyNames": { "minLength": 1 },
-          "additionalProperties": { "$ref": "#/$defs/choice" }
+          "additionalProperties": { "$ref": "#/$defs/bundleChoice" }
         },
         "fieldDecisions": {
           "type": "object",
           "propertyNames": { "minLength": 1 },
-          "additionalProperties": { "$ref": "#/$defs/choice" }
+          "additionalProperties": { "$ref": "#/$defs/expertFieldChoice" }
         },
         "notes": { "$ref": "#/$defs/notes" }
       }
@@ -298,13 +363,13 @@
             "newSkillLineDecision": {
               "enum": ["IMPORT_APPEND_ONLY", "IMPORT_CUSTOMIZED", "REJECT_PD2_SKILL", "DEFER_NATIVE_PROOF"]
             },
-            "componentDecisions": {
+            "bundleDecisions": {
               "type": "object",
-              "additionalProperties": { "$ref": "#/$defs/completeChoice" }
+              "additionalProperties": { "$ref": "#/$defs/completeBundleChoice" }
             },
             "fieldDecisions": {
               "type": "object",
-              "additionalProperties": { "$ref": "#/$defs/completeChoice" }
+              "additionalProperties": { "$ref": "#/$defs/completeExpertFieldChoice" }
             }
           },
           "required": ["globalDecision"]

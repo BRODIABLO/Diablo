@@ -29,8 +29,19 @@ export const ORIENTATION_ARTIFACT_PATHS = Object.freeze({
   fieldDictionary: path.join(repoRoot, 'Mission', 'pd2-skills-field-dictionary.json'),
   policySchema: path.join(repoRoot, 'Mission', 'pd2-skills-schema-policy.schema.json'),
   policyExample: path.join(repoRoot, 'Mission', 'pd2-skills-schema-policy.example.json'),
+  // The approved canonical policy is intentionally not a generated Phase 0
+  // artifact: regenerating the orientation must never reset Vincent's gate.
   policyCurrent: path.join(repoRoot, 'Mission', 'pd2-skills-schema-policy.json'),
 });
+
+const GENERATED_ORIENTATION_ARTIFACT_IDS = Object.freeze([
+  'orientationJson',
+  'orientationMarkdown',
+  'orientationHtml',
+  'fieldDictionary',
+  'policySchema',
+  'policyExample',
+]);
 
 const REFERENCE_PATHS = Object.freeze({
   skillsSchema: path.join(repoRoot, 'schemas', 'skills.json'),
@@ -38,6 +49,8 @@ const REFERENCE_PATHS = Object.freeze({
   nativeFindings: path.join(repoRoot, 'reverse-engineering', 'd2r-3.2.92777', 'findings.md'),
   knownRvas: path.join(repoRoot, 'reverse-engineering', 'd2r-3.2.92777', 'known-rvas.json'),
 });
+
+const CURRENT_WORKBENCH_REPORT_PATH = path.join(repoRoot, 'Mission', 'pd2-skills-review.json');
 
 function sha256(buffer) {
   return crypto.createHash('sha256').update(buffer).digest('hex').toUpperCase();
@@ -59,6 +72,19 @@ function governedPath(filePath) {
 function readJson(filePath) {
   const raw = fs.readFileSync(filePath);
   return JSON.parse(raw.toString('utf8').replace(/^\uFEFF/, ''));
+}
+
+function currentWorkbenchBinding(orientation) {
+  if (!fs.existsSync(CURRENT_WORKBENCH_REPORT_PATH)) return null;
+  const report = readJson(CURRENT_WORKBENCH_REPORT_PATH);
+  if (report?.reviewId !== 'pd2-skills-review-v1'
+    || !/^[A-F0-9]{64}$/.test(report?.comparisonHash ?? '')
+    || report?.schemaOrientation?.orientationHash !== orientation.orientationHash
+    || report?.schemaOrientation?.frozenContractHash !== orientation.frozenContractHash
+    || report?.schemaOrientation?.workbenchBinding?.comparisonHash !== report.comparisonHash) {
+    throw new Error('The checked-in Workbench report cannot provide a valid standalone schema-orientation binding');
+  }
+  return { reviewId: report.reviewId, comparisonHash: report.comparisonHash };
 }
 
 export function loadOrientationReferences(referencePaths = REFERENCE_PATHS) {
@@ -118,6 +144,7 @@ export function buildSchemaOrientationArtifacts(
   roots = DEFAULT_SOURCE_ROOTS,
   options = {},
 ) {
+  const standalone = options.sources === undefined && options.skillReport === undefined;
   const sources = options.sources ?? loadWorkbenchSources(roots);
   assertCanonicalPd2SkillsPath(sources);
   const skillReport = options.skillReport ?? buildOracleData(sources);
@@ -151,10 +178,14 @@ export function buildSchemaOrientationArtifacts(
       },
     };
   }
+  if (standalone) {
+    const binding = currentWorkbenchBinding(orientation);
+    if (binding) orientation = { ...orientation, workbenchBinding: binding };
+  }
   const dictionary = buildFieldDictionary(orientation);
   const policySchema = buildPolicySchema(orientation);
   const policyExample = buildPolicyEnvelope(orientation);
-  const policyCurrent = buildPolicyEnvelope(orientation);
+  const policyCurrent = readJson(ORIENTATION_ARTIFACT_PATHS.policyCurrent);
   const policyRuntimeSource = buildBrowserPolicyRuntimeSource();
   const orientationHtml = buildSchemaOrientationHtml(orientation, {
     policyRuntimeSource,
@@ -193,7 +224,8 @@ function verifyArtifactTargets() {
 
 export function writeSchemaOrientationArtifacts(generated) {
   verifyArtifactTargets();
-  for (const [id, filePath] of Object.entries(ORIENTATION_ARTIFACT_PATHS)) {
+  for (const id of GENERATED_ORIENTATION_ARTIFACT_IDS) {
+    const filePath = ORIENTATION_ARTIFACT_PATHS[id];
     fs.writeFileSync(filePath, generated.artifacts[id], 'utf8');
   }
 }
@@ -201,7 +233,8 @@ export function writeSchemaOrientationArtifacts(generated) {
 export function checkSchemaOrientationArtifacts(generated) {
   verifyArtifactTargets();
   const mismatches = [];
-  for (const [id, filePath] of Object.entries(ORIENTATION_ARTIFACT_PATHS)) {
+  for (const id of GENERATED_ORIENTATION_ARTIFACT_IDS) {
+    const filePath = ORIENTATION_ARTIFACT_PATHS[id];
     if (!fs.existsSync(filePath)) {
       mismatches.push(`${governedPath(filePath)} is missing`);
       continue;

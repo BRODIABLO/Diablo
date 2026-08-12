@@ -658,3 +658,98 @@ n'est pas prouvée.
 Aucune table gameplay, sauvegarde, configuration D2RLoader, installation de jeu
 ou priorité courante n'a été modifiée. Aucun skill n'a été importé, implanté ou
 préapprouvé.
+
+## Contrat gelé de la Phase 1 — application des politiques approuvées
+
+La Phase 1 ne modifie aucune table gameplay. Elle transforme le modèle de
+décision du Workbench après fermeture explicite des huit politiques Phase 0.
+
+- `schemaOrientation` demeure l'oracle analytique Phase 0 immuable.
+- `schemaPolicy.envelope` contient l'enveloppe canonique stricte approuvée,
+  validée contre `orientationId`, `orientationHash`, le contrat gelé, les huit
+  fingerprints et les hashes des sources. Le wrapper porte séparément le hash
+  canonique, le hash de l'export humain et le rapport de migration contrôlée.
+  Son hash participe au `comparisonHash` du Workbench.
+- Chaque skill expose des `decisionBundles` multi-tables. Chaque champ
+  décisionnel possède exactement un `decisionOwnerBundleId`; les liens secondaires
+  ne peuvent jamais créer deux projections concurrentes.
+- Les bundles `PLAYER` sont les seules décisions manuelles de comportement. Les
+  packages `TECHNICAL` sont visibles mais préremplis avec
+  `PRESERVE_BKVINCE`, `DEFER_NATIVE_PROOF` ou `NOT_APPLICABLE`.
+- Les cellules brutes conservent `ABSENT_COLUMN`, `NULL_VALUE`, `EMPTY_STRING`,
+  `ZERO` ou `VALUE`, mais ne sont modifiables qu'en mode expert avec activation
+  et justification explicites. Une protection native ou une formule malformée
+  conserve en plus son override gouverné existant.
+- Une projection pure commune à l'interface et au preview part de la ligne
+  BKVince complète, applique les bundles joueur, les résolutions techniques,
+  puis les overrides experts. Elle ne possède aucun chemin d'écriture gameplay.
+- Le schéma de décisions v3 migre les enveloppes anciennes uniquement lorsque la
+  correspondance est non ambiguë; tout ancien choix non projetable est signalé
+  `stale` ou `conflict`, jamais réinterprété silencieusement.
+
+Le témoin Fire Bolt est figé à quatre décisions joueur :
+`ELEMENTAL_DAMAGE_CURVE`, `MANA_CURVE`, `DAMAGE_SYNERGIES` et
+`PROJECTILE_PHYSICS`. `ITEM_TRIGGER_EXECUTION` et `NATIVE_EXECUTION` sont deux
+packages techniques visibles et automatiques. Les 83 exigences historiques ne
+sont pas cachées : chaque réduction porte une raison et la preuve brute reste
+accessible sous le mode expert.
+
+## Livraison Phase 1 — Workbench gouverné par bundles
+
+L'export humain `pd2-skills-schema-policy-approved.json` a été validé sur les
+huit identifiants et fingerprints de politique, puis migré dans
+`pd2-skills-schema-policy.json`. Le résultat canonique ferme 8 politiques sur 8
+et le rapport de migration contient 8 décisions retenues, 0 périmée et 0
+supprimée.
+
+La dérive des deux références natives a été auditée avant la migration :
+
+- `nativeFindings` : `0768EF47…C3D` vers `7A4E737F…131`;
+- `knownRvas` : `1FA2981D…086` vers `F19DB680…26A`.
+
+Ces ajouts concernent Floating Damage et Remote Stash. Les preuves Skills, les
+trois `Skills.txt`, le guide de schéma, l'audit historique, les définitions de
+politique et leurs fingerprints sont inchangés. Seules ces deux paires de
+hashes exactes sont admises par la migration; toute autre dérive échoue.
+
+Identité de la livraison :
+
+- modèle : `behavior-bundles-v1`;
+- `comparisonHash` :
+  `B4C52C7FACAB5DEDE191ED4F01CFEB41F18707998A1D4DA73AC056F2E7ABF2D3`;
+- contrat Workbench :
+  `E27F45EB00D0AB1BD9A39053FD4E9CD4A3D0001792CCAA2E7ED38374E8D9676F`;
+- orientation :
+  `9EBAA7737422C0F07DF039CD78197C42BFD8E574A1185B8E79234F5D5F97C2B4`;
+- politique canonique logique :
+  `74504869C6D5C146A3DF4AFD94A76A70FEC3C1D4171E1759C23707A4553D57D8`;
+- export approuvé brut :
+  `35EF03B53536DC8D0835716D675DAE9E701A1E6CD6B4A0DE1F19EEE871978A96`.
+
+Fire Bolt passe de 83 exigences historiques à quatre décisions joueur :
+courbe de dégâts élémentaires, mana, synergies de dégâts et physique du
+projectile. Les packages d'exécution par objet et d'exécution native sont
+visibles et préremplis respectivement `PRESERVE_BKVINCE` et
+`DEFER_NATIVE_PROOF`. Les cellules constitutives restent accessibles uniquement
+en mode expert. Le scénario à 20 hard points calcule des courbes numériques
+exactes; la vue joueur ne rend pour Fire Bolt que dégâts minimum, maximum,
+moyenne et mana.
+
+Le runtime et le preview utilisent la même projection pure : BKVince complet,
+bundles joueur, packages techniques, puis overrides experts justifiés. Le
+preview demeure atomique, read-only et sans mode `--apply`.
+
+Validation de livraison :
+
+- `npm.cmd run validate:pd2-skills-workbench` : 118/118 tests réussis;
+- `npm.cmd run smoke:pd2-skills-workbench` : PASS, 21 checkpoints,
+  aucune erreur JavaScript sous Chromium `file://`;
+- chargement à froid : 1 433,99 ms;
+- première interaction : 1 625,46 ms;
+- recherche : 13,09 ms; filtre : 803,16 ms; changement de classe :
+  730,80 ms; export : 159,02 ms;
+- pic RSS : 838,14 MiB; pic heap JavaScript : 114,52 MiB;
+- HTML : 11 065 270 octets; oracle JSON : 97 482 351 octets.
+
+Aucune table gameplay, sauvegarde, configuration D2RLoader ou installation de
+jeu n'a été modifiée. Aucun skill n'a été implanté, importé ou déployé.

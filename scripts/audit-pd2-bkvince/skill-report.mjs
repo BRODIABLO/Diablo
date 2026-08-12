@@ -817,13 +817,36 @@ function parseFormulaExpression(tokens, record, level, options) {
   return result();
 }
 
+function runtimeRecordOrdinal(record) {
+  return record?.index ?? record?.ordinal ?? null;
+}
+
+function referencedHardPoints(referencedName, fallback, options) {
+  const levels = options.referencedSkillLevels;
+  if (!levels) return fallback;
+  const normalized = normalizedName(referencedName);
+  const stableKey = normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  let configured;
+  if (levels instanceof Map) {
+    configured = levels.get(referencedName)
+      ?? levels.get(normalized)
+      ?? levels.get(stableKey);
+  } else if (typeof levels === 'object') {
+    configured = levels[referencedName]
+      ?? levels[normalized]
+      ?? levels[stableKey];
+  }
+  return numeric(configured, fallback);
+}
+
 function referencedSkillProperty(record, referencedName, property, level, referencedSkillLevel, options) {
   const matches = record.document.byKey.get(normalizedName(referencedName)) ?? [];
   if (matches.length !== 1) return null;
   const [target] = matches;
-  const self = target.index === record.index;
-  const targetLevel = self ? level : referencedSkillLevel;
-  const targetBaseLevel = self ? baseSkillLevel(record, level) : Math.min(referencedSkillLevel, numeric(target.get('maxlvl'), referencedSkillLevel));
+  const self = runtimeRecordOrdinal(target) === runtimeRecordOrdinal(record);
+  const configuredHardPoints = referencedHardPoints(referencedName, referencedSkillLevel, options);
+  const targetLevel = self ? level : configuredHardPoints;
+  const targetBaseLevel = self ? baseSkillLevel(record, level) : Math.min(configuredHardPoints, numeric(target.get('maxlvl'), configuredHardPoints));
   const normalizedProperty = property.toLowerCase();
   if (normalizedProperty === 'lvl') return targetLevel;
   if (normalizedProperty === 'blvl') return targetBaseLevel;

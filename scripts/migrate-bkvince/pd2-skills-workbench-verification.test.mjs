@@ -20,7 +20,11 @@ import {
   physicalNodeId,
   sha256Canonical,
 } from './pd2-skills-review-contracts.mjs';
-import { DEFAULT_SOURCE_ROOTS } from './pd2-skills-review-data.mjs';
+import {
+  DEFAULT_SOURCE_ROOTS,
+  buildOracleData,
+  loadWorkbenchSources,
+} from './pd2-skills-review-data.mjs';
 import {
   applyBulk,
   createEmptyEnvelope,
@@ -233,23 +237,17 @@ test('PD2_SP_ROOT and canonical Skills.txt casing are honored', () => {
 test('oracle covers every physical ordinal exactly once and never uses documentary Id as identity', () => {
   assert.equal(report.frozenContractHash, FROZEN_CONTRACT_HASH);
   assert.deepEqual(report.levels, [1, 5, 10, 20, 30, 40]);
+  const legacySkills = new Map(buildOracleData(loadWorkbenchSources(DEFAULT_SOURCE_ROOTS)).skills
+    .map((skill) => [skill.stableId, skill]));
   const owners = new Map();
   for (const skill of report.skills) {
     assert.match(skill.stableId, /^skill:[a-z0-9-]+:[a-z0-9-]+(?::[a-z0-9-]+)?$/);
     assert.match(skill.fingerprint, /^[A-F0-9]{64}$/);
     const expectedFingerprint = sha256Canonical({
-      stableId: skill.stableId,
-      nodeIds: skill.nodeIds,
-      ordinals: skill.ordinals,
-      rows: Object.fromEntries(['vanilla32', 'bkvince', 'pd2'].map((source) => [source, nodeOf(skill, source)?.rowFingerprint ?? null])),
-      mappingTypes: skill.mappingTypes,
-      semanticIdentityEvidence: skill.semanticIdentityEvidence,
-      classification: skill.classification,
-      collisionIds: skill.collisionIds,
-      dependencies: skill.dependencies,
-      dependencyClosure: skill.dependencyClosure,
-      newSkillPlan: skill.newSkillPlan,
-      protections: allFields(skill).filter(({ field }) => field.protected).map(({ field }) => ({ id: field.id, reasons: field.protectionReasons })),
+      previousFingerprint: legacySkills.get(skill.stableId).fingerprint,
+      decisionBundles: skill.decisionBundles,
+      policyApplication: skill.policyApplication,
+      curves: skill.curves,
     });
     assert.equal(skill.fingerprint, expectedFingerprint, `${skill.stableId}: fingerprint does not cover its final mapping/data/protections`);
     for (const nodeId of nodeIdsOf(skill)) {
@@ -486,9 +484,13 @@ test('curves use only governed levels and never manufacture malformed, symbolic 
   assert.deepEqual(scenariosOf(fireBall).map((scenario) => scenario.id), ['standard', 'synergies20', 'custom']);
   const standardMetrics = seriesOf(scenariosOf(fireBall)[0]);
   assert(standardMetrics.length > 0, 'standard scenario must expose UI-consumable metric series');
-  for (const metric of ['damageMin', 'damageMax', 'damageAverage', 'mana', 'duration', 'radius']) {
+  for (const metric of ['damageMin', 'damageMax', 'damageAverage', 'mana']) {
     const canonical = (value) => normalized(value).replace(/[^a-z0-9]/g, '');
     assert(standardMetrics.some((series) => canonical(series.id) === canonical(metric)), `standard curves omit ${metric}`);
+  }
+  for (const skill of scenarioSkills) for (const scenario of scenariosOf(skill)) for (const series of seriesOf(scenario)) {
+    const values = Object.values(series.values ?? {}).filter(Array.isArray).flat();
+    assert(values.some((value) => value !== null && value !== undefined), `${skill.stableId}/${scenario.id}/${series.id} is entirely inapplicable`);
   }
   const raven = findSkill('Raven');
   assert(scenariosOf(raven).some((scenario) => (scenario.symbolic ?? []).some((item) => /ulvl/i.test(JSON.stringify(item)))), 'Raven ulvl must remain symbolic');
@@ -546,24 +548,24 @@ test('three-way fields, proof and portability enums are structurally complete', 
   }
 });
 
-test('hybrid decisions work field-by-field without authorizing implementation', () => {
+test('hybrid decisions work by behavior bundle without authorizing implementation', () => {
   const skill = findSkill('Amplify Damage');
   const entry = createEntry(skill);
   entry.globalDecision = 'ADAPT_PD2_SELECTIVELY';
   entry.notes.finalJustification = 'Conserver la puissance BKVince et sélectionner seulement les paramètres PD2 prouvés.';
   entry.notes.testPlan = 'Comparer rayon, durée, mana et résistance aux niveaux gouvernés.';
-  for (const component of skill.components.filter((item) => item.changed)) {
-    entry.componentDecisions[component.id] = { decision: 'KEEP_BKVINCE' };
+  for (const bundle of skill.decisionBundles.filter((item) => item.scope === 'PLAYER')) {
+    entry.bundleDecisions[bundle.id] = { decision: 'KEEP_BKVINCE' };
   }
-  const adoptable = allFields(skill).find(({ field }) => field.changed && !field.protected);
-  assert(adoptable, 'Amplify Damage needs one non-protected field for a hybrid decision');
-  entry.fieldDecisions[adoptable.field.id] = { decision: 'ADOPT_PD2' };
+  const adoptable = skill.decisionBundles.find((bundle) => bundle.scope === 'PLAYER' && !bundle.protected);
+  assert(adoptable, 'Amplify Damage needs one non-protected behavior bundle for a hybrid decision');
+  entry.bundleDecisions[adoptable.id] = { decision: 'ADOPT_PD2' };
   const state = entryState(report, skill, entry, approvedSchemaPolicy());
   assert(state.complete, state.reasons.join('\n'));
   assert.equal(entry.implementationStatus, 'NOT_REVIEWED');
 
   const bulk = applyBulk(report, [skill.stableId], { [skill.stableId]: entry }, 'DISCUSS', { replace: false });
-  assert.equal(bulk[skill.stableId].fieldDecisions[adoptable.field.id].decision, 'ADOPT_PD2', 'bulk fill must preserve an existing decision');
+  assert.equal(bulk[skill.stableId].bundleDecisions[adoptable.id].decision, 'ADOPT_PD2', 'bulk fill must preserve an existing bundle decision');
   assert.equal(bulk[skill.stableId].implementationStatus, 'NOT_REVIEWED');
   assert.throws(() => applyBulk(report, [skill.stableId], bulk, 'KEEP_BKVINCE', { replace: true }), /confirmed:true/);
 });
@@ -572,8 +574,8 @@ test('completion requires governed notes without coupling design to implementati
   const skill = findSkill('Amplify Damage');
   const entry = createEntry(skill);
   entry.globalDecision = 'KEEP_BKVINCE';
-  for (const component of skill.components.filter((item) => item.changed)) {
-    entry.componentDecisions[component.id] = { decision: 'KEEP_BKVINCE' };
+  for (const bundle of skill.decisionBundles.filter((item) => item.scope === 'PLAYER')) {
+    entry.bundleDecisions[bundle.id] = { decision: 'KEEP_BKVINCE' };
   }
   const schemaPolicy = approvedSchemaPolicy();
   let state = entryState(report, skill, entry, schemaPolicy);
@@ -603,7 +605,7 @@ test('completion requires governed notes without coupling design to implementati
 
 test('decision persistence is comparison-bound and rejects stale hashes and fingerprints', () => {
   const envelope = createEmptyEnvelope(report);
-  assert.equal(storageKey(report), `pd2-skills-review-decisions-v2:${report.comparisonHash}`);
+  assert.equal(storageKey(report), `pd2-skills-review-decisions-v3:${report.comparisonHash}`);
   assert(Object.values(envelope.entries).every((entry) => entry.implementationStatus === 'NOT_REVIEWED'));
   const staleHash = structuredClone(envelope);
   staleHash.comparisonHash = '0'.repeat(64);
@@ -695,30 +697,11 @@ test('preview CLI is strictly read-only, rejects --apply, and cannot write to ga
   assert(candidate, 'an append candidate at the first computed ordinal is required');
   const entry = createEntry(candidate);
   entry.globalDecision = 'IMPORT_NEW_PD2_SKILL';
-  entry.newSkillLineDecision = 'IMPORT_CUSTOMIZED';
+  entry.newSkillLineDecision = 'IMPORT_APPEND_ONLY';
   entry.notes.finalJustification = 'Verification-only complete import selection.';
   entry.notes.testPlan = 'Verify append projection and every unresolved transitive gate.';
-  for (const { component, field } of allFields(candidate).filter(({ field }) => field.changed)) {
-    const documentaryId = /^\*?id$/i.test(field.header)
-      && candidate.newSkillPlan?.proposedRow?.mappingProvenance
-      && Object.entries(candidate.newSkillPlan.proposedRow.mappingProvenance)
-        .some(([header, provenance]) => /^\*?id$/i.test(header) && provenance.mode === 'APPEND_PREVIEW_DOCUMENTARY_VALUE');
-    const choice = documentaryId
-      ? {
-          decision: 'CUSTOM',
-          customValue: String(candidate.newSkillPlan.proposedTargetOrdinal),
-          justification: 'Document the computed append ordinal without using Id for allocation.',
-          testPlan: 'Assert the preview row remains at the computed append ordinal.',
-        }
-      : { decision: 'ADOPT_PD2' };
-    if (field.protected) choice.protectedOverride = {
-      approved: true,
-      justification: 'Verification fixture acknowledges the protected gate without authorizing implementation.',
-      acknowledgedProofStatus: field.proofStatus ?? component.proofStatus,
-      nativeRiskAccepted: true,
-      malformedResolution: 'Preserve the exact raw source; do not repair it.',
-    };
-    entry.fieldDecisions[field.id] = choice;
+  for (const bundle of candidate.decisionBundles.filter((item) => item.scope === 'PLAYER')) {
+    entry.bundleDecisions[bundle.id] = { decision: 'KEEP_BKVINCE' };
   }
   const importEnvelope = createEmptyEnvelope(report);
   importEnvelope.schemaPolicy = approvedSchemaPolicy();

@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "kind": "pd2-skills-schema-policy",
+  "orientationId": "pd2-skills-schema-orientation-v1",
+  "orientationHash": "09B657C5AF91B5155BC613B422CBFEF4FD8FAD215A6B9F082ADF318010B01DD3",
+  "frozenContractHash": "3133A16AD42315181599DBB5DE29C4C7DAEBC5DFB7F1110639C2CEBFEA13EC6B",
+  "sourceHashes": {
+    "skills": {
+      "vanilla32": "EFAF7AC4BA0493109C698EF32ACF4A2B3A577E13500D0B50258C80B600986F51",
+      "bkvince": "08497CC0BD8B2B5CBD895F7477AD0CBF272571FB67B78061EDFABC31C48B8B77",
+      "pd2": "AEEFC3F2C0C80811D62FC1A17C3B031DE2164E5606BF9779F34024B35BC87B8B"
+    },
+    "references": {
+      "skillsSchema": "944A40AA17BF44C8D5B262482925FAD26CF3B20FBE0B941D779D6E60F36DE742",
+      "analyticalAudit": "BE9385A532CBD3DF80D94E83F04293FB9238DFD10101C5A9F442DB8DAC07D565",
+      "nativeFindings": "0768EF47A41793AB5C1D30C06F64A79A794870AAD0E835628385DBE646587C3D",
+      "knownRvas": "1FA2981D14D3BA2B8F4F6E8ECF6CFDE5EE8D6E24AC742E8838B65FA46F31E086"
+    }
+  },
+  "exportedAt": "2026-08-12T22:27:31.926Z",
+  "decisions": {
+    "PRESERVE_ALL_D2R_BKVINCE_COLUMNS": {
+      "fingerprint": "5B6B5E308F2B8D94AEAC2B67B7F1B9E567E0878DEE92DF39918FB4BE3CC41140",
+      "decision": "APPROVE",
+      "justification": "BKVince fonctionne sous D2R 3.2 et son schéma demeure l’autorité cible. Toutes les colonnes Vanilla et BKVince doivent être conservées sans suppression ni réordonnancement."
+    },
+    "IGNORE_ALL_EMPTY_PD2_ONLY_COLUMNS": {
+      "fingerprint": "B98AA31CC1AFFBD286BE2C17B027066946303D93D9487810AC6CFC8CAA597207",
+      "decision": "APPROVE",
+      "justification": "Une colonne propre à PD2 mais entièrement vide ne démontre aucun comportement à porter. Elle doit rester visible comme preuve de schéma sans créer de décision par skill.\nSi PD2 possède une colonne, mais qu’elle est vide partout, on s’en sacre pour le gameplay. On conserve seulement l’information technique.\nCela vise notamment :\nauratgtevent\nauratgteventfunc\npassiveevent\npassiveeventfunc"
+    },
+    "NO_PD2_HEADER_IMPORT_WITHOUT_NATIVE_PROOF": {
+      "fingerprint": "133016232D83CA600BA170D4B3F05289EFCAC956BA2BD5AEE5492C6DE79E18B6",
+      "decision": "APPROVE",
+      "justification": "La présence d’un header dans PD2 ne prouve pas que D2R 3.2 le compile ou le consomme. Aucun nouveau header PD2 ne doit être ajouté sans consommateur D2R ou plugin natif prouvé.\nEn français humain\nOn ne copie pas une nouvelle colonne PD2 dans BKVince en espérant que D2R comprenne spontanément quoi en faire.\nCette politique gouverne notamment :\ndelay\ncheckfunc\ngeneral\nnocostinstate"
+    },
+    "NO_AUTOMATIC_DELAY_TRANSLATION": {
+      "fingerprint": "229A2054D3039368203F246099BB33FEEEF0DCE394C606B448FE68AD8D0BBA0B",
+      "decision": "APPROVE",
+      "justification": "PD2 delay et les champs D2R localdelay, globaldelay et perdelay représentent des modèles distincts. Toute traduction doit être décidée selon le comportement recherché et validée dans D2R.\nIl faudra décider, selon chaque cas, si l’intention PD2 correspond à :\nun cooldown local;\nun cooldown global;\nune cadence périodique;\nou un comportement natif différent.\nL’audit établit précisément que delay PD2 ne doit pas être assimilé automatiquement aux champs D2R."
+    },
+    "SEMANTIC_BLANKS_REQUIRE_NO_DECISION": {
+      "fingerprint": "C1E042EEFE8A1709111DFCE334B0EC402DE06B43E4060474A765ADE4D929DA34",
+      "decision": "APPROVE",
+      "justification": "Absent, null et vide doivent rester distincts dans la preuve brute, mais aucune décision gameplay n’est nécessaire lorsqu’aucune source ne configure réellement le champ. La valeur zéro demeure une valeur explicite.\nVanilla : vide\nBKVince : 0\nPD2 : 1\ndemeure une vraie différence, parce que 0 est une valeur.\nC’est la politique qui éliminera la majorité des 83 cochonneries de Fire Bolt."
+    },
+    "ITEM_ECONOMY_FIELDS_PRESERVE_BKVINCE": {
+      "fingerprint": "E9E2385AE2067753B4441C6C1EAD5C7941437B3671990090A7CCCD59FA01C07A",
+      "decision": "APPROVE",
+      "justification": "cost add et cost mult concernent principalement la valeur en or des objets qui accordent le skill. Ils ne doivent pas devenir des décisions de balance du skill et conservent BKVince par défaut.\nTu n’auras pas à décider cost add pour chaque skill.\nCes champs concernent principalement la valeur monétaire des objets qui accordent le skill, pas :\nses dégâts;\nson mana;\nsa portée;\nson niveau requis.\nL’audit distingue d’ailleurs expressément ItemEffect et les champs transversaux de ce genre de leurs implications gameplay réelles."
+    },
+    "NATIVE_CALLBACKS_PRESERVE_OR_DEFER": {
+      "fingerprint": "7AF76741FBB8DF2FF7F663359D718677AA2F165BEB6FC330FA59F5E17FAE3AB5",
+      "decision": "APPROVE",
+      "justification": "Les numéros de fonctions serveur et client sont propres au moteur. Sans preuve D2R 3.2, les callbacks BKVince sont préservés et les comportements PD2 sont différés ou reproduits par un mécanisme D2R prouvé.\nsrvdofunc = 8\npsrvhitfunc = 62\n\net BKVince autre chose, on ne choisit pas aveuglément le chiffre PD2.\nLes numéros peuvent appeler des fonctions différentes selon le moteur. Par défaut :\non garde BKVince\nou\non diffère jusqu’à preuve"
+    },
+    "RAW_FIELDS_INHERIT_FROM_BEHAVIOR_BUNDLE": {
+      "fingerprint": "96B22A8F9A486CAFF2D67CFD8E575E05285B9EFCF3A26310270B74083DCFAC36",
+      "decision": "APPROVE",
+      "justification": "Les cellules constitutives d’une même mécanique doivent suivre une décision unique de comportement. Les overrides individuels restent disponibles uniquement en mode expert avec justification.\nCourbe de dégâts élémentaires : PD2\nau lieu de devoir choisir séparément :\nemin\nemax\neminlev1\nemaxlev1\neminlev2\nemaxlev2\n...\n\nMême principe pour :\nmana;\nsynergies;\nprojectiles;\ncooldowns;\nsummons;\npassifs.\nCette politique est celle qui transforme le Workbench d’un interrogatoire sur 83 cellules en quelques décisions de gameplay."
+    }
+  }
+}

@@ -10,7 +10,7 @@ import {
 } from './pd2-skills-review-contracts.mjs';
 import {
   entryState,
-  resolveFieldChoice,
+  projectProposedResult,
   validateImport,
 } from './pd2-skills-review-runtime.mjs';
 import { policyGate } from './pd2-skills-schema-policy-runtime.mjs';
@@ -625,6 +625,15 @@ export function compilePreview(report, decisions, options = {}) {
       : (sourceNode(skill, 'bkvince', nodes)?.ordinal ?? skill.ordinals?.bkvince ?? null);
     const selectedFieldIds = new Set();
     const pendingFieldChanges = [];
+    const proposedResult = projectProposedResult(report, skill, entry);
+    if (!proposedResult.valid) {
+      preview.conflicts.push(...proposedResult.errors.map((reason) => ({
+        code: 'PROPOSED_RESULT_INVALID',
+        stableId,
+        reason,
+      })));
+      continue;
+    }
 
     if (entry.globalDecision === 'REJECT_PD2' || entry.globalDecision === 'DEFER_NATIVE_PROOF') {
       draft.tests.push(...(nonBlank(entry.notes?.testPlan) ? [{ stableId, plan: entry.notes.testPlan }] : []));
@@ -633,8 +642,10 @@ export function compilePreview(report, decisions, options = {}) {
 
     for (const component of skill.components ?? []) {
       for (const field of component.fields ?? []) {
-        if (field.changed === false) continue;
-        const choice = resolveFieldChoice(skill, entry, component, field);
+        const projected = proposedResult.byField[field.id];
+        if (!projected) continue;
+        if (!projected.bundleId && !entry.fieldDecisions?.[field.id]) continue;
+        const choice = projected.choice ?? { decision: projected.decision };
         if (!choice || choice.decision === 'DISCUSS') continue;
         const base = {
           stableId,
@@ -642,12 +653,17 @@ export function compilePreview(report, decisions, options = {}) {
           componentId: component.id,
           componentFingerprint: component.fingerprint ?? null,
           fieldId: field.id,
+          bundleId: projected.bundleId,
+          bundleScope: projected.bundleScope,
+          decisionSource: projected.source,
+          autoResolution: projected.autoResolution,
+          rawEvidence: clone(projected.rawEvidence),
           table: field.table,
           header: fieldHeader(field, 'bkvince'),
           sourceHeader: fieldHeader(field, 'pd2'),
           sourceRow: fieldSourceRow(skill, field, nodes),
           targetRow: fieldTargetRow(skill, field, nodes),
-          before: fieldValue(field, 'bkvince'),
+          before: projected.before,
           proofStatus: field.proofStatus ?? component.proofStatus,
           protected: field.protected === true,
           protectionReasons: clone(field.protectionReasons ?? []),
@@ -670,7 +686,7 @@ export function compilePreview(report, decisions, options = {}) {
             ready: !risks.some((risk) => risk.code === 'NATIVE_PROOF_REQUIRED'),
           });
         }
-        const after = choice.decision === 'CUSTOM' ? choice.customValue : fieldValue(field, 'pd2');
+        const after = projected.after;
         if (after === undefined) {
           preview.conflicts.push({ code: 'PD2_VALUE_MISSING', stableId, fieldId: field.id, reason: 'Selected field has no exact governed PD2 value' });
           continue;

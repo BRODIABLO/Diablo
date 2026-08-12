@@ -100,6 +100,73 @@ function mockReport(overrides = {}) {
   };
 }
 
+function mockPhase1Report() {
+  const report = mockReport();
+  const skill = report.skills[0];
+  skill.stableId = 'skill:sor:fire-bolt';
+  skill.fingerprint = 'FIRE-BOLT-PHASE1-FP';
+  skill.canonicalName = 'Fire Bolt';
+  skill.names = { vanilla32: 'Fire Bolt', bkvince: 'Fire Bolt', pd2: 'Fire Bolt' };
+  skill.collisionIds = [];
+  const raw = (vanilla32, bkvince, pd2) => ({
+    vanilla32: { columnPresent: true, rawHeader: 'EMaxLev1', rawValue: vanilla32, rawState: vanilla32 === '' ? 'EMPTY_STRING' : 'VALUE', semanticBlank: vanilla32 === '' },
+    bkvince: { columnPresent: true, rawHeader: 'EMaxLev1', rawValue: bkvince, rawState: bkvince === '' ? 'EMPTY_STRING' : 'VALUE', semanticBlank: bkvince === '' },
+    pd2: { columnPresent: true, rawHeader: 'EMaxLev1', rawValue: pd2, rawState: pd2 === '' ? 'EMPTY_STRING' : 'VALUE', semanticBlank: pd2 === '' },
+  });
+  const fields = [
+    ['skills.txt:emaxlev1', 'emaxlev1', 'ELEMENTAL_DAMAGE_CURVE', '3', '3', '6'],
+    ['skills.txt:mana', 'mana', 'MANA_CURVE', '6', '6', '5'],
+    ['skills.txt:edmgsympercalc', 'edmgsympercalc', 'DAMAGE_SYNERGIES', "skill('Fire Ball'.blvl)*par8", "skill('Fire Ball'.blvl)*par8", "skill('Combustion'.blvl)*par8"],
+    ['missiles.txt:vel', 'vel', 'PROJECTILE_PHYSICS', '16', '16', '20'],
+    ['skills.txt:itemeffect', 'itemeffect', 'ITEM_TRIGGER_EXECUTION', '', '', ''],
+    ['skills.txt:srvdofunc', 'srvdofunc', 'NATIVE_EXECUTION', '1', '1', '1'],
+  ].map(([id, header, owner, vanilla32, bkvince, pd2]) => ({
+    id, table: id.split(':')[0], header, label: header, values: { vanilla32, bkvince, pd2 }, rawEvidence: raw(vanilla32, bkvince, pd2),
+    changed: bkvince !== pd2, rawChanged: bkvince !== pd2, semanticChanged: bkvince !== pd2, decisionRelevant: true,
+    semanticDifferenceReason: 'PHASE1_WITNESS', decisionOwnerBundleId: owner, proofStatus: owner === 'NATIVE_EXECUTION' ? 'NATIVE_UNPROVEN' : 'EXACT_TABLE',
+    protected: owner === 'NATIVE_EXECUTION', protectionReasons: owner === 'NATIVE_EXECUTION' ? ['native_functions'] : [],
+  }));
+  fields.find((field) => field.id === 'skills.txt:itemeffect').rawEvidence.pd2 = {
+    columnPresent: false, rawHeader: null, rawValue: null, rawState: 'ABSENT_COLUMN', semanticBlank: true,
+  };
+  skill.components = [{ id: 'phase1', label: 'Phase 1', changed: true, fields }];
+  const bundle = (id, scope, fieldIds, extra = {}) => ({
+    id, stableId: `bundle:${id}`, scope, fieldIds, playerLabelFr: ({
+      ELEMENTAL_DAMAGE_CURVE: 'Courbe de dégâts élémentaires', MANA_CURVE: 'Coût en mana', DAMAGE_SYNERGIES: 'Synergies de dégâts',
+      PROJECTILE_PHYSICS: 'Physique du projectile', ITEM_TRIGGER_EXECUTION: 'Exécution déclenchée par objet', NATIVE_EXECUTION: 'Exécution native',
+    })[id], shortHelpFr: `Aide ${id}`, manualDecisionRequired: scope === 'PLAYER', proofStatus: 'EXACT_TABLE', fingerprint: `FP-${id}`, ...extra,
+  });
+  skill.decisionBundles = [
+    bundle('ELEMENTAL_DAMAGE_CURVE', 'PLAYER', ['skills.txt:emaxlev1']),
+    bundle('MANA_CURVE', 'PLAYER', ['skills.txt:mana']),
+    bundle('DAMAGE_SYNERGIES', 'PLAYER', ['skills.txt:edmgsympercalc']),
+    bundle('PROJECTILE_PHYSICS', 'PLAYER', ['missiles.txt:vel']),
+    bundle('ITEM_TRIGGER_EXECUTION', 'TECHNICAL', ['skills.txt:itemeffect'], { autoResolution: 'PRESERVE_BKVINCE' }),
+    bundle('NATIVE_EXECUTION', 'TECHNICAL', ['skills.txt:srvdofunc'], { autoResolution: 'DEFER_NATIVE_PROOF', proofStatus: 'NATIVE_UNPROVEN' }),
+  ];
+  skill.policyApplication = { canonicalPolicyHash: 'POLICY', counts: { rawFields: 83, decisionRelevant: 6, playerBundles: 4, technicalBundles: 2 } };
+  skill.curves = { scenarios: [
+    { id: 'standard', label: 'Sans synergie', levels: [1, 5, 10, 20, 30, 40], series: [
+      { id: 'damage_average', label: 'Dégâts moyens', values: { vanilla32: [4, 8, 12, 20, 40, 80], bkvince: [4, 8, 12, 20, 40, 80], pd2: [5, 10, 20, 40, 80, 160] } },
+      { id: 'poison_total', label: 'Dégâts poison', values: { vanilla32: [null, null], bkvince: [null, null], pd2: [null, null] }, proofStatus: 'NOT_APPLICABLE' },
+      { id: 'pd2_delay', label: 'Délai PD2', values: { vanilla32: [null], bkvince: [null], pd2: [null] } },
+    ] },
+    { id: 'synergies20', label: 'Synergies à 20 hard points', levels: [1, 5, 10, 20, 30, 40], hardPointsBySkill: { 'pd2:fire-ball': 20 }, seriesBySource: {
+      vanilla32: { damage_average: { label: 'Dégâts moyens', values: [8, 16, 24, 40, 80, 160] } },
+      bkvince: { damage_average: { label: 'Dégâts moyens', values: [8, 16, 24, 40, 80, 160] } },
+      pd2: { damage_average: { label: 'Dégâts moyens', values: [12, 24, 48, 96, 192, 384] } },
+    } },
+  ] };
+  report.fieldDictionary = { fields: [
+    { rawHeader: 'emaxlev1', playerLabelFr: 'Courbe de dégâts feu', shortHelpFr: 'Premier palier de progression.' },
+    { rawHeader: 'mana', playerLabelFr: 'Coût en mana réel', shortHelpFr: 'Coût gouverné.' },
+  ] };
+  report.navigation[0].skillIds = [skill.stableId];
+  report.navigation[0].trees[0].skillIds = [skill.stableId];
+  report.collisions = [];
+  return report;
+}
+
 function mockSchemaOrientation() {
   return {
     schemaVersion: 1,
@@ -443,6 +510,71 @@ test('includes protected override, CUSTOM governance, bulk safety and read-only 
     'Vider uniquement les décisions indécises', 'Aucune fusion automatique',
     'DECISION_COMPLETE ne devient jamais automatiquement IMPLEMENTATION_AUTHORIZED',
   ]) assert.match(html, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+});
+
+test('renders Phase 1 bundles, relevant metrics, governed raw evidence and a live read-only projection', async () => {
+  const phase1Runtime = `
+globalThis.decisionRuntime = {
+  constants: {},
+  createEmptyEnvelope(report) { return { schemaVersion: 3, reviewId: report.reviewId, comparisonHash: report.comparisonHash, schemaPolicy: { decisions: {} }, entries: {} }; },
+  createEntry(skill) { return { fingerprint: skill.fingerprint, implementationStatus: 'NOT_REVIEWED', bundleDecisions: {}, fieldDecisions: {}, notes: {} }; },
+  entryState(report, skill, entry) { return { required: true, complete: false, reasons: ['Four player bundles remain governed.'], schemaPolicyGate: { required: 8, closed: 8, complete: true } }; },
+  applyBulk(report, ids, entries) { return { ...entries }; },
+  validateImport(report, payload) { return payload; },
+  migrateEnvelope(report, payload) { return { envelope: payload, report: { retained: [], stale: [], dropped: [] } }; },
+  exportEnvelope(report, entries, options) { return { schemaVersion: 3, reviewId: report.reviewId, comparisonHash: report.comparisonHash, entries, schemaPolicy: options.schemaPolicy }; },
+  storageKey(report) { return 'pd2-skills-review-decisions-v3:' + report.comparisonHash; },
+  projectProposedResult(report, skill, entry) {
+    return { valid: true, errors: [], changedCells: [{ fieldId: 'skills.txt:emaxlev1', bkvinceValue: '3', proposedValue: entry.bundleDecisions?.ELEMENTAL_DAMAGE_CURVE?.decision === 'ADOPT_PD2' ? '6' : '3', bundleId: 'ELEMENTAL_DAMAGE_CURVE' }] };
+  },
+};`;
+  const html = buildHtml(mockPhase1Report(), phase1Runtime);
+  const listeners = {};
+  const root = { innerHTML: '', addEventListener(type, listener) { listeners[type] = listener; }, querySelector() { return null; } };
+  const context = {
+    console, Blob, Response, DecompressionStream, Uint8Array, atob, URL,
+    document: { body: root, querySelector(selector) { return selector === '#workbench' ? root : null; }, createElement() { return { click() {} }; } },
+    localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} }, navigator: {},
+    setTimeout() { return 1; }, clearTimeout() {}, confirm() { return true; }, requestAnimationFrame(callback) { callback(); },
+  };
+  context.window = context;
+  vm.runInNewContext(embeddedScript(html), context);
+  await context.__PD2_SKILLS_WORKBENCH_READY__;
+
+  listeners.click({ target: { closest(selector) { return selector === 'button' ? { dataset: { view: 'sor' } } : null; } } });
+  listeners.click({ target: { closest(selector) { return selector === 'button' ? { dataset: { action: 'toggle-skill', skillId: 'skill:sor:fire-bolt' } } : null; } } });
+
+  assert.equal((root.innerHTML.match(/data-decision-bundle(?:\s|>)/g) || []).length, 6);
+  assert.equal((root.innerHTML.match(/data-bundle-scope="PLAYER"/g) || []).length, 4);
+  assert.equal((root.innerHTML.match(/data-bundle-scope="TECHNICAL"/g) || []).length, 2);
+  for (const label of ['Courbe de dégâts élémentaires', 'Coût en mana', 'Synergies de dégâts', 'Physique du projectile', 'Exécution déclenchée par objet', 'Exécution native']) assert.match(root.innerHTML, new RegExp(label));
+  assert.match(root.innerHTML, /PRESERVE_BKVINCE|Preserve bkvince/);
+  assert.match(root.innerHTML, /DEFER_NATIVE_PROOF|Defer native proof/);
+  assert.match(root.innerHTML, /data-proposed-result/);
+  assert.doesNotMatch(root.innerHTML, /data-field-decision/);
+  assert.doesNotMatch(root.innerHTML, /Dégâts poison/);
+  assert.doesNotMatch(root.innerHTML, /Délai PD2/);
+
+  listeners.change({ target: {
+    dataset: { skillId: 'skill:sor:fire-bolt' }, value: 'synergies20',
+    matches(selector) { return selector === '[data-scenario]'; },
+  } });
+  assert.match(root.innerHTML, /Synergies à 20 hard points/);
+  assert.match(root.innerHTML, />384</);
+  assert.doesNotMatch(root.innerHTML, /undefined(?:: undefined)?/i);
+
+  listeners.click({ target: { closest(selector) { return selector === 'button' ? { dataset: { mode: 'expert' } } : null; } } });
+  assert.match(root.innerHTML, /data-expert-field/);
+  assert.match(root.innerHTML, /data-expert-override-enabled/);
+  assert.match(root.innerHTML, /ABSENT_COLUMN/);
+  assert.match(root.innerHTML, /Courbe de dégâts feu/);
+  assert.match(root.innerHTML, /Premier palier de progression/);
+  assert.match(root.innerHTML, /Nœuds physiques et cellules brutes/);
+  listeners.change({ target: {
+    dataset: { skillId: 'skill:sor:fire-bolt', fieldId: 'skills.txt:emaxlev1' }, checked: true,
+    matches(selector) { return selector === '[data-expert-override-enabled]'; },
+  } });
+  assert.match(root.innerHTML, /data-field-decision/);
 });
 
 test('rejects invalid generator inputs', () => {
