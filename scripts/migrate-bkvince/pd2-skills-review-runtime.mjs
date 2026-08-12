@@ -5,11 +5,17 @@ import {
   FROZEN_CONTRACT_HASH,
   GLOBAL_DECISIONS,
   IMPLEMENTATION_STATUSES,
+  LEGACY_DECISION_SCHEMA_VERSIONS,
+  LEGACY_STORAGE_KEY_PREFIXES,
   NEW_SKILL_LINE_DECISIONS,
   PROOF_STATUSES,
   REVIEW_ID,
   STORAGE_KEY_PREFIX,
 } from './pd2-skills-review-contracts.mjs';
+import {
+  buildBrowserPolicyRuntimeSource,
+  schemaPolicyRuntime,
+} from './pd2-skills-schema-policy-runtime.mjs';
 
 const RUNTIME_CONSTANTS = Object.freeze({
   componentDecisions: COMPONENT_DECISIONS,
@@ -18,13 +24,15 @@ const RUNTIME_CONSTANTS = Object.freeze({
   frozenContractHash: FROZEN_CONTRACT_HASH,
   globalDecisions: GLOBAL_DECISIONS,
   implementationStatuses: IMPLEMENTATION_STATUSES,
+  legacyDecisionSchemaVersions: LEGACY_DECISION_SCHEMA_VERSIONS,
+  legacyStorageKeyPrefixes: LEGACY_STORAGE_KEY_PREFIXES,
   newSkillLineDecisions: NEW_SKILL_LINE_DECISIONS,
   proofStatuses: PROOF_STATUSES,
   reviewId: REVIEW_ID,
   storageKeyPrefix: STORAGE_KEY_PREFIX,
 });
 
-function decisionRuntimeFactory(constants) {
+function decisionRuntimeFactory(constants, policyRuntime) {
   'use strict';
 
   const EMPTY_NOTES = Object.freeze({
@@ -68,6 +76,7 @@ function decisionRuntimeFactory(constants) {
     'sourceHashes',
     'exportedAt',
     'exportScope',
+    'schemaPolicy',
     'entries',
   ]);
 
@@ -181,6 +190,9 @@ function decisionRuntimeFactory(constants) {
       sourceHashes: clone(report.sourceHashes ?? {}),
       exportedAt: new Date().toISOString(),
       exportScope: 'ALL',
+      schemaPolicy: report.schemaOrientation
+        ? policyRuntime.createPolicyEnvelope(report.schemaOrientation)
+        : null,
       entries,
     };
   }
@@ -191,6 +203,38 @@ function decisionRuntimeFactory(constants) {
       : reportOrHash?.comparisonHash;
     if (!nonBlank(comparisonHash)) throw new Error('comparisonHash is required for localStorage');
     return `${constants.storageKeyPrefix}${comparisonHash}`;
+  }
+
+  function legacyStorageKeys(reportOrHash) {
+    const comparisonHash = typeof reportOrHash === 'string'
+      ? reportOrHash
+      : reportOrHash?.comparisonHash;
+    if (!nonBlank(comparisonHash)) throw new Error('comparisonHash is required for legacy localStorage discovery');
+    return constants.legacyStorageKeyPrefixes.map((prefix) => `${prefix}${comparisonHash}`);
+  }
+
+  function schemaPolicyFor(report, explicit = undefined) {
+    if (!report?.schemaOrientation) return null;
+    return explicit ?? null;
+  }
+
+  function schemaPolicyGate(report, explicit = undefined) {
+    if (!report?.schemaOrientation) return null;
+    const envelope = schemaPolicyFor(report, explicit);
+    if (!envelope) {
+      const required = (report.schemaOrientation.policies ?? [])
+        .filter((policy) => policy.requiredForSkillCompletion === true).length;
+      return {
+        complete: false,
+        open: true,
+        required,
+        closed: 0,
+        remaining: required,
+        reasons: ['schemaPolicy: governed Phase 0 policy envelope is required'],
+        policies: [],
+      };
+    }
+    return policyRuntime.policyGate(report.schemaOrientation, envelope);
   }
 
   function proofStatusFor(field, component) {
@@ -318,7 +362,7 @@ function decisionRuntimeFactory(constants) {
     return true;
   }
 
-  function entryState(report, skillOrId, entry) {
+  function entryState(report, skillOrId, entry, schemaPolicy = undefined) {
     const skill = typeof skillOrId === 'string' ? skillMap(report).get(skillOrId) : skillOrId;
     if (!skill) {
       return {
@@ -347,6 +391,12 @@ function decisionRuntimeFactory(constants) {
     const componentStates = [];
     let total = 1;
     let completed = 0;
+    const phase0Gate = schemaPolicyGate(report, schemaPolicy);
+    if (phase0Gate) {
+      total += 1;
+      if (phase0Gate.complete) completed += 1;
+      if (!phase0Gate.complete) reasons.push(...phase0Gate.reasons.map((reason) => `Phase 0 policy gate: ${reason}`));
+    }
     if (constants.globalDecisions.includes(current.globalDecision) && current.globalDecision !== 'DISCUSS') completed += 1;
     else if (current.globalDecision === 'DISCUSS') reasons.push('Global decision remains DISCUSS');
     else reasons.push('Global decision is required');
@@ -543,6 +593,7 @@ function decisionRuntimeFactory(constants) {
         percent: total === 0 ? 100 : Math.round((completed / total) * 100),
       },
       components: componentStates,
+      schemaPolicyGate: phase0Gate ? clone(phase0Gate) : null,
     };
   }
 
@@ -632,8 +683,10 @@ function decisionRuntimeFactory(constants) {
     return result;
   }
 
-  function progress(report, entries, classCode = null) {
+  function progress(report, entries, classCode = null, schemaPolicy = undefined) {
     const source = entries?.entries ?? entries ?? {};
+    const governedSchemaPolicy = schemaPolicy ?? entries?.schemaPolicy;
+    const phase0Gate = schemaPolicyGate(report, governedSchemaPolicy);
     const navigationView = classCode === null
       ? null
       : (report?.navigation ?? []).find((view) => view.id === classCode);
@@ -653,7 +706,7 @@ function decisionRuntimeFactory(constants) {
     let requirementCount = 0;
     let completedRequirements = 0;
     for (const skill of skills) {
-      const state = entryState(report, skill, source[skill.stableId]);
+      const state = entryState(report, skill, source[skill.stableId], governedSchemaPolicy);
       if (state.readOnly) {
         autoResolved += 1;
         complete += 1;
@@ -676,6 +729,7 @@ function decisionRuntimeFactory(constants) {
         complete: completedRequirements,
         percent: requirementCount === 0 ? 100 : Math.round((completedRequirements / requirementCount) * 100),
       },
+      schemaPolicyGate: phase0Gate ? clone(phase0Gate) : null,
     };
   }
 
@@ -738,11 +792,15 @@ function decisionRuntimeFactory(constants) {
     validateNotes(entry.notes, `${path}.notes`, errors);
   }
 
-  function validateEnvelopeShape(payload) {
+  function validateEnvelopeShape(payload, options = {}) {
     const errors = [];
     if (!isObject(payload)) return { valid: false, errors: ['$: decision envelope must be an object'] };
     addUnknownKeyErrors(payload, ENVELOPE_KEYS, '$', errors);
-    if (payload.schemaVersion !== constants.decisionSchemaVersion) errors.push('$.schemaVersion: unsupported schema version');
+    const legacyAllowed = options.allowLegacy === true
+      && constants.legacyDecisionSchemaVersions.includes(payload.schemaVersion);
+    if (payload.schemaVersion !== constants.decisionSchemaVersion && !legacyAllowed) {
+      errors.push('$.schemaVersion: unsupported schema version');
+    }
     if (payload.kind !== constants.decisionExportKind) errors.push('$.kind: invalid export kind');
     if (!nonBlank(payload.reviewId)) errors.push('$.reviewId: required');
     if (!isSha256(payload.comparisonHash)) errors.push('$.comparisonHash: a SHA-256 digest is required');
@@ -752,6 +810,12 @@ function decisionRuntimeFactory(constants) {
       errors.push('$.exportedAt: an ISO date-time is required');
     }
     if (!['ALL', 'COMPLETE_ONLY'].includes(payload.exportScope)) errors.push('$.exportScope: invalid scope');
+    if (payload.schemaVersion === constants.decisionSchemaVersion && !Object.hasOwn(payload, 'schemaPolicy')) {
+      errors.push('$.schemaPolicy: required in decision schema v2');
+    }
+    if (payload.schemaPolicy !== undefined && payload.schemaPolicy !== null && !isObject(payload.schemaPolicy)) {
+      errors.push('$.schemaPolicy: must be an object or null');
+    }
     if (!isObject(payload.entries)) errors.push('$.entries: must be an object');
     else {
       for (const [id, entry] of Object.entries(payload.entries)) validateEntryShape(entry, `$.entries.${id}`, errors);
@@ -770,6 +834,15 @@ function decisionRuntimeFactory(constants) {
       errors.push('$.frozenContractHash: frozen contract mismatch');
     }
     if (!sameValue(payload?.sourceHashes, report?.sourceHashes)) errors.push('$.sourceHashes: governed source hashes do not match');
+    if (report?.schemaOrientation) {
+      if (!payload?.schemaPolicy) errors.push('$.schemaPolicy: governed Phase 0 policy envelope is required');
+      else {
+        const policyValidation = policyRuntime.validatePolicyEnvelope(report.schemaOrientation, payload.schemaPolicy);
+        errors.push(...policyValidation.errors.map((error) => `$.schemaPolicy${error.startsWith('$') ? error.slice(1) : `: ${error}`}`));
+      }
+    } else if (payload?.schemaPolicy !== null) {
+      errors.push('$.schemaPolicy: must be null when the report has no governed schema orientation');
+    }
 
     const skills = skillMap(report);
     for (const [id, entry] of Object.entries(payload?.entries ?? {})) {
@@ -816,7 +889,7 @@ function decisionRuntimeFactory(constants) {
       if (!isNewPlayerSkill(skill) && entry.newSkillLineDecision !== undefined) {
         errors.push(`$.entries.${id}.newSkillLineDecision: forbidden for an existing skill`);
       }
-      const state = entryState(report, skill, entry);
+      const state = entryState(report, skill, entry, payload.schemaPolicy);
       if (payload.exportScope === 'COMPLETE_ONLY' && !state.complete) {
         errors.push(`$.entries.${id}: COMPLETE_ONLY contains an incomplete decision (${state.reasons.join('; ')})`);
       } else if (!state.complete) {
@@ -841,6 +914,7 @@ function decisionRuntimeFactory(constants) {
     const scope = options.scope ?? 'ALL';
     if (!['ALL', 'COMPLETE_ONLY'].includes(scope)) throw new Error(`Unknown export scope ${scope}`);
     const source = entries?.entries ?? entries ?? {};
+    const governedSchemaPolicy = options.schemaPolicy ?? entries?.schemaPolicy ?? null;
     const output = {};
     const skills = skillMap(report);
     for (const skill of report.skills ?? []) {
@@ -852,7 +926,7 @@ function decisionRuntimeFactory(constants) {
         continue;
       }
       const entry = normalizeEntry(skill, raw);
-      if (scope === 'COMPLETE_ONLY' && !entryState(report, skill, entry).complete) continue;
+      if (scope === 'COMPLETE_ONLY' && !entryState(report, skill, entry, governedSchemaPolicy).complete) continue;
       output[id] = entry;
     }
     const envelope = {
@@ -862,8 +936,9 @@ function decisionRuntimeFactory(constants) {
       comparisonHash: report.comparisonHash,
       frozenContractHash: report.frozenContractHash ?? constants.frozenContractHash,
       sourceHashes: clone(report.sourceHashes ?? {}),
-      exportedAt: new Date().toISOString(),
+      exportedAt: options.exportedAt ?? new Date().toISOString(),
       exportScope: scope,
+      schemaPolicy: clone(governedSchemaPolicy),
       entries: output,
     };
     const validation = validateImport(report, envelope);
@@ -871,14 +946,38 @@ function decisionRuntimeFactory(constants) {
     return envelope;
   }
 
-  function migrateEnvelope(report, previous) {
-    const shape = validateEnvelopeShape(previous);
+  function migrateEnvelope(report, previous, options = {}) {
+    const shape = validateEnvelopeShape(previous, { allowLegacy: true });
     if (!shape.valid) throw new Error(`Cannot migrate an invalid decision envelope:\n${shape.errors.join('\n')}`);
     if (previous.reviewId !== (report.reviewId ?? constants.reviewId)) {
       throw new Error('Cannot migrate decisions from another reviewId');
     }
-    if (previous.frozenContractHash !== (report.frozenContractHash ?? constants.frozenContractHash)) {
-      throw new Error('Cannot migrate decisions governed by another frozen contract');
+    const legacySource = constants.legacyDecisionSchemaVersions.includes(previous.schemaVersion);
+    let migratedSchemaPolicy = null;
+    let policyMigration = null;
+    if (report.schemaOrientation) {
+      if (previous.schemaPolicy) {
+        policyMigration = policyRuntime.migratePolicyEnvelope(report.schemaOrientation, previous.schemaPolicy, {
+          exportedAt: options.exportedAt,
+        });
+        migratedSchemaPolicy = policyMigration.envelope;
+      } else {
+        migratedSchemaPolicy = policyRuntime.createPolicyEnvelope(report.schemaOrientation, {
+          exportedAt: options.exportedAt,
+        });
+        policyMigration = {
+          envelope: migratedSchemaPolicy,
+          report: {
+            fromOrientationHash: null,
+            toOrientationHash: report.schemaOrientation.orientationHash,
+            retained: [],
+            stale: [],
+            dropped: [],
+            counts: { retained: 0, stale: 0, dropped: 0 },
+            reason: legacySource ? 'LEGACY_V1_HAS_NO_SCHEMA_POLICY' : 'SCHEMA_POLICY_MISSING',
+          },
+        };
+      }
     }
     const currentSkills = skillMap(report);
     const retained = [];
@@ -906,6 +1005,7 @@ function decisionRuntimeFactory(constants) {
       }
       const candidate = normalizeEntry(skill, raw);
       const scoped = createEmptyEnvelope(report);
+      scoped.schemaPolicy = clone(migratedSchemaPolicy);
       scoped.entries = { [stableId]: candidate };
       const validation = validateImport(report, scoped);
       if (!validation.valid) {
@@ -916,13 +1016,22 @@ function decisionRuntimeFactory(constants) {
       retained.push({ stableId, fingerprint: skill.fingerprint });
     }
     const fresh = createEmptyEnvelope(report);
+    fresh.schemaPolicy = clone(migratedSchemaPolicy);
     Object.assign(fresh.entries, entries);
-    const envelope = exportEnvelope(report, fresh.entries, { scope: 'ALL' });
+    const envelope = exportEnvelope(report, fresh, {
+      scope: 'ALL',
+      schemaPolicy: migratedSchemaPolicy,
+    });
     return {
       envelope,
       report: {
+        fromSchemaVersion: previous.schemaVersion,
+        toSchemaVersion: constants.decisionSchemaVersion,
         fromComparisonHash: previous.comparisonHash,
         toComparisonHash: report.comparisonHash,
+        fromFrozenContractHash: previous.frozenContractHash,
+        toFrozenContractHash: report.frozenContractHash ?? constants.frozenContractHash,
+        policyMigration: policyMigration?.report ?? null,
         retained,
         stale,
         dropped,
@@ -936,6 +1045,8 @@ function decisionRuntimeFactory(constants) {
     createEntry,
     createEmptyEnvelope,
     storageKey,
+    legacyStorageKeys,
+    schemaPolicyGate,
     validateChoice,
     validateChoiceShape,
     resolveFieldChoice,
@@ -950,11 +1061,13 @@ function decisionRuntimeFactory(constants) {
   });
 }
 
-const runtime = decisionRuntimeFactory(RUNTIME_CONSTANTS);
+const runtime = decisionRuntimeFactory(RUNTIME_CONSTANTS, schemaPolicyRuntime);
 
 export const createEntry = runtime.createEntry;
 export const createEmptyEnvelope = runtime.createEmptyEnvelope;
 export const storageKey = runtime.storageKey;
+export const legacyStorageKeys = runtime.legacyStorageKeys;
+export const schemaPolicyGate = runtime.schemaPolicyGate;
 export const validateChoice = runtime.validateChoice;
 export const validateChoiceShape = runtime.validateChoiceShape;
 export const resolveFieldChoice = runtime.resolveFieldChoice;
@@ -968,7 +1081,7 @@ export const exportEnvelope = runtime.exportEnvelope;
 export const migrateEnvelope = runtime.migrateEnvelope;
 
 export function buildBrowserRuntimeSource() {
-  return `;globalThis.decisionRuntime=(${decisionRuntimeFactory.toString()})(${JSON.stringify(RUNTIME_CONSTANTS)});`;
+  return `${buildBrowserPolicyRuntimeSource()};globalThis.decisionRuntime=(${decisionRuntimeFactory.toString()})(${JSON.stringify(RUNTIME_CONSTANTS)},globalThis.schemaPolicyRuntime);`;
 }
 
 export const browserRuntimeSource = buildBrowserRuntimeSource();

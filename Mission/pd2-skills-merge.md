@@ -100,6 +100,88 @@ calcul.
 
 ## Choix d'architecture
 
+## Phase 0 — PD2 Skills Schema and Engine Orientation
+
+La revue skill par skill est temporairement suspendue jusqu'à l'approbation des
+politiques globales de schéma. Le contrat Phase 0 est gelé dans
+`scripts/migrate-bkvince/pd2-skills-schema-orientation-contracts.mjs` et son
+hash est intégré aux artefacts générés.
+
+Le modèle canonique Phase 0 sépare cinq couches :
+
+1. les cellules physiques `absent`, `null`, `vide`, `0` et `valeur`;
+2. la matrice des headers canoniques avec leurs noms bruts par source;
+3. les contrats mécaniques et le dictionnaire joueur;
+4. les bundles atomiques qui projettent une intention vers plusieurs cellules;
+5. les huit politiques globales, toutes `PENDING` à la génération et jamais
+   préapprouvées.
+
+L'oracle d'orientation possède au minimum :
+
+```text
+{
+  schemaVersion, orientationId, productName, state,
+  frozenContractHash, orientationHash,
+  sourceManifest, sourceHashes, workbenchBinding,
+  semanticBlankDefinition, enums, coverage,
+  columns[], mechanicalContracts[], bundles[], policies[],
+  witnesses, fireBoltImpact, unresolvedNativeQuestions[]
+}
+
+columns[] = {
+  id, canonicalHeader, rawHeaders, presence,
+  usage, examples, documentation,
+  playerLabelFr, shortHelpFr, family,
+  consumer, classifications[], primaryClassification,
+  potentialEquivalent, decisionScope, defaultPolicy,
+  technicalOnly, protected, groupId, proofStatus
+}
+
+cellEvidence = {
+  source, columnPresent, rawHeader, rawValue,
+  rawState, semanticBlank
+}
+
+policyEnvelope = {
+  schemaVersion, kind, orientationId, orientationHash,
+  frozenContractHash, sourceHashes, exportedAt,
+  decisions: {
+    <policyId>: { fingerprint, decision, justification, customPolicy? }
+  }
+}
+```
+
+`rawChanged` compare les preuves physiques. `semanticChanged` traite seulement
+`absent`, `null` et chaîne vide comme blancs sémantiques; `0` et `"0"` restent
+des valeurs. `decisionRelevant` est faux lorsqu'un écart est uniquement un
+blanc sémantique, une absence de colonne PD2 face à une colonne D2R conservée,
+un champ documentaire/économie d'objet auto-résolu par politique, ou une
+différence Vanilla historique sans proposition PD2 distincte.
+
+Les bundles gelés sont `PHYSICAL_DAMAGE_CURVE`,
+`ELEMENTAL_DAMAGE_CURVE`, `MANA_CURVE`, `DAMAGE_SYNERGIES`,
+`LENGTH_SYNERGIES`, `AURA_RADIUS`, `AURA_DURATION`,
+`PROJECTILE_ARCHITECTURE`, `PROJECTILE_PHYSICS`,
+`ITEM_TRIGGER_EXECUTION`, `NATIVE_EXECUTION`, `SUMMON_PACKAGE`,
+`PASSIVE_PACKAGE`, `UI_ASSIGNMENT` et `COOLDOWN_MODEL`. Cette phase produit
+leur simulation et leur projection déterministe, mais ne remplace pas encore
+le moteur de décisions skill par skill. Cette refonte attend l'approbation
+explicite des politiques par Vincent.
+
+L'interface entre les chantiers est figée ainsi : le générateur produit un
+oracle pur et les six artefacts documentaires; le HTML Phase 0 ne persiste que
+les politiques dans `localStorage`; le Workbench consomme le même oracle dans
+un onglet `architecture` placé avant les classes; son runtime conserve les
+décisions de skills existantes mais refuse leur statut complet tant que les
+politiques requises ne sont ni `APPROVE`, ni `MODIFY` avec justification et
+règle explicite. Le preview reste read-only et doit refuser un lot dont le gate
+Phase 0 n'est pas fermé.
+
+Les règles de non-modification sont inchangées et renforcées : aucune écriture
+dans `data-BKVince`, `data-vanilla3.2`, le snapshot PD2, `data-TCP`, un profil
+installé ou une sauvegarde; aucun ajout/suppression/réordonnancement de colonne;
+aucun déplacement de ligne/ordinal; aucune modification de dégâts.
+
 ### Références V3 auditées
 
 Le chantier a étudié au HEAD les contrats de

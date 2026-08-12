@@ -13,6 +13,7 @@ import {
   resolveFieldChoice,
   validateImport,
 } from './pd2-skills-review-runtime.mjs';
+import { policyGate } from './pd2-skills-schema-policy-runtime.mjs';
 
 const modulePath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(modulePath), '..', '..');
@@ -543,7 +544,7 @@ function emptyPreview(report, decisions, verifiedSources) {
 }
 
 function fatalImportErrors(errors) {
-  return errors.filter((error) => /(?:schemaVersion|kind|reviewId|comparisonHash|frozenContractHash|sourceHashes|fingerprint|unknown stableId|read-only identical)/i.test(error));
+  return errors.filter((error) => /(?:schemaVersion|kind|reviewId|comparisonHash|orientationHash|frozenContractHash|sourceHashes|fingerprint|unknown stableId|read-only identical|schemaPolicy.*required)/i.test(error));
 }
 
 export function compilePreview(report, decisions, options = {}) {
@@ -556,6 +557,20 @@ export function compilePreview(report, decisions, options = {}) {
   const preview = emptyPreview(report, decisions, verifiedSources);
   if (validation.errors.length > 0) {
     preview.incomplete.push(...validation.errors.map((reason) => ({ code: 'INVALID_DECISION', reason })));
+  }
+  if (report.schemaOrientation) {
+    const phase0 = decisions.schemaPolicy
+      ? policyGate(report.schemaOrientation, decisions.schemaPolicy)
+      : {
+        complete: false,
+        reasons: ['schemaPolicy: governed Phase 0 policy envelope is required'],
+      };
+    if (!phase0.complete) {
+      preview.incomplete.push({
+        code: 'PHASE_0_POLICY_GATE_OPEN',
+        reasons: phase0.reasons,
+      });
+    }
   }
 
   const skills = new Map(report.skills.map((skill) => [skill.stableId, skill]));
@@ -596,7 +611,7 @@ export function compilePreview(report, decisions, options = {}) {
       continue;
     }
     draft.collisions.push(...collisionObjects(report, skill));
-    const state = entryState(report, skill, entry);
+    const state = entryState(report, skill, entry, decisions.schemaPolicy);
     if (!state.complete) {
       preview.incomplete.push({ code: 'DECISION_INCOMPLETE', stableId, reasons: state.reasons });
       continue;

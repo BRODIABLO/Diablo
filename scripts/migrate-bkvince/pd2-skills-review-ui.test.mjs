@@ -100,6 +100,41 @@ function mockReport(overrides = {}) {
   };
 }
 
+function mockSchemaOrientation() {
+  return {
+    schemaVersion: 1,
+    orientationId: 'pd2-skills-schema-orientation-v1',
+    productName: 'PD2 Skills Schema and Engine Orientation',
+    orientationHash: 'SCHEMA-ORIENTATION-HASH',
+    frozenContractHash: 'SCHEMA-CONTRACT',
+    policySchemaVersion: 2,
+    policyKind: 'pd2-skills-schema-policy',
+    sourceHashes: { vanilla32: 'VANILLA', bkvince: 'BKV', pd2: 'PD2' },
+    columns: [{
+      id: 'delay', canonicalHeader: 'delay', rawHeaders: { pd2: 'delay' },
+      presence: { vanilla32: false, bkvince: false, pd2: true },
+      usage: { vanilla32: { nonEmptyCells: 0 }, bkvince: { nonEmptyCells: 0 }, pd2: { nonEmptyCells: 12, playerSkills: 10 }, totalNonEmptyCells: 12, playerSkills: 10 },
+      examples: { pd2: [{ skill: 'Fire Wall', rawValue: '25', rawState: 'VALUE' }] },
+      playerLabelFr: 'Délai PD2', shortHelpFr: 'Aucune traduction automatique.', family: 'timing',
+      classifications: ['PD2_SEMANTIC_SOURCE_ONLY'], primaryClassification: 'PD2_SEMANTIC_SOURCE_ONLY',
+      decisionScope: 'GLOBAL_POLICY', defaultPolicy: 'NO_AUTOMATIC_DELAY_TRANSLATION', protected: true,
+      groupId: 'COOLDOWN_MODEL', proofStatus: 'NATIVE_UNPROVEN',
+    }],
+    mechanicalContracts: [{
+      id: 'cooldowns', titleFr: 'Cooldowns', fields: ['delay', 'localdelay', 'globaldelay'],
+      consumerFr: 'Cadence des skills.', provenRelations: [], hypotheses: ['Équivalence non prouvée.'],
+      translationPolicy: 'NO_AUTOMATIC_DELAY_TRANSLATION', proofStatus: 'NATIVE_UNPROVEN',
+    }],
+    policies: [{
+      id: 'NO_AUTOMATIC_DELAY_TRANSLATION', fingerprint: 'DELAY-POLICY-FP',
+      titleFr: 'Ne jamais traduire delay automatiquement', statementFr: 'Les modèles restent distincts.',
+      proposedDecision: 'APPROVE', requiredForSkillCompletion: true,
+    }],
+    fireBoltImpact: { currentModifiedFields: 82, currentRequiredDecisions: 83, bundleCount: 6, finalPlayerDecisions: 6 },
+    unresolvedNativeQuestions: [{ id: 'delay', question: 'Le consumer PD2 delay n’est pas prouvé dans D2R.', proofStatus: 'NATIVE_UNPROVEN' }],
+  };
+}
+
 function embeddedScript(html) {
   const match = html.match(/<script>([\s\S]*)<\/script>/);
   assert.ok(match, 'one embedded application script should exist');
@@ -229,6 +264,55 @@ test('boots asynchronously from the deterministic local gzip oracle and renders 
   assert.match(root.innerHTML, /Références Wiki PD2 épinglées/);
 });
 
+test('places Architecture globale before classes, opens it by default and leaves skill views unchanged', async () => {
+  const report = mockReport({ schemaOrientation: mockSchemaOrientation() });
+  const html = buildHtml(report);
+  const listeners = {};
+  const root = {
+    innerHTML: '',
+    addEventListener(type, listener) { listeners[type] = listener; },
+    querySelector() { return null; },
+  };
+  const context = {
+    console,
+    Blob,
+    Response,
+    DecompressionStream,
+    Uint8Array,
+    atob,
+    URL,
+    document: {
+      body: { innerHTML: '' },
+      querySelector(selector) { return selector === '#workbench' ? root : null; },
+      createElement() { return { click() {} }; },
+    },
+    localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
+    navigator: {},
+    setTimeout() { return 1; },
+    clearTimeout() {},
+    confirm() { return true; },
+  };
+  context.window = context;
+  vm.runInNewContext(embeddedScript(html), context, { filename: 'pd2-skills-review.html' });
+  await context.__PD2_SKILLS_WORKBENCH_READY__;
+  assert.ok(root.innerHTML.indexOf('Architecture globale') < root.innerHTML.indexOf('Sorceress'));
+  assert.match(root.innerHTML, /PD2 Skills Schema and Engine Orientation/);
+  assert.match(root.innerHTML, /id="schema-overview"/);
+  assert.match(root.innerHTML, /82[\s\S]*Champs bruts modifiés/);
+  assert.doesNotMatch(root.innerHTML, /class="skill-card/);
+
+  const sorceressButton = { dataset: { view: 'sor' } };
+  listeners.click({ target: { closest(selector) { return selector === 'button' ? sorceressButton : null; } } });
+  assert.match(root.innerHTML, /Fire Ball/);
+  assert.match(root.innerHTML, /class="skill-card/);
+  assert.doesNotMatch(root.innerHTML, /id="schema-overview"/);
+
+  const architectureButton = { dataset: { view: 'architecture' } };
+  listeners.click({ target: { closest(selector) { return selector === 'button' ? architectureButton : null; } } });
+  assert.match(root.innerHTML, /id="schema-overview"/);
+  assert.doesNotMatch(root.innerHTML, /class="skill-card/);
+});
+
 test('integrates with the canonical browser decision runtime API', async () => {
   const html = buildHtml(mockReport(), buildBrowserRuntimeSource());
   const root = { innerHTML: '', addEventListener() {} };
@@ -259,6 +343,56 @@ test('integrates with the canonical browser decision runtime API', async () => {
   await context.__PD2_SKILLS_WORKBENCH_READY__;
   assert.match(root.innerHTML, /Fire Ball/);
   assert.doesNotMatch(root.innerHTML, /moteur de décisions embarqué est incomplet/);
+});
+
+test('threads the Phase 0 policy envelope through skill state and governed exports', async () => {
+  const policyAwareRuntime = `
+globalThis.schemaPolicyRuntime = {
+  storageKey() { return 'policy-test-key'; },
+  createEmptyEnvelope(orientation) { return { orientationId: orientation.orientationId, orientationHash: orientation.orientationHash, frozenContractHash: orientation.frozenContractHash, decisions: {} }; },
+  validateImport(orientation, candidate) { return { valid: true, envelope: candidate }; },
+};
+globalThis.decisionRuntime = {
+  constants: {},
+  createEmptyEnvelope(report) { return { schemaVersion: 2, reviewId: report.reviewId, comparisonHash: report.comparisonHash, schemaPolicy: { marker: 'PHASE0' }, entries: {} }; },
+  createEntry(skill) { return { fingerprint: skill.fingerprint, implementationStatus: 'NOT_REVIEWED', componentDecisions: {}, fieldDecisions: {}, notes: {} }; },
+  entryState(report, skill, entry, schemaPolicy) {
+    globalThis.__ENTRY_POLICY_SEEN__ = schemaPolicy?.marker;
+    return { required: !skill.readOnly, complete: false, reasons: ['Phase 0 policy gate open'], schemaPolicyGate: { required: 8, closed: 0, complete: false } };
+  },
+  applyBulk(report, ids, entries) { return { ...entries }; },
+  validateImport(report, payload) { return payload; },
+  migrateEnvelope(report, payload) { return { envelope: payload, report: { retained: [], stale: [], dropped: [] } }; },
+  exportEnvelope(report, entries, options) {
+    globalThis.__EXPORT_POLICY_SEEN__ = options.schemaPolicy?.marker;
+    return { reviewId: report.reviewId, comparisonHash: report.comparisonHash, schemaPolicy: options.schemaPolicy, exportScope: options.scope, entries };
+  },
+  storageKey(report) { return 'pd2-skills-review-decisions-v2:' + report.comparisonHash; },
+};`;
+  const report = mockReport({ schemaOrientation: mockSchemaOrientation() });
+  const html = buildHtml(report, policyAwareRuntime);
+  const listeners = {};
+  const root = { innerHTML: '', addEventListener(type, listener) { listeners[type] = listener; }, querySelector() { return null; } };
+  const context = {
+    console, Blob, Response, DecompressionStream, Uint8Array, atob, URL,
+    document: {
+      body: root,
+      querySelector(selector) { return selector === '#workbench' ? root : null; },
+      createElement() { return { click() {} }; },
+    },
+    localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
+    navigator: {}, setTimeout() { return 1; }, clearTimeout() {}, confirm() { return true; },
+  };
+  context.window = context;
+  vm.runInNewContext(embeddedScript(html), context);
+  await context.__PD2_SKILLS_WORKBENCH_READY__;
+  const sorceressButton = { dataset: { view: 'sor' } };
+  listeners.click({ target: { closest(selector) { return selector === 'button' ? sorceressButton : null; } } });
+  assert.equal(context.__ENTRY_POLICY_SEEN__, 'PHASE0');
+  assert.match(root.innerHTML, /Phase 0 policy gate open/);
+  const exportButton = { dataset: { action: 'export-all' } };
+  listeners.click({ target: { closest(selector) { return selector === 'button' ? exportButton : null; } } });
+  assert.equal(context.__EXPORT_POLICY_SEEN__, 'PHASE0');
 });
 
 test('shows an explicit local compatibility error when gzip decompression is unavailable', async () => {

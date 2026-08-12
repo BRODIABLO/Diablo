@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://ruffneckk.local/schemas/pd2-skills-decisions-v1.schema.json",
+  "$id": "https://ruffneckk.local/schemas/pd2-skills-decisions-v2.schema.json",
   "title": "PD2 Skills Merge Workbench decision envelope",
   "description": "Governed, preview-only design decisions. ALL may retain structurally valid work in progress; the runtime enforces semantic completion for COMPLETE_ONLY and preview. This document grants no gameplay implementation authority.",
   "type": "object",
@@ -14,19 +14,27 @@
     "sourceHashes",
     "exportedAt",
     "exportScope",
+    "schemaPolicy",
     "entries"
   ],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "kind": { "const": "pd2-skills-review-decisions" },
     "reviewId": { "const": "pd2-skills-review-v1" },
     "comparisonHash": { "$ref": "#/$defs/sha256" },
     "frozenContractHash": {
-      "const": "3A0C347476D16366FE1557446E03BD33705AC7AF14CA6BBA4F172935B675A69C"
+      "const": "2234738A730732960C9B86AD8EECF56929AEBDD07EF4AAFC04A4C5717947C599"
     },
     "sourceHashes": { "$ref": "#/$defs/hashObject" },
     "exportedAt": { "type": "string", "format": "date-time" },
     "exportScope": { "enum": ["ALL", "COMPLETE_ONLY"] },
+    "schemaPolicy": {
+      "description": "Autonomous governed Phase 0 schema-policy envelope; null only for reports that predate schema orientation.",
+      "oneOf": [
+        { "$ref": "#/$defs/schemaPolicyEnvelope" },
+        { "type": "null" }
+      ]
+    },
     "entries": {
       "type": "object",
       "propertyNames": { "pattern": "^skill:[a-z0-9-]+:[a-z0-9-]+(?::[a-z0-9-]+)?$" },
@@ -69,6 +77,65 @@
         },
         { "$ref": "#/$defs/hashObject" }
       ]
+    },
+    "policyDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fingerprint", "decision", "justification"],
+      "properties": {
+        "fingerprint": { "$ref": "#/$defs/sha256" },
+        "decision": { "enum": ["PENDING", "APPROVE", "MODIFY", "REJECT", "DISCUSS"] },
+        "justification": { "type": "string" },
+        "customPolicy": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "decision": { "const": "APPROVE" } }, "required": ["decision"] },
+          "then": { "properties": { "justification": { "type": "string", "minLength": 1 } } }
+        },
+        {
+          "if": { "properties": { "decision": { "const": "MODIFY" } }, "required": ["decision"] },
+          "then": {
+            "properties": {
+              "justification": { "type": "string", "minLength": 1 },
+              "customPolicy": { "type": "string", "minLength": 1 }
+            },
+            "required": ["customPolicy"]
+          }
+        },
+        {
+          "if": { "properties": { "decision": { "not": { "const": "MODIFY" } } }, "required": ["decision"] },
+          "then": { "not": { "required": ["customPolicy"] } }
+        }
+      ]
+    },
+    "schemaPolicyEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "kind",
+        "orientationId",
+        "orientationHash",
+        "frozenContractHash",
+        "sourceHashes",
+        "exportedAt",
+        "decisions"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "pd2-skills-schema-policy" },
+        "orientationId": { "const": "pd2-skills-schema-orientation-v1" },
+        "orientationHash": { "$ref": "#/$defs/sha256" },
+        "frozenContractHash": { "const": "3133A16AD42315181599DBB5DE29C4C7DAEBC5DFB7F1110639C2CEBFEA13EC6B" },
+        "sourceHashes": { "$ref": "#/$defs/hashObject" },
+        "exportedAt": { "type": "string", "format": "date-time" },
+        "decisions": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/$defs/policyDecision" }
+        }
+      }
     },
     "globalDecision": {
       "enum": [

@@ -38079,6 +38079,11 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "pd2-skills-field-dictionary.json",
+                                                           "path":  "Mission/pd2-skills-field-dictionary.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "pd2-skills-merge.md",
                                                            "path":  "Mission/pd2-skills-merge.md",
                                                            "kind":  "file"
@@ -38091,6 +38096,36 @@
                                                        {
                                                            "name":  "pd2-skills-review.json",
                                                            "path":  "Mission/pd2-skills-review.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-skills-schema-orientation.html",
+                                                           "path":  "Mission/pd2-skills-schema-orientation.html",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-skills-schema-orientation.json",
+                                                           "path":  "Mission/pd2-skills-schema-orientation.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-skills-schema-orientation.md",
+                                                           "path":  "Mission/pd2-skills-schema-orientation.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-skills-schema-policy.example.json",
+                                                           "path":  "Mission/pd2-skills-schema-policy.example.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-skills-schema-policy.json",
+                                                           "path":  "Mission/pd2-skills-schema-policy.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-skills-schema-policy.schema.json",
+                                                           "path":  "Mission/pd2-skills-schema-policy.schema.json",
                                                            "kind":  "file"
                                                        },
                                                        {
@@ -38922,11 +38957,6 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
-                                                                                "name":  "pd2-skills-review-browser-smoke.mjs",
-                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-review-browser-smoke.mjs",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
                                                                                 "name":  "pd2-skills-review.mjs",
                                                                                 "path":  "scripts/migrate-bkvince/pd2-skills-review.mjs",
                                                                                 "kind":  "file"
@@ -38934,6 +38964,11 @@
                                                                             {
                                                                                 "name":  "pd2-skills-review.test.mjs",
                                                                                 "path":  "scripts/migrate-bkvince/pd2-skills-review.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-review-browser-smoke.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-review-browser-smoke.mjs",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
@@ -38969,6 +39004,51 @@
                                                                             {
                                                                                 "name":  "pd2-skills-review-ui.test.mjs",
                                                                                 "path":  "scripts/migrate-bkvince/pd2-skills-review-ui.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-schema-orientation.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-schema-orientation.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-schema-orientation-contracts.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-schema-orientation-contracts.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-schema-orientation-data.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-schema-orientation-data.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-schema-orientation-data.test.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-schema-orientation-data.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-schema-orientation-ui.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-schema-orientation-ui.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-schema-orientation-ui.test.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-schema-orientation-ui.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-schema-orientation-verification.test.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-schema-orientation-verification.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-schema-policy-runtime.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-schema-policy-runtime.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-schema-policy-runtime.test.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-schema-policy-runtime.test.mjs",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

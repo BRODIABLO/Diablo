@@ -20,7 +20,7 @@ import {
   physicalNodeId,
   sha256Canonical,
 } from './pd2-skills-review-contracts.mjs';
-import { DEFAULT_SOURCE_ROOTS, generateOracleData } from './pd2-skills-review-data.mjs';
+import { DEFAULT_SOURCE_ROOTS } from './pd2-skills-review-data.mjs';
 import {
   applyBulk,
   createEmptyEnvelope,
@@ -72,6 +72,16 @@ const artifacts = generateSkillReviewArtifacts();
 const { report } = artifacts;
 const skillsById = new Map(report.skills.map((skill) => [skill.stableId, skill]));
 const nodesById = new Map(report.nodes.map((node) => [node.id, node]));
+
+function approvedSchemaPolicy() {
+  const policy = structuredClone(createEmptyEnvelope(report).schemaPolicy);
+  for (const entry of Object.values(policy.decisions)) {
+    entry.decision = 'APPROVE';
+    entry.justification = 'Verification fixture explicitly approves the governed Phase 0 policy.';
+  }
+  policy.exportedAt = '2026-08-12T00:00:00.000Z';
+  return policy;
+}
 
 function normalized(value) {
   return String(value ?? '').trim().toLocaleLowerCase('en');
@@ -548,7 +558,7 @@ test('hybrid decisions work field-by-field without authorizing implementation', 
   const adoptable = allFields(skill).find(({ field }) => field.changed && !field.protected);
   assert(adoptable, 'Amplify Damage needs one non-protected field for a hybrid decision');
   entry.fieldDecisions[adoptable.field.id] = { decision: 'ADOPT_PD2' };
-  const state = entryState(report, skill, entry);
+  const state = entryState(report, skill, entry, approvedSchemaPolicy());
   assert(state.complete, state.reasons.join('\n'));
   assert.equal(entry.implementationStatus, 'NOT_REVIEWED');
 
@@ -565,26 +575,27 @@ test('completion requires governed notes without coupling design to implementati
   for (const component of skill.components.filter((item) => item.changed)) {
     entry.componentDecisions[component.id] = { decision: 'KEEP_BKVINCE' };
   }
-  let state = entryState(report, skill, entry);
+  const schemaPolicy = approvedSchemaPolicy();
+  let state = entryState(report, skill, entry, schemaPolicy);
   assert.equal(state.complete, false);
   assert(state.reasons.some((reason) => /finalJustification/i.test(reason)));
   entry.notes.finalJustification = 'La baseline BKVince reste le modèle retenu.';
-  state = entryState(report, skill, entry);
+  state = entryState(report, skill, entry, schemaPolicy);
   assert.equal(state.complete, true, state.reasons.join('\n'));
   assert.equal(entry.implementationStatus, 'NOT_REVIEWED');
 
   entry.globalDecision = 'ADAPT_PD2_SELECTIVELY';
-  state = entryState(report, skill, entry);
+  state = entryState(report, skill, entry, schemaPolicy);
   assert.equal(state.complete, false);
   assert(state.reasons.some((reason) => /testPlan/i.test(reason)));
   entry.notes.testPlan = 'Tester la composante sélectionnée contre les six niveaux gouvernés.';
-  assert.equal(entryState(report, skill, entry).complete, true);
+  assert.equal(entryState(report, skill, entry, schemaPolicy).complete, true);
 
   const discuss = createEntry(skill);
   discuss.globalDecision = 'DISCUSS';
-  assert.equal(entryState(report, skill, discuss).complete, false);
+  assert.equal(entryState(report, skill, discuss, schemaPolicy).complete, false);
   discuss.notes.general = 'Question ouverte sur la fonction native.';
-  const discussState = entryState(report, skill, discuss);
+  const discussState = entryState(report, skill, discuss, schemaPolicy);
   assert.equal(discussState.complete, false, 'DISCUSS remains deliberately unresolved even with its mandatory explanatory note');
   assert(!discussState.reasons.some((reason) => /note|general|finalJustification/i.test(reason)), 'the required DISCUSS note is now satisfied');
   assert.equal(discuss.implementationStatus, 'NOT_REVIEWED');
@@ -592,7 +603,7 @@ test('completion requires governed notes without coupling design to implementati
 
 test('decision persistence is comparison-bound and rejects stale hashes and fingerprints', () => {
   const envelope = createEmptyEnvelope(report);
-  assert.equal(storageKey(report), `pd2-skills-review-decisions-v1:${report.comparisonHash}`);
+  assert.equal(storageKey(report), `pd2-skills-review-decisions-v2:${report.comparisonHash}`);
   assert(Object.values(envelope.entries).every((entry) => entry.implementationStatus === 'NOT_REVIEWED'));
   const staleHash = structuredClone(envelope);
   staleHash.comparisonHash = '0'.repeat(64);
@@ -607,8 +618,8 @@ test('decision persistence is comparison-bound and rejects stale hashes and fing
 });
 
 test('generator, comparison hash, fingerprints and standalone HTML are deterministic', () => {
-  const secondReport = generateOracleData();
   const secondArtifacts = generateSkillReviewArtifacts();
+  const secondReport = secondArtifacts.report;
   assert.equal(JSON.stringify(secondReport), JSON.stringify(report));
   assert.deepEqual(secondArtifacts.hashes, artifacts.hashes);
   assert.equal(secondArtifacts.raw.html, artifacts.raw.html);
@@ -710,9 +721,10 @@ test('preview CLI is strictly read-only, rejects --apply, and cannot write to ga
     entry.fieldDecisions[field.id] = choice;
   }
   const importEnvelope = createEmptyEnvelope(report);
+  importEnvelope.schemaPolicy = approvedSchemaPolicy();
   importEnvelope.exportScope = 'COMPLETE_ONLY';
   importEnvelope.entries = { [candidate.stableId]: entry };
-  assert.equal(entryState(report, candidate, entry).complete, true, 'verification import fixture must be decision-complete');
+  assert.equal(entryState(report, candidate, entry, importEnvelope.schemaPolicy).complete, true, 'verification import fixture must be decision-complete');
   const gatedImport = compile(report, importEnvelope);
   assert.equal(gatedImport.ready, false);
   assert.equal(gatedImport.proposedManifest, null);

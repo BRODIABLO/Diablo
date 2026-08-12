@@ -14,6 +14,7 @@ import {
   entryState,
   exportEnvelope,
   migrateEnvelope,
+  legacyStorageKeys,
   progress,
   resolveFieldChoice,
   storageKey,
@@ -21,6 +22,15 @@ import {
   validateImport,
 } from './pd2-skills-review-runtime.mjs';
 import { FROZEN_CONTRACT_HASH, REVIEW_ID } from './pd2-skills-review-contracts.mjs';
+import {
+  FROZEN_ORIENTATION_CONTRACT_HASH,
+  GLOBAL_SCHEMA_POLICIES,
+  ORIENTATION_ID,
+} from './pd2-skills-schema-orientation-contracts.mjs';
+import {
+  createPolicyEnvelope,
+  policyGate,
+} from './pd2-skills-schema-policy-runtime.mjs';
 
 const HASH_A = 'A'.repeat(64);
 const HASH_B = 'B'.repeat(64);
@@ -145,6 +155,32 @@ function fixtureReport() {
   };
 }
 
+function fixtureOrientation() {
+  return {
+    schemaVersion: 1,
+    orientationId: ORIENTATION_ID,
+    orientationHash: HASH_C,
+    frozenContractHash: FROZEN_ORIENTATION_CONTRACT_HASH,
+    sourceHashes: { vanilla32: HASH_A, bkvince: HASH_B, pd2: HASH_C },
+    policies: GLOBAL_SCHEMA_POLICIES.map((policy, index) => ({
+      ...policy,
+      fingerprint: String(index + 1).repeat(64).slice(0, 64),
+    })),
+  };
+}
+
+function approvedSchemaPolicy(orientation) {
+  const envelope = createPolicyEnvelope(orientation);
+  for (const policy of orientation.policies) {
+    envelope.decisions[policy.id] = {
+      fingerprint: policy.fingerprint,
+      decision: 'APPROVE',
+      justification: `Approve ${policy.id} for governed review.`,
+    };
+  }
+  return envelope;
+}
+
 function completeKeepEntry(report, canonicalSkill) {
   const entry = createEntry(canonicalSkill);
   entry.globalDecision = 'KEEP_BKVINCE';
@@ -168,7 +204,8 @@ test('formal Draft 2020-12 schema accepts a full default governed envelope', () 
   assert.equal(validate(envelope), true, JSON.stringify(validate.errors));
   assert.equal(envelope.entries['skill:ama:critical-strike'], undefined, 'identical skills must not receive mutable entries');
   assert.equal(envelope.entries['skill:sor:combustion'].newSkillLineDecision, null);
-  assert.equal(storageKey(report), `pd2-skills-review-decisions-v1:${HASH_A}`);
+  assert.equal(storageKey(report), `pd2-skills-review-decisions-v2:${HASH_A}`);
+  assert.deepEqual(legacyStorageKeys(report), [`pd2-skills-review-decisions-v1:${HASH_A}`]);
 
   const inProgress = structuredClone(envelope);
   inProgress.entries['skill:nec:amplify-damage'].globalDecision = 'ADAPT_PD2_SELECTIVELY';
@@ -455,4 +492,73 @@ test('progress is global/class-aware and browser-injected runtime matches Node c
     isolated.decisionRuntime.entryState(report, amplify, entries[amplify.stableId]),
     entryState(report, amplify, entries[amplify.stableId]),
   );
+});
+
+test('Phase 0 policies gate every mutable skill but never disturb identical read-only auto-resolution', () => {
+  const report = fixtureReport();
+  report.schemaOrientation = fixtureOrientation();
+  const amplify = report.skills[0];
+  const complete = completeKeepEntry({ ...report, schemaOrientation: undefined }, amplify);
+  const pending = createPolicyEnvelope(report.schemaOrientation);
+
+  let state = entryState(report, amplify, complete, pending);
+  assert.equal(state.complete, false);
+  assert.equal(state.schemaPolicyGate.open, true);
+  assert.equal(state.requirements.remaining, 1, 'the eight global policies project as one atomic skill gate');
+  assert(state.reasons.some((reason) => /Phase 0 policy gate/.test(reason)));
+
+  const approved = approvedSchemaPolicy(report.schemaOrientation);
+  assert.equal(policyGate(report.schemaOrientation, approved).complete, true);
+  state = entryState(report, amplify, complete, approved);
+  assert.equal(state.complete, true, state.reasons.join('\n'));
+  const governedProgress = progress(report, { entries: { [amplify.stableId]: complete }, schemaPolicy: approved });
+  assert.equal(governedProgress.complete >= 2, true);
+  assert.equal(governedProgress.schemaPolicyGate.required, 8, 'progress exposes global policies once');
+  assert.equal(governedProgress.schemaPolicyGate.closed, 8);
+
+  const identical = report.skills.find((candidate) => candidate.readOnly);
+  assert.equal(entryState(report, identical, undefined, pending).complete, true);
+  assert.equal(entryState(report, identical, undefined, pending).readOnly, true);
+});
+
+test('formal v2 decision schema accepts the autonomous Phase 0 policy envelope', () => {
+  const report = fixtureReport();
+  report.schemaOrientation = fixtureOrientation();
+  const envelope = createEmptyEnvelope(report);
+  const schemaPath = path.resolve(import.meta.dirname, '..', '..', 'Mission', 'pd2-skills-decisions.schema.json');
+  const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+  const ajv = new Ajv2020({ allErrors: true, strict: true });
+  addFormats(ajv);
+  const validate = ajv.compile(schema);
+  assert.equal(validate(envelope), true, JSON.stringify(validate.errors));
+  const imported = validateImport(report, envelope);
+  assert.equal(imported.valid, true, imported.errors.join('\n'));
+  assert.equal(imported.warnings.length, report.skills.filter((skill) => !skill.readOnly).length);
+});
+
+test('v2 exports carry autonomous schemaPolicy and legacy v1 is migration-only with open fresh policies', () => {
+  const report = fixtureReport();
+  report.schemaOrientation = fixtureOrientation();
+  const amplify = report.skills[0];
+  const entry = completeKeepEntry({ ...report, schemaOrientation: undefined }, amplify);
+  const approved = approvedSchemaPolicy(report.schemaOrientation);
+  const exported = exportEnvelope(report, { [amplify.stableId]: entry }, {
+    scope: 'COMPLETE_ONLY',
+    schemaPolicy: approved,
+  });
+  assert.equal(exported.schemaVersion, 2);
+  assert.deepEqual(exported.schemaPolicy, approved);
+  assert.equal(validateImport(report, exported).valid, true);
+
+  const legacy = structuredClone(exported);
+  legacy.schemaVersion = 1;
+  legacy.frozenContractHash = '3A0C347476D16366FE1557446E03BD33705AC7AF14CA6BBA4F172935B675A69C';
+  delete legacy.schemaPolicy;
+  assert.equal(validateImport(report, legacy).valid, false, 'legacy v1 must never be imported directly');
+  const migrated = migrateEnvelope(report, legacy);
+  assert.equal(migrated.envelope.schemaVersion, 2);
+  assert.equal(migrated.report.fromSchemaVersion, 1);
+  assert.equal(migrated.report.policyMigration.reason, 'LEGACY_V1_HAS_NO_SCHEMA_POLICY');
+  assert(Object.values(migrated.envelope.schemaPolicy.decisions).every((decision) => decision.decision === 'PENDING'));
+  assert.equal(entryState(report, amplify, migrated.envelope.entries[amplify.stableId], migrated.envelope.schemaPolicy).complete, false);
 });

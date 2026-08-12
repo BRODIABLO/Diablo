@@ -10,15 +10,25 @@ import {
   REVIEW_ID,
   canonicalize,
 } from './pd2-skills-review-contracts.mjs';
-import { generateOracleData } from './pd2-skills-review-data.mjs';
+import {
+  DEFAULT_SOURCE_ROOTS,
+  buildOracleData,
+  loadWorkbenchSources,
+} from './pd2-skills-review-data.mjs';
 import { buildSkillReviewHtml } from './pd2-skills-review-ui.mjs';
 import { buildBrowserRuntimeSource } from './pd2-skills-review-runtime.mjs';
+import {
+  ORIENTATION_ARTIFACT_PATHS,
+  buildSchemaOrientationArtifacts,
+  buildWorkbenchOrientationBinding,
+} from './pd2-skills-schema-orientation.mjs';
 
 export const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 export const OUTPUT_PATHS = Object.freeze({
   report: path.join(repoRoot, 'Mission', 'pd2-skills-review.json'),
   html: path.join(repoRoot, 'Mission', 'pd2-skills-review.html'),
   documentation: path.join(repoRoot, 'Mission', 'pd2-skills-documentation-map.json'),
+  ...ORIENTATION_ARTIFACT_PATHS,
 });
 
 function sha256(value) {
@@ -48,6 +58,12 @@ function assertOracle(report) {
   if (!Array.isArray(report.nodes) || !Array.isArray(report.skills) || !Array.isArray(report.collisions)) {
     throw new Error('oracle must expose nodes, skills, and collisions arrays');
   }
+  if (!report.schemaOrientation || report.schemaOrientation.orientationHash !== report.policyHashes?.schemaOrientation) {
+    throw new Error('oracle must embed the governed Phase 0 schema orientation');
+  }
+  if (report.schemaOrientation.workbenchBinding?.comparisonHash !== report.comparisonHash) {
+    throw new Error('schema orientation workbench binding must match the final comparisonHash');
+  }
   const stableIds = new Set();
   for (const skill of report.skills) {
     if (!skill.stableId || stableIds.has(skill.stableId)) {
@@ -65,6 +81,31 @@ function assertOracle(report) {
       }
     }
   }
+}
+
+export function buildIntegratedWorkbenchReport(roots = DEFAULT_SOURCE_ROOTS) {
+  const sources = loadWorkbenchSources(roots);
+  const baseReport = buildOracleData(sources);
+  const phase0 = buildSchemaOrientationArtifacts(roots, { sources, skillReport: baseReport });
+  const orientation = phase0.orientation;
+  const {
+    sourceManifest,
+    sourceHashes,
+    policyHashes,
+    comparisonHash,
+  } = buildWorkbenchOrientationBinding(baseReport, orientation);
+  const report = {
+    ...baseReport,
+    comparisonHash,
+    sourceManifest,
+    sourceHashes,
+    policyHashes,
+    schemaOrientation: {
+      ...orientation,
+      workbenchBinding: { reviewId: baseReport.reviewId, comparisonHash },
+    },
+  };
+  return { report, orientationArtifacts: phase0 };
 }
 
 export function buildDocumentationMap(report) {
@@ -89,7 +130,8 @@ export function buildDocumentationMap(report) {
 }
 
 export function generateSkillReviewArtifacts(options = {}) {
-  const report = generateOracleData(options.roots);
+  const integrated = buildIntegratedWorkbenchReport(options.roots ?? DEFAULT_SOURCE_ROOTS);
+  const { report, orientationArtifacts } = integrated;
   assertOracle(report);
   const documentation = buildDocumentationMap(report);
   const runtimeSource = buildBrowserRuntimeSource();
@@ -103,11 +145,12 @@ export function generateSkillReviewArtifacts(options = {}) {
     report: `${JSON.stringify(report)}\n`,
     documentation: `${JSON.stringify(documentation, null, 2)}\n`,
     html,
+    ...orientationArtifacts.artifacts,
   });
   const hashes = Object.freeze(Object.fromEntries(
     Object.entries(raw).map(([key, value]) => [key, sha256(value)]),
   ));
-  return { report, documentation, runtimeSource, raw, hashes };
+  return { report, documentation, runtimeSource, orientationArtifacts, raw, hashes };
 }
 
 function compareFile(filePath, expected) {
@@ -121,11 +164,10 @@ function compareFile(filePath, expected) {
 }
 
 export function checkSkillReviewArtifacts(generated = generateSkillReviewArtifacts()) {
-  const checks = {
-    report: compareFile(OUTPUT_PATHS.report, generated.raw.report),
-    html: compareFile(OUTPUT_PATHS.html, generated.raw.html),
-    documentation: compareFile(OUTPUT_PATHS.documentation, generated.raw.documentation),
-  };
+  const checks = Object.fromEntries(Object.entries(generated.raw).map(([id, value]) => [
+    id,
+    compareFile(OUTPUT_PATHS[id], value),
+  ]));
   const stale = Object.entries(checks).filter(([, check]) => !check.matches);
   if (stale.length) {
     throw new Error(`stale PD2 skill review artifact(s): ${stale.map(([name]) => name).join(', ')}`);
@@ -134,9 +176,11 @@ export function checkSkillReviewArtifacts(generated = generateSkillReviewArtifac
 }
 
 export function writeSkillReviewArtifacts(generated = generateSkillReviewArtifacts()) {
-  fs.writeFileSync(OUTPUT_PATHS.report, generated.raw.report, 'utf8');
-  fs.writeFileSync(OUTPUT_PATHS.documentation, generated.raw.documentation, 'utf8');
-  fs.writeFileSync(OUTPUT_PATHS.html, generated.raw.html, 'utf8');
+  for (const [id, value] of Object.entries(generated.raw)) {
+    const filePath = OUTPUT_PATHS[id];
+    if (!filePath) throw new Error(`No governed output path for ${id}`);
+    fs.writeFileSync(filePath, value, 'utf8');
+  }
   return generated.hashes;
 }
 

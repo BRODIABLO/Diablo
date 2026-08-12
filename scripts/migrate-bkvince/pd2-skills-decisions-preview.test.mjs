@@ -17,6 +17,12 @@ import {
   exportEnvelope,
 } from './pd2-skills-review-runtime.mjs';
 import { FROZEN_CONTRACT_HASH, REVIEW_ID } from './pd2-skills-review-contracts.mjs';
+import {
+  FROZEN_ORIENTATION_CONTRACT_HASH,
+  GLOBAL_SCHEMA_POLICIES,
+  ORIENTATION_ID,
+} from './pd2-skills-schema-orientation-contracts.mjs';
+import { createPolicyEnvelope } from './pd2-skills-schema-policy-runtime.mjs';
 import { generateOracleData } from './pd2-skills-review-data.mjs';
 
 const HASH_A = 'A'.repeat(64);
@@ -150,6 +156,33 @@ function fixture(t, selectedSkills = []) {
 
 function decisionsFor(report, entries, scope = 'COMPLETE_ONLY') {
   return exportEnvelope(report, entries, { scope });
+}
+
+function attachOrientation(report) {
+  report.schemaOrientation = {
+    schemaVersion: 1,
+    orientationId: ORIENTATION_ID,
+    orientationHash: HASH_C,
+    frozenContractHash: FROZEN_ORIENTATION_CONTRACT_HASH,
+    sourceHashes: structuredClone(report.sourceHashes),
+    policies: GLOBAL_SCHEMA_POLICIES.map((policy, index) => ({
+      ...policy,
+      fingerprint: String(index + 1).repeat(64).slice(0, 64),
+    })),
+  };
+  return report.schemaOrientation;
+}
+
+function approveSchemaPolicies(orientation) {
+  const envelope = createPolicyEnvelope(orientation);
+  for (const policy of orientation.policies) {
+    envelope.decisions[policy.id] = {
+      fingerprint: policy.fingerprint,
+      decision: 'APPROVE',
+      justification: `Approve ${policy.id} before skill preview.`,
+    };
+  }
+  return envelope;
 }
 
 function keepEntry(skill, justification = 'Keep the governed BKVince behavior.') {
@@ -538,6 +571,35 @@ test('an empty COMPLETE_ONLY export cannot emit an applicable empty manifest', (
   assert.equal(preview.ready, false);
   assert.equal(preview.proposedManifest, null);
   assert(preview.incomplete.some((item) => item.code === 'NO_SELECTED_DECISIONS'));
+});
+
+test('preview remains atomically read-only while any required Phase 0 schema policy is open', (t) => {
+  const skill = canonicalSkill('skill:nec:amplify-damage', 'Amplify Damage', 1, [
+    group('damage_model', [canonicalField('power', ['1', '1', '2'], { bkvinceRow: 1, pd2Row: 1 })]),
+  ], { classCode: 'nec', scope: 'nec' });
+  const { root, report } = fixture(t, [skill]);
+  const orientation = attachOrientation(report);
+  const entry = keepEntry(skill);
+  const pending = createPolicyEnvelope(orientation);
+  const openDecisions = exportEnvelope(report, { [skill.stableId]: entry }, {
+    scope: 'ALL',
+    schemaPolicy: pending,
+  });
+  let preview = compilePreview(report, openDecisions, { repoRoot: root });
+  assert.equal(preview.ready, false);
+  assert.equal(preview.proposedManifest, null);
+  assert.deepEqual(preview.proposedCells, []);
+  assert.deepEqual(preview.proposedRows, []);
+  assert(preview.incomplete.some((item) => item.code === 'PHASE_0_POLICY_GATE_OPEN'));
+
+  const approved = approveSchemaPolicies(orientation);
+  const closedDecisions = exportEnvelope(report, { [skill.stableId]: entry }, {
+    scope: 'COMPLETE_ONLY',
+    schemaPolicy: approved,
+  });
+  preview = compilePreview(report, closedDecisions, { repoRoot: root });
+  assert.equal(preview.ready, true, JSON.stringify({ conflicts: preview.conflicts, incomplete: preview.incomplete }));
+  assert.equal(preview.implementationAuthorized, false);
 });
 
 test('stale comparison, fingerprints and source hashes fail before projection', (t) => {

@@ -1,12 +1,23 @@
 import crypto from 'node:crypto';
 
 export const ORACLE_SCHEMA_VERSION = 1;
-export const DECISION_SCHEMA_VERSION = 1;
+export const DECISION_SCHEMA_VERSION = 2;
 export const PREVIEW_SCHEMA_VERSION = 1;
 export const REVIEW_ID = 'pd2-skills-review-v1';
 export const PREVIEW_ID = 'pd2-skills-decisions-preview-v1';
 export const DECISION_EXPORT_KIND = 'pd2-skills-review-decisions';
-export const STORAGE_KEY_PREFIX = 'pd2-skills-review-decisions-v1:';
+export const STORAGE_KEY_PREFIX = 'pd2-skills-review-decisions-v2:';
+export const LEGACY_DECISION_SCHEMA_VERSIONS = Object.freeze([1]);
+export const LEGACY_STORAGE_KEY_PREFIXES = Object.freeze(['pd2-skills-review-decisions-v1:']);
+
+export const SCHEMA_ORIENTATION_INTERFACE = Object.freeze({
+  contractHash: '3133A16AD42315181599DBB5DE29C4C7DAEBC5DFB7F1110639C2CEBFEA13EC6B',
+  reportField: 'schemaOrientation',
+  decisionEnvelopeField: 'schemaPolicy',
+  navigationId: 'architecture',
+  completionGate: 'Every required Phase 0 policy must be APPROVE, or MODIFY with an explicit governed replacement, before a non-read-only skill decision can be complete.',
+  migration: 'Version 1 decision envelopes are migration sources only; direct import and preview require version 2.',
+});
 
 export const SOURCE_ORDER = Object.freeze(['vanilla32', 'bkvince', 'pd2']);
 export const CLASS_ORDER = Object.freeze(['ama', 'sor', 'nec', 'pal', 'bar', 'dru', 'ass', 'war']);
@@ -225,6 +236,9 @@ export const FROZEN_CONTRACT_HASH = sha256Canonical({
   PREVIEW_SCHEMA_VERSION,
   REVIEW_ID,
   DECISION_EXPORT_KIND,
+  LEGACY_DECISION_SCHEMA_VERSIONS,
+  LEGACY_STORAGE_KEY_PREFIXES,
+  SCHEMA_ORIENTATION_INTERFACE,
   SOURCE_ORDER,
   CLASS_ORDER,
   PLAYER_CLASS_CODES,

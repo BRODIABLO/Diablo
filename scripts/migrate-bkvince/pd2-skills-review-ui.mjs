@@ -16,6 +16,11 @@
  * protection rules to that runtime. It only owns rendering and browser I/O.
  */
 
+import {
+  buildSchemaOrientationApplicationSource,
+  SCHEMA_ORIENTATION_STYLE,
+} from './pd2-skills-schema-orientation-ui.mjs';
+
 function protectInlineSource(source) {
   return String(source)
     .replace(/<\/script/gi, '<\\/script')
@@ -74,8 +79,11 @@ function skillReviewBrowserApplication() {
   const collisionById = new Map((report.collisions || []).map((collision) => [collision.id, collision]));
   const normalizedNavigation = normalizeNavigation(report.navigation || [], report.skills);
   const navById = new Map(normalizedNavigation.map((view) => [view.id, view]));
+  const schemaOrientation = report.schemaOrientation && typeof report.schemaOrientation === 'object'
+    ? report.schemaOrientation
+    : null;
   const ui = {
-    activeViewId: normalizedNavigation[0]?.id || 'all',
+    activeViewId: schemaOrientation ? 'architecture' : (normalizedNavigation[0]?.id || 'all'),
     mode: 'player',
     expanded: new Set(),
     filters: {
@@ -90,6 +98,23 @@ function skillReviewBrowserApplication() {
   let envelope = loadEnvelope();
 
   const root = document.querySelector('#workbench');
+  let schemaPolicyControllerReady = false;
+  const schemaOrientationController = schemaOrientation && typeof globalThis.schemaOrientationUI?.createController === 'function'
+    ? globalThis.schemaOrientationUI.createController(schemaOrientation, {
+      policyRuntime: globalThis.schemaPolicyRuntime,
+      storage: globalThis.localStorage,
+      root,
+      initialEnvelope: envelope.schemaPolicy,
+      requestRender: render,
+      notify: showNotice,
+      download,
+      onPolicyChange(policyEnvelope) {
+        envelope.schemaPolicy = policyEnvelope;
+        if (schemaPolicyControllerReady) scheduleSave();
+      },
+    })
+    : null;
+  schemaPolicyControllerReady = true;
   root.addEventListener('click', onClick);
   root.addEventListener('change', onChange);
   root.addEventListener('input', onInput);
@@ -217,7 +242,7 @@ function skillReviewBrowserApplication() {
 
   function reviewState(skill) {
     try {
-      return runtime.entryState(report, skill, entryFor(skill, false)) || {};
+      return runtime.entryState(report, skill, entryFor(skill, false), envelope.schemaPolicy) || {};
     } catch (error) {
       return { required: !skill.readOnly, complete: false, reasons: [error.message] };
     }
@@ -365,20 +390,32 @@ function skillReviewBrowserApplication() {
   }
 
   function render() {
-    const currentView = activeView();
     const allStats = dashboardStats(report.skills);
-    const viewSkills = currentView.skillIds.map((id) => skillById.get(id)).filter(Boolean);
-    const viewStats = dashboardStats(viewSkills);
-    const skills = visibleSkills();
+    const architectureActive = ui.activeViewId === 'architecture' && schemaOrientationController;
+    const currentView = architectureActive ? null : activeView();
+    const viewSkills = currentView ? currentView.skillIds.map((id) => skillById.get(id)).filter(Boolean) : [];
+    const viewStats = currentView ? dashboardStats(viewSkills) : null;
+    const skills = currentView ? visibleSkills() : [];
     root.innerHTML = renderHeader(allStats)
       + '<div id="notice" class="notice" hidden role="status" aria-live="polite"></div>'
       + '<div class="layout">'
       + renderNavigation()
       + '<main id="main-content" tabindex="-1">'
-      + renderDashboard(currentView, viewStats)
-      + renderActiveFilters(skills.length)
-      + renderSkillGroups(skills, currentView)
+      + (architectureActive
+        ? schemaOrientationController.render()
+        : renderDashboard(currentView, viewStats) + renderActiveFilters(skills.length) + renderSkillGroups(skills, currentView))
       + '</main></div>';
+    // The sticky topbar height varies with viewport wrapping and filters. Keep
+    // the class/tree navigation below its measured edge instead of relying on
+    // a fixed desktop offset that can make the first classes unclickable.
+    const afterPaint = typeof window.requestAnimationFrame === 'function'
+      ? window.requestAnimationFrame.bind(window)
+      : (callback) => callback();
+    afterPaint(() => {
+      const topbar = typeof root.querySelector === 'function' ? root.querySelector('.topbar') : null;
+      if (!topbar || typeof topbar.getBoundingClientRect !== 'function') return;
+      root.style?.setProperty?.('--workbench-sticky-top', Math.ceil(topbar.getBoundingClientRect().height + 12) + 'px');
+    });
   }
 
   function renderBaselineNotice() {
@@ -443,12 +480,13 @@ function skillReviewBrowserApplication() {
 
   function renderNavigation() {
     return '<aside class="sidebar"><nav aria-label="Classes et vues">'
+      + (schemaOrientationController ? '<button type="button" data-view="architecture" class="nav-view ' + (ui.activeViewId === 'architecture' ? 'active' : '') + '"><span>Architecture globale</span><small>Phase 0</small></button>' : '')
       + normalizedNavigation.map((view) => {
         const skills = view.skillIds.map((id) => skillById.get(id)).filter(Boolean);
         const progress = progressFor(skills);
         return '<button type="button" data-view="' + escapeAttribute(view.id) + '" class="nav-view ' + (view.id === ui.activeViewId ? 'active' : '') + '"><span>' + escapeHtml(view.label) + '</span><small>' + progress.complete + '/' + progress.required + '</small></button>';
       }).join('')
-      + '</nav><div id="tree-nav">' + renderTreeNavigation(activeView()) + '</div></aside>';
+      + '</nav><div id="tree-nav">' + (ui.activeViewId === 'architecture' ? '' : renderTreeNavigation(activeView())) + '</div></aside>';
   }
 
   function renderTreeNavigation(view) {
@@ -811,6 +849,7 @@ function skillReviewBrowserApplication() {
   }
 
   function onClick(event) {
+    if (ui.activeViewId === 'architecture' && schemaOrientationController?.handleClick(event)) return;
     const button = event.target.closest('button');
     if (!button) return;
     if (button.dataset.view) {
@@ -873,6 +912,7 @@ function skillReviewBrowserApplication() {
   }
 
   function onChange(event) {
+    if (ui.activeViewId === 'architecture' && schemaOrientationController?.handleChange(event)) return;
     const target = event.target;
     if (target.matches('[data-filter]')) {
       const property = target.dataset.filter;
@@ -926,6 +966,7 @@ function skillReviewBrowserApplication() {
   }
 
   function onInput(event) {
+    if (ui.activeViewId === 'architecture' && schemaOrientationController?.handleInput(event)) return;
     const target = event.target;
     if (target.id === 'global-search') {
       ui.filters.query = target.value;
@@ -1022,6 +1063,9 @@ function skillReviewBrowserApplication() {
   function resetGlobal() {
     if (!window.confirm('Réinitialiser toutes les décisions locales liées à ce comparisonHash ?')) return;
     envelope = runtime.createEmptyEnvelope(report);
+    if (schemaOrientationController && envelope.schemaPolicy) {
+      schemaOrientationController.setEnvelope(envelope.schemaPolicy, { persist: true, render: false });
+    }
     try { localStorage.removeItem(storageKey); } catch { /* export remains available */ }
     showNotice('Décisions globales réinitialisées.', 'ok');
     render();
@@ -1053,6 +1097,9 @@ function skillReviewBrowserApplication() {
       }
       if (!imported?.entries) throw new Error('La migration n’a produit aucune enveloppe de décisions.');
       envelope = imported;
+      if (schemaOrientationController && envelope.schemaPolicy) {
+        schemaOrientationController.setEnvelope(envelope.schemaPolicy, { persist: true, render: false });
+      }
       scheduleSave();
       render();
     } catch (error) {
@@ -1062,7 +1109,7 @@ function skillReviewBrowserApplication() {
 
   function exportDecisions(scope) {
     try {
-      const payload = runtime.exportEnvelope(report, envelope.entries || {}, { scope });
+      const payload = runtime.exportEnvelope(report, envelope.entries || {}, { scope, schemaPolicy: envelope.schemaPolicy });
       download(scope === 'COMPLETE_ONLY' ? 'pd2-skills-decisions-complete.json' : 'pd2-skills-decisions-all.json', JSON.stringify(payload, null, 2) + '\n', 'application/json');
     } catch (error) {
       showNotice('Export refusé : ' + error.message, 'error');
@@ -1075,6 +1122,7 @@ function skillReviewBrowserApplication() {
       reviewId: report.reviewId,
       comparisonHash: report.comparisonHash,
       sourceHashes: report.sourceHashes,
+      schemaPolicy: envelope.schemaPolicy || null,
       skill,
       decision: entryFor(skill, false),
       reviewState: reviewState(skill),
@@ -1103,6 +1151,9 @@ function skillReviewBrowserApplication() {
       '- Raisons: ' + asArray(skill.portability?.reasons).map(display).join('; '),
       '- Dépendances manquantes: ' + asArray(skill.portability?.missingDependencies).map(display).join('; '),
       '- Preuves encore requises: ' + asArray(skill.portability?.requiredProof || skill.portability?.missingProof).map(display).join('; '), '',
+      '## Gate Phase 0', '', state.schemaPolicyGate
+        ? '- Politiques fermées: ' + state.schemaPolicyGate.closed + ' / ' + state.schemaPolicyGate.required + ' · ' + (state.schemaPolicyGate.complete ? 'FERMÉ' : 'OUVERT')
+        : '- Non applicable à cet oracle.', '',
       '## Décisions actuelles', '', '```json', JSON.stringify(current, null, 2), '```', '',
       '## Questions non résolues', '', ...asArray(state.questions || state.unresolvedQuestions || state.reasons).map((item) => '- ' + display(item)), '',
       '## Notes de Vincent', '', ...Object.entries(current.notes || {}).map(([key, value]) => '- ' + friendly(key) + ': ' + (value || '—')), '',
@@ -1180,9 +1231,9 @@ function skillReviewBrowserApplication() {
   }
 }
 
-const STYLE = `
-:root{color-scheme:dark;--bg:#091018;--panel:#111c28;--panel-2:#172536;--panel-3:#213247;--line:#344a61;--text:#eef5fb;--muted:#9fb0c1;--gold:#f0bd6b;--blue:#72c8ff;--green:#6ed49a;--red:#ff8d88;--violet:#b9a1ff;--shadow:0 12px 35px #0006}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 75% -20%,#17304c 0,transparent 42%),var(--bg);color:var(--text);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}button,input,select,textarea{font:inherit}button,select,input,textarea{border:1px solid var(--line);border-radius:7px;background:var(--panel-2);color:var(--text);padding:8px 10px}button{cursor:pointer}button:hover,button:focus-visible{border-color:var(--gold);outline:none}button.active{background:#2d3e55;color:#fff;border-color:var(--gold)}button.danger{border-color:#74454a;color:#ffc0bd}label>span{display:block;color:var(--muted);font-size:12px;margin-bottom:3px}textarea{width:100%;min-height:68px;resize:vertical}code,pre{font:12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#09131e;padding:12px;border-radius:8px;border:1px solid var(--line);max-height:520px;overflow:auto}.topbar{position:sticky;top:0;z-index:20;padding:13px 20px 11px;background:#091018f2;backdrop-filter:blur(15px);border-bottom:1px solid var(--line);box-shadow:0 4px 18px #0005}.title-row{display:flex;justify-content:space-between;gap:20px;align-items:center}.title-row h1{font-size:23px;margin:0}.title-row p{margin:1px 0;color:var(--muted)}.global-progress{display:grid;grid-template-columns:auto auto;gap:2px 10px;align-items:center}.global-progress progress{grid-column:1/-1;width:220px;height:7px}.non-mutation{margin:8px 0;padding:7px 10px;border-left:3px solid var(--gold);background:#302615;color:#ffdfa8}.primary-controls,.persistence-toolbar,.filters,.chips,.card-actions,.bulk-controls,.dashboard-actions{display:flex;gap:7px;align-items:end;flex-wrap:wrap}.primary-controls .search{flex:1;min-width:230px}.primary-controls .search input{width:100%}.segmented{display:flex}.segmented button{border-radius:0}.segmented button:first-child{border-radius:7px 0 0 7px}.segmented button:last-child{border-radius:0 7px 7px 0}.filter-panel{margin-top:8px}.filter-panel summary{cursor:pointer;color:var(--muted)}.filters{padding-top:8px}.filters label:not(.check){min-width:145px}.check{align-self:center}.persistence-toolbar{margin-top:8px}.hash{color:var(--muted);font:11px ui-monospace,monospace}#save-status{padding:5px 8px;border-radius:99px;color:var(--muted)}#save-status[data-status=saved]{color:var(--green)}#save-status[data-status=error]{color:var(--red)}.notice{position:fixed;right:18px;bottom:18px;z-index:50;max-width:520px;padding:12px 15px;background:var(--panel-3);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}.notice.ok{border-color:var(--green)}.notice.error{border-color:var(--red)}.notice.warning{border-color:var(--gold)}.layout{display:grid;grid-template-columns:230px minmax(0,1fr);max-width:1800px;margin:auto}.sidebar{position:sticky;top:253px;align-self:start;max-height:calc(100vh - 270px);overflow:auto;padding:18px 12px;border-right:1px solid var(--line)}.sidebar nav{display:grid;gap:5px}.sidebar button{display:flex;justify-content:space-between;text-align:left}.sidebar small{color:var(--muted)}.sidebar h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:18px 5px 7px}#main-content{min-width:0;padding:20px}.dashboard,.tree{margin-bottom:24px}.section-title,.tree-heading{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.eyebrow{text-transform:uppercase;letter-spacing:.12em;color:var(--gold);font-size:11px;margin:0}.section-title h2,.tree-heading h2{margin:1px 0}.metrics{display:grid;grid-template-columns:repeat(6,minmax(105px,1fr));gap:8px;margin:12px 0}.metric{background:linear-gradient(145deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:9px;padding:10px}.metric strong{font-size:22px;display:block}.metric span{color:var(--muted);font-size:12px}.metric.ok strong{color:var(--green)}.metric.warning strong{color:var(--gold)}.metric.danger strong{color:var(--red)}.scope-bulk,.tree-bulk{padding:9px;background:var(--panel);border:1px solid var(--line);border-radius:9px}.tree-bulk>span{display:block;color:var(--muted);font-size:11px}.result-summary{padding:8px 11px;background:#0d1722;border:1px solid var(--line);border-radius:7px;margin-bottom:14px;color:var(--muted)}.tree{scroll-margin-top:275px}.tree-heading{border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:10px}.skill-card{scroll-margin-top:275px;border:1px solid var(--line);border-radius:11px;background:linear-gradient(150deg,#132131,#0f1925);margin:10px 0;overflow:hidden;box-shadow:0 6px 20px #0003}.skill-card.incomplete{border-left:4px solid var(--gold)}.skill-card.complete{border-left:4px solid var(--green)}.skill-card.read-only{border-left-color:#72849a}.skill-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px}.expander{display:flex;align-items:center;gap:8px;background:none;border:0;text-align:left;padding:0;flex:1}.expander strong{display:block;font-size:18px}.expander small{display:block;color:var(--muted)}.chevron{font-size:20px;color:var(--gold)}.decision-progress{font-size:12px;color:var(--gold)}.decision-progress.done{color:var(--green)}.identity-strip{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.identity-strip>div{padding:9px 13px;border-right:1px solid var(--line)}.identity-strip>div:last-child{border:0}.identity-strip span,.identity-strip small{display:block;color:var(--muted);font-size:11px}.identity-strip strong{display:block}.skill-card>.chips,.player-summary,.card-decision{margin:10px 14px}.chip{display:inline-block;border:1px solid var(--line);border-radius:99px;padding:2px 7px;color:#c2cfdb;font-size:11px}.chip.portability{border-color:#5a5184;color:#cfbfff}.chip.proof{border-color:#3f6a67;color:#9fe2da}.chip.collision,.chip.warning,.chip.danger{border-color:#8a524c;color:#ffafa7}.chip.new{border-color:#85693e;color:#ffd28c}.chip.ok{border-color:#477a58;color:#8be5a8}.player-summary{font-size:15px}.card-decision{display:flex;align-items:start;gap:10px}.card-decision>label{min-width:290px}.read-only-banner,.warning-box,.validation-errors,.protection-warning,.symbolic{padding:9px 11px;border-radius:7px;background:#1d2834;border-left:3px solid #71859a}.warning-box,.protection-warning{background:#302619;border-left-color:var(--gold)}.validation-errors{background:#321f23;border-left-color:var(--red)}.validation-errors ul,.protection-warning ul{margin:5px 0}.skill-card-body{border-top:1px solid var(--line);padding:14px}.card-actions{margin-bottom:14px}.comparison-section,.curves,.new-skill-plan,.skill-card-body>section{margin:18px 0}.tri-way{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.tri-way>div{padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{border:1px solid var(--line);padding:7px;text-align:left;vertical-align:top}th{background:#172536}caption{text-align:left;color:var(--muted);padding:4px}.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.chart-card{margin:0;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}.chart-card figcaption,.chart-card h4{font-weight:700;margin:0 0 5px}.chart-card svg{width:100%;height:auto;background:#0b1520;border-radius:6px}.chart-card .axis{stroke:#52667b;fill:none}.chart-legend{display:flex;gap:12px;flex-wrap:wrap}.chart-legend span:before{content:"";display:inline-block;width:10px;height:3px;background:var(--legend);margin-right:4px;vertical-align:middle}.curve-table{font-size:11px}.symbolic-value{color:var(--gold);font-family:ui-monospace,monospace}.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.facts div,.list-grid>div{background:var(--panel);padding:8px;border-radius:7px}.facts dt,.list-grid strong{color:var(--muted);font-size:11px}.facts dd{margin:2px 0}.list-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.list-grid h4{grid-column:1/-1}.list-grid span{display:block}.component{border:1px solid var(--line);border-radius:9px;margin:8px 0;background:#0f1a26}.component>summary{cursor:pointer;display:flex;justify-content:space-between;gap:10px;padding:10px}.component>summary strong,.component>summary small{display:block}.component>summary small{color:var(--muted)}.component-body{padding:0 10px 10px}.component-decision{display:block;max-width:340px;margin:5px 0 9px}.field-list{display:grid;gap:7px}.field-row{padding:9px;border:1px solid #2b3f53;border-radius:8px;background:var(--panel)}.field-row.changed{border-left:3px solid var(--blue)}.field-row.protected{border-left-color:var(--red);background:#211b21}.field-title{display:flex;justify-content:space-between;gap:8px}.field-title small{display:block;color:var(--muted)}.field-values{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:7px 0}.field-values>div{padding:6px;background:#0b1520;border-radius:5px}.field-values span{display:block;color:var(--muted);font-size:10px}.field-values code{overflow-wrap:anywhere}.formula{display:flex;gap:8px;align-items:start;background:#0a141e;padding:7px;border-radius:6px}.formula code{flex:1;overflow-wrap:anywhere}.field-decision{display:grid;grid-template-columns:minmax(180px,300px) 1fr;gap:8px;margin-top:8px}.custom-fields,.override-fields{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}.override-fields{border:1px solid var(--red);border-radius:7px;padding:8px}.override-fields legend{color:var(--red)}.two-column{display:grid;grid-template-columns:1fr 1fr;gap:14px}.structured-list{list-style:none;padding:0}.structured-list li{display:flex;justify-content:space-between;gap:8px;padding:7px;border-bottom:1px solid var(--line)}.structured-list span{color:var(--muted)}.collision-grid,.documentation{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.collision-grid article,.documentation article{padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}.documentation a{display:block;color:var(--blue);margin-top:5px}.technical{border-top:1px dashed var(--line);padding-top:10px}.notes-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.notes-grid label:last-child{grid-column:1/-1}.empty-state,.empty-inline{color:var(--muted);padding:14px;border:1px dashed var(--line);border-radius:8px}.fatal{max-width:760px;margin:60px auto;padding:24px}.fatal pre{border-color:var(--red)}@media(max-width:1200px){.metrics{grid-template-columns:repeat(4,1fr)}.topbar{position:relative}.sidebar{top:12px}.skill-card,.tree{scroll-margin-top:12px}}@media(max-width:850px){.layout{display:block}.sidebar{position:relative;top:0;max-height:none;border-right:0;border-bottom:1px solid var(--line)}.sidebar nav{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:repeat(2,1fr)}.identity-strip,.tri-way,.field-values,.facts,.two-column,.charts,.collision-grid,.documentation,.notes-grid{grid-template-columns:1fr}.field-decision,.custom-fields,.list-grid{grid-template-columns:1fr}.title-row,.tree-heading,.section-title{display:block}.topbar{padding:12px}.skill-card-heading{align-items:flex-start}.decision-progress{max-width:130px}.list-grid h4{grid-column:auto}}@media print{.topbar,.sidebar,.bulk-controls,.card-actions,button,select,input[type=checkbox],#notice{display:none!important}.layout{display:block}.skill-card-body{display:block!important}.skill-card{break-inside:avoid}.technical pre{max-height:none}}
-`;
+const STYLE =
+`:root{color-scheme:dark;--bg:#091018;--panel:#111c28;--panel-2:#172536;--panel-3:#213247;--line:#344a61;--text:#eef5fb;--muted:#9fb0c1;--gold:#f0bd6b;--blue:#72c8ff;--green:#6ed49a;--red:#ff8d88;--violet:#b9a1ff;--shadow:0 12px 35px #0006}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 75% -20%,#17304c 0,transparent 42%),var(--bg);color:var(--text);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}button,input,select,textarea{font:inherit}button,select,input,textarea{border:1px solid var(--line);border-radius:7px;background:var(--panel-2);color:var(--text);padding:8px 10px}button{cursor:pointer}button:hover,button:focus-visible{border-color:var(--gold);outline:none}button.active{background:#2d3e55;color:#fff;border-color:var(--gold)}button.danger{border-color:#74454a;color:#ffc0bd}label>span{display:block;color:var(--muted);font-size:12px;margin-bottom:3px}textarea{width:100%;min-height:68px;resize:vertical}code,pre{font:12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#09131e;padding:12px;border-radius:8px;border:1px solid var(--line);max-height:520px;overflow:auto}.topbar{position:sticky;top:0;z-index:20;padding:13px 20px 11px;background:#091018f2;backdrop-filter:blur(15px);border-bottom:1px solid var(--line);box-shadow:0 4px 18px #0005}.title-row{display:flex;justify-content:space-between;gap:20px;align-items:center}.title-row h1{font-size:23px;margin:0}.title-row p{margin:1px 0;color:var(--muted)}.global-progress{display:grid;grid-template-columns:auto auto;gap:2px 10px;align-items:center}.global-progress progress{grid-column:1/-1;width:220px;height:7px}.non-mutation{margin:8px 0;padding:7px 10px;border-left:3px solid var(--gold);background:#302615;color:#ffdfa8}.primary-controls,.persistence-toolbar,.filters,.chips,.card-actions,.bulk-controls,.dashboard-actions{display:flex;gap:7px;align-items:end;flex-wrap:wrap}.primary-controls .search{flex:1;min-width:230px}.primary-controls .search input{width:100%}.segmented{display:flex}.segmented button{border-radius:0}.segmented button:first-child{border-radius:7px 0 0 7px}.segmented button:last-child{border-radius:0 7px 7px 0}.filter-panel{margin-top:8px}.filter-panel summary{cursor:pointer;color:var(--muted)}.filters{padding-top:8px}.filters label:not(.check){min-width:145px}.check{align-self:center}.persistence-toolbar{margin-top:8px}.hash{color:var(--muted);font:11px ui-monospace,monospace}#save-status{padding:5px 8px;border-radius:99px;color:var(--muted)}#save-status[data-status=saved]{color:var(--green)}#save-status[data-status=error]{color:var(--red)}.notice{position:fixed;right:18px;bottom:18px;z-index:50;max-width:520px;padding:12px 15px;background:var(--panel-3);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}.notice.ok{border-color:var(--green)}.notice.error{border-color:var(--red)}.notice.warning{border-color:var(--gold)}.layout{display:grid;grid-template-columns:230px minmax(0,1fr);max-width:1800px;margin:auto}.sidebar{position:sticky;top:var(--workbench-sticky-top,420px);align-self:start;max-height:calc(100vh - var(--workbench-sticky-top,420px) - 18px);overflow:auto;padding:18px 12px;border-right:1px solid var(--line)}.sidebar nav{display:grid;gap:5px}.sidebar button{display:flex;justify-content:space-between;text-align:left}.sidebar small{color:var(--muted)}.sidebar h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:18px 5px 7px}#main-content{min-width:0;padding:20px}.dashboard,.tree{margin-bottom:24px}.section-title,.tree-heading{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.eyebrow{text-transform:uppercase;letter-spacing:.12em;color:var(--gold);font-size:11px;margin:0}.section-title h2,.tree-heading h2{margin:1px 0}.metrics{display:grid;grid-template-columns:repeat(6,minmax(105px,1fr));gap:8px;margin:12px 0}.metric{background:linear-gradient(145deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:9px;padding:10px}.metric strong{font-size:22px;display:block}.metric span{color:var(--muted);font-size:12px}.metric.ok strong{color:var(--green)}.metric.warning strong{color:var(--gold)}.metric.danger strong{color:var(--red)}.scope-bulk,.tree-bulk{padding:9px;background:var(--panel);border:1px solid var(--line);border-radius:9px}.tree-bulk>span{display:block;color:var(--muted);font-size:11px}.result-summary{padding:8px 11px;background:#0d1722;border:1px solid var(--line);border-radius:7px;margin-bottom:14px;color:var(--muted)}.tree{scroll-margin-top:calc(var(--workbench-sticky-top,420px) + 12px)}.tree-heading{border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:10px}.skill-card{scroll-margin-top:calc(var(--workbench-sticky-top,420px) + 12px);border:1px solid var(--line);border-radius:11px;background:linear-gradient(150deg,#132131,#0f1925);margin:10px 0;overflow:hidden;box-shadow:0 6px 20px #0003}.skill-card.incomplete{border-left:4px solid var(--gold)}.skill-card.complete{border-left:4px solid var(--green)}.skill-card.read-only{border-left-color:#72849a}.skill-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px}.expander{display:flex;align-items:center;gap:8px;background:none;border:0;text-align:left;padding:0;flex:1}.expander strong{display:block;font-size:18px}.expander small{display:block;color:var(--muted)}.chevron{font-size:20px;color:var(--gold)}.decision-progress{font-size:12px;color:var(--gold)}.decision-progress.done{color:var(--green)}.identity-strip{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.identity-strip>div{padding:9px 13px;border-right:1px solid var(--line)}.identity-strip>div:last-child{border:0}.identity-strip span,.identity-strip small{display:block;color:var(--muted);font-size:11px}.identity-strip strong{display:block}.skill-card>.chips,.player-summary,.card-decision{margin:10px 14px}.chip{display:inline-block;border:1px solid var(--line);border-radius:99px;padding:2px 7px;color:#c2cfdb;font-size:11px}.chip.portability{border-color:#5a5184;color:#cfbfff}.chip.proof{border-color:#3f6a67;color:#9fe2da}.chip.collision,.chip.warning,.chip.danger{border-color:#8a524c;color:#ffafa7}.chip.new{border-color:#85693e;color:#ffd28c}.chip.ok{border-color:#477a58;color:#8be5a8}.player-summary{font-size:15px}.card-decision{display:flex;align-items:start;gap:10px}.card-decision>label{min-width:290px}.read-only-banner,.warning-box,.validation-errors,.protection-warning,.symbolic{padding:9px 11px;border-radius:7px;background:#1d2834;border-left:3px solid #71859a}.warning-box,.protection-warning{background:#302619;border-left-color:var(--gold)}.validation-errors{background:#321f23;border-left-color:var(--red)}.validation-errors ul,.protection-warning ul{margin:5px 0}.skill-card-body{border-top:1px solid var(--line);padding:14px}.card-actions{margin-bottom:14px}.comparison-section,.curves,.new-skill-plan,.skill-card-body>section{margin:18px 0}.tri-way{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.tri-way>div{padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{border:1px solid var(--line);padding:7px;text-align:left;vertical-align:top}th{background:#172536}caption{text-align:left;color:var(--muted);padding:4px}.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.chart-card{margin:0;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}.chart-card figcaption,.chart-card h4{font-weight:700;margin:0 0 5px}.chart-card svg{width:100%;height:auto;background:#0b1520;border-radius:6px}.chart-card .axis{stroke:#52667b;fill:none}.chart-legend{display:flex;gap:12px;flex-wrap:wrap}.chart-legend span:before{content:"";display:inline-block;width:10px;height:3px;background:var(--legend);margin-right:4px;vertical-align:middle}.curve-table{font-size:11px}.symbolic-value{color:var(--gold);font-family:ui-monospace,monospace}.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.facts div,.list-grid>div{background:var(--panel);padding:8px;border-radius:7px}.facts dt,.list-grid strong{color:var(--muted);font-size:11px}.facts dd{margin:2px 0}.list-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.list-grid h4{grid-column:1/-1}.list-grid span{display:block}.component{border:1px solid var(--line);border-radius:9px;margin:8px 0;background:#0f1a26}.component>summary{cursor:pointer;display:flex;justify-content:space-between;gap:10px;padding:10px}.component>summary strong,.component>summary small{display:block}.component>summary small{color:var(--muted)}.component-body{padding:0 10px 10px}.component-decision{display:block;max-width:340px;margin:5px 0 9px}.field-list{display:grid;gap:7px}.field-row{padding:9px;border:1px solid #2b3f53;border-radius:8px;background:var(--panel)}.field-row.changed{border-left:3px solid var(--blue)}.field-row.protected{border-left-color:var(--red);background:#211b21}.field-title{display:flex;justify-content:space-between;gap:8px}.field-title small{display:block;color:var(--muted)}.field-values{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:7px 0}.field-values>div{padding:6px;background:#0b1520;border-radius:5px}.field-values span{display:block;color:var(--muted);font-size:10px}.field-values code{overflow-wrap:anywhere}.formula{display:flex;gap:8px;align-items:start;background:#0a141e;padding:7px;border-radius:6px}.formula code{flex:1;overflow-wrap:anywhere}.field-decision{display:grid;grid-template-columns:minmax(180px,300px) 1fr;gap:8px;margin-top:8px}.custom-fields,.override-fields{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}.override-fields{border:1px solid var(--red);border-radius:7px;padding:8px}.override-fields legend{color:var(--red)}.two-column{display:grid;grid-template-columns:1fr 1fr;gap:14px}.structured-list{list-style:none;padding:0}.structured-list li{display:flex;justify-content:space-between;gap:8px;padding:7px;border-bottom:1px solid var(--line)}.structured-list span{color:var(--muted)}.collision-grid,.documentation{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.collision-grid article,.documentation article{padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}.documentation a{display:block;color:var(--blue);margin-top:5px}.technical{border-top:1px dashed var(--line);padding-top:10px}.notes-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.notes-grid label:last-child{grid-column:1/-1}.empty-state,.empty-inline{color:var(--muted);padding:14px;border:1px dashed var(--line);border-radius:8px}.fatal{max-width:760px;margin:60px auto;padding:24px}.fatal pre{border-color:var(--red)}@media(max-width:1200px){.metrics{grid-template-columns:repeat(4,1fr)}.topbar{position:relative}.sidebar{top:12px}.skill-card,.tree{scroll-margin-top:12px}}@media(max-width:850px){.layout{display:block}.sidebar{position:relative;top:0;max-height:none;border-right:0;border-bottom:1px solid var(--line)}.sidebar nav{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:repeat(2,1fr)}.identity-strip,.tri-way,.field-values,.facts,.two-column,.charts,.collision-grid,.documentation,.notes-grid{grid-template-columns:1fr}.field-decision,.custom-fields,.list-grid{grid-template-columns:1fr}.title-row,.tree-heading,.section-title{display:block}.topbar{padding:12px}.skill-card-heading{align-items:flex-start}.decision-progress{max-width:130px}.list-grid h4{grid-column:auto}}@media print{.topbar,.sidebar,.bulk-controls,.card-actions,button,select,input[type=checkbox],#notice{display:none!important}.layout{display:block}.skill-card-body{display:block!important}.skill-card{break-inside:avoid}.technical pre{max-height:none}}
+` + SCHEMA_ORIENTATION_STYLE;
 
 function compressedOracleBootstrap() {
   'use strict';
@@ -1211,8 +1262,10 @@ function compressedOracleBootstrap() {
     try {
       const report = await inflateOracle(globalThis.__PD2_SKILLS_ORACLE_GZIP_BASE64__);
       globalThis.__PD2_SKILLS_REPORT__ = report;
-      __PD2_SKILLS_RUNTIME__
-      __PD2_SKILLS_APPLICATION__
+__PD2_SKILLS_RUNTIME__
+__PD2_SCHEMA_POLICY_RUNTIME__
+__PD2_SCHEMA_ORIENTATION_APPLICATION__
+__PD2_SKILLS_APPLICATION__
       return report;
     } catch (error) {
       fatal(error);
@@ -1232,9 +1285,17 @@ export function buildSkillReviewHtml(report, browserRuntimeSource, options = {})
     throw new TypeError('options.compressedOracleBase64 must be a non-empty deterministic gzip payload');
   }
   const runtimeSource = protectInlineSource(browserRuntimeSource);
+  const policyRuntimeSource = typeof options.policyRuntimeSource === 'string'
+    ? protectInlineSource(options.policyRuntimeSource)
+    : '';
+  const orientationApplicationSource = report.schemaOrientation
+    ? protectInlineSource(buildSchemaOrientationApplicationSource())
+    : '';
   const applicationSource = protectInlineSource('(' + skillReviewBrowserApplication.toString() + ')();');
   const bootstrapSource = protectInlineSource('(' + compressedOracleBootstrap.toString() + ')();')
     .replace('__PD2_SKILLS_RUNTIME__', () => runtimeSource)
+    .replace('__PD2_SCHEMA_POLICY_RUNTIME__', () => policyRuntimeSource)
+    .replace('__PD2_SCHEMA_ORIENTATION_APPLICATION__', () => orientationApplicationSource)
     .replace('__PD2_SKILLS_APPLICATION__', () => applicationSource);
   return '<!doctype html>\n'
     + '<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'

@@ -1,0 +1,669 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pd2-skills-schema-policy.schema.json",
+  "title": "PD2 Skills Phase 0 schema policy decisions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "orientationId",
+    "orientationHash",
+    "frozenContractHash",
+    "sourceHashes",
+    "exportedAt",
+    "decisions"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "pd2-skills-schema-policy"
+    },
+    "orientationId": {
+      "const": "pd2-skills-schema-orientation-v1"
+    },
+    "orientationHash": {
+      "const": "019FA5F148559A4B197166075F064110127FEE9C66228D0A12A1C9DE63542E06"
+    },
+    "frozenContractHash": {
+      "const": "3133A16AD42315181599DBB5DE29C4C7DAEBC5DFB7F1110639C2CEBFEA13EC6B"
+    },
+    "sourceHashes": {
+      "const": {
+        "skills": {
+          "vanilla32": "EFAF7AC4BA0493109C698EF32ACF4A2B3A577E13500D0B50258C80B600986F51",
+          "bkvince": "08497CC0BD8B2B5CBD895F7477AD0CBF272571FB67B78061EDFABC31C48B8B77",
+          "pd2": "AEEFC3F2C0C80811D62FC1A17C3B031DE2164E5606BF9779F34024B35BC87B8B"
+        },
+        "references": {
+          "skillsSchema": "944A40AA17BF44C8D5B262482925FAD26CF3B20FBE0B941D779D6E60F36DE742",
+          "analyticalAudit": "BE9385A532CBD3DF80D94E83F04293FB9238DFD10101C5A9F442DB8DAC07D565",
+          "nativeFindings": "0A8854BF1151CE4CE2FEA4F77EACE73C96C968C4D4132E05E4BCE29AD5D7E620",
+          "knownRvas": "4AB3FF680C128F5E7D12520CD0ACAA97800AA1DE491141B65593BE9AF3941A5B"
+        }
+      }
+    },
+    "exportedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "decisions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "PRESERVE_ALL_D2R_BKVINCE_COLUMNS",
+        "IGNORE_ALL_EMPTY_PD2_ONLY_COLUMNS",
+        "NO_PD2_HEADER_IMPORT_WITHOUT_NATIVE_PROOF",
+        "NO_AUTOMATIC_DELAY_TRANSLATION",
+        "SEMANTIC_BLANKS_REQUIRE_NO_DECISION",
+        "ITEM_ECONOMY_FIELDS_PRESERVE_BKVINCE",
+        "NATIVE_CALLBACKS_PRESERVE_OR_DEFER",
+        "RAW_FIELDS_INHERIT_FROM_BEHAVIOR_BUNDLE"
+      ],
+      "properties": {
+        "PRESERVE_ALL_D2R_BKVINCE_COLUMNS": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fingerprint",
+            "decision",
+            "justification"
+          ],
+          "properties": {
+            "fingerprint": {
+              "const": "5B6B5E308F2B8D94AEAC2B67B7F1B9E567E0878DEE92DF39918FB4BE3CC41140"
+            },
+            "decision": {
+              "enum": [
+                "PENDING",
+                "APPROVE",
+                "MODIFY",
+                "REJECT",
+                "DISCUSS"
+              ]
+            },
+            "justification": {
+              "type": "string"
+            },
+            "customPolicy": {
+              "type": "string"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "MODIFY"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "required": [
+                  "customPolicy"
+                ],
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  },
+                  "customPolicy": {
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "APPROVE"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "IGNORE_ALL_EMPTY_PD2_ONLY_COLUMNS": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fingerprint",
+            "decision",
+            "justification"
+          ],
+          "properties": {
+            "fingerprint": {
+              "const": "B98AA31CC1AFFBD286BE2C17B027066946303D93D9487810AC6CFC8CAA597207"
+            },
+            "decision": {
+              "enum": [
+                "PENDING",
+                "APPROVE",
+                "MODIFY",
+                "REJECT",
+                "DISCUSS"
+              ]
+            },
+            "justification": {
+              "type": "string"
+            },
+            "customPolicy": {
+              "type": "string"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "MODIFY"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "required": [
+                  "customPolicy"
+                ],
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  },
+                  "customPolicy": {
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "APPROVE"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "NO_PD2_HEADER_IMPORT_WITHOUT_NATIVE_PROOF": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fingerprint",
+            "decision",
+            "justification"
+          ],
+          "properties": {
+            "fingerprint": {
+              "const": "133016232D83CA600BA170D4B3F05289EFCAC956BA2BD5AEE5492C6DE79E18B6"
+            },
+            "decision": {
+              "enum": [
+                "PENDING",
+                "APPROVE",
+                "MODIFY",
+                "REJECT",
+                "DISCUSS"
+              ]
+            },
+            "justification": {
+              "type": "string"
+            },
+            "customPolicy": {
+              "type": "string"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "MODIFY"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "required": [
+                  "customPolicy"
+                ],
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  },
+                  "customPolicy": {
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "APPROVE"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "NO_AUTOMATIC_DELAY_TRANSLATION": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fingerprint",
+            "decision",
+            "justification"
+          ],
+          "properties": {
+            "fingerprint": {
+              "const": "229A2054D3039368203F246099BB33FEEEF0DCE394C606B448FE68AD8D0BBA0B"
+            },
+            "decision": {
+              "enum": [
+                "PENDING",
+                "APPROVE",
+                "MODIFY",
+                "REJECT",
+                "DISCUSS"
+              ]
+            },
+            "justification": {
+              "type": "string"
+            },
+            "customPolicy": {
+              "type": "string"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "MODIFY"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "required": [
+                  "customPolicy"
+                ],
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  },
+                  "customPolicy": {
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "APPROVE"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "SEMANTIC_BLANKS_REQUIRE_NO_DECISION": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fingerprint",
+            "decision",
+            "justification"
+          ],
+          "properties": {
+            "fingerprint": {
+              "const": "C1E042EEFE8A1709111DFCE334B0EC402DE06B43E4060474A765ADE4D929DA34"
+            },
+            "decision": {
+              "enum": [
+                "PENDING",
+                "APPROVE",
+                "MODIFY",
+                "REJECT",
+                "DISCUSS"
+              ]
+            },
+            "justification": {
+              "type": "string"
+            },
+            "customPolicy": {
+              "type": "string"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "MODIFY"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "required": [
+                  "customPolicy"
+                ],
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  },
+                  "customPolicy": {
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "APPROVE"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "ITEM_ECONOMY_FIELDS_PRESERVE_BKVINCE": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fingerprint",
+            "decision",
+            "justification"
+          ],
+          "properties": {
+            "fingerprint": {
+              "const": "E9E2385AE2067753B4441C6C1EAD5C7941437B3671990090A7CCCD59FA01C07A"
+            },
+            "decision": {
+              "enum": [
+                "PENDING",
+                "APPROVE",
+                "MODIFY",
+                "REJECT",
+                "DISCUSS"
+              ]
+            },
+            "justification": {
+              "type": "string"
+            },
+            "customPolicy": {
+              "type": "string"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "MODIFY"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "required": [
+                  "customPolicy"
+                ],
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  },
+                  "customPolicy": {
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "APPROVE"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "NATIVE_CALLBACKS_PRESERVE_OR_DEFER": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fingerprint",
+            "decision",
+            "justification"
+          ],
+          "properties": {
+            "fingerprint": {
+              "const": "7AF76741FBB8DF2FF7F663359D718677AA2F165BEB6FC330FA59F5E17FAE3AB5"
+            },
+            "decision": {
+              "enum": [
+                "PENDING",
+                "APPROVE",
+                "MODIFY",
+                "REJECT",
+                "DISCUSS"
+              ]
+            },
+            "justification": {
+              "type": "string"
+            },
+            "customPolicy": {
+              "type": "string"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "MODIFY"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "required": [
+                  "customPolicy"
+                ],
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  },
+                  "customPolicy": {
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "APPROVE"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "RAW_FIELDS_INHERIT_FROM_BEHAVIOR_BUNDLE": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fingerprint",
+            "decision",
+            "justification"
+          ],
+          "properties": {
+            "fingerprint": {
+              "const": "96B22A8F9A486CAFF2D67CFD8E575E05285B9EFCF3A26310270B74083DCFAC36"
+            },
+            "decision": {
+              "enum": [
+                "PENDING",
+                "APPROVE",
+                "MODIFY",
+                "REJECT",
+                "DISCUSS"
+              ]
+            },
+            "justification": {
+              "type": "string"
+            },
+            "customPolicy": {
+              "type": "string"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "MODIFY"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "required": [
+                  "customPolicy"
+                ],
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  },
+                  "customPolicy": {
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "const": "APPROVE"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "justification": {
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

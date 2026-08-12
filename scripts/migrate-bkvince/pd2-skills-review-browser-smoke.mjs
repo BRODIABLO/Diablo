@@ -19,6 +19,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const HTML_PATH = path.resolve(process.env.PD2_SKILLS_WORKBENCH_HTML || path.join(ROOT, 'Mission', 'pd2-skills-review.html'));
 const JSON_PATH = path.resolve(process.env.PD2_SKILLS_WORKBENCH_JSON || path.join(ROOT, 'Mission', 'pd2-skills-review.json'));
 const HTML_URL = pathToFileURL(HTML_PATH).href;
+const ORIENTATION_HTML_PATH = path.resolve(process.env.PD2_SKILLS_SCHEMA_ORIENTATION_HTML || path.join(ROOT, 'Mission', 'pd2-skills-schema-orientation.html'));
+const ORIENTATION_HTML_URL = pathToFileURL(ORIENTATION_HTML_PATH).href;
 
 // Wide ceilings catch order-of-magnitude regressions while remaining stable on
 // slower GitHub-hosted runners. The measured values remain visible in the log.
@@ -70,12 +72,26 @@ async function browserRssBytes(browserSession) {
 }
 
 async function main() {
-  const [htmlStat, jsonStat] = await Promise.all([stat(HTML_PATH), stat(JSON_PATH)]);
+  const [htmlStat, jsonStat, orientationHtmlStat] = await Promise.all([stat(HTML_PATH), stat(JSON_PATH), stat(ORIENTATION_HTML_PATH)]);
   const browser = await chromium.launch({
     headless: true,
     args: ['--allow-file-access-from-files', '--enable-precise-memory-info'],
   });
   const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1600, height: 1000 } });
+  const orientationPage = await context.newPage();
+  orientationPage.on('pageerror', (error) => errors.push(`orientation pageerror: ${error.stack || error.message}`));
+  orientationPage.on('console', (message) => {
+    if (message.type() === 'error') errors.push(`orientation console.error: ${message.text()}`);
+  });
+  const orientationResponse = await orientationPage.goto(ORIENTATION_HTML_URL, { waitUntil: 'load', timeout: PERFORMANCE_THRESHOLDS.coldLoadMs });
+  assert.equal(orientationResponse?.status(), 200);
+  assert.equal(new URL(orientationResponse.url()).protocol, 'file:');
+  await orientationPage.evaluate(async () => globalThis.__PD2_SCHEMA_ORIENTATION_READY__);
+  await orientationPage.locator('.schema-hero').waitFor({ state: 'visible' });
+  assert.match(await orientationPage.locator('.schema-hero').innerText(), /PD2 Skills Schema and Engine Orientation/u);
+  assert.equal(await orientationPage.locator('[data-schema-policy-decision]').count(), 8);
+  checkpoints.push('standalone Phase 0 file:// artifact loaded');
+  await orientationPage.close();
   const page = await context.newPage();
   const pageSession = await context.newCDPSession(page);
   const browserSession = await browser.newBrowserCDPSession();
@@ -127,6 +143,29 @@ async function main() {
     assert.equal(await page.locator('#global-search').isEnabled(), true);
     assert.match(await page.locator('.non-mutation').innerText(), /file:\/\//u);
     checkpoints.push('initial UI assertions passed');
+
+    await page.locator('[data-view="architecture"].active').waitFor();
+    assert.match(await page.locator('.schema-hero').innerText(), /PD2 Skills Schema and Engine Orientation/u);
+    assert.match(await page.locator('.schema-hero .schema-gate').innerText(), /0 \/ 8/u);
+    assert.match(await page.locator('#schema-fire-bolt-impact').innerText(), /82[\s\S]*83[\s\S]*6/u);
+    assert.match(await page.locator('#schema-witnesses').innerText(), /auraevent4[\s\S]*ABSENT_COLUMN/u);
+    const policyIds = await page.locator('[data-schema-policy-decision]').evaluateAll((controls) => controls.map((control) => control.dataset.policyId));
+    assert.equal(policyIds.length, 8, 'Phase 0 must expose eight governed policies');
+    for (const policyId of policyIds) {
+      await page.locator(`[data-schema-policy-decision][data-policy-id="${policyId}"]`).selectOption('APPROVE');
+      await page.locator(`[data-schema-policy-property="justification"][data-policy-id="${policyId}"]`).fill(`Browser smoke approval for ${policyId}.`);
+    }
+    await page.waitForFunction(() => {
+      const key = Object.keys(localStorage).find((item) => item.startsWith('pd2-skills-review-decisions-v2:'));
+      const policy = key ? JSON.parse(localStorage.getItem(key))?.schemaPolicy : null;
+      return policy && Object.values(policy.decisions || {}).length === 8
+        && Object.values(policy.decisions).every((entry) => entry.decision === 'APPROVE' && entry.justification?.trim());
+    });
+    // The final justification is an input event without a full render. Re-fire
+    // one governed select change so the visible gate reflects the saved model.
+    await page.locator('[data-schema-policy-decision]').first().selectOption('APPROVE');
+    assert.match(await page.locator('.schema-hero .schema-gate').innerText(), /8 \/ 8/u);
+    checkpoints.push('Phase 0 architecture and eight policy approvals verified');
     await sampleMemory('cold-ready');
     checkpoints.push('initial memory sampled');
 
@@ -168,7 +207,7 @@ async function main() {
     await amplifyCard.locator('[data-choice-level="component"][data-component-id="buffs_debuffs_auras_passives"][data-choice-property="customValue"]').fill(customValue);
     await amplifyCard.locator('[data-choice-level="component"][data-component-id="buffs_debuffs_auras_passives"][data-choice-property="justification"]').fill(customJustification);
     await page.waitForFunction(({ skillId, expectedValue, expectedJustification }) => {
-      const key = Object.keys(localStorage).find((item) => item.startsWith('pd2-skills-review-decisions-v1:'));
+      const key = Object.keys(localStorage).find((item) => item.startsWith('pd2-skills-review-decisions-v2:'));
       if (!key) return false;
       const entry = JSON.parse(localStorage.getItem(key))?.entries?.[skillId];
       const custom = entry?.componentDecisions?.buffs_debuffs_auras_passives;
@@ -188,6 +227,8 @@ async function main() {
       if (globalThis.__PD2_SKILLS_WORKBENCH_ERROR__) throw globalThis.__PD2_SKILLS_WORKBENCH_ERROR__;
     });
     await page.locator('#global-search').waitFor({ state: 'visible' });
+    await page.locator('[data-view="nec"]').click();
+    await page.locator('[data-view="nec"].active').waitFor();
     await page.locator('#global-search').fill('Amplify Damage');
     await amplifyCard.waitFor({ state: 'visible' });
     await amplifyCard.locator('[data-action="toggle-skill"]').click();
@@ -207,6 +248,8 @@ async function main() {
     assert.equal(decisionsDownload.suggestedFilename(), 'pd2-skills-decisions-all.json');
     const decisionsPath = await decisionsDownload.path();
     const exportedDecisions = JSON.parse(await readFile(decisionsPath, 'utf8'));
+    assert.equal(exportedDecisions.schemaVersion, 2);
+    assert.equal(Object.values(exportedDecisions.schemaPolicy.decisions).filter((entry) => entry.decision === 'APPROVE').length, 8);
     assert.equal(exportedDecisions.entries['skill:nec:amplify-damage'].globalDecision, 'ADAPT_PD2_SELECTIVELY');
     checkpoints.push('decisions exported');
 
@@ -219,7 +262,7 @@ async function main() {
     // importFile renders immediately after its transient success notice, so the
     // governed envelope in localStorage is the durable success witness.
     await page.waitForFunction((skillId) => {
-      const key = Object.keys(localStorage).find((item) => item.startsWith('pd2-skills-review-decisions-v1:'));
+      const key = Object.keys(localStorage).find((item) => item.startsWith('pd2-skills-review-decisions-v2:'));
       return Boolean(key && JSON.parse(localStorage.getItem(key))?.entries?.[skillId]?.globalDecision === 'ADAPT_PD2_SELECTIVELY');
     }, 'skill:nec:amplify-damage');
     checkpoints.push('decisions reimported');
@@ -274,6 +317,9 @@ async function main() {
         htmlBytes: htmlStat.size,
         jsonPath: JSON_PATH,
         jsonBytes: jsonStat.size,
+        orientationHtmlPath: ORIENTATION_HTML_PATH,
+        orientationHtmlUrl: ORIENTATION_HTML_URL,
+        orientationHtmlBytes: orientationHtmlStat.size,
       },
       environment: {
         node: process.version,

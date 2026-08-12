@@ -1,0 +1,5623 @@
+{
+  "schemaVersion": 1,
+  "orientationId": "pd2-skills-schema-orientation-v1",
+  "orientationHash": "019FA5F148559A4B197166075F064110127FEE9C66228D0A12A1C9DE63542E06",
+  "documentationSource": {
+    "path": "schemas/skills.json",
+    "sha256": "944A40AA17BF44C8D5B262482925FAD26CF3B20FBE0B941D779D6E60F36DE742",
+    "bytes": 122895,
+    "role": "Tracked reproducible snapshot of eezstreet/d2rdoc Skills.txt documentation."
+  },
+  "fields": [
+    {
+      "rawHeader": "skill",
+      "rawHeaders": {
+        "vanilla32": "skill",
+        "bkvince": "skill",
+        "pd2": "skill"
+      },
+      "playerLabelFr": "Nom interne du skill",
+      "shortHelpFr": "Identité textuelle utilisée par les tables liées.",
+      "family": "identity_availability",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "id",
+      "rawHeaders": {
+        "vanilla32": "*Id",
+        "bkvince": "*Id",
+        "pd2": "Id"
+      },
+      "playerLabelFr": "ID documentaire",
+      "shortHelpFr": "Le runtime utilise l’ordinal réel de la ligne, jamais cette cellule documentaire.",
+      "family": "identity_availability",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "charclass",
+      "rawHeaders": {
+        "vanilla32": "charclass",
+        "bkvince": "charclass",
+        "pd2": "charclass"
+      },
+      "playerLabelFr": "Classe",
+      "shortHelpFr": "Classe à laquelle le skill joueur est rattaché.",
+      "family": "identity_availability",
+      "technicalOnly": false,
+      "protected": true,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "skilldesc",
+      "rawHeaders": {
+        "vanilla32": "skilldesc",
+        "bkvince": "skilldesc",
+        "pd2": "skilldesc"
+      },
+      "playerLabelFr": "Présentation du skill",
+      "shortHelpFr": "Lien vers le tooltip, l’icône et la position réelle dans l’arbre.",
+      "family": "interface_controls",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "UI_ASSIGNMENT",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "srvstfunc",
+      "rawHeaders": {
+        "vanilla32": "srvstfunc",
+        "bkvince": "srvstfunc",
+        "pd2": "srvstfunc"
+      },
+      "playerLabelFr": "Fonction moteur — srvstfunc",
+      "shortHelpFr": "Sélecteur natif protégé; un numéro identique entre moteurs ne prouve pas le même comportement.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "NATIVE_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "srvdofunc",
+      "rawHeaders": {
+        "vanilla32": "srvdofunc",
+        "bkvince": "srvdofunc",
+        "pd2": "srvdofunc"
+      },
+      "playerLabelFr": "Fonction moteur — srvdofunc",
+      "shortHelpFr": "Sélecteur natif protégé; un numéro identique entre moteurs ne prouve pas le même comportement.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "NATIVE_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "srvstopfunc",
+      "rawHeaders": {
+        "vanilla32": "srvstopfunc",
+        "bkvince": "srvstopfunc",
+        "pd2": null
+      },
+      "playerLabelFr": "Fonction moteur — srvstopfunc",
+      "shortHelpFr": "Sélecteur natif protégé; un numéro identique entre moteurs ne prouve pas le même comportement.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "NATIVE_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "prgstack",
+      "rawHeaders": {
+        "vanilla32": "prgstack",
+        "bkvince": "prgstack",
+        "pd2": "prgstack"
+      },
+      "playerLabelFr": "prgstack",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "srvprgfunc1",
+      "rawHeaders": {
+        "vanilla32": "srvprgfunc1",
+        "bkvince": "srvprgfunc1",
+        "pd2": "srvprgfunc1"
+      },
+      "playerLabelFr": "Fonction moteur — srvprgfunc1",
+      "shortHelpFr": "Sélecteur natif protégé; un numéro identique entre moteurs ne prouve pas le même comportement.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "NATIVE_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "srvprgfunc2",
+      "rawHeaders": {
+        "vanilla32": "srvprgfunc2",
+        "bkvince": "srvprgfunc2",
+        "pd2": "srvprgfunc2"
+      },
+      "playerLabelFr": "Fonction moteur — srvprgfunc2",
+      "shortHelpFr": "Sélecteur natif protégé; un numéro identique entre moteurs ne prouve pas le même comportement.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "NATIVE_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "srvprgfunc3",
+      "rawHeaders": {
+        "vanilla32": "srvprgfunc3",
+        "bkvince": "srvprgfunc3",
+        "pd2": "srvprgfunc3"
+      },
+      "playerLabelFr": "Fonction moteur — srvprgfunc3",
+      "shortHelpFr": "Sélecteur natif protégé; un numéro identique entre moteurs ne prouve pas le même comportement.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "NATIVE_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "prgcalc1",
+      "rawHeaders": {
+        "vanilla32": "prgcalc1",
+        "bkvince": "prgcalc1",
+        "pd2": "prgcalc1"
+      },
+      "playerLabelFr": "prgcalc1",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "prgcalc2",
+      "rawHeaders": {
+        "vanilla32": "prgcalc2",
+        "bkvince": "prgcalc2",
+        "pd2": "prgcalc2"
+      },
+      "playerLabelFr": "prgcalc2",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "prgcalc3",
+      "rawHeaders": {
+        "vanilla32": "prgcalc3",
+        "bkvince": "prgcalc3",
+        "pd2": "prgcalc3"
+      },
+      "playerLabelFr": "prgcalc3",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "prgdam",
+      "rawHeaders": {
+        "vanilla32": "prgdam",
+        "bkvince": "prgdam",
+        "pd2": "prgdam"
+      },
+      "playerLabelFr": "prgdam",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "srvmissile",
+      "rawHeaders": {
+        "vanilla32": "srvmissile",
+        "bkvince": "srvmissile",
+        "pd2": "srvmissile"
+      },
+      "playerLabelFr": "Projectile serveur principal",
+      "shortHelpFr": "Missile créé par la logique serveur.",
+      "family": "projectiles",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PROJECTILE_ARCHITECTURE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "decquant",
+      "rawHeaders": {
+        "vanilla32": "decquant",
+        "bkvince": "decquant",
+        "pd2": "decquant"
+      },
+      "playerLabelFr": "decquant",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "lob",
+      "rawHeaders": {
+        "vanilla32": "lob",
+        "bkvince": "lob",
+        "pd2": "lob"
+      },
+      "playerLabelFr": "lob",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "srvmissilea",
+      "rawHeaders": {
+        "vanilla32": "srvmissilea",
+        "bkvince": "srvmissilea",
+        "pd2": "srvmissilea"
+      },
+      "playerLabelFr": "srvmissilea",
+      "shortHelpFr": "Champ projectiles documenté par eezstreet; consulter le détail technique.",
+      "family": "projectiles",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PROJECTILE_ARCHITECTURE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "srvmissileb",
+      "rawHeaders": {
+        "vanilla32": "srvmissileb",
+        "bkvince": "srvmissileb",
+        "pd2": "srvmissileb"
+      },
+      "playerLabelFr": "srvmissileb",
+      "shortHelpFr": "Champ projectiles documenté par eezstreet; consulter le détail technique.",
+      "family": "projectiles",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PROJECTILE_ARCHITECTURE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "srvmissilec",
+      "rawHeaders": {
+        "vanilla32": "srvmissilec",
+        "bkvince": "srvmissilec",
+        "pd2": "srvmissilec"
+      },
+      "playerLabelFr": "srvmissilec",
+      "shortHelpFr": "Champ projectiles documenté par eezstreet; consulter le détail technique.",
+      "family": "projectiles",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PROJECTILE_ARCHITECTURE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "useservermissilesonremoteclients",
+      "rawHeaders": {
+        "vanilla32": "useServerMissilesOnRemoteClients",
+        "bkvince": "useServerMissilesOnRemoteClients",
+        "pd2": null
+      },
+      "playerLabelFr": "useservermissilesonremoteclients",
+      "shortHelpFr": "Champ projectiles documenté par eezstreet; consulter le détail technique.",
+      "family": "projectiles",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "srvoverlay",
+      "rawHeaders": {
+        "vanilla32": "srvoverlay",
+        "bkvince": "srvoverlay",
+        "pd2": "srvoverlay"
+      },
+      "playerLabelFr": "srvoverlay",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurafilter",
+      "rawHeaders": {
+        "vanilla32": "aurafilter",
+        "bkvince": "aurafilter",
+        "pd2": "aurafilter"
+      },
+      "playerLabelFr": "aurafilter",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurastate",
+      "rawHeaders": {
+        "vanilla32": "aurastate",
+        "bkvince": "aurastate",
+        "pd2": "aurastate"
+      },
+      "playerLabelFr": "aurastate",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "auratargetstate",
+      "rawHeaders": {
+        "vanilla32": "auratargetstate",
+        "bkvince": "auratargetstate",
+        "pd2": "auratargetstate"
+      },
+      "playerLabelFr": "auratargetstate",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "auralencalc",
+      "rawHeaders": {
+        "vanilla32": "auralencalc",
+        "bkvince": "auralencalc",
+        "pd2": "auralencalc"
+      },
+      "playerLabelFr": "Durée de l’aura ou du buff",
+      "shortHelpFr": "Formule de durée, généralement exprimée en frames.",
+      "family": "auras_passives",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "AURA_DURATION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurarangecalc",
+      "rawHeaders": {
+        "vanilla32": "aurarangecalc",
+        "bkvince": "aurarangecalc",
+        "pd2": "aurarangecalc"
+      },
+      "playerLabelFr": "Rayon de l’aura",
+      "shortHelpFr": "Formule de rayon exprimée en sous-tuiles.",
+      "family": "auras_passives",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "AURA_RADIUS",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurastat1",
+      "rawHeaders": {
+        "vanilla32": "aurastat1",
+        "bkvince": "aurastat1",
+        "pd2": "aurastat1"
+      },
+      "playerLabelFr": "Stat d’aura — palier 1",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurastatcalc1",
+      "rawHeaders": {
+        "vanilla32": "aurastatcalc1",
+        "bkvince": "aurastatcalc1",
+        "pd2": "aurastatcalc1"
+      },
+      "playerLabelFr": "Valeur de stat d’aura — palier 1",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurastat2",
+      "rawHeaders": {
+        "vanilla32": "aurastat2",
+        "bkvince": "aurastat2",
+        "pd2": "aurastat2"
+      },
+      "playerLabelFr": "Stat d’aura — palier 2",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurastatcalc2",
+      "rawHeaders": {
+        "vanilla32": "aurastatcalc2",
+        "bkvince": "aurastatcalc2",
+        "pd2": "aurastatcalc2"
+      },
+      "playerLabelFr": "Valeur de stat d’aura — palier 2",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurastat3",
+      "rawHeaders": {
+        "vanilla32": "aurastat3",
+        "bkvince": "aurastat3",
+        "pd2": "aurastat3"
+      },
+      "playerLabelFr": "Stat d’aura — palier 3",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurastatcalc3",
+      "rawHeaders": {
+        "vanilla32": "aurastatcalc3",
+        "bkvince": "aurastatcalc3",
+        "pd2": "aurastatcalc3"
+      },
+      "playerLabelFr": "Valeur de stat d’aura — palier 3",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurastat4",
+      "rawHeaders": {
+        "vanilla32": "aurastat4",
+        "bkvince": "aurastat4",
+        "pd2": "aurastat4"
+      },
+      "playerLabelFr": "Stat d’aura — palier 4",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurastatcalc4",
+      "rawHeaders": {
+        "vanilla32": "aurastatcalc4",
+        "bkvince": "aurastatcalc4",
+        "pd2": "aurastatcalc4"
+      },
+      "playerLabelFr": "Valeur de stat d’aura — palier 4",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurastat5",
+      "rawHeaders": {
+        "vanilla32": "aurastat5",
+        "bkvince": "aurastat5",
+        "pd2": "aurastat5"
+      },
+      "playerLabelFr": "Stat d’aura — palier 5",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurastatcalc5",
+      "rawHeaders": {
+        "vanilla32": "aurastatcalc5",
+        "bkvince": "aurastatcalc5",
+        "pd2": "aurastatcalc5"
+      },
+      "playerLabelFr": "Valeur de stat d’aura — palier 5",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurastat6",
+      "rawHeaders": {
+        "vanilla32": "aurastat6",
+        "bkvince": "aurastat6",
+        "pd2": "aurastat6"
+      },
+      "playerLabelFr": "Stat d’aura — palier 6",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aurastatcalc6",
+      "rawHeaders": {
+        "vanilla32": "aurastatcalc6",
+        "bkvince": "aurastatcalc6",
+        "pd2": "aurastatcalc6"
+      },
+      "playerLabelFr": "Valeur de stat d’aura — palier 6",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "auraevent1",
+      "rawHeaders": {
+        "vanilla32": "auraevent1",
+        "bkvince": "auraevent1",
+        "pd2": "auraevent1"
+      },
+      "playerLabelFr": "auraevent1",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "auraeventfunc1",
+      "rawHeaders": {
+        "vanilla32": "auraeventfunc1",
+        "bkvince": "auraeventfunc1",
+        "pd2": "auraeventfunc1"
+      },
+      "playerLabelFr": "auraeventfunc1",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "auraevent2",
+      "rawHeaders": {
+        "vanilla32": "auraevent2",
+        "bkvince": "auraevent2",
+        "pd2": "auraevent2"
+      },
+      "playerLabelFr": "auraevent2",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "auraeventfunc2",
+      "rawHeaders": {
+        "vanilla32": "auraeventfunc2",
+        "bkvince": "auraeventfunc2",
+        "pd2": "auraeventfunc2"
+      },
+      "playerLabelFr": "auraeventfunc2",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "auraevent3",
+      "rawHeaders": {
+        "vanilla32": "auraevent3",
+        "bkvince": "auraevent3",
+        "pd2": "auraevent3"
+      },
+      "playerLabelFr": "auraevent3",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "auraeventfunc3",
+      "rawHeaders": {
+        "vanilla32": "auraeventfunc3",
+        "bkvince": "auraeventfunc3",
+        "pd2": "auraeventfunc3"
+      },
+      "playerLabelFr": "auraeventfunc3",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "auraevent4",
+      "rawHeaders": {
+        "vanilla32": "auraevent4",
+        "bkvince": "auraevent4",
+        "pd2": null
+      },
+      "playerLabelFr": "auraevent4",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "auraeventfunc4",
+      "rawHeaders": {
+        "vanilla32": "auraeventfunc4",
+        "bkvince": "auraeventfunc4",
+        "pd2": null
+      },
+      "playerLabelFr": "auraeventfunc4",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestate",
+      "rawHeaders": {
+        "vanilla32": "passivestate",
+        "bkvince": "passivestate",
+        "pd2": "passivestate"
+      },
+      "playerLabelFr": "passivestate",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passiveitype",
+      "rawHeaders": {
+        "vanilla32": "passiveitype",
+        "bkvince": "passiveitype",
+        "pd2": "passiveitype"
+      },
+      "playerLabelFr": "passiveitype",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivereqweaponcount",
+      "rawHeaders": {
+        "vanilla32": "passivereqweaponcount",
+        "bkvince": "passivereqweaponcount",
+        "pd2": null
+      },
+      "playerLabelFr": "passivereqweaponcount",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestat1",
+      "rawHeaders": {
+        "vanilla32": "passivestat1",
+        "bkvince": "passivestat1",
+        "pd2": "passivestat1"
+      },
+      "playerLabelFr": "Stat passive — palier 1",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivecalc1",
+      "rawHeaders": {
+        "vanilla32": "passivecalc1",
+        "bkvince": "passivecalc1",
+        "pd2": "passivecalc1"
+      },
+      "playerLabelFr": "Valeur de stat passive — palier 1",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestat2",
+      "rawHeaders": {
+        "vanilla32": "passivestat2",
+        "bkvince": "passivestat2",
+        "pd2": "passivestat2"
+      },
+      "playerLabelFr": "Stat passive — palier 2",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivecalc2",
+      "rawHeaders": {
+        "vanilla32": "passivecalc2",
+        "bkvince": "passivecalc2",
+        "pd2": "passivecalc2"
+      },
+      "playerLabelFr": "Valeur de stat passive — palier 2",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestat3",
+      "rawHeaders": {
+        "vanilla32": "passivestat3",
+        "bkvince": "passivestat3",
+        "pd2": "passivestat3"
+      },
+      "playerLabelFr": "Stat passive — palier 3",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivecalc3",
+      "rawHeaders": {
+        "vanilla32": "passivecalc3",
+        "bkvince": "passivecalc3",
+        "pd2": "passivecalc3"
+      },
+      "playerLabelFr": "Valeur de stat passive — palier 3",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestat4",
+      "rawHeaders": {
+        "vanilla32": "passivestat4",
+        "bkvince": "passivestat4",
+        "pd2": "passivestat4"
+      },
+      "playerLabelFr": "Stat passive — palier 4",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivecalc4",
+      "rawHeaders": {
+        "vanilla32": "passivecalc4",
+        "bkvince": "passivecalc4",
+        "pd2": "passivecalc4"
+      },
+      "playerLabelFr": "Valeur de stat passive — palier 4",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestat5",
+      "rawHeaders": {
+        "vanilla32": "passivestat5",
+        "bkvince": "passivestat5",
+        "pd2": "passivestat5"
+      },
+      "playerLabelFr": "Stat passive — palier 5",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivecalc5",
+      "rawHeaders": {
+        "vanilla32": "passivecalc5",
+        "bkvince": "passivecalc5",
+        "pd2": "passivecalc5"
+      },
+      "playerLabelFr": "Valeur de stat passive — palier 5",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestat6",
+      "rawHeaders": {
+        "vanilla32": "passivestat6",
+        "bkvince": "passivestat6",
+        "pd2": null
+      },
+      "playerLabelFr": "Stat passive — palier 6",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivecalc6",
+      "rawHeaders": {
+        "vanilla32": "passivecalc6",
+        "bkvince": "passivecalc6",
+        "pd2": null
+      },
+      "playerLabelFr": "Valeur de stat passive — palier 6",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestat7",
+      "rawHeaders": {
+        "vanilla32": "passivestat7",
+        "bkvince": "passivestat7",
+        "pd2": null
+      },
+      "playerLabelFr": "Stat passive — palier 7",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivecalc7",
+      "rawHeaders": {
+        "vanilla32": "passivecalc7",
+        "bkvince": "passivecalc7",
+        "pd2": null
+      },
+      "playerLabelFr": "Valeur de stat passive — palier 7",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestat8",
+      "rawHeaders": {
+        "vanilla32": "passivestat8",
+        "bkvince": "passivestat8",
+        "pd2": null
+      },
+      "playerLabelFr": "Stat passive — palier 8",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivecalc8",
+      "rawHeaders": {
+        "vanilla32": "passivecalc8",
+        "bkvince": "passivecalc8",
+        "pd2": null
+      },
+      "playerLabelFr": "Valeur de stat passive — palier 8",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestat9",
+      "rawHeaders": {
+        "vanilla32": "passivestat9",
+        "bkvince": "passivestat9",
+        "pd2": null
+      },
+      "playerLabelFr": "Stat passive — palier 9",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivecalc9",
+      "rawHeaders": {
+        "vanilla32": "passivecalc9",
+        "bkvince": "passivecalc9",
+        "pd2": null
+      },
+      "playerLabelFr": "Valeur de stat passive — palier 9",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestat10",
+      "rawHeaders": {
+        "vanilla32": "passivestat10",
+        "bkvince": "passivestat10",
+        "pd2": null
+      },
+      "playerLabelFr": "Stat passive — palier 10",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivecalc10",
+      "rawHeaders": {
+        "vanilla32": "passivecalc10",
+        "bkvince": "passivecalc10",
+        "pd2": null
+      },
+      "playerLabelFr": "Valeur de stat passive — palier 10",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestat11",
+      "rawHeaders": {
+        "vanilla32": "passivestat11",
+        "bkvince": "passivestat11",
+        "pd2": null
+      },
+      "playerLabelFr": "Stat passive — palier 11",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivecalc11",
+      "rawHeaders": {
+        "vanilla32": "passivecalc11",
+        "bkvince": "passivecalc11",
+        "pd2": null
+      },
+      "playerLabelFr": "Valeur de stat passive — palier 11",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestat12",
+      "rawHeaders": {
+        "vanilla32": "passivestat12",
+        "bkvince": "passivestat12",
+        "pd2": null
+      },
+      "playerLabelFr": "Stat passive — palier 12",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivecalc12",
+      "rawHeaders": {
+        "vanilla32": "passivecalc12",
+        "bkvince": "passivecalc12",
+        "pd2": null
+      },
+      "playerLabelFr": "Valeur de stat passive — palier 12",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestat13",
+      "rawHeaders": {
+        "vanilla32": "passivestat13",
+        "bkvince": "passivestat13",
+        "pd2": null
+      },
+      "playerLabelFr": "Stat passive — palier 13",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivecalc13",
+      "rawHeaders": {
+        "vanilla32": "passivecalc13",
+        "bkvince": "passivecalc13",
+        "pd2": null
+      },
+      "playerLabelFr": "Valeur de stat passive — palier 13",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivestat14",
+      "rawHeaders": {
+        "vanilla32": "passivestat14",
+        "bkvince": "passivestat14",
+        "pd2": null
+      },
+      "playerLabelFr": "Stat passive — palier 14",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passivecalc14",
+      "rawHeaders": {
+        "vanilla32": "passivecalc14",
+        "bkvince": "passivecalc14",
+        "pd2": null
+      },
+      "playerLabelFr": "Valeur de stat passive — palier 14",
+      "shortHelpFr": "Cellule constitutive du bundle auras_passives; elle ne se décide pas isolément.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "summon",
+      "rawHeaders": {
+        "vanilla32": "summon",
+        "bkvince": "summon",
+        "pd2": "summon"
+      },
+      "playerLabelFr": "Monstre invoqué",
+      "shortHelpFr": "Lien vers la ligne monstats du summon.",
+      "family": "summons",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "SUMMON_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "pettype",
+      "rawHeaders": {
+        "vanilla32": "pettype",
+        "bkvince": "pettype",
+        "pd2": "pettype"
+      },
+      "playerLabelFr": "Type de familier",
+      "shortHelpFr": "Lien vers le package pettype du summon.",
+      "family": "summons",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "SUMMON_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "petmax",
+      "rawHeaders": {
+        "vanilla32": "petmax",
+        "bkvince": "petmax",
+        "pd2": "petmax"
+      },
+      "playerLabelFr": "Nombre maximum de summons",
+      "shortHelpFr": "Formule déterminant la limite de familiers.",
+      "family": "summons",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "SUMMON_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "requirespettype",
+      "rawHeaders": {
+        "vanilla32": "requirespettype",
+        "bkvince": "requirespettype",
+        "pd2": null
+      },
+      "playerLabelFr": "requirespettype",
+      "shortHelpFr": "Champ summons documenté par eezstreet; consulter le détail technique.",
+      "family": "summons",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "SUMMON_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "summode",
+      "rawHeaders": {
+        "vanilla32": "summode",
+        "bkvince": "summode",
+        "pd2": "summode"
+      },
+      "playerLabelFr": "summode",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "sumskill1",
+      "rawHeaders": {
+        "vanilla32": "sumskill1",
+        "bkvince": "sumskill1",
+        "pd2": "sumskill1"
+      },
+      "playerLabelFr": "sumskill1",
+      "shortHelpFr": "Champ summons documenté par eezstreet; consulter le détail technique.",
+      "family": "summons",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "SUMMON_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "sumsk1calc",
+      "rawHeaders": {
+        "vanilla32": "sumsk1calc",
+        "bkvince": "sumsk1calc",
+        "pd2": "sumsk1calc"
+      },
+      "playerLabelFr": "sumsk1calc",
+      "shortHelpFr": "Champ summons documenté par eezstreet; consulter le détail technique.",
+      "family": "summons",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "SUMMON_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "sumskill2",
+      "rawHeaders": {
+        "vanilla32": "sumskill2",
+        "bkvince": "sumskill2",
+        "pd2": "sumskill2"
+      },
+      "playerLabelFr": "sumskill2",
+      "shortHelpFr": "Champ summons documenté par eezstreet; consulter le détail technique.",
+      "family": "summons",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "SUMMON_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "sumsk2calc",
+      "rawHeaders": {
+        "vanilla32": "sumsk2calc",
+        "bkvince": "sumsk2calc",
+        "pd2": "sumsk2calc"
+      },
+      "playerLabelFr": "sumsk2calc",
+      "shortHelpFr": "Champ summons documenté par eezstreet; consulter le détail technique.",
+      "family": "summons",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "SUMMON_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "sumskill3",
+      "rawHeaders": {
+        "vanilla32": "sumskill3",
+        "bkvince": "sumskill3",
+        "pd2": "sumskill3"
+      },
+      "playerLabelFr": "sumskill3",
+      "shortHelpFr": "Champ summons documenté par eezstreet; consulter le détail technique.",
+      "family": "summons",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "SUMMON_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "sumsk3calc",
+      "rawHeaders": {
+        "vanilla32": "sumsk3calc",
+        "bkvince": "sumsk3calc",
+        "pd2": "sumsk3calc"
+      },
+      "playerLabelFr": "sumsk3calc",
+      "shortHelpFr": "Champ summons documenté par eezstreet; consulter le détail technique.",
+      "family": "summons",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "SUMMON_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "sumskill4",
+      "rawHeaders": {
+        "vanilla32": "sumskill4",
+        "bkvince": "sumskill4",
+        "pd2": "sumskill4"
+      },
+      "playerLabelFr": "sumskill4",
+      "shortHelpFr": "Champ summons documenté par eezstreet; consulter le détail technique.",
+      "family": "summons",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "SUMMON_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "sumsk4calc",
+      "rawHeaders": {
+        "vanilla32": "sumsk4calc",
+        "bkvince": "sumsk4calc",
+        "pd2": "sumsk4calc"
+      },
+      "playerLabelFr": "sumsk4calc",
+      "shortHelpFr": "Champ summons documenté par eezstreet; consulter le détail technique.",
+      "family": "summons",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "SUMMON_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "sumskill5",
+      "rawHeaders": {
+        "vanilla32": "sumskill5",
+        "bkvince": "sumskill5",
+        "pd2": "sumskill5"
+      },
+      "playerLabelFr": "sumskill5",
+      "shortHelpFr": "Champ summons documenté par eezstreet; consulter le détail technique.",
+      "family": "summons",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "SUMMON_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "sumsk5calc",
+      "rawHeaders": {
+        "vanilla32": "sumsk5calc",
+        "bkvince": "sumsk5calc",
+        "pd2": "sumsk5calc"
+      },
+      "playerLabelFr": "sumsk5calc",
+      "shortHelpFr": "Champ summons documenté par eezstreet; consulter le détail technique.",
+      "family": "summons",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "SUMMON_PACKAGE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "sumumod",
+      "rawHeaders": {
+        "vanilla32": "sumumod",
+        "bkvince": "sumumod",
+        "pd2": "sumumod"
+      },
+      "playerLabelFr": "sumumod",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "sumoverlay",
+      "rawHeaders": {
+        "vanilla32": "sumoverlay",
+        "bkvince": "sumoverlay",
+        "pd2": "sumoverlay"
+      },
+      "playerLabelFr": "sumoverlay",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "stsuccessonly",
+      "rawHeaders": {
+        "vanilla32": "stsuccessonly",
+        "bkvince": "stsuccessonly",
+        "pd2": "stsuccessonly"
+      },
+      "playerLabelFr": "stsuccessonly",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "stsound",
+      "rawHeaders": {
+        "vanilla32": "stsound",
+        "bkvince": "stsound",
+        "pd2": "stsound"
+      },
+      "playerLabelFr": "stsound",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "stsoundclass",
+      "rawHeaders": {
+        "vanilla32": "stsoundclass",
+        "bkvince": "stsoundclass",
+        "pd2": "stsoundclass"
+      },
+      "playerLabelFr": "stsoundclass",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "stsounddelay",
+      "rawHeaders": {
+        "vanilla32": "stsounddelay",
+        "bkvince": "stsounddelay",
+        "pd2": "stsounddelay"
+      },
+      "playerLabelFr": "stsounddelay",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "weaponsnd",
+      "rawHeaders": {
+        "vanilla32": "weaponsnd",
+        "bkvince": "weaponsnd",
+        "pd2": "weaponsnd"
+      },
+      "playerLabelFr": "weaponsnd",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "dosound",
+      "rawHeaders": {
+        "vanilla32": "dosound",
+        "bkvince": "dosound",
+        "pd2": "dosound"
+      },
+      "playerLabelFr": "dosound",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "dosound a",
+      "rawHeaders": {
+        "vanilla32": "dosound a",
+        "bkvince": "dosound a",
+        "pd2": "dosound a"
+      },
+      "playerLabelFr": "dosound a",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "dosound b",
+      "rawHeaders": {
+        "vanilla32": "dosound b",
+        "bkvince": "dosound b",
+        "pd2": "dosound b"
+      },
+      "playerLabelFr": "dosound b",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "tgtoverlay",
+      "rawHeaders": {
+        "vanilla32": "tgtoverlay",
+        "bkvince": "tgtoverlay",
+        "pd2": "tgtoverlay"
+      },
+      "playerLabelFr": "tgtoverlay",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "tgtsound",
+      "rawHeaders": {
+        "vanilla32": "tgtsound",
+        "bkvince": "tgtsound",
+        "pd2": "tgtsound"
+      },
+      "playerLabelFr": "tgtsound",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "prgoverlay",
+      "rawHeaders": {
+        "vanilla32": "prgoverlay",
+        "bkvince": "prgoverlay",
+        "pd2": "prgoverlay"
+      },
+      "playerLabelFr": "prgoverlay",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "prgsound",
+      "rawHeaders": {
+        "vanilla32": "prgsound",
+        "bkvince": "prgsound",
+        "pd2": "prgsound"
+      },
+      "playerLabelFr": "prgsound",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "castoverlay",
+      "rawHeaders": {
+        "vanilla32": "castoverlay",
+        "bkvince": "castoverlay",
+        "pd2": "castoverlay"
+      },
+      "playerLabelFr": "castoverlay",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cltoverlaya",
+      "rawHeaders": {
+        "vanilla32": "cltoverlaya",
+        "bkvince": "cltoverlaya",
+        "pd2": "cltoverlaya"
+      },
+      "playerLabelFr": "cltoverlaya",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cltoverlayb",
+      "rawHeaders": {
+        "vanilla32": "cltoverlayb",
+        "bkvince": "cltoverlayb",
+        "pd2": "cltoverlayb"
+      },
+      "playerLabelFr": "cltoverlayb",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cltstfunc",
+      "rawHeaders": {
+        "vanilla32": "cltstfunc",
+        "bkvince": "cltstfunc",
+        "pd2": "cltstfunc"
+      },
+      "playerLabelFr": "Fonction moteur — cltstfunc",
+      "shortHelpFr": "Sélecteur natif protégé; un numéro identique entre moteurs ne prouve pas le même comportement.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "NATIVE_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cltdofunc",
+      "rawHeaders": {
+        "vanilla32": "cltdofunc",
+        "bkvince": "cltdofunc",
+        "pd2": "cltdofunc"
+      },
+      "playerLabelFr": "Fonction moteur — cltdofunc",
+      "shortHelpFr": "Sélecteur natif protégé; un numéro identique entre moteurs ne prouve pas le même comportement.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "NATIVE_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cltstopfunc",
+      "rawHeaders": {
+        "vanilla32": "cltstopfunc",
+        "bkvince": "cltstopfunc",
+        "pd2": null
+      },
+      "playerLabelFr": "Fonction moteur — cltstopfunc",
+      "shortHelpFr": "Sélecteur natif protégé; un numéro identique entre moteurs ne prouve pas le même comportement.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "NATIVE_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cltprgfunc1",
+      "rawHeaders": {
+        "vanilla32": "cltprgfunc1",
+        "bkvince": "cltprgfunc1",
+        "pd2": "cltprgfunc1"
+      },
+      "playerLabelFr": "Fonction moteur — cltprgfunc1",
+      "shortHelpFr": "Sélecteur natif protégé; un numéro identique entre moteurs ne prouve pas le même comportement.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "NATIVE_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cltprgfunc2",
+      "rawHeaders": {
+        "vanilla32": "cltprgfunc2",
+        "bkvince": "cltprgfunc2",
+        "pd2": "cltprgfunc2"
+      },
+      "playerLabelFr": "Fonction moteur — cltprgfunc2",
+      "shortHelpFr": "Sélecteur natif protégé; un numéro identique entre moteurs ne prouve pas le même comportement.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "NATIVE_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cltprgfunc3",
+      "rawHeaders": {
+        "vanilla32": "cltprgfunc3",
+        "bkvince": "cltprgfunc3",
+        "pd2": "cltprgfunc3"
+      },
+      "playerLabelFr": "Fonction moteur — cltprgfunc3",
+      "shortHelpFr": "Sélecteur natif protégé; un numéro identique entre moteurs ne prouve pas le même comportement.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "NATIVE_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cltmissile",
+      "rawHeaders": {
+        "vanilla32": "cltmissile",
+        "bkvince": "cltmissile",
+        "pd2": "cltmissile"
+      },
+      "playerLabelFr": "Projectile client principal",
+      "shortHelpFr": "Missile affiché par la logique client.",
+      "family": "projectiles",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PROJECTILE_ARCHITECTURE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cltmissilea",
+      "rawHeaders": {
+        "vanilla32": "cltmissilea",
+        "bkvince": "cltmissilea",
+        "pd2": "cltmissilea"
+      },
+      "playerLabelFr": "cltmissilea",
+      "shortHelpFr": "Champ projectiles documenté par eezstreet; consulter le détail technique.",
+      "family": "projectiles",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PROJECTILE_ARCHITECTURE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cltmissileb",
+      "rawHeaders": {
+        "vanilla32": "cltmissileb",
+        "bkvince": "cltmissileb",
+        "pd2": "cltmissileb"
+      },
+      "playerLabelFr": "cltmissileb",
+      "shortHelpFr": "Champ projectiles documenté par eezstreet; consulter le détail technique.",
+      "family": "projectiles",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PROJECTILE_ARCHITECTURE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cltmissilec",
+      "rawHeaders": {
+        "vanilla32": "cltmissilec",
+        "bkvince": "cltmissilec",
+        "pd2": "cltmissilec"
+      },
+      "playerLabelFr": "cltmissilec",
+      "shortHelpFr": "Champ projectiles documenté par eezstreet; consulter le détail technique.",
+      "family": "projectiles",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PROJECTILE_ARCHITECTURE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cltmissiled",
+      "rawHeaders": {
+        "vanilla32": "cltmissiled",
+        "bkvince": "cltmissiled",
+        "pd2": "cltmissiled"
+      },
+      "playerLabelFr": "cltmissiled",
+      "shortHelpFr": "Champ projectiles documenté par eezstreet; consulter le détail technique.",
+      "family": "projectiles",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PROJECTILE_ARCHITECTURE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cltcalc1",
+      "rawHeaders": {
+        "vanilla32": "cltcalc1",
+        "bkvince": "cltcalc1",
+        "pd2": "cltcalc1"
+      },
+      "playerLabelFr": "cltcalc1",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*cltcalc1 desc",
+      "rawHeaders": {
+        "vanilla32": "*cltcalc1 desc",
+        "bkvince": "*cltcalc1 desc",
+        "pd2": "*cltcalc1 desc"
+      },
+      "playerLabelFr": "Documentation — cltcalc1 desc",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "cltcalc2",
+      "rawHeaders": {
+        "vanilla32": "cltcalc2",
+        "bkvince": "cltcalc2",
+        "pd2": "cltcalc2"
+      },
+      "playerLabelFr": "cltcalc2",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*cltcalc2 desc",
+      "rawHeaders": {
+        "vanilla32": "*cltcalc2 desc",
+        "bkvince": "*cltcalc2 desc",
+        "pd2": "*cltcalc2 desc"
+      },
+      "playerLabelFr": "Documentation — cltcalc2 desc",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "cltcalc3",
+      "rawHeaders": {
+        "vanilla32": "cltcalc3",
+        "bkvince": "cltcalc3",
+        "pd2": "cltcalc3"
+      },
+      "playerLabelFr": "cltcalc3",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*cltcalc3 desc",
+      "rawHeaders": {
+        "vanilla32": "*cltcalc3 desc",
+        "bkvince": "*cltcalc3 desc",
+        "pd2": "*cltcalc3 desc"
+      },
+      "playerLabelFr": "Documentation — cltcalc3 desc",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "warp",
+      "rawHeaders": {
+        "vanilla32": "warp",
+        "bkvince": "warp",
+        "pd2": "warp"
+      },
+      "playerLabelFr": "warp",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "immediate",
+      "rawHeaders": {
+        "vanilla32": "immediate",
+        "bkvince": "immediate",
+        "pd2": "immediate"
+      },
+      "playerLabelFr": "immediate",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "enhanceable",
+      "rawHeaders": {
+        "vanilla32": "enhanceable",
+        "bkvince": "enhanceable",
+        "pd2": "enhanceable"
+      },
+      "playerLabelFr": "enhanceable",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "attackrank",
+      "rawHeaders": {
+        "vanilla32": "attackrank",
+        "bkvince": "attackrank",
+        "pd2": "attackrank"
+      },
+      "playerLabelFr": "attackrank",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "noammo",
+      "rawHeaders": {
+        "vanilla32": "noammo",
+        "bkvince": "noammo",
+        "pd2": "noammo"
+      },
+      "playerLabelFr": "noammo",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "range",
+      "rawHeaders": {
+        "vanilla32": "range",
+        "bkvince": "range",
+        "pd2": "range"
+      },
+      "playerLabelFr": "range",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "weapsel",
+      "rawHeaders": {
+        "vanilla32": "weapsel",
+        "bkvince": "weapsel",
+        "pd2": "weapsel"
+      },
+      "playerLabelFr": "weapsel",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "requiresweapon",
+      "rawHeaders": {
+        "vanilla32": "requiresweapon",
+        "bkvince": "requiresweapon",
+        "pd2": null
+      },
+      "playerLabelFr": "requiresweapon",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itypea1",
+      "rawHeaders": {
+        "vanilla32": "itypea1",
+        "bkvince": "itypea1",
+        "pd2": "itypea1"
+      },
+      "playerLabelFr": "itypea1",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itypea2",
+      "rawHeaders": {
+        "vanilla32": "itypea2",
+        "bkvince": "itypea2",
+        "pd2": "itypea2"
+      },
+      "playerLabelFr": "itypea2",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itypea3",
+      "rawHeaders": {
+        "vanilla32": "itypea3",
+        "bkvince": "itypea3",
+        "pd2": "itypea3"
+      },
+      "playerLabelFr": "itypea3",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "etypea1",
+      "rawHeaders": {
+        "vanilla32": "etypea1",
+        "bkvince": "etypea1",
+        "pd2": "etypea1"
+      },
+      "playerLabelFr": "etypea1",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "etypea2",
+      "rawHeaders": {
+        "vanilla32": "etypea2",
+        "bkvince": "etypea2",
+        "pd2": "etypea2"
+      },
+      "playerLabelFr": "etypea2",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itypeb1",
+      "rawHeaders": {
+        "vanilla32": "itypeb1",
+        "bkvince": "itypeb1",
+        "pd2": "itypeb1"
+      },
+      "playerLabelFr": "itypeb1",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itypeb2",
+      "rawHeaders": {
+        "vanilla32": "itypeb2",
+        "bkvince": "itypeb2",
+        "pd2": "itypeb2"
+      },
+      "playerLabelFr": "itypeb2",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itypeb3",
+      "rawHeaders": {
+        "vanilla32": "itypeb3",
+        "bkvince": "itypeb3",
+        "pd2": "itypeb3"
+      },
+      "playerLabelFr": "itypeb3",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "etypeb1",
+      "rawHeaders": {
+        "vanilla32": "etypeb1",
+        "bkvince": "etypeb1",
+        "pd2": "etypeb1"
+      },
+      "playerLabelFr": "etypeb1",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "etypeb2",
+      "rawHeaders": {
+        "vanilla32": "etypeb2",
+        "bkvince": "etypeb2",
+        "pd2": "etypeb2"
+      },
+      "playerLabelFr": "etypeb2",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "anim",
+      "rawHeaders": {
+        "vanilla32": "anim",
+        "bkvince": "anim",
+        "pd2": "anim"
+      },
+      "playerLabelFr": "anim",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "seqtrans",
+      "rawHeaders": {
+        "vanilla32": "seqtrans",
+        "bkvince": "seqtrans",
+        "pd2": "seqtrans"
+      },
+      "playerLabelFr": "seqtrans",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "monanim",
+      "rawHeaders": {
+        "vanilla32": "monanim",
+        "bkvince": "monanim",
+        "pd2": "monanim"
+      },
+      "playerLabelFr": "monanim",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "seqnum",
+      "rawHeaders": {
+        "vanilla32": "seqnum",
+        "bkvince": "seqnum",
+        "pd2": "seqnum"
+      },
+      "playerLabelFr": "seqnum",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "seqinput",
+      "rawHeaders": {
+        "vanilla32": "seqinput",
+        "bkvince": "seqinput",
+        "pd2": "seqinput"
+      },
+      "playerLabelFr": "seqinput",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "durability",
+      "rawHeaders": {
+        "vanilla32": "durability",
+        "bkvince": "durability",
+        "pd2": "durability"
+      },
+      "playerLabelFr": "durability",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "useattackrate",
+      "rawHeaders": {
+        "vanilla32": "UseAttackRate",
+        "bkvince": "UseAttackRate",
+        "pd2": "UseAttackRate"
+      },
+      "playerLabelFr": "useattackrate",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "lineofsight",
+      "rawHeaders": {
+        "vanilla32": "LineOfSight",
+        "bkvince": "LineOfSight",
+        "pd2": "LineOfSight"
+      },
+      "playerLabelFr": "lineofsight",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "targetableonly",
+      "rawHeaders": {
+        "vanilla32": "TargetableOnly",
+        "bkvince": "TargetableOnly",
+        "pd2": "TargetableOnly"
+      },
+      "playerLabelFr": "targetableonly",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "searchenemyxy",
+      "rawHeaders": {
+        "vanilla32": "SearchEnemyXY",
+        "bkvince": "SearchEnemyXY",
+        "pd2": "SearchEnemyXY"
+      },
+      "playerLabelFr": "searchenemyxy",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "searchenemynear",
+      "rawHeaders": {
+        "vanilla32": "SearchEnemyNear",
+        "bkvince": "SearchEnemyNear",
+        "pd2": "SearchEnemyNear"
+      },
+      "playerLabelFr": "searchenemynear",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "searchopenxy",
+      "rawHeaders": {
+        "vanilla32": "SearchOpenXY",
+        "bkvince": "SearchOpenXY",
+        "pd2": "SearchOpenXY"
+      },
+      "playerLabelFr": "searchopenxy",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "selectproc",
+      "rawHeaders": {
+        "vanilla32": "SelectProc",
+        "bkvince": "SelectProc",
+        "pd2": "SelectProc"
+      },
+      "playerLabelFr": "selectproc",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "targetcorpse",
+      "rawHeaders": {
+        "vanilla32": "TargetCorpse",
+        "bkvince": "TargetCorpse",
+        "pd2": "TargetCorpse"
+      },
+      "playerLabelFr": "targetcorpse",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "targetpet",
+      "rawHeaders": {
+        "vanilla32": "TargetPet",
+        "bkvince": "TargetPet",
+        "pd2": "TargetPet"
+      },
+      "playerLabelFr": "targetpet",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "targetally",
+      "rawHeaders": {
+        "vanilla32": "TargetAlly",
+        "bkvince": "TargetAlly",
+        "pd2": "TargetAlly"
+      },
+      "playerLabelFr": "targetally",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "targetitem",
+      "rawHeaders": {
+        "vanilla32": "TargetItem",
+        "bkvince": "TargetItem",
+        "pd2": "TargetItem"
+      },
+      "playerLabelFr": "targetitem",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "attacknomana",
+      "rawHeaders": {
+        "vanilla32": "AttackNoMana",
+        "bkvince": "AttackNoMana",
+        "pd2": "AttackNoMana"
+      },
+      "playerLabelFr": "attacknomana",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "tgtplacecheck",
+      "rawHeaders": {
+        "vanilla32": "TgtPlaceCheck",
+        "bkvince": "TgtPlaceCheck",
+        "pd2": "TgtPlaceCheck"
+      },
+      "playerLabelFr": "tgtplacecheck",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "keepcursorstateonkill",
+      "rawHeaders": {
+        "vanilla32": "KeepCursorStateOnKill",
+        "bkvince": "KeepCursorStateOnKill",
+        "pd2": null
+      },
+      "playerLabelFr": "keepcursorstateonkill",
+      "shortHelpFr": "Champ interface controls documenté par eezstreet; consulter le détail technique.",
+      "family": "interface_controls",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "UI_ASSIGNMENT",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "continuecastunselected",
+      "rawHeaders": {
+        "vanilla32": "ContinueCastUnselected",
+        "bkvince": "ContinueCastUnselected",
+        "pd2": null
+      },
+      "playerLabelFr": "continuecastunselected",
+      "shortHelpFr": "Champ interface controls documenté par eezstreet; consulter le détail technique.",
+      "family": "interface_controls",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "UI_ASSIGNMENT",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "clearselectedonhold",
+      "rawHeaders": {
+        "vanilla32": "ClearSelectedOnHold",
+        "bkvince": "ClearSelectedOnHold",
+        "pd2": null
+      },
+      "playerLabelFr": "clearselectedonhold",
+      "shortHelpFr": "Champ interface controls documenté par eezstreet; consulter le détail technique.",
+      "family": "interface_controls",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "UI_ASSIGNMENT",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itemeffect",
+      "rawHeaders": {
+        "vanilla32": "ItemEffect",
+        "bkvince": "ItemEffect",
+        "pd2": "ItemEffect"
+      },
+      "playerLabelFr": "Exécution objet — serveur",
+      "shortHelpFr": "Fonction serveur utilisée lorsque le skill est déclenché par un objet.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ITEM_TRIGGER_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itemclteffect",
+      "rawHeaders": {
+        "vanilla32": "ItemCltEffect",
+        "bkvince": "ItemCltEffect",
+        "pd2": "ItemCltEffect"
+      },
+      "playerLabelFr": "Exécution objet — client",
+      "shortHelpFr": "Fonction client utilisée lorsque le skill est déclenché par un objet.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ITEM_TRIGGER_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itemtgtdo",
+      "rawHeaders": {
+        "vanilla32": "ItemTgtDo",
+        "bkvince": "ItemTgtDo",
+        "pd2": "ItemTgtDo"
+      },
+      "playerLabelFr": "itemtgtdo",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itemtarget",
+      "rawHeaders": {
+        "vanilla32": "ItemTarget",
+        "bkvince": "ItemTarget",
+        "pd2": "ItemTarget"
+      },
+      "playerLabelFr": "itemtarget",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itemuserestrict",
+      "rawHeaders": {
+        "vanilla32": "ItemUseRestrict",
+        "bkvince": "ItemUseRestrict",
+        "pd2": null
+      },
+      "playerLabelFr": "itemuserestrict",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "ITEM_TRIGGER_EXECUTION",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itemcheckstart",
+      "rawHeaders": {
+        "vanilla32": "ItemCheckStart",
+        "bkvince": "ItemCheckStart",
+        "pd2": "ItemCheckStart"
+      },
+      "playerLabelFr": "itemcheckstart",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itemcltcheckstart",
+      "rawHeaders": {
+        "vanilla32": "ItemCltCheckStart",
+        "bkvince": "ItemCltCheckStart",
+        "pd2": "ItemCltCheckStart"
+      },
+      "playerLabelFr": "itemcltcheckstart",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itemcastsound",
+      "rawHeaders": {
+        "vanilla32": "ItemCastSound",
+        "bkvince": "ItemCastSound",
+        "pd2": "ItemCastSound"
+      },
+      "playerLabelFr": "itemcastsound",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "itemcastoverlay",
+      "rawHeaders": {
+        "vanilla32": "ItemCastOverlay",
+        "bkvince": "ItemCastOverlay",
+        "pd2": "ItemCastOverlay"
+      },
+      "playerLabelFr": "itemcastoverlay",
+      "shortHelpFr": "Champ animation audio visuals documenté par eezstreet; consulter le détail technique.",
+      "family": "animation_audio_visuals",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "skpoints",
+      "rawHeaders": {
+        "vanilla32": "skpoints",
+        "bkvince": "skpoints",
+        "pd2": "skpoints"
+      },
+      "playerLabelFr": "skpoints",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "reqlevel",
+      "rawHeaders": {
+        "vanilla32": "reqlevel",
+        "bkvince": "reqlevel",
+        "pd2": "reqlevel"
+      },
+      "playerLabelFr": "Niveau requis",
+      "shortHelpFr": "Niveau de personnage requis pour apprendre le skill.",
+      "family": "identity_availability",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "maxlvl",
+      "rawHeaders": {
+        "vanilla32": "maxlvl",
+        "bkvince": "maxlvl",
+        "pd2": "maxlvl"
+      },
+      "playerLabelFr": "Niveau maximum",
+      "shortHelpFr": "Plafond de points du skill dans le schéma cible.",
+      "family": "identity_availability",
+      "technicalOnly": false,
+      "protected": true,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "reqstr",
+      "rawHeaders": {
+        "vanilla32": "reqstr",
+        "bkvince": "reqstr",
+        "pd2": "reqstr"
+      },
+      "playerLabelFr": "reqstr",
+      "shortHelpFr": "Champ identity availability documenté par eezstreet; consulter le détail technique.",
+      "family": "identity_availability",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "reqdex",
+      "rawHeaders": {
+        "vanilla32": "reqdex",
+        "bkvince": "reqdex",
+        "pd2": "reqdex"
+      },
+      "playerLabelFr": "reqdex",
+      "shortHelpFr": "Champ identity availability documenté par eezstreet; consulter le détail technique.",
+      "family": "identity_availability",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "reqint",
+      "rawHeaders": {
+        "vanilla32": "reqint",
+        "bkvince": "reqint",
+        "pd2": "reqint"
+      },
+      "playerLabelFr": "reqint",
+      "shortHelpFr": "Champ identity availability documenté par eezstreet; consulter le détail technique.",
+      "family": "identity_availability",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "reqvit",
+      "rawHeaders": {
+        "vanilla32": "reqvit",
+        "bkvince": "reqvit",
+        "pd2": "reqvit"
+      },
+      "playerLabelFr": "reqvit",
+      "shortHelpFr": "Champ identity availability documenté par eezstreet; consulter le détail technique.",
+      "family": "identity_availability",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "reqskill1",
+      "rawHeaders": {
+        "vanilla32": "reqskill1",
+        "bkvince": "reqskill1",
+        "pd2": "reqskill1"
+      },
+      "playerLabelFr": "reqskill1",
+      "shortHelpFr": "Champ identity availability documenté par eezstreet; consulter le détail technique.",
+      "family": "identity_availability",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "reqskill2",
+      "rawHeaders": {
+        "vanilla32": "reqskill2",
+        "bkvince": "reqskill2",
+        "pd2": "reqskill2"
+      },
+      "playerLabelFr": "reqskill2",
+      "shortHelpFr": "Champ identity availability documenté par eezstreet; consulter le détail technique.",
+      "family": "identity_availability",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "reqskill3",
+      "rawHeaders": {
+        "vanilla32": "reqskill3",
+        "bkvince": "reqskill3",
+        "pd2": "reqskill3"
+      },
+      "playerLabelFr": "reqskill3",
+      "shortHelpFr": "Champ identity availability documenté par eezstreet; consulter le détail technique.",
+      "family": "identity_availability",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "restrict",
+      "rawHeaders": {
+        "vanilla32": "restrict",
+        "bkvince": "restrict",
+        "pd2": "restrict"
+      },
+      "playerLabelFr": "restrict",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "state1",
+      "rawHeaders": {
+        "vanilla32": "State1",
+        "bkvince": "State1",
+        "pd2": "State1"
+      },
+      "playerLabelFr": "state1",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "state2",
+      "rawHeaders": {
+        "vanilla32": "State2",
+        "bkvince": "State2",
+        "pd2": "State2"
+      },
+      "playerLabelFr": "state2",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "state3",
+      "rawHeaders": {
+        "vanilla32": "State3",
+        "bkvince": "State3",
+        "pd2": "State3"
+      },
+      "playerLabelFr": "state3",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "localdelay",
+      "rawHeaders": {
+        "vanilla32": "localdelay",
+        "bkvince": "localdelay",
+        "pd2": null
+      },
+      "playerLabelFr": "Délai local D2R",
+      "shortHelpFr": "Délai de relance du skill lui-même, en frames D2R.",
+      "family": "cooldowns",
+      "technicalOnly": false,
+      "protected": true,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "COOLDOWN_MODEL",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "globaldelay",
+      "rawHeaders": {
+        "vanilla32": "globaldelay",
+        "bkvince": "globaldelay",
+        "pd2": null
+      },
+      "playerLabelFr": "Délai global D2R",
+      "shortHelpFr": "Délai imposé aux autres skills à délai après l’utilisation.",
+      "family": "cooldowns",
+      "technicalOnly": false,
+      "protected": true,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "COOLDOWN_MODEL",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "leftskill",
+      "rawHeaders": {
+        "vanilla32": "leftskill",
+        "bkvince": "leftskill",
+        "pd2": "leftskill"
+      },
+      "playerLabelFr": "leftskill",
+      "shortHelpFr": "Champ interface controls documenté par eezstreet; consulter le détail technique.",
+      "family": "interface_controls",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "UI_ASSIGNMENT",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "rightskill",
+      "rawHeaders": {
+        "vanilla32": "rightskill",
+        "bkvince": "rightskill",
+        "pd2": null
+      },
+      "playerLabelFr": "rightskill",
+      "shortHelpFr": "Champ interface controls documenté par eezstreet; consulter le détail technique.",
+      "family": "interface_controls",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "UI_ASSIGNMENT",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "repeat",
+      "rawHeaders": {
+        "vanilla32": "repeat",
+        "bkvince": "repeat",
+        "pd2": "repeat"
+      },
+      "playerLabelFr": "repeat",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "alwayshit",
+      "rawHeaders": {
+        "vanilla32": "alwayshit",
+        "bkvince": "alwayshit",
+        "pd2": null
+      },
+      "playerLabelFr": "alwayshit",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "usemanaondo",
+      "rawHeaders": {
+        "vanilla32": "usemanaondo",
+        "bkvince": "usemanaondo",
+        "pd2": "usemanaondo"
+      },
+      "playerLabelFr": "usemanaondo",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "startmana",
+      "rawHeaders": {
+        "vanilla32": "startmana",
+        "bkvince": "startmana",
+        "pd2": "startmana"
+      },
+      "playerLabelFr": "Mana initial",
+      "shortHelpFr": "Coût initial utilisé par certains skills continus.",
+      "family": "mana",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "MANA_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "minmana",
+      "rawHeaders": {
+        "vanilla32": "minmana",
+        "bkvince": "minmana",
+        "pd2": "minmana"
+      },
+      "playerLabelFr": "Mana minimum",
+      "shortHelpFr": "Plancher du coût réel en mana.",
+      "family": "mana",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "MANA_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "manashift",
+      "rawHeaders": {
+        "vanilla32": "manashift",
+        "bkvince": "manashift",
+        "pd2": "manashift"
+      },
+      "playerLabelFr": "Échelle du mana",
+      "shortHelpFr": "Décalage binaire appliqué à la courbe de mana.",
+      "family": "mana",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "MANA_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "mana",
+      "rawHeaders": {
+        "vanilla32": "mana",
+        "bkvince": "mana",
+        "pd2": "mana"
+      },
+      "playerLabelFr": "Mana de base",
+      "shortHelpFr": "Base encodée de la courbe de coût en mana.",
+      "family": "mana",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "MANA_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "lvlmana",
+      "rawHeaders": {
+        "vanilla32": "lvlmana",
+        "bkvince": "lvlmana",
+        "pd2": "lvlmana"
+      },
+      "playerLabelFr": "Mana par niveau",
+      "shortHelpFr": "Progression du coût en mana avec le niveau du skill.",
+      "family": "mana",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "MANA_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "interrupt",
+      "rawHeaders": {
+        "vanilla32": "interrupt",
+        "bkvince": "interrupt",
+        "pd2": "interrupt"
+      },
+      "playerLabelFr": "interrupt",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "intown",
+      "rawHeaders": {
+        "vanilla32": "InTown",
+        "bkvince": "InTown",
+        "pd2": "InTown"
+      },
+      "playerLabelFr": "intown",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aura",
+      "rawHeaders": {
+        "vanilla32": "aura",
+        "bkvince": "aura",
+        "pd2": "aura"
+      },
+      "playerLabelFr": "aura",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "periodic",
+      "rawHeaders": {
+        "vanilla32": "periodic",
+        "bkvince": "periodic",
+        "pd2": "periodic"
+      },
+      "playerLabelFr": "periodic",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "perdelay",
+      "rawHeaders": {
+        "vanilla32": "perdelay",
+        "bkvince": "perdelay",
+        "pd2": "perdelay"
+      },
+      "playerLabelFr": "Cadence périodique",
+      "shortHelpFr": "Fréquence d’exécution d’un skill périodique ou d’une aura.",
+      "family": "cooldowns",
+      "technicalOnly": false,
+      "protected": true,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "COOLDOWN_MODEL",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "periodicclearaura",
+      "rawHeaders": {
+        "vanilla32": "periodicClearAura",
+        "bkvince": "periodicClearAura",
+        "pd2": null
+      },
+      "playerLabelFr": "periodicclearaura",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "finishing",
+      "rawHeaders": {
+        "vanilla32": "finishing",
+        "bkvince": "finishing",
+        "pd2": "finishing"
+      },
+      "playerLabelFr": "finishing",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "prgchargestocast",
+      "rawHeaders": {
+        "vanilla32": "prgchargestocast",
+        "bkvince": "prgchargestocast",
+        "pd2": null
+      },
+      "playerLabelFr": "prgchargestocast",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "prgchargesconsumed",
+      "rawHeaders": {
+        "vanilla32": "prgchargesconsumed",
+        "bkvince": "prgchargesconsumed",
+        "pd2": null
+      },
+      "playerLabelFr": "prgchargesconsumed",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "passive",
+      "rawHeaders": {
+        "vanilla32": "passive",
+        "bkvince": "passive",
+        "pd2": "passive"
+      },
+      "playerLabelFr": "passive",
+      "shortHelpFr": "Champ auras passives documenté par eezstreet; consulter le détail technique.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "progressive",
+      "rawHeaders": {
+        "vanilla32": "progressive",
+        "bkvince": "progressive",
+        "pd2": "progressive"
+      },
+      "playerLabelFr": "progressive",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "scroll",
+      "rawHeaders": {
+        "vanilla32": "scroll",
+        "bkvince": "scroll",
+        "pd2": "scroll"
+      },
+      "playerLabelFr": "scroll",
+      "shortHelpFr": "Champ interface controls documenté par eezstreet; consulter le détail technique.",
+      "family": "interface_controls",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "calc1",
+      "rawHeaders": {
+        "vanilla32": "calc1",
+        "bkvince": "calc1",
+        "pd2": "calc1"
+      },
+      "playerLabelFr": "Calcul 1",
+      "shortHelpFr": "Le sens dépend du callback; utiliser en priorité la description propre à la ligne.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*calc1 desc",
+      "rawHeaders": {
+        "vanilla32": "*calc1 desc",
+        "bkvince": "*calc1 desc",
+        "pd2": "*calc1 desc"
+      },
+      "playerLabelFr": "Documentation — calc1 desc",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "calc2",
+      "rawHeaders": {
+        "vanilla32": "calc2",
+        "bkvince": "calc2",
+        "pd2": "calc2"
+      },
+      "playerLabelFr": "Calcul 2",
+      "shortHelpFr": "Le sens dépend du callback; utiliser en priorité la description propre à la ligne.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*calc2 desc",
+      "rawHeaders": {
+        "vanilla32": "*calc2 desc",
+        "bkvince": "*calc2 desc",
+        "pd2": "*calc2 desc"
+      },
+      "playerLabelFr": "Documentation — calc2 desc",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "calc3",
+      "rawHeaders": {
+        "vanilla32": "calc3",
+        "bkvince": "calc3",
+        "pd2": "calc3"
+      },
+      "playerLabelFr": "Calcul 3",
+      "shortHelpFr": "Le sens dépend du callback; utiliser en priorité la description propre à la ligne.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*calc3 desc",
+      "rawHeaders": {
+        "vanilla32": "*calc3 desc",
+        "bkvince": "*calc3 desc",
+        "pd2": "*calc3 desc"
+      },
+      "playerLabelFr": "Documentation — calc3 desc",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "calc4",
+      "rawHeaders": {
+        "vanilla32": "calc4",
+        "bkvince": "calc4",
+        "pd2": "calc4"
+      },
+      "playerLabelFr": "Calcul 4",
+      "shortHelpFr": "Le sens dépend du callback; utiliser en priorité la description propre à la ligne.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*calc4 desc",
+      "rawHeaders": {
+        "vanilla32": "*calc4 desc",
+        "bkvince": "*calc4 desc",
+        "pd2": "*calc4 desc"
+      },
+      "playerLabelFr": "Documentation — calc4 desc",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "calc5",
+      "rawHeaders": {
+        "vanilla32": "calc5",
+        "bkvince": "calc5",
+        "pd2": null
+      },
+      "playerLabelFr": "Calcul 5",
+      "shortHelpFr": "Le sens dépend du callback; utiliser en priorité la description propre à la ligne.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*calc5 desc",
+      "rawHeaders": {
+        "vanilla32": "*calc5 desc",
+        "bkvince": "*calc5 desc",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — calc5 desc",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "calc6",
+      "rawHeaders": {
+        "vanilla32": "calc6",
+        "bkvince": "calc6",
+        "pd2": null
+      },
+      "playerLabelFr": "Calcul 6",
+      "shortHelpFr": "Le sens dépend du callback; utiliser en priorité la description propre à la ligne.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*calc6 desc",
+      "rawHeaders": {
+        "vanilla32": "*calc6 desc",
+        "bkvince": "*calc6 desc",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — calc6 desc",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "calc7",
+      "rawHeaders": {
+        "vanilla32": "calc7",
+        "bkvince": "calc7",
+        "pd2": null
+      },
+      "playerLabelFr": "Calcul 7",
+      "shortHelpFr": "Le sens dépend du callback; utiliser en priorité la description propre à la ligne.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*calc7desc",
+      "rawHeaders": {
+        "vanilla32": "*calc7desc",
+        "bkvince": "*calc7desc",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — calc7desc",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "calc8",
+      "rawHeaders": {
+        "vanilla32": "calc8",
+        "bkvince": "calc8",
+        "pd2": null
+      },
+      "playerLabelFr": "Calcul 8",
+      "shortHelpFr": "Le sens dépend du callback; utiliser en priorité la description propre à la ligne.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*calc8desc",
+      "rawHeaders": {
+        "vanilla32": "*calc8desc",
+        "bkvince": "*calc8desc",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — calc8desc",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "calc9",
+      "rawHeaders": {
+        "vanilla32": "calc9",
+        "bkvince": "calc9",
+        "pd2": null
+      },
+      "playerLabelFr": "Calcul 9",
+      "shortHelpFr": "Le sens dépend du callback; utiliser en priorité la description propre à la ligne.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*calc9desc",
+      "rawHeaders": {
+        "vanilla32": "*calc9desc",
+        "bkvince": "*calc9desc",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — calc9desc",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "calc10",
+      "rawHeaders": {
+        "vanilla32": "calc10",
+        "bkvince": "calc10",
+        "pd2": null
+      },
+      "playerLabelFr": "Calcul 10",
+      "shortHelpFr": "Le sens dépend du callback; utiliser en priorité la description propre à la ligne.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*calc10desc",
+      "rawHeaders": {
+        "vanilla32": "*calc10desc",
+        "bkvince": "*calc10desc",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — calc10desc",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param1",
+      "rawHeaders": {
+        "vanilla32": "Param1",
+        "bkvince": "Param1",
+        "pd2": "Param1"
+      },
+      "playerLabelFr": "Paramètre 1",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param1 description",
+      "rawHeaders": {
+        "vanilla32": "*Param1 Description",
+        "bkvince": "*Param1 Description",
+        "pd2": "*Param1 Description"
+      },
+      "playerLabelFr": "Documentation — param1 description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param2",
+      "rawHeaders": {
+        "vanilla32": "Param2",
+        "bkvince": "Param2",
+        "pd2": "Param2"
+      },
+      "playerLabelFr": "Paramètre 2",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param2 description",
+      "rawHeaders": {
+        "vanilla32": "*Param2 Description",
+        "bkvince": "*Param2 Description",
+        "pd2": "*Param2 Description"
+      },
+      "playerLabelFr": "Documentation — param2 description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param3",
+      "rawHeaders": {
+        "vanilla32": "Param3",
+        "bkvince": "Param3",
+        "pd2": "Param3"
+      },
+      "playerLabelFr": "Paramètre 3",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param3 description",
+      "rawHeaders": {
+        "vanilla32": "*Param3 Description",
+        "bkvince": "*Param3 Description",
+        "pd2": "*Param3 Description"
+      },
+      "playerLabelFr": "Documentation — param3 description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param4",
+      "rawHeaders": {
+        "vanilla32": "Param4",
+        "bkvince": "Param4",
+        "pd2": "Param4"
+      },
+      "playerLabelFr": "Paramètre 4",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param4 description",
+      "rawHeaders": {
+        "vanilla32": "*Param4 Description",
+        "bkvince": "*Param4 Description",
+        "pd2": "*Param4 Description"
+      },
+      "playerLabelFr": "Documentation — param4 description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param5",
+      "rawHeaders": {
+        "vanilla32": "Param5",
+        "bkvince": "Param5",
+        "pd2": "Param5"
+      },
+      "playerLabelFr": "Paramètre 5",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param5 description",
+      "rawHeaders": {
+        "vanilla32": "*Param5 Description",
+        "bkvince": "*Param5 Description",
+        "pd2": "*Param5 Description"
+      },
+      "playerLabelFr": "Documentation — param5 description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param6",
+      "rawHeaders": {
+        "vanilla32": "Param6",
+        "bkvince": "Param6",
+        "pd2": "Param6"
+      },
+      "playerLabelFr": "Paramètre 6",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param6 description",
+      "rawHeaders": {
+        "vanilla32": "*Param6 Description",
+        "bkvince": "*Param6 Description",
+        "pd2": "*Param6 Description"
+      },
+      "playerLabelFr": "Documentation — param6 description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param7",
+      "rawHeaders": {
+        "vanilla32": "Param7",
+        "bkvince": "Param7",
+        "pd2": "Param7"
+      },
+      "playerLabelFr": "Paramètre 7",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param7 description",
+      "rawHeaders": {
+        "vanilla32": "*Param7 Description",
+        "bkvince": "*Param7 Description",
+        "pd2": "*Param7 Description"
+      },
+      "playerLabelFr": "Documentation — param7 description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param8",
+      "rawHeaders": {
+        "vanilla32": "Param8",
+        "bkvince": "Param8",
+        "pd2": "Param8"
+      },
+      "playerLabelFr": "Paramètre 8",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param8 description",
+      "rawHeaders": {
+        "vanilla32": "*Param8 Description",
+        "bkvince": "*Param8 Description",
+        "pd2": "*Param8 Description"
+      },
+      "playerLabelFr": "Documentation — param8 description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param9",
+      "rawHeaders": {
+        "vanilla32": "Param9",
+        "bkvince": "Param9",
+        "pd2": null
+      },
+      "playerLabelFr": "Paramètre 9",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param9 description",
+      "rawHeaders": {
+        "vanilla32": "*Param9 Description",
+        "bkvince": "*Param9 Description",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — param9 description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param10",
+      "rawHeaders": {
+        "vanilla32": "Param10",
+        "bkvince": "Param10",
+        "pd2": null
+      },
+      "playerLabelFr": "Paramètre 10",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param10 description2",
+      "rawHeaders": {
+        "vanilla32": "*Param10 Description2",
+        "bkvince": "*Param10 Description2",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — param10 description2",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param11",
+      "rawHeaders": {
+        "vanilla32": "Param11",
+        "bkvince": "Param11",
+        "pd2": null
+      },
+      "playerLabelFr": "Paramètre 11",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param11 description",
+      "rawHeaders": {
+        "vanilla32": "*Param11 Description",
+        "bkvince": "*Param11 Description",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — param11 description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param12",
+      "rawHeaders": {
+        "vanilla32": "Param12",
+        "bkvince": "Param12",
+        "pd2": null
+      },
+      "playerLabelFr": "Paramètre 12",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param12 description",
+      "rawHeaders": {
+        "vanilla32": "*Param12 Description",
+        "bkvince": "*Param12 Description",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — param12 description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param13",
+      "rawHeaders": {
+        "vanilla32": "Param13",
+        "bkvince": "Param13",
+        "pd2": null
+      },
+      "playerLabelFr": "Paramètre 13",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param13description",
+      "rawHeaders": {
+        "vanilla32": "*Param13Description",
+        "bkvince": "*Param13Description",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — param13description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param14",
+      "rawHeaders": {
+        "vanilla32": "Param14",
+        "bkvince": "Param14",
+        "pd2": null
+      },
+      "playerLabelFr": "Paramètre 14",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param14description",
+      "rawHeaders": {
+        "vanilla32": "*Param14Description",
+        "bkvince": "*Param14Description",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — param14description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param15",
+      "rawHeaders": {
+        "vanilla32": "Param15",
+        "bkvince": "Param15",
+        "pd2": null
+      },
+      "playerLabelFr": "Paramètre 15",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param15description",
+      "rawHeaders": {
+        "vanilla32": "*Param15Description",
+        "bkvince": "*Param15Description",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — param15description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param16",
+      "rawHeaders": {
+        "vanilla32": "Param16",
+        "bkvince": "Param16",
+        "pd2": null
+      },
+      "playerLabelFr": "Paramètre 16",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param16description",
+      "rawHeaders": {
+        "vanilla32": "*Param16Description",
+        "bkvince": "*Param16Description",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — param16description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param17",
+      "rawHeaders": {
+        "vanilla32": "Param17",
+        "bkvince": "Param17",
+        "pd2": null
+      },
+      "playerLabelFr": "Paramètre 17",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param17description",
+      "rawHeaders": {
+        "vanilla32": "*Param17Description",
+        "bkvince": "*Param17Description",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — param17description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param18",
+      "rawHeaders": {
+        "vanilla32": "Param18",
+        "bkvince": "Param18",
+        "pd2": null
+      },
+      "playerLabelFr": "Paramètre 18",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param18description",
+      "rawHeaders": {
+        "vanilla32": "*Param18Description",
+        "bkvince": "*Param18Description",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — param18description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param19",
+      "rawHeaders": {
+        "vanilla32": "Param19",
+        "bkvince": "Param19",
+        "pd2": null
+      },
+      "playerLabelFr": "Paramètre 19",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param19description",
+      "rawHeaders": {
+        "vanilla32": "*Param19Description",
+        "bkvince": "*Param19Description",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — param19description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "param20",
+      "rawHeaders": {
+        "vanilla32": "Param20",
+        "bkvince": "Param20",
+        "pd2": null
+      },
+      "playerLabelFr": "Paramètre 20",
+      "shortHelpFr": "Le sens dépend du callback et de la description propre au skill.",
+      "family": "calc_param",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*param20description",
+      "rawHeaders": {
+        "vanilla32": "*Param20Description",
+        "bkvince": "*Param20Description",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — param20description",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "ingame",
+      "rawHeaders": {
+        "vanilla32": "InGame",
+        "bkvince": "InGame",
+        "pd2": "InGame"
+      },
+      "playerLabelFr": "ingame",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "tohit",
+      "rawHeaders": {
+        "vanilla32": "ToHit",
+        "bkvince": "ToHit",
+        "pd2": "ToHit"
+      },
+      "playerLabelFr": "tohit",
+      "shortHelpFr": "Champ damage curves documenté par eezstreet; consulter le détail technique.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "levtohit",
+      "rawHeaders": {
+        "vanilla32": "LevToHit",
+        "bkvince": "LevToHit",
+        "pd2": "LevToHit"
+      },
+      "playerLabelFr": "levtohit",
+      "shortHelpFr": "Champ damage curves documenté par eezstreet; consulter le détail technique.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "tohitcalc",
+      "rawHeaders": {
+        "vanilla32": "ToHitCalc",
+        "bkvince": "ToHitCalc",
+        "pd2": "ToHitCalc"
+      },
+      "playerLabelFr": "tohitcalc",
+      "shortHelpFr": "Champ damage curves documenté par eezstreet; consulter le détail technique.",
+      "family": "damage_curves",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "resultflags",
+      "rawHeaders": {
+        "vanilla32": "ResultFlags",
+        "bkvince": "ResultFlags",
+        "pd2": "ResultFlags"
+      },
+      "playerLabelFr": "resultflags",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "hitflags",
+      "rawHeaders": {
+        "vanilla32": "HitFlags",
+        "bkvince": "HitFlags",
+        "pd2": "HitFlags"
+      },
+      "playerLabelFr": "hitflags",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "hitclass",
+      "rawHeaders": {
+        "vanilla32": "HitClass",
+        "bkvince": "HitClass",
+        "pd2": "HitClass"
+      },
+      "playerLabelFr": "hitclass",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "kick",
+      "rawHeaders": {
+        "vanilla32": "Kick",
+        "bkvince": "Kick",
+        "pd2": "Kick"
+      },
+      "playerLabelFr": "kick",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "hitshift",
+      "rawHeaders": {
+        "vanilla32": "HitShift",
+        "bkvince": "HitShift",
+        "pd2": "HitShift"
+      },
+      "playerLabelFr": "Échelle des dégâts",
+      "shortHelpFr": "Décalage binaire indissociable de la courbe de dégâts.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "srcdam",
+      "rawHeaders": {
+        "vanilla32": "SrcDam",
+        "bkvince": "SrcDam",
+        "pd2": "SrcDam"
+      },
+      "playerLabelFr": "srcdam",
+      "shortHelpFr": "Champ damage curves documenté par eezstreet; consulter le détail technique.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PHYSICAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "mindam",
+      "rawHeaders": {
+        "vanilla32": "MinDam",
+        "bkvince": "MinDam",
+        "pd2": "MinDam"
+      },
+      "playerLabelFr": "Dégâts physiques minimum",
+      "shortHelpFr": "Base minimum de la courbe physique.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PHYSICAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "minlevdam1",
+      "rawHeaders": {
+        "vanilla32": "MinLevDam1",
+        "bkvince": "MinLevDam1",
+        "pd2": "MinLevDam1"
+      },
+      "playerLabelFr": "Dégâts physiques minimum — palier 1",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PHYSICAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "minlevdam2",
+      "rawHeaders": {
+        "vanilla32": "MinLevDam2",
+        "bkvince": "MinLevDam2",
+        "pd2": "MinLevDam2"
+      },
+      "playerLabelFr": "Dégâts physiques minimum — palier 2",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PHYSICAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "minlevdam3",
+      "rawHeaders": {
+        "vanilla32": "MinLevDam3",
+        "bkvince": "MinLevDam3",
+        "pd2": "MinLevDam3"
+      },
+      "playerLabelFr": "Dégâts physiques minimum — palier 3",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PHYSICAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "minlevdam4",
+      "rawHeaders": {
+        "vanilla32": "MinLevDam4",
+        "bkvince": "MinLevDam4",
+        "pd2": "MinLevDam4"
+      },
+      "playerLabelFr": "Dégâts physiques minimum — palier 4",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PHYSICAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "minlevdam5",
+      "rawHeaders": {
+        "vanilla32": "MinLevDam5",
+        "bkvince": "MinLevDam5",
+        "pd2": "MinLevDam5"
+      },
+      "playerLabelFr": "Dégâts physiques minimum — palier 5",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PHYSICAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "maxdam",
+      "rawHeaders": {
+        "vanilla32": "MaxDam",
+        "bkvince": "MaxDam",
+        "pd2": "MaxDam"
+      },
+      "playerLabelFr": "Dégâts physiques maximum",
+      "shortHelpFr": "Base maximum de la courbe physique.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PHYSICAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "maxlevdam1",
+      "rawHeaders": {
+        "vanilla32": "MaxLevDam1",
+        "bkvince": "MaxLevDam1",
+        "pd2": "MaxLevDam1"
+      },
+      "playerLabelFr": "Dégâts physiques maximum — palier 1",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PHYSICAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "maxlevdam2",
+      "rawHeaders": {
+        "vanilla32": "MaxLevDam2",
+        "bkvince": "MaxLevDam2",
+        "pd2": "MaxLevDam2"
+      },
+      "playerLabelFr": "Dégâts physiques maximum — palier 2",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PHYSICAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "maxlevdam3",
+      "rawHeaders": {
+        "vanilla32": "MaxLevDam3",
+        "bkvince": "MaxLevDam3",
+        "pd2": "MaxLevDam3"
+      },
+      "playerLabelFr": "Dégâts physiques maximum — palier 3",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PHYSICAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "maxlevdam4",
+      "rawHeaders": {
+        "vanilla32": "MaxLevDam4",
+        "bkvince": "MaxLevDam4",
+        "pd2": "MaxLevDam4"
+      },
+      "playerLabelFr": "Dégâts physiques maximum — palier 4",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PHYSICAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "maxlevdam5",
+      "rawHeaders": {
+        "vanilla32": "MaxLevDam5",
+        "bkvince": "MaxLevDam5",
+        "pd2": "MaxLevDam5"
+      },
+      "playerLabelFr": "Dégâts physiques maximum — palier 5",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "PHYSICAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "dmgsympercalc",
+      "rawHeaders": {
+        "vanilla32": "DmgSymPerCalc",
+        "bkvince": "DmgSymPerCalc",
+        "pd2": "DmgSymPerCalc"
+      },
+      "playerLabelFr": "Synergies de dégâts physiques",
+      "shortHelpFr": "Formule qui relie la courbe physique aux skills sources.",
+      "family": "damage_curves",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "DAMAGE_SYNERGIES",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "etype",
+      "rawHeaders": {
+        "vanilla32": "EType",
+        "bkvince": "EType",
+        "pd2": "EType"
+      },
+      "playerLabelFr": "etype",
+      "shortHelpFr": "Champ damage curves documenté par eezstreet; consulter le détail technique.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "emin",
+      "rawHeaders": {
+        "vanilla32": "EMin",
+        "bkvince": "EMin",
+        "pd2": "EMin"
+      },
+      "playerLabelFr": "Dégâts élémentaires minimum",
+      "shortHelpFr": "Base minimum de la courbe élémentaire.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "eminlev1",
+      "rawHeaders": {
+        "vanilla32": "EMinLev1",
+        "bkvince": "EMinLev1",
+        "pd2": "EMinLev1"
+      },
+      "playerLabelFr": "Dégâts élémentaires minimum — palier 1",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "eminlev2",
+      "rawHeaders": {
+        "vanilla32": "EMinLev2",
+        "bkvince": "EMinLev2",
+        "pd2": "EMinLev2"
+      },
+      "playerLabelFr": "Dégâts élémentaires minimum — palier 2",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "eminlev3",
+      "rawHeaders": {
+        "vanilla32": "EMinLev3",
+        "bkvince": "EMinLev3",
+        "pd2": "EMinLev3"
+      },
+      "playerLabelFr": "Dégâts élémentaires minimum — palier 3",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "eminlev4",
+      "rawHeaders": {
+        "vanilla32": "EMinLev4",
+        "bkvince": "EMinLev4",
+        "pd2": "EMinLev4"
+      },
+      "playerLabelFr": "Dégâts élémentaires minimum — palier 4",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "eminlev5",
+      "rawHeaders": {
+        "vanilla32": "EMinLev5",
+        "bkvince": "EMinLev5",
+        "pd2": "EMinLev5"
+      },
+      "playerLabelFr": "Dégâts élémentaires minimum — palier 5",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "emax",
+      "rawHeaders": {
+        "vanilla32": "EMax",
+        "bkvince": "EMax",
+        "pd2": "EMax"
+      },
+      "playerLabelFr": "Dégâts élémentaires maximum",
+      "shortHelpFr": "Base maximum de la courbe élémentaire.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "emaxlev1",
+      "rawHeaders": {
+        "vanilla32": "EMaxLev1",
+        "bkvince": "EMaxLev1",
+        "pd2": "EMaxLev1"
+      },
+      "playerLabelFr": "Dégâts élémentaires maximum — palier 1",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "emaxlev2",
+      "rawHeaders": {
+        "vanilla32": "EMaxLev2",
+        "bkvince": "EMaxLev2",
+        "pd2": "EMaxLev2"
+      },
+      "playerLabelFr": "Dégâts élémentaires maximum — palier 2",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "emaxlev3",
+      "rawHeaders": {
+        "vanilla32": "EMaxLev3",
+        "bkvince": "EMaxLev3",
+        "pd2": "EMaxLev3"
+      },
+      "playerLabelFr": "Dégâts élémentaires maximum — palier 3",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "emaxlev4",
+      "rawHeaders": {
+        "vanilla32": "EMaxLev4",
+        "bkvince": "EMaxLev4",
+        "pd2": "EMaxLev4"
+      },
+      "playerLabelFr": "Dégâts élémentaires maximum — palier 4",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "emaxlev5",
+      "rawHeaders": {
+        "vanilla32": "EMaxLev5",
+        "bkvince": "EMaxLev5",
+        "pd2": "EMaxLev5"
+      },
+      "playerLabelFr": "Dégâts élémentaires maximum — palier 5",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "edmgsympercalc",
+      "rawHeaders": {
+        "vanilla32": "EDmgSymPerCalc",
+        "bkvince": "EDmgSymPerCalc",
+        "pd2": "EDmgSymPerCalc"
+      },
+      "playerLabelFr": "Synergies de dégâts élémentaires",
+      "shortHelpFr": "Formule qui relie la courbe élémentaire aux skills sources.",
+      "family": "damage_curves",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "DAMAGE_SYNERGIES",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "elen",
+      "rawHeaders": {
+        "vanilla32": "ELen",
+        "bkvince": "ELen",
+        "pd2": "ELen"
+      },
+      "playerLabelFr": "elen",
+      "shortHelpFr": "Champ damage curves documenté par eezstreet; consulter le détail technique.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "elevlen1",
+      "rawHeaders": {
+        "vanilla32": "ELevLen1",
+        "bkvince": "ELevLen1",
+        "pd2": "ELevLen1"
+      },
+      "playerLabelFr": "Durée élémentaire — palier 1",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "elevlen2",
+      "rawHeaders": {
+        "vanilla32": "ELevLen2",
+        "bkvince": "ELevLen2",
+        "pd2": "ELevLen2"
+      },
+      "playerLabelFr": "Durée élémentaire — palier 2",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "elevlen3",
+      "rawHeaders": {
+        "vanilla32": "ELevLen3",
+        "bkvince": "ELevLen3",
+        "pd2": "ELevLen3"
+      },
+      "playerLabelFr": "Durée élémentaire — palier 3",
+      "shortHelpFr": "Cellule constitutive du bundle damage_curves; elle ne se décide pas isolément.",
+      "family": "damage_curves",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "ELEMENTAL_DAMAGE_CURVE",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "elensympercalc",
+      "rawHeaders": {
+        "vanilla32": "ELenSymPerCalc",
+        "bkvince": "ELenSymPerCalc",
+        "pd2": "ELenSymPerCalc"
+      },
+      "playerLabelFr": "Synergies de durée",
+      "shortHelpFr": "Formule qui prolonge la durée élémentaire.",
+      "family": "damage_curves",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "BEHAVIOR_BUNDLE",
+      "groupId": "LENGTH_SYNERGIES",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aitype",
+      "rawHeaders": {
+        "vanilla32": "aitype",
+        "bkvince": "aitype",
+        "pd2": "aitype"
+      },
+      "playerLabelFr": "aitype",
+      "shortHelpFr": "Champ targeting restrictions documenté par eezstreet; consulter le détail technique.",
+      "family": "targeting_restrictions",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "aibonus",
+      "rawHeaders": {
+        "vanilla32": "aibonus",
+        "bkvince": "aibonus",
+        "pd2": "aibonus"
+      },
+      "playerLabelFr": "aibonus",
+      "shortHelpFr": "Champ raw technical documenté par eezstreet; consulter le détail technique.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "EXPERT_OVERRIDE_ONLY",
+      "groupId": null,
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cost mult",
+      "rawHeaders": {
+        "vanilla32": "cost mult",
+        "bkvince": "cost mult",
+        "pd2": "cost mult"
+      },
+      "playerLabelFr": "Multiplicateur de valeur en or",
+      "shortHelpFr": "Multiplicateur du prix d’un objet accordant ce skill; sans rapport avec le mana ou l’apprentissage.",
+      "family": "item_economy",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "ITEM_ECONOMY",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "cost add",
+      "rawHeaders": {
+        "vanilla32": "cost add",
+        "bkvince": "cost add",
+        "pd2": "cost add"
+      },
+      "playerLabelFr": "Influence sur la valeur en or",
+      "shortHelpFr": "Ajout plat au prix d’achat, de vente et de réparation d’un objet accordant ce skill.",
+      "family": "item_economy",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "ITEM_ECONOMY",
+      "documentationSource": "eezstreet-d2rdoc",
+      "proofStatus": "DOCUMENTED"
+    },
+    {
+      "rawHeader": "*eol",
+      "rawHeaders": {
+        "vanilla32": "*eol",
+        "bkvince": "*eol",
+        "pd2": null
+      },
+      "playerLabelFr": "Documentation — eol",
+      "shortHelpFr": "Texte documentaire conservé dans les détails techniques, sans décision de gameplay.",
+      "family": "documentation",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "auratgtevent",
+      "rawHeaders": {
+        "vanilla32": null,
+        "bkvince": null,
+        "pd2": "auratgtevent"
+      },
+      "playerLabelFr": "auratgtevent",
+      "shortHelpFr": "Champ auras passives sans consumer D2R 3.2 prouvé.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "auratgteventfunc",
+      "rawHeaders": {
+        "vanilla32": null,
+        "bkvince": null,
+        "pd2": "auratgteventfunc"
+      },
+      "playerLabelFr": "auratgteventfunc",
+      "shortHelpFr": "Champ auras passives sans consumer D2R 3.2 prouvé.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "passiveevent",
+      "rawHeaders": {
+        "vanilla32": null,
+        "bkvince": null,
+        "pd2": "passiveevent"
+      },
+      "playerLabelFr": "passiveevent",
+      "shortHelpFr": "Champ auras passives sans consumer D2R 3.2 prouvé.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "passiveeventfunc",
+      "rawHeaders": {
+        "vanilla32": null,
+        "bkvince": null,
+        "pd2": "passiveeventfunc"
+      },
+      "playerLabelFr": "passiveeventfunc",
+      "shortHelpFr": "Champ auras passives sans consumer D2R 3.2 prouvé.",
+      "family": "auras_passives",
+      "technicalOnly": false,
+      "protected": false,
+      "decisionScope": "NO_SKILL_DECISION",
+      "groupId": "PASSIVE_PACKAGE",
+      "documentationSource": null,
+      "proofStatus": "EXACT_TABLE"
+    },
+    {
+      "rawHeader": "delay",
+      "rawHeaders": {
+        "vanilla32": null,
+        "bkvince": null,
+        "pd2": "delay"
+      },
+      "playerLabelFr": "Délai PD2",
+      "shortHelpFr": "Champ propre au schéma PD2; aucune traduction automatique vers les délais D2R.",
+      "family": "cooldowns",
+      "technicalOnly": false,
+      "protected": true,
+      "decisionScope": "GLOBAL_POLICY",
+      "groupId": "COOLDOWN_MODEL",
+      "documentationSource": null,
+      "proofStatus": "NATIVE_UNPROVEN"
+    },
+    {
+      "rawHeader": "checkfunc",
+      "rawHeaders": {
+        "vanilla32": null,
+        "bkvince": null,
+        "pd2": "checkfunc"
+      },
+      "playerLabelFr": "Fonction moteur — checkfunc",
+      "shortHelpFr": "Sélecteur natif protégé; un numéro identique entre moteurs ne prouve pas le même comportement.",
+      "family": "engine_functions",
+      "technicalOnly": true,
+      "protected": true,
+      "decisionScope": "GLOBAL_POLICY",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "NATIVE_UNPROVEN"
+    },
+    {
+      "rawHeader": "nocostinstate",
+      "rawHeaders": {
+        "vanilla32": null,
+        "bkvince": null,
+        "pd2": "nocostinstate"
+      },
+      "playerLabelFr": "nocostinstate",
+      "shortHelpFr": "Champ raw technical sans consumer D2R 3.2 prouvé.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "GLOBAL_POLICY",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "NATIVE_UNPROVEN"
+    },
+    {
+      "rawHeader": "general",
+      "rawHeaders": {
+        "vanilla32": null,
+        "bkvince": null,
+        "pd2": "general"
+      },
+      "playerLabelFr": "general",
+      "shortHelpFr": "Champ raw technical sans consumer D2R 3.2 prouvé.",
+      "family": "raw_technical",
+      "technicalOnly": true,
+      "protected": false,
+      "decisionScope": "GLOBAL_POLICY",
+      "groupId": null,
+      "documentationSource": null,
+      "proofStatus": "NATIVE_UNPROVEN"
+    }
+  ]
+}
