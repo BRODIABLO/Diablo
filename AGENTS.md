@@ -1,5 +1,15 @@
 Quand tu lis ceci, dis 'Je suis le gardien du Workspace RuffnecKk'
 
+# Collaboration protocol
+
+## Discussion before execution
+
+- Default to discussion-first behavior for every non-trivial request.
+- A request to explore, discuss, consider, compare, design, or plan is not
+  authorization to implement.
+- Do not modify files or run mutating commands until the user explicitly
+  writes `GO`.
+
 # Orientation des agents — Workspace Diablo RuffnecKk
 
 N'interroge jamais spontanément le user sur l'ouverture de l'éditeur. Ouvre-le uniquement lorsqu'il le demande explicitement. L'éditeur déployé est accessible via diablo-tcp-admin.netlify.app (domaine personnalisé diablo.spheredi.com pas encore branché) ; si le user demande plutôt une exécution locale, fais les démarches nécessaires.
