@@ -142,6 +142,13 @@
         "d2rloader/plugins/RemoteStash.dll"
       ]
     },
+    "addons/RemoteStash/RemoteStash-1.2.0.zip": {
+      "kind": "plugin",
+      "entries": [
+        "d2rloader/config/RemoteStash.json",
+        "d2rloader/plugins/RemoteStash.dll"
+      ]
+    },
     "addons/NoEtherealItemTypes/NoEtherealItemTypes.zip": {
       "kind": "plugin",
       "legacy": true,
@@ -209,6 +216,13 @@
       "entries": [
         "ProgressiveAffixesPlugin.dll",
         "ProgressiveAffixesPlugin.toml"
+      ]
+    },
+    "addons/AdvancedItemTooltips/AdvancedItemTooltips-3.3.0.zip": {
+      "kind": "plugin",
+      "entries": [
+        "AdvancedItemTooltips.dll",
+        "AdvancedItemTooltips.json"
       ]
     },
     "addons/BKVCombat/BKVCombat-0.1.0.zip": {
