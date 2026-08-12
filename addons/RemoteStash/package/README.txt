@@ -1,4 +1,4 @@
-REMOTE STASH 1.1.7
+REMOTE STASH 1.2.0
 Author: RuffnecKk
 Reverse-engineering reference: D2MOO
 

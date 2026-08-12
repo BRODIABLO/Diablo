@@ -35,6 +35,11 @@ int main(int argc, char** argv) {
     REQUIRE(hotkey.virtualKey == 0x06 && hotkey.control);
     REQUIRE(ParseHotkey("F12", hotkey));
     REQUIRE(hotkey.virtualKey == 0x7B);
+    REQUIRE(ParseHotkey(";", hotkey));
+    REQUIRE(hotkey.virtualKey == 0xBA);
+    REQUIRE(!hotkey.control && !hotkey.shift && !hotkey.alt);
+    REQUIRE(ParseHotkey("semicolon", hotkey));
+    REQUIRE(hotkey.virtualKey == 0xBA);
     REQUIRE(!ParseHotkey("CTRL+CTRL+S", hotkey));
     REQUIRE(!ParseHotkey("S+H", hotkey));
     REQUIRE(!ParseHotkey("F25", hotkey));
@@ -50,6 +55,8 @@ int main(int argc, char** argv) {
     REQUIRE(!ResolveRemoteStashTransitionFlag(true, false));
     REQUIRE(ResolveRemoteStashTransitionFlag(false, true));
     REQUIRE(!ResolveRemoteStashTransitionFlag(false, false));
+    REQUIRE(ShouldSuppressHotkeyMouseReset(true));
+    REQUIRE(!ShouldSuppressHotkeyMouseReset(false));
     REQUIRE(ResolveHotkeyDispatch(false, false) == HotkeyDispatch::Open);
     REQUIRE(ResolveHotkeyDispatch(true, false) == HotkeyDispatch::Close);
     REQUIRE(ResolveHotkeyDispatch(false, true) == HotkeyDispatch::Refuse);

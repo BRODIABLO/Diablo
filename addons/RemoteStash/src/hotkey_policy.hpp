@@ -89,6 +89,11 @@ inline bool ParseMainKey(
             device = InputDevice::Keyboard;
             return true;
         }
+        if (ch == ';') {
+            virtualKey = 0xBA; // VK_OEM_1
+            device = InputDevice::Keyboard;
+            return true;
+        }
     }
     if (token.size() >= 2 && token.front() == 'F') {
         unsigned value{};
@@ -111,6 +116,7 @@ inline bool ParseMainKey(
         {"SPACE", 0x20}, {"TAB", 0x09}, {"INSERT", 0x2D},
         {"DELETE", 0x2E}, {"HOME", 0x24}, {"END", 0x23},
         {"PAGEUP", 0x21}, {"PAGEDOWN", 0x22},
+        {"SEMICOLON", 0xBA},
     };
     for (const auto& key : namedKeys) {
         if (token == key.name) {
@@ -206,6 +212,12 @@ inline bool ResolveRemoteStashTransitionFlag(
     bool requestedFlag
 ) noexcept {
     return remoteHotkeyOpenIsScoped ? false : requestedFlag;
+}
+
+inline bool ShouldSuppressHotkeyMouseReset(
+    bool remoteHotkeyOpenIsScoped
+) noexcept {
+    return remoteHotkeyOpenIsScoped;
 }
 
 inline bool ShouldSuppressRemoteStashClose(

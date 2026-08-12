@@ -956,3 +956,117 @@ items, or et persistance de RemoteStash.
   Le JSON public validé conserve `enabled=false`, `hotkey=S`, `consume=true` et
   son SHA-256 est
   `A1F59CB1BCAF2BBD23E20249992B99E90D9803870FCE4B3D622A7678BD854616`.
+
+## Préservation du clic maintenu pendant l'ouverture — candidate 1.1.9 — 11 août 2026
+
+- Le témoin gameplay 1.1.8 invalide la première protection : maintenir le clic
+  gauche, ouvrir RemoteStash avec `;`, puis continuer le déplacement exige
+  encore un nouveau clic. Le statut runtime prouve pourtant une demande
+  acceptée et dispatchée, un ticket de transition consommé, une transition
+  appliquée et une fermeture de l'Inventory compagnon. La DLL, le hotkey et le
+  ticket ne sont donc pas périmés ou désynchronisés.
+- La branche native du stash et la fermeture post-composition de l'Inventory
+  appellent toutes deux `CLIENT_ResetMouseButtonState 0x8D510` par
+  `UI_ApplyInterfaceLayoutMode 0xB9C20`. La 1.1.8 protégeait seulement le
+  premier appel : elle restaurait sa portée thread-local avant de fermer
+  l'Inventory compagnon avec `UI_CloseInterfaceState 0xC7D30`, laissant ce
+  second appel effacer le clic maintenu.
+- La 1.1.9 conserve désormais la même portée thread-local jusqu'après la
+  fermeture post-composition. Aucun état brut de souris n'est restauré et
+  aucune destination de mouvement n'est synthétisée : les deux transitions
+  natives restent exécutées, mais leur remise à zéro commune est supprimée
+  uniquement pendant cette ouverture au hotkey.
+- Le build Release x64 et CTest passent `2/2`. Les DLL du build et du package
+  sont byte-identiques : version `1.1.9`, taille `182272`, SHA-256
+  `C332216A02D45B0308B45641CAD3525B498D7754A186785F9074744252B38A19`.
+- La DLL candidate est déployée dans la portée globale avec un hash byte-exact;
+  le JSON existant est préservé (`enabled=true`, `hotkey=;`, `consume=true`). Le
+  cold start BKVince avec toute la pile active charge RemoteStash 1.1.9 et son
+  hook `0x8D510`, applique `15/15` patchsets, charge `19/19` plugins avec
+  `rejected=0` et `failed=0`, puis atteint l'étape frontend `24/24`.
+- Le gameplay reste `not run`. Le prochain témoin doit maintenir le clic gauche,
+  ouvrir puis fermer RemoteStash avec `;`, confirmer que le personnage continue
+  vers la destination courante sans nouveau clic, puis vérifier dans la console
+  que deux remises à zéro ont été supprimées pour une ouverture avec Inventory
+  initialement fermé.
+
+## Diagnostic du clic maintenu — candidate 1.1.10 — 11 août 2026
+
+- Le témoin gameplay 1.1.9 invalide la portée élargie : le personnage s'arrête
+  encore après l'ouverture au hotkey et exige un nouveau clic. Le statut prouve
+  une demande acceptée et dispatchée, une fermeture de l'Inventory compagnon et
+  une transition appliquée, mais sa ligne de 1 600 caractères est tronquée par
+  la console exactement avant la valeur de `hotkeyMouseResetSuppressions`.
+- La 1.1.10 ne change aucun comportement du stash. La commande `remote-stash`
+  imprime désormais une seconde ligne courte et non ambiguë :
+  `RemoteStash input: hotkeyMouseResetSuppressions=<nombre>`.
+- Cette valeur décidera la prochaine branche d'analyse : `2` prouve que les
+  deux resets connus sont supprimés et impose de chercher un autre mécanisme;
+  `1` prouve qu'un reset échappe encore à la portée; `0` invalide le trajet de
+  hook attendu.
+- Le build Release x64, CTest `2/2` et le self-test du workbench passent. Les
+  DLL du build et du package sont byte-identiques : version `1.1.10`, taille
+  `182272`, SHA-256
+  `54896479F8FBBE248CE25BFFADB56C2C77FFEBA1E3A97176DC5F62233EA5ABF1`.
+  Aucun runtime n'a été lancé ou modifié à cette étape.
+
+## Restauration ciblée du clic maintenu — candidate 1.1.11 — 11 août 2026
+
+- Le témoin gameplay 1.1.10 confirme encore l'arrêt du personnage, tandis que
+  la ligne courte rapporte `hotkeyMouseResetSuppressions=2`. Les deux passages
+  connus par `CLIENT_ResetMouseButtonState 0x8D510` sont donc réellement
+  interceptés; cette hypothèse est invalidée comme cause suffisante.
+- L'analyse du build 92777 identifie `0x8D540`, une seconde routine qui lit
+  l'index du contexte d'entrée, efface les mêmes six globals de souris, pose
+  deux autres états à `0x10`, puis rejoint le finalizer indexé `0xF15C0`. Sa
+  signature stricte de 32 octets est unique et l'index recense 16 xrefs.
+- La candidate 1.1.11 hooke cette seconde entrée uniquement lorsque la portée
+  thread-local de l'ouverture RemoteStash au hotkey est active. Elle capture
+  les six globals partagés, exécute intégralement la routine originale et son
+  finalizer, puis restaure seulement ces six valeurs. Les deux états à `0x10`
+  et la finalisation native restent intacts; aucun mouvement ou clic n'est
+  synthétisé.
+- La commande `remote-stash` ajoute le compteur court
+  `hotkeyMouseStateRestorations`. Le témoin gameplay attendu est une valeur non
+  nulle pendant l'ouverture et la poursuite du déplacement sans nouveau clic.
+- Le build Release x64 et CTest passent `2/2`; le self-test du workbench 92777
+  passe et `git diff --check` ne rapporte aucune erreur. Les DLL du build et des
+  deux emplacements du package sont byte-identiques : version `1.1.11`, taille
+  `182784`, SHA-256
+  `F4A30F70399735075DEDDEA64AFEE771AE701DE6E944A24995696552A2AF4C6A`.
+- La même DLL est déployée byte-exact dans la portée globale; le JSON existant
+  reste inchangé (`enabled=true`, `hotkey=;`, `consume=true`). Le cold start
+  BKVince avec toute la pile active accepte les hooks `0x8D540` et `0x8D510`,
+  applique `15/15` patchsets, charge `19/19` plugins avec `rejected=0` et
+  `failed=0`, puis atteint l'étape frontend `24/24`.
+- Témoin gameplay confirmé par Vincent : pendant un déplacement au clic gauche
+  maintenu, l'ouverture de RemoteStash avec `;` laisse le personnage poursuivre
+  son mouvement sans relâcher ni cliquer de nouveau. La fluidité recherchée est
+  donc validée en jeu pour la candidate 1.1.11.
+
+## Release publique 1.2.0 — 11 août 2026
+
+- Vincent retient `1.2.0` comme version publique officielle du comportement
+  validé en jeu dans la candidate 1.1.11. Aucun hook, protocole, layout ou
+  comportement gameplay n'est remanié par cette promotion de version.
+- Le ZIP public autonome conserve l'allowlist stricte : `RemoteStash.dll` et
+  `RemoteStash.json` seulement. Le README avec les crédits RuffnecKk/D2MOO et
+  les fichiers d'intégration destinés aux moddeurs restent dans le dépôt, hors
+  de l'archive publique.
+- Le build Release x64, CTest `2/2`, le self-test 92777 et `git diff --check`
+  passent. Les DLL build/package/runtime sont byte-identiques : version `1.2.0`,
+  taille `182784`, SHA-256
+  `F8FE4FF361825AE2912F368AC503844D01CB6D452F17E3260BE5D51866274A3C`.
+- Le runtime global conserve son JSON existant (`enabled=true`, `hotkey=;`,
+  `consume=true`). Le cold start BKVince avec toute la pile active accepte les
+  hooks `0x8D540` et `0x8D510`, applique `15/15` patchsets, charge `19/19`
+  plugins avec `rejected=0` et `failed=0`, puis atteint le frontend `24/24`.
+- `RemoteStash-1.2.0.zip` contient exactement
+  `d2rloader/plugins/RemoteStash.dll` et
+  `d2rloader/config/RemoteStash.json`. L'extraction confirme la DLL distribuée
+  byte-identique; le JSON public conserve les valeurs sûres
+  `enabled=false`, `hotkey=S`, `consume=true`. Taille du ZIP `81488`, SHA-256
+  `E945FE34EF8C652FA5C2CBC6812DE76A86AA09AF735A6EF00A4AA433C2B616C5`.
+- L'ajout structurel de l'archive a régénéré le cadastre; son validateur retourne
+  `VALID`. Le comportement gameplay 1.2.0 est la promotion sans changement de
+  la candidate 1.1.11 déjà confirmée par Vincent.

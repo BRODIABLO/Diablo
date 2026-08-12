@@ -1572,6 +1572,22 @@
       "notes": "Observed x64 ABI (int32 mode, bool transitionFlag) -> void at a unique 20-byte entry signature. The state dispatcher at 0xC1E80 calls it as (2, true) from the unique callsite 0xC1F01 on the native stash-state 0x18 branch. RemoteStash 1.1.6 redirects only that callsite and, only inside a bounded hotkey-open scope, forwards (2, false). The exact behavioral meaning of transitionFlag remains gameplay-gated, so the semantic name and confidence remain provisional."
     },
     {
+      "rva": "0x8D510",
+      "name": "CLIENT_ResetMouseButtonState",
+      "kind": "function",
+      "confidence": "medium",
+      "source": "Mission/remote-stash-3.2.md",
+      "notes": "Zeroes six client input globals and returns. Their consumers at 0x8B989, 0x8BA1F, 0x8BB30 and 0x8B007 route held mouse-button actions into the local-player input dispatcher. UI_ApplyInterfaceLayoutMode at 0xB9C20 tail-jumps here for both the native stash-open layout transition and the state-1 inventory-close transition. RemoteStash 1.1.9 hooks the unique strict 32-byte entry and suppresses it only inside the thread-local hotkey-open scope, extended through the immediate companion-inventory close. The exact individual meaning of all six globals remains provisional."
+    },
+    {
+      "rva": "0x8D540",
+      "name": "CLIENT_ResetMouseButtonStateWithFinalize",
+      "kind": "function",
+      "confidence": "medium",
+      "source": "Mission/remote-stash-3.2.md",
+      "notes": "Reads the current local input-context index, zeroes the same six client mouse-input globals as CLIENT_ResetMouseButtonState 0x8D510, sets two additional state globals to 0x10, then tail-jumps to 0xF15C0 to finalize the indexed input context. Its strict first 32 bytes are unique in build 92777 and it has 16 direct xrefs. RemoteStash 1.1.11 preserves the native function and its finalizer, but snapshots and restores only the six shared mouse-input globals when this entry is reached inside the exact thread-local hotkey-open transition. The individual semantic names of the six globals and the complete role of 0xF15C0 remain provisional."
+    },
+    {
       "rva": "0xC8240",
       "name": "UI_CloseActiveInterfaceStates",
       "kind": "function",
