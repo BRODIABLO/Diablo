@@ -96,18 +96,268 @@ function threeWayDiff(headers, vanilla, bkvince, pd2) {
     };
   });
 }
-function effect(row) {
+const SKILL_TABS = Object.freeze([
+  'Amazon Bow and Crossbow', 'Amazon Passive and Magic', 'Amazon Javelin and Spear',
+  'Sorceress Fire', 'Sorceress Lightning', 'Sorceress Cold',
+  'Necromancer Curses', 'Necromancer Poison and Bone', 'Necromancer Summoning',
+  'Paladin Combat', 'Paladin Offensive Auras', 'Paladin Defensive Auras',
+  'Barbarian Combat', 'Barbarian Masteries', 'Barbarian Warcries',
+  'Druid Summoning', 'Druid Shape Shifting', 'Druid Elemental',
+  'Assassin Traps', 'Assassin Shadow Disciplines', 'Assassin Martial Arts',
+  'Warlock Demon', 'Warlock Eldritch', 'Warlock Chaos',
+]);
+
+const CLASS_NAMES = Object.freeze({
+  ama: 'Amazon', sor: 'Sorceress', nec: 'Necromancer', pal: 'Paladin',
+  bar: 'Barbarian', dru: 'Druid', ass: 'Assassin', war: 'Warlock',
+});
+
+const PROPERTY_LABELS = Object.freeze({
+  'ac': 'Defense', 'ac%': 'Enhanced Defense', 'att': 'Attack Rating', 'att%': 'Bonus to Attack Rating',
+  'dmg%': 'Enhanced Damage', 'dmg-min': 'Minimum Damage', 'dmg-max': 'Maximum Damage',
+  'dmg-fire': 'Fire Damage', 'dmg-cold': 'Cold Damage', 'dmg-ltng': 'Lightning Damage',
+  'dmg-pois': 'Poison Damage', 'dmg-mag': 'Magic Damage',
+  'res-fire': 'Fire Resistance', 'res-cold': 'Cold Resistance',
+  'res-ltng': 'Lightning Resistance', 'res-pois': 'Poison Resistance', 'res-all': 'All Resistances',
+  'hp': 'Life', 'mana': 'Mana', 'stam': 'Stamina', 'str': 'Strength', 'dex': 'Dexterity',
+  'vit': 'Vitality', 'ene': 'Energy', 'regen': 'Life Replenishment', 'regen-mana': 'Mana Regeneration',
+  'swing1': 'Attack Speed', 'swing2': 'Increased Attack Speed', 'move1': 'Run/Walk Speed',
+  'move2': 'Faster Run/Walk', 'balance1': 'Hit Recovery', 'balance2': 'Faster Hit Recovery',
+  'block1': 'Block Rate', 'block2': 'Faster Block Rate', 'cast1': 'Cast Rate', 'cast2': 'Faster Cast Rate',
+  'lifesteal': 'Life Stolen per Hit', 'manasteal': 'Mana Stolen per Hit', 'mag%': 'Magic Find',
+  'gold%': 'Extra Gold', 'deadly': 'Deadly Strike', 'crush': 'Crushing Blow',
+  'openwounds': 'Open Wounds', 'pierce': 'Piercing Attack', 'splash': 'Melee Splash',
+  'pois-len': 'Poison Length', 'cold-len': 'Cold Duration', 'pierce-phys': 'Enemy Physical Resistance',
+  'crit-strike-multiplier': 'Critical Strike Damage', 'deep-wounds': 'Deep Wounds',
+  'extra-magi': 'Magic Skill Damage', 'allskills': 'All Skills', 'skilltab': 'Class Skill Tab',
+  'skill': 'Class Skill', 'oskill': 'Oskill', 'aura': 'Aura When Equipped', 'charged': 'Skill Charges',
+  'hit-skill': 'Chance to Cast on Striking', 'gethit-skill': 'Chance to Cast When Struck',
+  'att-skill': 'Chance to Cast on Attack', 'kill-skill': 'Chance to Cast on Kill',
+  'death-skill': 'Chance to Cast on Death', 'levelup-skill': 'Chance to Cast on Level Up',
+  'cast-skill': 'Chance to Cast on Casting', 'sock': 'Sockets', 'ease': 'Requirements',
+  'red-dmg': 'Physical Damage Reduction', 'red-dmg%': 'Physical Damage Reduction',
+  'red-mag': 'Magic Damage Reduction', 'thorns': 'Attacker Takes Damage',
+  'dmg/lvl': 'Maximum Damage per Character Level', 'att/lvl': 'Attack Rating per Character Level',
+  'att%/lvl': 'Bonus to Attack Rating per Character Level',
+});
+
+const MAP_PROPERTY_LABELS = Object.freeze({
+  'map-glob-density': 'Map Monster Density', 'map-glob-monsterrarity': 'Map Monster Rarity',
+  'map-glob-arealevel': 'Map Area Level', 'map-glob-extra-boss': 'Extra Map Bosses',
+  'map-glob-add-mon-cow': 'Adds Cow Monsters', 'map-glob-add-mon-doll': 'Adds Undead Doll Monsters',
+  'map-glob-add-mon-fetish': 'Adds Fetish Monsters', 'map-glob-add-mon-ghost': 'Adds Ghost Monsters',
+  'map-glob-add-mon-horde': 'Adds Horde Monsters', 'map-glob-add-mon-shriek': 'Adds Shrieking Monsters',
+  'map-glob-add-mon-souls': 'Adds Burning Soul Monsters', 'map-glob-add-mon-succ': 'Adds Succubus Monsters',
+  'map-glob-add-mon-vamp': 'Adds Vampire Monsters',
+  'map-play-mag-gold%': 'Player Magic Find and Gold Find', 'map-play-addxp': 'Player Experience Gained',
+  'map-play-regen': 'Player Life Regeneration', 'map-play-ac%': 'Player Defense',
+  'map-play-res-all': 'Player All Resistances', 'map-play-balance1': 'Player Hit Recovery',
+  'map-play-block': 'Player Block Chance', 'map-play-lightradius': 'Player Light Radius',
+  'map-mon-hp%': 'Map Monster Life', 'map-mon-extra-fire': 'Map Monsters Gain Fire Damage',
+  'map-mon-extra-cold': 'Map Monsters Gain Cold Damage', 'map-mon-extra-ltng': 'Map Monsters Gain Lightning Damage',
+  'map-mon-extra-pois': 'Map Monsters Gain Poison Damage', 'map-mon-extra-mag': 'Map Monsters Gain Magic Damage',
+  'map-mon-att-pierce': 'Map Monster Attacks Pierce', 'map-mon-splash': 'Map Monsters Deal Splash Damage',
+  'map-mon-ed%': 'Map Monster Enhanced Damage', 'map-mon-crush': 'Map Monster Crushing Blow',
+  'map-mon-phys-as-extra-ltng': 'Map Monster Physical Damage as Extra Lightning Damage',
+  'map-mon-phys-as-extra-cold': 'Map Monster Physical Damage as Extra Cold Damage',
+  'map-mon-phys-as-extra-fire': 'Map Monster Physical Damage as Extra Fire Damage',
+  'map-mon-phys-as-extra-pois': 'Map Monster Physical Damage as Extra Poison Damage',
+  'map-mon-phys-as-extra-mag': 'Map Monster Physical Damage as Extra Magic Damage',
+  'map-mon-att-cast-speed': 'Map Monster Attack and Cast Speed', 'map-mon-openwounds': 'Map Monster Open Wounds',
+  'map-mon-ac%': 'Map Monster Defense', 'map-mon-abs-fire%': 'Map Monster Fire Absorption',
+  'map-mon-abs-ltng%': 'Map Monster Lightning Absorption', 'map-mon-abs-mag%': 'Map Monster Magic Absorption',
+  'map-mon-abs-cold%': 'Map Monster Cold Absorption',
+  'map-mon-curseresist-hp%': 'Map Monster Curse Resistance and Life',
+  'map-mon-red-dmg': 'Map Monster Physical Damage Reduction', 'map-mon-velocity%': 'Map Monster Movement Speed',
+  'map-mon-regen': 'Map Monster Life Regeneration', 'map-mon-lifesteal-hp%': 'Map Monster Life Steal and Life',
+  'map-mon-balance1': 'Map Monster Hit Recovery', 'map-mon-droparmor': 'Increased Armor Drops',
+  'map-mon-dropcrafting': 'Increased Crafting Material Drops', 'map-mon-dropjewelry': 'Increased Jewelry Drops',
+  'map-mon-dropweapons': 'Increased Weapon Drops',
+});
+
+const FIELD_LABELS = Object.freeze({
+  Name: 'Nom de l’affixe', version: 'Mode de jeu', spawnable: 'Disponibilité', rare: 'Disponible sur objets rares',
+  level: 'Niveau d’affixe minimum', maxlevel: 'Niveau d’affixe maximum', levelreq: 'Niveau requis',
+  classspecific: 'Classe requise', class: 'Classe', classlevelreq: 'Niveau de classe requis',
+  frequency: 'Fréquence', group: 'Groupe d’exclusion', transformcolor: 'Couleur de transformation',
+  multiply: 'Multiplicateur de prix', add: 'Ajout au prix',
+});
+
+const COLOR_NAMES = Object.freeze({
+  whit: 'White', lgry: 'Light Gray', dgry: 'Dark Gray', blac: 'Black', red: 'Red', lred: 'Light Red',
+  dred: 'Dark Red', oran: 'Orange', yelo: 'Yellow', lyel: 'Light Yellow', dyel: 'Dark Yellow',
+  gre: 'Green', lgre: 'Light Green', dgre: 'Dark Green', blue: 'Blue', lblu: 'Light Blue',
+  dblu: 'Dark Blue', purp: 'Purple', lpur: 'Light Purple', dpur: 'Dark Purple',
+});
+
+function titleCaseCode(code) {
+  const parts = String(code ?? '').replace(/([a-z])([A-Z])/g, '$1 $2').split(/[-_/]+/).filter(Boolean);
+  const words = {
+    ac: 'Defense', att: 'Attack Rating', dmg: 'Damage', res: 'Resistance', mon: 'Monsters',
+    phys: 'Physical', magi: 'Magic', elem: 'Elemental', regen: 'Regeneration', lvl: 'Level',
+    pct: 'Percent', glob: 'Map', density: 'Density', extra: 'Extra', req: 'Requirements',
+  };
+  const label = parts.map((part) => words[part.toLowerCase()] ?? `${part.charAt(0).toUpperCase()}${part.slice(1)}`).join(' ');
+  return label || 'Special Effect';
+}
+
+function buildGameplayGlossary(properties, itemTypes, skills, fallback = null) {
+  const propertyByCode = new Map(fallback?.propertyByCode ?? []);
+  for (let row = 0; row < properties.table.rows.length; row += 1) {
+    const code = value(properties, row, 'code');
+    if (!code) continue;
+    const previous = propertyByCode.get(code.toLowerCase()) ?? {};
+    propertyByCode.set(code.toLowerCase(), {
+      code,
+      tooltip: value(properties, row, '*Tooltip') || previous.tooltip || '',
+      parameter: value(properties, row, '*Parameter') || previous.parameter || '',
+    });
+  }
+  const itemTypeByCode = new Map(fallback?.itemTypeByCode ?? []);
+  for (let row = 0; row < itemTypes.table.rows.length; row += 1) {
+    const code = value(itemTypes, row, 'Code');
+    const label = value(itemTypes, row, 'ItemType');
+    if (code && label) itemTypeByCode.set(code.toLowerCase(), label);
+  }
+  const skillById = new Map(fallback?.skillById ?? []);
+  for (let row = 0; row < skills.table.rows.length; row += 1) {
+    const id = value(skills, row, '*Id');
+    const name = value(skills, row, 'skill');
+    if (!name) continue;
+    skillById.set(String(row), name);
+    if (id !== '') skillById.set(String(Number(id)), name);
+  }
+  return { propertyByCode, itemTypeByCode, skillById };
+}
+
+function itemTypeName(code, glossary) {
+  if (!code) return '';
+  return glossary.itemTypeByCode.get(code.toLowerCase()) ?? titleCaseCode(code);
+}
+
+function skillName(param, glossary) {
+  if (param === '' || param === null || param === undefined) return 'Skill';
+  return glossary.skillById.get(String(Number(param))) ?? `Unknown Skill (ID ${param})`;
+}
+
+function rangeText(min, max) {
+  const first = min || max || '';
+  const last = max || min || '';
+  if (!first) return '';
+  return first === last ? first : `${first}–${last}`;
+}
+
+function normalizeGameplayText(text) {
+  return String(text)
+    .replace(/\bCold Resist\b/g, 'Cold Resistance')
+    .replace(/\bFire Resist\b/g, 'Fire Resistance')
+    .replace(/\bLightning Resist\b/g, 'Lightning Resistance')
+    .replace(/\bPoison Resist\b/g, 'Poison Resistance')
+    .replace(/\bMagic Resist\b/g, 'Magic Resistance')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function propertyTitle(code, glossary) {
+  if (!code) return '';
+  const normalizedCode = code.toLowerCase();
+  if (PROPERTY_LABELS[normalizedCode]) return PROPERTY_LABELS[normalizedCode];
+  if (MAP_PROPERTY_LABELS[normalizedCode]) return MAP_PROPERTY_LABELS[normalizedCode];
+  if (CLASS_NAMES[normalizedCode]) return `${CLASS_NAMES[normalizedCode]} Skill Levels`;
+  const tooltip = glossary.propertyByCode.get(normalizedCode)?.tooltip ?? '';
+  if (!tooltip) return titleCaseCode(code).replace(/\bAffix(\d+)\b/i, 'Affix Effect (Part $1)');
+  const cleaned = normalizeGameplayText(tooltip)
+    .replace(/\[[^\]]+\]/g, 'Skill')
+    .replace(/[+#%()/-]/g, ' ')
+    .replace(/\b(?:Min|Max)\b/g, '')
+    .replace(/\b(?:Adds|Level|Chance to cast|on striking|when struck|when equipped)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned || titleCaseCode(code);
+}
+
+function replaceTemplateNumbers(template, min, max, param) {
+  let result = template;
+  const first = min || max || '';
+  const last = max || min || '';
+  if (result.includes('#-#')) result = result.replace('#-#', `${first || '?'}–${last || '?'}`);
+  const ranged = rangeText(min, max);
+  if (result.includes('+#') && ranged.startsWith('-')) result = result.replace('+#', '#');
+  if (result.includes('-#') && ranged.startsWith('-')) result = result.replace('-#', '#');
+  result = result.replace('#', ranged || param || '?');
+  return result.replace('#', param || ranged || '?');
+}
+
+function gameplayMod(row, slot, glossary) {
+  const code = row?.[`mod${slot}code`];
+  if (!code) return null;
+  const normalizedCode = code.toLowerCase();
+  const param = row[`mod${slot}param`] ?? '';
+  const min = row[`mod${slot}min`] ?? '';
+  const max = row[`mod${slot}max`] ?? '';
+  const range = rangeText(min, max);
+  const skill = skillName(param, glossary);
+  const chanceEvents = {
+    'hit-skill': 'on Striking', 'gethit-skill': 'When Struck', 'att-skill': 'on Attack',
+    'kill-skill': 'on Kill', 'death-skill': 'on Death', 'levelup-skill': 'on Level Up',
+    'cast-skill': 'on Casting',
+  };
+  if (chanceEvents[normalizedCode]) {
+    return `${min || '5'}% Chance to Cast Level ${max || '?'} ${skill} ${chanceEvents[normalizedCode]}`;
+  }
+  if (normalizedCode === 'charged') {
+    return Number(min) >= 0 && Number(max) >= 0
+      ? `Level ${min || '?'} ${skill} (${max || '?'} Charges)`
+      : `${skill} Charges`;
+  }
+  if (normalizedCode === 'skill' || normalizedCode === 'oskill') {
+    return `+${range || '?'} to ${skill}${normalizedCode === 'skill' ? ' (Class Only)' : ''}`;
+  }
+  if (normalizedCode === 'skilltab') {
+    const tab = SKILL_TABS[Number(param)] ?? `Unknown Class Skill Tab (ID ${param})`;
+    return `+${range || '?'} to ${tab} Skills`;
+  }
+  if (normalizedCode === 'aura') return `Level ${range || '?'} ${skill} Aura When Equipped`;
+  if (['dmg/lvl', 'att/lvl', 'att%/lvl'].includes(normalizedCode)) {
+    return `${propertyTitle(code, glossary)} (Based on Character Level)`;
+  }
+  if (normalizedCode === 'dmg-pois' && param && (min || max)) {
+    const durationSeconds = Number(param) / 25;
+    const total = (cell) => String(Math.round((Number(cell || 0) * Number(param)) / 256));
+    return `Adds ${rangeText(total(min || max), total(max || min))} Poison Damage over ${Number.isInteger(durationSeconds) ? durationSeconds : durationSeconds.toFixed(1)} Seconds`;
+  }
+  if (normalizedCode === 'dmg-cold') {
+    const duration = param ? ` for ${Number(param) / 25} Seconds` : '';
+    return `Adds ${range || '?'} Cold Damage${duration}`;
+  }
+  if (['res-fire', 'res-cold', 'res-ltng', 'res-pois'].includes(normalizedCode)) {
+    return `+${range || '?'}% ${propertyTitle(code, glossary)}`;
+  }
+  if (normalizedCode === 'res-all') return `+${range || '?'}% to All Resistances`;
+  if (normalizedCode === 'pois-len') return `${range || '?'}% Reduced Poison Length`;
+  if (normalizedCode === 'splash') return 'Melee Attacks Deal Splash Damage';
+
+  const property = glossary.propertyByCode.get(normalizedCode);
+  if (property?.tooltip) {
+    let template = property.tooltip
+      .replace(/\[Skill\]/g, skill)
+      .replace(/\[Class Skill Tab\]/g, SKILL_TABS[Number(param)] ?? `Unknown Class Skill Tab (ID ${param})`)
+      .replace(/\[Class\]/g, CLASS_NAMES[row.classspecific] ?? 'Class');
+    template = replaceTemplateNumbers(template, min, max, param);
+    return normalizeGameplayText(template);
+  }
+  const label = propertyTitle(code, glossary);
+  return range ? `${label}: ${range}${normalizedCode.includes('%') ? '%' : ''}` : label;
+}
+
+function effect(row, glossary) {
   if (!row) return '—';
   const parts = [];
   for (let slot = 1; slot <= 3; slot += 1) {
-    const code = row[`mod${slot}code`];
-    if (!code) continue;
-    const param = row[`mod${slot}param`];
-    const min = row[`mod${slot}min`];
-    const max = row[`mod${slot}max`];
-    parts.push(`${code}${param ? `(${param})` : ''}${min || max ? ` ${min || '?'}–${max || min || '?'}` : ''}`);
+    const formatted = gameplayMod(row, slot, glossary);
+    if (formatted) parts.push(formatted);
   }
-  return parts.join(' · ') || 'Aucun mod direct';
+  return parts.join(' · ') || 'No Direct Modifier';
 }
 function types(row) {
   if (!row) return { allowed: [], excluded: [] };
@@ -116,13 +366,83 @@ function types(row) {
   for (let i = 1; i <= 5; i += 1) if (row[`etype${i}`]) excluded.push(row[`etype${i}`]);
   return { allowed, excluded };
 }
+
+function gameplayFieldLabel(field) {
+  if (FIELD_LABELS[field]) return FIELD_LABELS[field];
+  let match = /^mod([1-3])(code|param|min|max)$/i.exec(field);
+  if (match) {
+    const suffix = { code: 'propriété', param: 'paramètre', min: 'minimum', max: 'maximum' }[match[2].toLowerCase()];
+    return `Effet ${match[1]} — ${suffix}`;
+  }
+  match = /^itype([1-7])$/i.exec(field);
+  if (match) return `Type d’objet autorisé ${match[1]}`;
+  match = /^etype([1-5])$/i.exec(field);
+  if (match) return `Type d’objet exclu ${match[1]}`;
+  if (field === '$rowPresence') return 'Présence de l’occurrence';
+  return titleCaseCode(field);
+}
+
+function gameplayFieldValue(field, raw, row, glossary) {
+  if (raw === null || raw === undefined) return null;
+  const lower = field.toLowerCase();
+  if (/^mod[1-3]code$/.test(lower)) return raw ? propertyTitle(raw, glossary) : '';
+  const paramMatch = /^mod([1-3])param$/.exec(lower);
+  if (paramMatch && raw) {
+    const code = row?.[`mod${paramMatch[1]}code`]?.toLowerCase() ?? '';
+    if (['skill', 'oskill', 'aura', 'charged', 'hit-skill', 'gethit-skill', 'att-skill', 'kill-skill', 'death-skill', 'levelup-skill', 'cast-skill'].includes(code)) {
+      return skillName(raw, glossary);
+    }
+    if (code === 'skilltab') return SKILL_TABS[Number(raw)] ?? `Unknown Class Skill Tab (ID ${raw})`;
+    if (['dmg-cold', 'dmg-pois'].includes(code)) {
+      const seconds = Number(raw) / 25;
+      return `${Number.isInteger(seconds) ? seconds : seconds.toFixed(1)} Seconds`;
+    }
+  }
+  if (/^[ie]type[1-7]$/.test(lower)) return raw ? itemTypeName(raw, glossary) : '';
+  if (lower === 'spawnable') return raw === '1' ? 'Enabled' : 'Disabled';
+  if (lower === 'rare') return raw === '1' ? 'Yes' : 'No';
+  if (lower === 'version') return raw === '100' ? 'Expansion' : raw === '1' ? 'Classic and Expansion' : raw;
+  if (lower === 'class' || lower === 'classspecific') return CLASS_NAMES[raw] ?? titleCaseCode(raw);
+  if (lower === 'transformcolor') return COLOR_NAMES[raw] ?? titleCaseCode(raw);
+  if (lower === '$rowpresence') return raw === 'PRESENT' ? 'Present' : 'Absent';
+  return raw;
+}
+
+function decorateDifference(diff, rows, glossaries) {
+  return {
+    ...diff,
+    label: gameplayFieldLabel(diff.field),
+    display: {
+      vanilla: gameplayFieldValue(diff.field, diff.vanilla, rows.vanilla, glossaries.vanilla),
+      bkvince: gameplayFieldValue(diff.field, diff.bkvince, rows.bkvince, glossaries.bkvince),
+      pd2: gameplayFieldValue(diff.field, diff.pd2, rows.pd2, glossaries.pd2),
+    },
+  };
+}
 function blockedRows(expected) {
   const result = new Map();
   for (const [reason, spec] of Object.entries(expected.blocked ?? {})) for (const row of parseOrdinalSpec(spec)) result.set(row, reason);
   return result;
 }
-function statusFor({ mapped, pd2Deleted, vanilla, bkvince, pd2 }) {
+const CONSOLIDATION_VARIANT_FIELDS = Object.freeze(['spawnable', 'rare', 'level', 'maxlevel', 'levelreq', 'frequency']);
+const CONSOLIDATION_EXCLUDED_FIELDS = new Set(['*comment', 'spawnable', 'level', 'maxlevel', 'levelreq', 'frequency']);
+
+function consolidationIdentity(headers, row) {
+  const fields = headers.filter((header) => !CONSOLIDATION_EXCLUDED_FIELDS.has(header.toLowerCase()));
+  const values = fields.map((field) => [field, normalize(field, row?.[field] ?? '')]);
+  return { fields, values, signature: sha256(JSON.stringify(values)) };
+}
+
+function findExactActiveReplacement(headers, rows, disabledRow) {
+  const identity = consolidationIdentity(headers, disabledRow);
+  const candidates = rows.filter((candidate) => candidate.row.spawnable === '1'
+    && consolidationIdentity(headers, candidate.row).signature === identity.signature);
+  return candidates.length === 1 ? { ...candidates[0], identity } : null;
+}
+
+function statusFor({ mapped, pd2Deleted, pd2Consolidated, vanilla, bkvince, pd2 }) {
   if (!mapped) return 'PD2_NEW';
+  if (pd2Consolidated) return 'PD2_CONSOLIDATED';
   if (pd2Deleted) return 'PD2_DELETED';
   const equal = (a, b) => a && b && Object.keys(a).every((header) => normalize(header, a[header]) === normalize(header, b[header]));
   if (equal(vanilla, bkvince) && equal(bkvince, pd2)) return 'ALL_THREE_IDENTICAL';
@@ -138,15 +458,27 @@ const STATUS_LABELS = {
   BKV_EQUALS_PD2: 'BKVince = PD2; vanilla diffère',
   ALL_THREE_DIFFER: 'Les trois versions diffèrent',
   PD2_DELETED: 'Supprimé ou désactivé par PD2',
+  PD2_CONSOLIDATED: 'Ancienne occurrence consolidée dans une occurrence PD2 active',
   PD2_NEW: 'Nouveau dans PD2',
   BKV_ONLY: 'Propre à BKVince',
 };
-function familyFor(table, row, name) {
+function familyFor(table, row, name, glossary) {
   if (!row) return { id: `${table}:bkv-only:${name}`, label: name || 'Sans nom' };
   const group = row.group || 'ungrouped';
   const codes = [row.mod1code, row.mod2code, row.mod3code].filter(Boolean).join('+') || 'no-direct-mod';
   const type = [row.itype1, row.itype2].filter(Boolean).join('/') || 'all-items';
-  return { id: `${table}:${group}:${codes}:${type}`, label: `Groupe ${group} · ${codes} · ${type}` };
+  const propertyLabels = [row.mod1code, row.mod2code, row.mod3code].filter(Boolean)
+    .map((code) => propertyTitle(code, glossary));
+  const allowedTypes = types(row).allowed.map((code) => itemTypeName(code, glossary));
+  const typeLabel = allowedTypes.length === 0
+    ? 'All Items'
+    : allowedTypes.length <= 3
+      ? allowedTypes.join(', ')
+      : `${allowedTypes.slice(0, 3).join(', ')} +${allowedTypes.length - 3} More`;
+  return {
+    id: `${table}:${group}:${codes}:${type}`,
+    label: `${propertyLabels.join(' + ') || 'Special Affix'} · ${typeLabel}`,
+  };
 }
 function documentationFor(documentationMap, identity, category) {
   const mapped = documentationMap.entries.find((entry) => entry.table === identity.table
@@ -173,7 +505,7 @@ function documentationFor(documentationMap, identity, category) {
       },
     };
   }
-  if (['PD2_DELETED', 'PD2_MODIFIED', 'PD2_NEW_PORTABLE', 'PD2_NEW_REVIEW'].includes(category)) {
+  if (['PD2_DELETED', 'PD2_CONSOLIDATED', 'PD2_MODIFIED', 'PD2_NEW_PORTABLE', 'PD2_NEW_REVIEW'].includes(category)) {
     return { coverage: 'TABLE_ONLY', url: null, section: null, category: 'Table difference', season: 'unknown', summary: 'Différence prouvée par les tables officielles S13 sans correspondance documentaire occurrence-exacte.' };
   }
   return { coverage: 'UNMAPPED', url: null, section: null, category: 'No documented PD2 change', season: 'unknown', summary: 'Aucun changement PD2 documenté n’est revendiqué pour cette occurrence.' };
@@ -215,6 +547,15 @@ export function buildReport(sourceRoot, catalog) {
   const documentationMap = readJson(documentationMapPath);
   const dependencyContext = buildAffixDependencyAuditContext(sourceRoot, targetRoot);
   assertDependencyPins(dependencyContext, catalog);
+  const targetProperties = loadTable(targetRoot, 'properties.txt');
+  const targetItemTypes = loadTable(targetRoot, 'itemtypes.txt');
+  const targetSkills = loadTable(targetRoot, 'skills.txt');
+  const sourceProperties = loadTable(sourceRoot, 'properties.txt');
+  const sourceItemTypes = loadTable(sourceRoot, 'itemtypes.txt');
+  const sourceSkills = loadTable(sourceRoot, 'skills.txt');
+  const bkvinceGlossary = buildGameplayGlossary(targetProperties, targetItemTypes, targetSkills);
+  const pd2Glossary = buildGameplayGlossary(sourceProperties, sourceItemTypes, sourceSkills, bkvinceGlossary);
+  const glossaries = { vanilla: bkvinceGlossary, bkvince: bkvinceGlossary, pd2: pd2Glossary };
   for (const [tableName, config] of Object.entries(TABLES)) {
     const source = loadTable(sourceRoot, tableName), target = loadTable(targetRoot, tableName), vanillaTable = loadTable(vanillaRoot, tableName);
     assert(target.sha256 === catalog.targetBaseline[tableName].sha256, `${tableName}: BKVince is not at review baseline`);
@@ -222,6 +563,10 @@ export function buildReport(sourceRoot, catalog) {
     assert(source.sha256 === catalog.source.tables[tableName].mirrorSha256 || source.sha256 === catalog.source.tables[tableName].officialSha256, `${tableName}: PD2 source drift`);
     sourceHashes[tableName] = catalog.source.tables[tableName].officialSha256;
     const headers = target.table.headers.filter((header) => source.indexes.has(header.toLowerCase()) && vanillaTable.indexes.has(header.toLowerCase()));
+    const activePd2Rows = source.table.rows.map((_, sourceRow) => ({
+      sourceRow,
+      row: rowObject(source, sourceRow, headers),
+    })).filter((candidate) => isRealRow(source, candidate.sourceRow) && candidate.row.spawnable === '1');
     const portable = new Set(parseOrdinalSpec(catalog.expected.appends[tableName].sourceRows));
     const blocked = blockedRows(catalog.expected.appends[tableName]);
     const mappedTargets = new Set();
@@ -233,19 +578,76 @@ export function buildReport(sourceRoot, catalog) {
       const bkvince = mapped ? rowObject(target, targetRow, headers) : null;
       const pd2 = rowObject(source, sourceRow, headers);
       const pd2Deleted = mapped && vanilla.spawnable === '1' && pd2.spawnable !== '1';
-      const status = statusFor({ mapped, pd2Deleted, vanilla, bkvince, pd2 });
+      const replacement = pd2Deleted ? findExactActiveReplacement(headers, activePd2Rows, pd2) : null;
+      const pd2Consolidated = Boolean(replacement);
+      const status = statusFor({ mapped, pd2Deleted, pd2Consolidated, vanilla, bkvince, pd2 });
       const deferred = tableName === 'automagic.txt';
       const category = deferred ? 'AUTOMAGIC_DEFERRED' : mapped
-        ? (pd2Deleted ? 'PD2_DELETED' : status === 'ALL_THREE_IDENTICAL' || status === 'PD2_EQUALS_VANILLA_BKV_DIFFERS' ? 'UNCHANGED_BY_PD2' : 'PD2_MODIFIED')
+        ? (pd2Consolidated ? 'PD2_CONSOLIDATED' : pd2Deleted ? 'PD2_DELETED' : status === 'ALL_THREE_IDENTICAL' || status === 'PD2_EQUALS_VANILLA_BKV_DIFFERS' ? 'UNCHANGED_BY_PD2' : 'PD2_MODIFIED')
         : (portable.has(sourceRow) ? 'PD2_NEW_PORTABLE' : 'PD2_NEW_REVIEW');
-      const changes = threeWayDiff(headers, vanilla, bkvince, pd2).map((diff) => ({
-        ...diff,
-        defaultDecision: category === 'UNCHANGED_BY_PD2' ? 'KEEP_BKVINCE' : diff.defaultDecision,
-      }));
+      const versionRows = { vanilla, bkvince, pd2 };
+      const changes = threeWayDiff(headers, vanilla, bkvince, pd2)
+        .map((diff) => ({
+          ...diff,
+          defaultDecision: category === 'UNCHANGED_BY_PD2' ? 'KEEP_BKVINCE' : diff.defaultDecision,
+        }))
+        .map((diff) => decorateDifference(diff, versionRows, glossaries));
       const id = `${tableName}:${sourceRow}`;
       const name = rowName(source, sourceRow);
       const sourceTypes = types(pd2);
       const fingerprint = sha256(JSON.stringify({ tableName, sourceRow, targetRow, vanilla, bkvince, pd2 }));
+      let consolidation = null;
+      if (replacement) {
+        const replacementSourceRow = replacement.sourceRow;
+        const replacementMapped = replacementSourceRow < config.mapped;
+        const replacementTargetRow = replacementMapped ? config.targetRow(replacementSourceRow) : null;
+        const replacementVanilla = replacementMapped ? rowObject(vanillaTable, replacementSourceRow, headers) : null;
+        const replacementBkvince = replacementMapped ? rowObject(target, replacementTargetRow, headers) : null;
+        const replacementPd2 = replacement.row;
+        consolidation = {
+          kind: 'EXACT_ACTIVE_REPLACEMENT',
+          replacementId: `${tableName}:${replacementSourceRow}`,
+          replacementSourceRow,
+          replacementTargetRow,
+          replacementName: rowName(source, replacementSourceRow),
+          semanticIdentitySha256: replacement.identity.signature,
+          comparedFields: replacement.identity.fields,
+          candidateCount: 1,
+          matchPolicy: 'Exact same table, name, eligibility structure, item types, modifiers and cost fields; availability and tiering fields may differ.',
+          migrationFields: CONSOLIDATION_VARIANT_FIELDS.map((field) => {
+            const values = {
+              legacyVanilla: vanilla?.[field] ?? null,
+              legacyBkvince: bkvince?.[field] ?? null,
+              disabledPd2: pd2?.[field] ?? null,
+              replacementVanilla: replacementVanilla?.[field] ?? null,
+              replacementBkvince: replacementBkvince?.[field] ?? null,
+              replacementPd2: replacementPd2?.[field] ?? null,
+            };
+            return {
+              field,
+              label: gameplayFieldLabel(field),
+              ...values,
+              display: {
+                legacyVanilla: gameplayFieldValue(field, values.legacyVanilla, vanilla, glossaries.vanilla),
+                legacyBkvince: gameplayFieldValue(field, values.legacyBkvince, bkvince, glossaries.bkvince),
+                disabledPd2: gameplayFieldValue(field, values.disabledPd2, pd2, glossaries.pd2),
+                replacementVanilla: gameplayFieldValue(field, values.replacementVanilla, replacementVanilla, glossaries.vanilla),
+                replacementBkvince: gameplayFieldValue(field, values.replacementBkvince, replacementBkvince, glossaries.bkvince),
+                replacementPd2: gameplayFieldValue(field, values.replacementPd2, replacementPd2, glossaries.pd2),
+              },
+            };
+          }),
+          replacement: {
+            rows: { vanilla: replacementVanilla, bkvince: replacementBkvince, pd2: replacementPd2 },
+            effects: {
+              vanilla: effect(replacementVanilla, glossaries.vanilla),
+              bkvince: effect(replacementBkvince, glossaries.bkvince),
+              pd2: effect(replacementPd2, glossaries.pd2),
+            },
+            itemTypes: types(replacementPd2),
+          },
+        };
+      }
       const technicalAudit = !mapped ? auditAffixProjection(dependencyContext, {
         tableName, sourceRow, targetRow, projected: pd2, sourceOriginal: pd2, kind: 'append', catalog,
       }) : null;
@@ -262,10 +664,16 @@ export function buildReport(sourceRoot, catalog) {
         id, fingerprint,
         table: tableName, tableLabel: config.label, sourceRow, targetRow, name, status, statusLabel: STATUS_LABELS[status], category,
         portable: portable.has(sourceRow), blockedReason: auditReasons[0] ?? null, blockedReasons: auditReasons, deferred,
-        family: familyFor(tableName, pd2, name), documentation: documentationFor(documentationMap, { table: tableName, sourceRow, fingerprint }, category),
-        rows: { vanilla, bkvince, pd2 }, effects: { vanilla: effect(vanilla), bkvince: effect(bkvince), pd2: effect(pd2) },
+        family: familyFor(tableName, pd2, name, glossaries.pd2), documentation: documentationFor(documentationMap, { table: tableName, sourceRow, fingerprint }, category),
+        rows: versionRows,
+        effects: {
+          vanilla: effect(vanilla, glossaries.vanilla),
+          bkvince: effect(bkvince, glossaries.bkvince),
+          pd2: effect(pd2, glossaries.pd2),
+        },
         itemTypes: sourceTypes,
         technicalAudit,
+        ...(consolidation ? { consolidation } : {}),
         comparisons: {
           pd2VsVanilla: pairDiff(headers, pd2, vanilla, 'pd2', 'vanilla'),
           bkvVsVanilla: pairDiff(headers, bkvince, vanilla, 'bkvince', 'vanilla'),
@@ -279,12 +687,15 @@ export function buildReport(sourceRoot, catalog) {
       const headers = target.table.headers;
       const bkvince = rowObject(target, targetRow, headers), name = rowName(target, targetRow), id = `${tableName}:bkv:${targetRow}`;
       const fingerprint = sha256(JSON.stringify({ tableName, targetRow, bkvince }));
-      const differences = threeWayDiff(headers, null, bkvince, null).map((diff) => ({ ...diff, defaultDecision: 'KEEP_BKVINCE' }));
+      const versionRows = { vanilla: null, bkvince, pd2: null };
+      const differences = threeWayDiff(headers, null, bkvince, null)
+        .map((diff) => ({ ...diff, defaultDecision: 'KEEP_BKVINCE' }))
+        .map((diff) => decorateDifference(diff, versionRows, glossaries));
       entries.push({
         id, fingerprint, table: tableName, tableLabel: config.label,
         sourceRow: null, targetRow, name, status: 'BKV_ONLY', statusLabel: STATUS_LABELS.BKV_ONLY, category: tableName === 'automagic.txt' ? 'AUTOMAGIC_DEFERRED' : 'BKV_ONLY', portable: false,
-        blockedReason: null, blockedReasons: [], deferred: tableName === 'automagic.txt', family: familyFor(tableName, bkvince, name), documentation: documentationFor(documentationMap, { table: tableName, sourceRow: null, fingerprint }, 'BKV_ONLY'),
-        rows: { vanilla: null, bkvince, pd2: null }, effects: { vanilla: '—', bkvince: effect(bkvince), pd2: '—' }, itemTypes: types(bkvince),
+        blockedReason: null, blockedReasons: [], deferred: tableName === 'automagic.txt', family: familyFor(tableName, bkvince, name, glossaries.bkvince), documentation: documentationFor(documentationMap, { table: tableName, sourceRow: null, fingerprint }, 'BKV_ONLY'),
+        rows: versionRows, effects: { vanilla: '—', bkvince: effect(bkvince, glossaries.bkvince), pd2: '—' }, itemTypes: types(bkvince),
         comparisons: {
           pd2VsVanilla: pairDiff(headers, null, null, 'pd2', 'vanilla'),
           bkvVsVanilla: pairDiff(headers, bkvince, null, 'bkvince', 'vanilla'),
@@ -359,6 +770,13 @@ export function buildReport(sourceRoot, catalog) {
     sourceAuthority: catalog.source.authority, sourceHashes, dependencyHashes: dependencyContext.dependencyHashes,
     targetBaselineCommit: '756df5f53109729f16643b36aa459fead4cdbf94',
     targetBaselineHashes: Object.fromEntries(Object.entries(catalog.targetBaseline).map(([key, item]) => [key, item.sha256])),
+    decisionMigration: {
+      previousComparisonHashes: [
+        '33C3FBA6D50A4ABBBEA46E2F93BAF11D7D6AA13EF0F2067DD654258A6A13CDCD',
+        'E06791B2A67BCCB52BB1159FEB770399A18A41285DD54D36688B24780F9F584A',
+      ],
+      policy: 'LOCAL_STORAGE_FINGERPRINT_MATCH_ONLY',
+    },
     protectedFields: ['maxlevel'], fieldDecisionOptions: FIELD_DECISIONS, newAffixLineDecisionOptions: NEW_AFFIX_LINE_DECISIONS,
     reviewRequiredCategories: REVIEW_REQUIRED_CATEGORIES,
     documentationMap: {

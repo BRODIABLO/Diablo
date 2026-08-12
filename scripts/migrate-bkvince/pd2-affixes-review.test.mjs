@@ -66,6 +66,13 @@ test('V3 governed artifacts expose three versions and all pairwise comparisons',
   assert.equal(highest.schemaVersion, 3);
   assert.equal(highest.reportId, 'pd2-affixes-highest-level-v3');
   assert.deepEqual(report.newAffixLineDecisionOptions, [...NEW_AFFIX_LINE_DECISIONS]);
+  assert.deepEqual(report.decisionMigration, {
+    previousComparisonHashes: [
+      '33C3FBA6D50A4ABBBEA46E2F93BAF11D7D6AA13EF0F2067DD654258A6A13CDCD',
+      'E06791B2A67BCCB52BB1159FEB770399A18A41285DD54D36688B24780F9F584A',
+    ],
+    policy: 'LOCAL_STORAGE_FINGERPRINT_MATCH_ONLY',
+  });
   assert.deepEqual(report.sourceHashes, Object.fromEntries([
     'magicprefix.txt', 'magicsuffix.txt', 'automagic.txt',
   ].map((table) => [table, catalog.source.tables[table].officialSha256])));
@@ -102,6 +109,8 @@ test('V3 governed artifacts expose three versions and all pairwise comparisons',
   assert.match(html, /payload\?\.schemaVersion\s*!==\s*3/);
   assert.match(html, /\['sourceHashes',\s*'dependencyHashes',\s*'targetBaselineHashes'\]/);
   assert.match(html, /READ_ONLY_CATEGORIES=\["UNCHANGED_BY_PD2","AUTOMAGIC_DEFERRED"\]/);
+  assert.match(html, /choice\?\.fingerprint===entry\.fingerprint/);
+  assert.match(html, /Décisions locales reprises/);
   assert.match(html, /Cat[^<]*gorie en lecture seule/);
   assert.match(html, /if\(reviewState\(entry\)\.readOnly\)return/);
   const inlineScript = html.match(/<script>([\s\S]*)<\/script>/)?.[1];
@@ -130,6 +139,41 @@ test('V3 governed artifacts expose three versions and all pairwise comparisons',
   assert.match(embeddedState.reasons.join(' '), /unknownField/);
 });
 
+test('player-facing effects, families and changed fields use Diablo gameplay language', () => {
+  const entryAt = (sourceRow) => report.entries.find((entry) => entry.table === 'magicprefix.txt' && entry.sourceRow === sourceRow);
+  const sturdy = entryAt(143);
+  const bronze = entryAt(238);
+  const cobalt = entryAt(353);
+  const slayer = entryAt(578);
+  const iceBarrage = report.entries.find((entry) => entry.id === 'magicsuffix.txt:892');
+  const warlockChaos = report.entries.find((entry) => entry.id === 'magicprefix.txt:bkv:703');
+
+  assert.equal(sturdy.effects.pd2, '+10–20% Enhanced Defense');
+  assert.equal(bronze.effects.pd2, '+10–20 to Attack Rating');
+  assert.equal(cobalt.effects.pd2, '+21–30% Cold Resistance');
+  assert.equal(slayer.effects.pd2, '+1 to Barbarian Skill Levels');
+  assert.equal(iceBarrage.effects.pd2, '10% Chance to Cast Level 18 Ice Barrage on Casting');
+  assert.equal(warlockChaos.effects.bkvince, '+1 to Warlock Chaos Skills');
+  assert.ok(report.entries.every((entry) => Object.values(entry.effects)
+    .every((description) => !/Unknown (?:Skill|Class Skill Tab)/.test(description))));
+  assert.equal(sturdy.family.label, 'Enhanced Defense · Any Armor');
+  assert.doesNotMatch(sturdy.family.label, /Groupe|ac%|armo/);
+
+  const propertyDifference = report.entries.flatMap((entry) => entry.fieldDifferences)
+    .find((difference) => /^mod[1-3]code$/i.test(difference.field)
+      && [difference.vanilla, difference.bkvince, difference.pd2].some(Boolean));
+  assert.ok(propertyDifference);
+  assert.match(propertyDifference.label, /^Effet [1-3] — propriété$/);
+  for (const version of ['vanilla', 'bkvince', 'pd2']) {
+    if (propertyDifference[version]) assert.notEqual(propertyDifference.display[version], propertyDifference[version]);
+  }
+
+  assert.equal(sturdy.rows.pd2.mod1code, 'ac%', 'raw governed rows remain available to the preview compiler');
+  assert.match(html, /\+10–20% Enhanced Defense/);
+  assert.match(html, /\+21–30% Cold Resistance/);
+  assert.match(html, /\+1 to Barbarian Skill Levels/);
+});
+
 test('status, pairwise comparisons and field differences share canonical normalization', () => {
   const allowed = new Set([
     'ALL_THREE_IDENTICAL',
@@ -138,6 +182,7 @@ test('status, pairwise comparisons and field differences share canonical normali
     'BKV_EQUALS_PD2',
     'ALL_THREE_DIFFER',
     'PD2_DELETED',
+    'PD2_CONSOLIDATED',
     'PD2_NEW',
     'BKV_ONLY',
   ]);
@@ -156,6 +201,63 @@ test('status, pairwise comparisons and field differences share canonical normali
     .filter(({ diff }) => diff.field.toLowerCase() === 'multiply')
     .filter(({ diff }) => new Set(['vanilla', 'bkvince', 'pd2'].map((version) => normalizedCell(diff.field, diff[version]))).size === 1);
   assert.deepEqual(phantomMultiply, []);
+});
+
+test('disabled duplicate occurrences are separated from affix concepts consolidated by PD2', () => {
+  const consolidated = report.entries.filter((entry) => entry.category === 'PD2_CONSOLIDATED');
+  assert.equal(report.counts.PD2_CONSOLIDATED, 2);
+  assert.equal(report.counts.PD2_DELETED, 132);
+  assert.deepEqual(consolidated.map((entry) => [entry.id, entry.name, entry.consolidation.replacementId]), [
+    ['magicprefix.txt:668', 'Godly', 'magicprefix.txt:150'],
+    ['magicprefix.txt:669', 'Cruel', 'magicprefix.txt:194'],
+  ]);
+
+  for (const entry of consolidated) {
+    const evidence = entry.consolidation;
+    assert.equal(entry.status, 'PD2_CONSOLIDATED');
+    assert.equal(evidence.kind, 'EXACT_ACTIVE_REPLACEMENT');
+    assert.equal(evidence.candidateCount, 1);
+    assert.match(evidence.semanticIdentitySha256, /^[A-F0-9]{64}$/);
+    assert.ok(evidence.comparedFields.includes('Name'));
+    assert.ok(evidence.comparedFields.includes('mod1code'));
+    assert.ok(evidence.comparedFields.includes('itype1'));
+    assert.ok(!evidence.comparedFields.includes('spawnable'));
+    assert.ok(!evidence.comparedFields.includes('frequency'));
+    assert.equal(entry.name, evidence.replacementName);
+    assert.equal(evidence.replacement.rows.pd2.spawnable, '1');
+    for (const field of evidence.comparedFields) {
+      assert.equal(
+        normalizedCell(field, entry.rows.pd2[field]),
+        normalizedCell(field, evidence.replacement.rows.pd2[field]),
+        `${entry.id}: exact semantic field ${field}`,
+      );
+    }
+    const review = entryReviewState(entry, { fingerprint: entry.fingerprint, fields: {} });
+    assert.equal(review.required, true);
+    assert.equal(review.complete, false);
+  }
+
+  const godly = consolidated.find((entry) => entry.name === 'Godly');
+  const godlyFields = Object.fromEntries(godly.consolidation.migrationFields.map((item) => [item.field, item]));
+  assert.deepEqual(godlyFields.frequency, {
+    field: 'frequency',
+    label: 'Fréquence',
+    legacyVanilla: '1', legacyBkvince: '1', disabledPd2: '',
+    replacementVanilla: '3', replacementBkvince: '3', replacementPd2: '6',
+    display: {
+      legacyVanilla: '1', legacyBkvince: '1', disabledPd2: '',
+      replacementVanilla: '3', replacementBkvince: '3', replacementPd2: '6',
+    },
+  });
+  assert.equal(godlyFields.rare.legacyBkvince, '1');
+  assert.equal(godlyFields.rare.replacementPd2, '1');
+
+  const ambiguousSameName = report.entries.filter((entry) => entry.name === 'Howling' && entry.category === 'PD2_DELETED');
+  assert.ok(ambiguousSameName.length > 0, 'same-name but semantically different rows must remain deleted occurrences');
+  assert.match(html, /Occurrences consolidées par PD2/);
+  assert.match(html, /Ce n’est pas une suppression du concept d’affixe/);
+  assert.match(html, /magicprefix\.txt:150/);
+  assert.match(html, /magicprefix\.txt:194/);
 });
 
 test('UNCHANGED entries are automatically resolved and never enter actionable progress', () => {
@@ -494,6 +596,7 @@ test('decision exports reimport only with the complete V3 governed identity', ()
 test('review categories and documentation evidence remain explicit', () => {
   for (const category of [
     'PD2_DELETED',
+    'PD2_CONSOLIDATED',
     'PD2_MODIFIED',
     'PD2_NEW_PORTABLE',
     'PD2_NEW_REVIEW',

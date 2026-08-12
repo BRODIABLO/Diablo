@@ -350,6 +350,19 @@ qu'une sélection produit soit approuvée et réimplantée.
   côte à côte, les trois comparaisons bilatérales, les effets complets et tous
   les champs divergents. Les catégories de revue sont séparées, les familles
   sont regroupées et AutoMagic demeure masqué par défaut et différé.
+  Les effets, familles, types d’objet, skills et champs divergents utilisent
+  désormais un langage joueur D2 dérivé des tooltips gouvernés de
+  `properties.txt` et des noms de `itemtypes.txt`/`skills.txt` : par exemple
+  `+10–20% Enhanced Defense`, `+10–20 to Attack Rating`,
+  `+21–30% Cold Resistance` et `+1 to Barbarian Skill Levels`. Les codes et
+  cellules bruts restent disponibles dans les détails techniques et demeurent
+  la seule matière transmise au preview ; cette couche d’affichage ne modifie
+  aucune décision ni aucune donnée gameplay.
+  Les **132** occurrences réellement supprimées ou désactivées sont séparées
+  des **2 anciennes occurrences rares consolidées** : `Godly` source 668 est
+  relié à l'occurrence active 150 et `Cruel` source 669 à l'occurrence active
+  194. Ce classement exige une identité sémantique exacte sur 34 champs
+  structurels, propriétés et types d'objet ; un homonyme seul ne suffit pas.
 - Documentation : carte gouvernée V2 de **510 correspondances
   occurrence-exactes** (`table`, `sourceRow`, `fingerprint`, nom, propriétés et
   types d'objet), matérialisées par **33 claims** et **33 règles**. La couverture
@@ -368,7 +381,9 @@ qu'une sélection produit soit approuvée et réimplantée.
   protégé et préservé par défaut. Un champ `CUSTOM` rend
   `IMPORT_PD2_AFFIX` invalide et l'interface bascule vers `IMPORT_CUSTOMIZED` ;
   `UNCHANGED_BY_PD2` et `AUTOMAGIC_DEFERRED` sont en lecture seule et leurs
-  anciens choix éventuels sont ignorés par le preview.
+  anciens choix éventuels sont ignorés par le preview. Le reclassement
+  Godly/Cruel conserve automatiquement les décisions locales du rapport
+  précédent lorsque l'ID et le fingerprint de l'occurrence sont inchangés.
 - Prévisualisation : `pd2-affixes-decisions-preview.mjs` produit seulement le
   manifeste proposé, les cellules, lignes, dépendances, localisations,
   conflits, décisions incomplètes et diff textuel. Il ne possède aucun chemin
@@ -385,10 +400,11 @@ qu'une sélection produit soit approuvée et réimplantée.
   il reste **informatif, en attente de confirmation historique**, et ne prouve
   aucune régression BKVince. Le rapport distingue drops, crafts, rerolls et
   gambling sans inventer un chemin d'acquisition non prouvé.
-- Suite ciblée comparateur + preview V3 : **27/27**, y compris le runtime HTML
+- Suite ciblée comparateur + preview V3 : **29/29**, y compris le runtime HTML
   embarqué, les catégories en lecture seule, les conflits CUSTOM, tous les pins
-  de dépendances et l'interdiction de chaque chemin `--apply`.
-- Validation conjointe merge + preview + revue : **35/35**.
+  de dépendances, la couche de libellés gameplay et l'interdiction de chaque
+  chemin `--apply`.
+- Validation conjointe merge + preview + revue : **39/39**.
 - La suite Hero globale conserve **six attentes hors périmètre déjà décalées**
   dans les baselines belt/monsters/sets/properties ; ce blocage n'est pas une
   régression du merge d'affixes.
