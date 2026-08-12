@@ -75,6 +75,7 @@ En clair : `addons/`, `reverse-engineering/` et les procédures natives portent 
 - **Assets versionnés** : `data-TCP/hd`, `data-TCP/local`, `data-BK/hd` et `data-BK/local` sont dans Git. Les formats HD binaires de TCP/BK passent par Git LFS ; les backups `*.bak` restent exclus.
 - **Git** : ne change jamais de branche et ne commit ni ne push jamais de ta propre initiative. Une demande explicite de l’utilisateur courant suffit; aucune formule `GO` dédiée ni identité particulière n’est requise.
 - **Runtime Diablo** : utiliser le skill `d2r-runtime-validation`. Si des fichiers sont verrouillés, fermer soi-même les instances concernées; ne jamais demander à Vincent de fermer le jeu. Relancer ensuite une seule instance si la validation l’exige.
+- **Compatibilité des plugins** : ne désactiver aucun plugin installé ni aucune fonctionnalité du PluginPack pendant un cold start ou un test déclaré de compatibilité. La matrice de qualification doit utiliser la pile complète active et activer toutes les fonctionnalités du pack; un démarrage obtenu en retirant, neutralisant ou laissant désactivé un composant ne prouve aucune compatibilité. Une isolation temporaire est permise uniquement comme diagnostic explicitement étiqueté, puis la pile complète doit être restaurée et retestée avant toute conclusion ou livraison.
 
 ## Skills spécialisés
 
