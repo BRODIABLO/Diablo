@@ -1,15 +1,24 @@
 ---
 name: diablo-git-checkpoint
-description: Isoler, auditer, valider, committer et pousser des checkpoints Git cohérents dans le dépôt Diablo malgré un workspace sale ou activement modifié. Utiliser ce skill pour « next lot », « prépare le commit », « GO COMMIT », « GO PUSH », l'assainissement Git, le staging partiel de ROADMAP/cadastre/RVA, la détection de fichiers encore actifs et la validation exacte du contenu de l'index.
+description: Isoler, auditer, valider, committer et pousser rapidement des checkpoints Git cohérents dans le dépôt Diablo malgré un workspace sale ou activement modifié. Utiliser ce skill pour « commit push go », « commit push ciblé go », « next lot », « prépare le commit », « GO COMMIT », « GO PUSH », l'assainissement Git, le staging partiel de ROADMAP/cadastre/RVA, la détection de fichiers encore actifs et la validation exacte du contenu de l'index.
 ---
 
 # Checkpoints Git Diablo
 
 ## Appliquer le fast-path ciblé
 
-Utiliser obligatoirement ce chemin lorsque Vincent dit `commit push ciblé go`,
-`commit ciblé`, ou demande dans une même instruction de committer et pousser un
-lot déjà implanté et testé.
+Utiliser obligatoirement ce chemin lorsque Vincent dit `commit push go`,
+`commit push ciblé go`, `commit ciblé`, ou demande dans une même instruction de
+committer et pousser un lot déjà implanté et testé. Pour `commit push go`,
+inférer d'abord le lot depuis le travail accompli dans la conversation et les
+fichiers qui ont servi à cette implantation. Un workspace sale hors de ce lot
+n'annule jamais le fast-path.
+
+Viser une livraison en moins de 2 minutes, hors attente réseau du push. Démarrer
+le chronométrage avec le checkpoint initial. À 2 minutes, continuer seulement
+les opérations Git indispensables déjà engagées. Si la livraison dépasse
+5 minutes, donner immédiatement la cause concrète et l'opération restante; ne
+jamais poursuivre silencieusement un audit élargi.
 
 1. Exécuter une seule fois `npm run checkpoint`, lire l'index existant et définir
    l'allowlist exacte du lot.
@@ -25,6 +34,11 @@ lot déjà implanté et testé.
 6. Commettre, pousser et vérifier `HEAD...@{upstream}` dans la même passe lorsque
    l'utilisateur a autorisé ensemble commit et push. S'arrêter ensuite.
 
+Ne poser aucune question si le lot se déduit sans ambiguïté du travail accompli
+dans la conversation. Si deux lots plausibles se chevauchent réellement,
+s'arrêter après le checkpoint et demander uniquement lequel livrer; ne pas
+essayer de résoudre cette ambiguïté par un audit complet du workspace.
+
 Dans ce fast-path :
 
 - ne pas exécuter `npm ci`;
@@ -34,6 +48,9 @@ Dans ce fast-path :
 - ne pas poursuivre, réparer ou documenter une panne étrangère au lot;
 - ne pas invoquer une préparation de release ou modifier la ROADMAP, sauf si ces
   fichiers appartiennent explicitement à l'allowlist demandée.
+- ne pas relancer `npm run checkpoint` après le commit : utiliser directement
+  les contrôles Git de synchronisation, sauf mutation supplémentaire du
+  worktree effectuée pendant la livraison.
 
 Une panne globale déjà présente dans `HEAD` est classée immédiatement avec une
 preuve courte, puis ignorée pour ce commit ciblé. Escalader vers le workflow

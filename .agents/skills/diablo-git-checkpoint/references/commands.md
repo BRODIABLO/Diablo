@@ -14,6 +14,11 @@ git push
 git rev-list --left-right --count 'HEAD...@{upstream}'
 ```
 
+Cette séquence est aussi le défaut pour `commit push go` lorsque le lot courant
+se déduit du travail accompli dans la conversation. Viser moins de 2 minutes,
+hors attente réseau. À partir de 5 minutes, annoncer la cause concrète et
+l'opération restante au lieu d'étendre silencieusement l'audit.
+
 Si l'index contient d'autres lots, exécuter les opérations de staging et de
 commit avec un `GIT_INDEX_FILE` alternatif construit depuis `HEAD`, puis
 réconcilier uniquement les chemins ciblés dans l'index principal. Comparer les
@@ -22,6 +27,8 @@ entrées non ciblées avant/après et exiger un delta nul.
 Ne pas lancer `npm ci`, `npm run verify`, un test runtime ou plusieurs snapshots
 dans ce chemin. Réutiliser les tests frais du chantier et ne lancer qu'un
 parseur/test ciblé si le contenu allowlisté a changé depuis ces preuves.
+Ne pas relancer le checkpoint après le commit en l'absence de nouvelle mutation;
+les contrôles Git finaux suffisent.
 
 ## Inspection en lecture seule
 
