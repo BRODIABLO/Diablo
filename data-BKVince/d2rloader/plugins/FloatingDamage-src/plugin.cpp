@@ -61,7 +61,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "floating-damage",
     .name = "Floating Damage",
-    .version = "1.1.0",
+    .version = "1.2.0",
     .author = "RuffnecKk",
     .description = "Shows floating combat numbers and rolling damage per second.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -76,7 +76,14 @@ max_numbers_on_screen = 160
 font_index = 0
 color_by_damage_type = false
 
+[hotkey]
+# Toggles floating numbers for the current session without unloading the DLL.
+# The binding is never consumed: D2R still receives the same keyboard or mouse input.
+toggle_hotkey_enabled = true
+toggle_hotkey = "CTRL+SHIFT+D"
+
 [appearance]
+# Text sizes use 4K (2160p) reference pixels and scale automatically by display height.
 text_size = 38.0
 critical_hit_size = 48.0
 text_outline_width = 1
@@ -190,9 +197,142 @@ bool ParseColor(std::string_view value, ImVec4& output) {
     return true;
 }
 
+bool ParseTomlString(std::string_view value, std::string& output) {
+    const std::string text = Trim(value);
+    if (text.size() < 2 || (text.front() != '"' && text.front() != '\'')) return false;
+    if (text.back() != text.front()) return false;
+    output = text.substr(1, text.size() - 2);
+    return !output.empty() && output.size() <= 64;
+}
+
+std::string UpperTrim(std::string_view value) {
+    std::string result = Trim(value);
+    std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) {
+        return static_cast<char>(std::toupper(c));
+    });
+    return result;
+}
+
+bool ParseMainHotkey(const std::string& token, std::uint32_t& virtualKey) {
+    if (token.size() == 1) {
+        const auto c = static_cast<unsigned char>(token.front());
+        if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+            virtualKey = c;
+            return true;
+        }
+        struct PunctuationKey {
+            char character;
+            std::uint32_t virtualKey;
+        };
+        constexpr PunctuationKey punctuationKeys[] = {
+            {';', VK_OEM_1}, {'=', VK_OEM_PLUS}, {',', VK_OEM_COMMA},
+            {'-', VK_OEM_MINUS}, {'.', VK_OEM_PERIOD}, {'/', VK_OEM_2},
+            {'`', VK_OEM_3}, {'[', VK_OEM_4}, {'\\', VK_OEM_5},
+            {']', VK_OEM_6}, {'\'', VK_OEM_7},
+        };
+        for (const auto& key : punctuationKeys) {
+            if (c == static_cast<unsigned char>(key.character)) {
+                virtualKey = key.virtualKey;
+                return true;
+            }
+        }
+    }
+
+    if (token.size() >= 2 && token.front() == 'F') {
+        unsigned value{};
+        for (std::size_t index = 1; index < token.size(); ++index) {
+            if (token[index] < '0' || token[index] > '9') return false;
+            value = value * 10 + static_cast<unsigned>(token[index] - '0');
+        }
+        if (value >= 1 && value <= 24) {
+            virtualKey = VK_F1 + value - 1;
+            return true;
+        }
+    }
+
+    struct NamedKey {
+        std::string_view name;
+        std::uint32_t virtualKey;
+    };
+    constexpr NamedKey namedKeys[] = {
+        {"SPACE", VK_SPACE}, {"TAB", VK_TAB}, {"INSERT", VK_INSERT},
+        {"DELETE", VK_DELETE}, {"HOME", VK_HOME}, {"END", VK_END},
+        {"PAGEUP", VK_PRIOR}, {"PAGEDOWN", VK_NEXT},
+        {"ENTER", VK_RETURN}, {"BACKSPACE", VK_BACK}, {"ESCAPE", VK_ESCAPE},
+        {"UP", VK_UP}, {"DOWN", VK_DOWN}, {"LEFT", VK_LEFT}, {"RIGHT", VK_RIGHT},
+        {"SEMICOLON", VK_OEM_1}, {"EQUALS", VK_OEM_PLUS},
+        {"COMMA", VK_OEM_COMMA}, {"MINUS", VK_OEM_MINUS},
+        {"PERIOD", VK_OEM_PERIOD}, {"SLASH", VK_OEM_2},
+        {"BACKTICK", VK_OEM_3}, {"LBRACKET", VK_OEM_4},
+        {"BACKSLASH", VK_OEM_5}, {"RBRACKET", VK_OEM_6},
+        {"APOSTROPHE", VK_OEM_7},
+        {"MOUSE3", VK_MBUTTON}, {"MIDDLE", VK_MBUTTON},
+        {"MOUSE4", VK_XBUTTON1}, {"MOUSE5", VK_XBUTTON2},
+    };
+    for (const auto& key : namedKeys) {
+        if (token == key.name) {
+            virtualKey = key.virtualKey;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool ParseHotkey(std::string_view text, FloatingDamage::HotkeyBinding& output) {
+    FloatingDamage::HotkeyBinding parsed{};
+    parsed.virtualKey = 0;
+    parsed.control = false;
+    parsed.shift = false;
+    parsed.alt = false;
+    bool hasMainKey{};
+
+    std::size_t begin{};
+    while (begin <= text.size()) {
+        const std::size_t separator = text.find('+', begin);
+        const std::string token = UpperTrim(text.substr(
+            begin,
+            separator == std::string_view::npos ? text.size() - begin : separator - begin));
+        if (token.empty()) return false;
+
+        if (token == "CTRL" || token == "CONTROL") {
+            if (parsed.control) return false;
+            parsed.control = true;
+        } else if (token == "SHIFT") {
+            if (parsed.shift) return false;
+            parsed.shift = true;
+        } else if (token == "ALT") {
+            if (parsed.alt) return false;
+            parsed.alt = true;
+        } else {
+            if (hasMainKey || !ParseMainHotkey(token, parsed.virtualKey)) return false;
+            hasMainKey = true;
+        }
+
+        if (separator == std::string_view::npos) break;
+        begin = separator + 1;
+    }
+
+    if (!hasMainKey) return false;
+    output = parsed;
+    return true;
+}
+
 void ApplySetting(std::string_view rawKey, std::string_view value, FloatingDamage::Config& config) {
     const std::string key = Lower(Trim(rawKey));
     if (key == "enabled") ParseBool(value, config.enabled);
+    else if (key == "toggle_hotkey_enabled") ParseBool(value, config.toggleHotkeyEnabled);
+    else if (key == "toggle_hotkey") {
+        std::string text;
+        FloatingDamage::HotkeyBinding binding{};
+        if (ParseTomlString(value, text) && ParseHotkey(text, binding)) {
+            config.toggleHotkeyText = text;
+            config.toggleHotkey = binding;
+        } else {
+            config.toggleHotkeyEnabled = false;
+            config.toggleHotkeyText = "INVALID";
+            config.toggleHotkey.virtualKey = 0;
+        }
+    }
     else if (key == "max_numbers_on_screen") ParseInt(value, config.maxNumbersOnScreen);
     else if (key == "font_index") ParseInt(value, config.fontIndex);
     else if (key == "color_by_damage_type") ParseBool(value, config.colorByDamageType);
@@ -265,6 +405,7 @@ void ParseConfig(std::string_view text) {
     config.fontIndex = std::clamp(config.fontIndex, 0, D3D12::kFloatingDamageFontCount - 1);
     config.maxNumbersOnScreen = std::max(config.maxNumbersOnScreen, 1);
     config.numberOfColumns = std::max(config.numberOfColumns, 1);
+    FloatingDamage::SetEnabled(config.enabled);
 }
 
 bool LoadConfig() {
@@ -370,7 +511,7 @@ __declspec(noinline) void __fastcall HookDamageInfo(
     OriginalDamageInfo(game, attacker, target, baseDamage, resistance, reduction, finalDamage, typeName, damage, finalFlag);
 
     const int amount = finalDamage >> 8;
-    if (amount <= 0 || !FloatingDamage::GetConfig().enabled) return;
+    if (amount <= 0 || !FloatingDamage::IsEnabled()) return;
     __try { if (!target || target->unitType != MonsterUnitType) return; }
     __except (EXCEPTION_EXECUTE_HANDLER) { return; }
 
@@ -432,27 +573,37 @@ auto ConsoleCommand(
     if (!command || !command->plugin) return D2RL::ConsoleCommandResult::Failed;
     const std::string action = Lower(Trim(command->args ? std::string_view(command->args, command->argsLength) : std::string_view{}));
     auto& config = FloatingDamage::GetConfig();
+    const bool enabled = FloatingDamage::IsEnabled();
 
     if (action.empty() || action == "status") {
-        char message[384]{};
+        char message[640]{};
+        float displayWidth{};
+        float displayHeight{};
+        D3D12::GetDisplaySize(displayWidth, displayHeight);
         std::snprintf(
             message,
             sizeof(message),
-            "FloatingDamage 1.1.0: enabled=%s; overlay=%s; captured=%llu; displayed=%llu; active=%zu; pending=%zu; font=%d.",
-            config.enabled ? "true" : "false",
+            "FloatingDamage 1.2.0: enabled=%s; hotkey=%s (%s); overlay=%s; captured=%llu; displayed=%llu; active=%zu; pending=%zu; font=%d; display=%.0fx%.0f; scale=%.3f.",
+            enabled ? "true" : "false",
+            config.toggleHotkeyText.c_str(),
+            config.toggleHotkeyEnabled ? "enabled" : "disabled",
             OverlayReady.load(std::memory_order_acquire) ? "ready" : "waiting",
             static_cast<unsigned long long>(CapturedEvents.load(std::memory_order_relaxed)),
             static_cast<unsigned long long>(DisplayedEvents.load(std::memory_order_relaxed)),
             FloatingDamage::ActiveCount(),
             FloatingDamage::PendingCount(),
-            config.fontIndex);
+            config.fontIndex,
+            displayWidth,
+            displayHeight,
+            FloatingDamage::GetResolutionScale(displayHeight));
         command->plugin->WriteConsoleMessage(message);
         return D2RL::ConsoleCommandResult::Handled;
     }
     if (action == "on" || action == "off" || action == "toggle") {
-        config.enabled = action == "toggle" ? !config.enabled : action == "on";
-        if (!SaveEnabled(config.enabled)) return D2RL::ConsoleCommandResult::Failed;
-        command->plugin->WriteConsoleMessage(config.enabled ? "Floating Damage enabled." : "Floating Damage disabled.");
+        FloatingDamage::SetEnabled(action == "toggle" ? !enabled : action == "on");
+        const bool nowEnabled = FloatingDamage::IsEnabled();
+        if (!SaveEnabled(nowEnabled)) return D2RL::ConsoleCommandResult::Failed;
+        command->plugin->WriteConsoleMessage(nowEnabled ? "Floating Damage enabled." : "Floating Damage disabled.");
         return D2RL::ConsoleCommandResult::Handled;
     }
     if (action == "preview") {
@@ -571,7 +722,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     if (!context->RegisterConsoleCommand(registration)) {
         context->LogWarn("FloatingDamage: console command could not be registered.");
     }
-    context->LogInfo("FloatingDamage 1.1.0 active for D2R 3.2.92777 with the multi-overlay host.");
+    context->LogInfo("FloatingDamage 1.2.0 active for D2R 3.2.92777 with resolution-scaled numbers and the multi-overlay host.");
     return true;
 }
 

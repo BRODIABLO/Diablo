@@ -7,7 +7,14 @@ max_numbers_on_screen = 160
 font_index = 0
 color_by_damage_type = false
 
+[hotkey]
+# Toggles floating numbers for the current session without unloading the DLL.
+# The binding is never consumed: D2R still receives the same keyboard or mouse input.
+toggle_hotkey_enabled = true
+toggle_hotkey = "CTRL+SHIFT+D"
+
 [appearance]
+# Text sizes use 4K (2160p) reference pixels and scale automatically by display height.
 text_size = 38.0
 critical_hit_size = 48.0
 text_outline_width = 1

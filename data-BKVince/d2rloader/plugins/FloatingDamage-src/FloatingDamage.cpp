@@ -1,6 +1,7 @@
 #include "FloatingDamage.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cctype>
 #include <cfloat>
@@ -22,6 +23,20 @@ namespace FloatingDamage {
 namespace {
 
 constexpr int kFontPresetCount = D3D12::kFloatingDamageFontCount;
+constexpr float kReferenceDisplayHeight = 2160.0f;
+constexpr float kMinimumSupportedDisplayHeight = 720.0f;
+
+constexpr float CalculateResolutionScale(float displayHeight) noexcept
+{
+    return (displayHeight < kMinimumSupportedDisplayHeight
+        ? kMinimumSupportedDisplayHeight
+        : displayHeight) / kReferenceDisplayHeight;
+}
+
+static_assert(CalculateResolutionScale(720.0f) > 0.333f && CalculateResolutionScale(720.0f) < 0.334f);
+static_assert(CalculateResolutionScale(1080.0f) == 0.5f);
+static_assert(CalculateResolutionScale(1440.0f) > 0.666f && CalculateResolutionScale(1440.0f) < 0.667f);
+static_assert(CalculateResolutionScale(2160.0f) == 1.0f);
 
 const char* kFontPresetLabels[] = {
     "Exocet",
@@ -108,6 +123,7 @@ struct DpsSample {
 };
 
 Config g_config;
+std::atomic_bool g_enabled = true;
 std::vector<DamageNumber> g_numbers;
 std::vector<DamageEvent> g_pendingEvents;
 std::deque<DpsSample> g_dpsSamples;
@@ -116,6 +132,8 @@ long long g_rollingDamage = 0;
 // the visual spread deterministic and cannot affect gameplay.
 std::mt19937 g_rng{ 0xD2F10A7u };
 std::mutex g_queueMutex;
+std::atomic_bool g_clearDisplayRequested = false;
+bool g_toggleHotkeyWasDown = false;
 
 int ClampInt(int value, int minValue, int maxValue)
 {
@@ -211,7 +229,7 @@ std::string FormatDamageAmount(int amount)
     double value = static_cast<double>(clampedAmount);
     int suffixIndex = 0;
 
-    while (value >= 10000.0 && suffixIndex < 4)
+    while (value >= 1000.0 && suffixIndex < 4)
     {
         value /= 1000.0;
         ++suffixIndex;
@@ -230,7 +248,7 @@ std::string FormatDamageAmount(int amount)
 
     char text[32]{};
     if (roundedTenths < 1000 && roundedTenths % 10 != 0)
-        std::snprintf(text, sizeof(text), "%d,%d%s", roundedTenths / 10, roundedTenths % 10, suffixes[suffixIndex]);
+        std::snprintf(text, sizeof(text), "%d.%d%s", roundedTenths / 10, roundedTenths % 10, suffixes[suffixIndex]);
     else
         std::snprintf(text, sizeof(text), "%d%s", (roundedTenths + 5) / 10, suffixes[suffixIndex]);
 
@@ -589,12 +607,15 @@ void DrawStyledText(
     ImVec2 pos,
     const char* text,
     ImVec4 color,
-    float fade)
+    float fade,
+    float resolutionScale)
 {
     if (!text || !text[0])
         return;
 
-    const int outlineThickness = std::max(0, g_config.textOutlineWidth);
+    const int outlineThickness = g_config.textOutlineWidth > 0
+        ? std::max(1, static_cast<int>(std::lround(static_cast<float>(g_config.textOutlineWidth) * resolutionScale)))
+        : 0;
     const ImU32 mainColor = ToImColor(color, fade);
     const ImU32 outlineCol = ToImColor(g_config.outlineColor, fade);
     const ImU32 shadowCol = ToImColor(g_config.shadowColor, fade);
@@ -608,7 +629,9 @@ void DrawStyledText(
         drawList->AddText(
             font,
             fontSize,
-            ImVec2(pos.x + g_config.shadowLeftRightOffset, pos.y + g_config.shadowUpDownOffset),
+            ImVec2(
+                pos.x + (g_config.shadowLeftRightOffset * resolutionScale),
+                pos.y + (g_config.shadowUpDownOffset * resolutionScale)),
             shadowCol,
             text
         );
@@ -638,7 +661,8 @@ void RenderTickPopup(
     ImFont* font,
     const DamageNumber& number,
     const TickPopup& tick,
-    float baseFontSize)
+    float baseFontSize,
+    float resolutionScale)
 {
     if (!g_config.showTickPopups)
         return;
@@ -654,7 +678,7 @@ void RenderTickPopup(
 
     const float popT = t < 0.30f ? t / 0.30f : ClampFloat(1.0f - ((t - 0.30f) / 0.70f), 0.0f, 1.0f);
     const float tickScale = std::max(0.25f, g_config.tickPopupSize) * (1.0f + (0.20f * popT));
-    const float fontSize = std::max(10.0f, baseFontSize * number.prominenceScale * tickScale);
+    const float fontSize = std::max(10.0f * resolutionScale, baseFontSize * number.prominenceScale * tickScale);
 
     DrawStyledText(
         drawList,
@@ -663,18 +687,19 @@ void RenderTickPopup(
         ImVec2(drawX, drawY),
         tick.text.c_str(),
         ResolveNumberColor(number.kind, number.element),
-        CalculateFade(tick.age, duration)
+        CalculateFade(tick.age, duration),
+        resolutionScale
     );
 }
 
-void RenderDpsNumber(ImDrawList* drawList, ImFont* font, const ImVec2& displaySize)
+void RenderDpsNumber(ImDrawList* drawList, ImFont* font, const ImVec2& displaySize, float resolutionScale)
 {
     if (!g_config.showDpsCounter)
         return;
 
     const long long dps = CurrentDps();
     const std::string text = "DPS " + FormatDpsAmount(dps);
-    const float fontSize = ClampFloat(g_config.textSize - 6.0f, 20.0f, 40.0f);
+    const float fontSize = ClampFloat(g_config.textSize - 6.0f, 20.0f, 40.0f) * resolutionScale;
 
     const float xPercent = ClampFloat(g_config.horizontalPositionPercent, 0.0f, 100.0f);
     const float yPercent = ClampFloat(g_config.verticalPositionPercent, 0.0f, 100.0f);
@@ -685,16 +710,16 @@ void RenderDpsNumber(ImDrawList* drawList, ImFont* font, const ImVec2& displaySi
     ImVec2 pos = ImVec2(anchorX, anchorY);
 
     if (xPercent <= 10.0f)
-        pos.x += textSize.x * 0.5f + 10.0f;
+        pos.x += textSize.x * 0.5f + (10.0f * resolutionScale);
     else if (xPercent >= 90.0f)
-        pos.x -= textSize.x * 0.5f + 10.0f;
+        pos.x -= textSize.x * 0.5f + (10.0f * resolutionScale);
 
     if (yPercent <= 10.0f)
-        pos.y += textSize.y * 0.5f + 6.0f;
+        pos.y += textSize.y * 0.5f + (6.0f * resolutionScale);
     else if (yPercent >= 90.0f)
-        pos.y -= textSize.y * 0.5f + 6.0f;
+        pos.y -= textSize.y * 0.5f + (6.0f * resolutionScale);
 
-    DrawStyledText(drawList, font, fontSize, pos, text.c_str(), g_config.normalColor, 1.0f);
+    DrawStyledText(drawList, font, fontSize, pos, text.c_str(), g_config.normalColor, 1.0f, resolutionScale);
 }
 
 ImVec4 JsonToColor(const nlohmann::json& j, const ImVec4& fallback)
@@ -759,9 +784,53 @@ Config& GetConfig()
     return g_config;
 }
 
+bool IsEnabled() noexcept
+{
+    return g_enabled.load(std::memory_order_acquire);
+}
+
+void SetEnabled(bool enabled)
+{
+    g_config.enabled = enabled;
+    g_enabled.store(enabled, std::memory_order_release);
+    if (!enabled)
+        g_clearDisplayRequested.store(true, std::memory_order_release);
+}
+
+float GetResolutionScale(float displayHeight) noexcept
+{
+    if (!std::isfinite(displayHeight) || displayHeight <= 0.0f)
+        return 1.0f;
+
+    return CalculateResolutionScale(displayHeight);
+}
+
+void PollToggleHotkey(void* gameWindow) noexcept
+{
+    const auto& binding = g_config.toggleHotkey;
+    const bool mainKeyDown = binding.virtualKey != 0
+        && (GetAsyncKeyState(static_cast<int>(binding.virtualKey)) & 0x8000) != 0;
+    const bool controlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+    const bool shiftDown = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+    const bool altDown = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+    const bool modifiersMatch = binding.control == controlDown
+        && binding.shift == shiftDown
+        && binding.alt == altDown;
+    const bool gameHasFocus = gameWindow != nullptr
+        && GetForegroundWindow() == static_cast<HWND>(gameWindow);
+    const bool physicalChordDown = mainKeyDown && modifiersMatch;
+    const bool chordDown = g_config.toggleHotkeyEnabled && gameHasFocus && physicalChordDown;
+
+    const bool pressed = chordDown && !g_toggleHotkeyWasDown;
+    g_toggleHotkeyWasDown = gameHasFocus ? chordDown : physicalChordDown;
+
+    if (pressed)
+        SetEnabled(!IsEnabled());
+}
+
 void ResetToDefaults()
 {
-    const bool wasEnabled = g_config.enabled;
+    const bool wasEnabled = IsEnabled();
     g_config = Config{};
     g_config.enabled = wasEnabled;
 }
@@ -861,21 +930,20 @@ void LoadFromJson(const nlohmann::json& root)
         g_config.enabled = root["FloatingDamage"].get<bool>();
 
     if (root.contains("FloatingDamageSettings") && root["FloatingDamageSettings"].is_object())
-    {
         LoadSettingsFromJsonObject(root["FloatingDamageSettings"]);
-        return;
-    }
-
-    if (root.contains("DamageNumbers") && root["DamageNumbers"].is_object())
+    else if (root.contains("DamageNumbers") && root["DamageNumbers"].is_object())
         LoadSettingsFromJsonObject(root["DamageNumbers"]);
+
+    SetEnabled(g_config.enabled);
 }
 
 void SaveToJson(nlohmann::ordered_json& root)
 {
-    root["FloatingDamage"] = g_config.enabled;
+    const bool enabled = IsEnabled();
+    root["FloatingDamage"] = enabled;
 
     ordered_json j;
-    j["Enabled"] = g_config.enabled;
+    j["Enabled"] = enabled;
     j["TextSize"] = g_config.textSize;
     j["CriticalHitSize"] = g_config.criticalHitSize;
     j["TextOutlineWidth"] = g_config.textOutlineWidth;
@@ -954,7 +1022,7 @@ void QueueGameDamage(int amount, float screenX, float screenY, uint32_t unitType
 
 void QueueDamage(int amount, float screenX, float screenY, uint32_t unitType, uint32_t unitId, Kind kind, Element element)
 {
-    if (!g_config.enabled || amount <= 0)
+    if (!IsEnabled() || amount <= 0)
         return;
 
     QueueGameDamage(amount, screenX, screenY, unitType, unitId, kind, element);
@@ -1008,6 +1076,15 @@ bool HasDisplayActivity()
 
 void Update(float dt)
 {
+    if (g_clearDisplayRequested.exchange(false, std::memory_order_acq_rel))
+    {
+        std::lock_guard<std::mutex> lock(g_queueMutex);
+        g_pendingEvents.clear();
+        g_numbers.clear();
+        g_dpsSamples.clear();
+        g_rollingDamage = 0;
+    }
+
     std::vector<DamageEvent> pending;
     {
         std::lock_guard<std::mutex> lock(g_queueMutex);
@@ -1091,8 +1168,11 @@ void Render(ImDrawList* drawList, const ImVec2& displaySize)
     if (!font)
         return;
 
-    const bool showNumbers = g_config.enabled || !g_numbers.empty();
-    const bool showDps = g_config.enabled && g_config.showDpsCounter;
+    const float resolutionScale = GetResolutionScale(displaySize.y);
+
+    const bool enabled = IsEnabled();
+    const bool showNumbers = enabled;
+    const bool showDps = enabled && g_config.showDpsCounter;
     if (!showNumbers && !showDps)
         return;
 
@@ -1100,19 +1180,19 @@ void Render(ImDrawList* drawList, const ImVec2& displaySize)
     {
     for (const auto& number : g_numbers)
     {
-        const float baseFontSize = number.isProminent ? g_config.criticalHitSize : g_config.textSize;
+        const float baseFontSize = (number.isProminent ? g_config.criticalHitSize : g_config.textSize) * resolutionScale;
         for (const auto& tick : number.tickPopups)
-            RenderTickPopup(drawList, font, number, tick, baseFontSize);
+            RenderTickPopup(drawList, font, number, tick, baseFontSize, resolutionScale);
     }
 
     for (const auto& number : g_numbers)
     {
-        const float baseFontSize = number.isProminent ? g_config.criticalHitSize : g_config.textSize;
+        const float baseFontSize = (number.isProminent ? g_config.criticalHitSize : g_config.textSize) * resolutionScale;
         const float popScale = std::max(
             CalculatePopScale(number.age),
             CalculateHitPulseScale(number)
         );
-        const float fontSize = std::max(12.0f, baseFontSize * number.prominenceScale * popScale);
+        const float fontSize = std::max(12.0f * resolutionScale, baseFontSize * number.prominenceScale * popScale);
         const float fade = CalculateFade(number.age, number.lifetime);
 
         DrawStyledText(
@@ -1122,13 +1202,14 @@ void Render(ImDrawList* drawList, const ImVec2& displaySize)
             ImVec2(number.drawX, number.drawY),
             number.text.c_str(),
             ResolveNumberColor(number.kind, number.element),
-            fade
+            fade,
+            resolutionScale
         );
         }
     }
 
     if (showDps)
-    RenderDpsNumber(drawList, font, displaySize);
+    RenderDpsNumber(drawList, font, displaySize, resolutionScale);
 }
 
 void DrawSettingsPanel(float menuScale)

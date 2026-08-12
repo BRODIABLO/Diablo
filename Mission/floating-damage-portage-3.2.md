@@ -127,9 +127,10 @@ Aref Ruqaa, Formal 436 et PoE. Exocet reste le choix initial.
    projection monde-écran, le rendu D3D12/ImGui, les polices et la persistance
    de configuration. Ne pas présumer que l'API plugin D2RLoader expose toutes
    ces surfaces.
-3. Privilégier un composant mod-local distribué avec BKVince. Toute interception
-   native doit être verrouillée au build et aux signatures attendues, puis
-   refuser proprement un binaire incompatible.
+3. Distribuer un composant installable soit globalement dans
+   `<D2R>/d2rloader/`, soit par mod dans `<D2R>/mods/<mod>/d2rloader/`. Toute
+   interception native doit être verrouillée au build et aux signatures
+   attendues, puis refuser proprement un binaire incompatible.
 4. Le système reste visuel et client-only : il ne doit modifier ni les dégâts,
    ni les paquets de combat, ni l'attribution des kills, ni l'expérience, ni le
    loot, ni la simulation serveur.
@@ -160,7 +161,8 @@ Aref Ruqaa, Formal 436 et PoE. Exocet reste le choix initial.
 
 ## Implantation livrée — 19 juillet 2026
 
-Le portage est livré comme plugin natif mod-local D2RLoader :
+Le portage est livré comme plugin natif D2RLoader installable globalement ou
+par mod :
 
 - `data-BKVince/d2rloader/plugins/FloatingDamage.dll` est le binaire Release
   x64 distribué ; ses sources reproductibles sont conservées dans
@@ -192,3 +194,41 @@ Le smoke test final n'a pas produit d'attaque réussie (`captured=0`,
 persistante et sa signature stricte, tandis que la matrice de combat étendue du
 gate ci-dessus reste une campagne de non-régression à rejouer lors des futures
 évolutions de D2RLoader, du mod ou du build du jeu.
+
+## Évolution 1.2.0 — 11 août 2026
+
+La présentation a été adaptée aux résolutions modernes sans modifier le point
+de capture natif ni la simulation de combat :
+
+- la notation compacte commence à `1,000` (`1k`, `1.3k`, `1m`, `1.3m`, puis
+  `b` et `t`) et utilise un point comme séparateur décimal ;
+- les tailles TOML restent des pixels de référence 4K/2160p. Le rendu applique
+  un facteur fondé sur la hauteur d'affichage : `0.333` à 720p, `0.5` à 1080p,
+  `0.667` à 1440p et `1.0` à 2160p. Les écrans ultrawide suivent leur hauteur,
+  pas leur ratio ;
+- `CTRL+SHIFT+D` bascule l'affichage pour la session par un simple appui. La
+  liaison est configurable avec lettres, chiffres, `F1`–`F24`, touches de
+  navigation/édition, ponctuation, `MOUSE3`–`MOUSE5` et modificateurs exacts
+  `CTRL`, `SHIFT` et `ALT` ;
+- le plugin sonde l'état de la touche uniquement lorsque la fenêtre du jeu a le
+  focus. Il n'intercepte ni ne consomme le message d'entrée : la même touche
+  continue donc d'être reçue par D2R et par le chat ;
+- l'état d'activation partagé avec le hook de dégâts est atomique et la
+  désactivation demande au thread de rendu de vider les nombres et le DPS, ce
+  qui évite les accès concurrents avec l'overlay.
+
+La DLL Release x64 finale porte le SHA-256
+`E398E3355A6060BA73184DB4C012CA3A52A05C97E0E8F9E7D7BD2C80CFA9D97F`.
+La configuration distribuée porte le SHA-256
+`4CF259813621B9184DC3DFDE20357452D9765E1E4C60148FE8D5007751EFC3E3`.
+L'archive publique stricte contient uniquement `FloatingDamage.dll` et
+`floating-damage.toml`; son SHA-256 est
+`6A6BD72236B2D7EA0F185FDE57A3354F8BCB4CDC33D31DD453F751F6DDA424E9`.
+
+La compilation, l'architecture x64, les exports et `git diff --check` passent.
+Le cold start final avec la pile complète atteint `15/15` patchsets, `19/19`
+plugins et `24/24` étapes ; FloatingDamage 1.2.0 installe son hook, initialise
+l'overlay DX12, puis journalise un arrêt propre sans nouveau rapport de crash.
+La taille visuelle aux différentes résolutions, le basculement réel du hotkey
+et les seuils `k`/`m` restent à constater en jeu : ils ne sont pas revendiqués
+comme tests fonctionnels réussis par cette validation automatisée.

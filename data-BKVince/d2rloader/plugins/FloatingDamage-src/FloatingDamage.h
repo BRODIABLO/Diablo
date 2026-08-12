@@ -21,8 +21,18 @@ enum class Element {
     Magic
 };
 
+struct HotkeyBinding {
+    std::uint32_t virtualKey = 'D';
+    bool control = true;
+    bool shift = true;
+    bool alt = false;
+};
+
 struct Config {
     bool enabled = true;
+    bool toggleHotkeyEnabled = true;
+    std::string toggleHotkeyText = "CTRL+SHIFT+D";
+    HotkeyBinding toggleHotkey{};
 
     float textSize = 38.0f;
     float criticalHitSize = 48.0f;
@@ -85,9 +95,13 @@ struct Config {
 };
 
 Config& GetConfig();
+bool IsEnabled() noexcept;
+void SetEnabled(bool enabled);
 void ResetToDefaults();
 void LoadFromJson(const nlohmann::json& root);
 void SaveToJson(nlohmann::ordered_json& root);
+float GetResolutionScale(float displayHeight) noexcept;
+void PollToggleHotkey(void* gameWindow) noexcept;
 
 void QueueDamage(int amount, float screenX, float screenY, uint32_t unitType, uint32_t unitId, Kind kind, Element element = Element::Physical);
 void QueueGameDamage(int amount, float screenX, float screenY, uint32_t unitType, uint32_t unitId, Kind kind, Element element = Element::Physical);
