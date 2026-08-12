@@ -503,6 +503,7 @@
       "include": [
         "Mission/pd2-inspiration-bkvince.md",
         "Mission/pd2-monsters-bosses-vs-bkvince-audit.md",
+        "Mission/pd2-skills-*",
         "Mission/pd2-inspiration-bkvince.catalog.json",
         "Mission/pd2-inspiration-bkvince.schema.json",
         "Mission/pd2-game-mechanics-vs-bkvince-audit.md",
@@ -538,6 +539,7 @@
         "scripts/reverse-engineering/mechanics-92777/**",
         "scripts/migrate-bkvince/*melee-splash*",
         "scripts/migrate-bkvince/apply-pd2-blizzard-prototype.js",
+        "scripts/migrate-bkvince/pd2-skills-*",
         "scripts/migrate-bkvince/apply-static-field-rework.js",
         "scripts/validate-pd2-catalog/**",
         "Mission/bkvcombat-0.1.md",

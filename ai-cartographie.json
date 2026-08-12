@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-11T02:01:40.3252340+00:00",
+    "generatedAt":  "2026-08-12T06:44:36.5005074+00:00",
     "root":  {
                  "name":  "pd2-affixes-index-7776be629d014bf58eb297d6a91ce01a",
                  "path":  ".",
@@ -38064,6 +38064,36 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "pd2-skills-decisions.schema.json",
+                                                           "path":  "Mission/pd2-skills-decisions.schema.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-skills-documentation-map.json",
+                                                           "path":  "Mission/pd2-skills-documentation-map.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-skills-merge.md",
+                                                           "path":  "Mission/pd2-skills-merge.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-skills-review.html",
+                                                           "path":  "Mission/pd2-skills-review.html",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-skills-review.json",
+                                                           "path":  "Mission/pd2-skills-review.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-skills-vs-bkvince-full-audit.md",
+                                                           "path":  "Mission/pd2-skills-vs-bkvince-full-audit.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "PotionAutoPickup-portage-3.2.md",
                                                            "path":  "Mission/PotionAutoPickup-portage-3.2.md",
                                                            "kind":  "file"
@@ -38639,6 +38669,11 @@
                                                                                 "name":  "audit.mjs",
                                                                                 "path":  "scripts/audit-pd2-bkvince/audit.mjs",
                                                                                 "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "skill-report.mjs",
+                                                                                "path":  "scripts/audit-pd2-bkvince/skill-report.mjs",
+                                                                                "kind":  "file"
                                                                             }
                                                                         ]
                                                        },
@@ -38869,6 +38904,66 @@
                                                                             {
                                                                                 "name":  "pd2-affixes-review-ui.mjs",
                                                                                 "path":  "scripts/migrate-bkvince/pd2-affixes-review-ui.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-decisions-preview.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-decisions-preview.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-decisions-preview.test.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-decisions-preview.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-review.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-review.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-review.test.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-review.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-review-contracts.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-review-contracts.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-review-data.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-review-data.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-review-data.test.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-review-data.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-review-runtime.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-review-runtime.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-review-runtime.test.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-review-runtime.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-review-ui.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-review-ui.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-review-ui.test.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-review-ui.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "pd2-skills-workbench-verification.test.mjs",
+                                                                                "path":  "scripts/migrate-bkvince/pd2-skills-workbench-verification.test.mjs",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

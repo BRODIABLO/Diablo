@@ -1,0 +1,326 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ruffneckk.local/schemas/pd2-skills-decisions-v1.schema.json",
+  "title": "PD2 Skills Merge Workbench decision envelope",
+  "description": "Governed, preview-only design decisions. ALL may retain structurally valid work in progress; the runtime enforces semantic completion for COMPLETE_ONLY and preview. This document grants no gameplay implementation authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "reviewId",
+    "comparisonHash",
+    "frozenContractHash",
+    "sourceHashes",
+    "exportedAt",
+    "exportScope",
+    "entries"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "pd2-skills-review-decisions" },
+    "reviewId": { "const": "pd2-skills-review-v1" },
+    "comparisonHash": { "$ref": "#/$defs/sha256" },
+    "frozenContractHash": {
+      "const": "3A0C347476D16366FE1557446E03BD33705AC7AF14CA6BBA4F172935B675A69C"
+    },
+    "sourceHashes": { "$ref": "#/$defs/hashObject" },
+    "exportedAt": { "type": "string", "format": "date-time" },
+    "exportScope": { "enum": ["ALL", "COMPLETE_ONLY"] },
+    "entries": {
+      "type": "object",
+      "propertyNames": { "pattern": "^skill:[a-z0-9-]+:[a-z0-9-]+(?::[a-z0-9-]+)?$" },
+      "additionalProperties": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "exportScope": { "const": "COMPLETE_ONLY" } },
+        "required": ["exportScope"]
+      },
+      "then": {
+        "properties": {
+          "entries": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/$defs/completeEntry" }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[A-Fa-f0-9]{64}$"
+    },
+    "hashObject": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/hashTree" }
+    },
+    "hashTree": {
+      "oneOf": [
+        { "$ref": "#/$defs/sha256" },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/hashTree" }
+        },
+        { "$ref": "#/$defs/hashObject" }
+      ]
+    },
+    "globalDecision": {
+      "enum": [
+        "KEEP_BKVINCE",
+        "ADAPT_PD2_SELECTIVELY",
+        "ADOPT_PD2_MODEL",
+        "IMPORT_NEW_PD2_SKILL",
+        "REJECT_PD2",
+        "DEFER_NATIVE_PROOF",
+        "DISCUSS"
+      ]
+    },
+    "componentDecision": {
+      "enum": ["KEEP_BKVINCE", "ADOPT_PD2", "CUSTOM", "DISCUSS", "NOT_APPLICABLE"]
+    },
+    "newSkillLineDecision": {
+      "enum": [
+        "IMPORT_APPEND_ONLY",
+        "IMPORT_CUSTOMIZED",
+        "REJECT_PD2_SKILL",
+        "DEFER_NATIVE_PROOF",
+        "DISCUSS"
+      ]
+    },
+    "implementationStatus": {
+      "enum": [
+        "NOT_REVIEWED",
+        "DECISION_INCOMPLETE",
+        "DECISION_COMPLETE",
+        "SELECTED_FOR_PROTOTYPE",
+        "IMPLEMENTATION_NOT_AUTHORIZED",
+        "IMPLEMENTATION_AUTHORIZED",
+        "IMPLEMENTED",
+        "TESTED",
+        "REJECTED"
+      ]
+    },
+    "proofStatus": {
+      "enum": [
+        "EXACT_TABLE",
+        "EXACT_FORMULA",
+        "EXACT_DERIVED",
+        "SYMBOLIC",
+        "MALFORMED_SOURCE",
+        "UNSUPPORTED_IDENTIFIER",
+        "NATIVE_UNPROVEN"
+      ]
+    },
+    "protectedOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "approved": { "type": "boolean" },
+        "justification": { "type": "string" },
+        "acknowledgedProofStatus": { "$ref": "#/$defs/proofStatus" },
+        "nativeRiskAccepted": { "type": "boolean" },
+        "malformedResolution": { "type": "string" }
+      }
+    },
+    "choice": {
+      "type": "object",
+      "description": "Partial CUSTOM and override values are permitted for autosave; completion is enforced by the governed decision runtime.",
+      "additionalProperties": false,
+      "required": ["decision"],
+      "properties": {
+        "decision": { "$ref": "#/$defs/componentDecision" },
+        "customValue": { "type": "string" },
+        "justification": { "type": "string" },
+        "gameplayObjective": { "type": "string" },
+        "testPlan": { "type": "string" },
+        "protectedOverride": { "$ref": "#/$defs/protectedOverride" }
+      }
+    },
+    "completeChoice": {
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/$defs/choice" },
+        {
+          "properties": {
+            "decision": { "enum": ["KEEP_BKVINCE", "ADOPT_PD2", "CUSTOM", "NOT_APPLICABLE"] }
+          },
+          "required": ["decision"]
+        },
+        {
+          "if": {
+            "properties": { "decision": { "const": "CUSTOM" } },
+            "required": ["decision"]
+          },
+          "then": {
+            "properties": {
+              "customValue": { "type": "string", "minLength": 1 },
+              "justification": { "type": "string", "minLength": 1 },
+              "testPlan": { "type": "string", "minLength": 1 }
+            },
+            "required": ["customValue", "justification", "testPlan"]
+          }
+        }
+      ]
+    },
+    "notes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["general", "designObjective", "bkvinceProblem", "finalJustification", "testPlan"],
+      "properties": {
+        "general": { "type": "string" },
+        "designObjective": { "type": "string" },
+        "bkvinceProblem": { "type": "string" },
+        "finalJustification": { "type": "string" },
+        "testPlan": { "type": "string" }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fingerprint",
+        "globalDecision",
+        "implementationStatus",
+        "componentDecisions",
+        "fieldDecisions",
+        "notes"
+      ],
+      "properties": {
+        "fingerprint": { "$ref": "#/$defs/sha256" },
+        "globalDecision": {
+          "oneOf": [
+            { "$ref": "#/$defs/globalDecision" },
+            { "type": "null" }
+          ]
+        },
+        "newSkillLineDecision": {
+          "oneOf": [
+            { "$ref": "#/$defs/newSkillLineDecision" },
+            { "type": "null" }
+          ]
+        },
+        "implementationStatus": { "$ref": "#/$defs/implementationStatus" },
+        "componentDecisions": {
+          "type": "object",
+          "propertyNames": { "minLength": 1 },
+          "additionalProperties": { "$ref": "#/$defs/choice" }
+        },
+        "fieldDecisions": {
+          "type": "object",
+          "propertyNames": { "minLength": 1 },
+          "additionalProperties": { "$ref": "#/$defs/choice" }
+        },
+        "notes": { "$ref": "#/$defs/notes" }
+      }
+    },
+    "completeEntry": {
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/$defs/entry" },
+        {
+          "properties": {
+            "globalDecision": {
+              "enum": ["KEEP_BKVINCE", "ADAPT_PD2_SELECTIVELY", "ADOPT_PD2_MODEL", "IMPORT_NEW_PD2_SKILL", "REJECT_PD2", "DEFER_NATIVE_PROOF"]
+            },
+            "newSkillLineDecision": {
+              "enum": ["IMPORT_APPEND_ONLY", "IMPORT_CUSTOMIZED", "REJECT_PD2_SKILL", "DEFER_NATIVE_PROOF"]
+            },
+            "componentDecisions": {
+              "type": "object",
+              "additionalProperties": { "$ref": "#/$defs/completeChoice" }
+            },
+            "fieldDecisions": {
+              "type": "object",
+              "additionalProperties": { "$ref": "#/$defs/completeChoice" }
+            }
+          },
+          "required": ["globalDecision"]
+        },
+        {
+          "if": {
+            "properties": {
+              "globalDecision": {
+                "enum": ["KEEP_BKVINCE", "ADAPT_PD2_SELECTIVELY", "ADOPT_PD2_MODEL", "IMPORT_NEW_PD2_SKILL", "REJECT_PD2"]
+              }
+            },
+            "required": ["globalDecision"]
+          },
+          "then": {
+            "properties": {
+              "notes": {
+                "type": "object",
+                "properties": { "finalJustification": { "type": "string", "minLength": 1 } },
+                "required": ["finalJustification"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "globalDecision": { "enum": ["ADAPT_PD2_SELECTIVELY", "ADOPT_PD2_MODEL", "IMPORT_NEW_PD2_SKILL"] }
+            },
+            "required": ["globalDecision"]
+          },
+          "then": {
+            "properties": {
+              "notes": {
+                "type": "object",
+                "properties": { "testPlan": { "type": "string", "minLength": 1 } },
+                "required": ["testPlan"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "globalDecision": { "const": "DEFER_NATIVE_PROOF" } },
+            "required": ["globalDecision"]
+          },
+          "then": {
+            "properties": {
+              "notes": {
+                "type": "object",
+                "anyOf": [
+                  {
+                    "properties": { "general": { "type": "string", "minLength": 1 } },
+                    "required": ["general"]
+                  },
+                  {
+                    "properties": { "finalJustification": { "type": "string", "minLength": 1 } },
+                    "required": ["finalJustification"]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "implementationStatus": {
+                "enum": ["SELECTED_FOR_PROTOTYPE", "IMPLEMENTATION_NOT_AUTHORIZED", "IMPLEMENTATION_AUTHORIZED", "IMPLEMENTED", "TESTED"]
+              }
+            },
+            "required": ["implementationStatus"]
+          },
+          "then": {
+            "properties": {
+              "notes": {
+                "type": "object",
+                "properties": { "testPlan": { "type": "string", "minLength": 1 } },
+                "required": ["testPlan"]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
