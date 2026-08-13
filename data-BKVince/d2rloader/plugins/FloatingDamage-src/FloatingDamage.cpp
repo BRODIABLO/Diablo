@@ -80,9 +80,12 @@ struct DamageEvent {
     int amount = 0;
     float screenX = 0.0f;
     float screenY = 0.0f;
+    bool targetAnchored = false;
     Kind kind = Kind::Normal;
     Element element = Element::Physical;
     float durationSeconds = 0.0f;
+    float projectionWaitSeconds = 0.0f;
+    bool dpsRecorded = false;
     uint32_t targetUnitType = UINT32_MAX;
     uint32_t targetUnitId = UINT32_MAX;
 };
@@ -109,6 +112,8 @@ struct DamageNumber {
     Element element = Element::Physical;
     bool isProminent = false;
     bool canCombineHits = false;
+    bool targetAnchored = false;
+    bool targetVisible = true;
     int combinedAmount = 0;
     int spreadColumn = 0;
     float prominenceScale = 1.0f;
@@ -133,6 +138,7 @@ long long g_rollingDamage = 0;
 std::mt19937 g_rng{ 0xD2F10A7u };
 std::mutex g_queueMutex;
 std::atomic_bool g_clearDisplayRequested = false;
+std::atomic<TargetScreenPositionProvider> g_targetScreenPositionProvider{ nullptr };
 bool g_toggleHotkeyWasDown = false;
 
 int ClampInt(int value, int minValue, int maxValue)
@@ -431,6 +437,13 @@ void RefreshCombinedNumber(DamageNumber& number, const DamageEvent& event)
 
     number.targetUnitType = event.targetUnitType;
     number.targetUnitId = event.targetUnitId;
+    if (event.targetAnchored)
+    {
+        number.targetAnchored = true;
+        number.targetVisible = true;
+        number.anchorX = event.screenX;
+        number.anchorY = event.screenY;
+    }
 
     const float refreshLifetime = std::max(0.05f, g_config.extendDisplayOnHitSeconds);
     const float fadeStart = ClampFloat(g_config.fadeOutStart, 0.05f, 0.95f);
@@ -490,6 +503,8 @@ void SpawnNumberFromEvent(const DamageEvent& event)
     number.element = event.element;
     number.isProminent = IsProminent(event.kind);
     number.canCombineHits = IsHitCombiningEligible(event);
+    number.targetAnchored = event.targetAnchored;
+    number.targetVisible = true;
     number.combinedAmount = event.amount;
     number.spreadColumn = placement.column;
     number.prominenceScale = GetProminenceScale(event.kind);
@@ -828,6 +843,11 @@ void PollToggleHotkey(void* gameWindow) noexcept
         SetEnabled(!IsEnabled());
 }
 
+void SetTargetScreenPositionProvider(TargetScreenPositionProvider provider) noexcept
+{
+    g_targetScreenPositionProvider.store(provider, std::memory_order_release);
+}
+
 void ResetToDefaults()
 {
     const bool wasEnabled = IsEnabled();
@@ -1000,15 +1020,14 @@ void SaveToJson(nlohmann::ordered_json& root)
     root["FloatingDamageSettings"] = j;
 }
 
-void QueueGameDamage(int amount, float screenX, float screenY, uint32_t unitType, uint32_t unitId, Kind kind, Element element)
+void QueueGameDamage(int amount, uint32_t unitType, uint32_t unitId, Kind kind, Element element)
 {
     if (amount <= 0)
         return;
 
     DamageEvent event{};
     event.amount = amount;
-    event.screenX = screenX;
-    event.screenY = screenY;
+    event.targetAnchored = true;
     event.kind = kind;
     event.element = element;
     event.durationSeconds = IsProminent(kind) ? g_config.criticalDisplayTimeSeconds : g_config.displayTimeSeconds;
@@ -1025,7 +1044,19 @@ void QueueDamage(int amount, float screenX, float screenY, uint32_t unitType, ui
     if (!IsEnabled() || amount <= 0)
         return;
 
-    QueueGameDamage(amount, screenX, screenY, unitType, unitId, kind, element);
+    DamageEvent event{};
+    event.amount = amount;
+    event.screenX = screenX;
+    event.screenY = screenY;
+    event.kind = kind;
+    event.element = element;
+    event.durationSeconds = IsProminent(kind) ? g_config.criticalDisplayTimeSeconds : g_config.displayTimeSeconds;
+    event.targetUnitType = unitType;
+    event.targetUnitId = unitId;
+    {
+        std::lock_guard<std::mutex> lock(g_queueMutex);
+        g_pendingEvents.push_back(event);
+    }
 }
 
 void QueuePreviewAt(float screenX, float screenY, Kind kind)
@@ -1088,18 +1119,52 @@ void Update(float dt)
     std::vector<DamageEvent> pending;
     {
         std::lock_guard<std::mutex> lock(g_queueMutex);
-        if (g_pendingEvents.empty() && g_numbers.empty())
+        if (g_pendingEvents.empty() && g_numbers.empty() && g_dpsSamples.empty())
             return;
         pending.swap(g_pendingEvents);
     }
 
+    float displayWidth = 0.0f;
+    float displayHeight = 0.0f;
+    D3D12::GetDisplaySize(displayWidth, displayHeight);
+    const auto targetProvider = g_targetScreenPositionProvider.load(std::memory_order_acquire);
+
     if (!pending.empty())
     {
-        for (const auto& event : pending)
+        std::vector<DamageEvent> deferred;
+        for (auto event : pending)
         {
-            RecordDpsEvent(event);
+            if (!event.dpsRecorded)
+            {
+                RecordDpsEvent(event);
+                event.dpsRecorded = true;
+            }
+            if (event.targetAnchored)
+            {
+                if (!targetProvider || !targetProvider(
+                        event.targetUnitType,
+                        event.targetUnitId,
+                        displayWidth,
+                        displayHeight,
+                        &event.screenX,
+                        &event.screenY))
+                {
+                    event.projectionWaitSeconds += std::max(dt, 1.0f / 240.0f);
+                    if (event.projectionWaitSeconds <= 0.15f)
+                        deferred.push_back(event);
+                    continue;
+                }
+            }
             if (!TryCombineRapidHit(event))
                 SpawnNumberFromEvent(event);
+        }
+        if (!deferred.empty())
+        {
+            std::lock_guard<std::mutex> lock(g_queueMutex);
+            g_pendingEvents.insert(
+                g_pendingEvents.end(),
+                deferred.begin(),
+                deferred.end());
         }
         TrimActiveNumbers();
     }
@@ -1129,10 +1194,29 @@ void Update(float dt)
         number.animatedOffsetX += number.vx * dt;
         number.animatedOffsetY += number.vy * dt;
 
+        const bool wasTargetVisible = number.targetVisible;
+        if (number.targetAnchored)
+        {
+            float projectedX{};
+            float projectedY{};
+            number.targetVisible = targetProvider && targetProvider(
+                number.targetUnitType,
+                number.targetUnitId,
+                displayWidth,
+                displayHeight,
+                &projectedX,
+                &projectedY);
+            if (number.targetVisible)
+            {
+                number.anchorX = projectedX;
+                number.anchorY = projectedY;
+            }
+        }
+
         number.x = number.anchorX + number.localOffsetX + number.animatedOffsetX;
         number.y = number.anchorY + number.localOffsetY + number.animatedOffsetY;
 
-        if (number.age <= dt * 1.5f)
+        if (number.age <= dt * 1.5f || (number.targetAnchored && number.targetVisible && !wasTargetVisible))
         {
             number.drawX = number.x;
             number.drawY = number.y;
@@ -1180,6 +1264,8 @@ void Render(ImDrawList* drawList, const ImVec2& displaySize)
     {
     for (const auto& number : g_numbers)
     {
+        if (number.targetAnchored && !number.targetVisible)
+            continue;
         const float baseFontSize = (number.isProminent ? g_config.criticalHitSize : g_config.textSize) * resolutionScale;
         for (const auto& tick : number.tickPopups)
             RenderTickPopup(drawList, font, number, tick, baseFontSize, resolutionScale);
@@ -1187,6 +1273,8 @@ void Render(ImDrawList* drawList, const ImVec2& displaySize)
 
     for (const auto& number : g_numbers)
     {
+        if (number.targetAnchored && !number.targetVisible)
+            continue;
         const float baseFontSize = (number.isProminent ? g_config.criticalHitSize : g_config.textSize) * resolutionScale;
         const float popScale = std::max(
             CalculatePopScale(number.age),

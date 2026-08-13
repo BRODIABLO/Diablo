@@ -1,4 +1,5 @@
 #include <D2RLPlugin/api.h>
+#include <MinHook.h>
 
 #include "D3D12Hook.h"
 #include "FloatingDamage.h"
@@ -8,10 +9,14 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <charconv>
 #include <cctype>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -19,25 +24,40 @@
 
 namespace {
 constexpr std::uint32_t SupportedBuild = 92777;
-constexpr std::uintptr_t DamageInfoRva = 0x427150;
+constexpr std::uintptr_t HitpointsCommitContextRva = 0x44D083;
+constexpr std::uintptr_t HitpointsCommitCallRva = 0x44D093;
+constexpr std::uintptr_t GetUnitStatRva = 0x2F5020;
+constexpr std::uintptr_t SetUnitStatRva = 0x2F7D10;
+constexpr std::uintptr_t GetClientUnitRva = 0x09A5D0;
+constexpr std::uintptr_t UpdateCameraRva = 0x0B9B90;
+constexpr std::uintptr_t GetRenderThreadContextRootRva = 0x685750;
+constexpr std::uintptr_t ProjectUnitToScreenRva = 0x76A7D0;
+constexpr std::uintptr_t GetNativeHeightRva = 0x07F4A0;
+constexpr std::uintptr_t GetNativeWidthRva = 0x07F510;
 constexpr std::uint16_t CriticalStrikeResultFlag = 0x2000;
 constexpr std::uint32_t MonsterUnitType = 1;
+constexpr std::int32_t HitPointsStatId = 6;
+
+constexpr std::size_t DamagePhysicalOffset = 0x018;
+constexpr std::size_t DamageFireOffset = 0x020;
+constexpr std::size_t DamageLightningOffset = 0x02C;
+constexpr std::size_t DamageMagicOffset = 0x030;
+constexpr std::size_t DamageColdOffset = 0x034;
+constexpr std::size_t DamagePoisonOffset = 0x038;
 
 const D2RL::PluginContext* Context{};
 std::uint8_t* Base{};
 HMODULE Module{};
 std::atomic<std::uint64_t> CapturedEvents{};
 std::atomic<std::uint64_t> DisplayedEvents{};
+std::atomic<std::uint64_t> ProjectionSuccesses{};
+std::atomic<std::uint64_t> ProjectionFailures{};
+std::atomic_bool ProjectionReadyLogged{};
 std::atomic<bool> OverlayReady{};
 HANDLE OverlayStopEvent{};
 HANDLE OverlayWorker{};
-
-struct DynamicPathView {
-    std::uint16_t offsetX;
-    std::uint16_t positionX;
-    std::uint16_t offsetY;
-    std::uint16_t positionY;
-};
+void* HitpointsCommitRelay{};
+bool CameraFrameHookInstalled{};
 
 #pragma pack(push, 1)
 struct UnitView {
@@ -45,23 +65,86 @@ struct UnitView {
     std::uint32_t classId;
     std::uint32_t unitId;
     std::uint32_t mode;
-    std::uint8_t data[0x28];
-    DynamicPathView* dynamicPath;
 };
 #pragma pack(pop)
-static_assert(offsetof(UnitView, dynamicPath) == 0x38);
 
-using DamageInfoFn = void(__fastcall*)(
-    void*, UnitView*, UnitView*, std::int32_t, std::int32_t, std::uintptr_t,
-    std::int32_t, const char*, void*, std::uintptr_t) noexcept;
-DamageInfoFn OriginalDamageInfo{};
+struct NativeScreenPoint {
+    float x;
+    float y;
+};
+
+using GetUnitStatFn = std::int32_t(__fastcall*)(
+    UnitView*, std::int32_t, std::uint16_t) noexcept;
+using SetUnitStatFn = void(__fastcall*)(
+    UnitView*, std::int32_t, std::int32_t, std::uint16_t) noexcept;
+using GetClientUnitFn = UnitView*(__fastcall*)(
+    std::uint32_t unitId, std::uint32_t unitType) noexcept;
+using ProjectUnitToScreenFn = bool(__fastcall*)(
+    void* renderContext,
+    UnitView* unit,
+    NativeScreenPoint* point,
+    bool useUnitHeight) noexcept;
+using UpdateCameraFn = void(__fastcall*)() noexcept;
+using GetRenderThreadContextRootFn = void*(__fastcall*)() noexcept;
+using GetNativeDimensionFn = std::int32_t(__fastcall*)() noexcept;
+GetUnitStatFn GetUnitStat{};
+SetUnitStatFn SetUnitStat{};
+GetClientUnitFn GetClientUnit{};
+ProjectUnitToScreenFn ProjectUnitToScreen{};
+UpdateCameraFn OriginalUpdateCamera{};
+GetRenderThreadContextRootFn GetRenderThreadContextRoot{};
+GetNativeDimensionFn GetNativeHeight{};
+GetNativeDimensionFn GetNativeWidth{};
+
+constexpr std::size_t ProjectionCacheSize = 8192;
+constexpr std::uint64_t ProjectionFreshnessMs = 250;
+constexpr std::size_t ProjectionRequestCapacity = 1024;
+constexpr std::uint64_t ProjectionRequestLeaseMs = 300;
+constexpr std::uint64_t ProjectionSweepIntervalMs = 4;
+
+struct ProjectionCacheEntry {
+    std::atomic_flag writing = ATOMIC_FLAG_INIT;
+    std::atomic<std::uint64_t> key{};
+    std::atomic<std::uint64_t> elevatedPoint{};
+    std::atomic<std::uint64_t> elevatedTick{};
+    std::atomic<std::uint64_t> basePoint{};
+    std::atomic<std::uint64_t> baseTick{};
+    std::atomic<std::uint64_t> attemptTick{};
+    std::atomic_bool visible{};
+};
+
+struct ProjectionRequestSlot {
+    std::atomic_flag writing = ATOMIC_FLAG_INIT;
+    std::atomic<std::uint64_t> key{};
+    std::atomic<std::uint64_t> requestedUntil{};
+};
+
+std::array<ProjectionCacheEntry, ProjectionCacheSize> ProjectionCache{};
+std::array<ProjectionRequestSlot, ProjectionRequestCapacity>
+    ProjectionRequests{};
+std::atomic<std::int32_t> CachedNativeWidth{};
+std::atomic<std::int32_t> CachedNativeHeight{};
+std::atomic<std::uint64_t> NativeDimensionsRefreshTick{};
+std::atomic<std::uint64_t> LastProjectionSweepTick{};
+std::atomic<std::uint64_t> ActiveProjectionAttempts{};
+std::atomic<std::uint64_t> ActiveProjectionMisses{};
+std::atomic<std::uint64_t> ProjectionRequestDrops{};
+std::atomic<std::uint64_t> CameraFrameTicks{};
+std::atomic<std::uint64_t> RenderContextMisses{};
+std::atomic_bool CameraFrameReadyLogged{};
+thread_local bool ProjectionSweepActive{};
+
+void __cdecl LogOverlayDiagnostic(const char* message) noexcept {
+    if (Context && message)
+        Context->LogInfo(message);
+}
 
 constexpr D2RL::PluginInfo Info{
     .infoSize = D2RL::PluginInfoSize,
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "floating-damage",
     .name = "Floating Damage",
-    .version = "1.2.0",
+    .version = "1.2.9",
     .author = "RuffnecKk",
     .description = "Shows floating combat numbers and rolling damage per second.",
     .flags = D2RL::PluginFlags::NativeHooks,
@@ -432,51 +515,390 @@ bool SaveEnabled(bool enabled) {
     return Context->WriteConfig(text.c_str());
 }
 
-bool SafeCopyTypeName(const char* name, char* output, std::size_t outputSize) noexcept {
+constexpr std::uint64_t MakeProjectionKey(
+    std::uint32_t unitType,
+    std::uint32_t unitId) noexcept {
+    return (static_cast<std::uint64_t>(unitType) << 32) | unitId;
+}
+
+constexpr std::size_t ProjectionCacheIndex(std::uint64_t key) noexcept {
+    key ^= key >> 33;
+    key *= UINT64_C(0xff51afd7ed558ccd);
+    key ^= key >> 33;
+    return static_cast<std::size_t>(key) & (ProjectionCacheSize - 1);
+}
+
+constexpr std::size_t ProjectionRequestIndex(std::uint64_t key) noexcept {
+    key ^= key >> 33;
+    key *= UINT64_C(0xc4ceb9fe1a85ec53);
+    key ^= key >> 33;
+    return static_cast<std::size_t>(key)
+        & (ProjectionRequestCapacity - 1);
+}
+
+static_assert((ProjectionCacheSize & (ProjectionCacheSize - 1)) == 0);
+static_assert(
+    (ProjectionRequestCapacity & (ProjectionRequestCapacity - 1)) == 0);
+static_assert(ProjectionRequestCapacity >= 320);
+
+void RequestTargetProjection(
+    std::uint32_t unitType,
+    std::uint32_t unitId) noexcept {
+    if (unitType != MonsterUnitType)
+        return;
+
+    const std::uint64_t now = GetTickCount64();
+    const std::uint64_t requestedUntil = now + ProjectionRequestLeaseMs;
+    const std::uint64_t key = MakeProjectionKey(unitType, unitId);
+    const std::size_t start = ProjectionRequestIndex(key);
+    for (std::size_t probe = 0;
+            probe < ProjectionRequestCapacity;
+            ++probe) {
+        ProjectionRequestSlot& slot = ProjectionRequests[
+            (start + probe) & (ProjectionRequestCapacity - 1)];
+        if (slot.writing.test(std::memory_order_acquire))
+            continue;
+        const std::uint64_t currentKey = slot.key.load(
+            std::memory_order_acquire);
+        if (currentKey == key) {
+            if (slot.writing.test_and_set(std::memory_order_acquire))
+                continue;
+            if (slot.key.load(std::memory_order_relaxed) == key) {
+                const std::uint64_t lockedUntil = slot.requestedUntil.load(
+                    std::memory_order_relaxed);
+                slot.requestedUntil.store(
+                    std::max(lockedUntil, requestedUntil),
+                    std::memory_order_relaxed);
+                slot.writing.clear(std::memory_order_release);
+                return;
+            }
+            slot.writing.clear(std::memory_order_release);
+            continue;
+        }
+
+        const std::uint64_t currentUntil = slot.requestedUntil.load(
+            std::memory_order_acquire);
+        if (currentKey != 0 && currentUntil >= now)
+            continue;
+        if (slot.writing.test_and_set(std::memory_order_acquire))
+            continue;
+
+        const std::uint64_t lockedKey = slot.key.load(
+            std::memory_order_relaxed);
+        const std::uint64_t lockedUntil = slot.requestedUntil.load(
+            std::memory_order_relaxed);
+        if (lockedKey == key || lockedKey == 0 || lockedUntil < now) {
+            slot.requestedUntil.store(
+                requestedUntil, std::memory_order_relaxed);
+            slot.key.store(key, std::memory_order_release);
+            slot.writing.clear(std::memory_order_release);
+            return;
+        }
+        slot.writing.clear(std::memory_order_release);
+    }
+
+    ProjectionRequestDrops.fetch_add(1, std::memory_order_relaxed);
+}
+
+std::uint64_t PackNativePoint(const NativeScreenPoint& point) noexcept {
+    const std::uint64_t x = std::bit_cast<std::uint32_t>(point.x);
+    const std::uint64_t y = std::bit_cast<std::uint32_t>(point.y);
+    return x | (y << 32);
+}
+
+NativeScreenPoint UnpackNativePoint(std::uint64_t packed) noexcept {
+    return NativeScreenPoint{
+        std::bit_cast<float>(static_cast<std::uint32_t>(packed)),
+        std::bit_cast<float>(static_cast<std::uint32_t>(packed >> 32)),
+    };
+}
+
+void RefreshNativeDimensions(std::uint64_t now) noexcept {
+    const std::uint64_t previous = NativeDimensionsRefreshTick.load(
+        std::memory_order_relaxed);
+    if (CachedNativeWidth.load(std::memory_order_relaxed) > 0
+            && CachedNativeHeight.load(std::memory_order_relaxed) > 0
+            && now - previous < 1000) {
+        return;
+    }
+
+    std::uint64_t expected = previous;
+    if (!NativeDimensionsRefreshTick.compare_exchange_strong(
+            expected, now, std::memory_order_acq_rel)) {
+        return;
+    }
+
     __try {
-        if (!name || !output || outputSize == 0) return false;
-        strncpy_s(output, outputSize, name, _TRUNCATE);
-        return true;
+        const std::int32_t width = GetNativeWidth ? GetNativeWidth() : 0;
+        const std::int32_t height = GetNativeHeight ? GetNativeHeight() : 0;
+        if (width > 0 && height > 0) {
+            CachedNativeWidth.store(width, std::memory_order_release);
+            CachedNativeHeight.store(height, std::memory_order_release);
+        }
     }
     __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
     }
 }
 
-FloatingDamage::Element ElementFromName(const char* name) noexcept {
-    char text[16]{};
-    if (!SafeCopyTypeName(name, text, sizeof(text))) return FloatingDamage::Element::Physical;
-    const std::string type = Lower(text);
-    if (type.find("fire") != std::string::npos || type.find("burn") != std::string::npos) return FloatingDamage::Element::Fire;
-    if (type.find("ligt") != std::string::npos || type.find("ltng") != std::string::npos || type.find("light") != std::string::npos) return FloatingDamage::Element::Lightning;
-    if (type.find("cold") != std::string::npos) return FloatingDamage::Element::Cold;
-    if (type.find("pois") != std::string::npos) return FloatingDamage::Element::Poison;
-    if (type.find("mag") != std::string::npos) return FloatingDamage::Element::Magic;
-    return FloatingDamage::Element::Physical;
-}
-
-bool ComputeScreenPosition(UnitView* attacker, UnitView* target, float& screenX, float& screenY) noexcept {
+void CacheNativeProjection(
+    UnitView* unit,
+    const NativeScreenPoint& point,
+    bool elevated) noexcept {
     __try {
-        if (!target || !target->dynamicPath) return false;
-        if (!attacker || !attacker->dynamicPath) attacker = target;
-        const DynamicPathView* source = attacker->dynamicPath;
-        const DynamicPathView* destination = target->dynamicPath;
-        constexpr float inverseSubtile = 1.0f / 65536.0f;
-        const float sourceX = source->positionX + source->offsetX * inverseSubtile;
-        const float sourceY = source->positionY + source->offsetY * inverseSubtile;
-        const float targetX = destination->positionX + destination->offsetX * inverseSubtile;
-        const float targetY = destination->positionY + destination->offsetY * inverseSubtile;
-        const float isoX = (targetX - sourceX) - (targetY - sourceY);
-        const float isoY = (targetX - sourceX) + (targetY - sourceY);
-        float width{}, height{};
-        D3D12::GetDisplaySize(width, height);
-        screenX = width * 0.5f + 40.0f + isoX * 30.0f;
-        screenY = height * 0.5f - (120.0f - isoY * 12.5f);
-        return true;
+        if (!unit
+                || unit->unitType != MonsterUnitType
+                || !std::isfinite(point.x)
+                || !std::isfinite(point.y)) {
+            return;
+        }
+
+        const std::uint64_t now = GetTickCount64();
+        const std::uint64_t key = MakeProjectionKey(unit->unitType, unit->unitId);
+        ProjectionCacheEntry& entry = ProjectionCache[ProjectionCacheIndex(key)];
+        if (entry.writing.test_and_set(std::memory_order_acquire))
+            return;
+
+        if (entry.key.load(std::memory_order_relaxed) != key) {
+            entry.elevatedTick.store(0, std::memory_order_relaxed);
+            entry.baseTick.store(0, std::memory_order_relaxed);
+        }
+        const std::uint64_t packed = PackNativePoint(point);
+        if (elevated) {
+            entry.elevatedPoint.store(packed, std::memory_order_relaxed);
+            entry.elevatedTick.store(now, std::memory_order_relaxed);
+        }
+        else {
+            entry.basePoint.store(packed, std::memory_order_relaxed);
+            entry.baseTick.store(now, std::memory_order_relaxed);
+        }
+        entry.visible.store(true, std::memory_order_relaxed);
+        entry.attemptTick.store(now, std::memory_order_relaxed);
+        entry.key.store(key, std::memory_order_release);
+        entry.writing.clear(std::memory_order_release);
+        RefreshNativeDimensions(now);
     }
     __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+}
+
+void CacheNativeProjectionFailure(
+    std::uint32_t unitType,
+    std::uint32_t unitId,
+    std::uint64_t now) noexcept {
+    const std::uint64_t key = MakeProjectionKey(unitType, unitId);
+    ProjectionCacheEntry& entry = ProjectionCache[ProjectionCacheIndex(key)];
+    if (entry.writing.test_and_set(std::memory_order_acquire))
+        return;
+    if (entry.key.load(std::memory_order_relaxed) != key) {
+        entry.elevatedTick.store(0, std::memory_order_relaxed);
+        entry.baseTick.store(0, std::memory_order_relaxed);
+    }
+    entry.visible.store(false, std::memory_order_relaxed);
+    entry.attemptTick.store(now, std::memory_order_relaxed);
+    entry.key.store(key, std::memory_order_release);
+    entry.writing.clear(std::memory_order_release);
+}
+
+void ProjectRequestedTargets(
+    void* renderContext,
+    std::uint64_t now) noexcept {
+    if (!renderContext || !ProjectUnitToScreen || !GetClientUnit)
+        return;
+    if (ProjectionSweepActive)
+        return;
+
+    std::uint64_t previous = LastProjectionSweepTick.load(
+        std::memory_order_relaxed);
+    if (now - previous < ProjectionSweepIntervalMs
+            || !LastProjectionSweepTick.compare_exchange_strong(
+                previous, now, std::memory_order_acq_rel)) {
+        return;
+    }
+
+    ProjectionSweepActive = true;
+    for (ProjectionRequestSlot& slot : ProjectionRequests) {
+        if (slot.writing.test(std::memory_order_acquire))
+            continue;
+        const std::uint64_t key = slot.key.load(std::memory_order_acquire);
+        const std::uint64_t requestedUntil = slot.requestedUntil.load(
+            std::memory_order_acquire);
+        if (key == 0 || requestedUntil < now
+                || slot.writing.test(std::memory_order_acquire)
+                || slot.key.load(std::memory_order_acquire) != key) {
+            continue;
+        }
+
+        const std::uint32_t unitType = static_cast<std::uint32_t>(key >> 32);
+        const std::uint32_t unitId = static_cast<std::uint32_t>(key);
+        bool projected{};
+        __try {
+            UnitView* target = GetClientUnit(unitId, unitType);
+            if (target) {
+                NativeScreenPoint point{};
+                projected = ProjectUnitToScreen(
+                    renderContext, target, &point, true);
+                if (projected) {
+                    CacheNativeProjection(target, point, true);
+                }
+                else {
+                    projected = ProjectUnitToScreen(
+                        renderContext, target, &point, false);
+                    if (projected)
+                        CacheNativeProjection(target, point, false);
+                }
+            }
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER) {
+            projected = false;
+        }
+
+        ActiveProjectionAttempts.fetch_add(1, std::memory_order_relaxed);
+        if (!projected) {
+            ActiveProjectionMisses.fetch_add(1, std::memory_order_relaxed);
+            CacheNativeProjectionFailure(unitType, unitId, now);
+        }
+    }
+    ProjectionSweepActive = false;
+}
+
+void __fastcall HookUpdateCamera() noexcept {
+    if (OriginalUpdateCamera)
+        OriginalUpdateCamera();
+
+    CameraFrameTicks.fetch_add(1, std::memory_order_relaxed);
+    void* renderContext{};
+    __try {
+        auto* root = static_cast<std::uint8_t*>(
+            GetRenderThreadContextRoot
+                ? GetRenderThreadContextRoot()
+                : nullptr);
+        if (root)
+            renderContext = *reinterpret_cast<void**>(root + 0x20);
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        renderContext = nullptr;
+    }
+
+    if (!renderContext) {
+        RenderContextMisses.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    if (!CameraFrameReadyLogged.exchange(true, std::memory_order_acq_rel)
+            && Context) {
+        Context->LogInfo(
+            "FloatingDamage camera-frame projection rendezvous ready on D2R's native render thread.");
+    }
+    ProjectRequestedTargets(renderContext, GetTickCount64());
+}
+
+bool TryReadCachedNativeProjection(
+    std::uint32_t unitType,
+    std::uint32_t unitId,
+    NativeScreenPoint& point) noexcept {
+    const std::uint64_t key = MakeProjectionKey(unitType, unitId);
+    ProjectionCacheEntry& entry = ProjectionCache[ProjectionCacheIndex(key)];
+    if (entry.writing.test(std::memory_order_acquire)
+            || entry.key.load(std::memory_order_acquire) != key) {
         return false;
     }
+
+    const std::uint64_t now = GetTickCount64();
+    const std::uint64_t attemptTick = entry.attemptTick.load(
+        std::memory_order_relaxed);
+    if (attemptTick == 0
+            || now - attemptTick > ProjectionFreshnessMs
+            || !entry.visible.load(std::memory_order_relaxed)) {
+        return false;
+    }
+    const std::uint64_t elevatedTick = entry.elevatedTick.load(
+        std::memory_order_relaxed);
+    const std::uint64_t baseTick = entry.baseTick.load(
+        std::memory_order_relaxed);
+    std::uint64_t packed{};
+    if (elevatedTick != 0 && now - elevatedTick <= ProjectionFreshnessMs) {
+        packed = entry.elevatedPoint.load(std::memory_order_relaxed);
+    }
+    else if (baseTick != 0 && now - baseTick <= ProjectionFreshnessMs) {
+        packed = entry.basePoint.load(std::memory_order_relaxed);
+    }
+    else {
+        return false;
+    }
+
+    if (entry.writing.test(std::memory_order_acquire)
+            || entry.key.load(std::memory_order_acquire) != key) {
+        return false;
+    }
+    point = UnpackNativePoint(packed);
+    return std::isfinite(point.x) && std::isfinite(point.y);
+}
+
+bool TryProjectTargetToScreen(
+    std::uint32_t unitType,
+    std::uint32_t unitId,
+    float displayWidth,
+    float displayHeight,
+    float* screenX,
+    float* screenY) noexcept {
+    if (unitType != MonsterUnitType
+            || !screenX
+            || !screenY
+            || displayWidth <= 0.0f
+            || displayHeight <= 0.0f) {
+        ProjectionFailures.fetch_add(1, std::memory_order_relaxed);
+        return false;
+    }
+
+    RequestTargetProjection(unitType, unitId);
+
+    NativeScreenPoint native{};
+    const std::int32_t nativeWidth = CachedNativeWidth.load(
+        std::memory_order_acquire);
+    const std::int32_t nativeHeight = CachedNativeHeight.load(
+        std::memory_order_acquire);
+    if (nativeWidth <= 0
+            || nativeHeight <= 0
+            || !TryReadCachedNativeProjection(unitType, unitId, native)) {
+        ProjectionFailures.fetch_add(1, std::memory_order_relaxed);
+        return false;
+    }
+
+    const float projectedX = native.x * displayWidth / static_cast<float>(nativeWidth);
+    const float projectedY = native.y * displayHeight / static_cast<float>(nativeHeight);
+    if (!std::isfinite(projectedX)
+            || !std::isfinite(projectedY)
+            || projectedX < 0.0f
+            || projectedX > displayWidth
+            || projectedY < 0.0f
+            || projectedY > displayHeight) {
+        ProjectionFailures.fetch_add(1, std::memory_order_relaxed);
+        return false;
+    }
+
+    *screenX = projectedX;
+    *screenY = projectedY;
+    const std::uint64_t success = ProjectionSuccesses.fetch_add(
+        1, std::memory_order_relaxed) + 1;
+    if (success == 1
+            && !ProjectionReadyLogged.exchange(true, std::memory_order_acq_rel)
+            && Context) {
+        char message[256]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "FloatingDamage render-thread projection cache ready: target=%u; native=%.1f,%.1f/%dx%d; overlay=%.1f,%.1f/%.0fx%.0f.",
+            unitId,
+            native.x,
+            native.y,
+            nativeWidth,
+            nativeHeight,
+            projectedX,
+            projectedY,
+            displayWidth,
+            displayHeight);
+        Context->LogInfo(message);
+    }
+    return true;
 }
 
 bool IsCritical(void* damage) noexcept {
@@ -490,66 +912,389 @@ bool IsCritical(void* damage) noexcept {
     }
 }
 
-__declspec(noinline) void __fastcall HookDamageInfo(
-    void* game,
-    UnitView* attacker,
+FloatingDamage::Element ElementFromDamage(const void* damage) noexcept {
+    struct Component {
+        std::size_t offset;
+        FloatingDamage::Element element;
+    };
+    constexpr std::array components{
+        Component{DamagePhysicalOffset, FloatingDamage::Element::Physical},
+        Component{DamageFireOffset, FloatingDamage::Element::Fire},
+        Component{DamageLightningOffset, FloatingDamage::Element::Lightning},
+        Component{DamageMagicOffset, FloatingDamage::Element::Magic},
+        Component{DamageColdOffset, FloatingDamage::Element::Cold},
+        Component{DamagePoisonOffset, FloatingDamage::Element::Poison},
+    };
+
+    __try {
+        if (!damage) return FloatingDamage::Element::Physical;
+        std::int32_t largest{};
+        FloatingDamage::Element result = FloatingDamage::Element::Physical;
+        for (const auto& component : components) {
+            const auto value = *reinterpret_cast<const std::int32_t*>(
+                static_cast<const std::uint8_t*>(damage) + component.offset);
+            if (value > largest) {
+                largest = value;
+                result = component.element;
+            }
+        }
+        return result;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        return FloatingDamage::Element::Physical;
+    }
+}
+
+bool TryGetMonsterId(UnitView* target, std::uint32_t& unitId) noexcept {
+    __try {
+        if (!target || target->unitType != MonsterUnitType) return false;
+        unitId = target->unitId;
+        return true;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+bool TryGetFixedHitpoints(UnitView* target, std::int32_t& hitpoints) noexcept {
+    __try {
+        if (!target || !GetUnitStat) return false;
+        hitpoints = GetUnitStat(target, HitPointsStatId, 0);
+        return true;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+constexpr std::int32_t VisibleHitpoints(std::int32_t fixedHitpoints) noexcept {
+    return fixedHitpoints > 0 ? fixedHitpoints >> 8 : 0;
+}
+
+constexpr std::int32_t VisibleHitpointLoss(
+    std::int32_t beforeFixed,
+    std::int32_t afterFixed) noexcept {
+    const std::int32_t before = VisibleHitpoints(beforeFixed);
+    const std::int32_t after = VisibleHitpoints(afterFixed);
+    return before > after ? before - after : 0;
+}
+
+static_assert(VisibleHitpointLoss(20 * 256, 20 * 256 - 1023) == 4);
+static_assert(VisibleHitpointLoss(20 * 256, 20 * 256 - 794) == 4);
+static_assert(VisibleHitpointLoss(20 * 256 - 794, 20 * 256 - 1588) == 3);
+
+__declspec(noinline) void __fastcall HookHitpointsCommit(
     UnitView* target,
-    std::int32_t baseDamage,
-    std::int32_t resistance,
-    std::uintptr_t reduction,
-    std::int32_t finalDamage,
-    const char* typeName,
-    void* damage,
-    std::uintptr_t finalFlag
+    std::int32_t statId,
+    std::int32_t newFixed,
+    std::uint16_t layer,
+    UnitView*,
+    void* damage
 ) noexcept {
+    std::uint32_t targetId{};
+    std::int32_t beforeFixed{};
+    const bool observe = statId == HitPointsStatId
+        && layer == 0
+        && TryGetMonsterId(target, targetId)
+        && TryGetFixedHitpoints(target, beforeFixed);
+    const bool critical = observe && IsCritical(damage);
+    const FloatingDamage::Element element = observe
+        ? ElementFromDamage(damage)
+        : FloatingDamage::Element::Physical;
+
+    SetUnitStat(target, statId, newFixed, layer);
+    if (!observe) return;
+
+    std::int32_t afterFixed{};
+    if (!TryGetFixedHitpoints(target, afterFixed)) return;
+    const std::int32_t amount = VisibleHitpointLoss(beforeFixed, afterFixed);
+    if (amount <= 0) return;
+
     const std::uint64_t captured = CapturedEvents.fetch_add(1, std::memory_order_relaxed) + 1;
     if (captured == 1 && Context) {
-        Context->LogInfo("FloatingDamage captured its first resolved damage event.");
+        char message[192]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "FloatingDamage captured its first committed visible HP loss: fixed=%d->%d; popup=%d.",
+            beforeFixed,
+            afterFixed,
+            amount);
+        Context->LogInfo(message);
     }
-    const FloatingDamage::Element element = ElementFromName(typeName);
-    const bool critical = IsCritical(damage);
-    OriginalDamageInfo(game, attacker, target, baseDamage, resistance, reduction, finalDamage, typeName, damage, finalFlag);
+    if (!FloatingDamage::IsEnabled()) return;
 
-    const int amount = finalDamage >> 8;
-    if (amount <= 0 || !FloatingDamage::IsEnabled()) return;
-    __try { if (!target || target->unitType != MonsterUnitType) return; }
-    __except (EXCEPTION_EXECUTE_HANDLER) { return; }
-
-    float screenX{}, screenY{};
-    if (!ComputeScreenPosition(attacker, target, screenX, screenY)) return;
+    RequestTargetProjection(MonsterUnitType, targetId);
     FloatingDamage::QueueGameDamage(
         amount,
-        screenX,
-        screenY,
-        target->unitType,
-        target->unitId,
+        MonsterUnitType,
+        targetId,
         critical ? FloatingDamage::Kind::Critical : FloatingDamage::Kind::Normal,
         element);
     const std::uint64_t displayed = DisplayedEvents.fetch_add(1, std::memory_order_relaxed) + 1;
     if (displayed == 1 && Context) {
-        Context->LogInfo("FloatingDamage displayed its first player-to-monster damage event.");
+        Context->LogInfo("FloatingDamage queued its first committed target-monster HP loss.");
     }
 }
 
-bool InstallDamageHook() noexcept {
-    constexpr std::array<std::uint8_t, 26> expected{
-        0x4C, 0x8B, 0xDC, 0x55, 0x53, 0x49, 0x8D, 0xAB, 0x08, 0xFD,
-        0xFF, 0xFF, 0x48, 0x81, 0xEC, 0xE8, 0x03, 0x00, 0x00,
-        0x48, 0x8B, 0x05, 0x5E, 0x41, 0x5A, 0x02
+template <std::size_t Size>
+bool MatchesSignature(
+    std::uintptr_t rva,
+    const std::array<std::uint8_t, Size>& expected) noexcept {
+    __try {
+        return Base && std::memcmp(Base + rva, expected.data(), expected.size()) == 0;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+void* AllocateRelayPageNear(void* hint) noexcept {
+    SYSTEM_INFO systemInfo{};
+    GetSystemInfo(&systemInfo);
+    const auto granularity = static_cast<std::uintptr_t>(
+        systemInfo.dwAllocationGranularity);
+    const auto base = reinterpret_cast<std::uintptr_t>(hint)
+        & ~(granularity - 1);
+    for (std::uintptr_t delta = granularity;
+            delta < UINT64_C(0x70000000); delta += granularity) {
+        if (base > std::numeric_limits<std::uintptr_t>::max() - delta) break;
+        if (auto* memory = VirtualAlloc(
+                reinterpret_cast<void*>(base + delta),
+                systemInfo.dwPageSize,
+                MEM_COMMIT | MEM_RESERVE,
+                PAGE_READWRITE)) {
+            return memory;
+        }
+    }
+    return nullptr;
+}
+
+bool CreateHitpointsCommitRelay() noexcept {
+    HitpointsCommitRelay = AllocateRelayPageNear(Base + HitpointsCommitCallRva);
+    if (!HitpointsCommitRelay) return false;
+
+    std::array<std::uint8_t, 31> relay{
+        0x48,0x83,0xEC,0x38,
+        0x4C,0x89,0x74,0x24,0x20,
+        0x48,0x89,0x7C,0x24,0x28,
+        0x48,0xB8,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        0xFF,0xD0,
+        0x48,0x83,0xC4,0x38,
+        0xC3,
     };
-    return Context->InstallInlineHook(
-        DamageInfoRva,
-        expected.data(),
-        static_cast<std::uint32_t>(expected.size()),
-        HookDamageInfo,
-        &OriginalDamageInfo);
+    const auto hookAddress = reinterpret_cast<std::uintptr_t>(
+        &HookHitpointsCommit);
+    std::memcpy(relay.data() + 16, &hookAddress, sizeof(hookAddress));
+    std::memcpy(HitpointsCommitRelay, relay.data(), relay.size());
+
+    DWORD previousProtection{};
+    if (!VirtualProtect(
+            HitpointsCommitRelay,
+            relay.size(),
+            PAGE_EXECUTE_READ,
+            &previousProtection)) {
+        VirtualFree(HitpointsCommitRelay, 0, MEM_RELEASE);
+        HitpointsCommitRelay = nullptr;
+        return false;
+    }
+    FlushInstructionCache(
+        GetCurrentProcess(), HitpointsCommitRelay, relay.size());
+
+    const auto relayAddress = reinterpret_cast<std::uintptr_t>(
+        HitpointsCommitRelay);
+    const auto baseAddress = reinterpret_cast<std::uintptr_t>(Base);
+    if (relayAddress < baseAddress
+            || relayAddress - baseAddress
+                > std::numeric_limits<std::uint32_t>::max()) {
+        VirtualFree(HitpointsCommitRelay, 0, MEM_RELEASE);
+        HitpointsCommitRelay = nullptr;
+        return false;
+    }
+    return true;
+}
+
+void RemoveCameraFrameHook() noexcept {
+    if (!CameraFrameHookInstalled || !Base)
+        return;
+    void* target = Base + UpdateCameraRva;
+    MH_DisableHook(target);
+    MH_RemoveHook(target);
+    CameraFrameHookInstalled = false;
+    OriginalUpdateCamera = nullptr;
+}
+
+bool InstallCameraFrameHook() noexcept {
+    const MH_STATUS initialized = MH_Initialize();
+    if (initialized != MH_OK
+            && initialized != MH_ERROR_ALREADY_INITIALIZED) {
+        return false;
+    }
+
+    void* target = Base + UpdateCameraRva;
+    if (MH_CreateHook(
+            target,
+            reinterpret_cast<void*>(HookUpdateCamera),
+            reinterpret_cast<void**>(&OriginalUpdateCamera)) != MH_OK) {
+        OriginalUpdateCamera = nullptr;
+        return false;
+    }
+    if (MH_EnableHook(target) != MH_OK) {
+        MH_RemoveHook(target);
+        OriginalUpdateCamera = nullptr;
+        return false;
+    }
+    CameraFrameHookInstalled = true;
+    return true;
+}
+
+bool InstallDamageHook() noexcept {
+    constexpr std::array<std::uint8_t, 29> getUnitStatExpected{
+        0x48,0x89,0x5C,0x24,0x10,0x48,0x89,0x6C,0x24,0x18,
+        0x48,0x89,0x74,0x24,0x20,0x57,0x48,0x83,0xEC,0x20,
+        0x41,0x0F,0xB7,0xE8,0x8B,0xFA,0x48,0x8B,0xD9,
+    };
+    constexpr std::array<std::uint8_t, 29> setUnitStatExpected{
+        0x48,0x89,0x5C,0x24,0x10,0x48,0x89,0x6C,0x24,0x18,
+        0x56,0x57,0x41,0x54,0x41,0x56,0x41,0x57,0x48,0x83,
+        0xEC,0x40,0x45,0x0F,0xB7,0xE1,0x45,0x8B,0xF0,
+    };
+    constexpr std::array<std::uint8_t, 32> getClientUnitExpected{
+        0x4C,0x63,0xCA,0x48,0x8D,0x05,0x36,0x93,
+        0x98,0x02,0x8B,0xD1,0x44,0x8B,0xC1,0x49,
+        0x8B,0xC9,0x83,0xE2,0x7F,0x48,0xC1,0xE1,
+        0x0A,0x48,0x03,0xC8,0xE9,0x7F,0x4C,0x00,
+    };
+    constexpr std::array<std::uint8_t, 33> updateCameraExpected{
+        0x48,0x89,0x5C,0x24,0x18,0x57,0x48,0x83,
+        0xEC,0x20,0xE8,0x31,0x17,0xFD,0xFF,0x8B,
+        0xC8,0xE8,0xDA,0x08,0xFE,0xFF,0x48,0x8B,
+        0xC8,0x48,0x8B,0xD8,0xE8,0xAF,0x13,0x29,
+        0x00,
+    };
+    constexpr std::array<std::uint8_t, 37>
+        getRenderThreadContextRootExpected{
+        0x48,0x83,0xEC,0x28,0x65,0x48,0x8B,0x04,
+        0x25,0x58,0x00,0x00,0x00,0x8B,0x0D,0x65,
+        0xED,0xF2,0x02,0xBA,0x6C,0x12,0x00,0x00,
+        0x48,0x8B,0x0C,0xC8,0x8B,0x04,0x0A,0x39,
+        0x05,0x3F,0xF4,0xD8,0x02,
+    };
+    constexpr std::array<std::uint8_t, 61> projectUnitToScreenExpected{
+        0x4C,0x8B,0xDC,0x55,0x56,0x57,0x41,0x57,
+        0x49,0x8D,0x6B,0xA8,0x48,0x81,0xEC,0x38,
+        0x01,0x00,0x00,0x48,0x8B,0x05,0xDE,0x0A,
+        0x26,0x02,0x48,0x33,0xC4,0x48,0x89,0x45,
+        0xA0,0x40,0x32,0xFF,0x4C,0x89,0x44,0x24,
+        0x40,0x45,0x0F,0xB6,0xF9,0x48,0x8B,0xF2,
+        0x48,0x85,0xD2,0x0F,0x84,0x6E,0x07,0x00,
+        0x00,0x4C,0x8B,0x82,0xD8,
+    };
+    constexpr std::array<std::uint8_t, 27> getNativeHeightExpected{
+        0x48,0x83,0xEC,0x28,0xE8,0x67,0x6D,0x7C,
+        0x00,0x84,0xC0,0x74,0x0E,0xE8,0x1E,0x51,
+        0x5D,0x00,0x48,0xC1,0xE8,0x20,0x48,0x83,
+        0xC4,0x28,0xC3,
+    };
+    constexpr std::array<std::uint8_t, 33> getNativeWidthExpected{
+        0x48,0x83,0xEC,0x28,0xE8,0xF7,0x6C,0x7C,
+        0x00,0x84,0xC0,0x74,0x09,0x48,0x83,0xC4,
+        0x28,0xE9,0xAA,0x50,0x5D,0x00,0x8B,0x05,
+        0x3C,0x18,0x22,0x02,0x48,0x83,0xC4,0x28,
+        0xC3,
+    };
+    constexpr std::array<std::uint8_t, 21> hitpointsCommitContextExpected{
+        0x48,0x8B,0xCE,0x3D,0x00,0x01,0x00,0x00,0x44,0x0F,
+        0x4D,0xC0,0x41,0x8D,0x51,0x06,0xE8,0x78,0xAC,0xEA,0xFF,
+    };
+    constexpr std::array<std::uint8_t, 5> hitpointsCommitCallExpected{
+        0xE8,0x78,0xAC,0xEA,0xFF,
+    };
+    if (!MatchesSignature(GetUnitStatRva, getUnitStatExpected)
+            || !MatchesSignature(SetUnitStatRva, setUnitStatExpected)
+            || !MatchesSignature(
+                GetClientUnitRva,
+                getClientUnitExpected)
+            || !MatchesSignature(
+                UpdateCameraRva,
+                updateCameraExpected)
+            || !MatchesSignature(
+                GetRenderThreadContextRootRva,
+                getRenderThreadContextRootExpected)
+            || !MatchesSignature(
+                ProjectUnitToScreenRva,
+                projectUnitToScreenExpected)
+            || !MatchesSignature(
+                GetNativeHeightRva,
+                getNativeHeightExpected)
+            || !MatchesSignature(
+                GetNativeWidthRva,
+                getNativeWidthExpected)
+            || !MatchesSignature(
+                HitpointsCommitContextRva,
+                hitpointsCommitContextExpected)) {
+        return false;
+    }
+    GetUnitStat = reinterpret_cast<GetUnitStatFn>(Base + GetUnitStatRva);
+    SetUnitStat = reinterpret_cast<SetUnitStatFn>(Base + SetUnitStatRva);
+    GetClientUnit = reinterpret_cast<GetClientUnitFn>(
+        Base + GetClientUnitRva);
+    ProjectUnitToScreen = reinterpret_cast<ProjectUnitToScreenFn>(
+        Base + ProjectUnitToScreenRva);
+    GetRenderThreadContextRoot =
+        reinterpret_cast<GetRenderThreadContextRootFn>(
+            Base + GetRenderThreadContextRootRva);
+    GetNativeHeight = reinterpret_cast<GetNativeDimensionFn>(
+        Base + GetNativeHeightRva);
+    GetNativeWidth = reinterpret_cast<GetNativeDimensionFn>(
+        Base + GetNativeWidthRva);
+    if (!InstallCameraFrameHook()) return false;
+    if (!CreateHitpointsCommitRelay()) {
+        RemoveCameraFrameHook();
+        return false;
+    }
+    const auto relayRva = reinterpret_cast<std::uintptr_t>(
+        HitpointsCommitRelay) - reinterpret_cast<std::uintptr_t>(Base);
+    if (!Context->PatchCallRel32(
+            HitpointsCommitCallRva,
+            hitpointsCommitCallExpected.data(),
+            static_cast<std::uint32_t>(hitpointsCommitCallExpected.size()),
+            relayRva,
+            5)) {
+        VirtualFree(HitpointsCommitRelay, 0, MEM_RELEASE);
+        HitpointsCommitRelay = nullptr;
+        RemoveCameraFrameHook();
+        return false;
+    }
+    return true;
 }
 
 DWORD WINAPI OverlayWorkerMain(void*) noexcept {
+    const HMODULE pluginItems = GetModuleHandleW(L"plugin-items.dll");
+    const bool embeddedExtendedItemStats = pluginItems
+        && GetProcAddress(
+            pluginItems,
+            "ExtendedItemStatsOwnsTooltipPipeline")
+        && GetProcAddress(
+            pluginItems,
+            "ExtendedItemStatsTransformTooltip");
+    if (embeddedExtendedItemStats) {
+        if (Context) {
+            Context->LogInfo(
+                "FloatingDamage overlay: plugin-items embeds ExtendedItemStats; deferring D3D12 hook ownership so its fallback renderer can install first.");
+        }
+        if (WaitForSingleObject(OverlayStopEvent, 5000) != WAIT_TIMEOUT)
+            return 0;
+    }
     while (WaitForSingleObject(OverlayStopEvent, 500) == WAIT_TIMEOUT) {
         if (!D3D12::InstallHooks()) continue;
         OverlayReady.store(true, std::memory_order_release);
-        if (Context) Context->LogInfo("FloatingDamage: DirectX 12 overlay hooks installed after graphics startup.");
+        if (Context) {
+            Context->LogInfo(
+                embeddedExtendedItemStats
+                    ? "FloatingDamage: DirectX 12 overlay hooks installed after plugin-items for deterministic renderer chaining."
+                    : "FloatingDamage: DirectX 12 overlay hooks installed after graphics startup.");
+        }
         return 0;
     }
     return 0;
@@ -576,20 +1321,35 @@ auto ConsoleCommand(
     const bool enabled = FloatingDamage::IsEnabled();
 
     if (action.empty() || action == "status") {
-        char message[640]{};
+        char message[768]{};
         float displayWidth{};
         float displayHeight{};
         D3D12::GetDisplaySize(displayWidth, displayHeight);
+        const D3D12::OverlayDiagnostics overlay =
+            D3D12::GetOverlayDiagnostics();
         std::snprintf(
             message,
             sizeof(message),
-            "FloatingDamage 1.2.0: enabled=%s; hotkey=%s (%s); overlay=%s; captured=%llu; displayed=%llu; active=%zu; pending=%zu; font=%d; display=%.0fx%.0f; scale=%.3f.",
+            "FloatingDamage 1.2.9: enabled=%s; hotkey=%s (%s); overlay_hooks=%s; presents=%llu; queues=%llu; imgui_attempts=%llu; imgui_failures=%llu; init_stage=%u; overlay_frames=%llu; camera_frames=%llu; context_misses=%llu; captured=%llu; queued=%llu; projected=%llu; rejected=%llu; forced=%llu; missed=%llu; request_drops=%llu; active=%zu; pending=%zu; font=%d; display=%.0fx%.0f; scale=%.3f.",
             enabled ? "true" : "false",
             config.toggleHotkeyText.c_str(),
             config.toggleHotkeyEnabled ? "enabled" : "disabled",
             OverlayReady.load(std::memory_order_acquire) ? "ready" : "waiting",
+            static_cast<unsigned long long>(overlay.presentCalls),
+            static_cast<unsigned long long>(overlay.directQueueCaptures),
+            static_cast<unsigned long long>(overlay.rendererInitAttempts),
+            static_cast<unsigned long long>(overlay.rendererInitFailures),
+            overlay.lastInitFailureStage,
+            static_cast<unsigned long long>(overlay.renderedFrames),
+            static_cast<unsigned long long>(CameraFrameTicks.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(RenderContextMisses.load(std::memory_order_relaxed)),
             static_cast<unsigned long long>(CapturedEvents.load(std::memory_order_relaxed)),
             static_cast<unsigned long long>(DisplayedEvents.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(ProjectionSuccesses.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(ProjectionFailures.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(ActiveProjectionAttempts.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(ActiveProjectionMisses.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(ProjectionRequestDrops.load(std::memory_order_relaxed)),
             FloatingDamage::ActiveCount(),
             FloatingDamage::PendingCount(),
             config.fontIndex,
@@ -707,11 +1467,15 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         return false;
     }
     if (!InstallDamageHook()) {
-        context->LogError("FloatingDamage: D2R 3.2.92777 damage-info signature mismatch; hook refused.");
+        context->LogError("FloatingDamage: D2R 3.2.92777 HP commit, client-unit lookup, camera-frame or native projection signatures could not be installed; plugin refused.");
         return false;
     }
     D3D12::SetDllModule(Module);
+    D3D12::SetDiagnosticLogCallback(LogOverlayDiagnostic);
+    FloatingDamage::SetTargetScreenPositionProvider(TryProjectTargetToScreen);
     if (!StartOverlayWorker()) {
+        FloatingDamage::SetTargetScreenPositionProvider(nullptr);
+        RemoveCameraFrameHook();
         context->LogError("FloatingDamage: DirectX 12 overlay worker could not be started.");
         return false;
     }
@@ -722,21 +1486,35 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
     if (!context->RegisterConsoleCommand(registration)) {
         context->LogWarn("FloatingDamage: console command could not be registered.");
     }
-    context->LogInfo("FloatingDamage 1.2.0 active for D2R 3.2.92777 with resolution-scaled numbers and the multi-overlay host.");
+    context->LogInfo("FloatingDamage 1.2.9 active for D2R 3.2.92777 with overlay render-path diagnostics and per-frame camera-thread multi-target projection.");
     return true;
 }
 
 D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
+    FloatingDamage::SetTargetScreenPositionProvider(nullptr);
     D3D12::SetExternalOverlayCallback(nullptr);
     D3D12::ClearNamedExternalOverlays();
     if (Context) {
-        char message[192]{};
+        char message[320]{};
+        const D3D12::OverlayDiagnostics overlay =
+            D3D12::GetOverlayDiagnostics();
         std::snprintf(
             message,
             sizeof(message),
-            "FloatingDamage stopped: captured=%llu; displayed=%llu.",
+            "FloatingDamage stopped: presents=%llu; queues=%llu; imgui_attempts=%llu; imgui_failures=%llu; init_stage=%u; overlay_frames=%llu; camera_frames=%llu; context_misses=%llu; captured=%llu; queued=%llu; forced=%llu; missed=%llu; request_drops=%llu.",
+            static_cast<unsigned long long>(overlay.presentCalls),
+            static_cast<unsigned long long>(overlay.directQueueCaptures),
+            static_cast<unsigned long long>(overlay.rendererInitAttempts),
+            static_cast<unsigned long long>(overlay.rendererInitFailures),
+            overlay.lastInitFailureStage,
+            static_cast<unsigned long long>(overlay.renderedFrames),
+            static_cast<unsigned long long>(CameraFrameTicks.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(RenderContextMisses.load(std::memory_order_relaxed)),
             static_cast<unsigned long long>(CapturedEvents.load(std::memory_order_relaxed)),
-            static_cast<unsigned long long>(DisplayedEvents.load(std::memory_order_relaxed)));
+            static_cast<unsigned long long>(DisplayedEvents.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(ActiveProjectionAttempts.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(ActiveProjectionMisses.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(ProjectionRequestDrops.load(std::memory_order_relaxed)));
         Context->LogInfo(message);
     }
     if (OverlayStopEvent) SetEvent(OverlayStopEvent);
@@ -750,6 +1528,8 @@ D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
         OverlayStopEvent = nullptr;
     }
     D3D12::RemoveHooks();
+    D3D12::SetDiagnosticLogCallback(nullptr);
+    RemoveCameraFrameHook();
     OverlayReady.store(false, std::memory_order_release);
     Context = nullptr;
 }

@@ -70,7 +70,43 @@ std::chrono::steady_clock::time_point LastFrameTime{};
 std::atomic<float> DisplayWidth{1920.0f};
 std::atomic<float> DisplayHeight{1080.0f};
 std::atomic<ExternalOverlayCallback> ExternalOverlay{};
+std::atomic<DiagnosticLogCallback> DiagnosticLogger{};
+std::atomic<std::uint64_t> PresentCalls{};
+std::atomic<std::uint64_t> DirectQueueCaptures{};
+std::atomic<std::uint64_t> RendererInitAttempts{};
+std::atomic<std::uint64_t> RendererInitFailures{};
+std::atomic<std::uint64_t> RenderedFrames{};
+std::atomic<std::uint32_t> LastInitFailureStage{};
+std::atomic<std::uint32_t> DiagnosticMessages{};
 constexpr std::size_t MaximumNamedOverlays = 8;
+
+enum DiagnosticMessage : std::uint32_t {
+    PresentInterceptedMessage = 1u << 0,
+    DirectQueueCapturedMessage = 1u << 1,
+    RendererInitializedMessage = 1u << 2,
+    FirstFrameRenderedMessage = 1u << 3,
+    RendererInitFailedMessage = 1u << 4,
+};
+
+void LogDiagnosticOnce(
+    std::uint32_t messageBit,
+    const char* message) noexcept {
+    const std::uint32_t previous = DiagnosticMessages.fetch_or(
+        messageBit, std::memory_order_acq_rel);
+    if ((previous & messageBit) != 0)
+        return;
+    if (const auto logger = DiagnosticLogger.load(std::memory_order_acquire))
+        logger(message);
+}
+
+bool FailRendererInitialization(
+    std::uint32_t stage,
+    const char* message) noexcept {
+    RendererInitFailures.fetch_add(1, std::memory_order_relaxed);
+    LastInitFailureStage.store(stage, std::memory_order_relaxed);
+    LogDiagnosticOnce(RendererInitFailedMessage, message);
+    return false;
+}
 
 struct NamedOverlayEntry {
     std::array<char, 64> owner{};
@@ -140,11 +176,16 @@ bool LoadFonts() noexcept {
 }
 
 bool InitializeRenderer(IDXGISwapChain3* swapChain) noexcept {
+    RendererInitAttempts.fetch_add(1, std::memory_order_relaxed);
     ComPtr<ID3D12Device> device;
-    if (FAILED(swapChain->GetDevice(IID_PPV_ARGS(&device)))) return false;
+    if (FAILED(swapChain->GetDevice(IID_PPV_ARGS(&device))))
+        return FailRendererInitialization(
+            1, "FloatingDamage overlay: renderer initialization failed at swap-chain device lookup.");
 
     DXGI_SWAP_CHAIN_DESC swapDesc{};
-    if (FAILED(swapChain->GetDesc(&swapDesc)) || swapDesc.BufferCount == 0 || !swapDesc.OutputWindow) return false;
+    if (FAILED(swapChain->GetDesc(&swapDesc)) || swapDesc.BufferCount == 0 || !swapDesc.OutputWindow)
+        return FailRendererInitialization(
+            2, "FloatingDamage overlay: renderer initialization failed at swap-chain description.");
     Window = swapDesc.OutputWindow;
     BackBufferFormat = swapDesc.BufferDesc.Format == DXGI_FORMAT_UNKNOWN
         ? DXGI_FORMAT_R8G8B8A8_UNORM
@@ -154,12 +195,16 @@ bool InitializeRenderer(IDXGISwapChain3* swapChain) noexcept {
     srvDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     srvDesc.NumDescriptors = 1;
     srvDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-    if (FAILED(device->CreateDescriptorHeap(&srvDesc, IID_PPV_ARGS(&SrvHeap)))) return false;
+    if (FAILED(device->CreateDescriptorHeap(&srvDesc, IID_PPV_ARGS(&SrvHeap))))
+        return FailRendererInitialization(
+            3, "FloatingDamage overlay: renderer initialization failed at SRV heap creation.");
 
     D3D12_DESCRIPTOR_HEAP_DESC rtvDesc{};
     rtvDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
     rtvDesc.NumDescriptors = swapDesc.BufferCount;
-    if (FAILED(device->CreateDescriptorHeap(&rtvDesc, IID_PPV_ARGS(&RtvHeap)))) return false;
+    if (FAILED(device->CreateDescriptorHeap(&rtvDesc, IID_PPV_ARGS(&RtvHeap))))
+        return FailRendererInitialization(
+            4, "FloatingDamage overlay: renderer initialization failed at RTV heap creation.");
 
     Frames.clear();
     Frames.resize(swapDesc.BufferCount);
@@ -167,35 +212,58 @@ bool InitializeRenderer(IDXGISwapChain3* swapChain) noexcept {
     const UINT descriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     for (UINT index = 0; index < swapDesc.BufferCount; ++index) {
         auto& frame = Frames[index];
-        if (FAILED(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frame.allocator)))) return false;
-        if (FAILED(swapChain->GetBuffer(index, IID_PPV_ARGS(&frame.renderTarget)))) return false;
+        if (FAILED(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frame.allocator))))
+            return FailRendererInitialization(
+                5, "FloatingDamage overlay: renderer initialization failed at command allocator creation.");
+        if (FAILED(swapChain->GetBuffer(index, IID_PPV_ARGS(&frame.renderTarget))))
+            return FailRendererInitialization(
+                6, "FloatingDamage overlay: renderer initialization failed at back-buffer lookup.");
         frame.descriptor = descriptor;
         device->CreateRenderTargetView(frame.renderTarget.Get(), nullptr, descriptor);
         descriptor.ptr += descriptorSize;
     }
 
     if (FAILED(device->CreateCommandList(
-            0, D3D12_COMMAND_LIST_TYPE_DIRECT, Frames[0].allocator.Get(), nullptr, IID_PPV_ARGS(&CommandList)))) return false;
-    if (FAILED(CommandList->Close())) return false;
+            0, D3D12_COMMAND_LIST_TYPE_DIRECT, Frames[0].allocator.Get(), nullptr, IID_PPV_ARGS(&CommandList))))
+        return FailRendererInitialization(
+            7, "FloatingDamage overlay: renderer initialization failed at command-list creation.");
+    if (FAILED(CommandList->Close()))
+        return FailRendererInitialization(
+            8, "FloatingDamage overlay: renderer initialization failed while closing the command list.");
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
     ImGui::StyleColorsDark();
-    if (!ImGui_ImplWin32_Init(Window)) return false;
+    if (!ImGui_ImplWin32_Init(Window))
+        return FailRendererInitialization(
+            9, "FloatingDamage overlay: renderer initialization failed at ImGui Win32 startup.");
     if (!ImGui_ImplDX12_Init(
             device.Get(), swapDesc.BufferCount, BackBufferFormat, SrvHeap.Get(),
-            SrvHeap->GetCPUDescriptorHandleForHeapStart(), SrvHeap->GetGPUDescriptorHandleForHeapStart())) return false;
-    if (!LoadFonts()) return false;
-    if (!ImGui_ImplDX12_CreateDeviceObjects()) return false;
+            SrvHeap->GetCPUDescriptorHandleForHeapStart(), SrvHeap->GetGPUDescriptorHandleForHeapStart()))
+        return FailRendererInitialization(
+            10, "FloatingDamage overlay: renderer initialization failed at ImGui DirectX 12 startup.");
+    if (!LoadFonts())
+        return FailRendererInitialization(
+            11, "FloatingDamage overlay: renderer initialization failed while loading embedded fonts.");
+    if (!ImGui_ImplDX12_CreateDeviceObjects())
+        return FailRendererInitialization(
+            12, "FloatingDamage overlay: renderer initialization failed while creating ImGui device objects.");
 
     LastFrameTime = std::chrono::steady_clock::now();
     RendererInitialized = true;
+    LogDiagnosticOnce(
+        RendererInitializedMessage,
+        "FloatingDamage overlay: ImGui renderer initialized successfully.");
     return true;
 }
 
 HRESULT STDMETHODCALLTYPE HookPresent(IDXGISwapChain3* swapChain, UINT syncInterval, UINT flags) noexcept {
+    PresentCalls.fetch_add(1, std::memory_order_relaxed);
+    LogDiagnosticOnce(
+        PresentInterceptedMessage,
+        "FloatingDamage overlay: intercepted the first game Present call.");
     std::scoped_lock lock(RenderMutex);
     if (!CommandQueue) return OriginalPresent(swapChain, syncInterval, flags);
     if (!RendererInitialized && !InitializeRenderer(swapChain)) {
@@ -214,10 +282,10 @@ HRESULT STDMETHODCALLTYPE HookPresent(IDXGISwapChain3* swapChain, UINT syncInter
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
     FloatingDamage::PollToggleHotkey(Window);
-    FloatingDamage::Update(delta);
     const ImGuiIO& io = ImGui::GetIO();
     DisplayWidth.store(io.DisplaySize.x, std::memory_order_relaxed);
     DisplayHeight.store(io.DisplaySize.y, std::memory_order_relaxed);
+    FloatingDamage::Update(delta);
     FloatingDamage::Render(ImGui::GetBackgroundDrawList(), io.DisplaySize);
     if (const auto overlay = ExternalOverlay.load(std::memory_order_acquire)) {
         overlay(
@@ -262,6 +330,13 @@ HRESULT STDMETHODCALLTYPE HookPresent(IDXGISwapChain3* swapChain, UINT syncInter
     if (FAILED(CommandList->Close())) return OriginalPresent(swapChain, syncInterval, flags);
     ID3D12CommandList* lists[]{CommandList.Get()};
     CommandQueue->ExecuteCommandLists(1, lists);
+    const std::uint64_t rendered = RenderedFrames.fetch_add(
+        1, std::memory_order_relaxed) + 1;
+    if (rendered == 1) {
+        LogDiagnosticOnce(
+            FirstFrameRenderedMessage,
+            "FloatingDamage overlay: submitted the first ImGui frame to the game command queue.");
+    }
     return OriginalPresent(swapChain, syncInterval, flags);
 }
 
@@ -270,7 +345,13 @@ void STDMETHODCALLTYPE HookExecuteCommandLists(
     UINT count,
     ID3D12CommandList* const* lists
 ) noexcept {
-    if (!CommandQueue && queue && queue->GetDesc().Type == D3D12_COMMAND_LIST_TYPE_DIRECT) CommandQueue = queue;
+    if (!CommandQueue && queue && queue->GetDesc().Type == D3D12_COMMAND_LIST_TYPE_DIRECT) {
+        CommandQueue = queue;
+        DirectQueueCaptures.fetch_add(1, std::memory_order_relaxed);
+        LogDiagnosticOnce(
+            DirectQueueCapturedMessage,
+            "FloatingDamage overlay: captured the game DirectX 12 command queue.");
+    }
     OriginalExecuteCommandLists(queue, count, lists);
 }
 
@@ -367,6 +448,10 @@ bool CreateHook(std::size_t methodIndex, void* target, void** original) noexcept
 
 void SetDllModule(HMODULE module) noexcept {
     Module = module;
+}
+
+void SetDiagnosticLogCallback(DiagnosticLogCallback callback) noexcept {
+    DiagnosticLogger.store(callback, std::memory_order_release);
 }
 
 void SetExternalOverlayCallback(ExternalOverlayCallback callback) noexcept {
@@ -509,6 +594,20 @@ void RemoveHooks() noexcept {
     MH_DisableHook(Methods[54]);
     ResetRenderer();
     HooksInstalled = false;
+}
+
+OverlayDiagnostics GetOverlayDiagnostics() noexcept {
+    return OverlayDiagnostics{
+        .presentCalls = PresentCalls.load(std::memory_order_relaxed),
+        .directQueueCaptures = DirectQueueCaptures.load(std::memory_order_relaxed),
+        .rendererInitAttempts = RendererInitAttempts.load(std::memory_order_relaxed),
+        .rendererInitFailures = RendererInitFailures.load(std::memory_order_relaxed),
+        .renderedFrames = RenderedFrames.load(std::memory_order_relaxed),
+        .lastInitFailureStage = LastInitFailureStage.load(std::memory_order_relaxed),
+        .hooksInstalled = HooksInstalled,
+        .commandQueueReady = static_cast<bool>(CommandQueue),
+        .rendererInitialized = RendererInitialized,
+    };
 }
 
 ImFont* GetFloatingDamageFont(int index) noexcept {
