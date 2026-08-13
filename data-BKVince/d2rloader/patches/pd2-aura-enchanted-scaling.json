@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "name": "PD2 Aura Enchanted Scaling",
+  "description": "Uses eight monster-only auras with PD2 level scaling and a level 13 cap.",
+  "patches": [
+    {
+      "description": "Store monster Conviction in verified executable padding",
+      "op": "bytes",
+      "rva": "0xA5840",
+      "expected": "CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC",
+      "bytes": "00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 07 00 00 00 C3 01 00 00"
+    },
+    {
+      "description": "Store monster Fanaticism in verified executable padding",
+      "op": "bytes",
+      "rva": "0xA5858",
+      "expected": "CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC",
+      "bytes": "00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 07 00 00 00 C4 01 00 00"
+    },
+    {
+      "description": "Store monster Holy Shock in verified executable padding",
+      "op": "bytes",
+      "rva": "0xA5870",
+      "expected": "CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC",
+      "bytes": "00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 07 00 00 00 71 01 00 00"
+    },
+    {
+      "description": "Store monster Holy Freeze in verified executable padding",
+      "op": "bytes",
+      "rva": "0xA5888",
+      "expected": "CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC",
+      "bytes": "00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 07 00 00 00 6D 01 00 00"
+    },
+    {
+      "description": "Store monster Holy Fire in verified executable padding",
+      "op": "bytes",
+      "rva": "0xA58A0",
+      "expected": "CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC",
+      "bytes": "00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 07 00 00 00 70 01 00 00"
+    },
+    {
+      "description": "Store monster Might in verified executable padding",
+      "op": "bytes",
+      "rva": "0xA58B8",
+      "expected": "CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC",
+      "bytes": "00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 07 00 00 00 C5 01 00 00"
+    },
+    {
+      "description": "Store monster Concentration in verified executable padding",
+      "op": "bytes",
+      "rva": "0xA58D0",
+      "expected": "CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC",
+      "bytes": "00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 07 00 00 00 C6 01 00 00"
+    },
+    {
+      "description": "Store monster Vigor in verified executable padding",
+      "op": "bytes",
+      "rva": "0xA58E8",
+      "expected": "CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC",
+      "bytes": "00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 07 00 00 00 C7 01 00 00"
+    },
+    {
+      "description": "Redirect the eligibility check to the relocated aura records",
+      "op": "bytes",
+      "rva": "0x495E04",
+      "expected": "41 39 B4 C4 70 DE D1 01",
+      "bytes": "41 39 B4 C4 40 58 0A 00"
+    },
+    {
+      "description": "Redirect the eligibility weight read to the relocated aura records",
+      "op": "bytes",
+      "rva": "0x495E0E",
+      "expected": "41 8B 84 C4 74 DE D1 01",
+      "bytes": "41 8B 84 C4 44 58 0A 00"
+    },
+    {
+      "description": "Count all eight Aura Enchanted choices",
+      "op": "bytes",
+      "rva": "0x495E20",
+      "expected": "48 83 F9 07",
+      "bytes": "48 83 F9 08"
+    },
+    {
+      "description": "Redirect the selection check to the relocated aura records",
+      "op": "bytes",
+      "rva": "0x495E94",
+      "expected": "41 39 B4 C4 70 DE D1 01",
+      "bytes": "41 39 B4 C4 40 58 0A 00"
+    },
+    {
+      "description": "Redirect the selection weight read to the relocated aura records",
+      "op": "bytes",
+      "rva": "0x495E9E",
+      "expected": "41 8B 84 C4 74 DE D1 01",
+      "bytes": "41 8B 84 C4 44 58 0A 00"
+    },
+    {
+      "description": "Select across all eight Aura Enchanted choices",
+      "op": "bytes",
+      "rva": "0x495EB5",
+      "expected": "48 83 F9 07",
+      "bytes": "48 83 F9 08"
+    },
+    {
+      "description": "Validate the selected index against eight aura records",
+      "op": "bytes",
+      "rva": "0x495ECE",
+      "expected": "48 83 F8 07",
+      "bytes": "48 83 F8 08"
+    },
+    {
+      "description": "Redirect the selected aura record read to the relocated pool",
+      "op": "bytes",
+      "rva": "0x495EF2",
+      "expected": "41 0F 10 94 CC 70 DE D1 01",
+      "bytes": "41 0F 10 94 CC 40 58 0A 00"
+    },
+    {
+      "description": "Redirect the selected aura divisor and skill read to the relocated pool",
+      "op": "bytes",
+      "rva": "0x495EFB",
+      "expected": "F2 41 0F 10 84 CC 80 DE D1 01",
+      "bytes": "F2 41 0F 10 84 CC 50 58 0A 00"
+    },
+    {
+      "description": "Cap ordinary Aura Enchanted skills at level 13",
+      "op": "bytes",
+      "rva": "0x495DC4",
+      "expected": "45 8D 6E 62",
+      "bytes": "45 8D 6E 0C"
+    },
+    {
+      "description": "Keep Lord de Seis fixed to monster Fanaticism in the reordered pool",
+      "op": "bytes",
+      "rva": "0x495DD5",
+      "expected": "8D 4B 05",
+      "bytes": "8D 4B 01"
+    }
+  ]
+}

@@ -128,7 +128,7 @@ pas être masqué en ajoutant des flags sans consommateur prouvé.
 
 | # | Changement audité | Décision et cible BKVince exacte | Cellules/ressources et route | Dépendances | Tests solo | Rollback |
 |---:|---|---|---|---|---|---|
-| 1 | Holy Shock dans Aura Enchanted | **ACCEPT conditionnel** : conserver `upick(H)=12`; retirer le doublon Fanaticism; préserver les outcomes BKV voulus, dont Vigor; ajouter un outcome Holy Fire réel et un Holy Shock réel; pool final et niveau PD2 `clamp(floor(mlvl/7),1,13)` | `monumod.txt`, `skills.txt`, sélecteur Aura Enchanted — **TXT + native** | préserver les réaffectations BKV voulues; prouver ordinals et sélecteur 92777; classifier les fixed mods | T0, T3 | R1 + R4 |
+| 1 | Holy Shock dans Aura Enchanted | **IMPLANTÉ** : fréquence `6/6/12`; pool monster-only `[MonConviction, MonFanaticism, MonHolyShock, MonHolyFreeze, MonHolyFire, MonMight, MonConcentration, MonVigor]`; niveau `clamp(floor(mlvl/7),1,13)`; portée ×2; Vigor conserve sa courbe BKVince ≈ `13–39 %` au lieu du scaling PD2 | `monumod.txt`, `skills.txt`, `pd2-aura-enchanted-scaling.json` — **TXT + memory patch gouverné** | ordinals et sélecteur 92777 prouvés; Lord de Seis reste Fanaticism; Uber Meph reste hors de ce lot | T0 passé, T3 en jeu restant | R1 + R4 |
 | 2 | Dolls PD2 | **ACCEPT** sur les huit Dolls classiques BKV : proc 100 %, délai visé 25 frames, rayon 4, dégâts physiques fixes N `18–30`, NM `54–96`, H `318–540`; conserver l'explosion BKV des Rift Dolls et le comportement `ISREVIVE` | `monstats.txt`, `monprop.txt`, `properties.txt`, `itemstatcost.txt`, `skills.txt`, `missiles.txt`, AnimData au besoin — **TXT + native** | funcs event/skill/missile 92777; classification classique/Rift; ownership | T0, T4 | R1 + R4 |
 | 3 | `primeevil` comme axe | **ACCEPT** : liste exacte de 15 ci-dessus; `uberizual=1`, `baalclone` vide; ne pas étendre aux 149 flags PD2 | `monstats.txt.primeevil` — **TXT**; consommateurs séparés — **native** | contrat stable `PrimeEvilRules` | T0, T5 | R1/R4 |
 | 4 | Taxonomies Act/Apex/Rift/etc. | **DEFER** : aucun sidecar ni taxonomie chargée dans ce merge | aucun fichier — route future **TXT/native** | définitions et loader futurs | aucun tant que différé | R0 |
@@ -207,9 +207,9 @@ modifier `monlvl.txt`. Les cellules réellement écrites sont :
 3. **Statistiques et économie ciblée** : Andariel, Nihlathak, Countess, Summoner,
    Duriel, Blood Raven, puis adaptation TC Andy/Duriel/TZ et poids d'essences.
    Les changements de skill/summons Blood Raven peuvent être scindés du HP.
-4. **Aura Enchanted** : après preuve du sélecteur et des réaffectations BKV;
-   garder `upick(H)=12`, retirer le doublon Fanaticism, ajouter Holy Fire et Holy
-   Shock réels tout en conservant Vigor.
+4. **Aura Enchanted — implanté le 12 août 2026** : sélecteur 92777 prouvé et
+   redirigé vers huit auras monster-only; `upick=6/6/12`, Holy Fire et Holy Shock
+   réels, portée ×2, scaling `mlvl/7` cap13; Vigor conserve la courbe BKVince.
 5. **Dolls** : huit classiques selon PD2; Rift Dolls et `ISREVIVE` préservés.
 6. **Règles Prime Evil** : flags exacts, puis immunité universelle à tous les
    slows et chaque autre protection/multiplicateur comme sous-lot isolé. La
@@ -233,7 +233,7 @@ modifier `monlvl.txt`. Les cellules réellement écrites sont :
 - Le rollback s'exécute par lot : cellules, graphe TC, override DS1 ou guard
   natif; jamais par restauration globale d'une table ou désactivation d'un plugin.
 
-## État d'implantation — 2026-08-10
+## État d'implantation — 2026-08-12
 
 `ACCEPT` demeure une décision de design dans la matrice; l'état technique réel
 du merge est le suivant.
@@ -242,9 +242,10 @@ du merge est le suivant.
   Summoner; Blood Raven hybride et ses summons/skills/missiles dédiés;
   `MephComp.ds1`; liste Prime Evil de 15 et `ColdEffect=0`; graphes TC
   Andy/Meph/Duriel/Baal, quest et TZ; poids d'essences; trio Uber recalibré;
-  `BKV Baal Lowres` niveau 13 dans le slot 6 d'Uber Baal.
-- **Non implanté, dépendance native ouverte** : pool Aura Enchanted; explosions
-  des huit Dolls; ralentissements Prime autres que chill/froid; quatre curses
+  `BKV Baal Lowres` niveau 13 dans le slot 6 d'Uber Baal; pool Aura Enchanted
+  monster-only PD2 avec exception Vigor BKVince.
+- **Non implanté, dépendance native ouverte** : explosions des huit Dolls;
+  ralentissements Prime autres que chill/froid; quatre curses
   d'AI; dégâts ×2 mercenaires/pets; Conviction spéciale d'Uber Mephisto. Aucun
   sidecar, loader, plugin ou DLL n'a été créé pour contourner ces gates.
 - **Validation statique passée** : round-trip byte-exact CRLF, `verify:data`,
@@ -266,3 +267,10 @@ du merge est le suivant.
   `AE8E8E8487CA34293221032E17E06168912A0482645F36F5336E0748D29F892F`.
   Les combats ciblés, la sauvegarde/recharge et les tests T1/T3/T4/T5/T6/T7
   restent `not run`; ils ne sont pas implicitement validés par le démarrage.
+- **Aura Enchanted validé techniquement le 12 août** : `skills.txt` revient à
+  Vanilla pour les auras Paladin, ajoute les huit rows monster-only avec portée
+  ×2 et paramètres PD2 sauf `MonVigor`; le patch natif reloge huit records,
+  applique `mlvl/7` et le cap13. Cold start complet : `17/17` fichiers de
+  patches, `19/19` plugins actifs, `24/24`, zéro rejet/échec. La relecture
+  mémoire confirme les 19 écritures et les huit IDs exacts. Le témoin T3 en jeu
+  sur plusieurs packs et paliers de niveau reste à exécuter.

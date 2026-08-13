@@ -726,6 +726,43 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   ce store, de sorte que le morceau de la zone de base reste actif tandis que
   les dix autres champs hérités continuent d'être copiés nativement.
 
+## Aura Enchanted — pool et scaling PD2
+
+- La table runtime de callbacks à la RVA `0x2395FE0` contient exactement 43
+  pointeurs. Son masque nul/non nul correspond aux indices MonUMod hérités et
+  l'index `30` pointe sur `MONSTERUNIQUE_UMod30_AuraEnchanted 0x495CD0`.
+  L'entrée possède une signature stricte de 32 octets unique sous 92777.
+- Le chemin ordinaire lit `STAT_LEVEL=12`, borne le niveau source à au moins 1,
+  choisit un record pondéré, calcule
+  `multiplier * (mlvl + offset) / divisor`, puis borne le résultat entre 1 et
+  99 avant d'ajouter et d'assigner le skill. Lord de Seis impose l'index 5 dans
+  Vanilla; Uber Mephisto conserve une branche séparée Conviction 123 niveau 20.
+- La table Vanilla à `0x1D1DE70` comporte sept records de `0x18` octets, pas
+  huit : `[98/6, 368/6, 108/5, 365/7, 123/8, 122/8, 369/8]`, avec un seuil 20
+  sur Holy Shock. La table distincte qui commence à `0x1D1DF20` chevauche
+  l'espace qu'occuperait un huitième record; elle ne peut donc pas être écrasée.
+- Le patch BKVince place huit records dans la plage `0xA5840..0xA58FF`, à
+  l'intérieur d'un intervalle `CC` `0xA583B..0xA5EBF` sans xref indexée. Les
+  six lectures de table et les trois bornes de boucle sont redirigées vers
+  `[451,452,369,365,368,453,454,455]`, tous pondérés 1 et divisés par 7. Le
+  plafond natif devient 13 et l'index spécial de Lord de Seis devient 1, soit
+  `MonFanaticism 452` dans le nouvel ordre.
+- Les huit rows `skills.txt` sont monster-only et ont une portée doublée.
+  Might, Concentration, Fanaticism, Conviction, Holy Fire, Holy Freeze et Holy
+  Shock reprennent leurs paramètres PD2. `MonVigor 455` conserve expressément
+  la courbe BKVince `Param5=7`, `Param6=50`, soit environ 13–39 % aux niveaux
+  d'aura 1–13, sans le passif PD2 additionnel `blvl/2`.
+- Au cold start complet du 12 août 2026, D2RLoader a appliqué `17/17` fichiers
+  de patches et activé `19/19` plugins, sans rejet ni échec, puis atteint
+  `24/24`. La relecture mémoire a confirmé les 19 écritures et les huit records
+  exacts. Les tables source/runtime `skills.txt` et `monumod.txt` sont
+  hash-identiques; Aura Enchanted reste à `6/6/12`.
+
+La référence sémantique
+`D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/MONSTER/MonsterUnique.cpp:601-652`
+explique les champs et le flux historique; aucune adresse, structure ou ABI
+32 bits n'a été transposée.
+
 ## Discipline de promotion
 
 Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de

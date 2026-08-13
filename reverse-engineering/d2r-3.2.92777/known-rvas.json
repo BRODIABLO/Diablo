@@ -2882,6 +2882,30 @@
       "confidence": "high",
       "source": "data-BKVince/d2rloader/patches/preserve-terror-zone-area-music.json; Mission/D2RMM-D2RLoader-integration.md",
       "notes": "Unique six-byte store 89 05 1F B5 88 02 in build 92777. It copies only the inherited sound-environment Song field loaded from record+0x34 into the active environment. NOPing this store preserves the base area's current music while leaving the ten adjacent inherited ambience and event assignments native."
+    },
+    {
+      "rva": "0x495CD0",
+      "name": "MONSTERUNIQUE_UMod30_AuraEnchanted",
+      "kind": "function",
+      "confidence": "high",
+      "source": "data-BKVince/d2rloader/patches/pd2-aura-enchanted-scaling.json; Mission/monster-decisions.md",
+      "notes": "Exact build-92777 Aura Enchanted callback reached through index 30 of the 43-entry MonUMod dispatcher at RVA 0x2395FE0. Its unique 32-byte entry signature is 40 55 53 57 48 8B EC 48 83 EC 70 41 8B D8 48 8B F9 48 85 C9 74 0A E8 E5 5C EB FF 83 F8 01 74 1B. The ordinary path reads monster stat level 12, selects from weighted 0x18-byte aura records, computes multiplier*(level+offset)/divisor, clamps it and assigns the selected skill. BKVince redirects only that ordinary pool to eight monster-only records, changes the upper clamp from 99 to 13 and keeps the native Uber Mephisto level-20 branch."
+    },
+    {
+      "rva": "0x2395FE0",
+      "name": "MONSTERUNIQUE_UModInitCallbacks",
+      "kind": "data-table",
+      "confidence": "high",
+      "source": "Mission/monster-decisions.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Runtime-initialized table of 43 absolute x64 callback pointers. Its non-null mask exactly matches MonUMod indices 1,2,4,5,6,8,9,16,17,18,23,25,26,27,28,30,36,37,38,39,41; index 30 resolves to RVA 0x495CD0. The mapping was recovered independently from a full-stack build-92777 process; D2MOO supplies semantic names only."
+    },
+    {
+      "rva": "0x1D1DE70",
+      "name": "MONSTERUNIQUE_VanillaAuraEnchantedRecords",
+      "kind": "data-table",
+      "confidence": "high",
+      "source": "Mission/monster-decisions.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Runtime-initialized vanilla Aura Enchanted array of seven 0x18-byte records with fields minLevel, weight, levelOffset, multiplier, divisor and skillId. The original skill IDs are 98,368,108,365,123,122,369 with divisors 6,6,5,7,8,8,8 and Holy Shock minimum level 20. The distinct four-record table beginning at 0x1D1DF20 overlaps what would have been an eighth 0x18-byte slot, so BKVince relocates its exact eight-record pool to verified padding instead of overwriting adjacent native data."
     }
   ]
 }

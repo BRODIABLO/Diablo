@@ -20675,6 +20675,11 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "pd2-aura-enchanted-scaling.json",
+                                                                                                     "path":  "data-BKVince/d2rloader/patches/pd2-aura-enchanted-scaling.json",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "player-difficulty-overrides.json",
                                                                                                      "path":  "data-BKVince/d2rloader/patches/player-difficulty-overrides.json",
                                                                                                      "kind":  "file"
