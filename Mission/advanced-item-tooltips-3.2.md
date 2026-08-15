@@ -620,3 +620,80 @@ n'est ni causé ni masqué par Advanced Item Tooltips.
 Après l'isolation, les cinq DLL PluginPack ont été restaurées byte-identiques
 dans le profil BKVince et le jeu a été laissé fermé pour la reprise de leurs
 propres tests.
+
+## Conception BKVince consignée le 15 août 2026 — métadonnées contextuelles
+
+Cette section consigne uniquement le nouveau backlog produit discuté avec
+Vincent. Elle ne décrit pas une implantation déjà réalisée. La cible est une
+extension activée pour BKVince seulement; le comportement et les défauts de la
+distribution publique d'Advanced Item Tooltips ne doivent pas changer.
+
+### Fonctions retenues
+
+- Pour les weapons, afficher leur vitesse de base et leur melee range. Ces
+  valeurs doivent provenir des tables du mod actif plutôt que d'une liste
+  BKVince codée en dur.
+- Ajouter une étoile rouge à chaque ligne de propriété réellement ajoutée par
+  une corruption et une étoile dorée à chaque ligne réellement ajoutée par un
+  Augment. Si les deux provenances contribuent à la même ligne native, les deux
+  marqueurs peuvent être affichés de manière déterministe.
+- Calculer les ranges des propriétés provenant des recettes Corruption,
+  Augment et Tempered lorsque l'état final de l'objet permet d'identifier la
+  recette ou la famille de recettes sans ambiguïté. En cas d'histoires
+  concurrentes impossibles à départager, ne pas inventer de range.
+- Pour les charms, afficher les informations contextuelles utiles au reroll :
+  item level, recette applicable et règle de nombre d'affixes seulement si la
+  règle active de BKVince peut être lue et démontrée. Le seuil illustré par une
+  capture externe ne doit pas être codé en dur.
+- Pour un objet magic, rare, crafted, set ou unique admissible, non corrompu et
+  non socketé, afficher son potentiel maximal de sockets obtenu spécifiquement
+  par une recette de corruption BKVince. La valeur doit être dérivée des
+  recettes actives et bornée par la capacité réelle de la base.
+- Lorsque la touche de maintien configurée est pressée, ajouter un bloc doré
+  listant les runewords admissibles et leur séquence de runes. Cette fonction
+  s'applique exclusivement à une base grise déjà socketée dont tous les
+  sockets sont vides. Les candidats doivent correspondre au type de la base et
+  à son nombre exact de sockets.
+- Le bloc de runewords ne doit jamais apparaître sur une base non socketée, un
+  objet magic/rare/crafted/set/unique, un objet contenant déjà une rune, une
+  gemme ou un jewel, ni sur un runeword terminé. En mode de ranges `Always`, la
+  même touche reste disponible pour ce bloc contextuel; la touche par défaut
+  demeure `Shift`.
+
+### Contraintes d'implantation
+
+- Lire et pré-indexer au chargement les tables BKVince nécessaires, notamment
+  `runes.txt`, `itemtypes.txt`, `cubemain.txt`, les tables d'items et les
+  propriétés. Aucun parcours complet des recettes ne doit avoir lieu à chaque
+  hover.
+- Résoudre les noms de runewords et de runes avec les clés natives du mod afin
+  de préserver le support multilingue existant.
+- Inclure dans la clé de cache l'état de la touche contextuelle, l'identité de
+  l'objet, son item level, ses sockets et les marqueurs persistants pertinents.
+- Les marqueurs de corruption et d'augment observés dans les tables BKVince
+  constituent une preuve exploitable, mais leurs IDs doivent être relus depuis
+  les tables actives et non codés en dur.
+- Les recettes de corruption doivent être filtrées avec leurs prédicats
+  complets, y compris l'identité exacte des uniques lorsqu'elle est requise.
+  Une simple correspondance par qualité ou type serait insuffisante.
+- Une recette Tempered répétable peut perdre l'historique exact de ses passages.
+  Les ranges cumulés ne sont affichables que si cet historique est prouvé par
+  l'état persistant de l'objet; sinon, le cas reste volontairement fail-closed.
+
+### Hors périmètre confirmé
+
+- Ne pas ajouter de ligne Enhanced Damage abrégée près du nom de l'objet.
+- Ne pas ajouter de note de recette d'upgrade ni de requirements projetés : la
+  recette est jugée suffisamment simple et constante.
+- Ne pas distinguer Larzuk de la recette Cube pour les bases blanches.
+  Conserver la ligne `Max Sockets` et son comportement actuels.
+- Ne proposer aucune recette de runeword sur une base non socketée.
+
+### Gates avant implantation ou validation runtime
+
+- Confirmer le format visuel exact et le placement de chaque nouveau bloc.
+- Ajouter des tests déterministes pour les filtres de runewords, les marqueurs
+  multiples, les recettes ambiguës et le cache sans accès disque au hover.
+- Vérifier les cas Corruption, Augment, Tempered, charms et bases grises
+  socketées vides dans BKVince. Aucun cold start ni test en jeu ne doit être
+  lancé sans l'autorisation préalable de Vincent.
