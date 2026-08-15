@@ -1,0 +1,37 @@
+{
+  "id": "smoke-launch-save-exit",
+  "fixture": "default-test-character",
+  "steps": [
+    {
+      "action": "launch_or_reuse_game"
+    },
+    {
+      "action": "focus_game"
+    },
+    {
+      "action": "select_character"
+    },
+    {
+      "action": "enter_game"
+    },
+    {
+      "action": "wait_for_in_game"
+    },
+    {
+      "action": "open_inventory"
+    },
+    {
+      "action": "capture",
+      "name": "inventory-open"
+    },
+    {
+      "action": "close_inventory"
+    },
+    {
+      "action": "save_and_exit"
+    },
+    {
+      "action": "wait_for_character_select"
+    }
+  ]
+}

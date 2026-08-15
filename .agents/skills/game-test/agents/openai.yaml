@@ -1,0 +1,6 @@
+interface:
+  display_name: "Game Test"
+  short_description: "Exécuter des tests D2R hors ligne rapides"
+  default_prompt: "Utilise $game-test pour exécuter le smoke test D2R hors ligne et analyser ses preuves."
+policy:
+  allow_implicit_invocation: false

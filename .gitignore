@@ -24,6 +24,12 @@ deno.lock
 reverse-engineering/**/analysis-cache/
 reverse-engineering/**/sdk-contribution/*.zip
 
+# Local D2R game-test calibration, configuration, and run evidence.
+/tools/GameTestRunner/config.local.json
+/tools/GameTestRunner/calibration.local/
+/game-tests/artifacts/*
+!/game-tests/artifacts/.gitkeep
+
 # Reference externe : guide D2R communautaire (clone local, non versionne)
 guide/
 

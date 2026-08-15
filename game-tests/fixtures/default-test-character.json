@@ -1,0 +1,9 @@
+{
+  "id": "default-test-character",
+  "characterName": "QtyTester",
+  "files": [
+    "QtyTester.d2s"
+  ],
+  "sourceSha256": "a28f46040b65100b1110967365dc617f3fc8ebefebd75c50bdab890939b3c030",
+  "preserveWorkingCopy": true
+}

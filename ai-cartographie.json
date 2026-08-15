@@ -265,6 +265,36 @@
                                                                                              ]
                                                                             },
                                                                             {
+                                                                                "name":  "game-test",
+                                                                                "path":  ".agents/skills/game-test",
+                                                                                "kind":  "directory",
+                                                                                "meta":  {
+                                                                                             "role":  "x-game-test-skill",
+                                                                                             "summary":  "Skill repo-scoped à invocation explicite pour exécuter des tests D2R hors ligne rapides avec GameTestRunner et analyser leurs preuves.",
+                                                                                             "agentAccess":  "read-write",
+                                                                                             "status":  "active"
+                                                                                         },
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "agents",
+                                                                                                     "path":  ".agents/skills/game-test/agents",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "openai.yaml",
+                                                                                                                          "path":  ".agents/skills/game-test/agents/openai.yaml",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "SKILL.md",
+                                                                                                     "path":  ".agents/skills/game-test/SKILL.md",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
                                                                                 "name":  "plugin-architect",
                                                                                 "path":  ".agents/skills/plugin-architect",
                                                                                 "kind":  "directory",
@@ -37755,6 +37785,55 @@
                                                    ]
                                   },
                                   {
+                                      "name":  "game-tests",
+                                      "path":  "game-tests",
+                                      "kind":  "directory",
+                                      "meta":  {
+                                                   "role":  "x-game-test-cases",
+                                                   "summary":  "Scénarios et manifestes de fixtures versionnés pour les tests D2R hors ligne; les artefacts d’exécution locaux restent ignorés.",
+                                                   "agentAccess":  "read-write",
+                                                   "status":  "active"
+                                               },
+                                      "children":  [
+                                                       {
+                                                           "name":  "artifacts",
+                                                           "path":  "game-tests/artifacts",
+                                                           "kind":  "directory",
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  ".gitkeep",
+                                                                                "path":  "game-tests/artifacts/.gitkeep",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "fixtures",
+                                                           "path":  "game-tests/fixtures",
+                                                           "kind":  "directory",
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "default-test-character.json",
+                                                                                "path":  "game-tests/fixtures/default-test-character.json",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "scenarios",
+                                                           "path":  "game-tests/scenarios",
+                                                           "kind":  "directory",
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "smoke-launch-save-exit.json",
+                                                                                "path":  "game-tests/scenarios/smoke-launch-save-exit.json",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       }
+                                                   ]
+                                  },
+                                  {
                                       "name":  "Mission",
                                       "path":  "Mission",
                                       "kind":  "directory",
@@ -39431,6 +39510,34 @@
                                                                             {
                                                                                 "name":  "README.md",
                                                                                 "path":  "tools/D2R-Sprite-ED2R/README.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "GameTestRunner",
+                                                           "path":  "tools/GameTestRunner",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-game-test-runner",
+                                                                        "summary":  "Orchestrateur PowerShell et exécuteur AutoHotkey v2 génériques pour des séquences D2R hors ligne rapides, sûres et traçables.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "active"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "config.example.json",
+                                                                                "path":  "tools/GameTestRunner/config.example.json",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "GameTestRunner.ahk",
+                                                                                "path":  "tools/GameTestRunner/GameTestRunner.ahk",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "Invoke-GameTest.ps1",
+                                                                                "path":  "tools/GameTestRunner/Invoke-GameTest.ps1",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]

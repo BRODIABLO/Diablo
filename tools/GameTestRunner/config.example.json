@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "launcherExecutable": "",
+  "gameExecutable": "",
+  "launcherArguments": [
+    "-mod",
+    "BKVince",
+    "-txt",
+    "-offline"
+  ],
+  "workingDirectory": "",
+  "fixtureSourceDirectory": "",
+  "testSaveDirectory": "",
+  "runtimeModInfoPath": "",
+  "testSavePathName": "BKVinceGameTest",
+  "testCharacter": "QtyTester",
+  "windowMode": "windowed",
+  "resolution": "1920x1080",
+  "artifactDirectory": "game-tests/artifacts",
+  "autoHotkeyExecutable": "",
+  "processNames": [
+    "D2R",
+    "D2RLoader"
+  ],
+  "windowTitle": "Diablo II: Resurrected",
+  "inputProfile": "1920x1080-windowed",
+  "inputProfiles": {
+    "1920x1080-windowed": {
+      "expectedClientSize": {
+        "width": 1920,
+        "height": 1080
+      },
+      "geometryTolerancePixels": 24,
+      "keys": {
+        "inventory": "i",
+        "escape": "Escape"
+      },
+      "coordinates": {
+        "play": {
+          "x": 0.39,
+          "y": 0.9
+        },
+        "difficulty": {
+          "x": 0.5,
+          "y": 0.55
+        },
+        "saveAndExit": {
+          "x": 0.5,
+          "y": 0.46
+        }
+      },
+      "characterSelection": {
+        "templatePath": "LOCAL_ONLY/templates/QtyTester.png",
+        "searchRegion": {
+          "x": 0.8,
+          "y": 0.03,
+          "width": 0.19,
+          "height": 0.92
+        },
+        "clickOffset": {
+          "x": 0.041,
+          "y": 0.021
+        },
+        "fallbackPosition": {
+          "x": 0.9,
+          "y": 0.08
+        }
+      },
+      "stateProbes": {
+        "CHARACTER_SELECT": {
+          "templatePath": "LOCAL_ONLY/templates/character-select.png",
+          "searchRegion": {
+            "x": 0.29,
+            "y": 0.84,
+            "width": 0.22,
+            "height": 0.14
+          },
+          "variation": 32
+        },
+        "IN_GAME": {
+          "templatePath": "LOCAL_ONLY/templates/in-game.png",
+          "searchRegion": {
+            "x": 0.42,
+            "y": 0.83,
+            "width": 0.16,
+            "height": 0.16
+          },
+          "variation": 32
+        },
+        "ESC_MENU": {
+          "templatePath": "LOCAL_ONLY/templates/escape-menu.png",
+          "searchRegion": {
+            "x": 0.34,
+            "y": 0.19,
+            "width": 0.32,
+            "height": 0.62
+          },
+          "variation": 32
+        },
+        "INVENTORY_OPEN": {
+          "templatePath": "LOCAL_ONLY/templates/inventory-open.png",
+          "searchRegion": {
+            "x": 0.51,
+            "y": 0.08,
+            "width": 0.48,
+            "height": 0.83
+          },
+          "variation": 32
+        }
+      },
+      "timeoutsMs": {
+        "windowReady": 120000,
+        "characterSelect": 90000,
+        "inGame": 120000,
+        "inventory": 5000,
+        "transition": 15000,
+        "runnerStartup": 10000,
+        "runner": 300000
+      },
+      "delaysMs": {
+        "input": 80,
+        "afterCharacterSelection": 250,
+        "afterPlay": 1000,
+        "afterDifficulty": 1000,
+        "afterMenuOpen": 250,
+        "afterAction": 100,
+        "pollInterval": 250
+      }
+    }
+  }
+}

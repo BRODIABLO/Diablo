@@ -1,6 +1,6 @@
 # BKVCombat 0.1 — Release 1 Damage Core
 
-Dernière mise à jour : 10 août 2026
+Dernière mise à jour : 15 août 2026
 
 ## Décision et état
 
@@ -68,9 +68,38 @@ la table active. Aucune allowlist C++ de noms de boss n’est autorisée.
   technique current-stack**;
 - négociation lazy MeleeSplash→BKVCombat et témoins gameplay : **NOT RUN**.
 
+## Prérequis GameTestRunner retenu
+
+Vincent a retenu l’option A le 15 août 2026 : fermer d’abord le trajet vertical
+repo-scoped `game-test` / `GameTestRunner`, puis seulement ouvrir la matrice
+gameplay BKVCombat. Son premier gate est le scénario générique
+`smoke-launch-save-exit` sur une copie isolée du personnage de test niveau 99
+`QtyTester`. Il doit produire une capture d’inventaire et un `result.json`,
+confirmer le retour à la sélection après `Save and Exit`, refuser tout bloc
+d’inputs hors de la fenêtre D2R et conserver les sauvegardes originales
+byte-exactes. Un échec volontaire et le hotkey d’arrêt `Pause` font partie du
+gate.
+
+Ce prérequis est **fermé par preuves réelles le 15 août 2026**. Le run
+`20260815-114640043` passe 10/10 étapes en 31,7 s sous le profil local
+3840×2160, produit
+la capture d’inventaire, exécute `Save and Exit` et confirme
+`CHARACTER_SELECT`; le modinfo, les sauvegardes originales et la fixture source
+restent byte-exacts. L’échec volontaire `20260815-114719747` capture puis refuse
+`open_inventory` hors `IN_GAME` sans envoyer d’input, et le run
+`20260815-114810431` prouve l’arrêt `Pause` avec code AHK 130 et cleanup complet.
+La v1 ferme encore toute session existante avant de rediriger le savepath et
+referme D2R avant restauration; la réutilisation sûre reste un lot ultérieur.
+
+Ce smoke ne vaut **aucune preuve des politiques de combat**. L’intégration future
+au BKVince Hero Editor est limitée à des recettes de fixtures versionnées
+appliquées par son codec à des copies de travail; elle n’est pas construite dans
+le lot actuel.
+
 ## Prochain gate
 
-1. Vérifier en solo les caps et multiplicateurs Critical/Deadly, les quatre
+1. Vérifier en solo avec `GameTestRunner` les caps et multiplicateurs
+   Critical/Deadly, les quatre
    classes CB, le player-count, ranged, CBE `0/+100`, les trois stacks OW et leur
    rafraîchissement, ainsi que Life/Mana Steal et Life Tap.
 2. Confirmer au premier hit la négociation lazy MeleeSplash→BKVCombat,

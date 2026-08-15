@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-10",
+  "updatedAt": "2026-08-15",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -503,6 +503,9 @@
       "include": [
         ".github/workflows/pd2-skills-workbench.yml",
         "Mission/pd2-inspiration-bkvince.md",
+        "Mission/bkvcombat-0.1.md",
+        ".agents/skills/game-test/**",
+        "game-tests/**",
         "Mission/pd2-monsters-bosses-vs-bkvince-audit.md",
         "Mission/monster-decisions.md",
         "Mission/pd2-skills-*",
