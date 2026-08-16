@@ -196,21 +196,23 @@ function main() {
   assert(value(andarielHell, treasureIndexes, 'Prob1', 'treasureclassex.txt') === '1',
     'treasureclassex.txt: probabilite de la classe essence invalide pour Andariel (H)');
 
-  const riftNightmare = uniqueRow(
-    treasureClasses,
-    'Rift Crafts (N) Premium',
-    'treasureclassex.txt',
-  );
   const riftBase = uniqueRow(
     treasureClasses,
     'Rift Crafts Premium',
     'treasureclassex.txt',
   );
-  assert(treasureClasses.rows.indexOf(riftNightmare) < treasureClasses.rows.indexOf(riftBase),
-    'treasureclassex.txt: Rift Crafts (N) Premium doit preceder son appelant');
   assert(value(riftBase, treasureIndexes, 'Item1', 'treasureclassex.txt')
-    === 'Rift Crafts (N) Premium',
-  'treasureclassex.txt: la progression Normal -> Nightmare des crafts Rift est invalide');
+    === 'brk',
+  'treasureclassex.txt: le premier drop direct Rift Crafts Premium est invalide');
+  assert(value(riftBase, treasureIndexes, 'Item2', 'treasureclassex.txt')
+    === 'std',
+  'treasureclassex.txt: le second drop direct Rift Crafts Premium est invalide');
+  assert(value(riftBase, treasureIndexes, 'Item3', 'treasureclassex.txt')
+    === 'AND',
+  'treasureclassex.txt: le dernier drop direct Rift Crafts Premium est invalide');
+  assert(value(riftBase, treasureIndexes, 'Prob3', 'treasureclassex.txt')
+    === '940',
+  'treasureclassex.txt: le poids AND de Rift Crafts Premium est invalide');
 
   console.log('VALID : references BKVince de demarrage resolues');
   console.log(`  Hireling skills -> ${hirelingSkillNames.size} skilldesc resolus`);
@@ -218,7 +220,7 @@ function main() {
   console.log(`  Eruption -> ${missileMatch[1]}`);
   console.log(`  Treasure Classes -> toutes resolues dans l'ordre (${itemCodes.size} items resolvables)`);
   console.log('  Andariel (H) -> Andariel Essence (H) -> tes (6 picks, NoDrop 982, poids 15)');
-  console.log('  Rift Crafts (N) Premium precede Rift Crafts Premium');
+  console.log('  Rift Crafts Premium -> brk/std/AND (poids AND 940)');
 }
 
 main();

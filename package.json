@@ -22,7 +22,7 @@
     "checkpoint": "node scripts/checkpoint/checkpoint.mjs",
     "dev": "concurrently -n api,web -c blue,green \"node scripts/dev-server.js\" \"npm run dev -w apps/admin\"",
     "build": "turbo run build",
-    "verify:data": "npm run test:gem-storage && npm run test:pandemonium-storage && npm run test:cube-guide && npm run test:itemstatcost && npm run test:bkvince-startup-refs && npm run test:bkvince-monstats-lots && npm run test:bkvince-storage-bag && npm run test:bkvince-mercenary-command && npm run test:bkvince-super-tk && npm run test:bkvince-itemtypes && npm run test:bkvince-staffmods && npm run test:bkvince-rift-levelgroups && npm run test:bkvince-melee-splash-stats && npm run test:bkvince-bkvcombat-stats && npm run test:bkvince-pd2-affixes",
+    "verify:data": "npm run test:gem-storage && npm run test:pandemonium-storage && npm run test:cube-guide && npm run test:itemstatcost && npm run test:bkvince-startup-refs && npm run test:bkvince-monstats-lots && npm run test:bkvince-storage-bag && npm run test:bkvince-mercenary-command && npm run test:bkvince-super-tk && npm run test:bkvince-itemtypes && npm run test:bkvince-staffmods && npm run test:bkvince-rift-levelgroups && npm run test:bkvince-melee-splash-stats && npm run test:bkvince-bkvcombat-stats && npm run test:bkvince-bk17-update && npm run test:bkvince-pd2-affixes",
     "preview": "turbo run preview",
     "generate:schemas": "node scripts/build-data/gen-schemas.js",
     "generate:gem-storage": "node scripts/build-data/gem-storage.js",
@@ -69,7 +69,9 @@
     "generate:bkvince-melee-splash-stats": "node scripts/migrate-bkvince/apply-melee-splash-stats.js --apply",
     "test:bkvince-melee-splash-stats": "node scripts/migrate-bkvince/apply-melee-splash-stats.js --check",
     "generate:bkvince-bkvcombat-stats": "node scripts/migrate-bkvince/apply-bkvcombat-stats.js --apply",
-    "test:bkvince-bkvcombat-stats": "node scripts/migrate-bkvince/apply-bkvcombat-stats.js --check"
+    "test:bkvince-bkvcombat-stats": "node scripts/migrate-bkvince/apply-bkvcombat-stats.js --check",
+    "generate:bkvince-bk17-update": "node scripts/migrate-bkvince/apply-bkdiablo-v17.js --apply",
+    "test:bkvince-bk17-update": "node scripts/migrate-bkvince/apply-bkdiablo-v17.js --check"
   },
   "devDependencies": {
     "@d2runewizard/d2s": "2.0.132",

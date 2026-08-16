@@ -1,0 +1,2914 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "repository": "https://github.com/BaronBeefStick/BKDiablo-Ascenstion",
+    "branch": "BKDiablo-Ascension",
+    "baseCommit": "7782298044b0cdd433b7075030e789ea7a80089f",
+    "v17Commit": "9bd79fe0248eed24ed165acd179f10354dbb80b7",
+    "auditManifestSha256": "1ef423d925e2083111c22b16fa6131c328f7cf259b0fa8e43fcf736a9d638e7d"
+  },
+  "policy": {
+    "summary": "Port only the approved BKDiablo v17 delta into BKVince.",
+    "exclusions": [
+      "BKDiablo softcoded Summon Splash model",
+      "BKDiablo main-menu MOTD",
+      "all pre-v17 differences between BKDiablo and BKVince"
+    ],
+    "adaptations": [
+      "Keep BKVince native MeleeSplash player-only.",
+      "Correct Fire Ball formula syntax with a final parenthesis.",
+      "Describe Holy Bolt damage to all enemies without claiming ally healing.",
+      "Apply Brick corrections to all 13 locales.",
+      "Allocate Flask localization IDs 30431 and 30432."
+    ]
+  },
+  "tsv": [
+    {
+      "path": "global/excel/cubemain.txt",
+      "keyHeader": "description",
+      "changes": [
+        {
+          "rowKey": "2 Uber Ancient Summon Material convert next Tier 1",
+          "desiredRowKey": "2 Talic Statues = 1 Korlic Statue",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 35,
+          "targetOrdinal": 35,
+          "header": "description",
+          "headerOccurrence": 1,
+          "base": "2 Uber Ancient Summon Material convert next Tier 1",
+          "upstreamV17": "2 Talic Statues = 1 Korlic Statue",
+          "desired": "2 Talic Statues = 1 Korlic Statue"
+        },
+        {
+          "rowKey": "2 Uber Ancient Summon Material convert next Tier 1",
+          "desiredRowKey": "2 Talic Statues = 1 Korlic Statue",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 35,
+          "targetOrdinal": 35,
+          "header": "input 1",
+          "headerOccurrence": 1,
+          "base": "\"ua5,qty=2\"",
+          "upstreamV17": "\"ua1,qty=2\"",
+          "desired": "\"ua1,qty=2\""
+        },
+        {
+          "rowKey": "2 Uber Ancient Summon Material convert next Tier 1",
+          "desiredRowKey": "2 Talic Statues = 1 Korlic Statue",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 35,
+          "targetOrdinal": 35,
+          "header": "output",
+          "headerOccurrence": 1,
+          "base": "ua4",
+          "upstreamV17": "ua2",
+          "desired": "ua2"
+        },
+        {
+          "rowKey": "2 Uber Ancient Summon Material convert next Tier 2",
+          "desiredRowKey": "2 Korlic Statues = 1 Madawc Statue",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 36,
+          "targetOrdinal": 36,
+          "header": "description",
+          "headerOccurrence": 1,
+          "base": "2 Uber Ancient Summon Material convert next Tier 2",
+          "upstreamV17": "2 Korlic Statues = 1 Madawc Statue",
+          "desired": "2 Korlic Statues = 1 Madawc Statue"
+        },
+        {
+          "rowKey": "2 Uber Ancient Summon Material convert next Tier 2",
+          "desiredRowKey": "2 Korlic Statues = 1 Madawc Statue",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 36,
+          "targetOrdinal": 36,
+          "header": "input 1",
+          "headerOccurrence": 1,
+          "base": "\"ua4,qty=2\"",
+          "upstreamV17": "\"ua2,qty=2\"",
+          "desired": "\"ua2,qty=2\""
+        },
+        {
+          "rowKey": "2 Uber Ancient Summon Material convert next Tier 3",
+          "desiredRowKey": "2 Madawc Statues = 1 Bul-Kathos Statue",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 37,
+          "targetOrdinal": 37,
+          "header": "description",
+          "headerOccurrence": 1,
+          "base": "2 Uber Ancient Summon Material convert next Tier 3",
+          "upstreamV17": "2 Madawc Statues = 1 Bul-Kathos Statue",
+          "desired": "2 Madawc Statues = 1 Bul-Kathos Statue"
+        },
+        {
+          "rowKey": "2 Uber Ancient Summon Material convert next Tier 3",
+          "desiredRowKey": "2 Madawc Statues = 1 Bul-Kathos Statue",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 37,
+          "targetOrdinal": 37,
+          "header": "output",
+          "headerOccurrence": 1,
+          "base": "ua2",
+          "upstreamV17": "ua4",
+          "desired": "ua4"
+        },
+        {
+          "rowKey": "2 Uber Ancient Summon Material convert next Tier 4",
+          "desiredRowKey": "2 Bul-Kathos Statues = 1 Warusk Statue",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 38,
+          "targetOrdinal": 38,
+          "header": "description",
+          "headerOccurrence": 1,
+          "base": "2 Uber Ancient Summon Material convert next Tier 4",
+          "upstreamV17": "2 Bul-Kathos Statues = 1 Warusk Statue",
+          "desired": "2 Bul-Kathos Statues = 1 Warusk Statue"
+        },
+        {
+          "rowKey": "2 Uber Ancient Summon Material convert next Tier 4",
+          "desiredRowKey": "2 Bul-Kathos Statues = 1 Warusk Statue",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 38,
+          "targetOrdinal": 38,
+          "header": "input 1",
+          "headerOccurrence": 1,
+          "base": "\"ua2,qty=2\"",
+          "upstreamV17": "\"ua4,qty=2\"",
+          "desired": "\"ua4,qty=2\""
+        },
+        {
+          "rowKey": "2 Uber Ancient Summon Material convert next Tier 4",
+          "desiredRowKey": "2 Bul-Kathos Statues = 1 Warusk Statue",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 38,
+          "targetOrdinal": 38,
+          "header": "output",
+          "headerOccurrence": 1,
+          "base": "ua1",
+          "upstreamV17": "ua5",
+          "desired": "ua5"
+        },
+        {
+          "rowKey": "2 Uber Ancient Summon Material convert next Tier 5",
+          "desiredRowKey": "2 Warusk Statues = 1 Talic Statue",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 39,
+          "targetOrdinal": 39,
+          "header": "description",
+          "headerOccurrence": 1,
+          "base": "2 Uber Ancient Summon Material convert next Tier 5",
+          "upstreamV17": "2 Warusk Statues = 1 Talic Statue",
+          "desired": "2 Warusk Statues = 1 Talic Statue"
+        },
+        {
+          "rowKey": "2 Uber Ancient Summon Material convert next Tier 5",
+          "desiredRowKey": "2 Warusk Statues = 1 Talic Statue",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 39,
+          "targetOrdinal": 39,
+          "header": "input 1",
+          "headerOccurrence": 1,
+          "base": "\"ua1,qty=2\"",
+          "upstreamV17": "\"ua5,qty=2\"",
+          "desired": "\"ua5,qty=2\""
+        },
+        {
+          "rowKey": "2 Uber Ancient Summon Material convert next Tier 5",
+          "desiredRowKey": "2 Warusk Statues = 1 Talic Statue",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 39,
+          "targetOrdinal": 39,
+          "header": "output",
+          "headerOccurrence": 1,
+          "base": "ua5",
+          "upstreamV17": "ua1",
+          "desired": "ua1"
+        },
+        {
+          "rowKey": "15 Bricks + Thawing Potion = Mal Rune",
+          "desiredRowKey": "15 Bricks + Thawing Potion = Um Rune + 2 Pul Runes",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 120,
+          "targetOrdinal": 120,
+          "header": "description",
+          "headerOccurrence": 1,
+          "base": "15 Bricks + Thawing Potion = Mal Rune",
+          "upstreamV17": "15 Bricks + Thawing Potion = Um Rune + 2 Pul Runes",
+          "desired": "15 Bricks + Thawing Potion = Um Rune + 2 Pul Runes"
+        },
+        {
+          "rowKey": "15 Bricks + Thawing Potion = Mal Rune",
+          "desiredRowKey": "15 Bricks + Thawing Potion = Um Rune + 2 Pul Runes",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 120,
+          "targetOrdinal": 120,
+          "header": "output",
+          "headerOccurrence": 1,
+          "base": "r23",
+          "upstreamV17": "r22",
+          "desired": "r22"
+        },
+        {
+          "rowKey": "15 Bricks + Thawing Potion = Mal Rune",
+          "desiredRowKey": "15 Bricks + Thawing Potion = Um Rune + 2 Pul Runes",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 120,
+          "targetOrdinal": 120,
+          "header": "output b",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "r21",
+          "desired": "r21"
+        },
+        {
+          "rowKey": "15 Bricks + Thawing Potion = Mal Rune",
+          "desiredRowKey": "15 Bricks + Thawing Potion = Um Rune + 2 Pul Runes",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 120,
+          "targetOrdinal": 120,
+          "header": "output c",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "r21",
+          "desired": "r21"
+        },
+        {
+          "rowKey": "21 Bricks + Thawing Potion = Gul Rune",
+          "desiredRowKey": "21 Bricks + Thawing Potion = Mal Rune + Um Rune + Pul Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 121,
+          "targetOrdinal": 121,
+          "header": "description",
+          "headerOccurrence": 1,
+          "base": "21 Bricks + Thawing Potion = Gul Rune",
+          "upstreamV17": "21 Bricks + Thawing Potion = Mal Rune + Um Rune + Pul Rune",
+          "desired": "21 Bricks + Thawing Potion = Mal Rune + Um Rune + Pul Rune"
+        },
+        {
+          "rowKey": "21 Bricks + Thawing Potion = Gul Rune",
+          "desiredRowKey": "21 Bricks + Thawing Potion = Mal Rune + Um Rune + Pul Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 121,
+          "targetOrdinal": 121,
+          "header": "output",
+          "headerOccurrence": 1,
+          "base": "r25",
+          "upstreamV17": "r23",
+          "desired": "r23"
+        },
+        {
+          "rowKey": "21 Bricks + Thawing Potion = Gul Rune",
+          "desiredRowKey": "21 Bricks + Thawing Potion = Mal Rune + Um Rune + Pul Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 121,
+          "targetOrdinal": 121,
+          "header": "output b",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "r22",
+          "desired": "r22"
+        },
+        {
+          "rowKey": "21 Bricks + Thawing Potion = Gul Rune",
+          "desiredRowKey": "21 Bricks + Thawing Potion = Mal Rune + Um Rune + Pul Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 121,
+          "targetOrdinal": 121,
+          "header": "output c",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "r21",
+          "desired": "r21"
+        },
+        {
+          "rowKey": "27 Bricks + Thawing Potion = Ohm Rune",
+          "desiredRowKey": "27 Bricks + Thawing Potion = Ist Rune + Mal Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 122,
+          "targetOrdinal": 122,
+          "header": "description",
+          "headerOccurrence": 1,
+          "base": "27 Bricks + Thawing Potion = Ohm Rune",
+          "upstreamV17": "27 Bricks + Thawing Potion = Ist Rune + Mal Rune",
+          "desired": "27 Bricks + Thawing Potion = Ist Rune + Mal Rune"
+        },
+        {
+          "rowKey": "27 Bricks + Thawing Potion = Ohm Rune",
+          "desiredRowKey": "27 Bricks + Thawing Potion = Ist Rune + Mal Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 122,
+          "targetOrdinal": 122,
+          "header": "output",
+          "headerOccurrence": 1,
+          "base": "r27",
+          "upstreamV17": "r24",
+          "desired": "r24"
+        },
+        {
+          "rowKey": "27 Bricks + Thawing Potion = Ohm Rune",
+          "desiredRowKey": "27 Bricks + Thawing Potion = Ist Rune + Mal Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 122,
+          "targetOrdinal": 122,
+          "header": "output b",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "r23",
+          "desired": "r23"
+        },
+        {
+          "rowKey": "33 Bricks + Thawing Potion = Sur Rune",
+          "desiredRowKey": "31 Bricks + Thawing Potion = Ist Rune + Mal Rune + Um Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 123,
+          "targetOrdinal": 123,
+          "header": "description",
+          "headerOccurrence": 1,
+          "base": "33 Bricks + Thawing Potion = Sur Rune",
+          "upstreamV17": "31 Bricks + Thawing Potion = Ist Rune + Mal Rune + Um Rune",
+          "desired": "31 Bricks + Thawing Potion = Ist Rune + Mal Rune + Um Rune"
+        },
+        {
+          "rowKey": "33 Bricks + Thawing Potion = Sur Rune",
+          "desiredRowKey": "31 Bricks + Thawing Potion = Ist Rune + Mal Rune + Um Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 123,
+          "targetOrdinal": 123,
+          "header": "numinputs",
+          "headerOccurrence": 1,
+          "base": "34",
+          "upstreamV17": "32",
+          "desired": "32"
+        },
+        {
+          "rowKey": "33 Bricks + Thawing Potion = Sur Rune",
+          "desiredRowKey": "31 Bricks + Thawing Potion = Ist Rune + Mal Rune + Um Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 123,
+          "targetOrdinal": 123,
+          "header": "input 1",
+          "headerOccurrence": 1,
+          "base": "brk,qty=33",
+          "upstreamV17": "brk,qty=31",
+          "desired": "brk,qty=31"
+        },
+        {
+          "rowKey": "33 Bricks + Thawing Potion = Sur Rune",
+          "desiredRowKey": "31 Bricks + Thawing Potion = Ist Rune + Mal Rune + Um Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 123,
+          "targetOrdinal": 123,
+          "header": "output",
+          "headerOccurrence": 1,
+          "base": "r29",
+          "upstreamV17": "r24",
+          "desired": "r24"
+        },
+        {
+          "rowKey": "33 Bricks + Thawing Potion = Sur Rune",
+          "desiredRowKey": "31 Bricks + Thawing Potion = Ist Rune + Mal Rune + Um Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 123,
+          "targetOrdinal": 123,
+          "header": "output b",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "r23",
+          "desired": "r23"
+        },
+        {
+          "rowKey": "33 Bricks + Thawing Potion = Sur Rune",
+          "desiredRowKey": "31 Bricks + Thawing Potion = Ist Rune + Mal Rune + Um Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 123,
+          "targetOrdinal": 123,
+          "header": "output c",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "r22",
+          "desired": "r22"
+        },
+        {
+          "rowKey": "36 Bricks + Thawing Potion = Ber Rune",
+          "desiredRowKey": "35 Bricks + Thawing Potion = Gul Rune + Ist Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 124,
+          "targetOrdinal": 124,
+          "header": "description",
+          "headerOccurrence": 1,
+          "base": "36 Bricks + Thawing Potion = Ber Rune",
+          "upstreamV17": "35 Bricks + Thawing Potion = Gul Rune + Ist Rune",
+          "desired": "35 Bricks + Thawing Potion = Gul Rune + Ist Rune"
+        },
+        {
+          "rowKey": "36 Bricks + Thawing Potion = Ber Rune",
+          "desiredRowKey": "35 Bricks + Thawing Potion = Gul Rune + Ist Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 124,
+          "targetOrdinal": 124,
+          "header": "numinputs",
+          "headerOccurrence": 1,
+          "base": "37",
+          "upstreamV17": "36",
+          "desired": "36"
+        },
+        {
+          "rowKey": "36 Bricks + Thawing Potion = Ber Rune",
+          "desiredRowKey": "35 Bricks + Thawing Potion = Gul Rune + Ist Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 124,
+          "targetOrdinal": 124,
+          "header": "input 1",
+          "headerOccurrence": 1,
+          "base": "brk,qty=36",
+          "upstreamV17": "brk,qty=35",
+          "desired": "brk,qty=35"
+        },
+        {
+          "rowKey": "36 Bricks + Thawing Potion = Ber Rune",
+          "desiredRowKey": "35 Bricks + Thawing Potion = Gul Rune + Ist Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 124,
+          "targetOrdinal": 124,
+          "header": "output",
+          "headerOccurrence": 1,
+          "base": "r30",
+          "upstreamV17": "r25",
+          "desired": "r25"
+        },
+        {
+          "rowKey": "36 Bricks + Thawing Potion = Ber Rune",
+          "desiredRowKey": "35 Bricks + Thawing Potion = Gul Rune + Ist Rune",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 124,
+          "targetOrdinal": 124,
+          "header": "output b",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "r24",
+          "desired": "r24"
+        }
+      ]
+    },
+    {
+      "path": "global/excel/skilldesc.txt",
+      "keyHeader": "skilldesc",
+      "changes": [
+        {
+          "rowKey": "fire ball",
+          "desiredRowKey": "fire ball",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 95,
+          "targetOrdinal": 95,
+          "header": "desccalca3",
+          "headerOccurrence": 1,
+          "base": "min(3,1+skill('Fire Ball'.blvl)/10",
+          "upstreamV17": "min(5,1+skill('Fire Ball'.blvl)/5",
+          "desired": "min(5,1+skill('Fire Ball'.blvl)/5)"
+        }
+      ]
+    },
+    {
+      "path": "global/excel/skills.txt",
+      "keyHeader": "skill",
+      "changes": [
+        {
+          "rowKey": "Summon Fenris",
+          "desiredRowKey": "Summon Fenris",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 239,
+          "targetOrdinal": 239,
+          "header": "Param3",
+          "headerOccurrence": 1,
+          "base": "8",
+          "upstreamV17": "5",
+          "desired": "5"
+        },
+        {
+          "rowKey": "Blade Sentinel",
+          "desiredRowKey": "Blade Sentinel",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 259,
+          "targetOrdinal": 259,
+          "header": "summode",
+          "headerOccurrence": 1,
+          "base": "S1",
+          "upstreamV17": "NU",
+          "desired": "NU"
+        },
+        {
+          "rowKey": "Shadow Warrior",
+          "desiredRowKey": "Shadow Warrior",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 270,
+          "targetOrdinal": 270,
+          "header": "summode",
+          "headerOccurrence": 1,
+          "base": "NU",
+          "upstreamV17": "S1",
+          "desired": "S1"
+        }
+      ]
+    },
+    {
+      "path": "global/excel/superuniques.txt",
+      "keyHeader": "Superunique",
+      "changes": [
+        {
+          "rowKey": "Baal Subject 1",
+          "desiredRowKey": "Baal Subject 1",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 64,
+          "targetOrdinal": 64,
+          "header": "TC Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 5 Champ C",
+          "desired": "Act 5 Champ C"
+        },
+        {
+          "rowKey": "Baal Subject 1",
+          "desiredRowKey": "Baal Subject 1",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 64,
+          "targetOrdinal": 64,
+          "header": "TC(N) Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 5 (N) Champ C",
+          "desired": "Act 5 (N) Champ C"
+        },
+        {
+          "rowKey": "Baal Subject 2",
+          "desiredRowKey": "Baal Subject 2",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 65,
+          "targetOrdinal": 65,
+          "header": "TC Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 5 Champ C",
+          "desired": "Act 5 Champ C"
+        },
+        {
+          "rowKey": "Baal Subject 2",
+          "desiredRowKey": "Baal Subject 2",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 65,
+          "targetOrdinal": 65,
+          "header": "TC(N) Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 5 (N) Champ C",
+          "desired": "Act 5 (N) Champ C"
+        },
+        {
+          "rowKey": "Baal Subject 3",
+          "desiredRowKey": "Baal Subject 3",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 66,
+          "targetOrdinal": 66,
+          "header": "TC Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 5 Champ C",
+          "desired": "Act 5 Champ C"
+        },
+        {
+          "rowKey": "Baal Subject 3",
+          "desiredRowKey": "Baal Subject 3",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 66,
+          "targetOrdinal": 66,
+          "header": "TC(N) Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 5 (N) Champ C",
+          "desired": "Act 5 (N) Champ C"
+        },
+        {
+          "rowKey": "Baal Subject 4",
+          "desiredRowKey": "Baal Subject 4",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 67,
+          "targetOrdinal": 67,
+          "header": "TC Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 5 Champ C",
+          "desired": "Act 5 Champ C"
+        },
+        {
+          "rowKey": "Baal Subject 4",
+          "desiredRowKey": "Baal Subject 4",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 67,
+          "targetOrdinal": 67,
+          "header": "TC(N) Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 5 (N) Champ C",
+          "desired": "Act 5 (N) Champ C"
+        },
+        {
+          "rowKey": "Baal Subject 5",
+          "desiredRowKey": "Baal Subject 5",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 68,
+          "targetOrdinal": 68,
+          "header": "TC Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 5 Champ C",
+          "desired": "Act 5 Champ C"
+        },
+        {
+          "rowKey": "Baal Subject 5",
+          "desiredRowKey": "Baal Subject 5",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 68,
+          "targetOrdinal": 68,
+          "header": "TC(N) Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 5 (N) Champ C",
+          "desired": "Act 5 (N) Champ C"
+        },
+        {
+          "rowKey": "Baron",
+          "desiredRowKey": "Baron",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 69,
+          "targetOrdinal": 69,
+          "header": "TC Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Barons",
+          "desired": "Barons"
+        },
+        {
+          "rowKey": "Baron",
+          "desiredRowKey": "Baron",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 69,
+          "targetOrdinal": 69,
+          "header": "TC(N) Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 5 (N) Champ C",
+          "desired": "Act 5 (N) Champ C"
+        },
+        {
+          "rowKey": "BTDiablo",
+          "desiredRowKey": "BTDiablo",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 70,
+          "targetOrdinal": 70,
+          "header": "TC Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 5 Super C",
+          "desired": "Act 5 Super C"
+        },
+        {
+          "rowKey": "BTDiablo",
+          "desiredRowKey": "BTDiablo",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 70,
+          "targetOrdinal": 70,
+          "header": "TC(N) Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 5 (N) Super C",
+          "desired": "Act 5 (N) Super C"
+        },
+        {
+          "rowKey": "Kexicon",
+          "desiredRowKey": "Kexicon",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 71,
+          "targetOrdinal": 71,
+          "header": "TC Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 3 Super B",
+          "desired": "Act 3 Super B"
+        },
+        {
+          "rowKey": "Kexicon",
+          "desiredRowKey": "Kexicon",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 71,
+          "targetOrdinal": 71,
+          "header": "TC(N) Desecrated",
+          "headerOccurrence": 1,
+          "base": "",
+          "upstreamV17": "Act 3 (N) Super B",
+          "desired": "Act 3 (N) Super B"
+        }
+      ]
+    },
+    {
+      "path": "global/excel/treasureclassex.txt",
+      "keyHeader": "Treasure Class",
+      "changes": [
+        {
+          "rowKey": "Rift Crafts Premium",
+          "desiredRowKey": "Rift Crafts Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1375,
+          "targetOrdinal": 1384,
+          "header": "Item1",
+          "headerOccurrence": 1,
+          "base": "Rift Crafts (N) Premium",
+          "upstreamV17": "brk",
+          "desired": "brk"
+        },
+        {
+          "rowKey": "Rift Crafts Premium",
+          "desiredRowKey": "Rift Crafts Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1375,
+          "targetOrdinal": 1384,
+          "header": "Prob1",
+          "headerOccurrence": 1,
+          "base": "5",
+          "upstreamV17": "1",
+          "desired": "1"
+        },
+        {
+          "rowKey": "Rift Crafts Premium",
+          "desiredRowKey": "Rift Crafts Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1375,
+          "targetOrdinal": 1384,
+          "header": "Item2",
+          "headerOccurrence": 1,
+          "base": "brk",
+          "upstreamV17": "std",
+          "desired": "std"
+        },
+        {
+          "rowKey": "Rift Crafts Premium",
+          "desiredRowKey": "Rift Crafts Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1375,
+          "targetOrdinal": 1384,
+          "header": "Item3",
+          "headerOccurrence": 1,
+          "base": "std",
+          "upstreamV17": "AND",
+          "desired": "AND"
+        },
+        {
+          "rowKey": "Rift Crafts Premium",
+          "desiredRowKey": "Rift Crafts Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1375,
+          "targetOrdinal": 1384,
+          "header": "Prob3",
+          "headerOccurrence": 1,
+          "base": "1",
+          "upstreamV17": "940",
+          "desired": "940"
+        },
+        {
+          "rowKey": "Rift Crafts Premium",
+          "desiredRowKey": "Rift Crafts Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1375,
+          "targetOrdinal": 1384,
+          "header": "Item4",
+          "headerOccurrence": 1,
+          "base": "AND",
+          "upstreamV17": "",
+          "desired": ""
+        },
+        {
+          "rowKey": "Rift Crafts Premium",
+          "desiredRowKey": "Rift Crafts Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1375,
+          "targetOrdinal": 1384,
+          "header": "Prob4",
+          "headerOccurrence": 1,
+          "base": "190",
+          "upstreamV17": "",
+          "desired": ""
+        },
+        {
+          "rowKey": "Rift Crafts (N) Premium",
+          "desiredRowKey": "Rift Crafts (N) Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1376,
+          "targetOrdinal": 1383,
+          "header": "NoDrop",
+          "headerOccurrence": 1,
+          "base": "300",
+          "upstreamV17": "375",
+          "desired": "375"
+        },
+        {
+          "rowKey": "Rift Crafts (N) Premium",
+          "desiredRowKey": "Rift Crafts (N) Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1376,
+          "targetOrdinal": 1383,
+          "header": "Prob1",
+          "headerOccurrence": 1,
+          "base": "12",
+          "upstreamV17": "1",
+          "desired": "1"
+        },
+        {
+          "rowKey": "Rift Crafts (N) Premium",
+          "desiredRowKey": "Rift Crafts (N) Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1376,
+          "targetOrdinal": 1383,
+          "header": "Prob2",
+          "headerOccurrence": 1,
+          "base": "12",
+          "upstreamV17": "2",
+          "desired": "2"
+        },
+        {
+          "rowKey": "Rift Crafts (N) Premium",
+          "desiredRowKey": "Rift Crafts (N) Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1376,
+          "targetOrdinal": 1383,
+          "header": "Prob3",
+          "headerOccurrence": 1,
+          "base": "2",
+          "upstreamV17": "1",
+          "desired": "1"
+        },
+        {
+          "rowKey": "Rift Crafts (N) Premium",
+          "desiredRowKey": "Rift Crafts (N) Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1376,
+          "targetOrdinal": 1383,
+          "header": "Prob4",
+          "headerOccurrence": 1,
+          "base": "1",
+          "upstreamV17": "8",
+          "desired": "8"
+        },
+        {
+          "rowKey": "Rift Crafts (N) Premium",
+          "desiredRowKey": "Rift Crafts (N) Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1376,
+          "targetOrdinal": 1383,
+          "header": "Prob5",
+          "headerOccurrence": 1,
+          "base": "1",
+          "upstreamV17": "5",
+          "desired": "5"
+        },
+        {
+          "rowKey": "Rift Crafts (N) Premium",
+          "desiredRowKey": "Rift Crafts (N) Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1376,
+          "targetOrdinal": 1383,
+          "header": "Prob6",
+          "headerOccurrence": 1,
+          "base": "175",
+          "upstreamV17": "800",
+          "desired": "800"
+        },
+        {
+          "rowKey": "Rift Crafts (H) Premium",
+          "desiredRowKey": "Rift Crafts (H) Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1377,
+          "targetOrdinal": 1385,
+          "header": "NoDrop",
+          "headerOccurrence": 1,
+          "base": "150",
+          "upstreamV17": "375",
+          "desired": "375"
+        },
+        {
+          "rowKey": "Rift Crafts (H) Premium",
+          "desiredRowKey": "Rift Crafts (H) Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1377,
+          "targetOrdinal": 1385,
+          "header": "Prob1",
+          "headerOccurrence": 1,
+          "base": "20",
+          "upstreamV17": "1",
+          "desired": "1"
+        },
+        {
+          "rowKey": "Rift Crafts (H) Premium",
+          "desiredRowKey": "Rift Crafts (H) Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1377,
+          "targetOrdinal": 1385,
+          "header": "Prob2",
+          "headerOccurrence": 1,
+          "base": "23",
+          "upstreamV17": "2",
+          "desired": "2"
+        },
+        {
+          "rowKey": "Rift Crafts (H) Premium",
+          "desiredRowKey": "Rift Crafts (H) Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1377,
+          "targetOrdinal": 1385,
+          "header": "Prob3",
+          "headerOccurrence": 1,
+          "base": "5",
+          "upstreamV17": "1",
+          "desired": "1"
+        },
+        {
+          "rowKey": "Rift Crafts (H) Premium",
+          "desiredRowKey": "Rift Crafts (H) Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1377,
+          "targetOrdinal": 1385,
+          "header": "Prob4",
+          "headerOccurrence": 1,
+          "base": "10",
+          "upstreamV17": "8",
+          "desired": "8"
+        },
+        {
+          "rowKey": "Rift Crafts (H) Premium",
+          "desiredRowKey": "Rift Crafts (H) Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1377,
+          "targetOrdinal": 1385,
+          "header": "Prob5",
+          "headerOccurrence": 1,
+          "base": "10",
+          "upstreamV17": "6",
+          "desired": "6"
+        },
+        {
+          "rowKey": "Rift Crafts (H) Premium",
+          "desiredRowKey": "Rift Crafts (H) Premium",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1377,
+          "targetOrdinal": 1385,
+          "header": "Prob6",
+          "headerOccurrence": 1,
+          "base": "150",
+          "upstreamV17": "780",
+          "desired": "780"
+        },
+        {
+          "rowKey": "Rift Good",
+          "desiredRowKey": "Rift Good",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1378,
+          "targetOrdinal": 1386,
+          "header": "Prob3",
+          "headerOccurrence": 1,
+          "base": "4",
+          "upstreamV17": "3",
+          "desired": "3"
+        },
+        {
+          "rowKey": "Rift Good",
+          "desiredRowKey": "Rift Good",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1378,
+          "targetOrdinal": 1386,
+          "header": "Item4",
+          "headerOccurrence": 1,
+          "base": "Runes 6",
+          "upstreamV17": "Craft",
+          "desired": "Craft"
+        },
+        {
+          "rowKey": "Rift Good",
+          "desiredRowKey": "Rift Good",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1378,
+          "targetOrdinal": 1386,
+          "header": "Prob4",
+          "headerOccurrence": 1,
+          "base": "2",
+          "upstreamV17": "3",
+          "desired": "3"
+        },
+        {
+          "rowKey": "Rift Good",
+          "desiredRowKey": "Rift Good",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1378,
+          "targetOrdinal": 1386,
+          "header": "Item5",
+          "headerOccurrence": 1,
+          "base": "Craft",
+          "upstreamV17": "AND",
+          "desired": "AND"
+        },
+        {
+          "rowKey": "Rift Good",
+          "desiredRowKey": "Rift Good",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1378,
+          "targetOrdinal": 1386,
+          "header": "Prob5",
+          "headerOccurrence": 1,
+          "base": "3",
+          "upstreamV17": "400",
+          "desired": "400"
+        },
+        {
+          "rowKey": "Rift Good",
+          "desiredRowKey": "Rift Good",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1378,
+          "targetOrdinal": 1386,
+          "header": "Item6",
+          "headerOccurrence": 1,
+          "base": "AND",
+          "upstreamV17": "",
+          "desired": ""
+        },
+        {
+          "rowKey": "Rift Good",
+          "desiredRowKey": "Rift Good",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1378,
+          "targetOrdinal": 1386,
+          "header": "Prob6",
+          "headerOccurrence": 1,
+          "base": "360",
+          "upstreamV17": "",
+          "desired": ""
+        },
+        {
+          "rowKey": "Rift Good Low",
+          "desiredRowKey": "Rift Good Low",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1379,
+          "targetOrdinal": 1387,
+          "header": "Prob3",
+          "headerOccurrence": 1,
+          "base": "3",
+          "upstreamV17": "4",
+          "desired": "4"
+        },
+        {
+          "rowKey": "Rift Good Low",
+          "desiredRowKey": "Rift Good Low",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1379,
+          "targetOrdinal": 1387,
+          "header": "Prob5",
+          "headerOccurrence": 1,
+          "base": "380",
+          "upstreamV17": "450",
+          "desired": "450"
+        },
+        {
+          "rowKey": "Rift (N) Good",
+          "desiredRowKey": "Rift (N) Good",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1389,
+          "targetOrdinal": 1397,
+          "header": "Prob3",
+          "headerOccurrence": 1,
+          "base": "4",
+          "upstreamV17": "1",
+          "desired": "1"
+        },
+        {
+          "rowKey": "Rift (N) Good",
+          "desiredRowKey": "Rift (N) Good",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1389,
+          "targetOrdinal": 1397,
+          "header": "Prob4",
+          "headerOccurrence": 1,
+          "base": "2",
+          "upstreamV17": "8",
+          "desired": "8"
+        },
+        {
+          "rowKey": "Rift (N) Good",
+          "desiredRowKey": "Rift (N) Good",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1389,
+          "targetOrdinal": 1397,
+          "header": "Prob5",
+          "headerOccurrence": 1,
+          "base": "3",
+          "upstreamV17": "2",
+          "desired": "2"
+        },
+        {
+          "rowKey": "Rift (N) Good",
+          "desiredRowKey": "Rift (N) Good",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1389,
+          "targetOrdinal": 1397,
+          "header": "Prob6",
+          "headerOccurrence": 1,
+          "base": "360",
+          "upstreamV17": "400",
+          "desired": "400"
+        },
+        {
+          "rowKey": "Rift (N) Good Low",
+          "desiredRowKey": "Rift (N) Good Low",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1390,
+          "targetOrdinal": 1398,
+          "header": "Prob1",
+          "headerOccurrence": 1,
+          "base": "12",
+          "upstreamV17": "6",
+          "desired": "6"
+        },
+        {
+          "rowKey": "Rift (N) Good Low",
+          "desiredRowKey": "Rift (N) Good Low",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1390,
+          "targetOrdinal": 1398,
+          "header": "Prob3",
+          "headerOccurrence": 1,
+          "base": "3",
+          "upstreamV17": "6",
+          "desired": "6"
+        },
+        {
+          "rowKey": "Rift (N) Good Low",
+          "desiredRowKey": "Rift (N) Good Low",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1390,
+          "targetOrdinal": 1398,
+          "header": "Prob5",
+          "headerOccurrence": 1,
+          "base": "380",
+          "upstreamV17": "350",
+          "desired": "350"
+        },
+        {
+          "rowKey": "Rift (N) Good High",
+          "desiredRowKey": "Rift (N) Good High",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1391,
+          "targetOrdinal": 1399,
+          "header": "Prob3",
+          "headerOccurrence": 1,
+          "base": "1",
+          "upstreamV17": "5",
+          "desired": "5"
+        },
+        {
+          "rowKey": "Rift (H) Good",
+          "desiredRowKey": "Rift (H) Good",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1400,
+          "targetOrdinal": 1408,
+          "header": "Prob3",
+          "headerOccurrence": 1,
+          "base": "4",
+          "upstreamV17": "1",
+          "desired": "1"
+        },
+        {
+          "rowKey": "Rift (H) Good",
+          "desiredRowKey": "Rift (H) Good",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1400,
+          "targetOrdinal": 1408,
+          "header": "Prob4",
+          "headerOccurrence": 1,
+          "base": "2",
+          "upstreamV17": "8",
+          "desired": "8"
+        },
+        {
+          "rowKey": "Rift (H) Good",
+          "desiredRowKey": "Rift (H) Good",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1400,
+          "targetOrdinal": 1408,
+          "header": "Prob6",
+          "headerOccurrence": 1,
+          "base": "360",
+          "upstreamV17": "400",
+          "desired": "400"
+        },
+        {
+          "rowKey": "Rift (H) Good Low",
+          "desiredRowKey": "Rift (H) Good Low",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1401,
+          "targetOrdinal": 1409,
+          "header": "Prob2",
+          "headerOccurrence": 1,
+          "base": "3",
+          "upstreamV17": "5",
+          "desired": "5"
+        },
+        {
+          "rowKey": "Rift (H) Good Low",
+          "desiredRowKey": "Rift (H) Good Low",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1401,
+          "targetOrdinal": 1409,
+          "header": "Prob4",
+          "headerOccurrence": 1,
+          "base": "380",
+          "upstreamV17": "390",
+          "desired": "390"
+        },
+        {
+          "rowKey": "Rift (H) Good High",
+          "desiredRowKey": "Rift (H) Good High",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1402,
+          "targetOrdinal": 1410,
+          "header": "Prob1",
+          "headerOccurrence": 1,
+          "base": "4",
+          "upstreamV17": "2",
+          "desired": "2"
+        },
+        {
+          "rowKey": "Rift (H) Good High",
+          "desiredRowKey": "Rift (H) Good High",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1402,
+          "targetOrdinal": 1410,
+          "header": "Prob2",
+          "headerOccurrence": 1,
+          "base": "3",
+          "upstreamV17": "8",
+          "desired": "8"
+        },
+        {
+          "rowKey": "Rift (H) Good High",
+          "desiredRowKey": "Rift (H) Good High",
+          "occurrence": 1,
+          "upstreamBaseOrdinal": 1402,
+          "targetOrdinal": 1410,
+          "header": "Prob5",
+          "headerOccurrence": 1,
+          "base": "150",
+          "upstreamV17": "95",
+          "desired": "95"
+        }
+      ]
+    }
+  ],
+  "localization": {
+    "holyBolt": {
+      "path": "local/lng/strings/skills.json",
+      "id": 4779,
+      "Key": "skillld101",
+      "values": {
+        "enUS": {
+          "base": "a bolt of divine energy\nthat damages demons and undead\nor heals allies",
+          "upstreamV17": "a bolt of divine energy\nthat damages enemies\nor heals allies",
+          "desired": "a bolt of divine energy\nthat damages enemies"
+        },
+        "zhTW": {
+          "base": "射出神聖的能量彈，可對惡魔和不死怪物造成傷害，\n或是治療你的盟友",
+          "upstreamV17": "一道神聖能量彈\n可對敵人造成傷害\n或治療盟友",
+          "desired": "一道神聖能量彈\n可對敵人造成傷害"
+        },
+        "deDE": {
+          "base": "Blitz aus göttlicher Energie,\nder Dämonen und Untoten Schaden zufügt\noder Verbündete heilt",
+          "upstreamV17": "Ein Blitz aus göttlicher Energie,\nder Gegnern Schaden zufügt\noder Verbündete heilt",
+          "desired": "Ein Blitz aus göttlicher Energie,\nder Gegnern Schaden zufügt"
+        },
+        "esES": {
+          "base": "Un rayo de energía divina\nque inflige daño a demonios y muertos vivientes\no cura a los aliados.",
+          "upstreamV17": "Un rayo de energía divina\nque inflige daño a los enemigos\no cura a los aliados.",
+          "desired": "Un rayo de energía divina\nque inflige daño a los enemigos."
+        },
+        "frFR": {
+          "base": "un éclair divin\nqui inflige des dégâts aux démons et morts-vivants\nou soigne les personnages alliés",
+          "upstreamV17": "un éclair d’énergie divine\nqui inflige des dégâts aux ennemis\nou soigne les personnages alliés",
+          "desired": "un éclair d’énergie divine\nqui inflige des dégâts aux ennemis"
+        },
+        "itIT": {
+          "base": "Un dardo di energia divina\nche danneggia demoni e non morti\no cura gli alleati",
+          "upstreamV17": "Un dardo di energia divina\nche danneggia i nemici\no cura gli alleati",
+          "desired": "Un dardo di energia divina\nche danneggia i nemici"
+        },
+        "koKR": {
+          "base": "신성한 마력으로\n악마 및 언데드에게 피해를 주고\n아군을 치유합니다.",
+          "upstreamV17": "신성한 마력의 화살로\n적에게 피해를 주거나\n아군을 치유합니다.",
+          "desired": "신성한 마력의 화살로\n적에게 피해를 줍니다."
+        },
+        "plPL": {
+          "base": "promień boskiego światła,\nktóry zadaje obrażenia demonom i nieumarłym\nlub leczy sojuszników",
+          "upstreamV17": "promień boskiej energii,\nktóry zadaje obrażenia wrogom\nlub leczy sojuszników",
+          "desired": "promień boskiej energii,\nktóry zadaje obrażenia wrogom"
+        },
+        "esMX": {
+          "base": "un rayo de energía divina\nque daña a los demonios y no muertos\no cura a los aliados",
+          "upstreamV17": "un rayo de energía divina\nque daña a los enemigos\no cura a los aliados",
+          "desired": "un rayo de energía divina\nque daña a los enemigos"
+        },
+        "jaJP": {
+          "base": "聖なる力が宿る矢で悪魔と\nアンデッドにダメージを与え\n味方のライフを回復する",
+          "upstreamV17": "聖なる力が宿る矢で\n敵にダメージを与えるか\n味方のライフを回復する",
+          "desired": "聖なる力が宿る矢で\n敵にダメージを与える"
+        },
+        "ptBR": {
+          "base": "uma seta de energia divina\nque causa dano a demônios e mortos-vivos\nou cura aliados",
+          "upstreamV17": "uma seta de energia divina\nque causa dano aos inimigos\nou cura aliados",
+          "desired": "uma seta de energia divina\nque causa dano aos inimigos"
+        },
+        "ruRU": {
+          "base": "Заряд божественной энергии,\nкоторый наносит урон демонам и нежити\nили исцеляет союзников",
+          "upstreamV17": "Заряд божественной энергии,\nкоторый наносит урон врагам\nили исцеляет союзников",
+          "desired": "Заряд божественной энергии,\nкоторый наносит урон врагам"
+        },
+        "zhCN": {
+          "base": "释放出一道神圣能量箭\n对恶魔和亡灵敌人造成伤害\n也可以治疗盟友",
+          "upstreamV17": "释放出一道神圣能量箭\n对敌人造成伤害\n或治疗盟友",
+          "desired": "释放出一道神圣能量箭\n对敌人造成伤害"
+        }
+      }
+    },
+    "ui": {
+      "path": "local/lng/strings/ui.json",
+      "changes": [
+        {
+          "id": 30237,
+          "field": "deDE",
+          "base": "5 aufgestiegene Diamanten",
+          "upstreamV17": "5 aufgestiegene Diamanten + 1 Primärsiegel",
+          "desired": "5 aufgestiegene Diamanten + 1 Primärsiegel"
+        },
+        {
+          "id": 30237,
+          "field": "enUS",
+          "base": "5 Ascended Diamonds",
+          "upstreamV17": "5 Ascended Diamonds + 1 Prime Sigil",
+          "desired": "5 Ascended Diamonds + 1 Prime Sigil"
+        },
+        {
+          "id": 30237,
+          "field": "esES",
+          "base": "5 diamantes ascendidos",
+          "upstreamV17": "5 diamantes ascendidos + 1 sello primordial",
+          "desired": "5 diamantes ascendidos + 1 sello primordial"
+        },
+        {
+          "id": 30237,
+          "field": "esMX",
+          "base": "5 diamantes ascendidos",
+          "upstreamV17": "5 diamantes ascendidos + 1 sello primordial",
+          "desired": "5 diamantes ascendidos + 1 sello primordial"
+        },
+        {
+          "id": 30237,
+          "field": "frFR",
+          "base": "5 diamants transcendés",
+          "upstreamV17": "5 diamants transcendés + 1 sceau primordial",
+          "desired": "5 diamants transcendés + 1 sceau primordial"
+        },
+        {
+          "id": 30237,
+          "field": "itIT",
+          "base": "5 diamanti ascesi",
+          "upstreamV17": "5 diamanti ascesi + 1 sigillo primordiale",
+          "desired": "5 diamanti ascesi + 1 sigillo primordiale"
+        },
+        {
+          "id": 30237,
+          "field": "jaJP",
+          "base": "昇華したダイヤモンド5個",
+          "upstreamV17": "昇華したダイヤモンド5個 + 原初の印章1個",
+          "desired": "昇華したダイヤモンド5個 + 原初の印章1個"
+        },
+        {
+          "id": 30237,
+          "field": "koKR",
+          "base": "승천한 다이아몬드 5개",
+          "upstreamV17": "승천한 다이아몬드 5개 + 태고의 인장 1개",
+          "desired": "승천한 다이아몬드 5개 + 태고의 인장 1개"
+        },
+        {
+          "id": 30237,
+          "field": "plPL",
+          "base": "5 wyniesionych diamentów",
+          "upstreamV17": "5 wyniesionych diamentów + 1 pierwotna pieczęć",
+          "desired": "5 wyniesionych diamentów + 1 pierwotna pieczęć"
+        },
+        {
+          "id": 30237,
+          "field": "ptBR",
+          "base": "5 diamantes ascendidos",
+          "upstreamV17": "5 diamantes ascendidos + 1 selo primordial",
+          "desired": "5 diamantes ascendidos + 1 selo primordial"
+        },
+        {
+          "id": 30237,
+          "field": "ruRU",
+          "base": "5 вознесённых алмазов",
+          "upstreamV17": "5 вознесённых алмазов + 1 изначальная печать",
+          "desired": "5 вознесённых алмазов + 1 изначальная печать"
+        },
+        {
+          "id": 30237,
+          "field": "zhCN",
+          "base": "5 颗升华钻石",
+          "upstreamV17": "5 颗升华钻石 + 1 个至高印记",
+          "desired": "5 颗升华钻石 + 1 个至高印记"
+        },
+        {
+          "id": 30237,
+          "field": "zhTW",
+          "base": "5 顆昇華鑽石",
+          "upstreamV17": "5 顆昇華鑽石 + 1 個至高印記",
+          "desired": "5 顆昇華鑽石 + 1 個至高印記"
+        },
+        {
+          "id": 30239,
+          "field": "deDE",
+          "base": "5 aufgestiegene Amethyste",
+          "upstreamV17": "5 aufgestiegene Amethyste + 1 Primärsiegel",
+          "desired": "5 aufgestiegene Amethyste + 1 Primärsiegel"
+        },
+        {
+          "id": 30239,
+          "field": "enUS",
+          "base": "5 Ascended Amethysts",
+          "upstreamV17": "5 Ascended Amethysts + 1 Prime Sigil",
+          "desired": "5 Ascended Amethysts + 1 Prime Sigil"
+        },
+        {
+          "id": 30239,
+          "field": "esES",
+          "base": "5 amatistas ascendidas",
+          "upstreamV17": "5 amatistas ascendidas + 1 sello primordial",
+          "desired": "5 amatistas ascendidas + 1 sello primordial"
+        },
+        {
+          "id": 30239,
+          "field": "esMX",
+          "base": "5 amatistas ascendidas",
+          "upstreamV17": "5 amatistas ascendidas + 1 sello primordial",
+          "desired": "5 amatistas ascendidas + 1 sello primordial"
+        },
+        {
+          "id": 30239,
+          "field": "frFR",
+          "base": "5 améthystes transcendées",
+          "upstreamV17": "5 améthystes transcendées + 1 sceau primordial",
+          "desired": "5 améthystes transcendées + 1 sceau primordial"
+        },
+        {
+          "id": 30239,
+          "field": "itIT",
+          "base": "5 ametiste ascese",
+          "upstreamV17": "5 ametiste ascese + 1 sigillo primordiale",
+          "desired": "5 ametiste ascese + 1 sigillo primordiale"
+        },
+        {
+          "id": 30239,
+          "field": "jaJP",
+          "base": "昇華したアメジスト5個",
+          "upstreamV17": "昇華したアメジスト5個 + 原初の印章1個",
+          "desired": "昇華したアメジスト5個 + 原初の印章1個"
+        },
+        {
+          "id": 30239,
+          "field": "koKR",
+          "base": "승천한 자수정 5개",
+          "upstreamV17": "승천한 자수정 5개 + 태고의 인장 1개",
+          "desired": "승천한 자수정 5개 + 태고의 인장 1개"
+        },
+        {
+          "id": 30239,
+          "field": "plPL",
+          "base": "5 wyniesionych ametystów",
+          "upstreamV17": "5 wyniesionych ametystów + 1 pierwotna pieczęć",
+          "desired": "5 wyniesionych ametystów + 1 pierwotna pieczęć"
+        },
+        {
+          "id": 30239,
+          "field": "ptBR",
+          "base": "5 ametistas ascendidas",
+          "upstreamV17": "5 ametistas ascendidas + 1 selo primordial",
+          "desired": "5 ametistas ascendidas + 1 selo primordial"
+        },
+        {
+          "id": 30239,
+          "field": "ruRU",
+          "base": "5 вознесённых аметистов",
+          "upstreamV17": "5 вознесённых аметистов + 1 изначальная печать",
+          "desired": "5 вознесённых аметистов + 1 изначальная печать"
+        },
+        {
+          "id": 30239,
+          "field": "zhCN",
+          "base": "5 颗升华紫宝石",
+          "upstreamV17": "5 颗升华紫宝石 + 1 个至高印记",
+          "desired": "5 颗升华紫宝石 + 1 个至高印记"
+        },
+        {
+          "id": 30239,
+          "field": "zhTW",
+          "base": "5 顆昇華紫寶石",
+          "upstreamV17": "5 顆昇華紫寶石 + 1 個至高印記",
+          "desired": "5 顆昇華紫寶石 + 1 個至高印記"
+        },
+        {
+          "id": 30241,
+          "field": "deDE",
+          "base": "5 aufgestiegene Rubine",
+          "upstreamV17": "5 aufgestiegene Rubine + 1 Primärsiegel",
+          "desired": "5 aufgestiegene Rubine + 1 Primärsiegel"
+        },
+        {
+          "id": 30241,
+          "field": "enUS",
+          "base": "5 Ascended Rubies",
+          "upstreamV17": "5 Ascended Rubies + 1 Prime Sigil",
+          "desired": "5 Ascended Rubies + 1 Prime Sigil"
+        },
+        {
+          "id": 30241,
+          "field": "esES",
+          "base": "5 rubíes ascendidos",
+          "upstreamV17": "5 rubíes ascendidos + 1 sello primordial",
+          "desired": "5 rubíes ascendidos + 1 sello primordial"
+        },
+        {
+          "id": 30241,
+          "field": "esMX",
+          "base": "5 rubíes ascendidos",
+          "upstreamV17": "5 rubíes ascendidos + 1 sello primordial",
+          "desired": "5 rubíes ascendidos + 1 sello primordial"
+        },
+        {
+          "id": 30241,
+          "field": "frFR",
+          "base": "5 rubis transcendés",
+          "upstreamV17": "5 rubis transcendés + 1 sceau primordial",
+          "desired": "5 rubis transcendés + 1 sceau primordial"
+        },
+        {
+          "id": 30241,
+          "field": "itIT",
+          "base": "5 rubini ascesi",
+          "upstreamV17": "5 rubini ascesi + 1 sigillo primordiale",
+          "desired": "5 rubini ascesi + 1 sigillo primordiale"
+        },
+        {
+          "id": 30241,
+          "field": "jaJP",
+          "base": "昇華したルビー5個",
+          "upstreamV17": "昇華したルビー5個 + 原初の印章1個",
+          "desired": "昇華したルビー5個 + 原初の印章1個"
+        },
+        {
+          "id": 30241,
+          "field": "koKR",
+          "base": "승천한 루비 5개",
+          "upstreamV17": "승천한 루비 5개 + 태고의 인장 1개",
+          "desired": "승천한 루비 5개 + 태고의 인장 1개"
+        },
+        {
+          "id": 30241,
+          "field": "plPL",
+          "base": "5 wyniesionych rubinów",
+          "upstreamV17": "5 wyniesionych rubinów + 1 pierwotna pieczęć",
+          "desired": "5 wyniesionych rubinów + 1 pierwotna pieczęć"
+        },
+        {
+          "id": 30241,
+          "field": "ptBR",
+          "base": "5 rubis ascendidos",
+          "upstreamV17": "5 rubis ascendidos + 1 selo primordial",
+          "desired": "5 rubis ascendidos + 1 selo primordial"
+        },
+        {
+          "id": 30241,
+          "field": "ruRU",
+          "base": "5 вознесённых рубинов",
+          "upstreamV17": "5 вознесённых рубинов + 1 изначальная печать",
+          "desired": "5 вознесённых рубинов + 1 изначальная печать"
+        },
+        {
+          "id": 30241,
+          "field": "zhCN",
+          "base": "5 颗升华红宝石",
+          "upstreamV17": "5 颗升华红宝石 + 1 个至高印记",
+          "desired": "5 颗升华红宝石 + 1 个至高印记"
+        },
+        {
+          "id": 30241,
+          "field": "zhTW",
+          "base": "5 顆昇華紅寶石",
+          "upstreamV17": "5 顆昇華紅寶石 + 1 個至高印記",
+          "desired": "5 顆昇華紅寶石 + 1 個至高印記"
+        },
+        {
+          "id": 30243,
+          "field": "deDE",
+          "base": "5 aufgestiegene Saphire",
+          "upstreamV17": "5 aufgestiegene Saphire + 1 Primärsiegel",
+          "desired": "5 aufgestiegene Saphire + 1 Primärsiegel"
+        },
+        {
+          "id": 30243,
+          "field": "enUS",
+          "base": "5 Ascended Sapphires",
+          "upstreamV17": "5 Ascended Sapphires + 1 Prime Sigil",
+          "desired": "5 Ascended Sapphires + 1 Prime Sigil"
+        },
+        {
+          "id": 30243,
+          "field": "esES",
+          "base": "5 zafiros ascendidos",
+          "upstreamV17": "5 zafiros ascendidos + 1 sello primordial",
+          "desired": "5 zafiros ascendidos + 1 sello primordial"
+        },
+        {
+          "id": 30243,
+          "field": "esMX",
+          "base": "5 zafiros ascendidos",
+          "upstreamV17": "5 zafiros ascendidos + 1 sello primordial",
+          "desired": "5 zafiros ascendidos + 1 sello primordial"
+        },
+        {
+          "id": 30243,
+          "field": "frFR",
+          "base": "5 saphirs transcendés",
+          "upstreamV17": "5 saphirs transcendés + 1 sceau primordial",
+          "desired": "5 saphirs transcendés + 1 sceau primordial"
+        },
+        {
+          "id": 30243,
+          "field": "itIT",
+          "base": "5 zaffiri ascesi",
+          "upstreamV17": "5 zaffiri ascesi + 1 sigillo primordiale",
+          "desired": "5 zaffiri ascesi + 1 sigillo primordiale"
+        },
+        {
+          "id": 30243,
+          "field": "jaJP",
+          "base": "昇華したサファイア5個",
+          "upstreamV17": "昇華したサファイア5個 + 原初の印章1個",
+          "desired": "昇華したサファイア5個 + 原初の印章1個"
+        },
+        {
+          "id": 30243,
+          "field": "koKR",
+          "base": "승천한 사파이어 5개",
+          "upstreamV17": "승천한 사파이어 5개 + 태고의 인장 1개",
+          "desired": "승천한 사파이어 5개 + 태고의 인장 1개"
+        },
+        {
+          "id": 30243,
+          "field": "plPL",
+          "base": "5 wyniesionych szafirów",
+          "upstreamV17": "5 wyniesionych szafirów + 1 pierwotna pieczęć",
+          "desired": "5 wyniesionych szafirów + 1 pierwotna pieczęć"
+        },
+        {
+          "id": 30243,
+          "field": "ptBR",
+          "base": "5 safiras ascendidas",
+          "upstreamV17": "5 safiras ascendidas + 1 selo primordial",
+          "desired": "5 safiras ascendidas + 1 selo primordial"
+        },
+        {
+          "id": 30243,
+          "field": "ruRU",
+          "base": "5 вознесённых сапфиров",
+          "upstreamV17": "5 вознесённых сапфиров + 1 изначальная печать",
+          "desired": "5 вознесённых сапфиров + 1 изначальная печать"
+        },
+        {
+          "id": 30243,
+          "field": "zhCN",
+          "base": "5 颗升华蓝宝石",
+          "upstreamV17": "5 颗升华蓝宝石 + 1 个至高印记",
+          "desired": "5 颗升华蓝宝石 + 1 个至高印记"
+        },
+        {
+          "id": 30243,
+          "field": "zhTW",
+          "base": "5 顆昇華藍寶石",
+          "upstreamV17": "5 顆昇華藍寶石 + 1 個至高印記",
+          "desired": "5 顆昇華藍寶石 + 1 個至高印記"
+        },
+        {
+          "id": 30245,
+          "field": "deDE",
+          "base": "5 aufgestiegene Smaragde",
+          "upstreamV17": "5 aufgestiegene Smaragde + 1 Primärsiegel",
+          "desired": "5 aufgestiegene Smaragde + 1 Primärsiegel"
+        },
+        {
+          "id": 30245,
+          "field": "enUS",
+          "base": "5 Ascended Emeralds",
+          "upstreamV17": "5 Ascended Emeralds + 1 Prime Sigil",
+          "desired": "5 Ascended Emeralds + 1 Prime Sigil"
+        },
+        {
+          "id": 30245,
+          "field": "esES",
+          "base": "5 esmeraldas ascendidas",
+          "upstreamV17": "5 esmeraldas ascendidas + 1 sello primordial",
+          "desired": "5 esmeraldas ascendidas + 1 sello primordial"
+        },
+        {
+          "id": 30245,
+          "field": "esMX",
+          "base": "5 esmeraldas ascendidas",
+          "upstreamV17": "5 esmeraldas ascendidas + 1 sello primordial",
+          "desired": "5 esmeraldas ascendidas + 1 sello primordial"
+        },
+        {
+          "id": 30245,
+          "field": "frFR",
+          "base": "5 émeraudes transcendées",
+          "upstreamV17": "5 émeraudes transcendées + 1 sceau primordial",
+          "desired": "5 émeraudes transcendées + 1 sceau primordial"
+        },
+        {
+          "id": 30245,
+          "field": "itIT",
+          "base": "5 smeraldi ascesi",
+          "upstreamV17": "5 smeraldi ascesi + 1 sigillo primordiale",
+          "desired": "5 smeraldi ascesi + 1 sigillo primordiale"
+        },
+        {
+          "id": 30245,
+          "field": "jaJP",
+          "base": "昇華したエメラルド5個",
+          "upstreamV17": "昇華したエメラルド5個 + 原初の印章1個",
+          "desired": "昇華したエメラルド5個 + 原初の印章1個"
+        },
+        {
+          "id": 30245,
+          "field": "koKR",
+          "base": "승천한 에메랄드 5개",
+          "upstreamV17": "승천한 에메랄드 5개 + 태고의 인장 1개",
+          "desired": "승천한 에메랄드 5개 + 태고의 인장 1개"
+        },
+        {
+          "id": 30245,
+          "field": "plPL",
+          "base": "5 wyniesionych szmaragdów",
+          "upstreamV17": "5 wyniesionych szmaragdów + 1 pierwotna pieczęć",
+          "desired": "5 wyniesionych szmaragdów + 1 pierwotna pieczęć"
+        },
+        {
+          "id": 30245,
+          "field": "ptBR",
+          "base": "5 esmeraldas ascendidas",
+          "upstreamV17": "5 esmeraldas ascendidas + 1 selo primordial",
+          "desired": "5 esmeraldas ascendidas + 1 selo primordial"
+        },
+        {
+          "id": 30245,
+          "field": "ruRU",
+          "base": "5 вознесённых изумрудов",
+          "upstreamV17": "5 вознесённых изумрудов + 1 изначальная печать",
+          "desired": "5 вознесённых изумрудов + 1 изначальная печать"
+        },
+        {
+          "id": 30245,
+          "field": "zhCN",
+          "base": "5 颗升华绿宝石",
+          "upstreamV17": "5 颗升华绿宝石 + 1 个至高印记",
+          "desired": "5 颗升华绿宝石 + 1 个至高印记"
+        },
+        {
+          "id": 30245,
+          "field": "zhTW",
+          "base": "5 顆昇華綠寶石",
+          "upstreamV17": "5 顆昇華綠寶石 + 1 個至高印記",
+          "desired": "5 顆昇華綠寶石 + 1 個至高印記"
+        },
+        {
+          "id": 30247,
+          "field": "deDE",
+          "base": "5 aufgestiegene Topase",
+          "upstreamV17": "5 aufgestiegene Topase + 1 Primärsiegel",
+          "desired": "5 aufgestiegene Topase + 1 Primärsiegel"
+        },
+        {
+          "id": 30247,
+          "field": "enUS",
+          "base": "5 Ascended Topazes",
+          "upstreamV17": "5 Ascended Topazes + 1 Prime Sigil",
+          "desired": "5 Ascended Topazes + 1 Prime Sigil"
+        },
+        {
+          "id": 30247,
+          "field": "esES",
+          "base": "5 topacios ascendidos",
+          "upstreamV17": "5 topacios ascendidos + 1 sello primordial",
+          "desired": "5 topacios ascendidos + 1 sello primordial"
+        },
+        {
+          "id": 30247,
+          "field": "esMX",
+          "base": "5 topacios ascendidos",
+          "upstreamV17": "5 topacios ascendidos + 1 sello primordial",
+          "desired": "5 topacios ascendidos + 1 sello primordial"
+        },
+        {
+          "id": 30247,
+          "field": "frFR",
+          "base": "5 topazes transcendées",
+          "upstreamV17": "5 topazes transcendées + 1 sceau primordial",
+          "desired": "5 topazes transcendées + 1 sceau primordial"
+        },
+        {
+          "id": 30247,
+          "field": "itIT",
+          "base": "5 topazi ascesi",
+          "upstreamV17": "5 topazi ascesi + 1 sigillo primordiale",
+          "desired": "5 topazi ascesi + 1 sigillo primordiale"
+        },
+        {
+          "id": 30247,
+          "field": "jaJP",
+          "base": "昇華したトパーズ5個",
+          "upstreamV17": "昇華したトパーズ5個 + 原初の印章1個",
+          "desired": "昇華したトパーズ5個 + 原初の印章1個"
+        },
+        {
+          "id": 30247,
+          "field": "koKR",
+          "base": "승천한 토파즈 5개",
+          "upstreamV17": "승천한 토파즈 5개 + 태고의 인장 1개",
+          "desired": "승천한 토파즈 5개 + 태고의 인장 1개"
+        },
+        {
+          "id": 30247,
+          "field": "plPL",
+          "base": "5 wyniesionych topazów",
+          "upstreamV17": "5 wyniesionych topazów + 1 pierwotna pieczęć",
+          "desired": "5 wyniesionych topazów + 1 pierwotna pieczęć"
+        },
+        {
+          "id": 30247,
+          "field": "ptBR",
+          "base": "5 topázios ascendidos",
+          "upstreamV17": "5 topázios ascendidos + 1 selo primordial",
+          "desired": "5 topázios ascendidos + 1 selo primordial"
+        },
+        {
+          "id": 30247,
+          "field": "ruRU",
+          "base": "5 вознесённых топазов",
+          "upstreamV17": "5 вознесённых топазов + 1 изначальная печать",
+          "desired": "5 вознесённых топазов + 1 изначальная печать"
+        },
+        {
+          "id": 30247,
+          "field": "zhCN",
+          "base": "5 颗升华黄宝石",
+          "upstreamV17": "5 颗升华黄宝石 + 1 个至高印记",
+          "desired": "5 颗升华黄宝石 + 1 个至高印记"
+        },
+        {
+          "id": 30247,
+          "field": "zhTW",
+          "base": "5 顆昇華黃寶石",
+          "upstreamV17": "5 顆昇華黃寶石 + 1 個至高印記",
+          "desired": "5 顆昇華黃寶石 + 1 個至高印記"
+        },
+        {
+          "id": 30249,
+          "field": "deDE",
+          "base": "5 aufgestiegene Schädel",
+          "upstreamV17": "5 aufgestiegene Schädel + 1 Primärsiegel",
+          "desired": "5 aufgestiegene Schädel + 1 Primärsiegel"
+        },
+        {
+          "id": 30249,
+          "field": "enUS",
+          "base": "5 Ascended Skulls",
+          "upstreamV17": "5 Ascended Skulls + 1 Prime Sigil",
+          "desired": "5 Ascended Skulls + 1 Prime Sigil"
+        },
+        {
+          "id": 30249,
+          "field": "esES",
+          "base": "5 calaveras ascendidas",
+          "upstreamV17": "5 calaveras ascendidas + 1 sello primordial",
+          "desired": "5 calaveras ascendidas + 1 sello primordial"
+        },
+        {
+          "id": 30249,
+          "field": "esMX",
+          "base": "5 calaveras ascendidas",
+          "upstreamV17": "5 calaveras ascendidas + 1 sello primordial",
+          "desired": "5 calaveras ascendidas + 1 sello primordial"
+        },
+        {
+          "id": 30249,
+          "field": "frFR",
+          "base": "5 crânes transcendés",
+          "upstreamV17": "5 crânes transcendés + 1 sceau primordial",
+          "desired": "5 crânes transcendés + 1 sceau primordial"
+        },
+        {
+          "id": 30249,
+          "field": "itIT",
+          "base": "5 teschi ascesi",
+          "upstreamV17": "5 teschi ascesi + 1 sigillo primordiale",
+          "desired": "5 teschi ascesi + 1 sigillo primordiale"
+        },
+        {
+          "id": 30249,
+          "field": "jaJP",
+          "base": "昇華した骸骨5個",
+          "upstreamV17": "昇華した骸骨5個 + 原初の印章1個",
+          "desired": "昇華した骸骨5個 + 原初の印章1個"
+        },
+        {
+          "id": 30249,
+          "field": "koKR",
+          "base": "승천한 해골 5개",
+          "upstreamV17": "승천한 해골 5개 + 태고의 인장 1개",
+          "desired": "승천한 해골 5개 + 태고의 인장 1개"
+        },
+        {
+          "id": 30249,
+          "field": "plPL",
+          "base": "5 wyniesionych czaszek",
+          "upstreamV17": "5 wyniesionych czaszek + 1 pierwotna pieczęć",
+          "desired": "5 wyniesionych czaszek + 1 pierwotna pieczęć"
+        },
+        {
+          "id": 30249,
+          "field": "ptBR",
+          "base": "5 crânios ascendidos",
+          "upstreamV17": "5 crânios ascendidos + 1 selo primordial",
+          "desired": "5 crânios ascendidos + 1 selo primordial"
+        },
+        {
+          "id": 30249,
+          "field": "ruRU",
+          "base": "5 вознесённых черепов",
+          "upstreamV17": "5 вознесённых черепов + 1 изначальная печать",
+          "desired": "5 вознесённых черепов + 1 изначальная печать"
+        },
+        {
+          "id": 30249,
+          "field": "zhCN",
+          "base": "5 颗升华骷髅",
+          "upstreamV17": "5 颗升华骷髅 + 1 个至高印记",
+          "desired": "5 颗升华骷髅 + 1 个至高印记"
+        },
+        {
+          "id": 30249,
+          "field": "zhTW",
+          "base": "5 顆昇華骷髏",
+          "upstreamV17": "5 顆昇華骷髏 + 1 個至高印記",
+          "desired": "5 顆昇華骷髏 + 1 個至高印記"
+        },
+        {
+          "id": 30400,
+          "field": "deDE",
+          "base": "Mal-Rune",
+          "upstreamV17": "Mal-Rune",
+          "desired": "Um-Rune + Pul-Rune + Pul-Rune",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30400,
+          "field": "enUS",
+          "base": "Mal Rune",
+          "upstreamV17": "Um Rune + 2 Pul Runes",
+          "desired": "Um Rune + 2 Pul Runes"
+        },
+        {
+          "id": 30400,
+          "field": "esES",
+          "base": "Runa Mal",
+          "upstreamV17": "Runa Mal",
+          "desired": "Runa Um + Runa Pul + Runa Pul",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30400,
+          "field": "esMX",
+          "base": "Runa Mal",
+          "upstreamV17": "Runa Mal",
+          "desired": "Runa Um + Runa Pul + Runa Pul",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30400,
+          "field": "frFR",
+          "base": "Rune Mal",
+          "upstreamV17": "Rune Mal",
+          "desired": "Rune Um + Rune Pul + Rune Pul",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30400,
+          "field": "itIT",
+          "base": "Runa Mal",
+          "upstreamV17": "Runa Mal",
+          "desired": "Runa Um + Runa Pul + Runa Pul",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30400,
+          "field": "jaJP",
+          "base": "Malルーン",
+          "upstreamV17": "Malルーン",
+          "desired": "アムルーン + プルルーン + プルルーン",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30400,
+          "field": "koKR",
+          "base": "Mal 룬",
+          "upstreamV17": "Mal 룬",
+          "desired": "우움 룬 + 풀 룬 + 풀 룬",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30400,
+          "field": "plPL",
+          "base": "Runa Mal",
+          "upstreamV17": "Runa Mal",
+          "desired": "Runa Um + Runa Pul + Runa Pul",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30400,
+          "field": "ptBR",
+          "base": "Runa Mal",
+          "upstreamV17": "Runa Mal",
+          "desired": "Runa Um + Runa Pul + Runa Pul",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30400,
+          "field": "ruRU",
+          "base": "Руна Mal",
+          "upstreamV17": "Руна Mal",
+          "desired": "Руна Ум + Руна Пул + Руна Пул",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30400,
+          "field": "zhCN",
+          "base": "Mal 符文",
+          "upstreamV17": "Mal 符文",
+          "desired": "乌姆 符文 + 普尔 符文 + 普尔 符文",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30400,
+          "field": "zhTW",
+          "base": "Mal 符文",
+          "upstreamV17": "Mal 符文",
+          "desired": "烏姆 符文 + 普爾 符文 + 普爾 符文",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30402,
+          "field": "deDE",
+          "base": "Gul-Rune",
+          "upstreamV17": "Gul-Rune",
+          "desired": "Mal-Rune + Um-Rune + Pul-Rune",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30402,
+          "field": "enUS",
+          "base": "Gul Rune",
+          "upstreamV17": "Mal Rune + Um Rune + Pul Rune",
+          "desired": "Mal Rune + Um Rune + Pul Rune"
+        },
+        {
+          "id": 30402,
+          "field": "esES",
+          "base": "Runa Gul",
+          "upstreamV17": "Runa Gul",
+          "desired": "Runa Mal + Runa Um + Runa Pul",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30402,
+          "field": "esMX",
+          "base": "Runa Gul",
+          "upstreamV17": "Runa Gul",
+          "desired": "Runa Mal + Runa Um + Runa Pul",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30402,
+          "field": "frFR",
+          "base": "Rune Gul",
+          "upstreamV17": "Rune Gul",
+          "desired": "Rune Mal + Rune Um + Rune Pul",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30402,
+          "field": "itIT",
+          "base": "Runa Gul",
+          "upstreamV17": "Runa Gul",
+          "desired": "Runa Mal + Runa Um + Runa Pul",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30402,
+          "field": "jaJP",
+          "base": "Gulルーン",
+          "upstreamV17": "Gulルーン",
+          "desired": "マルルーン + アムルーン + プルルーン",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30402,
+          "field": "koKR",
+          "base": "Gul 룬",
+          "upstreamV17": "Gul 룬",
+          "desired": "말 룬 + 우움 룬 + 풀 룬",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30402,
+          "field": "plPL",
+          "base": "Runa Gul",
+          "upstreamV17": "Runa Gul",
+          "desired": "Runa Mal + Runa Um + Runa Pul",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30402,
+          "field": "ptBR",
+          "base": "Runa Gul",
+          "upstreamV17": "Runa Gul",
+          "desired": "Runa Mal + Runa Um + Runa Pul",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30402,
+          "field": "ruRU",
+          "base": "Руна Gul",
+          "upstreamV17": "Руна Gul",
+          "desired": "Руна Мал + Руна Ум + Руна Пул",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30402,
+          "field": "zhCN",
+          "base": "Gul 符文",
+          "upstreamV17": "Gul 符文",
+          "desired": "玛尔 符文 + 乌姆 符文 + 普尔 符文",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30402,
+          "field": "zhTW",
+          "base": "Gul 符文",
+          "upstreamV17": "Gul 符文",
+          "desired": "馬爾 符文 + 烏姆 符文 + 普爾 符文",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30404,
+          "field": "deDE",
+          "base": "Ohm-Rune",
+          "upstreamV17": "Ohm-Rune",
+          "desired": "Ist-Rune + Mal-Rune",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30404,
+          "field": "enUS",
+          "base": "Ohm Rune",
+          "upstreamV17": "Ist Rune + Mal Rune",
+          "desired": "Ist Rune + Mal Rune"
+        },
+        {
+          "id": 30404,
+          "field": "esES",
+          "base": "Runa Ohm",
+          "upstreamV17": "Runa Ohm",
+          "desired": "Runa Ist + Runa Mal",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30404,
+          "field": "esMX",
+          "base": "Runa Ohm",
+          "upstreamV17": "Runa Ohm",
+          "desired": "Runa Ist + Runa Mal",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30404,
+          "field": "frFR",
+          "base": "Rune Ohm",
+          "upstreamV17": "Rune Ohm",
+          "desired": "Rune Ist + Rune Mal",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30404,
+          "field": "itIT",
+          "base": "Runa Ohm",
+          "upstreamV17": "Runa Ohm",
+          "desired": "Runa Ist + Runa Mal",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30404,
+          "field": "jaJP",
+          "base": "Ohmルーン",
+          "upstreamV17": "Ohmルーン",
+          "desired": "イストルーン + マルルーン",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30404,
+          "field": "koKR",
+          "base": "Ohm 룬",
+          "upstreamV17": "Ohm 룬",
+          "desired": "이스트 룬 + 말 룬",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30404,
+          "field": "plPL",
+          "base": "Runa Ohm",
+          "upstreamV17": "Runa Ohm",
+          "desired": "Runa Ist + Runa Mal",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30404,
+          "field": "ptBR",
+          "base": "Runa Ohm",
+          "upstreamV17": "Runa Ohm",
+          "desired": "Runa Ist + Runa Mal",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30404,
+          "field": "ruRU",
+          "base": "Руна Ohm",
+          "upstreamV17": "Руна Ohm",
+          "desired": "Руна Ист + Руна Мал",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30404,
+          "field": "zhCN",
+          "base": "Ohm 符文",
+          "upstreamV17": "Ohm 符文",
+          "desired": "伊司特 符文 + 玛尔 符文",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30404,
+          "field": "zhTW",
+          "base": "Ohm 符文",
+          "upstreamV17": "Ohm 符文",
+          "desired": "伊司特 符文 + 馬爾 符文",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30405,
+          "field": "deDE",
+          "base": "33 Ziegel + Auftauelixier",
+          "upstreamV17": "33 Ziegel + Auftauelixier",
+          "desired": "31 Ziegel + Auftauelixier",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30405,
+          "field": "enUS",
+          "base": "33 Bricks + Thawing Potion",
+          "upstreamV17": "31 Bricks + Thawing Potion",
+          "desired": "31 Bricks + Thawing Potion"
+        },
+        {
+          "id": 30405,
+          "field": "esES",
+          "base": "33 Ladrillos + Poción descongelante",
+          "upstreamV17": "33 Ladrillos + Poción descongelante",
+          "desired": "31 Ladrillos + Poción descongelante",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30405,
+          "field": "esMX",
+          "base": "33 Ladrillos + Poción descongelante",
+          "upstreamV17": "33 Ladrillos + Poción descongelante",
+          "desired": "31 Ladrillos + Poción descongelante",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30405,
+          "field": "frFR",
+          "base": "33 Briques + Potion de dégel",
+          "upstreamV17": "33 Briques + Potion de dégel",
+          "desired": "31 Briques + Potion de dégel",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30405,
+          "field": "itIT",
+          "base": "33 Mattoni + Pozione scongelante",
+          "upstreamV17": "33 Mattoni + Pozione scongelante",
+          "desired": "31 Mattoni + Pozione scongelante",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30405,
+          "field": "jaJP",
+          "base": "レンガ33個 + 解凍ポーション",
+          "upstreamV17": "レンガ33個 + 解凍ポーション",
+          "desired": "レンガ31個 + 解凍ポーション",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30405,
+          "field": "koKR",
+          "base": "벽돌 33개 + 해동 물약",
+          "upstreamV17": "벽돌 33개 + 해동 물약",
+          "desired": "벽돌 31개 + 해동 물약",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30405,
+          "field": "plPL",
+          "base": "33 Cegły + Mikstura odtajania",
+          "upstreamV17": "33 Cegły + Mikstura odtajania",
+          "desired": "31 Cegły + Mikstura odtajania",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30405,
+          "field": "ptBR",
+          "base": "33 Tijolos + Poção de descongelamento",
+          "upstreamV17": "33 Tijolos + Poção de descongelamento",
+          "desired": "31 Tijolos + Poção de descongelamento",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30405,
+          "field": "ruRU",
+          "base": "33 Кирпича + Зелье оттаивания",
+          "upstreamV17": "33 Кирпича + Зелье оттаивания",
+          "desired": "31 Кирпича + Зелье оттаивания",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30405,
+          "field": "zhCN",
+          "base": "33 块砖 + 解冻药剂",
+          "upstreamV17": "33 块砖 + 解冻药剂",
+          "desired": "31 块砖 + 解冻药剂",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30405,
+          "field": "zhTW",
+          "base": "33 塊磚 + 解凍藥劑",
+          "upstreamV17": "33 塊磚 + 解凍藥劑",
+          "desired": "31 塊磚 + 解凍藥劑",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30406,
+          "field": "deDE",
+          "base": "Sur-Rune",
+          "upstreamV17": "Sur-Rune",
+          "desired": "Ist-Rune + Mal-Rune + Um-Rune",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30406,
+          "field": "enUS",
+          "base": "Sur Rune",
+          "upstreamV17": "Ist Rune + Mal Rune + Um Rune",
+          "desired": "Ist Rune + Mal Rune + Um Rune"
+        },
+        {
+          "id": 30406,
+          "field": "esES",
+          "base": "Runa Sur",
+          "upstreamV17": "Runa Sur",
+          "desired": "Runa Ist + Runa Mal + Runa Um",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30406,
+          "field": "esMX",
+          "base": "Runa Sur",
+          "upstreamV17": "Runa Sur",
+          "desired": "Runa Ist + Runa Mal + Runa Um",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30406,
+          "field": "frFR",
+          "base": "Rune Sur",
+          "upstreamV17": "Rune Sur",
+          "desired": "Rune Ist + Rune Mal + Rune Um",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30406,
+          "field": "itIT",
+          "base": "Runa Sur",
+          "upstreamV17": "Runa Sur",
+          "desired": "Runa Ist + Runa Mal + Runa Um",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30406,
+          "field": "jaJP",
+          "base": "Surルーン",
+          "upstreamV17": "Surルーン",
+          "desired": "イストルーン + マルルーン + アムルーン",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30406,
+          "field": "koKR",
+          "base": "Sur 룬",
+          "upstreamV17": "Sur 룬",
+          "desired": "이스트 룬 + 말 룬 + 우움 룬",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30406,
+          "field": "plPL",
+          "base": "Runa Sur",
+          "upstreamV17": "Runa Sur",
+          "desired": "Runa Ist + Runa Mal + Runa Um",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30406,
+          "field": "ptBR",
+          "base": "Runa Sur",
+          "upstreamV17": "Runa Sur",
+          "desired": "Runa Ist + Runa Mal + Runa Um",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30406,
+          "field": "ruRU",
+          "base": "Руна Sur",
+          "upstreamV17": "Руна Sur",
+          "desired": "Руна Ист + Руна Мал + Руна Ум",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30406,
+          "field": "zhCN",
+          "base": "Sur 符文",
+          "upstreamV17": "Sur 符文",
+          "desired": "伊司特 符文 + 玛尔 符文 + 乌姆 符文",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30406,
+          "field": "zhTW",
+          "base": "Sur 符文",
+          "upstreamV17": "Sur 符文",
+          "desired": "伊司特 符文 + 馬爾 符文 + 烏姆 符文",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30407,
+          "field": "deDE",
+          "base": "36 Ziegel + Auftauelixier",
+          "upstreamV17": "36 Ziegel + Auftauelixier",
+          "desired": "35 Ziegel + Auftauelixier",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30407,
+          "field": "enUS",
+          "base": "36 Bricks + Thawing Potion",
+          "upstreamV17": "35 Bricks + Thawing Potion",
+          "desired": "35 Bricks + Thawing Potion"
+        },
+        {
+          "id": 30407,
+          "field": "esES",
+          "base": "36 Ladrillos + Poción descongelante",
+          "upstreamV17": "36 Ladrillos + Poción descongelante",
+          "desired": "35 Ladrillos + Poción descongelante",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30407,
+          "field": "esMX",
+          "base": "36 Ladrillos + Poción descongelante",
+          "upstreamV17": "36 Ladrillos + Poción descongelante",
+          "desired": "35 Ladrillos + Poción descongelante",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30407,
+          "field": "frFR",
+          "base": "36 Briques + Potion de dégel",
+          "upstreamV17": "36 Briques + Potion de dégel",
+          "desired": "35 Briques + Potion de dégel",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30407,
+          "field": "itIT",
+          "base": "36 Mattoni + Pozione scongelante",
+          "upstreamV17": "36 Mattoni + Pozione scongelante",
+          "desired": "35 Mattoni + Pozione scongelante",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30407,
+          "field": "jaJP",
+          "base": "レンガ36個 + 解凍ポーション",
+          "upstreamV17": "レンガ36個 + 解凍ポーション",
+          "desired": "レンガ35個 + 解凍ポーション",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30407,
+          "field": "koKR",
+          "base": "벽돌 36개 + 해동 물약",
+          "upstreamV17": "벽돌 36개 + 해동 물약",
+          "desired": "벽돌 35개 + 해동 물약",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30407,
+          "field": "plPL",
+          "base": "36 Cegieł + Mikstura odtajania",
+          "upstreamV17": "36 Cegieł + Mikstura odtajania",
+          "desired": "35 Cegieł + Mikstura odtajania",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30407,
+          "field": "ptBR",
+          "base": "36 Tijolos + Poção de descongelamento",
+          "upstreamV17": "36 Tijolos + Poção de descongelamento",
+          "desired": "35 Tijolos + Poção de descongelamento",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30407,
+          "field": "ruRU",
+          "base": "36 Кирпичей + Зелье оттаивания",
+          "upstreamV17": "36 Кирпичей + Зелье оттаивания",
+          "desired": "35 Кирпичей + Зелье оттаивания",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30407,
+          "field": "zhCN",
+          "base": "36 块砖 + 解冻药剂",
+          "upstreamV17": "36 块砖 + 解冻药剂",
+          "desired": "35 块砖 + 解冻药剂",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30407,
+          "field": "zhTW",
+          "base": "36 塊磚 + 解凍藥劑",
+          "upstreamV17": "36 塊磚 + 解凍藥劑",
+          "desired": "35 塊磚 + 解凍藥劑",
+          "rationale": "Complete the v17 Brick ingredient correction in every supported locale."
+        },
+        {
+          "id": 30408,
+          "field": "deDE",
+          "base": "Ber-Rune",
+          "upstreamV17": "Ber-Rune",
+          "desired": "Gul-Rune + Ist-Rune",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30408,
+          "field": "enUS",
+          "base": "Ber Rune",
+          "upstreamV17": "Gul Rune + Ist Rune",
+          "desired": "Gul Rune + Ist Rune"
+        },
+        {
+          "id": 30408,
+          "field": "esES",
+          "base": "Runa Ber",
+          "upstreamV17": "Runa Ber",
+          "desired": "Runa Gul + Runa Ist",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30408,
+          "field": "esMX",
+          "base": "Runa Ber",
+          "upstreamV17": "Runa Ber",
+          "desired": "Runa Gul + Runa Ist",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30408,
+          "field": "frFR",
+          "base": "Rune Ber",
+          "upstreamV17": "Rune Ber",
+          "desired": "Rune Gul + Rune Ist",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30408,
+          "field": "itIT",
+          "base": "Runa Ber",
+          "upstreamV17": "Runa Ber",
+          "desired": "Runa Gul + Runa Ist",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30408,
+          "field": "jaJP",
+          "base": "Berルーン",
+          "upstreamV17": "Berルーン",
+          "desired": "ガルルーン + イストルーン",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30408,
+          "field": "koKR",
+          "base": "Ber 룬",
+          "upstreamV17": "Ber 룬",
+          "desired": "굴 룬 + 이스트 룬",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30408,
+          "field": "plPL",
+          "base": "Runa Ber",
+          "upstreamV17": "Runa Ber",
+          "desired": "Runa Gul + Runa Ist",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30408,
+          "field": "ptBR",
+          "base": "Runa Ber",
+          "upstreamV17": "Runa Ber",
+          "desired": "Runa Gul + Runa Ist",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30408,
+          "field": "ruRU",
+          "base": "Руна Ber",
+          "upstreamV17": "Руна Ber",
+          "desired": "Руна Гул + Руна Ист",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30408,
+          "field": "zhCN",
+          "base": "Ber 符文",
+          "upstreamV17": "Ber 符文",
+          "desired": "古尔 符文 + 伊司特 符文",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30408,
+          "field": "zhTW",
+          "base": "Ber 符文",
+          "upstreamV17": "Ber 符文",
+          "desired": "古爾 符文 + 伊司特 符文",
+          "rationale": "Complete the v17 Brick result correction in every supported locale."
+        },
+        {
+          "id": 30419,
+          "field": "deDE",
+          "base": "Verdrehte Essenz des Leidens + Geladene Essenz des Hasses + Brennende Essenz des Schreckens + Eiternde Essenz der Zerstörung",
+          "upstreamV17": "Je 1 Essenz",
+          "desired": "Je 1 Essenz"
+        },
+        {
+          "id": 30419,
+          "field": "enUS",
+          "base": "Twisted Essence of Suffering + Charged Essence of Hatred + Burning Essence of Terror + Festering Essence of Destruction",
+          "upstreamV17": "1 of Each Essence",
+          "desired": "1 of Each Essence"
+        },
+        {
+          "id": 30419,
+          "field": "esES",
+          "base": "Esencia retorcida del sufrimiento + Esencia cargada del odio + Esencia ardiente del terror + Esencia putrefacta de la destrucción",
+          "upstreamV17": "1 de cada esencia",
+          "desired": "1 de cada esencia"
+        },
+        {
+          "id": 30419,
+          "field": "esMX",
+          "base": "Esencia retorcida del sufrimiento + Esencia cargada del odio + Esencia ardiente del terror + Esencia putrefacta de la destrucción",
+          "upstreamV17": "1 de cada esencia",
+          "desired": "1 de cada esencia"
+        },
+        {
+          "id": 30419,
+          "field": "frFR",
+          "base": "Essence tordue de souffrance + Essence chargée de haine + Essence ardente de terreur + Essence purulente de destruction",
+          "upstreamV17": "1 essence de chaque type",
+          "desired": "1 essence de chaque type"
+        },
+        {
+          "id": 30419,
+          "field": "itIT",
+          "base": "Essenza contorta della sofferenza + Essenza caricata dell'odio + Essenza ardente del terrore + Essenza purulenta della distruzione",
+          "upstreamV17": "1 di ogni essenza",
+          "desired": "1 di ogni essenza"
+        },
+        {
+          "id": 30419,
+          "field": "jaJP",
+          "base": "苦痛の歪んだエッセンス + 憎悪の帯電したエッセンス + 恐怖の燃えるエッセンス + 破壊の腐敗したエッセンス",
+          "upstreamV17": "各エッセンス1個",
+          "desired": "各エッセンス1個"
+        },
+        {
+          "id": 30419,
+          "field": "koKR",
+          "base": "고통의 뒤틀린 정수 + 증오의 충전된 정수 + 공포의 불타는 정수 + 파괴의 부패한 정수",
+          "upstreamV17": "정수 종류별 1개",
+          "desired": "정수 종류별 1개"
+        },
+        {
+          "id": 30419,
+          "field": "plPL",
+          "base": "Skręcona Esencja Cierpienia + Naładowana Esencja Nienawiści + Płonąca Esencja Terroru + Gnijąca Esencja Zniszczenia",
+          "upstreamV17": "Po 1 esencji każdego rodzaju",
+          "desired": "Po 1 esencji każdego rodzaju"
+        },
+        {
+          "id": 30419,
+          "field": "ptBR",
+          "base": "Essência Retorcida do Sofrimento + Essência Carregada do Ódio + Essência Ardente do Terror + Essência Pútrida da Destruição",
+          "upstreamV17": "1 de cada essência",
+          "desired": "1 de cada essência"
+        },
+        {
+          "id": 30419,
+          "field": "ruRU",
+          "base": "Искажённая сущность страдания + Заряженная сущность ненависти + Пылающая сущность ужаса + Гниющая сущность разрушения",
+          "upstreamV17": "По 1 сущности каждого вида",
+          "desired": "По 1 сущности каждого вида"
+        },
+        {
+          "id": 30419,
+          "field": "zhCN",
+          "base": "扭曲苦痛精华 + 充能憎恨精华 + 燃烧恐惧精华 + 腐败毁灭精华",
+          "upstreamV17": "每种精华各 1 个",
+          "desired": "每种精华各 1 个"
+        },
+        {
+          "id": 30419,
+          "field": "zhTW",
+          "base": "扭曲苦痛精華 + 充能憎恨精華 + 燃燒恐懼精華 + 腐敗毀滅精華",
+          "upstreamV17": "每種精華各 1 個",
+          "desired": "每種精華各 1 個"
+        }
+      ],
+      "additions": [
+        {
+          "id": 30431,
+          "Key": "strFlaskofEthericLightRecipe",
+          "enUS": "35 SoH + Thawing Potion",
+          "zhTW": "35 個 SoH + 解凍藥劑",
+          "deDE": "35 SoH + Auftauelixier",
+          "esES": "35 SoH + Poción de descongelación",
+          "frFR": "35 SoH + Potion de dégel",
+          "itIT": "35 SoH + Pozione del disgelo",
+          "koKR": "SoH 35개 + 해동 물약",
+          "plPL": "35 SoH + Mikstura odtajania",
+          "esMX": "35 SoH + Poción de descongelación",
+          "jaJP": "SoH 35個 + 解凍のポーション",
+          "ptBR": "35 SoH + Poção do Degelo",
+          "ruRU": "35 SoH + Зелье оттаивания",
+          "zhCN": "35 个 SoH + 解冻药剂"
+        },
+        {
+          "id": 30432,
+          "Key": "strFlaskofEthericLightResult",
+          "enUS": "Flask of Etheric Light",
+          "zhTW": "以太之光藥瓶",
+          "deDE": "Fläschchen des ätherischen Lichts",
+          "esES": "Frasco de luz etérea",
+          "frFR": "Flacon de lumière éthérique",
+          "itIT": "Ampolla di luce eterea",
+          "koKR": "에테르 빛의 플라스크",
+          "plPL": "Flakon eterycznego światła",
+          "esMX": "Frasco de luz etérea",
+          "jaJP": "エーテルの光のフラスコ",
+          "ptBR": "Frasco de Luz Etérea",
+          "ruRU": "Флакон эфирного света",
+          "zhCN": "以太之光药瓶"
+        }
+      ],
+      "protectedOwners": [
+        {
+          "id": 30429,
+          "Key": "remoteStashTooltip"
+        },
+        {
+          "id": 30430,
+          "Key": "shiftConfirmation",
+          "optional": true
+        }
+      ]
+    }
+  },
+  "layouts": {
+    "modSpecificPath": "global/ui/layouts/cuberecipesmodspecifichd.json",
+    "uniqueSetPath": "global/ui/layouts/cuberecipesuniquesethd.json",
+    "blankCharmWidget": {
+      "type": "TableRowWidget",
+      "name": "blank_charm_recipe",
+      "children": [
+        {
+          "type": "TextBoxWidget",
+          "name": "Ingredients",
+          "fields": {
+            "text": "@strBlankCharmRecipeIngredient",
+            "style": "$StyleSettingsText"
+          },
+          "children": [
+            {
+              "type": "ImageWidget",
+              "name": "Divider",
+              "fields": {
+                "rect": "$OptionsDividerRect",
+                "filename": "PauseMenu\\Divider"
+              }
+            }
+          ]
+        },
+        {
+          "type": "TextBoxWidget",
+          "name": "Result",
+          "fields": {
+            "text": "@strBlankCharmRecipeResult",
+            "style": "$StyleSettingsText"
+          }
+        }
+      ]
+    },
+    "flaskWidget": {
+      "type": "TableRowWidget",
+      "name": "flask_recipe",
+      "children": [
+        {
+          "type": "TextBoxWidget",
+          "name": "Ingredients",
+          "fields": {
+            "text": "@strFlaskofEthericLightRecipe",
+            "style": "$StyleSettingsText"
+          },
+          "children": [
+            {
+              "type": "ImageWidget",
+              "name": "Divider",
+              "fields": {
+                "rect": "$OptionsDividerRect",
+                "filename": "PauseMenu\\Divider"
+              }
+            }
+          ]
+        },
+        {
+          "type": "TextBoxWidget",
+          "name": "Result",
+          "fields": {
+            "text": "@strFlaskofEthericLightResult",
+            "style": "$StyleSettingsText"
+          }
+        }
+      ]
+    },
+    "blankCharmAnchor": "modifiers_charm_recipe",
+    "flaskAnchor": "pile_of_bricks_recipe"
+  }
+}

@@ -39204,6 +39204,16 @@
                                                                                 "name":  "validate-startup-references.js",
                                                                                 "path":  "scripts/migrate-bkvince/validate-startup-references.js",
                                                                                 "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "apply-bkdiablo-v17.js",
+                                                                                "path":  "scripts/migrate-bkvince/apply-bkdiablo-v17.js",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "bkdiablo-v17-selected-delta.json",
+                                                                                "path":  "scripts/migrate-bkvince/bkdiablo-v17-selected-delta.json",
+                                                                                "kind":  "file"
                                                                             }
                                                                         ]
                                                        },
