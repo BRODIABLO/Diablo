@@ -1383,7 +1383,7 @@
       "type": "Widget",
       "name": "StashSearchAnchor",
       "fields": {
-        "rect": { "x": 91, "y": 1566, "width": 562, "height": 93 }
+        "rect": { "x": 752, "y": 40, "width": 532, "height": 93 }
       }
     }
   ]
