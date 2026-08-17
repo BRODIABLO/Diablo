@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-12T11:12:03.8819168+00:00",
+    "generatedAt":  "2026-08-17T20:04:06.2952699+00:00",
     "root":  {
                  "name":  "pd2-affixes-index-7776be629d014bf58eb297d6a91ce01a",
                  "path":  ".",
@@ -22069,6 +22069,11 @@
                                                                                                  {
                                                                                                      "name":  "RogueScoutMovement.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/RogueScoutMovement.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "StashSearch.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/StashSearch.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
