@@ -1,39 +1,35 @@
-# BKVince preset for the mod-local PotionAutoPickup plugin.
-enabled = true
-# Vanilla automatic gold pickup uses a server distance-cost limit of 4.
-pickup_distance = 4
-# Scan after every supported player action packet for responsive movement pickup.
-minimum_interval_actions = 1
-family_priority = ["rejuvenation", "healing", "mana"]
+# Potion Auto Pickup
+# Potion codes are the exact values from the code column in misc.txt.
+# The order of each potion_codes list is also its pickup priority.
 
-[healing]
 enabled = true
-# Supported types: hp1, hp2, hp3, hp4, hp5.
-tiers = ["hp2", "hp3", "hp4", "hp5"]
-columns = [1, 2]
-# The legacy family-wide switch remains false; overflow_tiers is authoritative.
-overflow_to_inventory = false
-overflow_tiers = ["hp3", "hp4", "hp5"]
-tier_priority = ["hp5", "hp4", "hp3", "hp2"]
+pickup_range = 4
+pickup_family_order = ["rejuvenation", "health", "mana"]
 
-[mana]
+[health_potions]
 enabled = true
-# Supported types: mp1, mp2, mp3, mp4, mp5.
-tiers = ["mp2", "mp3", "mp4", "mp5"]
-columns = [3, 4]
-overflow_to_inventory = false
-overflow_tiers = ["mp3", "mp4", "mp5"]
-tier_priority = ["mp5", "mp4", "mp3", "mp2"]
+potion_codes = ["hp5", "hp4", "hp3", "hp2"]
+belt_columns = [1, 2]
+# Only hp5 may use character inventory when belt columns 1 and 2 are full.
+inventory_fallback_potion_codes = ["hp5"]
 
-[rejuvenation]
+[mana_potions]
 enabled = true
-# Supported types: rvs, rvl.
-tiers = ["rvs", "rvl"]
-columns = [4]
-overflow_to_inventory = false
-overflow_tiers = ["rvs", "rvl"]
-tier_priority = ["rvl", "rvs"]
+potion_codes = ["mp5", "mp4", "mp3"]
+belt_columns = [3]
+# Only mp5 may use character inventory when belt column 3 is full.
+inventory_fallback_potion_codes = ["mp5"]
+
+[rejuvenation_potions]
+enabled = true
+potion_codes = ["rvl", "rvs"]
+belt_columns = [4]
+# Both Full Rejuvenation and Rejuvenation may use character inventory.
+inventory_fallback_potion_codes = ["rvl", "rvs"]
+
+[advanced]
+scan_every_player_actions = 1
 
 [diagnostics]
-enabled = false
+enabled = true
 log_scans = false
