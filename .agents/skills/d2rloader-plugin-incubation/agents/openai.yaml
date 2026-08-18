@@ -1,4 +1,4 @@
 interface:
   display_name: "D2RLoader Plugin Incubation"
-  short_description: "Choisir et incuber un plugin D2RLoader"
-  default_prompt: "Utilise $d2rloader-plugin-incubation pour choisir entre plugin autonome et merge PluginPack, puis préparer son incubation."
+  short_description: "Incuber un plugin autonome RuffnecKk Suite"
+  default_prompt: "Utilise $d2rloader-plugin-incubation pour préparer un plugin autonome compatible avec la RuffnecKk D2RLoader Suite."

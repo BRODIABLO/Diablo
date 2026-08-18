@@ -1,6 +1,6 @@
 # BaseMod 3.2 — Charm Zone, services répétables, MF linéaire et démarrage Players
 
-Dernière mise à jour : 2 août 2026
+Dernière mise à jour : 18 août 2026
 
 ## Décisions produit
 
@@ -9,7 +9,7 @@ ses branches avancent en parallèle selon les preuves disponibles, sans dépenda
 artificielle entre les services répétables et le Magic Find linéaire :
 
 1. implanter une Charm Zone stricte propre à BKVince;
-2. intégrer les services de quête répétables au prochain lot PluginPack;
+2. conserver les services de quête répétables dans une DLL autonome Suite;
 3. auditer le player count automatique avant d'ajouter une couche PluginPack;
 4. vérifier la nécessité de `UniqueNoLimit` sous D2R 3.2;
 5. mesurer la cadence CPU de PotionAutoPickup avant toute optimisation;
@@ -20,10 +20,12 @@ artificielle entre les services répétables et le Magic Find linéaire :
 Il reste hybride globale/mod-locale, compatible avec les cinq DLL eezstreet et
 utilise son propre `charm-zone.toml` en anglais. BKVince l'installe mod-localement.
 
-Les destinations PluginPack confirmées sont :
-
-- `quests.repeatableServices` dans `plugin-quests.dll`;
-- `items.magicFindFormula` dans `plugin-items.dll`.
+La règle Suite confirmée le 18 août 2026 annule la destination encore ouverte
+de `quests.repeatableServices` dans `plugin-quests.dll`. `RepeatableServices.dll`
+reste un plugin autonome RuffnecKk Suite avec son `RepeatableServices.json`, sa
+version et son archive propres. L’intégration déjà réalisée de
+`items.magicFindFormula` dans `plugin-items.dll` demeure une preuve historique;
+elle ne crée aucun précédent pour un nouveau merge.
 
 ## Contrat Charm Zone
 
@@ -50,7 +52,7 @@ Chaque service expose `mode = disabled | free | paid`, `goldPerLevel` et
 | Socketing | 1000 | 20000 |
 | Personalization | 500 | 10000 |
 
-- Defaults PluginPack : les quatre services sont `disabled`.
+- Defaults de `RepeatableServices.json` : les quatre services sont `disabled`.
 - Preset BKVince : les quatre services sont `paid`.
 - La récompense native gratuite est consommée avant tout paiement, séparément
   par difficulté.
@@ -248,8 +250,8 @@ n'est pas reproduite.
 - [ ] Localiser la couture équivalente après validation mais avant mutation pour
   Charsi, Larzuk et Anya.
 - [ ] Prouver l'affichage dynamique et localisé du prix calculé au niveau.
-- [ ] Intégrer `quests.repeatableServices` sans collision avec les chemins
-  Charsi/Larzuk existants ni avec ConfigurableCharsiReward.
+- [ ] Qualifier `RepeatableServices.dll` dans la Suite sans collision avec les
+  chemins Charsi/Larzuk existants ni avec ConfigurableCharsiReward.
 - [ ] Remplacer le patch de récompenses infinies seulement après matrice complète.
 - [x] Confirmer `items.magicFindFormula` dans `plugin-items.dll`, avec modes
   `vanilla|linear`, défaut vanilla et preset BKVince linéaire.

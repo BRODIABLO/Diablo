@@ -2,7 +2,7 @@
 
 ## Statut
 
-Étude parallèle gouvernée — 31 juillet 2026. Elle ne remplace pas la mission active désignée par `Mission/CURRENT.md` et ne modifie aucun fichier gameplay, plugin, patch mémoire, configuration ou runtime de BKVince.
+Étude parallèle gouvernée — 31 juillet 2026, règle d’incubation actualisée le 18 août 2026. Elle ne remplace pas la mission active désignée par `Mission/CURRENT.md` et ne modifie aucun fichier gameplay, plugin, patch mémoire, configuration ou runtime de BKVince.
 
 Source étudiée : `TDE_D2SE_3.1d.1.7z`, SHA-256 `671D0636EF96FF59D94192C3FF0DD73AB69CAAE1D41FC4563F796149AFBC9356`.
 
@@ -84,7 +84,7 @@ Le score équilibré sur 100 est `valeur joueur × 6 + adéquation BKVince × 5 
 
 ## Top 10 natif ou hybride
 
-Ce classement établit des candidats d’étude, pas une autorisation de coder une DLL. Pour chacun, la prochaine étape obligatoire est la question d’incubation « Plugin autonome ou plugin à merger au PluginPack ? », suivie des preuves ABI/hooks propres au build 92777.
+Ce classement établit des candidats d’étude, pas une autorisation de coder une DLL. Toute nouvelle DLL est automatiquement un plugin autonome RuffnecKk Suite; sa prochaine étape obligatoire est l’incubation de compatibilité Suite, suivie des preuves ABI/hooks propres au build 92777.
 
 | Rang | Idée adaptée | Score | Preuve actuelle et prochain gate |
 |---:|---|---:|---|
@@ -112,12 +112,12 @@ Ce classement établit des candidats d’étude, pas une autorisation de coder u
 
 Commencer, lorsque Vincent voudra ouvrir un lot TDE, par une seule idée data-first isolée : **préserver les socketables lors du vidage d’un item**. C’est le candidat au meilleur score, le plus réversible et le moins dépendant du runtime natif. L’étude doit d’abord confirmer que BKVince ne possède pas déjà une recette équivalente, fixer un coût cohérent avec son économie, puis utiliser le workflow `diablo-tsv` pour une implantation ciblée et byte-safe.
 
-Le premier chantier natif recommandé est ensuite **les services payants Charsi/Larzuk/Anya**, parce que des preuves 92777 adjacentes existent déjà. Il ne doit toutefois pas commencer avant le gate de destination du plugin et une décision explicite sur le contrat joueur : prix, gratuité initiale, consommation de quête, limites, solo/hôte/joiner et interaction avec les patches Infinite.
+Le premier chantier natif recommandé est ensuite **les services payants Charsi/Larzuk/Anya**, parce que des preuves 92777 adjacentes existent déjà. Il ne doit toutefois pas commencer avant le gate autonome RuffnecKk Suite et une décision explicite sur le contrat joueur : prix, gratuité initiale, consommation de quête, limites, solo/hôte/joiner et interaction avec les patches Infinite.
 
 ## Gates de décision avant implantation
 
 1. Vincent choisit un seul candidat du catalogue et confirme qu’il devient une mission, sans changer implicitement la priorité désignée par `Mission/CURRENT.md`.
-2. Pour un candidat natif, appliquer intégralement `d2rloader-plugin-incubation` et fermer le gate autonome ou merge avant tout code/configuration/archive.
+2. Pour un candidat natif, appliquer intégralement `d2rloader-plugin-incubation` et fermer le contrat autonome RuffnecKk Suite avant tout code/configuration/archive.
 3. Pour un candidat data, produire le différentiel BKVince/vanilla 3.2/TDE utile, puis définir le comportement BKVince sans copier les lignes TDE.
 4. Pour un candidat natif ou hybride, interroger le workbench 92777, consigner preuves, ABI, signatures, autorité réseau et collisions de hooks.
 5. Définir sauvegarde, migration et rollback avant toute modification qui crée des IDs, stats, objets ou états persistants.
@@ -125,10 +125,10 @@ Le premier chantier natif recommandé est ensuite **les services payants Charsi/
 
 ## Prochain gate du workstream
 
-Le 1 août 2026, Vincent retient `alt-required-ground-pickup` pour un futur merge
-dans `plugin-items.dll` sous `items.requireItemDisplayForPickup`, selon l’Option A :
-le candidat rejoint MassID dans la réserve du prochain lot PluginPack sans
-remplacer la mission courante. Sa conception gouvernée est consignée dans
+Le 1 août 2026, Vincent avait retenu `alt-required-ground-pickup` pour un futur
+merge dans `plugin-items.dll`. La règle Suite du 18 août 2026 supersède cette
+destination : le candidat et MassID restent deux plugins RuffnecKk autonomes,
+qualifiés ensemble sans fusion. Sa conception gouvernée est consignée dans
 `Mission/require-item-display-for-pickup-3.2.md`.
 
 Poursuivre la revue séquentielle des autres candidats TDE. Le candidat retenu

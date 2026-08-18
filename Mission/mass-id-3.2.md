@@ -1,21 +1,21 @@
 # MassID — D2R 3.2
 
-Dernière mise à jour : 5 août 2026
+Dernière mise à jour : 18 août 2026
 
 ## Décision produit
 
-Vincent demande l’implantation de **MassID** comme plugin autonome d’incubation,
-destiné à être mergé plus tard dans `plugin-items.dll` sous la clé
-`items.massIdentify`. L’incubation ne modifie, ne lie et ne redistribue aucune
-DLL d’eezstreet.
+Vincent confirme le 18 août 2026 **MassID** comme plugin autonome permanent de
+la RuffnecKk D2RLoader Suite. L’ancien projet de merge dans `plugin-items.dll`
+sous `items.massIdentify` est annulé; il reste seulement une décision
+historique. MassID conserve sa DLL, sa version, son archive et son JSON
+indépendants, sans modifier, lier ni redistribuer une DLL d’eezstreet.
 
 Le geste retenu est `Shift + clic droit` sur un Tome of Identify. L’autorité
 serveur identifie les objets non identifiés de l’inventaire principal, puis ceux
 du Horadric Cube, puis ceux du coffre personnel et partagé, dans cet ordre
 déterministe.
 
-Le JSON autonome et le futur bloc du PluginPack partagent exactement le même
-contrat :
+Le JSON autonome porte le contrat propre de MassID :
 
 ```json
 {
@@ -108,13 +108,14 @@ contrat :
 
 ## Gates de validation
 
-- [x] Destination future confirmée : `plugin-items.dll`,
-  `items.massIdentify`.
-- [x] Configuration confirmée : `enabled`, `freeIdentification`.
+- [x] Destination permanente confirmée : `MassID.dll`, plugin autonome
+  RuffnecKk Suite sans catégorie, propriétaire ni clé de merge PluginPack.
+- [x] Configuration autonome confirmée : `MassID.json` avec `enabled` et
+  `freeIdentification`.
 - [x] Handler du geste, protocole Cain 3.2, helper d’identification et ABI de
   quantité prouvés pour 92777.
-- [x] Audit de coexistence : aucun hook autoritaire partagé avec les cinq DLL
-  du pack ou Transmogrify; le tooltip est optionnel et coopératif.
+- [x] Audit de coexistence ciblé : aucun hook autoritaire partagé avec les cinq
+  DLL du pack ou Transmogrify; le tooltip est optionnel et coopératif.
 - [x] Release x64, CTest, manifeste v2, exports, auteur, description et JSON
   strict validés.
 - [x] Cold start BKVince frais sans rejet, échec ni assertion.
@@ -127,13 +128,15 @@ contrat :
 - [x] Compatibilité technique : portées globale et mod-locale, repli global,
   priorité mod-locale, doublon neutralisé et coexistence avec les cinq DLL
   eezstreet sans rejet ni échec.
+- [ ] Qualification complète RuffnecKk Suite avec tous les composants actifs,
+  toutes les fonctionnalités PluginPack activées et les ordres de chargement
+  pertinents, sans retrait ni neutralisation.
 - [ ] Compatibilité fonctionnelle : souris/manette inchangées, solo,
   hôte/joiner.
-- [x] ZIP public limité à `MassID.dll`, `MassID.json` et `README.md` selon
-  l’allowlist explicitement confirmée par Vincent; entrées inspectées et hash
-  calculé.
-- [ ] Après validation intégrée future, supprimer seulement le binaire et le
-  JSON autonomes; conserver les sources comme oracle jusqu’à équivalence.
+- [ ] Reconstruire le ZIP public strict avec seulement `MassID.dll` et
+  `MassID.json`; conserver le README révisable à côté de l’archive.
+- [x] Conserver définitivement la DLL, le JSON et le versionnement autonomes;
+  aucune suppression après intégration PluginPack n’est planifiée.
 
 ## Validation obtenue le 31 juillet 2026
 
@@ -578,7 +581,8 @@ modifie aucune politique, ABI ni surface de hook. Faire confirmer sur le profil
 coréen que MassID 1.0.0 charge et exécute la même action avec Cube Output
 Quantity 1.0.2 actif. Les validations
 `freeIdentification=true`, sauvegarde/relecture et hôte/joiner restent ouvertes
-avant de fermer toute la matrice fonctionnelle et le futur merge PluginPack.
+avant de fermer toute la matrice fonctionnelle et la qualification MassID dans
+la RuffnecKk D2RLoader Suite.
 L’échec distinct de Repeatable Services demeure hors de cette matrice MassID.
 
 La DLL Release x64 `1.0.0` et son test de politique sont reconstruits avec

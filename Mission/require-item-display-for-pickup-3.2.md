@@ -1,6 +1,6 @@
 # Require Item Display for Pickup — D2R 3.2
 
-Dernière mise à jour : 1 août 2026
+Dernière mise à jour : 18 août 2026
 
 ## Décision produit
 
@@ -8,16 +8,17 @@ Vincent retient l’idée issue du catalogue TDE consistant à empêcher les
 ramassages accidentels lorsque les étiquettes des objets au sol ne sont pas
 affichées.
 
-La destination confirmée est un futur merge dans `plugin-items.dll`, sous la
-clé `items.requireItemDisplayForPickup`. L’Option A est retenue : accumuler ce
-candidat avec MassID et le traiter plus tard dans un lot `plugin-items`
-distinct, sans rouvrir le PR PluginPack déjà soumis et sans remplacer la
-mission courante.
+La destination PluginPack choisie le 1 août 2026 est supersédée par la règle
+Suite confirmée par Vincent le 18 août 2026. La fonctionnalité devient un
+plugin RuffnecKk autonome permanent, membre de la RuffnecKk D2RLoader Suite;
+aucune catégorie, DLL propriétaire, clé de merge ou intégration future dans
+une DLL d’eezstreet ne reste planifiée.
 
-Pendant l’incubation, la fonctionnalité doit rester une DLL RuffnecKk autonome
-hybride, installable globalement ou dans un mod, accompagnée d’un JSON autonome
-compatible avec le futur bloc de `D2RPlugins.json`. Aucune DLL d’eezstreet ne
-doit être modifiée, liée ou redistribuée par l’incubation.
+La future DLL doit rester hybride, installable globalement ou dans un mod,
+avec sa propre version, son archive et une configuration JSON ou TOML
+indépendante de `D2RPlugins.json`. Le format sera choisi selon la convivialité
+réelle du contrat. Aucune DLL d’eezstreet ne doit être modifiée, liée ou
+redistribuée.
 
 Description joueur retenue :
 
@@ -44,12 +45,13 @@ Description joueur retenue :
 
 - Le candidat du catalogue est `alt-required-ground-pickup`, classé deuxième
   parmi les inspirations natives/hybrides.
-- Le 1 août 2026, Vincent confirme successivement le merge PluginPack, la
+- Le 1 août 2026, Vincent avait confirmé successivement le merge PluginPack, la
   catégorie `items`, la DLL propriétaire `plugin-items.dll`, la clé
-  `items.requireItemDisplayForPickup` et l’Option A de séquencement.
-- MassID est déjà le premier candidat du prochain lot PluginPack et fournit un
-  voisin logique pour mutualiser l’audit de `plugin-items.dll`, du manifeste,
-  de la configuration et de la matrice d’intégration.
+  `items.requireItemDisplayForPickup` et l’Option A de séquencement; cette
+  destination est conservée comme historique et annulée prospectivement par la
+  décision Suite du 18 août 2026.
+- MassID demeure un voisin logique pour mutualiser l’audit des hooks, contrats
+  inter-DLL et matrices de coexistence de la Suite sans fusionner les deux DLL.
 - Aucun hook, RVA, ABI ou comportement manette propre à cette fonctionnalité
   n’est encore gouverné pour D2R 3.2.92777.
 
@@ -66,20 +68,20 @@ Description joueur retenue :
 
 ## Gates avant implantation
 
-- [x] Destination : merge au PluginPack.
-- [x] Propriétaire : `plugin-items.dll`.
-- [x] Clé : `items.requireItemDisplayForPickup`.
-- [x] Séquence : Option A, prochain lot `plugin-items` avec MassID.
+- [x] Destination : plugin autonome permanent RuffnecKk Suite.
+- [x] Ancienne destination `plugin-items.dll` et clé
+  `items.requireItemDisplayForPickup` annulées pour toute implantation future.
 - [ ] Vérifier le workbench 92777 et identifier le chemin client de sélection et
   de ramassage d’un item au sol.
 - [ ] Prouver l’état natif des labels pour maintenir, basculer et affichage
   permanent, à la souris et à la manette.
-- [ ] Auditer le propriétaire de chaque hook contre les cinq DLL PluginPack,
-  PotionAutoPickup, l’autogold et les autres incubations.
+- [ ] Auditer le propriétaire de chaque hook contre tous les composants actifs
+  de la Suite, les cinq DLL PluginPack, PotionAutoPickup, l’autogold et les
+  autres incubations.
 - [ ] Concevoir un paquet ou une délégation qui conserve l’autorité serveur et
   refuse les requêtes invalides sans mutation locale seule.
-- [ ] Définir le contrat JSON autonome compatible avec le futur bloc
-  `items.requireItemDisplayForPickup`.
+- [ ] Choisir JSON ou TOML selon le contrat réel et définir une configuration
+  autonome indépendante de `D2RPlugins.json`.
 - [ ] Obtenir une autorisation d’implantation distincte avant toute création de
   source, configuration, DLL ou archive.
 
@@ -92,12 +94,12 @@ Description joueur retenue :
 - PotionAutoPickup et autogold activés ou désactivés;
 - solo, hôte et joiner, sauvegarde puis relecture;
 - portées globale et mod-locale, configuration absente, valide et invalide;
-- coexistence avec les cinq DLL eezstreet et toutes les incubations du lot,
-  sans plugin rejeté ou en échec.
+- coexistence avec tous les composants actifs de la Suite, les cinq DLL
+  eezstreet et toutes les incubations, sans plugin rejeté ou en échec.
 
 ## Prochain gate
 
-Lorsque le prochain lot `plugin-items` est explicitement ouvert, exécuter le
-gate `status` du workbench 92777, auditer la référence PluginPack épinglée et
-prouver le chemin de ramassage manuel ainsi que l’état Show Items avant toute
-implantation.
+Lorsque cette mission est explicitement reprise, exécuter le gate `status` du
+workbench 92777, relever la baseline gouvernée de la Suite, auditer la référence
+PluginPack épinglée et prouver le chemin de ramassage manuel ainsi que l’état
+Show Items avant toute implantation.

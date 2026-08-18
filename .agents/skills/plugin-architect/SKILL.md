@@ -31,8 +31,7 @@ Determiner d'abord si l'effet releve principalement de :
 - tables TXT, donnees ou assets;
 - composition locale D2RMM;
 - memory patch JSON D2RLoader;
-- DLL D2RLoader autonome;
-- fonctionnalite destinee a un futur merge PluginPack;
+- DLL D2RLoader autonome membre de la RuffnecKk D2RLoader Suite;
 - application ou outillage du workspace;
 - combinaison justifiee de plusieurs mecanismes.
 
@@ -40,7 +39,7 @@ Expliquer pourquoi le mecanisme retenu correspond mieux au besoin que les autres
 
 ## Router vers les preuves gouvernees
 
-1. Pour toute nouvelle DLL native envisagee, appliquer `d2rloader-plugin-incubation` et conserver son gate autonome ou merge avant toute implantation.
+1. Pour toute nouvelle DLL native envisagee, appliquer `d2rloader-plugin-incubation` et imposer son contrat autonome RuffnecKk Suite avant toute implantation; ne proposer aucun merge PluginPack.
 2. Pour un hook, une ABI, une signature, un RVA ou un memory patch visant D2R.exe 3.2.92777, appliquer `d2r32-reverse-engineering` et commencer par son gate `status`.
 3. Pour toute lecture de table TXT/TSV ou analyse de schema, appliquer `diablo-tsv` et respecter les sources read-only.
 4. Pour D2RMM, traiter sa sortie comme une composition locale a auditer, jamais comme la source de verite de BKVince.
@@ -82,7 +81,7 @@ Expliquer pourquoi le mecanisme retenu correspond mieux au besoin que les autres
    - risque de regression;
    - reversibilite et rayon d'impact.
 6. Ne jamais presenter une compatibilite runtime comme prouvee par une analyse statique ou un simple cold start.
-7. Pour les plugins natifs, analyser la coexistence avec la pile complete active et toutes les fonctionnalites du PluginPack, sans proposer d'en desactiver une pour obtenir artificiellement un demarrage.
+7. Pour les plugins natifs, analyser la coexistence avec tous les composants actifs de la RuffnecKk D2RLoader Suite et toutes les fonctionnalites du PluginPack, sans proposer d'en desactiver une pour obtenir artificiellement un demarrage.
 
 ## Recommander et preparer la suite
 

@@ -54,7 +54,7 @@
       "status": "active",
       "owner": "Guillaume + Codex",
       "mission": "Mission/qty-display-issue-3.2.md",
-      "nextGate": "When selected in the accepted PluginPack sequence, merge items.qtyDisplayIssue into plugin-items.dll and preserve standalone 1.1.0 only as a witness until integration validation passes.",
+      "nextGate": "Preserve the completed PluginPack integration as historical evidence. Any future QtyDisplayIssue development remains an autonomous RuffnecKk Suite component and must re-establish unique ownership of RVA 0x2BE118 before runtime deployment.",
       "include": [
         "Mission/qty-display-issue-3.2.md",
         "addons/QtyDisplayIssue/QtyDisplayIssue.zip",
@@ -440,7 +440,7 @@
       "status": "paused",
       "owner": "Vincent + Codex",
       "mission": "Mission/require-item-display-for-pickup-3.2.md",
-      "nextGate": "When the next plugin-items batch is explicitly opened, verify the governed 92777 workbench and prove the manual ground-pickup path, native Show Items state, controller policy, and unique hook ownership before implementation.",
+      "nextGate": "When this standalone Suite plugin is explicitly resumed, verify the governed 92777 workbench and current RuffnecKk Suite baseline, then prove the manual ground-pickup path, native Show Items state, controller policy, and unique hook ownership before implementation.",
       "include": [
         "Mission/require-item-display-for-pickup-3.2.md",
         "addons/RequireItemDisplayForPickup/**",
@@ -485,7 +485,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/tde-inspiration-bkvince.md",
-      "nextGate": "Continue the sequential TDE candidate review; alt-required-ground-pickup is separately scheduled with MassID for the next plugin-items batch and remains unimplemented until its governed gates are opened.",
+      "nextGate": "Continue the sequential TDE candidate review; every future native candidate, including alt-required-ground-pickup, remains an autonomous RuffnecKk Suite plugin and stays unimplemented until its governed RE, ABI, hook and coexistence gates are opened.",
       "include": [
         "Mission/tde-inspiration-bkvince.md",
         "Mission/tde-inspiration-bkvince.catalog.json",
@@ -647,6 +647,7 @@
         ".agents/skills/d2rloader-plugin-incubation/SKILL.md",
         ".agents/skills/d2rloader-plugin-incubation/agents/openai.yaml",
         ".agents/skills/d2rloader-plugin-incubation/references/incubation-checklist.md",
+        ".agents/skills/plugin-architect/**",
         ".agents/skills/diablo-roadmap-release/references/release-checklist.md",
         ".agents/skills/diablo-git-checkpoint/scripts/inspect-checkpoint.mjs",
         "reverse-engineering/cheat-spawn.md",
@@ -697,7 +698,7 @@
       "workstreams": [
         "*"
       ],
-      "reason": "Cross-cutting ownership and merge ledger shared by every PluginPack-bound incubation."
+      "reason": "Historical PluginPack evidence and cross-cutting collision ledger shared by native RuffnecKk Suite incubations."
     },
     {
       "pattern": "data-BKVince/BKVince.mpq/D2RPlugins.json",

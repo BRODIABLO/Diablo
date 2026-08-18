@@ -1825,4 +1825,4 @@ Mechanics 2.0 n’autorise aucune écriture de code, configuration gameplay ou
 archive de plugin. Avant le premier lot natif qui créerait une nouvelle DLL, le
 gate obligatoire demeure :
 
-> **Plugin autonome ou plugin à merger au PluginPack ?**
+> **Plugin autonome RuffnecKk Suite : contrat et coexistence à fermer avant implantation.**
