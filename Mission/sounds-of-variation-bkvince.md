@@ -376,3 +376,31 @@ est conservée sous
 la copie de repli n'a été effectuée qu'après confirmation de zéro processus
 vivant. Aucun redémarrage n'est effectué. Le cold start et l'audition de cette
 nouvelle correction restent `not run`.
+
+## Menu principal Classic — 18 août 2026
+
+Le thème Lord of Destruction du premier groupe du jukebox est remplacé par le
+thème Diablo II Classic déjà livré par D2R. Le changement modifie uniquement
+les deux cellules `FileName` de `jukebox_music_group1` et
+`jukebox_music_group_hd1` dans `sounds.txt` : `introedit.flac` devient
+`common\\options.flac` et `introedit_hd.flac` devient
+`common\\options_hd.flac`. Les redirects, groupes, volumes et fades restent
+inchangés; aucun FLAC Blizzard n'est copié ni ajouté au dépôt.
+
+La table conserve ses 13 242 lignes, ses headers, son EOL final et un
+round-trip byte-exact intégralement CRLF. Le SHA-256 gouverné et runtime de
+`sounds.txt` est
+`094E5CBA9CCF2B101F3A3CD82E3A629963717860AD0998D500A330479AB48BFC`.
+La copie a remplacé uniquement le `sounds.txt` du profil actif
+`mods/BKVince`, après fermeture complète de D2RLoader et vérification de zéro
+processus D2R vivant.
+
+Le cold start frais du profil BKVince build 92777 passe avec la pile complète :
+27 plugins chargés, 17 memory patches appliqués, table audio chargée, 188
+tables compilées depuis TXT et 24/24 étapes terminées. Le menu principal est
+atteint et confirmé visuellement. `verify:data` reste bloqué par l'écart
+préexistant et hors périmètre de
+`hd/global/ui/spells/submenu/skillicon.lowend.sprite` dans le contrôle
+Mercenary Command; les validations antérieures et le contrôle TSV ciblé
+passent. L'audition humaine du thème Classic dans les modes Resurrected et
+Legacy reste `not run` et constitue le seul gate fonctionnel de ce lot.

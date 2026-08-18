@@ -4698,7 +4698,7 @@ music_quest_diablo	4695	music_quest_diablo_hd	music/event_sd	act4\diabloaction.f
 music_quest_baal	4696	music_quest_baal_hd	music/event_sd	act5\baalmusic.flac	0	1	0	0	0	127	127	100	100	0	0	0	0	125	1	0	0	0	0	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
 music_quest_nihlathak	4697	music_quest_nihlathak_hd	music/event_sd	act5\nihlathakmusic.flac	0	1	0	0	0	127	127	100	100	0	0	0	0	125	1	0	0	0	0	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
 music_quest_shenk	4698	music_quest_shenk_hd	music/event_sd	act5\shenkmusic.flac	0	1	0	0	0	127	127	100	100	0	0	0	0	125	1	0	0	0	0	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
-jukebox_music_group1	4699	jukebox_music_group_hd1	music/ui_sd	introedit.flac	0	1	0	0	0	160	160	100	100	8	0	0	0	75	1	0	0	0	0	0	0	0	1	1	0	0	1	-1	-1	-1	0	0	
+jukebox_music_group1	4699	jukebox_music_group_hd1	music/ui_sd	common\options.flac	0	1	0	0	0	160	160	100	100	8	0	0	0	75	1	0	0	0	0	0	0	0	1	1	0	0	1	-1	-1	-1	0	0	
 jukebox_music_group2	4700		music/ui_sd	act5\icecaves.flac	0	1	0	0	0	160	160	100	100	0	0	0	0	75	1	0	0	0	0	0	0	0	1	1	0	0	1	-1	-1	-1	0	0	
 jukebox_music_group3	4701		music/ui_sd	act5\xtemple.flac	0	1	0	0	0	160	160	100	100	0	0	0	0	75	1	0	0	0	0	0	0	0	1	1	0	0	1	-1	-1	-1	0	0	
 jukebox_music_group4	4702		music/ui_sd	act2\desert.flac	0	1	0	0	0	160	160	100	100	0	0	0	0	75	1	0	0	0	0	0	0	0	1	1	0	0	1	-1	-1	-1	0	0	
@@ -7307,7 +7307,7 @@ event_thunder_hd_5	7284		sfx/ambient/event-3d_hd	ambient\event\thunder_norm_1_hd
 event_thunder_hd_6	7285		sfx/ambient/event-3d_hd	ambient\event\thunder_norm_2_hd.flac	0	0	0	0	0	112	113	90	95	0	0	0	0	0	0	0	0	0	3	0	75	0	0	0	0	0	0	-1	-1	-1	0	0	
 event_thunder_hd_7	7286		sfx/ambient/event-3d_hd	ambient\event\thunder_norm_3_hd.flac	0	0	0	0	0	112	113	90	95	0	0	0	0	0	0	0	0	0	3	0	75	0	0	0	0	0	0	-1	-1	-1	0	0	
 event_thunder_hd_8	7287		sfx/ambient/event-3d_hd	ambient\event\thunder_norm_4_hd.flac	0	0	0	0	0	112	113	90	95	0	0	0	0	0	0	0	0	0	3	0	75	0	0	0	0	0	0	-1	-1	-1	0	0	
-jukebox_music_group_hd1	7288		music/ui_hd	introedit_hd.flac	0	1	0	0	0	112	112	100	100	8	0	0	0	75	1	0	0	0	0	0	0	255	1	1	0	0	1	-1	-1	-1	0	0	
+jukebox_music_group_hd1	7288		music/ui_hd	common\options_hd.flac	0	1	0	0	0	112	112	100	100	8	0	0	0	75	1	0	0	0	0	0	0	255	1	1	0	0	1	-1	-1	-1	0	0	
 jukebox_music_group_hd2	7289		music/ui_hd	act5\icecaves_hd.flac	0	1	0	0	0	112	112	100	100	0	0	0	0	75	1	0	0	0	0	0	0	255	1	1	0	0	1	-1	-1	-1	0	0	
 jukebox_music_group_hd3	7290		music/ui_hd	act5\xtemple_hd.flac	0	1	0	0	0	112	112	100	100	0	0	0	0	75	1	0	0	0	0	0	0	255	1	1	0	0	1	-1	-1	-1	0	0	
 jukebox_music_group_hd4	7291		music/ui_hd	act2\desert_hd.flac	0	1	0	0	0	112	112	100	100	0	0	0	0	75	1	0	0	0	0	0	0	255	1	1	0	0	1	-1	-1	-1	0	0	
