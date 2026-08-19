@@ -4683,7 +4683,7 @@ music_xbaal	4680	music_xbaal_hd	music_sd	act5\baal.flac	0	1	0	0	0	127	127	100	10
 music_xicecaves	4681	music_xicecaves_hd	music_sd	act5\icecaves.flac	0	1	0	0	0	127	127	100	100	0	0	1	125	125	1	0	0	0	0	0	0	0	1	1	0	0	1	6095820	-1	-1	0	0	
 music_xsiege	4682	music_xsiege_hd	music_sd	act5\siege.flac	0	1	0	0	0	127	127	100	100	0	0	1	125	125	1	0	0	0	0	0	0	0	1	1	0	0	1	4587950	13745000	-1	0	0	
 music_xtemple	4683	music_xtemple_hd	music_sd	act5\xtemple.flac	0	1	0	0	0	127	127	100	100	0	0	1	125	125	1	0	0	0	0	0	0	0	1	1	0	0	1	-1	-1	-1	0	0	
-music_xtown	4684	music_xtown_hd	music_sd	act5\xtown.flac	0	1	0	0	0	127	127	100	100	0	0	1	125	125	1	0	0	0	0	0	0	0	1	1	0	0	1	6682492	-1	-1	0	0	
+music_xtown	4684	music_xtown_hd	music_sd	act5\xtown.flac	0	1	0	0	0	127	127	100	100	0	0	1	125	125	1	0	0	0	0	0	0	0	1	1	0	0	1	-1	-1	-1	0	0	
 music_quest_andariel	4685	music_quest_andariel_hd	music/event_sd	act1\andarielaction.flac	0	1	0	0	0	127	127	100	100	0	0	0	0	125	1	0	0	0	0	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
 music_quest_bloodraven	4686	music_quest_bloodraven_hd	music/event_sd	act1\bloodravenresolution.flac	0	1	0	0	0	127	127	100	100	0	0	0	0	125	1	0	0	0	0	0	0	0	1	1	0	0	1	-1	-1	-1	0	0	
 music_quest_compelling	4687	music_quest_compelling_hd	music/event_sd	act3\orbaction.flac	0	1	0	0	0	127	127	100	100	0	0	0	0	125	1	0	0	0	0	0	0	0	1	1	0	0	0	-1	-1	-1	0	0	
@@ -4898,7 +4898,7 @@ music_quest_baal_hd	4895		music/event_hd	act5\baalmusic_hd.flac	0	1	0	0	0	127	12
 music_xicecaves_hd	4896		music_hd	act5\icecaves_hd.flac	0	1	0	0	0	127	127	100	100	0	0	1	125	125	1	0	0	0	0	0	0	255	1	1	0	0	1	6095820	-1	-1	0	0	
 music_xsiege_hd	4897		music_hd	act5\siege_hd.flac	0	1	0	0	0	127	127	100	100	0	0	1	125	125	1	0	0	0	0	0	0	255	1	1	0	0	1	4587950	13745000	-1	0	0	
 music_xtemple_hd	4898		music_hd	act5\xtemple_hd.flac	0	1	0	0	0	127	127	100	100	0	0	1	125	125	1	0	0	0	0	0	0	255	1	1	0	0	1	-1	-1	-1	0	0	
-music_xtown_hd	4899		music_hd	act5\xtown_hd.flac	0	1	0	0	0	127	127	100	100	0	0	1	125	125	1	0	0	0	0	0	0	255	1	1	0	0	1	6682492	-1	-1	0	0	
+music_xtown_hd	4899		music_hd	act5\xtown_hd.flac	0	1	0	0	0	127	127	100	100	0	0	1	125	125	1	0	0	0	0	0	0	255	1	1	0	0	1	-1	-1	-1	0	0	
 music_quest_shenk_hd	4900		music/event_hd	act5\shenkmusic_hd.flac	0	1	0	0	0	127	127	100	100	0	0	0	0	125	1	0	0	0	0	0	0	255	1	1	0	0	0	-1	-1	-1	0	0	
 music_quest_nihlathak_hd	4901		music/event_hd	act5\nihlathakmusic_hd.flac	0	1	0	0	0	127	127	100	100	0	0	0	0	125	1	0	0	0	0	0	0	255	1	1	0	0	0	-1	-1	-1	0	0	
 music_desert_hd	4902		music_hd	act2\desert_hd.flac	0	1	0	0	0	179	179	100	100	0	0	1	125	125	1	0	0	0	0	0	0	255	1	1	0	0	1	9800000	-1	-1	0	0	
