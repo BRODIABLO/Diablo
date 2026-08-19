@@ -8,9 +8,9 @@ description: Modifier, migrer, auditer ou régénérer les tables TXT/TSV Diablo
 ## Respecter les sources gouvernées
 
 1. Lire `ai-cartographie.json` avant toute écriture et identifier le runtime ciblé.
-2. Modifier uniquement une zone dont `agentAccess` autorise l'écriture. Traiter `data-BK/`, `data-BT/`, `data-VNP/`, `excel-vanilla2.4/` et `data-vanilla3.2/` comme des références read-only.
-3. Utiliser `data-TCP/` comme source historique 2.4 et `data-BKVince/` comme cible de développement D2RLoader 3.2. Ne jamais confondre une source du dépôt avec un profil runtime actif.
-4. Consulter `schemas/*.json` pour les colonnes typées. Pour D2R 3.2, préférer les headers réels BKVince et `guide/d2rdoc/`; n'utiliser TCP 2.4 ou `guide/legacy/` qu'en repli.
+2. Modifier uniquement une zone dont `agentAccess` autorise l'écriture. Traiter `data-BK/`, `data-BT/`, `data-VNP/`, `excel-vanilla2.4/`, `data-vanilla3.2/` et `data-vanilla3.3/` comme des références read-only.
+3. Utiliser `data-TCP/` comme source historique 2.4 et `data-BKVince/` comme cible de développement du runtime courant D2R 3.3 sous D2RLoader. Ne jamais confondre une source du dépôt avec un profil runtime actif.
+4. Consulter `schemas/*.json` pour les colonnes typées. Pour le runtime courant D2R 3.3, préférer les headers réels BKVince et `guide/d2rdoc/`; n'utiliser TCP 2.4 ou `guide/legacy/` qu'en repli. Conserver `data-vanilla3.2/` comme provenance historique, jamais comme nom de la baseline courante.
 
 ## Préserver les octets
 

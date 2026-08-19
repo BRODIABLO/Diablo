@@ -7,7 +7,7 @@
                  "kind":  "directory",
                  "meta":  {
                               "role":  "modding-workspace",
-                              "summary":  "Laboratoire de plugins et de patches D2R 3.2 au service de la communauté Discord D2RLoader, et quartier général de BKVince, construit sur le squelette de BKDiablo puis enrichi d\u0027apports Nexus Mods et de créations propres.",
+                              "summary":  "Laboratoire de plugins et de patches D2R 3.3 au service de la communauté Discord D2RLoader, et quartier général de BKVince, construit sur le squelette de BKDiablo puis enrichi d\u0027apports Nexus Mods et de créations propres.",
                               "agentAccess":  "read-write"
                           },
                  "children":  [
@@ -32,37 +32,37 @@
                                                                     },
                                                            "children":  [
                                                                             {
-                                                                                "name":  "d2r32-reverse-engineering",
-                                                                                "path":  ".agents/skills/d2r32-reverse-engineering",
+                                                                                "name":  "d2r33-reverse-engineering",
+                                                                                "path":  ".agents/skills/d2r33-reverse-engineering",
                                                                                 "kind":  "directory",
                                                                                 "children":  [
                                                                                                  {
                                                                                                      "name":  "agents",
-                                                                                                     "path":  ".agents/skills/d2r32-reverse-engineering/agents",
+                                                                                                     "path":  ".agents/skills/d2r33-reverse-engineering/agents",
                                                                                                      "kind":  "directory",
                                                                                                      "children":  [
                                                                                                                       {
                                                                                                                           "name":  "openai.yaml",
-                                                                                                                          "path":  ".agents/skills/d2r32-reverse-engineering/agents/openai.yaml",
+                                                                                                                          "path":  ".agents/skills/d2r33-reverse-engineering/agents/openai.yaml",
                                                                                                                           "kind":  "file"
                                                                                                                       }
                                                                                                                   ]
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "references",
-                                                                                                     "path":  ".agents/skills/d2r32-reverse-engineering/references",
+                                                                                                     "path":  ".agents/skills/d2r33-reverse-engineering/references",
                                                                                                      "kind":  "directory",
                                                                                                      "children":  [
                                                                                                                       {
                                                                                                                           "name":  "queries-and-evidence.md",
-                                                                                                                          "path":  ".agents/skills/d2r32-reverse-engineering/references/queries-and-evidence.md",
+                                                                                                                          "path":  ".agents/skills/d2r33-reverse-engineering/references/queries-and-evidence.md",
                                                                                                                           "kind":  "file"
                                                                                                                       }
                                                                                                                   ]
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "SKILL.md",
-                                                                                                     "path":  ".agents/skills/d2r32-reverse-engineering/SKILL.md",
+                                                                                                     "path":  ".agents/skills/d2r33-reverse-engineering/SKILL.md",
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
@@ -408,7 +408,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "x-external-addons",
-                                                   "summary":  "Plugins, patches et add-ons D2R 3.2 autonomes destinés à une publication au service de la communauté Discord D2RLoader, séparément de BKVince.",
+                                                   "summary":  "Plugins, patches et add-ons D2R 3.3 autonomes destinés à une publication au service de la communauté Discord D2RLoader, séparément de BKVince.",
                                                    "agentAccess":  "read-write"
                                                },
                                       "children":  [
@@ -8626,12 +8626,12 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "mod-development",
-                                                   "summary":  "Quartier général et source gouvernée de BKVince sous D2RLoader 3.2, construit sur le squelette de BKDiablo puis enrichi d\u0027apports sélectionnés de plusieurs mods Nexus Mods et de créations propres à Vincent.",
+                                                   "summary":  "Quartier général et source gouvernée de BKVince pour D2R 3.3 sous D2RLoader, construit sur le squelette de BKDiablo puis enrichi d\u0027apports sélectionnés de plusieurs mods Nexus Mods et de créations propres à Vincent.",
                                                    "agentAccess":  "read-write",
                                                    "status":  "active",
                                                    "provenance":  {
                                                                       "source":  "Squelette BKDiablo converti par D2RLoader, apports sélectionnés de mods Nexus Mods et créations propres à Vincent",
-                                                                      "version":  "D2R 3.2.0 build 92777"
+                                                                      "version":  "D2R 3.3.93847"
                                                                   },
                                                    "policy":  {
                                                                   "editable":  true,
@@ -40181,7 +40181,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-re-runtime-tooling",
-                                                                        "summary":  "Workflow reproductible pour construire les plugins natifs, instrumenter D2R 3.2 et analyser les crashs ou gels.",
+                                                                        "summary":  "Workflow reproductible pour construire les plugins natifs, instrumenter le runtime courant D2R 3.3 et analyser les crashs ou gels.",
                                                                         "agentAccess":  "read-write"
                                                                     }
                                                        },

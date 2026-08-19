@@ -1,21 +1,27 @@
 ---
 name: d2rloader-plugin-incubation
-description: Concevoir, auditer, implanter et emballer tout nouveau plugin D2RLoader comme DLL autonome RuffnecKk intégrée à la RuffnecKk D2RLoader Suite. Utiliser ce skill dès qu'une nouvelle DLL native est envisagée, avant toute modification de code, configuration ou archive, puis pour imposer la baseline D2RLoader/SDK gouvernée, l'audit ABI/hooks et de coexistence, la configuration indépendante JSON ou TOML, les crédits RuffnecKk et le contenu strict du ZIP public.
+description: Auditer, implanter, qualifier et emballer une nouvelle DLL D2RLoader déjà retenue comme plugin autonome RuffnecKk de la RuffnecKk D2RLoader Suite. Utiliser ce skill lorsque l'architecture a sélectionné une DLL ou que Vincent demande explicitement son implantation, sa qualification ou sa livraison; ne pas l'utiliser pour une comparaison exploratoire où le mécanisme reste ouvert.
 ---
 
 # Incubation de plugin D2RLoader
+
+## Franchir le gate d'entrée
+
+1. Vérifier qu'une DLL D2RLoader a déjà été retenue comme mécanisme ou que Vincent demande explicitement de poursuivre une DLL existante.
+2. Si le mécanisme reste ouvert, ne modifier aucun fichier : revenir à la planification normale ou à `plugin-architect` lorsque Vincent l'a explicitement invoqué.
+3. Exiger le gate `GO` d'`AGENTS.md` avant toute modification de code, configuration, mission ou archive.
+4. Après autorisation, consigner dans la mission la décision autonome RuffnecKk Suite et sa date avant la première implantation.
 
 ## Appliquer le contrat autonome de la Suite
 
 1. Classer automatiquement toute nouvelle DLL comme plugin autonome RuffnecKk membre de la RuffnecKk D2RLoader Suite.
 2. Ne pas demander de choisir une destination et ne proposer ni catégorie, ni DLL propriétaire, ni clé de merge PluginPack. Ne planifier aucun merge futur dans une DLL d'eezstreet.
-3. Consigner dans la mission la décision autonome Suite et sa date avant toute modification de code, configuration ou archive.
-4. Exiger une DLL indépendante, hybride globale/mod-locale, avec sa propre version, ses métadonnées, son archive et son fichier de configuration indépendant de `D2RPlugins.json`.
-5. Choisir JSON ou TOML selon la convivialité réelle pour le moddeur; rédiger le contenu et les commentaires en anglais.
+3. Exiger une DLL indépendante, hybride globale/mod-locale, avec sa propre version, ses métadonnées, son archive et son fichier de configuration indépendant de `D2RPlugins.json`.
+4. Choisir JSON ou TOML selon la convivialité réelle pour le moddeur; rédiger le contenu et les commentaires en anglais.
 
 ## Auditer avant de coder
 
-1. Pour le build 92777, exécuter le skill `d2r32-reverse-engineering` et franchir son gate `status`.
+1. Pour le runtime courant D2R 3.3.93847, exécuter le skill `d2r33-reverse-engineering` et franchir son gate `status`. L'identité binaire utile avec le corpus 92777 étant établie, réutiliser ses preuves gouvernées sans créer un workbench duplicatif.
 2. Relever la baseline gouvernée courante de la Suite : build D2R, version D2RLoader, version d'API/SDK, versions et hashes des composants RuffnecKk, plugins tiers actifs et contrats inter-DLL partagés.
 3. Vérifier la référence PluginPack épinglée et inventorier les surfaces nécessaires à la coexistence avec tous les composants actifs de la Suite et les cinq DLL eezstreet : structures, callbacks, ABI, RVA, plages de hooks, configurations et assets partagés.
 4. Réutiliser les contrats gouvernés de la Suite lorsqu'ils couvrent réellement le besoin; versionner toute nouvelle coopération inter-DLL, tolérer l'absence du fournisseur et refuser proprement une version d'ABI incompatible.

@@ -16,8 +16,9 @@ description: Déployer un changement Diablo ou D2RLoader dans le profil runtime 
 
 1. Avant toute copie ou relance, relever la version et la Build Key de `.build.info`, son SHA-256, puis la version et le SHA-256 de l'exécutable du jeu. Comparer ces preuves à la baseline gouvernée; un horodatage seul ne prouve pas un changement de build.
 2. Après une opération Battle.net, distinguer une réparation ou réapplication du même build d'un nouveau build. Si les identifiants et hashes gouvernés restent identiques, conserver la baseline tout en revérifiant les fichiers runtime ciblés.
-3. Si le build a changé, séparer les données softcodées des composants natifs. Un port TXT peut poursuivre sa propre matrice ciblée, mais aucun plugin, patch mémoire, RVA, signature ou ABI n'hérite automatiquement de sa compatibilité.
-4. Suspendre toute revendication native sur un build différent jusqu'à l'obtention des preuves propres à ce build. Ne jamais convertir une validation data en compatibilité générale de type « version précédente+ ».
+3. Lorsqu'une nouvelle version produit conserve une image native byte-identique prouvée, rattacher les preuves binaires au hash commun mais nommer la baseline, les logs, la documentation et les livraisons avec la nouvelle version officielle. Une provenance historique ne devient jamais le nom du runtime courant.
+4. Si le build a changé, séparer les données softcodées des composants natifs. Un port TXT peut poursuivre sa propre matrice ciblée, mais aucun plugin, patch mémoire, RVA, signature ou ABI n'hérite automatiquement de sa compatibilité.
+5. Suspendre toute revendication native sur un hash binaire différent jusqu'à l'obtention des preuves propres à cette image. Ne jamais convertir une validation data en compatibilité générale de type « version précédente+ ».
 
 ## Libérer et synchroniser les fichiers
 

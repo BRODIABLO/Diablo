@@ -1,19 +1,16 @@
 ---
 name: plugin-architect
-description: Produire une revue d'architecture approfondie et strictement read-only pour une fonctionnalite D2R, un mod D2RMM, un memory patch, un plugin D2RLoader ou un conflit entre plugins. Utiliser uniquement lorsque Vincent invoque explicitement `$plugin-architect` pour explorer une idee, comparer des conceptions, analyser la compatibilite, l'equilibrage, la persistance, le multijoueur, les hooks ou l'ordre de chargement avant toute implantation.
+description: Produire une revue d'architecture D2R approfondie, explicite et strictement read-only avant toute implantation. Utiliser uniquement lorsque Vincent invoque `$plugin-architect` pour choisir ou comparer un mecanisme, analyser ses compromis et preparer une decision; ne pas utiliser pour implanter, qualifier ou emballer une DLL deja retenue.
 ---
 
 # Plugin Architect
 
-## Tenir le contrat de discussion
+## Tenir le contrat de decision
 
 1. Lire les fichiers `AGENTS.md` applicables et les sources gouvernees pertinentes avant toute affirmation technique.
-2. Reformuler precisement l'effet visible recherche, les contraintes et la decision que Vincent cherche reellement a prendre.
-3. Repondre dans la langue de Vincent avec un ton naturel, collaboratif et substantiel.
-4. Expliquer le raisonnement et les consequences concretes; ne pas livrer une conclusion nue, une checklist mecanique ou une reponse artificiellement breve.
-5. Calibrer la profondeur sur les enjeux, l'incertitude et le risque. Developper les sujets complexes sans gonfler les sujets simples.
-6. Commencer par la conclusion utile, puis montrer les preuves et les compromis qui la soutiennent.
-7. Ne pas noyer l'analyse dans la gestion de projet. Ne mentionner mission, ROADMAP, release ou Git que si cela change materiellement la decision d'architecture.
+2. Reformuler l'effet visible recherche, les contraintes et la decision que Vincent cherche reellement a prendre.
+3. Expliquer le comportement actuel, les preuves et les compromis avant de recommander une architecture.
+4. Ne mentionner mission, ROADMAP, release ou Git que si cela change materiellement la decision.
 
 ## Rester strictement read-only
 
@@ -21,8 +18,8 @@ description: Produire une revue d'architecture approfondie et strictement read-o
 2. Ne rien deployer dans un profil runtime, ne pas lancer le jeu et ne modifier aucune installation externe.
 3. Autoriser uniquement les diagnostics read-only et les rafraichissements locaux obligatoires imposes par `AGENTS.md`, comme le checkpoint automatique.
 4. Ne jamais interpreter l'approbation d'une architecture comme une autorisation d'implanter.
-5. Exiger une demande d'implantation explicite dans un message ulterieur, formulee naturellement. Ne pas imposer de mot magique tel que `IMPLEMENTE`.
-6. Lors de l'implantation ulterieure, appliquer tous les skills et gates specialises du workspace; ce skill ne les remplace pas.
+5. Respecter le gate `GO` defini par `AGENTS.md` pour toute mutation ulterieure.
+6. Ne pas appliquer `d2rloader-plugin-incubation` comme workflow actif tant que le mecanisme reste ouvert. Si la decision retient une nouvelle DLL, identifier ce skill comme gate obligatoire du futur chantier.
 
 ## Classer le mecanisme avant de concevoir
 
@@ -39,8 +36,8 @@ Expliquer pourquoi le mecanisme retenu correspond mieux au besoin que les autres
 
 ## Router vers les preuves gouvernees
 
-1. Pour toute nouvelle DLL native envisagee, appliquer `d2rloader-plugin-incubation` et imposer son contrat autonome RuffnecKk Suite avant toute implantation; ne proposer aucun merge PluginPack.
-2. Pour un hook, une ABI, une signature, un RVA ou un memory patch visant D2R.exe 3.2.92777, appliquer `d2r32-reverse-engineering` et commencer par son gate `status`.
+1. Pour une DLL candidate, verifier seulement que l'option peut respecter les invariants RuffnecKk Suite d'`AGENTS.md`. Si la decision finale retient cette DLL, identifier `d2rloader-plugin-incubation` comme gate obligatoire apres `GO`; ne pas lancer son workflow operationnel pendant la revue.
+2. Pour un hook, une ABI, une signature, un RVA ou un memory patch visant le runtime courant D2R.exe 3.3.93847, appliquer `d2r33-reverse-engineering` et commencer par son gate `status`. L'identité binaire utile avec le corpus 92777 étant établie, ses preuves gouvernées sont directement réutilisables.
 3. Pour toute lecture de table TXT/TSV ou analyse de schema, appliquer `diablo-tsv` et respecter les sources read-only.
 4. Pour D2RMM, traiter sa sortie comme une composition locale a auditer, jamais comme la source de verite de BKVince.
 5. Concevoir la future qualification runtime selon `d2r-runtime-validation`, sans l'executer pendant cette revue read-only.
@@ -91,4 +88,4 @@ Expliquer pourquoi le mecanisme retenu correspond mieux au besoin que les autres
 4. Donner un plan de validation technique, fonctionnelle, runtime, multijoueur et de regression proportionne au risque.
 5. Donner un plan de rollback qui precise ce qui serait retire, restaure ou migre.
 6. Terminer par les decisions materielles encore ouvertes et les preuves techniques manquantes.
-7. Ne poser une question que si sa reponse change materiellement l'architecture; poursuivre l'analyse avec des hypotheses explicites chaque fois que cela reste sur.
+7. Ne poser une question que si sa reponse change materiellement l'architecture; poursuivre l'analyse avec des hypotheses explicites chaque fois que cela reste sur. Si une DLL est retenue, terminer en indiquant le passage obligatoire par `d2rloader-plugin-incubation` apres `GO`.

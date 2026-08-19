@@ -414,7 +414,12 @@ def command_status(_: argparse.Namespace) -> int:
     ghidra_root = resolve_relative(config["ghidra"]["projectDirectory"])
     project_file = ghidra_root / f'{config["ghidra"]["projectName"]}.gpr'
     project_rep = ghidra_root / f'{config["ghidra"]["projectName"]}.rep'
-    print(f"target=D2R {config['target']['version']} build {config['target']['build']}")
+    runtime_version = os.environ.get("D2R_RUNTIME_VERSION")
+    if runtime_version:
+        print(f"target=D2R {runtime_version}")
+        print(f"nativeCorpusProvenance=legacy build {config['target']['build']}")
+    else:
+        print(f"target=D2R {config['target']['version']} build {config['target']['build']}")
     print(f"canonicalImage={canonical_path}")
     print(
         f"canonicalSize={canonical_size} canonicalSha256={canonical_digest} verified=true"

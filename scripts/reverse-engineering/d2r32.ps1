@@ -8,6 +8,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $pythonCandidates = @(
+    (Join-Path $PSScriptRoot '..\..\reverse-engineering\d2r-3.2.92777\analysis-cache\python\Scripts\python.exe'),
     (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe'),
     (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python313\python.exe'),
     (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python311\python.exe')

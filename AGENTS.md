@@ -20,9 +20,9 @@ N'interroge jamais spontanément le user sur l'ouverture de l'éditeur. Ouvre-le
 
 | Terme | Signification |
 |---|---|
-| **Workspace RuffnecKk** | Laboratoire de plugins et de patches D2R 3.2 au service de la communauté Discord D2RLoader, et quartier général de BKVince |
+| **Workspace RuffnecKk** | Laboratoire de plugins et de patches D2R 3.3 au service de la communauté Discord D2RLoader, et quartier général de BKVince |
 | **RuffnecKk D2RLoader Suite** | Suite modulaire de plugins RuffnecKk autonomes, versionnés et configurés indépendamment, mais qualifiés ensemble contre une baseline D2RLoader/SDK et une matrice de coexistence communes |
-| **BKVince** | Mod actuel sous D2RLoader 3.2, construit sur le squelette de BKDiablo puis enrichi par plusieurs mods provenant de Nexus Mods et par les idées propres de Vincent |
+| **BKVince** | Mod actuel pour D2R 3.3 sous D2RLoader, construit sur le squelette de BKDiablo puis enrichi par plusieurs mods provenant de Nexus Mods et par les idées propres de Vincent |
 | **TCP** | Mod historique D2R 2.4, distinct de BKVince |
 | **BK, BT, VNP** | Mods de référence distincts, jamais synonymes de BKVince |
 
@@ -30,7 +30,7 @@ Lorsque Vincent dit « mon mod » sans autre précision, interpréter **BKVince*
 
 Trois activités complémentaires cohabitent :
 
-1. **Un laboratoire communautaire D2RLoader 3.2** — reverse engineering gouverné, plugins natifs autonomes et hybrides, patches mémoire JSON et add-ons publiables séparément de BKVince. Les travaux réutilisables ont vocation à servir la communauté Discord D2RLoader.
+1. **Un laboratoire communautaire D2R 3.3 sous D2RLoader** — reverse engineering gouverné, plugins natifs autonomes et hybrides, patches mémoire JSON et add-ons publiables séparément de BKVince. Les travaux réutilisables ont vocation à servir la communauté Discord D2RLoader.
 2. **Le quartier général de BKVince** — le mod actuel de Vincent, assemblé à partir du squelette de BKDiablo, d'apports sélectionnés provenant de plusieurs mods publiés sur Nexus Mods et de ses propres idées. Les sources tierces et leurs crédits restent explicitement distingués des créations RuffnecKk.
 3. **Les données et l'outillage du workspace** — les tables `.txt` (TSV), les assets, les missions, le cadastre et une plateforme web en monorepo **npm + turbo** : un **Admin** pour éditer les tables et, à venir, un **Wiki** de comparaison.
 
@@ -44,7 +44,7 @@ Les `.txt` restent la source ; **pas de base de données**. Les dossiers `local/
 |---|---|---|
 | `data-TCP/` (`global`, `hd`, `local`) | mod historique D2R 2.4 | **modifiable** |
 | `data-TCP/D2RLAN/` | profil local D2RLAN et intégration runtime de TCP | **modifiable** |
-| `data-BKVince/` | quartier général et source de développement du mod actuel sous D2RLoader 3.2; squelette BKDiablo enrichi d'apports Nexus Mods et de créations propres | **modifiable** |
+| `data-BKVince/` | quartier général et source de développement du mod actuel pour D2R 3.3 sous D2RLoader; squelette BKDiablo enrichi d'apports Nexus Mods et de créations propres | **modifiable** |
 | `data-BK/`, `data-BT/` | mods de référence / inspiration; BKDiablo constitue le squelette historique de BKVince | **read-only** |
 | `data-VNP/` | Mod Vanilla++ servant d'inspiration pour BKVince | **read-only** |
 | `excel-vanilla2.4/` | données vanilla Diablo II 2.4 | **read-only** |
@@ -52,13 +52,13 @@ Les `.txt` restent la source ; **pas de base de données**. Les dossiers `local/
 | `data-vanilla3.3/` | extraction directe du CASC officiel D2R 3.3.93847 ; seul `data/data/global/excel` est versionné | **read-only** |
 | `Mission/` | besoins et intentions | modifiable |
 | `addons/` | plugins, patches et add-ons autonomes destinés à une publication communautaire indépendante de BKVince | modifiable |
-| `reverse-engineering/` | ateliers persistants et preuves natives pour D2R 3.2 | modifiable |
+| `reverse-engineering/` | ateliers persistants et preuves natives pour le runtime courant D2R 3.3, avec provenance historique explicite des images binaires | modifiable |
 | `apps/` | plateforme web (admin, wiki) | modifiable |
 | `schemas/` | catalogue de schémas de colonnes (dérivé du guide TXT eezstreet/d2rdoc) | modifiable |
 | `scripts/` | outillage (cadastre, validateur, TSV, dev-server) | modifiable |
 | `.agents/skills/` | procédures spécialisées réutilisables des agents | modifiable |
-| `guide/d2rdoc/` | guide TXT courant pour D2R 3.x/3.2 (`eezstreet/d2rdoc`) | **gitignoré — source primaire des schémas TXT** |
-| `guide/legacy/` | ancien D2R Data Guide | **gitignoré — référence complémentaire pour assets et certains JSON, jamais normative pour les `.txt` 3.2** |
+| `guide/d2rdoc/` | guide TXT courant pour D2R 3.x/3.3 (`eezstreet/d2rdoc`) | **gitignoré — source primaire des schémas TXT** |
+| `guide/legacy/` | ancien D2R Data Guide | **gitignoré — référence complémentaire pour assets et certains JSON, jamais normative pour les `.txt` 3.3** |
 
 En clair : `addons/`, `reverse-engineering/` et les procédures natives portent le laboratoire communautaire; `data-BKVince/` est le quartier général du mod actuel; `data-TCP/` demeure la source historique 2.4 et n'est jamais un synonyme de BKVince. `apps/`, `schemas/` et `scripts/` fournissent la plateforme et l'outillage communs.
 
@@ -71,9 +71,9 @@ En clair : `addons/`, `reverse-engineering/` et les procédures natives portent 
 - **Crédit D2MOO** : dès qu’un plugin a nécessité des connaissances acquises grâce à D2MOO, créditer explicitement D2MOO dans le README du plugin. Conserver ce README avec la documentation du projet et à côté du ZIP généré par l’agent, afin que Vincent puisse le réviser avant de l’ajouter lui-même au ZIP final.
 - **Description des plugins** : rédiger en anglais une seule phrase courte, idéalement moins de 100 caractères, commençant par un verbe au présent et décrivant d’abord l’effet visible pour le joueur. Ne pas y répéter le build D2R, le mode de chargement ni les détails internes (`RVA`, hooks, ABI, identifiants de statistiques) ; conserver ces précisions dans le README et les logs.
 - **Plugins D2RLoader hybrides** : toute nouvelle DLL doit pouvoir être installée indifféremment dans le dossier global `<D2R>/d2rloader/plugins/` ou dans le dossier d’un mod `<D2R>/mods/<mod>/d2rloader/plugins/`. Ne déclare pas `ModScopedOnly`; conserve les mêmes contrôles stricts de build, de signatures et d’ABI dans les deux portées.
-- **Gate absolu pour chaque nouveau plugin** : avant toute implantation, utiliser le skill `d2rloader-plugin-incubation`. Tout nouveau plugin est automatiquement une DLL autonome RuffnecKk membre de la **RuffnecKk D2RLoader Suite**; ne plus demander de choisir entre autonome et merge, ne proposer aucune catégorie, DLL propriétaire ou clé de merge PluginPack, et ne planifier aucun merge futur dans une DLL d’eezstreet.
+- **Gate absolu pour chaque nouveau plugin** : lorsqu'une nouvelle DLL est retenue et avant toute implantation, utiliser le skill `d2rloader-plugin-incubation`. Ne pas activer son workflow opérationnel pendant une comparaison exploratoire où le mécanisme reste ouvert. Tout nouveau plugin est automatiquement une DLL autonome RuffnecKk membre de la **RuffnecKk D2RLoader Suite**; ne plus demander de choisir entre autonome et merge, ne proposer aucune catégorie, DLL propriétaire ou clé de merge PluginPack, et ne planifier aucun merge futur dans une DLL d’eezstreet.
 - **Contrat RuffnecKk Suite** : chaque nouvelle DLL conserve sa version, ses métadonnées, son archive et sa configuration indépendante en JSON ou en TOML lorsque TOML est plus convivial. Elle doit utiliser la baseline D2RLoader/SDK gouvernée courante, rester hybride globale/mod-locale, désigner un propriétaire unique pour chaque hook ou contrat partagé et être qualifiée avec tous les composants actifs de la Suite ainsi qu’avec les cinq plugins eezstreet. Toute coopération inter-DLL doit être versionnée, tolérer l’absence du fournisseur et refuser proprement une ABI incompatible. Ne jamais modifier, lier ni redistribuer une DLL d’eezstreet.
-- **Documentation des `.txt`** : `https://eezstreet.github.io/d2rdoc/` est la référence primaire pour les tables D2R 3.2 et les descriptions de headers de l’Éditeur. L’ancien guide ne tranche plus une question concernant un header `.txt` 3.2; il reste utilisable pour les assets et certains JSON.
+- **Documentation des `.txt`** : `https://eezstreet.github.io/d2rdoc/` est la référence primaire pour les tables du runtime courant D2R 3.3 et les descriptions de headers de l’Éditeur. L’ancien guide ne tranche plus une question concernant un header `.txt` 3.3; il reste utilisable pour les assets et certains JSON.
 - **Encodage & intégrité des `.txt`** : UTF-8 sans BOM pour le code ; les tables `.txt` D2R restent en **CRLF**. Toute réécriture doit utiliser le skill `diablo-tsv` et `scripts/build-data/tsv.js`, avec un round-trip **byte-exact** obligatoire.
 - **Assets versionnés** : `data-TCP/hd`, `data-TCP/local`, `data-BK/hd` et `data-BK/local` sont dans Git. Les formats HD binaires de TCP/BK passent par Git LFS ; les backups `*.bak` restent exclus.
 - **Git** : ne change jamais de branche et ne commit ni ne push jamais de ta propre initiative. Une demande explicite de l’utilisateur courant suffit; aucune formule `GO` dédiée ni identité particulière n’est requise.
@@ -85,19 +85,20 @@ En clair : `addons/`, `reverse-engineering/` et les procédures natives portent 
 Les procédures répétables résident sous `.agents/skills/`. Utilise le skill correspondant dès que son domaine est engagé :
 
 - `diablo-tsv` — cadastre, schémas, tables TXT, CRLF et round-trip byte-exact;
-- `d2r32-reverse-engineering` — preuves natives du build 92777, fonctions, xrefs, signatures, ABI et RVA;
-- `d2rloader-plugin-incubation` — autonomie RuffnecKk Suite, audit SDK/ABI/hooks et coexistence complète, configuration indépendante, crédits et ZIP;
+- `plugin-architect` — revue d'architecture explicite, approfondie et strictement read-only avant le choix d'un mécanisme;
+- `d2r33-reverse-engineering` — preuves natives du runtime courant D2R 3.3.93847, fonctions, xrefs, signatures, ABI et RVA;
+- `d2rloader-plugin-incubation` — implantation d'une DLL retenue, autonomie RuffnecKk Suite, audit SDK/ABI/hooks, coexistence complète, configuration indépendante, crédits et ZIP;
 - `d2r-runtime-validation` — arrêt/relance du jeu, synchronisation, hashes, logs et matrice de validation;
 - `diablo-roadmap-release` — mission courante, séquencement ROADMAP, archive publique et contrôles de livraison.
 
-## Atelier persistant de reverse engineering D2R 3.2
+## Atelier persistant de reverse engineering D2R 3.3
 
-Pour tout memory patch ou plugin natif ciblant `D2R.exe 3.2.92777`, utiliser obligatoirement le skill `d2r32-reverse-engineering` et commencer par `npm run re:d2r32 -- status`. Si l’image et l’index sont vérifiés, ne pas redumper ni réimporter le binaire. Les contenus de `analysis-cache/` restent locaux, gitignorés et jamais commités. Toute identification stable enrichit `known-rvas.json` avec sa source et sa confiance. Un autre build reçoit son propre workbench et ne réutilise aucun RVA 92777 sans preuve. D2MOO reste une référence sémantique 1.10f : aucune adresse, structure ou ABI 32 bits n’est transposable directement.
+Pour tout memory patch ou plugin natif ciblant le runtime courant `D2R.exe 3.3.93847`, utiliser obligatoirement le skill `d2r33-reverse-engineering` et commencer par `npm run re:d2r33 -- status`. L'identité binaire utile entre 3.2.92777 et 3.3.93847 est établie : `reverse-engineering/d2r-3.2.92777/` reste le corpus natif gouverné commun et ses RVA, signatures, ABI, index et preuves sont réutilisables. Les nouvelles instructions, sorties et livraisons nomment toujours la cible courante 3.3.93847; le chemin historique décrit seulement la provenance du corpus. Si l’image et l’index sont vérifiés, ne pas redumper ni réimporter le binaire. Les contenus de `analysis-cache/` restent locaux, gitignorés et jamais commités. Toute identification stable enrichit `known-rvas.json` avec sa source et sa confiance. Un workbench distinct n'est créé que pour une future image native utile réellement différente, jamais sur la seule différence de hash du PE retail protégé. D2MOO reste une référence sémantique 1.10f : aucune adresse, structure ou ABI 32 bits n’est transposable directement.
 
 ## Développement de la plateforme
 
 - `npm install` puis `npm run dev` : lance le **dev-server** local (`scripts/dev-server.js`, port 4000, lit/écrit les `.txt`) et l'**admin** Vite (port 5173).
-- L'admin édite les tables typées via `schemas/*.json`. Ces schémas sont régénérés avec `npm run generate:schemas` depuis les headers réels de BKVince 3.2 et les définitions structurées du clone local `guide/d2rdoc/`; TCP 2.4 et `guide/legacy/` ne servent que de replis. En dev, l'admin écrit les `.txt` en direct ; en production (`diablo-tcp-admin.netlify.app`), l'écriture passe par des **commits via l'API GitHub**.
+- L'admin édite les tables typées via `schemas/*.json`. Ces schémas sont régénérés avec `npm run generate:schemas` depuis les headers réels de BKVince 3.3 et les définitions structurées du clone local `guide/d2rdoc/`; TCP 2.4 et `guide/legacy/` ne servent que de replis. En dev, l'admin écrit les `.txt` en direct ; en production (`diablo-tcp-admin.netlify.app`), l'écriture passe par des **commits via l'API GitHub**.
 
 ## Workflow cadastre
 
