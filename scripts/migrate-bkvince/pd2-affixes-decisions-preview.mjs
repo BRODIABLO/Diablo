@@ -21,6 +21,7 @@ const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 const reportPath = path.join(repoRoot, 'Mission', 'pd2-affixes-review.json');
 const catalogPath = path.join(repoRoot, 'Mission', 'pd2-affixes-merge.catalog.json');
 const targetRoot = path.join(repoRoot, 'data-BKVince', 'BKVince.mpq', 'data', 'global', 'excel');
+export const APPROVED_MAP_EXCLUSION_NOTE = 'NOT APPLICABLE TO CURRENT BKVINCE';
 
 function fail(message) { throw new Error(message); }
 function readJson(file) { return JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '')); }
@@ -29,6 +30,70 @@ export function validateDecisionExport(report, decisions) {
   validateDecisionEnvelope(report, decisions);
   const byId = new Map(report.entries.map((entry) => [entry.id, entry]));
   return byId;
+}
+
+export function applyApprovedMapExclusions(report, decisions, mapAffixes) {
+  if (mapAffixes?.occurrenceCount !== 248 || !Array.isArray(mapAffixes.families)) {
+    fail('the governed map exclusion must contain exactly 248 occurrences');
+  }
+  const occurrenceIds = [...new Set(mapAffixes.families.flatMap((family) => family.occurrenceIds ?? []))];
+  if (occurrenceIds.length !== mapAffixes.occurrenceCount) {
+    fail(`the governed map exclusion resolves ${occurrenceIds.length}/248 unique occurrences`);
+  }
+  const byId = new Map(report.entries.map((entry) => [entry.id, entry]));
+  const updated = structuredClone(decisions);
+  updated.entries ??= {};
+  for (const id of occurrenceIds) {
+    const entry = byId.get(id);
+    if (!entry || !isNewAffix(entry)) fail(`map exclusion references a non-new or missing affix: ${id}`);
+    updated.entries[id] = {
+      ...(updated.entries[id] ?? {}),
+      fingerprint: entry.fingerprint,
+      lineDecision: 'EXCLUDE_PD2_AFFIX',
+      notes: APPROVED_MAP_EXCLUSION_NOTE,
+      fields: { ...(updated.entries[id]?.fields ?? {}) },
+    };
+  }
+  return updated;
+}
+
+export function poisonDamageMetrics(encodedDamage, durationFrames) {
+  if (!Number.isSafeInteger(encodedDamage) || encodedDamage < 0) fail('poison encoded damage must be a non-negative integer');
+  if (!Number.isSafeInteger(durationFrames) || durationFrames <= 0) fail('poison duration must be a positive frame count');
+  return {
+    encodedDamage,
+    durationFrames,
+    durationSeconds: durationFrames / 25,
+    totalDamage: (encodedDamage * durationFrames) / 256,
+    damagePerSecond: (encodedDamage * 25) / 256,
+  };
+}
+
+export function closestPoisonTotalEquivalent(encodedDamage, durationFrames, {
+  maximumEncodedDamage = 1023,
+  maximumDurationFrames = 511,
+} = {}) {
+  const wantedProduct = encodedDamage * durationFrames;
+  let best = null;
+  for (let candidateDuration = 1; candidateDuration <= maximumDurationFrames; candidateDuration += 1) {
+    const candidateDamage = Math.min(
+      maximumEncodedDamage,
+      Math.max(0, Math.round(wantedProduct / candidateDuration)),
+    );
+    const error = Math.abs((candidateDamage * candidateDuration) - wantedProduct);
+    const candidate = {
+      ...poisonDamageMetrics(candidateDamage, candidateDuration),
+      productError: error,
+      durationDistance: Math.abs(candidateDuration - durationFrames),
+    };
+    if (!best
+      || candidate.productError < best.productError
+      || (candidate.productError === best.productError && candidate.durationDistance < best.durationDistance)
+      || (candidate.productError === best.productError
+        && candidate.durationDistance === best.durationDistance
+        && candidate.encodedDamage > best.encodedDamage)) best = candidate;
+  }
+  return best;
 }
 
 function assertCurrentBaseline(report) {

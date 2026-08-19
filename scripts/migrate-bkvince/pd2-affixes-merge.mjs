@@ -100,6 +100,41 @@ const TABLE_CONFIG = Object.freeze({
   }),
 });
 
+const GOVERNED_ITEMTYPE_TARGET_SEMANTICS = Object.freeze({
+  helm: Object.freeze({
+    sourceCoverageSha256: 'FE0CBA77F84F952AAA7C9352D8D14F9B190FE4CAFBDAFF92E6DE06EF7639856C',
+    targetCoverageSha256: '93CC6DE6488929FC1495537B4E06180488AD7B075DB22EF7985E3306CAE8A64A',
+  }),
+  knif: Object.freeze({
+    sourceCoverageSha256: 'BDC0FBEDA9B6B0EF15166B112E0EAD961168FB706138992A1232EDB7776FA4C1',
+    targetCoverageSha256: 'B4B5535F7F4008291AD3E7CDB0E429CC65E4158D2FA2A5C03F577B8B851C4CA7',
+  }),
+  club: Object.freeze({
+    sourceCoverageSha256: '8E62A33A1189D5B94369649E41D2BED52A7B6BCDD762283B5DE55B4D89275E4B',
+    targetCoverageSha256: '4F95EF66EF2267DC1B1FB344280A8F02C35286EB15F09624C10B4306DC125D66',
+  }),
+  amul: Object.freeze({
+    sourceCoverageSha256: '79063D0445FA9B3A50D31A24F7B645306C4A6A660CC5C763AB5F341C3CFFB9A5',
+    targetCoverageSha256: '82082FA96CBE5758042450C96987FF13D2D8EABA07946708ECBE48DE93B8E5D6',
+  }),
+  ring: Object.freeze({
+    sourceCoverageSha256: '5D812D6157AD8A63B8A6A3B993090612EC19C7354F0DCD3C6ABFB6BEBCB2E161',
+    targetCoverageSha256: 'AF0084752AC1F6E34BA591E956A5D6454F9B98153BD5D77E86E5E4B5C9278046',
+  }),
+  miss: Object.freeze({
+    sourceCoverageSha256: '13B09E753E681B9752E1B4648E9543B498E23D2780D6872AED5FCDEB5FE9161B',
+    targetCoverageSha256: 'D072CBB504AF78733DD56C325B056479D6700264755D64784D6F8CE3F028AB21',
+  }),
+  jewl: Object.freeze({
+    sourceCoverageSha256: 'DEE7639B5703F7B73C92610D5B3F13630991F415B35B0E8813F608B008B502E5',
+    targetCoverageSha256: '26CE02993970BF4BD6167E38FAA50D96E0BDC4EBEF8A55738AB1E97AA9675FF3',
+  }),
+  thro: Object.freeze({
+    sourceCoverageSha256: 'E0B1C3A11F8B845EA868F59432A73CFC5E013C033C4D40BFAAEC5E35904EDB60',
+    targetCoverageSha256: 'BDC308F35C352E089DA1141B1D7845D9FAEE8630E1D268B02975FB7B14B0747F',
+  }),
+});
+
 const STRUCTURAL_HEADERS = Object.freeze([
   'Name',
   'version',
@@ -501,7 +536,86 @@ export function propertyFunctionValues(func, minimum, maximum, parameter, fixedV
   return [minimum, maximum, fixedValue].filter((value) => value !== null);
 }
 
-export function rowItemStatAudit(row, rowIndexes, properties, itemStats, label) {
+export function encodedBitRange(bits, signed = false) {
+  assert(Number.isSafeInteger(bits) && bits > 0 && bits <= 32, `unsupported encoded bit width ${bits}`);
+  if (!signed) return { minimum: 0, maximum: Number((2n ** BigInt(bits)) - 1n) };
+  return {
+    minimum: -Number(2n ** BigInt(bits - 1)),
+    maximum: Number((2n ** BigInt(bits - 1)) - 1n),
+  };
+}
+
+function skillChargeProfile(skills, skillId) {
+  if (!skills || !Number.isSafeInteger(skillId) || skillId < 0) return null;
+  const indexes = headerIndexes(skills.table);
+  const idColumn = indexes.get('*id') ?? indexes.get('id');
+  if (idColumn === undefined) return null;
+  const matches = skills.table.rows.filter((row) => Number(row[idColumn]) === skillId);
+  if (matches.length !== 1) return null;
+  const row = matches[0];
+  const requiredLevel = optionalInteger(rowCell(row, indexes, 'reqlevel'), `skill ${skillId} reqlevel`) ?? 1;
+  const maximumLevel = optionalInteger(rowCell(row, indexes, 'maxlvl'), `skill ${skillId} maxlvl`) ?? 63;
+  return {
+    requiredLevel: Math.max(requiredLevel, 1),
+    maximumLevel: Math.min(Math.max(maximumLevel, 1), 63),
+  };
+}
+
+export function decodeChargedSkillFormula({
+  minimum,
+  maximum,
+  itemLevel,
+  requiredLevel = 1,
+  maximumLevel = 63,
+}) {
+  assert(Number.isSafeInteger(minimum), 'charged minimum must be an integer');
+  assert(Number.isSafeInteger(maximum), 'charged maximum must be an integer');
+  assert(Number.isSafeInteger(itemLevel) && itemLevel >= 1 && itemLevel <= 99, 'charged item level must be in 1..99');
+  assert(Number.isSafeInteger(requiredLevel) && requiredLevel >= 1 && requiredLevel <= 99, 'charged required level must be in 1..99');
+  assert(Number.isSafeInteger(maximumLevel) && maximumLevel >= 1 && maximumLevel <= 63, 'charged maximum skill level must be in 1..63');
+
+  let level;
+  if (maximum === 0) {
+    level = Math.trunc((itemLevel - requiredLevel) / 4) + 1;
+    level = Math.min(Math.max(level, 1), maximumLevel);
+  } else if (maximum < 0) {
+    const availableLevels = Math.max(99 - requiredLevel, 1);
+    const levelsPerStep = Math.max(-Math.trunc(availableLevels / maximum), 1);
+    level = Math.max(Math.trunc((itemLevel - requiredLevel) / levelsPerStep), 1);
+  } else {
+    level = maximum;
+  }
+  level = Math.min(level, 63);
+
+  let charges;
+  if (minimum === 0) charges = 5;
+  else if (minimum < 0) charges = Math.trunc((level * -minimum) / 8) - minimum;
+  else charges = minimum;
+  charges = Math.min(Math.max(charges, 1), 255);
+  return { level, charges };
+}
+
+export function chargedSkillSerializationAudit(minimum, maximum, profile = null) {
+  const reasons = [];
+  if (!Number.isSafeInteger(minimum) || !Number.isSafeInteger(maximum)) {
+    return { ok: false, reasons: ['charged requires integer min/max charge formulas'], outcomes: [] };
+  }
+  if (maximum > 63 || maximum < -63) reasons.push(`charged level formula ${maximum} exceeds the 6-bit skill-level domain`);
+  if (minimum > 255) reasons.push(`charged direct charge count ${minimum} exceeds 255`);
+  const effectiveProfile = profile ?? { requiredLevel: 1, maximumLevel: 63 };
+  const outcomes = [];
+  if (reasons.length === 0) {
+    for (let itemLevel = 1; itemLevel <= 99; itemLevel += 1) {
+      const outcome = decodeChargedSkillFormula({ minimum, maximum, itemLevel, ...effectiveProfile });
+      if (outcome.level < 1 || outcome.level > 63) reasons.push(`charged decoded level ${outcome.level} outside 1..63`);
+      if (outcome.charges < 1 || outcome.charges > 255) reasons.push(`charged decoded charges ${outcome.charges} outside 1..255`);
+      outcomes.push({ itemLevel, ...outcome });
+    }
+  }
+  return { ok: reasons.length === 0, reasons: uniqueValues(reasons), outcomes };
+}
+
+export function rowItemStatAudit(row, rowIndexes, properties, itemStats, label, { skills = null } = {}) {
   const reasons = [];
   for (let slot = 1; slot <= 3; slot += 1) {
     const rawProperty = rowCell(row, rowIndexes, `mod${slot}code`);
@@ -516,6 +630,21 @@ export function rowItemStatAudit(row, rowIndexes, properties, itemStats, label) 
       if (!func) continue;
       const fixedValue = optionalInteger(rawFixedValue, `${label} ${rawProperty} val`);
       const values = propertyFunctionValues(func, minimum, maximum, parameter, fixedValue);
+      const isCharged = func === '19';
+      const isScaledHowl = rawProperty.toLowerCase() === 'howl';
+      if (isCharged) {
+        const chargedAudit = chargedSkillSerializationAudit(
+          minimum,
+          maximum,
+          skillChargeProfile(skills, parameter),
+        );
+        reasons.push(...chargedAudit.reasons.map((reason) => `${rawProperty}:${reason}`));
+      }
+      if (isScaledHowl) {
+        for (const value of values) {
+          if (value < 0 || value > 128) reasons.push(`${rawProperty}:scaled value ${value} outside 0..128`);
+        }
+      }
       const stats = propertyFunctionStats(func, declaredStat);
       for (const rawStat of stats) {
         const statName = rawStat.toLowerCase();
@@ -526,7 +655,7 @@ export function rowItemStatAudit(row, rowIndexes, properties, itemStats, label) 
           continue;
         }
         const range = storedValueRange(targetStat, itemStats.targetIndexes);
-        if (range) {
+        if (range && !isCharged && !isScaledHowl) {
           for (const value of values) {
             if (value < range.minimum || value > range.maximum) {
               reasons.push(
@@ -540,11 +669,10 @@ export function rowItemStatAudit(row, rowIndexes, properties, itemStats, label) 
           rowCell(targetStat.row, itemStats.targetIndexes, 'Send Bits'),
           `${rawStat} Send Bits`,
         );
-        if (sendBits) {
+        if (sendBits && !isCharged && !isScaledHowl) {
           assert(sendBits > 0 && sendBits <= 32, `${rawStat}: unsupported Send Bits ${sendBits}`);
-          const signed = rowCell(targetStat.row, itemStats.targetIndexes, 'Signed') === '1' && sendBits < 32;
-          const sendMinimum = signed ? -Number(2n ** BigInt(sendBits - 1)) : 0;
-          const sendMaximum = signed ? Number((2n ** BigInt(sendBits - 1)) - 1n) : Number((2n ** BigInt(sendBits)) - 1n);
+          const signed = rowCell(targetStat.row, itemStats.targetIndexes, 'Signed') === '1';
+          const { minimum: sendMinimum, maximum: sendMaximum } = encodedBitRange(sendBits, signed);
           for (const value of values) {
             if (value < sendMinimum || value > sendMaximum) reasons.push(`${rawProperty}:${rawStat}:${value} outside send ${sendMinimum}..${sendMaximum}`);
           }
@@ -570,8 +698,14 @@ export function rowItemStatAudit(row, rowIndexes, properties, itemStats, label) 
         if (sendParameterBits) {
           assert(sendParameterBits > 0 && sendParameterBits <= 32, `${rawStat}: unsupported Send Param Bits ${sendParameterBits}`);
           const parameterCandidates = [parameter, fixedValue].filter((value) => value !== null);
-          const minimumParameter = sendParameterBits < 32 ? -Number(2n ** BigInt(sendParameterBits - 1)) : -2147483648;
-          const maximumParameter = sendParameterBits < 32 ? Number((2n ** BigInt(sendParameterBits - 1)) - 1n) : 2147483647;
+          // Func 19 skill ids and func 21 class ids are unsigned selectors. Signed
+          // governs the stat amount, not those embedded identifiers.
+          const signedParameter = !['19', '21'].includes(func)
+            && rowCell(targetStat.row, itemStats.targetIndexes, 'Signed') === '1';
+          const { minimum: minimumParameter, maximum: maximumParameter } = encodedBitRange(
+            sendParameterBits,
+            signedParameter,
+          );
           for (const value of parameterCandidates) {
             if (value < minimumParameter || value > maximumParameter) reasons.push(`${rawProperty}:${rawStat}:param ${value} outside send ${minimumParameter}..${maximumParameter}`);
           }
@@ -633,6 +767,50 @@ export function isMapRow(row, indexes, sourceItemTypes) {
   if (rowProperties(row, indexes).some((code) => /^map-/.test(code))) return true;
   return usedValues(row, indexes, ITEM_TYPE_HEADERS)
     .some((code) => itemTypeReaches(sourceItemTypes, code, 'map'));
+}
+
+export function concreteItemTypeCoverage(baseTables, itemTypes, code) {
+  const result = [];
+  for (const [tableName, loaded] of Object.entries(baseTables)) {
+    const indexes = new Map(['code', 'name', 'spawnable', 'type', 'type2'].map((header) => {
+      const index = loaded.table.headers.findIndex((candidate) => candidate.toLowerCase() === header);
+      assert(index !== -1, `${tableName}: missing concrete-coverage header ${header}`);
+      return [header, index];
+    }));
+    for (const row of loaded.table.rows) {
+      const type = rowCell(row, indexes, 'type');
+      const type2 = rowCell(row, indexes, 'type2');
+      if (!itemTypeReaches(itemTypes, type, code) && !itemTypeReaches(itemTypes, type2, code)) continue;
+      result.push({
+        table: tableName,
+        code: rowCell(row, indexes, 'code'),
+        name: rowCell(row, indexes, 'name'),
+        spawnable: rowCell(row, indexes, 'spawnable'),
+        type,
+        type2,
+      });
+    }
+  }
+  return result;
+}
+
+function governedItemTypeTargetSemantics(sourceRoot, targetRoot, sourceItemTypes, targetItemTypes) {
+  const sourceBaseRoot = resolvePd2BaseSourceRoot(sourceRoot);
+  const tableNames = ['armor.txt', 'weapons.txt', 'misc.txt'];
+  const sourceTables = Object.fromEntries(tableNames.map((name) => [name, loadTable(sourceBaseRoot, name)]));
+  const targetTables = Object.fromEntries(tableNames.map((name) => [name, loadTable(targetRoot, name)]));
+  return new Map(Object.entries(GOVERNED_ITEMTYPE_TARGET_SEMANTICS).map(([code, expected]) => {
+    const sourceCoverageSha256 = stableSha(concreteItemTypeCoverage(sourceTables, sourceItemTypes, code));
+    const targetCoverageSha256 = stableSha(concreteItemTypeCoverage(targetTables, targetItemTypes, code));
+    return [code, {
+      code,
+      expected,
+      sourceCoverageSha256,
+      targetCoverageSha256,
+      verified: sourceCoverageSha256 === expected.sourceCoverageSha256
+        && targetCoverageSha256 === expected.targetCoverageSha256,
+    }];
+  }));
 }
 
 function projectSourceRow(sourceRow, sourceIndexes, targetTable) {
@@ -955,9 +1133,14 @@ export function buildAffixDependencyAuditContext(sourceRoot, targetRoot = target
   const targetItemTypesLoaded = loadTable(targetRoot, 'itemtypes.txt');
   const sourceSkills = verifiedSource['skills.txt'];
   const targetSkills = loadTable(targetRoot, 'skills.txt');
+  const sourceItemTypes = itemTypeIndex(sourceItemTypesLoaded.table);
+  const targetItemTypes = itemTypeIndex(targetItemTypesLoaded.table);
+  const targetDataRoot = path.resolve(targetRoot, '..', '..');
+  const targetModernStringsRoot = path.join(targetDataRoot, 'local', 'lng', 'strings');
+  const targetLegacyStringsRoot = path.join(targetDataRoot, 'local', 'lng', 'strings-legacy');
   const localizationSnapshots = {
-    modern: loadLocalizationSnapshot(modernStringsRoot),
-    legacy: loadLocalizationSnapshot(legacyStringsRoot),
+    modern: loadLocalizationSnapshot(targetModernStringsRoot),
+    legacy: loadLocalizationSnapshot(targetLegacyStringsRoot),
   };
   const tables = {};
   for (const name of Object.keys(TABLE_CONFIG)) {
@@ -995,8 +1178,14 @@ export function buildAffixDependencyAuditContext(sourceRoot, targetRoot = target
       },
     },
     properties,
-    sourceItemTypes: itemTypeIndex(sourceItemTypesLoaded.table),
-    targetItemTypes: itemTypeIndex(targetItemTypesLoaded.table),
+    sourceItemTypes,
+    targetItemTypes,
+    itemTypeTargetSemantics: governedItemTypeTargetSemantics(
+      sourceRoot,
+      targetRoot,
+      sourceItemTypes,
+      targetItemTypes,
+    ),
     itemStats: {
       source: itemStatIndex(sourceItemStatsLoaded.table),
       target: itemStatIndex(targetItemStatsLoaded.table),
@@ -1100,7 +1289,16 @@ export function auditAffixProjection(context, {
     if (!targetType) { status = 'absent'; reason = 'ItemType is absent from BKVince.'; }
     else if (sourceSemantics && !sourceType) { status = 'absent-source-definition'; reason = 'The adopted PD2 ItemType has no unique source definition.'; }
     else if (sourceSemantics && (sourceType.equiv1 !== targetType.equiv1 || sourceType.equiv2 !== targetType.equiv2)) {
-      status = 'incompatible'; reason = 'PD2 and BKVince ItemType ancestry differs.';
+      const governed = context.itemTypeTargetSemantics?.get(code);
+      if (governed?.verified) {
+        status = 'compatible-governed-target';
+        reason = 'The occurrence uses the approved BKVince ItemType target semantics with exact concrete-coverage hashes.';
+      } else {
+        status = 'incompatible';
+        reason = governed
+          ? 'PD2 and BKVince ItemType ancestry differs and the concrete coverage hashes no longer match the governed exception.'
+          : 'PD2 and BKVince ItemType ancestry differs.';
+      }
     } else if (sourceSemantics) { status = 'compatible'; reason = 'PD2 and BKVince ItemType ancestry matches.'; }
     dependencies.push({ kind: 'ItemType', code, field: header, provenance: sourceSemantics ? 'PD2' : 'BKVINCE_OR_CUSTOM', status, reason });
     if (['absent', 'absent-source-definition', 'incompatible'].includes(status)) conflicts.push({ kind: 'ItemType', code, reason });
@@ -1122,6 +1320,7 @@ export function auditAffixProjection(context, {
       targetPropertyContext,
       targetStatContext,
       `${tableName} ${kind} source ${sourceRow ?? '-'} target ${targetRow ?? '-'}`,
+      { skills: context.targetSkills },
     )
     : { ok: false, reasons: ['serialization audit blocked by absent target Property'] };
   for (const reason of serialization.reasons) conflicts.push({ kind: 'serialization', code: 'ItemStatCost', reason });

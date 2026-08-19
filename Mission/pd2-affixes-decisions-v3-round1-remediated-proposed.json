@@ -37,7 +37,7 @@
     "magicsuffix.txt": "71725CF1C0AAD191BB35074474EA1B7E08558851D097B3B7283C72A9BE7B0C97",
     "automagic.txt": "ACB99D4F703FEC5DC486144DD8856A1E8566EAC859FE49E526209E6604991C6A"
   },
-  "exportedAt": "2026-08-19T00:12:04.913Z",
+  "exportedAt": "2026-08-19T01:59:30.859Z",
   "entries": {
     "magicprefix.txt:143": {
       "fingerprint": "93E78BD1A3CA89DDB77A801E1E1309DE2548631B50387B65326BBB4A9ADA8D71",
@@ -7289,487 +7289,584 @@
     "magicprefix.txt:671": {
       "fingerprint": "A46C8E81171F3D7D1233543E0E717E9437D7BD26B4880787CE6216BE3E1A447F",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:843": {
       "fingerprint": "1C2920C9BB52138C971CB005DB7DB80F157B6D320B09CAA3A08A385D01A34751",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:793": {
       "fingerprint": "2CB008200D6A68ADD6477EABB525F143D782B04781416A722C81807466524B11",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:844": {
       "fingerprint": "F29B3F6768C9D4E911E8BA66FD4F7120D31081EF6F7B07E85B806475D2096F0E",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:794": {
       "fingerprint": "12BBE489C69F6ACFCAD7C760A31F836D1E5483A87872CF70E6C0A0B4804B01E0",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:845": {
       "fingerprint": "0DA570CDE8FB7BC2551C8AE53D614D15A702A250B9A6CE998E4010AF464348D8",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:672": {
       "fingerprint": "32EF1144EA5D945CEFC3113B48BC094F02C8D6CDE80C8C1FE3236BD458F15C10",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:846": {
       "fingerprint": "1DA5641EBFF870EF118E1D5FF0D1D936A0858C6330E3F2BFF13B8FC0A3C253B3",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:673": {
       "fingerprint": "AE22BE217A85843BFBEAC6970E02A5BD6DC2752C1CA9429AE039AA4BF3DFBA63",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:847": {
       "fingerprint": "FC86E0D0CAC249748ACFAA1A37E5568F62A439E5541A14FC4FB87EA47D508021",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:674": {
       "fingerprint": "2A1B1DF8B3E9A608C4420568DE563C0EEAC7838D082095170A7144A9AD6227E4",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:848": {
       "fingerprint": "46D71A52A85442E96F25F6AFF4F6F1136004AE4B1241334553675539BCC7433A",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:675": {
       "fingerprint": "89CF1DB48304C343A9F10278179EE89085DB3188BB97A7E6CD8F3C2C21957138",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:849": {
       "fingerprint": "7A22D25C50E1C5A241DCDD5E71DA339AEAA345DD12F167182423C6E4AF491B96",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:676": {
       "fingerprint": "E42FFF26272633C54030F37B2FE11A07709AA9EC86032334ABC1DDBEACC81932",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:850": {
       "fingerprint": "D18EF5D293EFB1295ACBEBC442619131B8AD374CA750A256F9689983BAADDB77",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:677": {
       "fingerprint": "8675D703370D25B8EE9E6F12C424E1578BC2230A770D897196A969489DE1523B",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:851": {
       "fingerprint": "639C4D60E5A48C02F3ED203A9E78D70B7103F2502D3D27C22373664B813D144D",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:678": {
       "fingerprint": "FD1281A3813D5F1FF401D750BC7EB58E9445F4BDFED3FF454FCE3D0EE27FB4FF",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:852": {
       "fingerprint": "DA8B734B61693087ECFA083EE232EECA2735BF961F39A140974D8779578AAB71",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:679": {
       "fingerprint": "BDCAC5C7D1E3B0D9A9952C29C198A0B638BA0066725DE39025058F845F434EE8",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:853": {
       "fingerprint": "D9D7455E2E5B274A2CE5C6C3AA1611A0EE6708451DC074F6F015CD93360524C7",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:680": {
       "fingerprint": "7E90C1859FD3213A8012CAE6EB9786C0190DC025799B56E9509B756C91DF5AF2",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:854": {
       "fingerprint": "AEA846B4AB03AC633152914758711C49799C6CF923EB1D1F99778334A5FDC44E",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:681": {
       "fingerprint": "93C10E1124C7515A452E6E49C981E5C62B462A8E9FAFD17460E8DA0F27296AB8",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:855": {
       "fingerprint": "0B57359BFBE9E2063AEFFD1C5D95C241798BAEDAA3320E022FFF1D1F87AB3490",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:682": {
       "fingerprint": "2CC2290F17DB39DF7A89B8854A654B82EAB33F88715F07EDF10844712E144C53",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:856": {
       "fingerprint": "3B9BE450A8F010A82CBB4DD623FCEDB2708C4882CF9334FA86EA542C58715C05",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:683": {
       "fingerprint": "5A6B4FC17738AEE743E2B2852AB134ED4850EE088457D82938DF8A04C5052E70",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:857": {
       "fingerprint": "DB835615C3A7A3C7595B3201F29FE80C66EE3DCED1EE79D9C91CF2F58D14B6E4",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:684": {
       "fingerprint": "F48400BE7F9FD6F37862D3927CE8246A155E14CA983F7E9478718FD19EA8317F",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:685": {
       "fingerprint": "CD91914510C5B5DE554118D3292890D9581D80DBF5D101813B2F54EAFDC6C52A",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:686": {
       "fingerprint": "80E60F6D0A6295711124E2A94F16661F04525A5D57AA9AA9405071E5976995BF",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:690": {
       "fingerprint": "610FCCA114DDEB8DDC48CEE284647F8BC39BA634B67BECAC2B98CC25AF03E0E6",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:858": {
       "fingerprint": "8665E829573E395B61D70A0802EE9242041DF26A5E796CFE19C10FB2273B48EA",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:691": {
       "fingerprint": "5477CB6206E2F191D3C6D08CFF4166240CC367859D5EAE4FAEF35FF1CCE1B3C5",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:859": {
       "fingerprint": "EB31DC7F20D4F5FC529370BE2EEA40B59560C65525BEBB84AB2DDC8A8B9F499B",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:692": {
       "fingerprint": "FE67DFE15532B781E2414E4A6ED107E0CBEEF7AE6B6DADD6B686AFEB49916022",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:860": {
       "fingerprint": "43AF6E3E9025535861956BB9FD5BAE26AF8081A3679DA961C9EE3178EB862F8D",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:702": {
       "fingerprint": "EBA591BFD052DD5682BC88419560FE25F231C374021EECC8954FC5034AD8465B",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:870": {
       "fingerprint": "1240B4BB4515F8CD65AC3408CA0ECADFF71AD94DBFEFCB4AFC9C33C73643AA4C",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:703": {
       "fingerprint": "BE6A1819621A6FD8D4A5BC445DCC460DD6BDFF2261EB505E8618F70F4FC3FFFF",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:871": {
       "fingerprint": "64B8F476AE89005299F8482ED115A84BAEBA98D10C8ED3B5E0B7300D2770572A",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:704": {
       "fingerprint": "44D49B83F54B08446C0B8EA1AD01AB234A979789A1D2101769AB83D23A4C6E6D",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:872": {
       "fingerprint": "C80ECC2A27098655E463265B05819BE0DCDAEA8E852D5715819DB64D86034633",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:699": {
       "fingerprint": "C8ECA7D5F0867DE89631FE63227D343483F28D71395594E3CD42CD213D15C991",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:867": {
       "fingerprint": "090D9DCD96F8DA315EB348ECAB2E1DA53D5CEA391019CB43DFC984D4FBA96724",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:700": {
       "fingerprint": "C57A01ECEA2E73252F363ADA38DF22CE2BE19E1D06A4A3C3075CB0DA5345270A",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:868": {
       "fingerprint": "81D67ABEDD3F53F31746C963463BBF70C77F655B97B79F967B573E75FE6FE27B",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:701": {
       "fingerprint": "DB8D51C0BC87747AC79C355F211ED6F4F716A6FF9B76AA8CE884A43A6127DFD7",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:869": {
       "fingerprint": "2596FC55C81DE51ACC5A804ECABE071771F7DD4962A014158DA40916E3E91D2E",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:711": {
       "fingerprint": "BC91033D40B83D154B114697BF5D4C160C1CE3B9E9ADB6792E8569941C75CB4A",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:879": {
       "fingerprint": "24AA9375D9442AB8803F8DDE80291E0A28A83CB7A3193EA54C9744D7003FEC1D",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:712": {
       "fingerprint": "5F1DA46CEFD30145413788F0071911F9956535C966047FCCD2E39DD4D5B8DA31",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:880": {
       "fingerprint": "55414114152CAB1F3E3F776EFE2F2287C6908A2D7BF170E3539C503635C76D80",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:713": {
       "fingerprint": "72C4A57BD7BD66F03D9CEC07EC46E593C5E1F2067B05173C5E88E72CE8445DCC",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:881": {
       "fingerprint": "27EE1E663597A2961A2A7CAF58F2189A3CB7EE92D793BA41582CB3356D7B4D58",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:714": {
       "fingerprint": "2A2BEAF04E4EC976E8150EAEBF9EAFABBD89E18993C3DBB9BD3D0FD40C90AE19",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:882": {
       "fingerprint": "1BE9D057BABFBB1CAC6F4C8AB33F76B4AA853525743DB112627F05A677F0193A",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:715": {
       "fingerprint": "6BB1F7DB16C74CDD704702C482DB71D75ACAE76DA1B474C42567B9AF2EC29BB1",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:883": {
       "fingerprint": "23E526170AD0AC223AFB48C11ED324E8A909212F704650156D14B0707F3D7FA8",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:716": {
       "fingerprint": "C43A0809AF816B4A28BAAB8B09F39FB9EA1B5F8355C8C92D538307403533B495",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:884": {
       "fingerprint": "9BC706690588B6E2753D5BF86E973DD56430EB96CE41F9E955510D4FEFE565BE",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:717": {
       "fingerprint": "58E606444C08AE54819D0F8F8D2E66C1F94F7C8E490C5808092D90EDC74D9243",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:885": {
       "fingerprint": "E7568CE5DD2BC3C282E11261E185BAB2984D5DEA51E5FE1EFF27112EA52667E7",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:718": {
       "fingerprint": "D8C446A190816EBC4A6BCF9672B349EE08507FAD34DE5BEC139176EC340D6033",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:886": {
       "fingerprint": "DCBF15B0295C4E5D3D0EE3283DE370636E4FF2BF8BA21508949C5CD5BEB3D13F",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:719": {
       "fingerprint": "9D586E4067EF02038F505290FC4657E18CC861F9B779726F5CE2600387F0B47F",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:887": {
       "fingerprint": "D020320EAC9015336D694D59CA38D1C1CE28E9F72B5C56A8A7CA847BD059D82D",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:720": {
       "fingerprint": "0C26518D9B99C354E5FF6C3299FB4351E0AF42D74B000BCEED242E0ED34AD857",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:888": {
       "fingerprint": "0F00303AF6B2F794957FEA238561D50687C567EB1962634C1B608975B61A02D4",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:721": {
       "fingerprint": "214086517887F3F38B8403AA01F343F994DDC4A6545619B5A527E1672FD36C59",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:889": {
       "fingerprint": "0AB779AAAD66034878DE3EDCA66676B4B7EE939013F50ADCB1603A2E0F75FFA0",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:722": {
       "fingerprint": "1C973CC2B40908E674790A2097A8A736F3C06F5C96115D05DD5958E551615081",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:890": {
       "fingerprint": "2911C4F09EA8E2709F02CA4CAB2C7FE78B87E989082DFCC4F5A53F43C557DFD3",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:723": {
       "fingerprint": "16DA5B7B235FB11A345C9CF7D28BF22CEF6F3202DA2A858C2D57BD5E4EF82D56",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:891": {
       "fingerprint": "5D8CF9DA616262A5385E8FB0AD6CA72FA83D04C7151FAC9DE6937F931600276F",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:724": {
       "fingerprint": "E102FAB231D6B00DA719CCE339E2AF2395E0E5C4676517665701A3EAD948ADD5",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:892": {
       "fingerprint": "711282C4B23727E29E5EA7C5833EF3123C3BD9F1DCBB9F65053E849CA5B7DE54",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:725": {
       "fingerprint": "F94E58164881991332942E5928A9EA6F54735F8C6DDC4A4BF7C833EDBAA9DC41",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:893": {
       "fingerprint": "0BB832327E8F83B38124CF6B9205DB2689F32B3596FE90CD6E03ADC14230106A",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:726": {
       "fingerprint": "BEC5C8918C09A5F7CFF5858B1A97454E823671096F81F035F89E4F59BD4E406C",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:894": {
       "fingerprint": "02763317E4C282F68691D19A9EB42140C0D8738EB0C4FD0428CBBC523F02ACC4",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:727": {
       "fingerprint": "AC5F8DF669C69737DAB5361D651814C73556FDC2D530AC621907113CB5219DC3",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:895": {
       "fingerprint": "873E06000BE02B9363D24A752FFB8A25CC43BC3C78F7AEEB8A2E96D184512E09",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:728": {
       "fingerprint": "9C6E4167B59A4138C694AAF91F3E650C9F06BF50FDE983546927C5256C3C2007",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:896": {
       "fingerprint": "500916A1F2A4A2AC80B577C587CA799C5657C0919BB42C83A5F990DAD1E4CF10",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:732": {
       "fingerprint": "240AFE712313D85EB450B3B27F66A0A3636698393BF728CE0156BD5C1E45E120",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:729": {
       "fingerprint": "2ACB78EA95C153BF2CC1BD011BAD7B095EAB0C5BBC949E748E725A102DE37D2A",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:779": {
       "fingerprint": "03099E5518C6118289CBFC88F2823414662E8B89A534972698723371EF2EDBB5",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:734": {
       "fingerprint": "A2E3B9BCFCD2979D9E96EDEE6A6D1C0E1744280B93868F569ED8C69FF8ADF912",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:733": {
       "fingerprint": "A41EB1189CC5408E59A590A5647EB370F86FF4B317B04533AA57A3E0A9F40B93",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:795": {
       "fingerprint": "5FADEC589653996C6871C601A19861EC6BB9193B78BC4A36C25FB317A40EA5B7",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:778": {
       "fingerprint": "AFF67BF1ABC75C7F12AE48E0A024C4CCD5193ED5323E221B2F0EE2B4B0818791",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:730": {
       "fingerprint": "944C3BBA515E721DD484EE47134F787EA4CBCCAD793BBB39EA91E8FFCE92069B",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:731": {
       "fingerprint": "69C96659F42AC93F97C1A977E7E39B42C49DEF1E1DD68710560629E9E5E3DC15",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:792": {
       "fingerprint": "9AF73C6ED045DAFCBA9E34A91DF69B9CAC3A5B55DD285F159A8E5B841A2D0BCD",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:809": {
       "fingerprint": "D14BE51995F14F9B727F17C9FFF9495A9CE442BC994304165111C9FB494611D9",
@@ -9012,47 +9109,56 @@
     "magicprefix.txt:687": {
       "fingerprint": "CB1B9514CC2E59908C0748854BE513276E422EFABA12B41F19A62D8173EC5C0C",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:688": {
       "fingerprint": "D0B08085278F408D2420AF668E0C44906429F34A53DD4FD56C4A182FF779BDDF",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:689": {
       "fingerprint": "DBE7099DEB7F2770B28A1DDE03C90E7258F56002FB8D21EB930A632560EA1A11",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:693": {
       "fingerprint": "8FDD70855D2B0423C4082E50FE77951F3C02F93E883646278BF99CD033761EC2",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:861": {
       "fingerprint": "1EF29BE893F2C3A2F72F7B28FFB122C0508AEB2D18BEC1AE0DBC6C5D3AA17337",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:694": {
       "fingerprint": "D1E0CDC4339B59B52BD811377DA16ED8993CAD29D3CE4924E3B37F53CF4681FE",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:862": {
       "fingerprint": "23AF02C20F525FD489873BC1344E4B4F661EE68C56257C2D8A1B6B751E98C3D4",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:695": {
       "fingerprint": "1C5ECF12A087F626CC795C4C7DDCBB7CD4E0AA425CC05E8E998DA660F811B1EB",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:863": {
       "fingerprint": "EB000FD11FFACFF6772EF7C69522444B4AABFE6B190CEA209A805D17F1293396",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:bkv:682": {
       "fingerprint": "E20189E2BECBD9E729E1D06CC8947DF5B95498042109827BA15987F87068055F",
@@ -11597,92 +11703,110 @@
     "magicprefix.txt:696": {
       "fingerprint": "3D4D761B17141F76E3F80E68ACD7FDA07C4584978307CFDF07EA9D1BADD6D2EB",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:864": {
       "fingerprint": "4A257778150921B64AE823CAB68B101D5C815011D3EF8A66CCD663CF3F05E307",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:697": {
       "fingerprint": "51119251907A6CED1052C1D45D7AC6B845456BD90D0BD4E9838A6DDE801E52B4",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:865": {
       "fingerprint": "E1D4FE2526F201791E2B9E59642847EECFD84B002A843150BC3514A6E7C64247",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:698": {
       "fingerprint": "2F4FBD1C6D6B60C39A8D992FE68FAEFE4CCFFD46D150AFFC73313BC4EF05A48B",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:866": {
       "fingerprint": "A426FEBF70706CE3F8B1276B173CEDA3EE61BF555FC33E8863887EA3CCE33258",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:705": {
       "fingerprint": "ABAFCC2EB76447200A99F79F0B3D71F99C30AE7732FBE91CEAFEE29695C1C755",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:873": {
       "fingerprint": "9C1AE625FEDD2527126702B626AF1250CF82C23651D5F4EE8308F6BE355A4B91",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:706": {
       "fingerprint": "F2C1A059864A4031A01AF9A9E74D816EA2285AC52BDF6D43B946B0C01998C827",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:874": {
       "fingerprint": "B58275F8609161C3B42D131FD2E7ED4D3B3ACE857615AED4AFD6FFF3F64E5F39",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:707": {
       "fingerprint": "D2870540980ED7A89B53AE0511514D4D03ACEAF74CDB15704801659FA04EE881",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:875": {
       "fingerprint": "3B2ABD992564D4BE3217FD327F88008E787BF3C88AEF3AF64E49180F4AB5F970",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:708": {
       "fingerprint": "76D0B841F41132CBBB71530FDFD0B5EDB413C0E5D2BA0DA18E3B53F41A7F8CD6",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:876": {
       "fingerprint": "EB107709D4CA598F6EC1ECAFEA3D0E3D3875C3F72F783F60424708C2D79CA114",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:709": {
       "fingerprint": "1D3DEAF6A7F1A9A08BE156A904E13915C80A8CD8D508E46B8D9AFF5A4B56C3C7",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:877": {
       "fingerprint": "11A34729B8E3D517FB9D13F492ED6F863E51673777C301961EE28282E8B8F760",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:710": {
       "fingerprint": "517640944AD268B00480161FE11B3F645617D0266F7D448E474515D1195791A0",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicprefix.txt:878": {
       "fingerprint": "FE30A4103BA158D086415D13EF58F12FFB13ECA3C4F7377DDC20C77C4B0E94C4",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:117": {
       "fingerprint": "8DA92E0A02A954A67F7E292B01F06B4435D09920FFCE995E7E2E37FA7D1F7ABA",
@@ -13786,92 +13910,110 @@
     "magicsuffix.txt:749": {
       "fingerprint": "27AED9DB45E4ED5F32860D9D89450EAC5DF8EEC59F453130D796D76B977EA9A4",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:921": {
       "fingerprint": "4F8BC307E77CC53422AC92533E3515D0551B48AF77EE088A357901CDF2221DC9",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:750": {
       "fingerprint": "511D4C10902B17EAE4DBF76CC339759B8D67BF00DFA27D4B6978C21FC29B5033",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:922": {
       "fingerprint": "AC0EC65D0C30C6829D38A70BB22EBAA6FF34185F88F34623D07F744ADED0E36D",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:751": {
       "fingerprint": "70D4BE214235906C1246F4E72F492227F00B933624C8ABFB63605B5FBDB8E03C",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:923": {
       "fingerprint": "D85F967EBCF818A8552A6CB4BF0434469BDC32337D24295AD22E197B319BADF5",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:752": {
       "fingerprint": "F5053FAB2094FD331AF157C84364664E382570C11AA6FB15401ADFCD0BE4F91D",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:924": {
       "fingerprint": "5BEE0847B5D66B3D80231A55448F434C85FDB0C09E4899847C6B5895D6BD87B3",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:753": {
       "fingerprint": "FAE47221F47288B4ED0516C9D645D3A4EAF81B4ABF9A332A0BDF8D4645138DBE",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:925": {
       "fingerprint": "08477C7A63C08BBA7F62085769AE18FB69F0313E17BF62E1654AD54083B28B7D",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:754": {
       "fingerprint": "60C853F797D77D2CEBEACC0089964BD65A83A2A65EF750698F4BB7A5805235F8",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:926": {
       "fingerprint": "BF7DAEC501DB2A4BCEBFF9624D2CF9A7F369340B0C283A407FD09BDBBA262909",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:755": {
       "fingerprint": "9DB5F44BB54846743E1668A57B787C5B303FC7ADE96F21A67D400DCC7C53EF93",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:927": {
       "fingerprint": "794A69744BD56EBA7D52F82DE38AA8768496A41309AD575C86F2B11FC9481013",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:756": {
       "fingerprint": "B1A44F74BF64E31620ED59FFE7FCCFBC8E9DD823E47CC7805D9C450DC4FFC32F",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:928": {
       "fingerprint": "821882BBAE57210FDDCCB77925FBB55963EDA57163317F54455E0EE1EDEC45F6",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:757": {
       "fingerprint": "C94396D933E24EC4C0E3F132F8723E31EDD847C54F7D4EE99FFE71B8EAD2D032",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:929": {
       "fingerprint": "D75A10EFEA19E053902A2EF9A68E19DE24865F19293600056249EA6F6A1D4355",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:682": {
       "fingerprint": "BAB38B794773C9126F26DDFD2AF668D31EC9EECE123A2A8BE400408077FB18D0",
@@ -14258,152 +14400,182 @@
     "magicsuffix.txt:758": {
       "fingerprint": "EB49D5C277F615D6833C2BCDCAD2A36491BC792110076061F118590F7A6C1FCB",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:930": {
       "fingerprint": "8F8F2F28D99DB911F0C1C23E94F6B041B3070F49788876C148B3096B5F16C83E",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:759": {
       "fingerprint": "3D8DAAD3048F1BF1DA87C169D459CAD76D447ADE399D5C47F249653B705CC2A2",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:931": {
       "fingerprint": "8207B6DC0230F4DC0BFC23F2CD4CCA44B92AF9506D1FC78A4540EF80CA2299E2",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:760": {
       "fingerprint": "40BF770191970B09F83038219787A0942A63FC34F9136C46CBCC34FDDDE0C754",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:932": {
       "fingerprint": "517C43F5FBE617ECF4100536EA8896934C8F2D4D782373A38A5D5924B55CCBED",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:761": {
       "fingerprint": "09CE78B978BAAD962D8B85BB8F8A29B55E98E8325F63A6ABDE2C36435A50F8E6",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:933": {
       "fingerprint": "7E7C9ACD938D27A5E15E9E472F41F2519DB313EED8E937CE548BD1B36B3EBF5F",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:762": {
       "fingerprint": "8F61B64D31A64C5E42113AC1B489E054BB1F85BE1130D3043B460944BA5FEC4B",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:934": {
       "fingerprint": "F4C0697310D0FF89BF33832AD4D1F0A6DE56FE48647D9573CFC79CBE389E954D",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:763": {
       "fingerprint": "7BBA3848C84CE782ED1F75C783AC6DC884A0722A2C34570C990D825CAD2E38EB",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:935": {
       "fingerprint": "27BDCC71B6525309E3D370A45D355BB9565B076DE43434B3DD1F28180FAD38EA",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:785": {
       "fingerprint": "9CFAF9F89D5A640F42A69F46A5FBCD2A8A110CF946EC0B446CD51B7515FB6173",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:957": {
       "fingerprint": "A92486259151E2FAE98D943A53C008A5B8F73D06A2EF0DD33EA5FCA61C9F7FA9",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:786": {
       "fingerprint": "378E032E78AABEFB6E6ECA3BA7EEA0C825CAE09ECBA489284C189660EBE5C0E6",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:958": {
       "fingerprint": "09D21DEEA152C9A88343EF9F4B391C5DEF57B626CB7ECE84A82C2FAA3B9EEDB8",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:787": {
       "fingerprint": "25DBE1B639BFB8CB22CE6034840617EE89D1F42D351BD91DE64E20B6A6A6B0B2",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:959": {
       "fingerprint": "BE558F74B5B5BE24645F33E856528015AAFC2ED884CBBB7053E930F2A4C2EA39",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:791": {
       "fingerprint": "61143C769AA87E1F8CED50083536097A8686A3061C28ECAFD8661DCC69F50E20",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:963": {
       "fingerprint": "F1FD0627C31E90C28FAF331A95E2273D74949FA25557A41722276C44358CF2C9",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:792": {
       "fingerprint": "04DDBA784495DA1A36967BC94294272B20F2F04B9A8DD1385B4EB1BD83C17618",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:964": {
       "fingerprint": "237523624473BA979D1BB5E4671DA6C209F37421CEA4510E2712C8E209CC25EC",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:793": {
       "fingerprint": "89BC6786FD44C30F4FB73FFCB5DEAF3E84E80C9BDF9D9EC5D0D28E7B119676B0",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:965": {
       "fingerprint": "8F172098A46F6686FF0528DBE995CA7FDFF1D546C52981941DF53B1B336BC321",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:788": {
       "fingerprint": "3FF2CA772BBACFFBCF0E89145DD2CBFE047F2FC739BE843B80CF48BDC3548878",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:960": {
       "fingerprint": "4B0D23F92CABBE92C92705B70AF71213811FDF534FC8FCD8BE0CB8B81372B6A2",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:789": {
       "fingerprint": "CAA58FF8C15B4E0EA6ACD62BDA46FD88D938472C8E12856B258A23B2F2B518ED",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:961": {
       "fingerprint": "A920F5A5309CE3846EBA5F5251C2D8E8F726FA829F2EDDF37C02B676DBF23A9D",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:790": {
       "fingerprint": "EC4B531D557509013713CACDF990924074A0D42120938E06F7C1C94411DB5314",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:962": {
       "fingerprint": "D972DA20CC159C13AD1A812A9D0A0740990C10C3F83DB48CA34E687BCC8842C9",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:240": {
       "fingerprint": "E0153C41424F09DA31B447D235E78CACE686FCB0DD643F8429837A8A669E7E96",
@@ -16066,62 +16238,74 @@
     "magicsuffix.txt:764": {
       "fingerprint": "9E75C0178F972A3E2A26182128DE51A5B2AAC189DCFB053684EDA62EA2BC8024",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:936": {
       "fingerprint": "1F550652CF0DA06CE0C423641F63FCD485B5FAB5FA4825A78C1F48BB66D99E8F",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:765": {
       "fingerprint": "3D9680AEA021DE6E26B79FC22ECD81DB3F7EE7462070B0B05A4E5D8BA90842C5",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:937": {
       "fingerprint": "F155BC41888D0DE79289F61F5BAEEC5C4CE1914B65E643CB0C13411D6F00FF07",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:766": {
       "fingerprint": "96EDD3735CD43C0203044A3C6CC21093DD0DB1E7A99FC156073C7E1F0CDB95F5",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:938": {
       "fingerprint": "24180A78B3B9235F8269ED2F85A71CD4EAF0FA90FC9B654BBF174B6249A65A37",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:767": {
       "fingerprint": "7549357B3582B18CA143EC70ACC3C8E6664427230C3E2EED0E883ECA3B6DFB94",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:939": {
       "fingerprint": "9E325680AA185D6078131C59FB816D05EE396D6D80F52729460DEA2B0962D118",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:768": {
       "fingerprint": "634943280B019566D396402777014E743ACD8776177FAA9B7FFEE05758CD2FD2",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:940": {
       "fingerprint": "2B7A989AF220D43B0E5B69F402F2D146A03FC52130DF5075EE8B94FE127A8A31",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:769": {
       "fingerprint": "3E6BD8D8B671067CE9DA4B8B5CB55B67414BFF7E60CE4DBA0A3C8CC2CCB34D53",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:941": {
       "fingerprint": "78F524A030985DBFD6C261EA0A336F1E28830563847A2C638F1578283206C219",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:bkv:767": {
       "fingerprint": "A6980F63E82EBB0A9E771EDB1D6A9923C4E3178FD8C30BBA36E6369677B3A12A",
@@ -18466,62 +18650,74 @@
     "magicsuffix.txt:770": {
       "fingerprint": "8885254A2EBB587454C4703694727AAE0BA3B91BC76BB527A674F0052B978BD0",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:942": {
       "fingerprint": "DEF12E3383A5C8D5998BFE60C3E4FFBB1A1D8227D70FDE4580B373A68DE61049",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:771": {
       "fingerprint": "B0B3E70F7B64961A64275BD4AB4C7D30504D847483A4F5E7F23AFFB18761120A",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:943": {
       "fingerprint": "6D49D624FEE7ED7456F98874604AC8476F6451FEDFF9AF44B9F87438A819EE6F",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:772": {
       "fingerprint": "BD26259A5648A38D30442BEE69A90B5E4CF9328314ECE0ADE4BD8C42C847901A",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:944": {
       "fingerprint": "03F9329EBFE4E5085AC00F94CDCFCD8BFFC901429667BE81929253C2A43C540A",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:773": {
       "fingerprint": "981AB6A9514F972130C21C484D883A4666C9E0E6F7899A012636314B37E4A9F6",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:945": {
       "fingerprint": "0579ADA5CED69E2FF690A1ECE2511856B918181D624E962FF4884BBF22D73184",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:774": {
       "fingerprint": "270961BEAB2A9C6279F1A2FA89FE6CF25CD164D06AF3C225A2164F4FBB6A21A8",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:946": {
       "fingerprint": "64193F0BE369F5A7B0F1A1B9D2D7DC84DD5D0D304C312153F9961E93D8AB59FA",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:775": {
       "fingerprint": "82BE8DD84CA9D44F60BDCD8F0353C65723130A9B4548587FB3511DF241BB7A77",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:947": {
       "fingerprint": "41A73E710C803CC3CD4343C6B1FE780BC05AFD117300927C2437DB9C7AE59386",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:372": {
       "fingerprint": "09B840552073DD68D8C31CD45561060394148857B1B840F89BB4F5D0E3443664",
@@ -18779,257 +18975,308 @@
     "magicsuffix.txt:776": {
       "fingerprint": "7C640A0AF6F116CB2EE8A0D1858D06773A3BD9EE166E8E3900513CA7CC99F1B6",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:948": {
       "fingerprint": "638D4A5534BF8DA543AD6624380EA3FFC6233CA3F50FEFDAF8E142AA86103940",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:777": {
       "fingerprint": "48F5A8BF4ED2F5F515E9DE3CA20B6F610D3D28C24FB6E48D81E6F409B48D740F",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:949": {
       "fingerprint": "1F2C8687159D827DC2E7B702F442940055413E1A38CEE29AF951B6CD4C75A3D1",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:778": {
       "fingerprint": "0D7C718C5FB402949EC36F060C821B6449D034EA876A22DE8321617A4321D9F0",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:950": {
       "fingerprint": "0C9591712C1BD4C5107FB2A93E944CC887F69EAC8BF72E4779D301397A503031",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:782": {
       "fingerprint": "9CAFBC64043B80629965073BF17B04EC1437C4D6EC6ED3255ABE4A0A6E0D826B",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:954": {
       "fingerprint": "44E12BFFB9959B2D53ABAC89917A12C5BE563F1235A85ED367F27B63D0F6698D",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:783": {
       "fingerprint": "38CE190A1C5E187C89040EB166C5712D49C40CA9A3B6C680618E690B2B925427",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:955": {
       "fingerprint": "0FC08CFAB8CECDBA6414B3E2B759C16871BD39D9F6142DF713F83E27C0591EF4",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:784": {
       "fingerprint": "8E870984644D2E6CFCE93A8DE50EF7491B47A74C771C8EC6A51C3BAA6F4C824C",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:956": {
       "fingerprint": "B2F6EBE6FF0196EB70435A85E14A316633B1634A1DCF07A3210592E02D471F45",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:794": {
       "fingerprint": "05442D6EBC3D9F3EE480DF65E98AAF1932DCFDA9B7CD08214412431F7DB34B48",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:966": {
       "fingerprint": "4DC5B811890EEDB8310F6F5FD69AD2A77CF8A6DC4C9BEFA8A52C9D6C58B9B370",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:795": {
       "fingerprint": "8E00A9937C5781A6F304F2AF540A46561FD8E085B9E9DDD1D9F361F7EC3C7687",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:967": {
       "fingerprint": "02F75BABAF6C07FCD900DBF72472E64FE15F819FF918865491436CE9B5E6CB12",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:796": {
       "fingerprint": "5440B7A994F7EF10E86B76FFE67C111626D84B64BADEFAB7351EB12B52289F44",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:968": {
       "fingerprint": "D7F5ACBDE7C557CFB39B0A10C79B9F854C3EA2973DB4E91589B2710705BD05DB",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:779": {
       "fingerprint": "38CD15D3014EA272FB6F018BE64727C9A0D814EDA6D50900172F68502B3D460B",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:951": {
       "fingerprint": "D792D1593BA71F431780563A595150300F6CAB4625CB77E1A50275D14D32CED6",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:780": {
       "fingerprint": "B1F5E3892F64B76FE0E0A537778EA1B6108989D83002000BBC5E85CD121C7A3A",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:952": {
       "fingerprint": "0A75466CBFEA2B303F7352308E2B4418F4E504B72711C4DB37D48FA9E48621A8",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:781": {
       "fingerprint": "61871B5A21A2D0652B17E6661F5B191910B352D4F8ADB8A2878683D17F785E62",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:953": {
       "fingerprint": "9363328113C834085DA98C3644B9085CECDA7B7F5E47AB375E72F230064AE260",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:829": {
       "fingerprint": "5D57048CDE7177FEE75F0120CCB25508F41EB7F1E9CDC8897B0A166B7F9B4858",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:830": {
       "fingerprint": "62A45E0F5F7CC30059348CB7C005BF1A269B59B00F767620CEC1475B28E680B8",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:831": {
       "fingerprint": "988C87405BFF28219137BAD40A876536C91363DB04C01D1F91F859EF426F3090",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:843": {
       "fingerprint": "60AC2A12118FD870DB094C1FB1B06DEBF5F034BEBB154B396F6BC28E1D3166B8",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:972": {
       "fingerprint": "5542D5D86D877C15DDE37F6445490BBF3DBCAB23E928C9B6E1E6AED21FF381AF",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:844": {
       "fingerprint": "3AFDAA258F6DE74F49E6A4040604BCBE85AED5FD09AA8B9E03109BE869FE0B10",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:973": {
       "fingerprint": "6FCC9E40477BB199E0BFD9513F921353EC608D23975E50ED3AEB08B07E71C7D7",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:845": {
       "fingerprint": "5C7580CEE09A19169D49D1292AAE604667239A0E9A33486229574D976C499D4F",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:974": {
       "fingerprint": "22184563D98525F772D9F550E8D4BC382DE4CAB282D8D8052E1DAA5585BD51BB",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:846": {
       "fingerprint": "A53A8DD73FE7EB249691D33BF1A032FBB4137D71F9D7556E261AABE679468588",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:975": {
       "fingerprint": "62E1DF90AD45CA6CDAA12E76EDF628A540D37F50B7AD5C654F90E763F5091C41",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:847": {
       "fingerprint": "63F8DE78166AAB1C3B4365BF05F0BD735C136E3DE4D3CBCD0A08F7D4100F40FA",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:976": {
       "fingerprint": "53017663F6A8D93036ADC7C3338BF130A3211F1C20BDAA546E62E3A340DBD781",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:848": {
       "fingerprint": "14B49BB2377B2C483F703C2FBE340AD68A12C8B2819321E746C2E6D18D859593",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:977": {
       "fingerprint": "631407BC0BE9EB97133A7C89A1CE98CE44605F7268E4A1B7F74B18910825C05D",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:837": {
       "fingerprint": "3EEFDA4ACE51C2EA8727FEBAE28E80EE46A14D3B0DD56393F0B14289369664C6",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:1018": {
       "fingerprint": "9603E3C32C9035B804CAA8AF7E330331FB87B85D18CC1015056D46D7EE2A9860",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:838": {
       "fingerprint": "C5D855B44E584E80077CFE9CBD447C38121853C9B589695CB88F5EBA85F64594",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:1019": {
       "fingerprint": "8D76FC5B9B24E506329D1D9C0691914402385C3FCEA4FBEE63EB0FE996ECC510",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:839": {
       "fingerprint": "E45A65E26D62903C2A3320C36C84E4E27F8163760643306735D275EA653C25A6",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:1020": {
       "fingerprint": "6531CEAEB73D705EBC6FE36D0CAC27D996B635AEE868857E5648D49B211ACF50",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:840": {
       "fingerprint": "D4704B2283523998880EF3DFF50709DF74E5BCE626F77999F4674EFDC15EA4D8",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:969": {
       "fingerprint": "3D8D166A15833EC8F2FCECBC11E41FA031454953927E3B4518CF1B29022D569C",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:841": {
       "fingerprint": "99E224D01B5BB88F2127667E5AFDFA05C2F78AF0DB23AB2DAD353A4E7790DD7F",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:970": {
       "fingerprint": "11926A17CF03F4BC326070A40FA7BC2C31ECAD3A6C043FE0D41DF7B0039934A1",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:842": {
       "fingerprint": "1B734F124D591E8768258812E9125BB7725A1262967DB3E8CB9D252AFB39B8ED",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:971": {
       "fingerprint": "82990E6EDE823DEC5197C054643912BFB0DBCF3259413ACED82355220718892B",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:993": {
       "fingerprint": "03063390C7EA9A6EC32049594A1AC0A0F3978204EC07F6B5C43941F3B8AB32C3",
@@ -19154,7 +19401,8 @@
     "magicsuffix.txt:849": {
       "fingerprint": "CA79357E84E6C7D1E0A4892E1685EBC75C1D831897153308D6E903A5E3310EC4",
       "fields": {},
-      "notes": ""
+      "notes": "NOT APPLICABLE TO CURRENT BKVINCE",
+      "lineDecision": "EXCLUDE_PD2_AFFIX"
     },
     "magicsuffix.txt:1021": {
       "fingerprint": "86495911121A7EF6E4ACC8DD2B267838741B4DD9B214735C10DFBA64960F1A13",

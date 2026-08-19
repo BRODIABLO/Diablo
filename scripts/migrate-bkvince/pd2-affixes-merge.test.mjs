@@ -9,12 +9,17 @@ import {
   assertPinnedOutput,
   buildAffixDependencyAuditContext,
   canonicalPropertySignature,
+  chargedSkillSerializationAudit,
+  decodeChargedSkillFormula,
+  encodedBitRange,
   headerIndexes,
   itemTypeReaches,
+  loadTable,
   parseOrdinalSpec,
   propertyFunctionValues,
   REQUIRED_PD2_AFFIX_SOURCE_TABLES,
   resolvePd2AffixSourceRoot,
+  rowItemStatAudit,
   storedValueRange,
   transactionalWriteFiles,
 } from './pd2-affixes-merge.mjs';
@@ -24,6 +29,34 @@ import {
 } from './pd2-affixes-distribution.mjs';
 
 const repoRoot = path.resolve(import.meta.dirname, '..', '..');
+const targetRoot = path.join(repoRoot, 'data-BKVince', 'BKVince.mpq', 'data', 'global', 'excel');
+let sharedAuditContext;
+
+function auditContext() {
+  sharedAuditContext ??= buildAffixDependencyAuditContext(resolvePd2AffixSourceRoot(), targetRoot);
+  return sharedAuditContext;
+}
+
+function auditSyntheticProperty(code, parameter, minimum, maximum) {
+  const context = auditContext();
+  const table = {
+    headers: ['mod1code', 'mod1param', 'mod1min', 'mod1max', 'mod2code', 'mod2param', 'mod2min', 'mod2max', 'mod3code', 'mod3param', 'mod3min', 'mod3max'],
+    rows: [[code, String(parameter ?? ''), String(minimum ?? ''), String(maximum ?? ''), '', '', '', '', '', '', '', '']],
+  };
+  return rowItemStatAudit(
+    table.rows[0],
+    headerIndexes(table),
+    { source: context.properties.target },
+    {
+      source: context.itemStats.target,
+      target: context.itemStats.target,
+      sourceIndexes: context.itemStats.targetIndexes,
+      targetIndexes: context.itemStats.targetIndexes,
+    },
+    `synthetic ${code}`,
+    { skills: context.targetSkills },
+  );
+}
 
 test('PD2 affix source resolution honors explicit, environment, official and mirror precedence', () => {
   const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pd2-affix-source-resolution-'));
@@ -153,6 +186,73 @@ test('ItemStatCost bounds use target Save Bits/Add and property value sources', 
   assert.deepEqual(propertyFunctionValues('15', 626, 800, 150, null), [626]);
   assert.deepEqual(propertyFunctionValues('16', 626, 800, 150, null), [800]);
   assert.deepEqual(propertyFunctionValues('17', 626, 800, 150, null), [150]);
+});
+
+test('func19 charged formulas decode vanilla negative min/max values instead of storing them raw', () => {
+  const targetSuffixes = loadTable(targetRoot, 'magicsuffix.txt').table;
+  const vanillaSuffixes = loadTable(
+    path.join(repoRoot, 'data-vanilla3.2', 'data', 'data', 'global', 'excel'),
+    'magicsuffix.txt',
+  ).table;
+  const indexes = headerIndexes(targetSuffixes);
+  const vanillaIndexes = headerIndexes(vanillaSuffixes);
+  const context = auditContext();
+  const auditRow = (row, rowIndexes, label) => rowItemStatAudit(
+    row,
+    rowIndexes,
+    { source: context.properties.target },
+    {
+      source: context.itemStats.target,
+      target: context.itemStats.target,
+      sourceIndexes: context.itemStats.targetIndexes,
+      targetIndexes: context.itemStats.targetIndexes,
+    },
+    label,
+    { skills: context.targetSkills },
+  );
+
+  assert.equal(auditRow(targetSuffixes.rows[532], indexes, 'vanilla Teleportation').ok, true);
+  assert.equal(auditRow(vanillaSuffixes.rows[569], vanillaIndexes, 'vanilla Iron Maiden').ok, true);
+
+  for (const [minimum, maximum] of [[-60, -10], [-20, -4]]) {
+    const audit = chargedSkillSerializationAudit(minimum, maximum, {
+      requiredLevel: 1,
+      maximumLevel: 20,
+    });
+    assert.equal(audit.ok, true, `${minimum}/${maximum}: ${audit.reasons.join(', ')}`);
+    assert(audit.outcomes.every(({ level, charges }) => level >= 1 && level <= 63 && charges >= 1 && charges <= 255));
+  }
+  assert.deepEqual(
+    decodeChargedSkillFormula({ minimum: -20, maximum: -4, itemLevel: 99, requiredLevel: 12, maximumLevel: 20 }),
+    { level: 4, charges: 30 },
+  );
+});
+
+test('class skill parameters 0..6 use the unsigned three-bit selector domain', () => {
+  assert.deepEqual(encodedBitRange(3, false), { minimum: 0, maximum: 7 });
+  const classes = [
+    ['ama', 0],
+    ['sor', 1],
+    ['nec', 2],
+    ['pal', 3],
+    ['bar', 4],
+    ['dru', 5],
+    ['ass', 6],
+  ];
+  for (const [property, classId] of classes) {
+    const audit = auditSyntheticProperty(property, null, 1, 1);
+    assert.equal(audit.ok, true, `${property}=${classId}: ${audit.reasons.join(', ')}`);
+  }
+  assert.equal(auditSyntheticProperty('bar', null, 1, 1).ok, true);
+  assert.equal(auditSyntheticProperty('dru', null, 1, 1).ok, true);
+  assert.equal(auditSyntheticProperty('ass', null, 1, 1).ok, true);
+});
+
+test('howl accepts its governed 0..128 scaled domain without changing Wailing', () => {
+  assert.equal(auditSyntheticProperty('howl', null, 128, 128).ok, true);
+  const invalid = auditSyntheticProperty('howl', null, 129, 129);
+  assert.equal(invalid.ok, false);
+  assert(invalid.reasons.some((reason) => /outside 0\.\.128/.test(reason)));
 });
 
 test('apply pins fail closed and cover predicted table, projection and localization hashes', () => {

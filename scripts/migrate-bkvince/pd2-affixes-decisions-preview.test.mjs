@@ -9,7 +9,13 @@ import {
   loadTable,
   resolvePd2AffixSourceRoot,
 } from './pd2-affixes-merge.mjs';
-import { compilePreview } from './pd2-affixes-decisions-preview.mjs';
+import {
+  applyApprovedMapExclusions,
+  APPROVED_MAP_EXCLUSION_NOTE,
+  closestPoisonTotalEquivalent,
+  compilePreview,
+  poisonDamageMetrics,
+} from './pd2-affixes-decisions-preview.mjs';
 
 const repoRoot = path.resolve(import.meta.dirname, '..', '..');
 const sourceRoot = resolvePd2AffixSourceRoot();
@@ -317,6 +323,33 @@ test('Property and ItemType failures never leak partial retune or append outputs
   )));
 });
 
+test('the governed ItemType exceptions accept Cardinal and fail closed outside exact coverage', () => {
+  const cardinal = entry('magicprefix.txt:784');
+  const accepted = previewFor(cardinal, { lineDecision: 'IMPORT_PD2_AFFIX' });
+  assert.equal(accepted.ready, true);
+  assert.equal(accepted.rows.length, 1);
+  assert(accepted.dependencyAudit.occurrences[0].dependencies.some((dependency) => (
+    dependency.kind === 'ItemType'
+      && dependency.code === 'jewl'
+      && dependency.status === 'compatible-governed-target'
+  )));
+
+  const staleCoverage = structuredClone(context);
+  staleCoverage.itemTypeTargetSemantics.get('jewl').verified = false;
+  const rejectedCardinal = previewFor(cardinal, { lineDecision: 'IMPORT_PD2_AFFIX' }, staleCoverage);
+  assert.equal(rejectedCardinal.ready, false);
+  assert(rejectedCardinal.conflicts.some((conflict) => conflict.kind === 'ItemType' && conflict.code === 'jewl'));
+
+  const unauthorized = structuredClone(context);
+  unauthorized.sourceItemTypes.set('orb', {
+    ...unauthorized.sourceItemTypes.get('orb'),
+    equiv1: 'unauthorized-parent',
+  });
+  const rejectedOtherType = previewFor(entry('magicsuffix.txt:865'), { lineDecision: 'IMPORT_PD2_AFFIX' }, unauthorized);
+  assert.equal(rejectedOtherType.ready, false);
+  assert(rejectedOtherType.conflicts.some((conflict) => conflict.kind === 'ItemType' && conflict.code === 'orb'));
+});
+
 test('ItemStatCost overflow rejects the complete append without partial output', () => {
   const reviewEntry = entry('magicprefix.txt:814');
   const preview = previewFor(reviewEntry, { lineDecision: 'IMPORT_PD2_AFFIX' });
@@ -403,4 +436,139 @@ test('projected table counts remain inside the governed serialization fields', (
   );
   assert.equal(suffixes.within11BitLimit, true);
   assert.equal(preview.serializationPlan.withinUint16Limit, true);
+});
+
+test('the approved map rule excludes exactly 248 occurrences without changing MaxLevel decisions', () => {
+  const decisions = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'Mission', 'pd2-affixes-decisions-v3-round1-remediated-proposed.json'),
+    'utf8',
+  ));
+  const matrix = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'Mission', 'pd2-affixes-round1-conflict-matrix.json'),
+    'utf8',
+  ));
+  const currentReport = {
+    ...report,
+    dependencyHashes: context.dependencyHashes,
+    targetBaselineHashes: currentTargetHashes,
+  };
+  const currentDecisions = {
+    ...decisions,
+    dependencyHashes: context.dependencyHashes,
+    targetBaselineHashes: currentTargetHashes,
+  };
+  const maxLevelDecision = (selection) => structuredClone(
+    Object.entries(selection?.fields ?? {}).find(([field]) => field.toLowerCase() === 'maxlevel')?.[1] ?? null,
+  );
+  const maxLevelBefore = Object.fromEntries(Object.entries(decisions.entries).map(([id, selection]) => [
+    id,
+    maxLevelDecision(selection),
+  ]));
+  const updated = applyApprovedMapExclusions(currentReport, currentDecisions, matrix.mapAffixes);
+  const excluded = Object.entries(updated.entries).filter(([, selection]) => (
+    selection.lineDecision === 'EXCLUDE_PD2_AFFIX' && selection.notes === APPROVED_MAP_EXCLUSION_NOTE
+  ));
+  assert.equal(excluded.length, 248);
+  for (const [id, before] of Object.entries(maxLevelBefore)) {
+    assert.deepEqual(maxLevelDecision(updated.entries[id]), before, `${id} MaxLevel changed`);
+  }
+  assert.deepEqual(updated.entries['magicprefix.txt:350'].fields.itype6, {
+    decision: 'CUSTOM', customValue: 'weap', notes: 'weap (Weapon)', automatic: false,
+  });
+  assert.deepEqual(updated.entries['magicprefix.txt:417'].fields.itype6, {
+    decision: 'CUSTOM', customValue: 'armo', notes: 'armo (Armor)', automatic: false,
+  });
+  assert.deepEqual(updated.entries['magicsuffix.txt:175'].fields.itype4, {
+    decision: 'CUSTOM', customValue: '', notes: 'Vider itype4', automatic: false,
+  });
+  const preview = compilePreview(currentReport, updated, { catalog, context });
+  assert.deepEqual(preview.proposedManifest, {
+    changedCells: 1368,
+    appendedRows: 7,
+    rejectedRows: 249,
+    auditedOccurrences: 655,
+    conflicts: 5,
+    incomplete: 296,
+  });
+  assert.deepEqual(preview.rows.map((row) => row.id).sort(), [
+    'magicprefix.txt:784',
+    'magicprefix.txt:796',
+    'magicprefix.txt:812',
+    'magicprefix.txt:813',
+    'magicsuffix.txt:914',
+    'magicsuffix.txt:915',
+    'magicsuffix.txt:916',
+  ]);
+  assert.equal(preview.conflicts.filter((conflict) => conflict.id === 'magicprefix.txt:558').length, 2);
+  assert.equal(preview.conflicts.filter((conflict) => conflict.id === 'magicprefix.txt:559').length, 2);
+  assert.equal(preview.conflicts.filter((conflict) => conflict.id === 'magicsuffix.txt:569').length, 1);
+});
+
+test('poison calculations expose capped and exact-total-compatible alternatives without choosing one', () => {
+  assert.deepEqual(poisonDamageMetrics(308, 125), {
+    encodedDamage: 308,
+    durationFrames: 125,
+    durationSeconds: 5,
+    totalDamage: 150.390625,
+    damagePerSecond: 30.078125,
+  });
+  assert.deepEqual(poisonDamageMetrics(1160, 50), {
+    encodedDamage: 1160,
+    durationFrames: 50,
+    durationSeconds: 2,
+    totalDamage: 226.5625,
+    damagePerSecond: 113.28125,
+  });
+  assert.deepEqual(closestPoisonTotalEquivalent(1160, 50), {
+    encodedDamage: 1000,
+    durationFrames: 58,
+    durationSeconds: 2.32,
+    totalDamage: 226.5625,
+    damagePerSecond: 97.65625,
+    productError: 0,
+    durationDistance: 8,
+  });
+  assert.deepEqual(closestPoisonTotalEquivalent(1970, 50), {
+    encodedDamage: 985,
+    durationFrames: 100,
+    durationSeconds: 4,
+    totalDamage: 384.765625,
+    damagePerSecond: 96.19140625,
+    productError: 0,
+    durationDistance: 50,
+  });
+});
+
+test('the Iron Maiden Proc dependency plan remains separate, exact and blocked on missing localization', () => {
+  const matrix = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'Mission', 'pd2-affixes-round1-conflict-matrix.json'),
+    'utf8',
+  ));
+  const audit = matrix.skillParameter444;
+  assert.equal(audit.state, 'DEPENDENCY_PLAN_ONLY_NO_GAMEPLAY_APPLICATION');
+  assert.deepEqual(audit.referenceAudit.activeReferencesToSkill444, []);
+  assert.equal(audit.completeRows.pd2Skill444.Id, '444');
+  assert.equal(audit.completeRows.pd2Skill444.skill, 'Iron Maiden Proc');
+  assert.equal(audit.completeRows.bkvinceSkill76['*Id'], '76');
+  assert.equal(audit.completeRows.bkvinceSkill76.skill, 'Iron Maiden');
+  assert(audit.completeComparisonToBkvince76.some((field) => (
+    field.field.toLowerCase() === 'aurarangecalc'
+      && field.pd2Skill444.trim() === 'par1'
+      && field.bkvinceSkill76 === 'ln12'
+  )));
+  assert(audit.completeComparisonToBkvince76.some((field) => (
+    field.field.toLowerCase() === 'param3'
+      && field.pd2Skill444 === '150'
+      && field.bkvinceSkill76 === '300'
+  )));
+  assert.deepEqual(
+    audit.proposedDependencyPatch.missingDependencies.map(({ key }) => key),
+    ['CurseMastery', 'StrIncDmgRet', 'StrIncRadiusplev'],
+  );
+  assert(audit.proposedDependencyPatch.operations.some((operation) => (
+    operation.table === 'skills.txt'
+      && operation.targetRow === 444
+      && operation.action === 'REPLACE_RESERVED_ROW_444'
+  )));
+  assert(!JSON.stringify(audit.proposedDependencyPatch).includes('444→76'));
 });
