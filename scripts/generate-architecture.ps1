@@ -13,7 +13,8 @@ $script:excludedDirectories = @('.git', 'node_modules', 'guide', 'dist', '.turbo
 # Sous-arbres locaux dont seule une branche gouvernée doit entrer au cadastre.
 # Les ancêtres du sous-arbre sont conservés afin que l'arbre reste navigable.
 $script:selectiveWorkspaceSubtrees = @(
-    'data-vanilla3.2/data/data/global/excel'
+    'data-vanilla3.2/data/data/global/excel',
+    'data-vanilla3.3/data/data/global/excel'
 )
 $script:includedWorkspacePaths = $null
 

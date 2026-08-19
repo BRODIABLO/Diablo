@@ -69,6 +69,18 @@ data-vanilla3.2/data/data/global/*
 !data-vanilla3.2/data/data/global/excel/
 !data-vanilla3.2/data/data/global/excel/**
 
+# Reference vanilla D2R 3.3 extraite directement du CASC officiel :
+# versionner uniquement data/global/excel; conserver le reste local.
+data-vanilla3.3/*
+!data-vanilla3.3/data/
+data-vanilla3.3/data/*
+!data-vanilla3.3/data/data/
+data-vanilla3.3/data/data/*
+!data-vanilla3.3/data/data/global/
+data-vanilla3.3/data/data/global/*
+!data-vanilla3.3/data/data/global/excel/
+!data-vanilla3.3/data/data/global/excel/**
+
 # Backups automatiques des tables (gardes localement, non versionnes)
 *.bak
 
@@ -79,3 +91,4 @@ __pycache__/
 *.pyc
 *.log
 !data-vanilla3.2/data/data/global/excel/**/*.log
+!data-vanilla3.3/data/data/global/excel/**/*.log

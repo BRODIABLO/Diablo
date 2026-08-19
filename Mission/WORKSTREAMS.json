@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-15",
+  "updatedAt": "2026-08-19",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -635,6 +635,32 @@
       ]
     },
     {
+      "id": "bkvince-d2r33-data-alignment",
+      "name": "BKVince D2R 3.3 Data Alignment",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/bkvince-d2r33-data-alignment.md",
+      "nextGate": "Observe Council, Herald Extra, Worldstone Shards and Sunder Charms in gameplay; preserve the approved BK NoDrop and Sunder weights, and keep general native D2R 3.3 compatibility unclaimed until separately qualified.",
+      "include": [
+        ".gitattributes",
+        ".gitignore",
+        "README.md",
+        "Mission/bkvince-d2r33-data-alignment.md",
+        "Mission/bkvince-d2r33-vanilla-manifest.json",
+        "data-vanilla3.3/**",
+        "data-BKVince/BKVince.mpq/data/global/excel/cubemain.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/monstats.txt",
+        "data-BKVince/BKVince.mpq/data/global/excel/treasureclassex.txt",
+        "apps/hero-editor/scripts/generate-constants.mjs",
+        "apps/hero-editor/src/App.jsx",
+        "apps/hero-editor/src/data/bkvince-constants.generated.js",
+        "netlify/functions/_shared/github.mjs",
+        "scripts/dev-server.js",
+        "scripts/generate-architecture.ps1",
+        "scripts/migrate-bkvince/port-d2r33-data.js"
+      ]
+    },
+    {
       "id": "workstream-registry",
       "name": "Workstream Registry",
       "status": "maintenance",
@@ -749,6 +775,7 @@
     {
       "pattern": "AGENTS.md",
       "workstreams": [
+        "bkvince-d2r33-data-alignment",
         "workstream-registry"
       ],
       "reason": "Durable repository instructions make automatic checkpoint refresh mandatory."
@@ -775,6 +802,7 @@
     {
       "pattern": "scripts/verify/repo-policy.mjs",
       "workstreams": [
+        "bkvince-d2r33-data-alignment",
         "workstream-registry"
       ],
       "reason": "Shared repository policy and path normalization guardrails."
@@ -920,9 +948,10 @@
     {
       "pattern": "data-BKVince/BKVince.mpq/data/global/excel/monstats.txt",
       "workstreams": [
-        "sounds-of-variation-bkvince"
+        "sounds-of-variation-bkvince",
+        "bkvince-d2r33-data-alignment"
       ],
-      "reason": "Sounds of Variation changes only MonSound and UMonSound on 27 skeleton-mage rows."
+      "reason": "Sounds of Variation owns its skeleton-mage sound cells while the D2R 3.3 alignment owns only three Council TreasureClassHerald(H) cells."
     },
     {
       "pattern": "scripts/migrate-bkvince/port-storage-bag.js",
@@ -930,6 +959,46 @@
         "readable-items-clue-scrolls"
       ],
       "reason": "Storage Bag validates its contiguous governed block while permitting independent custom stats and properties after it."
+    },
+    {
+      "pattern": "data-BKVince/BKVince.mpq/data/global/excel/cubemain.txt",
+      "workstreams": [
+        "readable-items-clue-scrolls",
+        "bkvince-d2r33-data-alignment"
+      ],
+      "reason": "Readable Items owns its clue-scroll recipes while the D2R 3.3 alignment owns only the six approved Sunder recipe level cells."
+    },
+    {
+      "pattern": "data-BKVince/BKVince.mpq/data/global/excel/treasureclassex.txt",
+      "workstreams": [
+        "pd2-inspiration-bkvince",
+        "bkvince-d2r33-data-alignment"
+      ],
+      "reason": "The D2R 3.3 alignment owns only its governed Council, Shard and Herald allowlist while the PD2 workstream preserves the broader BKVince economy graph."
+    },
+    {
+      "pattern": "apps/hero-editor/scripts/generate-constants.mjs",
+      "workstreams": [
+        "bkvince-hero-editor",
+        "bkvince-d2r33-data-alignment"
+      ],
+      "reason": "The Hero Editor owns constant generation while the D2R 3.3 alignment updates only its current retail vanilla source."
+    },
+    {
+      "pattern": "apps/hero-editor/src/App.jsx",
+      "workstreams": [
+        "bkvince-hero-editor",
+        "bkvince-d2r33-data-alignment"
+      ],
+      "reason": "The Hero Editor owns the UI while the D2R 3.3 alignment updates only the governed LowQualityItems provenance label."
+    },
+    {
+      "pattern": "apps/hero-editor/src/data/bkvince-constants.generated.js",
+      "workstreams": [
+        "bkvince-hero-editor",
+        "bkvince-d2r33-data-alignment"
+      ],
+      "reason": "Generated Hero Editor constants remain owned by the editor and are checked for byte-identical output after the retail vanilla source switch."
     }
   ]
 }

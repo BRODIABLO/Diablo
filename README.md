@@ -22,6 +22,7 @@ Les `.txt` restent la **source de vérité** ; pas de base de données — git e
 - `data-VNP/` — Mod Vanilla++ servant d'inspiration pour BKVince (**lecture seule**, hors Comparateur); seuls `global/`, `local/` et `hd/` sont versionnés
 - `excel-vanilla2.4/` — tables du jeu de base D2 2.4 (référence, lecture seule)
 - `data-vanilla3.2/` — extraction CASCView du jeu de base D2R 3.2 (référence, lecture seule) ; seul `data/data/global/excel/` est versionné, les autres branches demeurent locales
+- `data-vanilla3.3/` — extraction directe du CASC officiel D2R 3.3.93847 (référence retail courante, lecture seule) ; seul `data/data/global/excel/` est versionné et `data-vanilla3.2/` reste intact pour les preuves 92777
 - `apps/admin/` — **éditeur web** des tables (Vite + React)
 - `schemas/` — schémas de colonnes des tables BKVince 3.2 (typage, descriptions et validation de l'éditeur), générés depuis le guide TXT courant
 - `scripts/` — `dev-server.js` (API locale de lecture/écriture des `.txt`), `build-data/` (parseur/écrivain TSV), `generate-architecture.ps1` (cadastre), `validate-cartographie/` (validateur), `publish-tcp.ps1`

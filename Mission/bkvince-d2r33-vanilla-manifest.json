@@ -1,0 +1,3642 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "kind": "official-local-casc-enumeration",
+    "gameRoot": "<D2R_INSTALL_ROOT>",
+    "storagePath": "<D2R_INSTALL_ROOT>",
+    "online": false,
+    "product": "osi",
+    "version": "3.3.93847",
+    "buildKey": "623f7a1f73eabb08ccb2b2046e3f9164",
+    "buildInfoSha256": "2EBCAD0521DBF038D5A7FE5395E96B4BEF6D4F0774F7B1F840E03C3DE9CB067A",
+    "d2rExeSha256": "E1F5436E3D9687F644EF16938B1B183D1FDEF434F18CF66D852CF68F48CC8936",
+    "cascLibVersion": "1.50.0.206",
+    "cascLibSha256": "EAF1DE2512E9D0F7BACC27DC128C624FA971115D09145CDE46FE49062E8DA1A2",
+    "openFlags": [
+      "CASC_STRICT_DATA_CHECK"
+    ]
+  },
+  "enumeratedStorageEntries": 175824,
+  "requested": 361,
+  "extracted": 361,
+  "extractedBytes": 22995401,
+  "treeSha256": "D0E3625EB96FAD6407CB9BE57D9C81250BA47C5223187DF39C26E1D551124360",
+  "integrity": {
+    "readSizeMatches": 361,
+    "cKeyMd5Matches": 361,
+    "failures": 0
+  },
+  "missing": [],
+  "files": [
+    {
+      "path": "_automap_tile_lookup.py",
+      "cascPath": "data:data\\global\\excel\\_automap_tile_lookup.py",
+      "size": 1905,
+      "ckey": "37A951648CCCAC36A431CB475BE1E2CD",
+      "ekey": "87F18895023637C0F03A6B7E9B1EBCF6",
+      "available": true,
+      "nameType": 0,
+      "sha256": "EE8A15AFB9B3C96A67B8A7EA6269C3B6335BC3D5A6476C71B82A3E33C3501A1D"
+    },
+    {
+      "path": "actcode.bin",
+      "cascPath": "data:data\\global\\excel\\actcode.bin",
+      "size": 24,
+      "ckey": "E8E0FE01ED64745FF2428CDD4A378DE8",
+      "ekey": "FADDF8E8B107BB0CCCCF55B6852C2E5B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "80146D2E5B0FC54B073EFEA8DA134D506F145099FD31D3C4A9664D58827409B1"
+    },
+    {
+      "path": "actinfo.bin",
+      "cascPath": "data:data\\global\\excel\\actinfo.bin",
+      "size": 704,
+      "ckey": "80FFF15C6522B52C276415EF91EBF7EF",
+      "ekey": "0CE38ED73C1FA5204DEA8A6BE26C8579",
+      "available": true,
+      "nameType": 0,
+      "sha256": "782506D3B2055E16AE2B68EDF922A6091E6BBA78BDF5DD3700C59ED31EE3F4D4"
+    },
+    {
+      "path": "actinfo.txt",
+      "cascPath": "data:data\\global\\excel\\actinfo.txt",
+      "size": 1474,
+      "ckey": "D9A19AD61007879EA98975CD9348C1AD",
+      "ekey": "2BBAA9ED93255042115701603C6EE5A8",
+      "available": true,
+      "nameType": 0,
+      "sha256": "A168B0C70D821E7360E42A843F63C156F51315EA1E119AC92D2DC57F8E3A6E8E"
+    },
+    {
+      "path": "armor.bin",
+      "cascPath": "data:data\\global\\excel\\armor.bin",
+      "size": 97220,
+      "ckey": "E511A7ADCDF4878F29DC84B50BD75A95",
+      "ekey": "E0796CEC878B6A018A964E3296D0CAEE",
+      "available": true,
+      "nameType": 0,
+      "sha256": "A62114166D90C8DA1695787105218F12425AD6F340CEA5A8ECCFD8103D0488BB"
+    },
+    {
+      "path": "armor.txt",
+      "cascPath": "data:data\\global\\excel\\armor.txt",
+      "size": 81583,
+      "ckey": "5FD1B21E5D7BDE2B660114ACE22119C1",
+      "ekey": "55B1ED06ACC44EBDFE02292B7C1AAA9E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "734872B6DDE85073C6EBAF4199EC4BD2B30EFCBF9F0E60E381AF2E22662A1B4F"
+    },
+    {
+      "path": "armtype.bin",
+      "cascPath": "data:data\\global\\excel\\armtype.bin",
+      "size": 112,
+      "ckey": "C61424D0348A991BBD20D41A085DBF83",
+      "ekey": "7F1673B5FE3385CCCE15AF298D4C24CC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "913B7646922D54BCC1972F4095A6F52122518577A0A50C29EE3A9657A432D853"
+    },
+    {
+      "path": "armtype.txt",
+      "cascPath": "data:data\\global\\excel\\armtype.txt",
+      "size": 45,
+      "ckey": "216C13F4537C64F6FF16126FA1ADB4F6",
+      "ekey": "9CFC1ED9F640539DE255A3F12F386AAF",
+      "available": true,
+      "nameType": 0,
+      "sha256": "288A8C7964E5D4DC0DC3E2A05F6793E9B3946A46B50E1604C86C172E91D291A1"
+    },
+    {
+      "path": "automagic.bin",
+      "cascPath": "data:data\\global\\excel\\automagic.bin",
+      "size": 6164,
+      "ckey": "CBB8336CD1014DD9F923CFC50F7DFE36",
+      "ekey": "134CABF70E98EFE61C1CC7B55692F86B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "41FC0FC99533A8BA659B3FD282EA029C5F782F382F4E6F82F6A57BCC387283F5"
+    },
+    {
+      "path": "automagic.txt",
+      "cascPath": "data:data\\global\\excel\\automagic.txt",
+      "size": 4113,
+      "ckey": "2FF29CF7318F0ABCC0D706D513607E73",
+      "ekey": "0072D533474A39CC089ED4F532B978BB",
+      "available": true,
+      "nameType": 0,
+      "sha256": "AA5B30AA2BF51460955A5FB3AD5E9017607EAC8E8CCE40F9C7B08AEB9FFCB7DF"
+    },
+    {
+      "path": "automap.bin",
+      "cascPath": "data:data\\global\\excel\\automap.bin",
+      "size": 144588,
+      "ckey": "77842521BBFBF6078B52630E4D71163D",
+      "ekey": "E6F1335A75B568C6461623045471783D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "1F39BA673BF40A58921E68F579591DE54F8789A520379FE4873341848C362A80"
+    },
+    {
+      "path": "automap.txt",
+      "cascPath": "data:data\\global\\excel\\automap.txt",
+      "size": 157027,
+      "ckey": "BA5C50C10E9C4F72DB300DA5104FEFB7",
+      "ekey": "6C9541CD63BB6A670C26C8BF7C1C8420",
+      "available": true,
+      "nameType": 0,
+      "sha256": "0C63A8907B3CB4CF165BB09EBCB08F627A5AC69B485FE0E4E8A5D94E9C380CA1"
+    },
+    {
+      "path": "base/actcode.bin",
+      "cascPath": "data:data\\global\\excel\\base\\actcode.bin",
+      "size": 24,
+      "ckey": "E8E0FE01ED64745FF2428CDD4A378DE8",
+      "ekey": "FADDF8E8B107BB0CCCCF55B6852C2E5B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "80146D2E5B0FC54B073EFEA8DA134D506F145099FD31D3C4A9664D58827409B1"
+    },
+    {
+      "path": "base/actinfo.bin",
+      "cascPath": "data:data\\global\\excel\\base\\actinfo.bin",
+      "size": 704,
+      "ckey": "80FFF15C6522B52C276415EF91EBF7EF",
+      "ekey": "0CE38ED73C1FA5204DEA8A6BE26C8579",
+      "available": true,
+      "nameType": 0,
+      "sha256": "782506D3B2055E16AE2B68EDF922A6091E6BBA78BDF5DD3700C59ED31EE3F4D4"
+    },
+    {
+      "path": "base/actinfo.txt",
+      "cascPath": "data:data\\global\\excel\\base\\actinfo.txt",
+      "size": 1474,
+      "ckey": "D9A19AD61007879EA98975CD9348C1AD",
+      "ekey": "2BBAA9ED93255042115701603C6EE5A8",
+      "available": true,
+      "nameType": 0,
+      "sha256": "A168B0C70D821E7360E42A843F63C156F51315EA1E119AC92D2DC57F8E3A6E8E"
+    },
+    {
+      "path": "base/armor.bin",
+      "cascPath": "data:data\\global\\excel\\base\\armor.bin",
+      "size": 97220,
+      "ckey": "C878A2CF630C626950EC18AA374625A0",
+      "ekey": "746B5B8D02853F449CD924EBCC1749DC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F7F9FF599719659AC382414590A66DEA247B45C3579AE0BE92E72E793E23BBC4"
+    },
+    {
+      "path": "base/armor.txt",
+      "cascPath": "data:data\\global\\excel\\base\\armor.txt",
+      "size": 79058,
+      "ckey": "8D0612C2F1EBE02701DB01FA76278BCE",
+      "ekey": "D09CF666A9F343F426A229E331BC1772",
+      "available": true,
+      "nameType": 0,
+      "sha256": "0B092B7B4BF84703520EC6C5FD52261B15A0A24269B203D26377F93E484B5437"
+    },
+    {
+      "path": "base/armtype.bin",
+      "cascPath": "data:data\\global\\excel\\base\\armtype.bin",
+      "size": 112,
+      "ckey": "C61424D0348A991BBD20D41A085DBF83",
+      "ekey": "7F1673B5FE3385CCCE15AF298D4C24CC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "913B7646922D54BCC1972F4095A6F52122518577A0A50C29EE3A9657A432D853"
+    },
+    {
+      "path": "base/armtype.txt",
+      "cascPath": "data:data\\global\\excel\\base\\armtype.txt",
+      "size": 45,
+      "ckey": "216C13F4537C64F6FF16126FA1ADB4F6",
+      "ekey": "9CFC1ED9F640539DE255A3F12F386AAF",
+      "available": true,
+      "nameType": 0,
+      "sha256": "288A8C7964E5D4DC0DC3E2A05F6793E9B3946A46B50E1604C86C172E91D291A1"
+    },
+    {
+      "path": "base/automagic.bin",
+      "cascPath": "data:data\\global\\excel\\base\\automagic.bin",
+      "size": 6164,
+      "ckey": "AF2CFC037332F597627725F1BD83CCC4",
+      "ekey": "9FA676E889494D3E61667EA345B3939D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D59184839314E280845FFA1A04E685EEBF0425188847BEBD494A3B331E735E8C"
+    },
+    {
+      "path": "base/automagic.txt",
+      "cascPath": "data:data\\global\\excel\\base\\automagic.txt",
+      "size": 3825,
+      "ckey": "3A35DA6354A7CD019A411B0AD1E0658D",
+      "ekey": "67F217B050A5AAFD948D9E86D2D54D98",
+      "available": true,
+      "nameType": 0,
+      "sha256": "709ED3E328A855407470D5E9BA35AA7686A2DC979FCA842977BEB992C3B9F58C"
+    },
+    {
+      "path": "base/automap.bin",
+      "cascPath": "data:data\\global\\excel\\base\\automap.bin",
+      "size": 144588,
+      "ckey": "77842521BBFBF6078B52630E4D71163D",
+      "ekey": "E6F1335A75B568C6461623045471783D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "1F39BA673BF40A58921E68F579591DE54F8789A520379FE4873341848C362A80"
+    },
+    {
+      "path": "base/automap.txt",
+      "cascPath": "data:data\\global\\excel\\base\\automap.txt",
+      "size": 157027,
+      "ckey": "BA5C50C10E9C4F72DB300DA5104FEFB7",
+      "ekey": "6C9541CD63BB6A670C26C8BF7C1C8420",
+      "available": true,
+      "nameType": 0,
+      "sha256": "0C63A8907B3CB4CF165BB09EBCB08F627A5AC69B485FE0E4E8A5D94E9C380CA1"
+    },
+    {
+      "path": "base/belts.bin",
+      "cascPath": "data:data\\global\\excel\\base\\belts.bin",
+      "size": 4036,
+      "ckey": "0DFFC4569164964EC691C971A6F2DEB5",
+      "ekey": "3FB56437EAB84D8D1DFB8B49C634DB9D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "643D7B2FDB8E98062A92DA3B53B9ABE32E77CF40F7820AFBD124B2AC565A3296"
+    },
+    {
+      "path": "base/belts.txt",
+      "cascPath": "data:data\\global\\excel\\base\\belts.txt",
+      "size": 4182,
+      "ckey": "678879D4598650480AD9094F58614FC9",
+      "ekey": "A2CC547B8ABB5F6FF02CD56A9FC674DC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3F2C2772A9F2055D114127E1983ABE9C40CF91E3E4240A0356DC7C23933F24C9"
+    },
+    {
+      "path": "base/bodylocs.txt",
+      "cascPath": "data:data\\global\\excel\\base\\bodylocs.txt",
+      "size": 160,
+      "ckey": "4E5012FCD56E3F25E8AFEB63C0F2B2AB",
+      "ekey": "2D27E1D41BD5392B83394F3A8867CE34",
+      "available": true,
+      "nameType": 0,
+      "sha256": "6B3A6AC0BB1CEF5E7F216F083EF85082ACEDF22C4BBFACF5B254FB36ECD8BBD5"
+    },
+    {
+      "path": "base/books.bin",
+      "cascPath": "data:data\\global\\excel\\base\\books.bin",
+      "size": 100,
+      "ckey": "9132890CFFB191E362B5E3DF9EFDAA2E",
+      "ekey": "86CAF5A6326C5306258EE0B6D78EA0C3",
+      "available": true,
+      "nameType": 0,
+      "sha256": "0681EBD05DFD7D50697589265FB445BCC0A0D8BBBE7058627CE689D54EE26B3B"
+    },
+    {
+      "path": "base/books.txt",
+      "cascPath": "data:data\\global\\excel\\base\\books.txt",
+      "size": 289,
+      "ckey": "3139BE98EA4F9F085391EAD1DF9C8ED3",
+      "ekey": "5EECBA3894EC054BDFA0DA95BD667AA1",
+      "available": true,
+      "nameType": 0,
+      "sha256": "0E5DBAD85CE7B05E0DE9B13F1284EE8876F436C77D927E250D7BCE5009E42493"
+    },
+    {
+      "path": "base/charstats.bin",
+      "cascPath": "data:data\\global\\excel\\base\\charstats.bin",
+      "size": 1700,
+      "ckey": "34C95A0176C40B585DD1F323D820EFE0",
+      "ekey": "5ACF108CD06981FFDB75B3D9650AB227",
+      "available": true,
+      "nameType": 0,
+      "sha256": "982349949A5CBEB12CB3F438714D899B76D01D973F713EFBF9D93338D4AA7D82"
+    },
+    {
+      "path": "base/charstats.txt",
+      "cascPath": "data:data\\global\\excel\\base\\charstats.txt",
+      "size": 3903,
+      "ckey": "FB6FAB1E8C9A8307CAFA44A5E03A17B6",
+      "ekey": "95069C65DBE26C7D3CFF564A37DBDFBC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "A805B1FA321F75DA7475DDC35D4470BB226E4B57ED6811E83D1430C07AEBB2F5"
+    },
+    {
+      "path": "base/colors.txt",
+      "cascPath": "data:data\\global\\excel\\base\\colors.txt",
+      "size": 374,
+      "ckey": "E7F2310FFE221B74F00057932762DDC2",
+      "ekey": "3B25F99E00FDA33037C43B0971F02E77",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4C0E1274EAB79DAF5ECEC10F12FEA7FC11CCE4DB6D37F30CA0B4456DCAD632EE"
+    },
+    {
+      "path": "base/compcode.bin",
+      "cascPath": "data:data\\global\\excel\\base\\compcode.bin",
+      "size": 464,
+      "ckey": "F5B6C38431F346226601E3858D8D74EB",
+      "ekey": "C5C0A7E13B36FD65DD05CFD0AA1555B4",
+      "available": true,
+      "nameType": 0,
+      "sha256": "DC089B0317E25A2ECC0D42A86C6A763457EFA31B2F62EBAA8E125D923C80A1CD"
+    },
+    {
+      "path": "base/compcode.txt",
+      "cascPath": "data:data\\global\\excel\\base\\compcode.txt",
+      "size": 1862,
+      "ckey": "B6A6C45955459EC446CAF00C0F44CFA1",
+      "ekey": "726D8ACBDDE9D7270166B9347EBC295B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "A26B8437A13E5777801D8794ED49D103CDD5D274AFBD013F09A107CA11BA2A4B"
+    },
+    {
+      "path": "base/composit.bin",
+      "cascPath": "data:data\\global\\excel\\base\\composit.bin",
+      "size": 580,
+      "ckey": "9B328BF138E7B34A1C62DEBDE56A2A9E",
+      "ekey": "B80FC059A8F53CBC8C589C85261709FF",
+      "available": true,
+      "nameType": 0,
+      "sha256": "43F98D9898B18D6F7B756AB6FA691992F1C0C31F0581C53C69DF221880F33879"
+    },
+    {
+      "path": "base/composit.txt",
+      "cascPath": "data:data\\global\\excel\\base\\composit.txt",
+      "size": 207,
+      "ckey": "1AC4646F31E8CB8E77E966BEA7B2B4D8",
+      "ekey": "288DAA425E5C5C46D0713492EE90262F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F59507AE8D7D4FA6A919F502EA957B47369AC4077AE21E2FA28DE360A515C604"
+    },
+    {
+      "path": "base/cubemain.bin",
+      "cascPath": "data:data\\global\\excel\\base\\cubemain.bin",
+      "size": 53324,
+      "ckey": "5B256350197939DE5EB9E23058678BD2",
+      "ekey": "2BF07EB6F6E92F18D3A8970EB1B878DB",
+      "available": true,
+      "nameType": 0,
+      "sha256": "8D14327C171E28500856A3F355A3C4C99D88519D87CA54E146B0E566C435C95B"
+    },
+    {
+      "path": "base/cubemain.txt",
+      "cascPath": "data:data\\global\\excel\\base\\cubemain.txt",
+      "size": 33181,
+      "ckey": "4D83B2322266B3164AA0BCFBAE386EAA",
+      "ekey": "67F2674FD173AF25B987212A4982E202",
+      "available": true,
+      "nameType": 0,
+      "sha256": "0C4E53D340774AC78483DC347785DA9993550BB7DC305B202BBB8F1C62496E24"
+    },
+    {
+      "path": "base/cubemod.txt",
+      "cascPath": "data:data\\global\\excel\\base\\cubemod.txt",
+      "size": 164,
+      "ckey": "4830CD23022B5834CAEEEB4F46B2F98F",
+      "ekey": "2A5C4E1E7AABB4BBC50E13F091D84284",
+      "available": true,
+      "nameType": 0,
+      "sha256": "58C50CED7A4D922B5AF42BF5738FF63D4E1306435BEAB1D994CE0B1214D4B138"
+    },
+    {
+      "path": "base/difficultylevels.bin",
+      "cascPath": "data:data\\global\\excel\\base\\difficultylevels.bin",
+      "size": 400,
+      "ckey": "922AB8C1828AEFD7E382C8087B660830",
+      "ekey": "99AEE459E433EA3ED081EF8C59A7FDDF",
+      "available": true,
+      "nameType": 0,
+      "sha256": "DE87114D33F9DF591833C329C2D2213DA106DE4702187D54DD2A08B50A402408"
+    },
+    {
+      "path": "base/difficultylevels.txt",
+      "cascPath": "data:data\\global\\excel\\base\\difficultylevels.txt",
+      "size": 1064,
+      "ckey": "479D518CF0D50281562C800798BC78E0",
+      "ekey": "3801F83BA6632BE3459F2D7C87A3BE6E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "B06210C50936DC776C76F81607B3E480DA64ED320134295F1964A1A1F56F6094"
+    },
+    {
+      "path": "base/elemtypes.txt",
+      "cascPath": "data:data\\global\\excel\\base\\elemtypes.txt",
+      "size": 195,
+      "ckey": "2DDADA1BF51E522A4F8BE26264793744",
+      "ekey": "58CAD4B590D24987594EF4E7342CCFA5",
+      "available": true,
+      "nameType": 0,
+      "sha256": "91ADDF64FF87ABB19DCCEBA77F6DA6ED84E9E4194D30EEB1D69D36EDD55CDC15"
+    },
+    {
+      "path": "base/events.txt",
+      "cascPath": "data:data\\global\\excel\\base\\events.txt",
+      "size": 636,
+      "ckey": "F4627FED82DAAA54629CA09FA46F41F5",
+      "ekey": "1801A89A4C6E7F85FB47F5800C83AB62",
+      "available": true,
+      "nameType": 0,
+      "sha256": "EB1A49325012FA9E367A8D4B6596B11C81B0D96D56812FD5249A7C16277ED6C0"
+    },
+    {
+      "path": "base/experience.bin",
+      "cascPath": "data:data\\global\\excel\\base\\experience.bin",
+      "size": 3640,
+      "ckey": "85C533791C4FFCE3136055EB07E9920C",
+      "ekey": "C1A15BFE4BD6A17B2AA856499BBB3CB2",
+      "available": true,
+      "nameType": 0,
+      "sha256": "7FE1A0D7EA0D88D1EA5F4B59E5A47229F34879BCE4BC7CBD4AC957540054DC97"
+    },
+    {
+      "path": "base/experience.txt",
+      "cascPath": "data:data\\global\\excel\\base\\experience.txt",
+      "size": 7225,
+      "ckey": "4BDEE0EBBEA64736F821421D5C393D43",
+      "ekey": "CF17C29427D59803C1EFEADCFD673E45",
+      "available": true,
+      "nameType": 0,
+      "sha256": "68E7F5E5F1D787EA4BD404F0F30921D3DFC0973DB43DF422AF5312EBC8D2DC62"
+    },
+    {
+      "path": "base/gamble.bin",
+      "cascPath": "data:data\\global\\excel\\base\\gamble.bin",
+      "size": 1504,
+      "ckey": "10DB5C75E81BAC9D29C8B66640335CC1",
+      "ekey": "72F092C7B66D04812B1C75B8C2AB66DE",
+      "available": true,
+      "nameType": 0,
+      "sha256": "305C97D39AFBE38019EE5DFE47F70D3C6F38B7CC8F35AA5FD5D9B19D966B98EC"
+    },
+    {
+      "path": "base/gamble.txt",
+      "cascPath": "data:data\\global\\excel\\base\\gamble.txt",
+      "size": 1989,
+      "ckey": "7573E4F6BF1A76CD7B1EB0165E4D9106",
+      "ekey": "F2ED1F94185E3D2E7BE99C7B7D271860",
+      "available": true,
+      "nameType": 0,
+      "sha256": "46A41A1D55DEFFD66E7808B6A0903ADC1DD98E41BF8127F1B97A8AE34833C694"
+    },
+    {
+      "path": "base/gems.bin",
+      "cascPath": "data:data\\global\\excel\\base\\gems.bin",
+      "size": 13060,
+      "ckey": "65CCE7303F47A18D545C0C01221B538F",
+      "ekey": "74F696365F19DC5577AA8E7835D0096D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "7CFE306FC7DC2B776CA209E8CA014FD71B7BDA0EEE54246DF14D9141E6367189"
+    },
+    {
+      "path": "base/gems.txt",
+      "cascPath": "data:data\\global\\excel\\base\\gems.txt",
+      "size": 7688,
+      "ckey": "1F7F98EB185EECA3AD01FA3816119DC9",
+      "ekey": "B45683BED61B4F4AE2E73771EE99C1B5",
+      "available": true,
+      "nameType": 0,
+      "sha256": "955D22EB1E7FCED4F138D975670DE642E2410BFD72DF03E2BCFCF689339E155B"
+    },
+    {
+      "path": "base/hireling.bin",
+      "cascPath": "data:data\\global\\excel\\base\\hireling.bin",
+      "size": 45364,
+      "ckey": "08C778B5BAC0E4E0B187064A8E1557DF",
+      "ekey": "D4EBB5F9EFAE823D8AEA2EE69A68B7BA",
+      "available": true,
+      "nameType": 0,
+      "sha256": "AA78F62EA76376870B94D58AEF9957A2BA2F646A427A2241D957CA5DC6C4B614"
+    },
+    {
+      "path": "base/hireling.txt",
+      "cascPath": "data:data\\global\\excel\\base\\hireling.txt",
+      "size": 33634,
+      "ckey": "7EB5B17BE8A7F4B6014E76F1A47487CD",
+      "ekey": "E47C43D2DF57BCE9C8BF76AAC27395B2",
+      "available": true,
+      "nameType": 0,
+      "sha256": "5401A23343348AAA2710337297E85D2EDF124A5F84D16CD2CA4330D3209CFA8B"
+    },
+    {
+      "path": "base/hitclass.bin",
+      "cascPath": "data:data\\global\\excel\\base\\hitclass.bin",
+      "size": 60,
+      "ckey": "A17CE0AD9D09E926F16FE3D1158FAFBF",
+      "ekey": "531C4C2AA1A5D862DAFBA6D5EE4BA13B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "AD4B04EB8B90E52EDA5B589EEE7CC5D509C2A104E7259DE541550A8E53DD6D4B"
+    },
+    {
+      "path": "base/hitclass.txt",
+      "cascPath": "data:data\\global\\excel\\base\\hitclass.txt",
+      "size": 279,
+      "ckey": "B61325E80BF80C28B63FACD9654FCCAA",
+      "ekey": "D492FC6F903CD51B9B693CB1C0FB8A6E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "57D43B716F248A7F72A4FEF39B774569ECACCD644396FE3DEEBF29206B3B6B30"
+    },
+    {
+      "path": "base/inventory.bin",
+      "cascPath": "data:data\\global\\excel\\base\\inventory.bin",
+      "size": 7204,
+      "ckey": "42CD386481010A8E2895C2F267085A0B",
+      "ekey": "815B27C9FDBC0775F10C0DA72F001FAF",
+      "available": true,
+      "nameType": 0,
+      "sha256": "64B1D6003859E2CCFD760F6FC458E4E992F2AE081C43061A156FF2DC0098DF13"
+    },
+    {
+      "path": "base/inventory.txt",
+      "cascPath": "data:data\\global\\excel\\base\\inventory.txt",
+      "size": 8423,
+      "ckey": "F107C7E8DC62DB8A1A6FA739D81E829E",
+      "ekey": "A91C98A5DBFDC19326336BCE2C481D37",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D8F404C65DDECFA39838A7258958DED34531690F612B914D12A0B4234D0855A7"
+    },
+    {
+      "path": "base/itemratio.bin",
+      "cascPath": "data:data\\global\\excel\\base\\itemratio.bin",
+      "size": 412,
+      "ckey": "A14BE2029F3F1AE1EC5CFFD026FF183D",
+      "ekey": "BE2940A38F0F640C4FBE1EE3C4AC1D98",
+      "available": true,
+      "nameType": 0,
+      "sha256": "9285AFEDA0B7DE64BA57EE755B869932CB57F8C245E1A37EE56DEBF37088B0B1"
+    },
+    {
+      "path": "base/itemratio.txt",
+      "cascPath": "data:data\\global\\excel\\base\\itemratio.txt",
+      "size": 662,
+      "ckey": "8DD209DE3673749DE2D8DCE084E97B4E",
+      "ekey": "3AFE19DD40E92BC673B8708FA52DEF80",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F8EBB2128C09311D2F17F9F3EA9E1933441F3322AB2C4C203EB9858A00AF90FF"
+    },
+    {
+      "path": "base/itemscode.bin",
+      "cascPath": "data:data\\global\\excel\\base\\itemscode.bin",
+      "size": 164,
+      "ckey": "6C006308A657D8223A4C2DF22D0B1902",
+      "ekey": "FDAF1F08A518337A553F831E2607EFFD",
+      "available": true,
+      "nameType": 0,
+      "sha256": "C59EBFBADBC6AC05ECB21504427A6E67B0D76F5816303542A47F7A1DBACDF769"
+    },
+    {
+      "path": "base/itemstatcost.bin",
+      "cascPath": "data:data\\global\\excel\\base\\itemstatcost.bin",
+      "size": 119236,
+      "ckey": "EAC9D1448191CF8D6458485A6A3D84AD",
+      "ekey": "85D86EA828104797B5DB37EF841C8DE3",
+      "available": true,
+      "nameType": 0,
+      "sha256": "B1356A7D6839BA1649DA2CB41BD44257ECA9E15B2E9FDA306CDA02C390926791"
+    },
+    {
+      "path": "base/itemstatcost.txt",
+      "cascPath": "data:data\\global\\excel\\base\\itemstatcost.txt",
+      "size": 40068,
+      "ckey": "251B246F279BD531830017E9578F48BC",
+      "ekey": "A56CEB123165448AFDD7DE82CC7269C5",
+      "available": true,
+      "nameType": 0,
+      "sha256": "462B75F724BACE549286198B9B5F5DE065E6EC230F2DCBAF2B9EFDEE3D05A68E"
+    },
+    {
+      "path": "base/itemtypes.bin",
+      "cascPath": "data:data\\global\\excel\\base\\itemtypes.bin",
+      "size": 25060,
+      "ckey": "0BDEFC69DA2861F417847BD54A7E695F",
+      "ekey": "94A4BA1B15583A95C997B91DEF8D9CD0",
+      "available": true,
+      "nameType": 0,
+      "sha256": "380315A1EF8FA6BFAE62DDEF5C0860B0E0EAACB8E72A24FB0DC2D024D9D5822E"
+    },
+    {
+      "path": "base/itemtypes.txt",
+      "cascPath": "data:data\\global\\excel\\base\\itemtypes.txt",
+      "size": 10321,
+      "ckey": "D5873102DA42A3754197D97CAD9FEA22",
+      "ekey": "BA39C37F5D94BF007DE109537B8ECD71",
+      "available": true,
+      "nameType": 0,
+      "sha256": "7ABF970BC4B539B251D2FE706CB7C0FD2785CB886273D6515398EBE4EDF899D1"
+    },
+    {
+      "path": "base/itemuicategories.bin",
+      "cascPath": "data:data\\global\\excel\\base\\itemuicategories.bin",
+      "size": 556,
+      "ckey": "44523F3B54F7891C4CE66A0EDB70C401",
+      "ekey": "87AE33387A4F6E7251A9C3B5A450A53F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "43C06620800EDB84B600187ADEB4524412D83288CE3AA3241D454816AD969D83"
+    },
+    {
+      "path": "base/itemuicategories.txt",
+      "cascPath": "data:data\\global\\excel\\base\\itemuicategories.txt",
+      "size": 873,
+      "ckey": "C0E606E19FB590E32B5CF8793C87DA1A",
+      "ekey": "22291D7D66EF943369F049F488684675",
+      "available": true,
+      "nameType": 0,
+      "sha256": "CEBB2507CB769B3CC1BDBB2F77D823CAF4C09EF0780848C158BB59BC1B588EA8"
+    },
+    {
+      "path": "base/leveldefs.bin",
+      "cascPath": "data:data\\global\\excel\\base\\leveldefs.bin",
+      "size": 21376,
+      "ckey": "F24FF97696BB6EA87EDE666C89442CAC",
+      "ekey": "E6C59512867158B4E95AC4FBD39A7D61",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D6BCD63A7D66446F0E63F4543C716533D5A1064CCEFEA65CE5CAFBE5B02F0E24"
+    },
+    {
+      "path": "base/levelgroups.bin",
+      "cascPath": "data:data\\global\\excel\\base\\levelgroups.bin",
+      "size": 2428,
+      "ckey": "87DB3B3E4622EBCEDA8BC9481D3EF662",
+      "ekey": "577790DD0CC3053FC47A61F0397D1050",
+      "available": true,
+      "nameType": 0,
+      "sha256": "67941203F011F4537595C80DA04D5CD32A642B28FAFE59B551C8A80D7EE518D3"
+    },
+    {
+      "path": "base/levelgroups.txt",
+      "cascPath": "data:data\\global\\excel\\base\\levelgroups.txt",
+      "size": 5943,
+      "ckey": "486E43F703511E6EFD0F8755D0BEFBB7",
+      "ekey": "929DA6417EA8BF3255AE33AD45344F79",
+      "available": true,
+      "nameType": 0,
+      "sha256": "E38DC1EFF60432D35C75159E55584D69CB4BBD210B8BE3D793BAB92EEFEA51FA"
+    },
+    {
+      "path": "base/levels.bin",
+      "cascPath": "data:data\\global\\excel\\base\\levels.bin",
+      "size": 55352,
+      "ckey": "6E4C43ED7AC1B2ABC3C796B9C54CDF9B",
+      "ekey": "7368BECC8A248776B40F73DFC2254966",
+      "available": true,
+      "nameType": 0,
+      "sha256": "2D988B2F67D478229622206BF971D0D276FDC29DE41925A20CD8D8D4E4A13571"
+    },
+    {
+      "path": "base/levels.txt",
+      "cascPath": "data:data\\global\\excel\\base\\levels.txt",
+      "size": 80962,
+      "ckey": "4B6E0E60A4B67980B530DE8CA0BC9E92",
+      "ekey": "C1E1A7B5E1ABAE8F66B7ABA0977CF94A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "99A47F74CF65387356645D5DBA22B1A55D8A43B150CE7EE2799DBAB24F07CD35"
+    },
+    {
+      "path": "base/lowqualityitems.bin",
+      "cascPath": "data:data\\global\\excel\\base\\lowqualityitems.bin",
+      "size": 140,
+      "ckey": "B37EB7C121B352CD7305B6F8642F58BB",
+      "ekey": "04CBC4112371D59861F6D2DB5CFD07D6",
+      "available": true,
+      "nameType": 0,
+      "sha256": "AAEB6F0EAB7D768AC48ECF2FCCA82FCED595B0529467C2E6CBDD9D38AA3821E3"
+    },
+    {
+      "path": "base/lowqualityitems.txt",
+      "cascPath": "data:data\\global\\excel\\base\\lowqualityitems.txt",
+      "size": 44,
+      "ckey": "5E893A25DE72EF4F2C1D1CBE00AA33E6",
+      "ekey": "5588017129A0D92555EDB9532D2DCB16",
+      "available": true,
+      "nameType": 0,
+      "sha256": "66A8A59DD88E0BED8130A08D803A057F9331F575A7C9A28F0AA622B34F098108"
+    },
+    {
+      "path": "base/lvlmaze.bin",
+      "cascPath": "data:data\\global\\excel\\base\\lvlmaze.bin",
+      "size": 2272,
+      "ckey": "BE84258EBEB38D674C004D26D18A1417",
+      "ekey": "2B00C4BF2BCADB2ED5983C2D5B31178C",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4DA089A98D38235AB2B66BCFFFDE11F1A7E179C84F796E36A7F37DB0B29FC80A"
+    },
+    {
+      "path": "base/lvlmaze.txt",
+      "cascPath": "data:data\\global\\excel\\base\\lvlmaze.txt",
+      "size": 3295,
+      "ckey": "B424D76AFE9CDBF5F9F141B6B109FAAD",
+      "ekey": "3738300938E58D3191CD91F17C785330",
+      "available": true,
+      "nameType": 0,
+      "sha256": "C1735A975013DC7E4804E0525C249F4C4B96AE59B714DB4773CB20231B64DD64"
+    },
+    {
+      "path": "base/lvlprest.bin",
+      "cascPath": "data:data\\global\\excel\\base\\lvlprest.bin",
+      "size": 467380,
+      "ckey": "C8F981175FE54F563EE26216CC6E17CD",
+      "ekey": "A48787A1172DC2620DF4EAA5DD853C56",
+      "available": true,
+      "nameType": 0,
+      "sha256": "EB8536396CD5F8721A0DE506824B93F37B8A793FF73004AA2E67496F2BD793EC"
+    },
+    {
+      "path": "base/lvlprest.txt",
+      "cascPath": "data:data\\global\\excel\\base\\lvlprest.txt",
+      "size": 130676,
+      "ckey": "2CF5B92140E13B8B81AF0AEE4E0ED31A",
+      "ekey": "4C3855A68DF3CBC3B1185A67D20771F0",
+      "available": true,
+      "nameType": 0,
+      "sha256": "6D83368945D1B02042D0B9225764F3F47C8F34801F154BE93B4EF70F315C8A56"
+    },
+    {
+      "path": "base/lvlsub.bin",
+      "cascPath": "data:data\\global\\excel\\base\\lvlsub.bin",
+      "size": 11700,
+      "ckey": "54FB1454FF6A0C34AA8A30E573C4CA23",
+      "ekey": "39CF673D13A04779E9404F0EFE84437E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "22E983931396114BEFFE48266EDC819F5B9AFD7C4ED567048DC2AC0C7E2F2601"
+    },
+    {
+      "path": "base/lvlsub.txt",
+      "cascPath": "data:data\\global\\excel\\base\\lvlsub.txt",
+      "size": 3313,
+      "ckey": "9AB01FFEA5E7625E16A3014332AC408B",
+      "ekey": "D40F37DD4791DDC77CDC089652F959FC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4E394C3CB5E36375996960284C8C8B2BFB853C9E24FA832A0E376C9B2FE75808"
+    },
+    {
+      "path": "base/lvltypes.bin",
+      "cascPath": "data:data\\global\\excel\\base\\lvltypes.bin",
+      "size": 69160,
+      "ckey": "796EF673510E88CFEF29264C148864DE",
+      "ekey": "7C7551719ACDF4FC1176A3FB7B996587",
+      "available": true,
+      "nameType": 0,
+      "sha256": "19D81025895A3A3E9FAF6725D04973D4711C7D911A34A72FA9E5BE2E66101B86"
+    },
+    {
+      "path": "base/lvltypes.txt",
+      "cascPath": "data:data\\global\\excel\\base\\lvltypes.txt",
+      "size": 10558,
+      "ckey": "2E3F8AFBD72863EAE1FBCE4001821E1B",
+      "ekey": "6A1F989FD31F08C4D145DF511AF5E3C4",
+      "available": true,
+      "nameType": 0,
+      "sha256": "578A75BEABF4A1C6CB11679A6F01008908CA419CCDDF8F0239384FA15081AD36"
+    },
+    {
+      "path": "base/lvlwarp.bin",
+      "cascPath": "data:data\\global\\excel\\base\\lvlwarp.bin",
+      "size": 8452,
+      "ckey": "08A1F99F0677EA6F86625F42A0DB6098",
+      "ekey": "FFC498801E262403A6281ABC8A524B40",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F4A8872CDCE715444B6002C0D64275538500CA5B690286F01C9A283068D60735"
+    },
+    {
+      "path": "base/lvlwarp.txt",
+      "cascPath": "data:data\\global\\excel\\base\\lvlwarp.txt",
+      "size": 5534,
+      "ckey": "BE989B465ABAC78981ECC1425561FAED",
+      "ekey": "9AD114ED6F9D91E596AE93066D9C1695",
+      "available": true,
+      "nameType": 0,
+      "sha256": "E458ABF0309FA6879E64C1AEFFA964888A860E102A203A5C922DF59D1F9678B6"
+    },
+    {
+      "path": "base/magicprefix.bin",
+      "cascPath": "data:data\\global\\excel\\base\\magicprefix.bin",
+      "size": 100944,
+      "ckey": "0A3EC343163E707BCF8937BA61E65114",
+      "ekey": "3C083B583335425BFD60B8884D48E8B1",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F34888BBB3F5795DA8B1577474AF1823EF2DEFEE783CCD558539D628617A1537"
+    },
+    {
+      "path": "base/magicprefix.txt",
+      "cascPath": "data:data\\global\\excel\\base\\magicprefix.txt",
+      "size": 57809,
+      "ckey": "7DEF0B0E7827560F507C4BFE5C305824",
+      "ekey": "CC0282A5ECB0EB0570651B375D9DFE3C",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F64142547DD8A99992F49CB399562795220F620C117AC65D36260B6B7DE47EB7"
+    },
+    {
+      "path": "base/magicsuffix.bin",
+      "cascPath": "data:data\\global\\excel\\base\\magicsuffix.bin",
+      "size": 109904,
+      "ckey": "258D92176E2D93B52CF426EBD6B57ADC",
+      "ekey": "26B67D3C69EF6625DA30F5DCB40ACCFD",
+      "available": true,
+      "nameType": 0,
+      "sha256": "C8391B0756BACA3FAD1E1EE3AA4319BE716A00747E059E05B1D9085950673F84"
+    },
+    {
+      "path": "base/magicsuffix.txt",
+      "cascPath": "data:data\\global\\excel\\base\\magicsuffix.txt",
+      "size": 67041,
+      "ckey": "3B3D8B95A05870E31E0F1EF5FF42261F",
+      "ekey": "2DC99756A4B9DC75A940AF880341E56D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "218D95F46259A3DB2D627F74E8B7AB18F8735D2E270BA227C82908D24DA13F8A"
+    },
+    {
+      "path": "base/misc.bin",
+      "cascPath": "data:data\\global\\excel\\base\\misc.bin",
+      "size": 75268,
+      "ckey": "53080ACA12E2AFD0D86AD14B7F0BE769",
+      "ekey": "281EAD8FAF154D3C832E68F64801517F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "EF261A8A717D5A003EACCA4BD1DEE77D1FCC923CBE41BD3552EE7EF684D3CC42"
+    },
+    {
+      "path": "base/misc.txt",
+      "cascPath": "data:data\\global\\excel\\base\\misc.txt",
+      "size": 58796,
+      "ckey": "276FA5DDE3FCEE134AE37D0FC4E1703D",
+      "ekey": "F60FFACCA92B3A5B5D1E39340811E8FD",
+      "available": true,
+      "nameType": 0,
+      "sha256": "20D93E8773E87AB3E6E29D61E335EBE0F2D44D76E5774249D6C2158740D2BF51"
+    },
+    {
+      "path": "base/misscalc.txt",
+      "cascPath": "data:data\\global\\excel\\base\\misscalc.txt",
+      "size": 1701,
+      "ckey": "FDC9765E158C9A7A5ABF71CCF1002632",
+      "ekey": "C02F4A15DFBB682AD521DBA6BAFC543F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4FD7CC4A31BD2E5C961273E5BA1C85B2FFD19A35A45BD8AD6F7F683268018576"
+    },
+    {
+      "path": "base/misscode.bin",
+      "cascPath": "data:data\\global\\excel\\base\\misscode.bin",
+      "size": 2506,
+      "ckey": "9C1446B19AA4FBEE37B299D4475C589C",
+      "ekey": "55BCD4D6BBDAAF512CE3D1EB695B1C0B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "6B12A3EBB22592996F881CBDB30E3A3EF363DBEC2DCF2264FB6D664F38B784C3"
+    },
+    {
+      "path": "base/missiles.bin",
+      "cascPath": "data:data\\global\\excel\\base\\missiles.bin",
+      "size": 338564,
+      "ckey": "D771CC8807DB5BE57C0033E1CC2D9BA0",
+      "ekey": "17EAE831CF24B71589784D99D7976299",
+      "available": true,
+      "nameType": 0,
+      "sha256": "BFD0EADE1C58092BF845368BCD61AA3B53AD16D9E2FED7AC04806E1A412078F5"
+    },
+    {
+      "path": "base/missiles.txt",
+      "cascPath": "data:data\\global\\excel\\base\\missiles.txt",
+      "size": 218529,
+      "ckey": "780C76F1651334101AAB40FC279F977B",
+      "ekey": "41AF0D257216AD485116C3A361588F1A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "B2754A670F0E96D83A9E0D8B9D7951D241BF207E2C71CABB24E2C5BD4FDFE06C"
+    },
+    {
+      "path": "base/monai.txt",
+      "cascPath": "data:data\\global\\excel\\base\\monai.txt",
+      "size": 17560,
+      "ckey": "B75A7D0A58F135AFC31EE512EAAF2277",
+      "ekey": "F7178B8CE7689D337136FF75208D9FEC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "7C7C7B8866C46078356BCC6118789699351004F39EDEA92922425699D6AA86A8"
+    },
+    {
+      "path": "base/moncalc.txt",
+      "cascPath": "data:data\\global\\excel\\base\\moncalc.txt",
+      "size": 558,
+      "ckey": "6D97C42C0FBDBE6D52DC1D4356634C91",
+      "ekey": "C09189F727EAEF859B92B59319E8A6FE",
+      "available": true,
+      "nameType": 0,
+      "sha256": "5E144C6462A11E1B48DF097799254743F24433A6ED803EE270D3A30150A5C706"
+    },
+    {
+      "path": "base/moncode.bin",
+      "cascPath": "data:data\\global\\excel\\base\\moncode.bin",
+      "size": 1,
+      "ckey": "93B885ADFE0DA089CDF634904FD59F71",
+      "ekey": "4318A0FEFDD0009BB73732D6F92CA14A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "6E340B9CFFB37A989CA544E6BB780A2C78901D3FB33738768511A30617AFA01D"
+    },
+    {
+      "path": "base/monequip.bin",
+      "cascPath": "data:data\\global\\excel\\base\\monequip.bin",
+      "size": 1264,
+      "ckey": "8CCA1E601550CDE7D20DF28FF7077FC3",
+      "ekey": "5435FA808A22D68DEA47619D553E1351",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D99930FA66DA9B03E60305266D6D0D3D7E24E3AAC5E742E1AE9967A2107DC8AD"
+    },
+    {
+      "path": "base/monequip.txt",
+      "cascPath": "data:data\\global\\excel\\base\\monequip.txt",
+      "size": 1764,
+      "ckey": "409D3924778617F98CBF270FFC35504E",
+      "ekey": "71D4793187C692A62B2C62516FEFA3CC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F731A867DC96C1F44D23E48B6E819B976280DA907F7A95FCA0DBFE97D9E83F0A"
+    },
+    {
+      "path": "base/monlvl.bin",
+      "cascPath": "data:data\\global\\excel\\base\\monlvl.bin",
+      "size": 13324,
+      "ckey": "FCD70F54692495E8D0856B3E22657BB5",
+      "ekey": "9E43119CE2326BA2AA8C3BB86C03EF6A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "7DC108D66DF6BAD7032BD6678D23F9864B398F2B71EE24C3AC88528DC7832499"
+    },
+    {
+      "path": "base/monlvl.txt",
+      "cascPath": "data:data\\global\\excel\\base\\monlvl.txt",
+      "size": 14707,
+      "ckey": "3A638A83029A8F0F61CDB0520CA2EA0C",
+      "ekey": "B1187D7A51D972D6183129DF8BBC3FF0",
+      "available": true,
+      "nameType": 0,
+      "sha256": "BDA243EFE1D1E9591F75B8CF97AC73F78FF691362381F35CC000233EB46C092A"
+    },
+    {
+      "path": "base/monmode.bin",
+      "cascPath": "data:data\\global\\excel\\base\\monmode.bin",
+      "size": 580,
+      "ckey": "9826709FFDF4859CE3CEA46C2D98040D",
+      "ekey": "5A1956783AD2C72EB2BB301A60BE8707",
+      "available": true,
+      "nameType": 0,
+      "sha256": "71792AAA383158063667ADDDC1DD22A0DDEA1CB03ECB076A80F4BF8DB4DF6A9D"
+    },
+    {
+      "path": "base/monmode.txt",
+      "cascPath": "data:data\\global\\excel\\base\\monmode.txt",
+      "size": 238,
+      "ckey": "1B1162651F55019924F5A09ABFF6B305",
+      "ekey": "B2FF97BC51F95DDFB51B7EF9DF137287",
+      "available": true,
+      "nameType": 0,
+      "sha256": "2663C45B5CA74916DB0114335BABE7FC6DD9D357322892DF501F7850E4385B52"
+    },
+    {
+      "path": "base/monpet.bin",
+      "cascPath": "data:data\\global\\excel\\base\\monpet.bin",
+      "size": 604,
+      "ckey": "8BA91BCB648F28E0CC69B26C1E15EFB2",
+      "ekey": "B66E1C4EF723C61376F4F46CDBA9B58A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3EA8C61280453D61184B4C7F7BB7DEC4CE5650A7EB735C067624E1A59B9DFA3E"
+    },
+    {
+      "path": "base/monpet.txt",
+      "cascPath": "data:data\\global\\excel\\base\\monpet.txt",
+      "size": 585,
+      "ckey": "F45EE2E94BB05E05F8B72E24B5BD73A6",
+      "ekey": "B31984E5D8F079C1F1147CCEDA75DB49",
+      "available": true,
+      "nameType": 0,
+      "sha256": "B81A405523CA95EB4C2DC65912A7DC414628B0B6C76A903137386E9AB39F46D2"
+    },
+    {
+      "path": "base/monplace.txt",
+      "cascPath": "data:data\\global\\excel\\base\\monplace.txt",
+      "size": 658,
+      "ckey": "74428F002BA2D5C52703889AF88724AA",
+      "ekey": "E6542927DD3496973BA492E8324DBCF6",
+      "available": true,
+      "nameType": 0,
+      "sha256": "1BC9F2D3ACF57B65EB7036641C54E7424E5F235BFCD79A71A4EC040B46BC0B75"
+    },
+    {
+      "path": "base/monpreset.bin",
+      "cascPath": "data:data\\global\\excel\\base\\monpreset.bin",
+      "size": 924,
+      "ckey": "6CDBE2DE22DB7FD12293141BCF5D4523",
+      "ekey": "8142F0974472F0A5DA7EEA4EB4A25AAA",
+      "available": true,
+      "nameType": 0,
+      "sha256": "97DFB2D0C391F842601F748628033D2C3081EB3027D016EB82944E5C6A76AE59"
+    },
+    {
+      "path": "base/monpreset.txt",
+      "cascPath": "data:data\\global\\excel\\base\\monpreset.txt",
+      "size": 3603,
+      "ckey": "6C99A999CE1D46A9E135C1E16EDF9FFD",
+      "ekey": "DEDF5AE5E3E272F150E91C7CFABE4BE4",
+      "available": true,
+      "nameType": 0,
+      "sha256": "235BEDD087A3D66BA647B62D35F67D678E1D4B2C3CC6549D1BF31D17B2B4003D"
+    },
+    {
+      "path": "base/monprop.bin",
+      "cascPath": "data:data\\global\\excel\\base\\monprop.bin",
+      "size": 4060,
+      "ckey": "BFED5D2192E4B429AF64A735D39313E0",
+      "ekey": "AEDDBA6210FCDA973268C21029A4CE65",
+      "available": true,
+      "nameType": 0,
+      "sha256": "BC85BF2F9607EC8FC0CCACF82E0B1C1E2FC02EDA80D1DC81D2D66DC39CC92DB9"
+    },
+    {
+      "path": "base/monprop.txt",
+      "cascPath": "data:data\\global\\excel\\base\\monprop.txt",
+      "size": 2454,
+      "ckey": "A26A5F4CED8CB495F9509F5388AF25AD",
+      "ekey": "BF7B69C9252E2934F0FD88BC8109E243",
+      "available": true,
+      "nameType": 0,
+      "sha256": "2E7B22F19AA571F1EE3CCA8426E219D146471B0B13A25C5FB70A452C2C8C9F4D"
+    },
+    {
+      "path": "base/monseq.bin",
+      "cascPath": "data:data\\global\\excel\\base\\monseq.bin",
+      "size": 6184,
+      "ckey": "904DCD7D497FC0AD7162A0FA1286B454",
+      "ekey": "551E234B0560CD32AD934B1400596EBD",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D122A76C8BE8B51358F090AFD523A13EB9B31E5EDB7B995844744CB7815A0EF9"
+    },
+    {
+      "path": "base/monseq.txt",
+      "cascPath": "data:data\\global\\excel\\base\\monseq.txt",
+      "size": 28393,
+      "ckey": "3DA07990BF1B2BF47A5B2FFD793B7E20",
+      "ekey": "0CC55543F2FC9F37EB2A73964C8DEC02",
+      "available": true,
+      "nameType": 0,
+      "sha256": "A48A884A654CAB7CAFE0BE2764FA8A77F428A9B48855D27461D133A1F553898C"
+    },
+    {
+      "path": "base/monsounds.bin",
+      "cascPath": "data:data\\global\\excel\\base\\monsounds.bin",
+      "size": 22204,
+      "ckey": "F9438C06AE8A31361D0A913CBA5A9F40",
+      "ekey": "7B907C24982660343EC1835A07DBFA88",
+      "available": true,
+      "nameType": 0,
+      "sha256": "A57665169673391DBFC2FF462AF45359C00DD28B3EFE7E0DAF824BDED07A6989"
+    },
+    {
+      "path": "base/monsounds.txt",
+      "cascPath": "data:data\\global\\excel\\base\\monsounds.txt",
+      "size": 25111,
+      "ckey": "B96A74707E0775A3EFC0EEBEECFAB68D",
+      "ekey": "105C77316E1A5A041B7EEE6C7AD87FA9",
+      "available": true,
+      "nameType": 0,
+      "sha256": "8AB5439DCF8D26B1B0F1B3A3413E07EDFBC6C0F2FF83F90A5F5D3604029988F0"
+    },
+    {
+      "path": "base/monstats.bin",
+      "cascPath": "data:data\\global\\excel\\base\\monstats.bin",
+      "size": 381512,
+      "ckey": "7A600DD4C7762A12C1E2F629AF360EFD",
+      "ekey": "AFFB7106753A693DA144FD9F09D79DAC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "6738A8FA58CB4EA92F20562999BE0981D0F755E10CAD9941F2A1A671E1278337"
+    },
+    {
+      "path": "base/monstats.txt",
+      "cascPath": "data:data\\global\\excel\\base\\monstats.txt",
+      "size": 482874,
+      "ckey": "7A8ACD71AAC5F2863DB1D61CBB770C92",
+      "ekey": "37D7439747905207C3EA44A83802B9F8",
+      "available": true,
+      "nameType": 0,
+      "sha256": "36C288DB54B39C85739A514E6C74A88527C86AEBB09FFB44AFD18AD1B04A0DDB"
+    },
+    {
+      "path": "base/monstats2.bin",
+      "cascPath": "data:data\\global\\excel\\base\\monstats2.bin",
+      "size": 184412,
+      "ckey": "A148D0E8E6680F13B75B39BA1E696525",
+      "ekey": "82223A41286C72441DC24C007A463D9E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F646FBB792792CAE20AF656A134BC96C2810CF04DBC8F0707F699110A3577CE6"
+    },
+    {
+      "path": "base/monstats2.txt",
+      "cascPath": "data:data\\global\\excel\\base\\monstats2.txt",
+      "size": 139637,
+      "ckey": "51C9F8905DCE0E1266ECD34E39DBD6FC",
+      "ekey": "722CAD96D64496B5D47251E22424C5B2",
+      "available": true,
+      "nameType": 0,
+      "sha256": "B4A34EE28B05F11450B1D3CC02967F9BB935EC1AD32A767675DA1E2DA573FC59"
+    },
+    {
+      "path": "base/montype.bin",
+      "cascPath": "data:data\\global\\excel\\base\\montype.bin",
+      "size": 712,
+      "ckey": "16F139EB85AF779CEB317789FB6C338B",
+      "ekey": "7F338194E2C3B3B18C73956B148BDBCA",
+      "available": true,
+      "nameType": 0,
+      "sha256": "6555AE02AA7FFDCFADF042D4FE60DDA894CDF4AAD743D3BA2086484232E74C0B"
+    },
+    {
+      "path": "base/montype.txt",
+      "cascPath": "data:data\\global\\excel\\base\\montype.txt",
+      "size": 1312,
+      "ckey": "489B573E6F7B90454E5835DC233BBD39",
+      "ekey": "D4E698D581F212FDBEC908E41354B0B1",
+      "available": true,
+      "nameType": 0,
+      "sha256": "956F8D116381D526985630858E6CDCB3941D446A92699DC074E8A7047616EF5F"
+    },
+    {
+      "path": "base/monumod.bin",
+      "cascPath": "data:data\\global\\excel\\base\\monumod.bin",
+      "size": 1444,
+      "ckey": "B6BED918FDBC9F4BFA4A34451EA3AF47",
+      "ekey": "C48209CE76CC4CFC24FAE14CDDBD7A0E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F41D5367E0259BB37123B2BF77C83CE1DC4C78715085375D023E0C399BE809E9"
+    },
+    {
+      "path": "base/monumod.txt",
+      "cascPath": "data:data\\global\\excel\\base\\monumod.txt",
+      "size": 3236,
+      "ckey": "937899D3406263AB7F0C3E052642AC24",
+      "ekey": "6E98AB1C0FD7A63C4DDB8E37ACBF7921",
+      "available": true,
+      "nameType": 0,
+      "sha256": "01F3F46A348D68D67C5A4E89019F50D8E0AA309468A6A31DB8D1FDFF4A9E697C"
+    },
+    {
+      "path": "base/npc.bin",
+      "cascPath": "data:data\\global\\excel\\base\\npc.bin",
+      "size": 1296,
+      "ckey": "E7F44DE4906878E9D413B34CCB1BF97F",
+      "ekey": "47521ED5E5C95B5C6F04912C030B37DC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "7BC6BF435C382570145BB16567DD022D2D59D8B4CF744F3F157DF1A9D2886973"
+    },
+    {
+      "path": "base/npc.txt",
+      "cascPath": "data:data\\global\\excel\\base\\npc.txt",
+      "size": 1289,
+      "ckey": "407209DBF41DE1164069171A7E1E904E",
+      "ekey": "1249AA9EE4B53AF852746E0E923F8A2A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "A08A6E0F9F3E8A9C3341D73D07B9F4A8E580B7C155F4439CD7E79A43E05080E5"
+    },
+    {
+      "path": "base/objects.bin",
+      "cascPath": "data:data\\global\\excel\\base\\objects.bin",
+      "size": 211324,
+      "ckey": "6EB5276635D4658BD4048ED4204355CD",
+      "ekey": "EE6119D0CEF94CD5F7AFBACAA431E279",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4FC39A8A00F898E87DAF57EFD4424C3D8EB6D32F79BFD24495561C1B256C60D5"
+    },
+    {
+      "path": "base/objects.txt",
+      "cascPath": "data:data\\global\\excel\\base\\objects.txt",
+      "size": 207796,
+      "ckey": "BFD3DE8278AC5FF8AFB5153E7F1EC018",
+      "ekey": "1EEEDB056244193C50D0833361EE1DF5",
+      "available": true,
+      "nameType": 0,
+      "sha256": "30BF6B0D0C066DD25AF08E5E50DBA5EE02E18DDFFC346434CD5464AC08400119"
+    },
+    {
+      "path": "base/objecttokens.bin",
+      "cascPath": "data:data\\global\\excel\\base\\objecttokens.bin",
+      "size": 21136,
+      "ckey": "4881A142C1EB4DE5074139FB8568EE7C",
+      "ekey": "5F21045E82308461EF10B04B23383426",
+      "available": true,
+      "nameType": 0,
+      "sha256": "6FA45240B9624B64F5F67105B18A7B781B709848524EFFB41C012D2C1A76C9F6"
+    },
+    {
+      "path": "base/objgroup.bin",
+      "cascPath": "data:data\\global\\excel\\base\\objgroup.bin",
+      "size": 6388,
+      "ckey": "53B202F1825D4C20D9758A54A6C53ACE",
+      "ekey": "8722C567EA95507CD30E5D2D93B831F8",
+      "available": true,
+      "nameType": 0,
+      "sha256": "C85B86FC1AA29FA80C44B21A388B608FE244F07C62429A7CDED1B6DD3B762E1C"
+    },
+    {
+      "path": "base/objgroup.txt",
+      "cascPath": "data:data\\global\\excel\\base\\objgroup.txt",
+      "size": 10333,
+      "ckey": "6C139E27BAAC7CF7235C87D4570A3864",
+      "ekey": "469E269A79A8DD4D65A39C5230F6456A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4B16D5F6E4FC35985148D7576519F484F5E270A22ABB697D247CDBD2A836D8B7"
+    },
+    {
+      "path": "base/objmode.bin",
+      "cascPath": "data:data\\global\\excel\\base\\objmode.bin",
+      "size": 292,
+      "ckey": "CB90BCFF54EE1053686A365DB5C485C8",
+      "ekey": "B1E38A5413A26915B2FD225EAE440AA3",
+      "available": true,
+      "nameType": 0,
+      "sha256": "1CFBD113DBD6BF4804DDC33622F40A5E6C183C8F2830ECF240807D55F2202059"
+    },
+    {
+      "path": "base/objmode.txt",
+      "cascPath": "data:data\\global\\excel\\base\\objmode.txt",
+      "size": 114,
+      "ckey": "9A0CC0A8B1ED1C535C73E62C630DD872",
+      "ekey": "177CF8CED458802BA2591A400AF941DB",
+      "available": true,
+      "nameType": 0,
+      "sha256": "23FD7AB06A6942239C75DDD97540D89B16FCD88F51A956E61794700353BABEC3"
+    },
+    {
+      "path": "base/objpreset.bin",
+      "cascPath": "data:data\\global\\excel\\base\\objpreset.bin",
+      "size": 7012,
+      "ckey": "999AF93B0C1BCBE3385D82306A7C2535",
+      "ekey": "69A734796246108F7D3F58F4496D418A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "B15BFA892D32071057F4431F039C031D9A4EA44570D3A3D4F69ECFDF247B2A57"
+    },
+    {
+      "path": "base/objpreset.txt",
+      "cascPath": "data:data\\global\\excel\\base\\objpreset.txt",
+      "size": 13096,
+      "ckey": "503A14663C9B54DCDEA513660335AEFA",
+      "ekey": "BEC34CFF7DA878BD65CDABD1B85115F4",
+      "available": true,
+      "nameType": 0,
+      "sha256": "277F58C9216433BBDDC3F39CE9193526A35256481F2DEB9BC312E27F6C3EED1C"
+    },
+    {
+      "path": "base/objtype.txt",
+      "cascPath": "data:data\\global\\excel\\base\\objtype.txt",
+      "size": 8769,
+      "ckey": "D380C3A43BB7012E465E25BB48F2B751",
+      "ekey": "3C06B1BC2C7D9D9C4D07B6855BDAF486",
+      "available": true,
+      "nameType": 0,
+      "sha256": "55349B617E4E92BF05ED46F316D095E178B585AB207AD39B97C28EC9B39279CD"
+    },
+    {
+      "path": "base/overlay.bin",
+      "cascPath": "data:data\\global\\excel\\base\\overlay.bin",
+      "size": 74596,
+      "ckey": "2B944565019A722187CC8E6E7204F7C4",
+      "ekey": "A0FCA2F60AC9BF6EE21D2C606E38FA06",
+      "available": true,
+      "nameType": 0,
+      "sha256": "C3C7D7BCA972D6FE758017C8546ECD7222CD5CEF685B5B4646A4733E6C675FD9"
+    },
+    {
+      "path": "base/overlay.txt",
+      "cascPath": "data:data\\global\\excel\\base\\overlay.txt",
+      "size": 30131,
+      "ckey": "EBD10C02DA79416B4B54EBCE3B3BB6CA",
+      "ekey": "AC339F2F5486665C4D3607170585D6B1",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4B0DAD4979D7791812187B8B3FE21FBA8CE2E98BFDFAA0C4AE940B1A7764EF02"
+    },
+    {
+      "path": "base/pettype.bin",
+      "cascPath": "data:data\\global\\excel\\base\\pettype.bin",
+      "size": 4404,
+      "ckey": "F272F194D6C7D4A6E3B9DADDB602DD4D",
+      "ekey": "9033240EB89855911901D5800EED5209",
+      "available": true,
+      "nameType": 0,
+      "sha256": "392FFC8EDF030129CA1DFFFF2BD5B1EC8CDF8853628643A11E3FA69542FA2470"
+    },
+    {
+      "path": "base/pettype.txt",
+      "cascPath": "data:data\\global\\excel\\base\\pettype.txt",
+      "size": 1293,
+      "ckey": "DAB316A615E1C08AA4F1E35779411ADF",
+      "ekey": "1ADAEA1F3F910E5DC9CA7F53FA27FB5D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "37DEB8D1594EE9CCBE1BB65C7D69540657E19BC32561651576C6BF47C8DC6D97"
+    },
+    {
+      "path": "base/playerclass.bin",
+      "cascPath": "data:data\\global\\excel\\base\\playerclass.bin",
+      "size": 420,
+      "ckey": "1B8818143A5FDA05D88363738A53F137",
+      "ekey": "9433774891B1D82D33BB0841FD98FCC0",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3E26273370FED3ADDE0DBE8BEAA07F0719516C74F8930E9C8D978824AD0E21D9"
+    },
+    {
+      "path": "base/playerclass.txt",
+      "cascPath": "data:data\\global\\excel\\base\\playerclass.txt",
+      "size": 141,
+      "ckey": "2E5D2F993B58F86BFDF436D9155B9C45",
+      "ekey": "A3DC09AFFDC1FC94085A8EAF75F19B35",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F0D3AC87EE6D565D7B311BE4023D808FFA50BF36C331A2C6A298BE9178D2457A"
+    },
+    {
+      "path": "base/plrmode.bin",
+      "cascPath": "data:data\\global\\excel\\base\\plrmode.bin",
+      "size": 724,
+      "ckey": "216A3A6B62F7A2A3EC54E6F1F0E438BA",
+      "ekey": "8F76273A333C10884A268D5068E4A09C",
+      "available": true,
+      "nameType": 0,
+      "sha256": "2516E64ACA39FB828CF4F01E93698EBCD28B7AAD8C00D504C0A5C91094FC1777"
+    },
+    {
+      "path": "base/plrmode.txt",
+      "cascPath": "data:data\\global\\excel\\base\\plrmode.txt",
+      "size": 302,
+      "ckey": "541564EC81C46B542F9C391333239D84",
+      "ekey": "A11367972F2226BDF32D0AE107017EDF",
+      "available": true,
+      "nameType": 0,
+      "sha256": "23106DA08603BC215624E2837F3990B5ED4B5521BBE8B4A80B0EA6B6502FB8E3"
+    },
+    {
+      "path": "base/plrtype.bin",
+      "cascPath": "data:data\\global\\excel\\base\\plrtype.bin",
+      "size": 292,
+      "ckey": "2AF047D565EA63F5F48A881F90BB1C0C",
+      "ekey": "50BDE16C10AD88DF53E56DC1C74F63BF",
+      "available": true,
+      "nameType": 0,
+      "sha256": "2F2B267CA0F9A22A9727306EDF75F6DB40FD91918DDBE1DF28DA564A435AFA63"
+    },
+    {
+      "path": "base/plrtype.txt",
+      "cascPath": "data:data\\global\\excel\\base\\plrtype.txt",
+      "size": 126,
+      "ckey": "DD6E81B53219E9F2B9B3C27FFCDC59D4",
+      "ekey": "AC3FA9E3585474E66C43B89F21B5E9BC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "9155B6AA48974EBE619B0CFE65A8750C19A15C6F410B7A511D5251A0B2D28B0C"
+    },
+    {
+      "path": "base/properties.bin",
+      "cascPath": "data:data\\global\\excel\\base\\properties.bin",
+      "size": 13636,
+      "ckey": "6E8F3BA94268797028C5AE09C7C1B1F1",
+      "ekey": "1768B5D31ADF15F257A9F410E143F3C3",
+      "available": true,
+      "nameType": 0,
+      "sha256": "DAE7CE4D2D395CBC7EFD2C21E8A70F5DB24276A49611ABFB4F456D8FDDE35FAC"
+    },
+    {
+      "path": "base/properties.txt",
+      "cascPath": "data:data\\global\\excel\\base\\properties.txt",
+      "size": 36934,
+      "ckey": "6F7B26967AA889D7F6FBB8797CAEC7C2",
+      "ekey": "27C4EF8BF90458B971CB1D5B97F27842",
+      "available": true,
+      "nameType": 0,
+      "sha256": "91EB5B3254EFAD3EDC0ACC615A5C56A3B8CBB163D54A9EB4E2FC06BF4D63B264"
+    },
+    {
+      "path": "base/propertygroups.bin",
+      "cascPath": "data:data\\global\\excel\\base\\propertygroups.bin",
+      "size": 4004,
+      "ckey": "C1B96499C89CEEA2DDFC0AEBE8428AE1",
+      "ekey": "8D99B504BB67BFA854CD8BB472B0AEA1",
+      "available": true,
+      "nameType": 0,
+      "sha256": "329B8685256324F3B064E0B41BA288885398A4F81DDCCD923906F60BD19E81C8"
+    },
+    {
+      "path": "base/propertygroups.txt",
+      "cascPath": "data:data\\global\\excel\\base\\propertygroups.txt",
+      "size": 2429,
+      "ckey": "B5AC038B7373F2E70C6F3320B4B80EFB",
+      "ekey": "AE2EB2572F08542E255AFBA75E3D1956",
+      "available": true,
+      "nameType": 0,
+      "sha256": "18C46C7E6BD9559574C16D22591913FDB6794302DA151B384F550A450DEF92E7"
+    },
+    {
+      "path": "base/qualityitems.bin",
+      "cascPath": "data:data\\global\\excel\\base\\qualityitems.bin",
+      "size": 356,
+      "ckey": "E43786E0C624DCD4BD9C1AC81A76E9F2",
+      "ekey": "A7E584DDC87B435AED858B7FD69E5835",
+      "available": true,
+      "nameType": 0,
+      "sha256": "35B1BB03212736C9273B152666F7D6873386671F6F6A50AE03B2AD3634F9E697"
+    },
+    {
+      "path": "base/qualityitems.txt",
+      "cascPath": "data:data\\global\\excel\\base\\qualityitems.txt",
+      "size": 459,
+      "ckey": "7409723FB65065B72244CCCD2975F0D5",
+      "ekey": "75467685ED6D952C56C925EEADD849AA",
+      "available": true,
+      "nameType": 0,
+      "sha256": "2AADD8C89316F3C58DD958839776AB01C3937A5E2E5D03188FC26B27309F4444"
+    },
+    {
+      "path": "base/rareprefix.bin",
+      "cascPath": "data:data\\global\\excel\\base\\rareprefix.bin",
+      "size": 3316,
+      "ckey": "CC62DFBBAA0C906353776180D263F0DD",
+      "ekey": "9744B9D946E5E019ABFA99A69B280A99",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3138A4E84B612611CFE6D929E5DE8E800E417C3F26EE9E98EE203F4D41D49617"
+    },
+    {
+      "path": "base/rareprefix.txt",
+      "cascPath": "data:data\\global\\excel\\base\\rareprefix.txt",
+      "size": 1474,
+      "ckey": "A3CE335722A5BFB8BD2326EED09087A0",
+      "ekey": "86B01EA0CD0FFA6CE5F8DBDE2EDA6154",
+      "available": true,
+      "nameType": 0,
+      "sha256": "5CA9268675AB07CFBBCC74380BEE6F76793A16DF4FD9D534EF1E87FFDE1CC289"
+    },
+    {
+      "path": "base/raresuffix.bin",
+      "cascPath": "data:data\\global\\excel\\base\\raresuffix.bin",
+      "size": 11164,
+      "ckey": "D65F7CF55ED0AE3657BE5703BB3C7411",
+      "ekey": "6E2EF37B541D4A4A179664A2D3496B4D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "710F9AC7F3012D804AE8A70F04E9B28A97B259FC042B9A5D2CACF23B984518D4"
+    },
+    {
+      "path": "base/raresuffix.txt",
+      "cascPath": "data:data\\global\\excel\\base\\raresuffix.txt",
+      "size": 4384,
+      "ckey": "569E5CFCA330858159825616729C6A69",
+      "ekey": "24AC7445119A31E694ABAF35092F4096",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3E1C88BB069730D42F0586A3E585B67B05C7A010920ED727D0432101A956F493"
+    },
+    {
+      "path": "base/runes.bin",
+      "cascPath": "data:data\\global\\excel\\base\\runes.bin",
+      "size": 41996,
+      "ckey": "48C2284A7DB4776DF750A00F7749D902",
+      "ekey": "990014F6400DDF0361AE9D06A6188465",
+      "available": true,
+      "nameType": 0,
+      "sha256": "53F1F1EF99A8CB610FB8B86CFFBE0D1C927F9E7B15819E9332880C5A2D2FB93B"
+    },
+    {
+      "path": "base/runes.txt",
+      "cascPath": "data:data\\global\\excel\\base\\runes.txt",
+      "size": 24479,
+      "ckey": "548F967EB803340ED94B7D8F1D9AFE95",
+      "ekey": "09A2729F85704C00CC54A7DDAC236461",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3EB1549D6CA7DC32AC3827ACFCCD205D793B6D3ACB737B3F25CAC0F16E89D1F6"
+    },
+    {
+      "path": "base/runeworduicategories.bin",
+      "cascPath": "data:data\\global\\excel\\base\\runeworduicategories.bin",
+      "size": 44,
+      "ckey": "7742E950D2330BE5AAC7C2F2CD327C57",
+      "ekey": "926E3CC395D1E74B4659CCA75E378419",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D559DEEE185BB81CD6B890CFDA99F772B0578E44AABF0A4714AFE210D7D4C1DE"
+    },
+    {
+      "path": "base/runeworduicategories.txt",
+      "cascPath": "data:data\\global\\excel\\base\\runeworduicategories.txt",
+      "size": 106,
+      "ckey": "D24E747E19301D51926F8BF1A158CC01",
+      "ekey": "3EFE2FA6106271ABF43CEAA29B1C9493",
+      "available": true,
+      "nameType": 0,
+      "sha256": "9ECA4880FCCCE2F00E1FB0C0E4807DDCB738E607F56E416AE248A03BE0B52CC9"
+    },
+    {
+      "path": "base/setitems.bin",
+      "cascPath": "data:data\\global\\excel\\base\\setitems.bin",
+      "size": 64404,
+      "ckey": "5F29E2A3AF82B8E122B0ACC796AAE795",
+      "ekey": "8CADD9C758C6CB89751506AD3195B193",
+      "available": true,
+      "nameType": 0,
+      "sha256": "626731EDD35CE2307768AFDE83966F314926042C77AB23A0916D6D00662900EA"
+    },
+    {
+      "path": "base/setitems.txt",
+      "cascPath": "data:data\\global\\excel\\base\\setitems.txt",
+      "size": 30286,
+      "ckey": "C00A06A74DA666978FA1621ACAE891B3",
+      "ekey": "51561664EC7E24834B5B1CCFC036EA00",
+      "available": true,
+      "nameType": 0,
+      "sha256": "6481D53C22A525F52248A3043DD2497D525E0A3BBD7EDCE38A762F7D63AF5BBA"
+    },
+    {
+      "path": "base/sets.bin",
+      "cascPath": "data:data\\global\\excel\\base\\sets.bin",
+      "size": 10504,
+      "ckey": "DE8DFEEC6FA845CDBADD1F5F6E59577D",
+      "ekey": "F6DB33208BB3CB6B27DD07878B190410",
+      "available": true,
+      "nameType": 0,
+      "sha256": "51CBC2306917A8FE078C1F665AA38D0B2D3C9ED67FE2339D6AF53FCAB387B034"
+    },
+    {
+      "path": "base/sets.txt",
+      "cascPath": "data:data\\global\\excel\\base\\sets.txt",
+      "size": 6905,
+      "ckey": "F55FB7A528EA8772F60D89150D2D1F87",
+      "ekey": "CB5340A09C5AEA74A298781AB19A78BC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "DD678E5AEB02495D548B7B7FF67B274C722087BB4139AFD066555D16C004715A"
+    },
+    {
+      "path": "base/shrines.bin",
+      "cascPath": "data:data\\global\\excel\\base\\shrines.bin",
+      "size": 648,
+      "ckey": "13A7620A2282013E2189821DBEC87B9B",
+      "ekey": "E3CBFBF4FCBE5498E90DC6A793A53A2E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "9F29EB9EB29B2ECEFE1D5337AEAD1A2AD9B529E24360F4CED399C13ADCC1D926"
+    },
+    {
+      "path": "base/shrines.txt",
+      "cascPath": "data:data\\global\\excel\\base\\shrines.txt",
+      "size": 2474,
+      "ckey": "9F2EB1DFA20EFFE8E6462EB0C5893772",
+      "ekey": "689FAD57F686A547C38915880CC3FEBE",
+      "available": true,
+      "nameType": 0,
+      "sha256": "B937A0F5F20C3471B1FF035807E500B3DEDA21193EB637F49A918A27D89EBE93"
+    },
+    {
+      "path": "base/skillcalc.txt",
+      "cascPath": "data:data\\global\\excel\\base\\skillcalc.txt",
+      "size": 4763,
+      "ckey": "1871CEBA43B145762953F996F12BC39A",
+      "ekey": "29E7C1D4A6BD0131F7177C9B394A8D9C",
+      "available": true,
+      "nameType": 0,
+      "sha256": "C0BEC5461DF1DCA010F8475AB09281DB2B227FF1E8E711715EB9049D479BCC96"
+    },
+    {
+      "path": "base/skilldesc.bin",
+      "cascPath": "data:data\\global\\excel\\base\\skilldesc.bin",
+      "size": 69604,
+      "ckey": "CB79160CF6A6C0CB74F2C7EFCF231F7A",
+      "ekey": "233CE4AB6362A797375C31EEFCD8FE8F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "5080F809C9AFCA9C2A38918DFC696F7A8BA48710F84CA8C744C8545F198D596B"
+    },
+    {
+      "path": "base/skilldesc.txt",
+      "cascPath": "data:data\\global\\excel\\base\\skilldesc.txt",
+      "size": 80201,
+      "ckey": "EB895E97BEC6D58D20BB7AD38BB2B3F1",
+      "ekey": "9DD25C47378122C7F47A8EE0BB3B3294",
+      "available": true,
+      "nameType": 0,
+      "sha256": "0FD5076CAA8AF8101CEC906ABD32EFAAC5108E861EB22CF51EF1768612D45D11"
+    },
+    {
+      "path": "base/skilldesccode.bin",
+      "cascPath": "data:data\\global\\excel\\base\\skilldesccode.bin",
+      "size": 8096,
+      "ckey": "471E1159D015072752BAE1554A704789",
+      "ekey": "0DD48570FE93EBCC6B87960FCAD5A9A2",
+      "available": true,
+      "nameType": 0,
+      "sha256": "8B3DADE88706B5287FC56FE00E0F5AE965952977BFB5A863461D174DB4DA0A64"
+    },
+    {
+      "path": "base/skills.bin",
+      "cascPath": "data:data\\global\\excel\\base\\skills.bin",
+      "size": 319400,
+      "ckey": "B79037D4D7B082D00C08315E5C9F0FFD",
+      "ekey": "80C0CE91F013F7B6FE7EE60F4A0ED1B6",
+      "available": true,
+      "nameType": 0,
+      "sha256": "B84B7AEF4852197512380FC10FA5733DF664E46BA0B2C7F45AB745A4593EEE66"
+    },
+    {
+      "path": "base/skills.txt",
+      "cascPath": "data:data\\global\\excel\\base\\skills.txt",
+      "size": 242265,
+      "ckey": "EF757B8BC79060F91F3E1CD11B536C65",
+      "ekey": "8DF6107598E901C9B3FABFDC721E5864",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3E03A61304002D90CC39FC86D05C824CE3D98D362D8AD4EB0CE51B9489347BF5"
+    },
+    {
+      "path": "base/skillscode.bin",
+      "cascPath": "data:data\\global\\excel\\base\\skillscode.bin",
+      "size": 7759,
+      "ckey": "456067165A10F0251972CFC9B225BBE2",
+      "ekey": "C0C1FAE00A7AEEEA04B8E2C04729E181",
+      "available": true,
+      "nameType": 0,
+      "sha256": "7379894718428A0A7D03FF9DD12C39332DF0143588294ADC96A9FACD39594638"
+    },
+    {
+      "path": "base/soundenviron.txt",
+      "cascPath": "data:data\\global\\excel\\base\\soundenviron.txt",
+      "size": 20261,
+      "ckey": "EB6810DAC2AF68856CA473DEAF3D2517",
+      "ekey": "49287C15C9304B4A50B29354D102428B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F7C4F82380D239A82DCE54E2987B8F624933C16A4FB100150B7CEC7243A00F78"
+    },
+    {
+      "path": "base/sounds.txt",
+      "cascPath": "data:data\\global\\excel\\base\\sounds.txt",
+      "size": 2019354,
+      "ckey": "9C68E412077E3889F3A7A2AE5EA40FF9",
+      "ekey": "28FC8536B2EA398F8B6A3E24657283B7",
+      "available": true,
+      "nameType": 0,
+      "sha256": "AF49B6415529D8E52F64AFA4A8E0C17393B287EC5AB660AE3FE5535C3964F0DC"
+    },
+    {
+      "path": "base/states.bin",
+      "cascPath": "data:data\\global\\excel\\base\\states.bin",
+      "size": 15780,
+      "ckey": "89BC2C3B7E75638724DEBC58AE09C742",
+      "ekey": "CF91FA16212150A816436B8166989617",
+      "available": true,
+      "nameType": 0,
+      "sha256": "0FB66E7395E4DD4A641AE8BCA29F771ACED6DED597B035795CB1331758553C9A"
+    },
+    {
+      "path": "base/states.txt",
+      "cascPath": "data:data\\global\\excel\\base\\states.txt",
+      "size": 25914,
+      "ckey": "D60454D6C47D84C2B4272113B5069282",
+      "ekey": "83FC34039962464ABBBF58F255AE1F92",
+      "available": true,
+      "nameType": 0,
+      "sha256": "67E33FBA2EC5D22CB27EA756739C236DE965DCA7759805586B63CF3A6824C8A5"
+    },
+    {
+      "path": "base/storepage.txt",
+      "cascPath": "data:data\\global\\excel\\base\\storepage.txt",
+      "size": 85,
+      "ckey": "F1D1F4CF6353C91614D519646B3D9BDF",
+      "ekey": "2535142358B51E85AA1820C087B4B7FD",
+      "available": true,
+      "nameType": 0,
+      "sha256": "8F9CDD23C8B6A77DC0674AE2F2941B7E7E600EC0962EA96FC3C2E8A508AAE690"
+    },
+    {
+      "path": "base/superuniques.bin",
+      "cascPath": "data:data\\global\\excel\\base\\superuniques.bin",
+      "size": 3436,
+      "ckey": "F73C3C96828326CBD6D72E38BBEA134C",
+      "ekey": "191406B7206B4A3BAF31FAFE5EBAA763",
+      "available": true,
+      "nameType": 0,
+      "sha256": "9DDEA480CD5CD048505CBD10D496AE5CE68417D1D18877D0A0103728DCAA6CD7"
+    },
+    {
+      "path": "base/superuniques.txt",
+      "cascPath": "data:data\\global\\excel\\base\\superuniques.txt",
+      "size": 10518,
+      "ckey": "BA018F5A6D239DCC7A10EAC581A535F9",
+      "ekey": "58A12973EF11B9C82E1F371FC50AF8AA",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F585DDB62B8F7E973A6343D278BDB6A243444CCBA93EF95C0EACD8FAB9F41720"
+    },
+    {
+      "path": "base/tccode.bin",
+      "cascPath": "data:data\\global\\excel\\base\\tccode.bin",
+      "size": 1,
+      "ckey": "93B885ADFE0DA089CDF634904FD59F71",
+      "ekey": "4318A0FEFDD0009BB73732D6F92CA14A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "6E340B9CFFB37A989CA544E6BB780A2C78901D3FB33738768511A30617AFA01D"
+    },
+    {
+      "path": "base/treasureclassex.bin",
+      "cascPath": "data:data\\global\\excel\\base\\treasureclassex.bin",
+      "size": 878540,
+      "ckey": "F9867364E3074192AE33FDEBA1673C8A",
+      "ekey": "75427AE73C9720A0940E73EEBBFFB13B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "FEFBF81FD2DECBE25C09F6026F325E4EC303D35D6EBFE163C89228AC89C5B842"
+    },
+    {
+      "path": "base/treasureclassex.txt",
+      "cascPath": "data:data\\global\\excel\\base\\treasureclassex.txt",
+      "size": 130248,
+      "ckey": "9E495598B672832B6B5BB4E41BC39BC0",
+      "ekey": "61A311DA12BCF2F7D389CFACC1947E96",
+      "available": true,
+      "nameType": 0,
+      "sha256": "AB5D28F9FFFF6A8DE00F352E233DA78415974BD8551C3AFE9563A83CE1D1B55A"
+    },
+    {
+      "path": "base/uniqueappellation.bin",
+      "cascPath": "data:data\\global\\excel\\base\\uniqueappellation.bin",
+      "size": 54,
+      "ckey": "C9C711897600A164B3C2540E41AC39C7",
+      "ekey": "FE1F4272EAD9DDD39E9290FDDB58CFFA",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D5743375BF5D5539799663080716E36EE18EC74FF89B890AC61831D370D0DECC"
+    },
+    {
+      "path": "base/uniqueappellation.txt",
+      "cascPath": "data:data\\global\\excel\\base\\uniqueappellation.txt",
+      "size": 294,
+      "ckey": "B1E60D247D262B6D35E2D77FF48B5A83",
+      "ekey": "6A76CF79EB0847590373EEB38937C7FC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "FBB5661F61F578219CD6B72B6709A319C0EE906FB9B1FB44F018AB17C3AA4C1A"
+    },
+    {
+      "path": "base/uniqueitems.bin",
+      "cascPath": "data:data\\global\\excel\\base\\uniqueitems.bin",
+      "size": 148252,
+      "ckey": "3FC12FDF0B89A68F8DA777C90F2414F6",
+      "ekey": "ABFA9807176E390797F30F1B082354FD",
+      "available": true,
+      "nameType": 0,
+      "sha256": "E6441A3D6F68065859BCA75B1BE50CDFFF6BF655A6383D13D72F9629F6E697CD"
+    },
+    {
+      "path": "base/uniqueitems.txt",
+      "cascPath": "data:data\\global\\excel\\base\\uniqueitems.txt",
+      "size": 78981,
+      "ckey": "E6D0DAE33CAF960A6BF5F539C03E9910",
+      "ekey": "60C6F4EDB027E645E3687E6EE652896D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "1AC797930EE33AEC7AE96C951389C88BE788FF39EDA9A3050FB85EF5A374AE65"
+    },
+    {
+      "path": "base/uniqueprefix.bin",
+      "cascPath": "data:data\\global\\excel\\base\\uniqueprefix.bin",
+      "size": 110,
+      "ckey": "D98C84F00C3D5C7DAA4301A319E9EA5D",
+      "ekey": "796F3D6FD091F15DC56B6BB91CC76D09",
+      "available": true,
+      "nameType": 0,
+      "sha256": "FEEF153FE5292AD607CBA993DC223D0F82A6E4B0F7591A11F98141E4F70D15A3"
+    },
+    {
+      "path": "base/uniqueprefix.txt",
+      "cascPath": "data:data\\global\\excel\\base\\uniqueprefix.txt",
+      "size": 392,
+      "ckey": "60E4BADC64FE97D77EE23F4D8963CDFD",
+      "ekey": "AE77E5CF4D6769B5A9A9420842ACCE8F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "564CE70637B464C3CFE735C898310208B062751F80C5952AFB78BBFB48F45369"
+    },
+    {
+      "path": "base/uniquesuffix.bin",
+      "cascPath": "data:data\\global\\excel\\base\\uniquesuffix.bin",
+      "size": 142,
+      "ckey": "A06CC6C6C94F386F82662A24ECA3E0BC",
+      "ekey": "6C9683834977CBBFDF22BFFABE99374F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "79F3983A50B9EFBBB14CCCE270AE7F2EB5F280FFCD1665E984BB607F5A4F9D9B"
+    },
+    {
+      "path": "base/uniquesuffix.txt",
+      "cascPath": "data:data\\global\\excel\\base\\uniquesuffix.txt",
+      "size": 527,
+      "ckey": "318331B07F6671AB866AA0B5595196C5",
+      "ekey": "B52374FE02EB7541D567D13FDAE6EF00",
+      "available": true,
+      "nameType": 0,
+      "sha256": "5C9597373FD8C3621C94AFC95AA80487C59C81349C663635A2CAE2F156E862F7"
+    },
+    {
+      "path": "base/wanderingmon.bin",
+      "cascPath": "data:data\\global\\excel\\base\\wanderingmon.bin",
+      "size": 6,
+      "ckey": "FA8DFB1F27432111209CCEBAA2439C0D",
+      "ekey": "59FB98EBC49E12FA2787D9A7E56F5ED4",
+      "available": true,
+      "nameType": 0,
+      "sha256": "92BB808A9633C6BDA908973DEDA6EE89F02D24EE064A8B9B96E5A21AF1BBC77D"
+    },
+    {
+      "path": "base/wanderingmon.txt",
+      "cascPath": "data:data\\global\\excel\\base\\wanderingmon.txt",
+      "size": 15,
+      "ckey": "DFDBAAA49FB228EF018726D920EC3811",
+      "ekey": "4FDD0F3B76404DB4216EFDF58E7874DD",
+      "available": true,
+      "nameType": 0,
+      "sha256": "8CE585FD155E5230C378CB9F05E8DC779C357BF97688F21286D92516E3D8EC41"
+    },
+    {
+      "path": "base/weapons.bin",
+      "cascPath": "data:data\\global\\excel\\base\\weapons.bin",
+      "size": 137092,
+      "ckey": "EA9445B058CCE53B77B38AE8E9CFEB17",
+      "ekey": "CE06F1CC0D79A5259EBFDAAF73041B15",
+      "available": true,
+      "nameType": 0,
+      "sha256": "42AF05C61AC41CABA47887D7ABF9B87289E99759C3EDDDDDBF4AB405B90E8322"
+    },
+    {
+      "path": "base/weapons.txt",
+      "cascPath": "data:data\\global\\excel\\base\\weapons.txt",
+      "size": 119620,
+      "ckey": "8650ACA6CFD9007B1C90A214349523A0",
+      "ekey": "9617A9C47676E20AC84EBA3A4C53FAD0",
+      "available": true,
+      "nameType": 0,
+      "sha256": "33B2871FEA24380096F63A296F9203C6DA6323C773A619A19E5C9DB4DBD00152"
+    },
+    {
+      "path": "belts.bin",
+      "cascPath": "data:data\\global\\excel\\belts.bin",
+      "size": 4036,
+      "ckey": "0DFFC4569164964EC691C971A6F2DEB5",
+      "ekey": "3FB56437EAB84D8D1DFB8B49C634DB9D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "643D7B2FDB8E98062A92DA3B53B9ABE32E77CF40F7820AFBD124B2AC565A3296"
+    },
+    {
+      "path": "belts.txt",
+      "cascPath": "data:data\\global\\excel\\belts.txt",
+      "size": 4182,
+      "ckey": "678879D4598650480AD9094F58614FC9",
+      "ekey": "A2CC547B8ABB5F6FF02CD56A9FC674DC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3F2C2772A9F2055D114127E1983ABE9C40CF91E3E4240A0356DC7C23933F24C9"
+    },
+    {
+      "path": "bodylocs.txt",
+      "cascPath": "data:data\\global\\excel\\bodylocs.txt",
+      "size": 160,
+      "ckey": "4E5012FCD56E3F25E8AFEB63C0F2B2AB",
+      "ekey": "2D27E1D41BD5392B83394F3A8867CE34",
+      "available": true,
+      "nameType": 0,
+      "sha256": "6B3A6AC0BB1CEF5E7F216F083EF85082ACEDF22C4BBFACF5B254FB36ECD8BBD5"
+    },
+    {
+      "path": "books.bin",
+      "cascPath": "data:data\\global\\excel\\books.bin",
+      "size": 100,
+      "ckey": "9132890CFFB191E362B5E3DF9EFDAA2E",
+      "ekey": "86CAF5A6326C5306258EE0B6D78EA0C3",
+      "available": true,
+      "nameType": 0,
+      "sha256": "0681EBD05DFD7D50697589265FB445BCC0A0D8BBBE7058627CE689D54EE26B3B"
+    },
+    {
+      "path": "books.txt",
+      "cascPath": "data:data\\global\\excel\\books.txt",
+      "size": 289,
+      "ckey": "3139BE98EA4F9F085391EAD1DF9C8ED3",
+      "ekey": "5EECBA3894EC054BDFA0DA95BD667AA1",
+      "available": true,
+      "nameType": 0,
+      "sha256": "0E5DBAD85CE7B05E0DE9B13F1284EE8876F436C77D927E250D7BCE5009E42493"
+    },
+    {
+      "path": "charstats.bin",
+      "cascPath": "data:data\\global\\excel\\charstats.bin",
+      "size": 1700,
+      "ckey": "9790F9AFE28C53F1CE6904E27544C1A8",
+      "ekey": "7FE9E8D1A99C8779D3F81C562B54E42F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "C977FF83BD7761B13705ABC10750949B72DA3A181644F7B81FC09588C82DC2D5"
+    },
+    {
+      "path": "charstats.txt",
+      "cascPath": "data:data\\global\\excel\\charstats.txt",
+      "size": 3985,
+      "ckey": "E0E81BE46646147F1017292CC8AB3E28",
+      "ekey": "39F2EA255407EFD7411E319FA508E440",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4F9E9B670727634298AE562753966BAAB7EAE701CEEB4EDD159BA10E18E899C2"
+    },
+    {
+      "path": "colors.txt",
+      "cascPath": "data:data\\global\\excel\\colors.txt",
+      "size": 374,
+      "ckey": "E7F2310FFE221B74F00057932762DDC2",
+      "ekey": "3B25F99E00FDA33037C43B0971F02E77",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4C0E1274EAB79DAF5ECEC10F12FEA7FC11CCE4DB6D37F30CA0B4456DCAD632EE"
+    },
+    {
+      "path": "compcode.bin",
+      "cascPath": "data:data\\global\\excel\\compcode.bin",
+      "size": 464,
+      "ckey": "F5B6C38431F346226601E3858D8D74EB",
+      "ekey": "C5C0A7E13B36FD65DD05CFD0AA1555B4",
+      "available": true,
+      "nameType": 0,
+      "sha256": "DC089B0317E25A2ECC0D42A86C6A763457EFA31B2F62EBAA8E125D923C80A1CD"
+    },
+    {
+      "path": "compcode.txt",
+      "cascPath": "data:data\\global\\excel\\compcode.txt",
+      "size": 1862,
+      "ckey": "B6A6C45955459EC446CAF00C0F44CFA1",
+      "ekey": "726D8ACBDDE9D7270166B9347EBC295B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "A26B8437A13E5777801D8794ED49D103CDD5D274AFBD013F09A107CA11BA2A4B"
+    },
+    {
+      "path": "composit.bin",
+      "cascPath": "data:data\\global\\excel\\composit.bin",
+      "size": 580,
+      "ckey": "9B328BF138E7B34A1C62DEBDE56A2A9E",
+      "ekey": "B80FC059A8F53CBC8C589C85261709FF",
+      "available": true,
+      "nameType": 0,
+      "sha256": "43F98D9898B18D6F7B756AB6FA691992F1C0C31F0581C53C69DF221880F33879"
+    },
+    {
+      "path": "composit.txt",
+      "cascPath": "data:data\\global\\excel\\composit.txt",
+      "size": 207,
+      "ckey": "1AC4646F31E8CB8E77E966BEA7B2B4D8",
+      "ekey": "288DAA425E5C5C46D0713492EE90262F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F59507AE8D7D4FA6A919F502EA957B47369AC4077AE21E2FA28DE360A515C604"
+    },
+    {
+      "path": "cubemain.bin",
+      "cascPath": "data:data\\global\\excel\\cubemain.bin",
+      "size": 78092,
+      "ckey": "C572285E4153502BC55EEDA56E6CBDF5",
+      "ekey": "8E17D25EC80E1B412523FEE40E51EEF7",
+      "available": true,
+      "nameType": 0,
+      "sha256": "5A0C173DCEBE1CB4D84903D38F4C623F3F1B69B427C244DBAA1AD0302C035CFB"
+    },
+    {
+      "path": "cubemain.txt",
+      "cascPath": "data:data\\global\\excel\\cubemain.txt",
+      "size": 51936,
+      "ckey": "4288E6D6A08B1CB12CB5B8CD45C40E62",
+      "ekey": "87703DE52F22D7895E3F1E572648AB38",
+      "available": true,
+      "nameType": 0,
+      "sha256": "785AE4A250244068CD1A5625760C03B86EA5DC73C23B08F6020FA2A240AB028D"
+    },
+    {
+      "path": "cubemod.txt",
+      "cascPath": "data:data\\global\\excel\\cubemod.txt",
+      "size": 164,
+      "ckey": "4830CD23022B5834CAEEEB4F46B2F98F",
+      "ekey": "2A5C4E1E7AABB4BBC50E13F091D84284",
+      "available": true,
+      "nameType": 0,
+      "sha256": "58C50CED7A4D922B5AF42BF5738FF63D4E1306435BEAB1D994CE0B1214D4B138"
+    },
+    {
+      "path": "customgossiptbl.template",
+      "cascPath": "data:data\\global\\excel\\customgossiptbl.template",
+      "size": 102,
+      "ckey": "8096F256A6F7E126AC14D7F65E79F8ED",
+      "ekey": "FE6ACDC711E40EB63564320EBEE52BE3",
+      "available": true,
+      "nameType": 0,
+      "sha256": "66E2C9238FF3C6D799942613164BF9B844275D8E2F1BCA9CF5275565B9AC0A00"
+    },
+    {
+      "path": "customnpcs.template",
+      "cascPath": "data:data\\global\\excel\\customnpcs.template",
+      "size": 151,
+      "ckey": "8F71690D63BFFEBF6543AFFF2DC66FF7",
+      "ekey": "BA565AD16BDA48B68C51B0771223A572",
+      "available": true,
+      "nameType": 0,
+      "sha256": "1AE61C67005C185A39BCBDE8560750A1338838ABD7F737A5719D7B3AD2B5C4E2"
+    },
+    {
+      "path": "difficultylevels.bin",
+      "cascPath": "data:data\\global\\excel\\difficultylevels.bin",
+      "size": 400,
+      "ckey": "0B15C9A391BFE08A40783B5772C3B32C",
+      "ekey": "CE785738532FC47AA81DD7F66E7AB4FF",
+      "available": true,
+      "nameType": 0,
+      "sha256": "CE5ABA26C7BB51CA09827587E74F473E28F11275BB74DF8C57E62EC613281793"
+    },
+    {
+      "path": "difficultylevels.txt",
+      "cascPath": "data:data\\global\\excel\\difficultylevels.txt",
+      "size": 1076,
+      "ckey": "66C9D960FDCF4628320DD5E099029E59",
+      "ekey": "C98953DC41AD6201C4FB3A02E9CE8FAA",
+      "available": true,
+      "nameType": 0,
+      "sha256": "8DC24E9F15C236F79DBA3B039899155CF8E512BA387D97473583882358340C3E"
+    },
+    {
+      "path": "elemtypes.txt",
+      "cascPath": "data:data\\global\\excel\\elemtypes.txt",
+      "size": 195,
+      "ckey": "2DDADA1BF51E522A4F8BE26264793744",
+      "ekey": "58CAD4B590D24987594EF4E7342CCFA5",
+      "available": true,
+      "nameType": 0,
+      "sha256": "91ADDF64FF87ABB19DCCEBA77F6DA6ED84E9E4194D30EEB1D69D36EDD55CDC15"
+    },
+    {
+      "path": "errors.log",
+      "cascPath": "data:data\\global\\excel\\errors.log",
+      "size": 295,
+      "ckey": "8173B14DD9EBE16E2C297A3682FD6193",
+      "ekey": "8E3983C71646277AFFE129B6CD056527",
+      "available": true,
+      "nameType": 0,
+      "sha256": "1837920BA436B8957DDECC856AF568E192732708AD9C0EB9E4CB8DA9BCDF1B8F"
+    },
+    {
+      "path": "events.txt",
+      "cascPath": "data:data\\global\\excel\\events.txt",
+      "size": 700,
+      "ckey": "9F176B8FD0EA401F90D2803BC02C5B99",
+      "ekey": "B6376C7EC0DC1396EBE49BB5BB71F785",
+      "available": true,
+      "nameType": 0,
+      "sha256": "320E880DBDFBC3C8DB714A56C15EF7FBFB48FF115BAD6CE0A6843BB192ECFC9C"
+    },
+    {
+      "path": "experience.bin",
+      "cascPath": "data:data\\global\\excel\\experience.bin",
+      "size": 3640,
+      "ckey": "89C81FFCBB33044981B6FFDA9A2441F1",
+      "ekey": "F970E6E3FDE94B436BBF72478990E508",
+      "available": true,
+      "nameType": 0,
+      "sha256": "9D769EFD0DB3B4021311E6101EC2332E7376E71E06FBB987BCA12F10790E4945"
+    },
+    {
+      "path": "experience.txt",
+      "cascPath": "data:data\\global\\excel\\experience.txt",
+      "size": 8007,
+      "ckey": "5D7BAC9652B2F1D8710A7C8310C74DA2",
+      "ekey": "DE4437029E024742C449EFDAA0E1E402",
+      "available": true,
+      "nameType": 0,
+      "sha256": "7A3676C71F6984E6BAC6E7C2FB8F26FB1A2F876E90EA9A875915F3C2519D61B2"
+    },
+    {
+      "path": "gamble.bin",
+      "cascPath": "data:data\\global\\excel\\gamble.bin",
+      "size": 1456,
+      "ckey": "9D718D152D8473ABCE4935B0B6321D7F",
+      "ekey": "5096E46ACF2F4AA54A5C965D784AAB1F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4F46E5BA7DBB79F3C6FD1124030141C5A42232EAC69307BE217CBC9497EC2492"
+    },
+    {
+      "path": "gamble.txt",
+      "cascPath": "data:data\\global\\excel\\gamble.txt",
+      "size": 1945,
+      "ckey": "2694BABDF78853E192DFEECD9E42F0C0",
+      "ekey": "F4B9C746B09B9761CCA571CC4017A9CC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "FE26418CBFD3B774197D55D39525F6DDDB5723203BE9C38AEB0B552A09781635"
+    },
+    {
+      "path": "gems.bin",
+      "cascPath": "data:data\\global\\excel\\gems.bin",
+      "size": 13060,
+      "ckey": "65CCE7303F47A18D545C0C01221B538F",
+      "ekey": "74F696365F19DC5577AA8E7835D0096D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "7CFE306FC7DC2B776CA209E8CA014FD71B7BDA0EEE54246DF14D9141E6367189"
+    },
+    {
+      "path": "gems.txt",
+      "cascPath": "data:data\\global\\excel\\gems.txt",
+      "size": 7688,
+      "ckey": "1F7F98EB185EECA3AD01FA3816119DC9",
+      "ekey": "B45683BED61B4F4AE2E73771EE99C1B5",
+      "available": true,
+      "nameType": 0,
+      "sha256": "955D22EB1E7FCED4F138D975670DE642E2410BFD72DF03E2BCFCF689339E155B"
+    },
+    {
+      "path": "hireling.bin",
+      "cascPath": "data:data\\global\\excel\\hireling.bin",
+      "size": 45364,
+      "ckey": "08C778B5BAC0E4E0B187064A8E1557DF",
+      "ekey": "D4EBB5F9EFAE823D8AEA2EE69A68B7BA",
+      "available": true,
+      "nameType": 0,
+      "sha256": "AA78F62EA76376870B94D58AEF9957A2BA2F646A427A2241D957CA5DC6C4B614"
+    },
+    {
+      "path": "hireling.txt",
+      "cascPath": "data:data\\global\\excel\\hireling.txt",
+      "size": 33634,
+      "ckey": "7EB5B17BE8A7F4B6014E76F1A47487CD",
+      "ekey": "E47C43D2DF57BCE9C8BF76AAC27395B2",
+      "available": true,
+      "nameType": 0,
+      "sha256": "5401A23343348AAA2710337297E85D2EDF124A5F84D16CD2CA4330D3209CFA8B"
+    },
+    {
+      "path": "hitclass.bin",
+      "cascPath": "data:data\\global\\excel\\hitclass.bin",
+      "size": 60,
+      "ckey": "A17CE0AD9D09E926F16FE3D1158FAFBF",
+      "ekey": "531C4C2AA1A5D862DAFBA6D5EE4BA13B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "AD4B04EB8B90E52EDA5B589EEE7CC5D509C2A104E7259DE541550A8E53DD6D4B"
+    },
+    {
+      "path": "hitclass.txt",
+      "cascPath": "data:data\\global\\excel\\hitclass.txt",
+      "size": 279,
+      "ckey": "B61325E80BF80C28B63FACD9654FCCAA",
+      "ekey": "D492FC6F903CD51B9B693CB1C0FB8A6E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "57D43B716F248A7F72A4FEF39B774569ECACCD644396FE3DEEBF29206B3B6B30"
+    },
+    {
+      "path": "inventory.bin",
+      "cascPath": "data:data\\global\\excel\\inventory.bin",
+      "size": 7204,
+      "ckey": "42CD386481010A8E2895C2F267085A0B",
+      "ekey": "815B27C9FDBC0775F10C0DA72F001FAF",
+      "available": true,
+      "nameType": 0,
+      "sha256": "64B1D6003859E2CCFD760F6FC458E4E992F2AE081C43061A156FF2DC0098DF13"
+    },
+    {
+      "path": "inventory.txt",
+      "cascPath": "data:data\\global\\excel\\inventory.txt",
+      "size": 8423,
+      "ckey": "F107C7E8DC62DB8A1A6FA739D81E829E",
+      "ekey": "A91C98A5DBFDC19326336BCE2C481D37",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D8F404C65DDECFA39838A7258958DED34531690F612B914D12A0B4234D0855A7"
+    },
+    {
+      "path": "itemratio.bin",
+      "cascPath": "data:data\\global\\excel\\itemratio.bin",
+      "size": 412,
+      "ckey": "A14BE2029F3F1AE1EC5CFFD026FF183D",
+      "ekey": "BE2940A38F0F640C4FBE1EE3C4AC1D98",
+      "available": true,
+      "nameType": 0,
+      "sha256": "9285AFEDA0B7DE64BA57EE755B869932CB57F8C245E1A37EE56DEBF37088B0B1"
+    },
+    {
+      "path": "itemratio.txt",
+      "cascPath": "data:data\\global\\excel\\itemratio.txt",
+      "size": 662,
+      "ckey": "8DD209DE3673749DE2D8DCE084E97B4E",
+      "ekey": "3AFE19DD40E92BC673B8708FA52DEF80",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F8EBB2128C09311D2F17F9F3EA9E1933441F3322AB2C4C203EB9858A00AF90FF"
+    },
+    {
+      "path": "itemscode.bin",
+      "cascPath": "data:data\\global\\excel\\itemscode.bin",
+      "size": 259,
+      "ckey": "722E3F6ADC350145B5CE83F778E23609",
+      "ekey": "3CD822CFB84E3B22D1C63016FDCD0A74",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D9167C34416582D9AF605943DEABD45B097BEC76D90D27E7993B7D9BC6DFE2FA"
+    },
+    {
+      "path": "itemstatcost.bin",
+      "cascPath": "data:data\\global\\excel\\itemstatcost.bin",
+      "size": 119236,
+      "ckey": "C66F23DA65D7CF29170AC0813AC0A808",
+      "ekey": "BE6ACB443868A05A612B23974233CE1A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F815BC3EEA6B4DB20AE9A1AB7C592195A7073B690B9E25E64EB64C450226DF92"
+    },
+    {
+      "path": "itemstatcost.txt",
+      "cascPath": "data:data\\global\\excel\\itemstatcost.txt",
+      "size": 40068,
+      "ckey": "6F88939213D8EE97E448802E962A6469",
+      "ekey": "849E85A61DC4BC0CC30586F7428468A3",
+      "available": true,
+      "nameType": 0,
+      "sha256": "99960B46E1963B20FA120BD4D1F77E4B28138330CCEC65C7FAB0BFD3DB6FD8E8"
+    },
+    {
+      "path": "itemtypes.bin",
+      "cascPath": "data:data\\global\\excel\\itemtypes.bin",
+      "size": 25292,
+      "ckey": "41FE53BF9A1FD1F457AE7DEA741A0C49",
+      "ekey": "19719E3640242D7EB269C8BA2C36741E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "7518F334AF717749E0387A2836A989F65336C83D9361FA7E0D99CF257C3AB431"
+    },
+    {
+      "path": "itemtypes.txt",
+      "cascPath": "data:data\\global\\excel\\itemtypes.txt",
+      "size": 10452,
+      "ckey": "FA3ECF305766A4518F0AAA152D899DB4",
+      "ekey": "300E7FB76933FE6C95608B2774870C80",
+      "available": true,
+      "nameType": 0,
+      "sha256": "AE957ABDE89A2D0276A55FEFFA809E0CCBDAF82F65C6EAED9443B886B960E26A"
+    },
+    {
+      "path": "itemuicategories.bin",
+      "cascPath": "data:data\\global\\excel\\itemuicategories.bin",
+      "size": 568,
+      "ckey": "EB029F27EB21E6B04420CCEB1FDDE089",
+      "ekey": "6DD244B27A62D34C0E54E5CA71FADEDE",
+      "available": true,
+      "nameType": 0,
+      "sha256": "5254B9A6755B38777399979EBD9BE3A2CC8963AE5506A32DB7A3EA2AF2CBD588"
+    },
+    {
+      "path": "itemuicategories.txt",
+      "cascPath": "data:data\\global\\excel\\itemuicategories.txt",
+      "size": 889,
+      "ckey": "FCCA7498AC571B5FF20E97C1119ED34A",
+      "ekey": "C051F289D7C0C218270A466766DE638B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4D37D7496F9031B6DFE2F6E5EDD99DD4D8A7FA8DFD7B2905E0EED0890998F48D"
+    },
+    {
+      "path": "leveldefs.bin",
+      "cascPath": "data:data\\global\\excel\\leveldefs.bin",
+      "size": 21532,
+      "ckey": "B603958AE50E315C7293768B8AD7A172",
+      "ekey": "DB0FB1439D52A96D5DD6ABAA46FF3C2D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "DC57B3954FC70007F8D54CFC9E244BC4B8A3176F0FA6A2D3E402D7BD7ACB6637"
+    },
+    {
+      "path": "levelgroups.bin",
+      "cascPath": "data:data\\global\\excel\\levelgroups.bin",
+      "size": 2428,
+      "ckey": "87DB3B3E4622EBCEDA8BC9481D3EF662",
+      "ekey": "577790DD0CC3053FC47A61F0397D1050",
+      "available": true,
+      "nameType": 0,
+      "sha256": "67941203F011F4537595C80DA04D5CD32A642B28FAFE59B551C8A80D7EE518D3"
+    },
+    {
+      "path": "levelgroups.txt",
+      "cascPath": "data:data\\global\\excel\\levelgroups.txt",
+      "size": 5943,
+      "ckey": "486E43F703511E6EFD0F8755D0BEFBB7",
+      "ekey": "929DA6417EA8BF3255AE33AD45344F79",
+      "available": true,
+      "nameType": 0,
+      "sha256": "E38DC1EFF60432D35C75159E55584D69CB4BBD210B8BE3D793BAB92EEFEA51FA"
+    },
+    {
+      "path": "levels.bin",
+      "cascPath": "data:data\\global\\excel\\levels.bin",
+      "size": 55756,
+      "ckey": "5B84090B130D737FAFC4DAB51B2E3485",
+      "ekey": "EFC6B6507401B82731D704B12B1BE43E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D356106E45955B38BDD50CEB794CFAC29C3E0C584D7C47B41215CD5FDC41A6D2"
+    },
+    {
+      "path": "levels.txt",
+      "cascPath": "data:data\\global\\excel\\levels.txt",
+      "size": 81527,
+      "ckey": "C711F5E94C390295E445F725C632EF2B",
+      "ekey": "AB405D57A551D38A699C7E4A66B334CB",
+      "available": true,
+      "nameType": 0,
+      "sha256": "67B99EE9C928D758C25A08F3FBC8D2E02ACF57F98E5D351567E20A0FDF37427E"
+    },
+    {
+      "path": "lowqualityitems.bin",
+      "cascPath": "data:data\\global\\excel\\lowqualityitems.bin",
+      "size": 140,
+      "ckey": "B37EB7C121B352CD7305B6F8642F58BB",
+      "ekey": "04CBC4112371D59861F6D2DB5CFD07D6",
+      "available": true,
+      "nameType": 0,
+      "sha256": "AAEB6F0EAB7D768AC48ECF2FCCA82FCED595B0529467C2E6CBDD9D38AA3821E3"
+    },
+    {
+      "path": "lowqualityitems.txt",
+      "cascPath": "data:data\\global\\excel\\lowqualityitems.txt",
+      "size": 44,
+      "ckey": "5E893A25DE72EF4F2C1D1CBE00AA33E6",
+      "ekey": "5588017129A0D92555EDB9532D2DCB16",
+      "available": true,
+      "nameType": 0,
+      "sha256": "66A8A59DD88E0BED8130A08D803A057F9331F575A7C9A28F0AA622B34F098108"
+    },
+    {
+      "path": "lvlmaze.bin",
+      "cascPath": "data:data\\global\\excel\\lvlmaze.bin",
+      "size": 2272,
+      "ckey": "BE84258EBEB38D674C004D26D18A1417",
+      "ekey": "2B00C4BF2BCADB2ED5983C2D5B31178C",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4DA089A98D38235AB2B66BCFFFDE11F1A7E179C84F796E36A7F37DB0B29FC80A"
+    },
+    {
+      "path": "lvlmaze.txt",
+      "cascPath": "data:data\\global\\excel\\lvlmaze.txt",
+      "size": 3295,
+      "ckey": "B424D76AFE9CDBF5F9F141B6B109FAAD",
+      "ekey": "3738300938E58D3191CD91F17C785330",
+      "available": true,
+      "nameType": 0,
+      "sha256": "C1735A975013DC7E4804E0525C249F4C4B96AE59B714DB4773CB20231B64DD64"
+    },
+    {
+      "path": "lvlprest.bin",
+      "cascPath": "data:data\\global\\excel\\lvlprest.bin",
+      "size": 467380,
+      "ckey": "8B313EED25FCE7CF58D9627C2B8BAFBB",
+      "ekey": "047F102678C61F2EEF9D56020D7A051D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "E3D322CB05DDFC83093D04E549FF4AC0C06C519DD8854318CE628FB76E1CC694"
+    },
+    {
+      "path": "lvlprest.txt",
+      "cascPath": "data:data\\global\\excel\\lvlprest.txt",
+      "size": 130676,
+      "ckey": "BBD641D84641A12F536B3CB15B59C774",
+      "ekey": "5F0453E49EDB7D2C53BA330C3DFB0A71",
+      "available": true,
+      "nameType": 0,
+      "sha256": "C0F715A9368F9F7CCFC3C52F3C1FBD782914945877FA1CD3A711E13C13320037"
+    },
+    {
+      "path": "lvlsub.bin",
+      "cascPath": "data:data\\global\\excel\\lvlsub.bin",
+      "size": 11700,
+      "ckey": "54FB1454FF6A0C34AA8A30E573C4CA23",
+      "ekey": "39CF673D13A04779E9404F0EFE84437E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "22E983931396114BEFFE48266EDC819F5B9AFD7C4ED567048DC2AC0C7E2F2601"
+    },
+    {
+      "path": "lvlsub.txt",
+      "cascPath": "data:data\\global\\excel\\lvlsub.txt",
+      "size": 3313,
+      "ckey": "9AB01FFEA5E7625E16A3014332AC408B",
+      "ekey": "D40F37DD4791DDC77CDC089652F959FC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4E394C3CB5E36375996960284C8C8B2BFB853C9E24FA832A0E376C9B2FE75808"
+    },
+    {
+      "path": "lvltypes.bin",
+      "cascPath": "data:data\\global\\excel\\lvltypes.bin",
+      "size": 69160,
+      "ckey": "796EF673510E88CFEF29264C148864DE",
+      "ekey": "7C7551719ACDF4FC1176A3FB7B996587",
+      "available": true,
+      "nameType": 0,
+      "sha256": "19D81025895A3A3E9FAF6725D04973D4711C7D911A34A72FA9E5BE2E66101B86"
+    },
+    {
+      "path": "lvltypes.txt",
+      "cascPath": "data:data\\global\\excel\\lvltypes.txt",
+      "size": 10558,
+      "ckey": "2E3F8AFBD72863EAE1FBCE4001821E1B",
+      "ekey": "6A1F989FD31F08C4D145DF511AF5E3C4",
+      "available": true,
+      "nameType": 0,
+      "sha256": "578A75BEABF4A1C6CB11679A6F01008908CA419CCDDF8F0239384FA15081AD36"
+    },
+    {
+      "path": "lvlwarp.bin",
+      "cascPath": "data:data\\global\\excel\\lvlwarp.bin",
+      "size": 8452,
+      "ckey": "08A1F99F0677EA6F86625F42A0DB6098",
+      "ekey": "FFC498801E262403A6281ABC8A524B40",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F4A8872CDCE715444B6002C0D64275538500CA5B690286F01C9A283068D60735"
+    },
+    {
+      "path": "lvlwarp.txt",
+      "cascPath": "data:data\\global\\excel\\lvlwarp.txt",
+      "size": 5534,
+      "ckey": "BE989B465ABAC78981ECC1425561FAED",
+      "ekey": "9AD114ED6F9D91E596AE93066D9C1695",
+      "available": true,
+      "nameType": 0,
+      "sha256": "E458ABF0309FA6879E64C1AEFFA964888A860E102A203A5C922DF59D1F9678B6"
+    },
+    {
+      "path": "magicprefix.bin",
+      "cascPath": "data:data\\global\\excel\\magicprefix.bin",
+      "size": 100944,
+      "ckey": "8C5EE53CE8835055C5BA8F8F4F544337",
+      "ekey": "C49C291C8AB532CB35CBC5E4890B19D7",
+      "available": true,
+      "nameType": 0,
+      "sha256": "54A38178BD1D37C0C6B0E9037F6697DCE202FA25329F72EAD7FAB0E0C4C37853"
+    },
+    {
+      "path": "magicprefix.txt",
+      "cascPath": "data:data\\global\\excel\\magicprefix.txt",
+      "size": 59837,
+      "ckey": "7AA4C924B20F555042C0D0E011DDDB69",
+      "ekey": "CED7A0680FAA5F6B403EDDD910C0D29B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3CF2B5F730D5B93388146ACDB6E2A7CFFB0AA0BF23E2C95B2D80D00841720381"
+    },
+    {
+      "path": "magicsuffix.bin",
+      "cascPath": "data:data\\global\\excel\\magicsuffix.bin",
+      "size": 109904,
+      "ckey": "7B729508353DB152E1CBBFD54142399C",
+      "ekey": "600E9EDC9655897280E0695AD577769D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "9F2B245917FD78107FC50400808DE7B2C8B88F779E08BBB00203906DC799B0BA"
+    },
+    {
+      "path": "magicsuffix.txt",
+      "cascPath": "data:data\\global\\excel\\magicsuffix.txt",
+      "size": 68312,
+      "ckey": "1F6145EBFD42046879C81C3E5E1B2A1E",
+      "ekey": "D2003F856F6EE9149DD07971F6683C4A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "A697A051D988C78CBBBC8FE30D565CF473989817CE4D8A2BB08A321E2BC15C43"
+    },
+    {
+      "path": "misc.bin",
+      "cascPath": "data:data\\global\\excel\\misc.bin",
+      "size": 75716,
+      "ckey": "06B7062216158A31C47D75993B291CBE",
+      "ekey": "93BE35E040A55A66057AA13B3197639B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "0B28B09BD41319283B572DEAAF05552DD300A264568FDA0F7C8A73BFF605C288"
+    },
+    {
+      "path": "misc.txt",
+      "cascPath": "data:data\\global\\excel\\misc.txt",
+      "size": 62853,
+      "ckey": "292213872DD6C1ED7E8CB4D976D60A65",
+      "ekey": "2D4ACE3C80199D598F11AA8DDB32C74B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4B7259D1DB5FA0A9DA1D9530A019066CD40806EDE91A4C0F4C69F81AEBFFDB7F"
+    },
+    {
+      "path": "misscalc.txt",
+      "cascPath": "data:data\\global\\excel\\misscalc.txt",
+      "size": 1701,
+      "ckey": "FDC9765E158C9A7A5ABF71CCF1002632",
+      "ekey": "C02F4A15DFBB682AD521DBA6BAFC543F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4FD7CC4A31BD2E5C961273E5BA1C85B2FFD19A35A45BD8AD6F7F683268018576"
+    },
+    {
+      "path": "misscode.bin",
+      "cascPath": "data:data\\global\\excel\\misscode.bin",
+      "size": 3255,
+      "ckey": "00187542D8DC8C5EAC09208F400DA555",
+      "ekey": "57616AF6908162A1794C46F9AC2A3658",
+      "available": true,
+      "nameType": 0,
+      "sha256": "472530D750C1976859C53966FA7DE350C91B355EBF28E3DDB11142448CBB2F68"
+    },
+    {
+      "path": "missiles.bin",
+      "cascPath": "data:data\\global\\excel\\missiles.bin",
+      "size": 341324,
+      "ckey": "DBAA2B70B98FC79017DEA087C9EDE442",
+      "ekey": "2BDC94AAD625DA701CDAAEE1A27598CE",
+      "available": true,
+      "nameType": 0,
+      "sha256": "1FB0BF5090D879A6AD03441977F221B46A6DD1050A9ADF0D2A133D7A96AEA6CC"
+    },
+    {
+      "path": "missiles.txt",
+      "cascPath": "data:data\\global\\excel\\missiles.txt",
+      "size": 231770,
+      "ckey": "206D39F0BE2385E8ACC6D414F970712E",
+      "ekey": "49E333EA1437A4F951872B46B97CE2AF",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D1D561538D08A9D59842482A82D890A80B83FE3EF460939EFE985EC4E4904A27"
+    },
+    {
+      "path": "monai.txt",
+      "cascPath": "data:data\\global\\excel\\monai.txt",
+      "size": 17560,
+      "ckey": "B75A7D0A58F135AFC31EE512EAAF2277",
+      "ekey": "F7178B8CE7689D337136FF75208D9FEC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "7C7C7B8866C46078356BCC6118789699351004F39EDEA92922425699D6AA86A8"
+    },
+    {
+      "path": "moncalc.txt",
+      "cascPath": "data:data\\global\\excel\\moncalc.txt",
+      "size": 558,
+      "ckey": "6D97C42C0FBDBE6D52DC1D4356634C91",
+      "ekey": "C09189F727EAEF859B92B59319E8A6FE",
+      "available": true,
+      "nameType": 0,
+      "sha256": "5E144C6462A11E1B48DF097799254743F24433A6ED803EE270D3A30150A5C706"
+    },
+    {
+      "path": "moncode.bin",
+      "cascPath": "data:data\\global\\excel\\moncode.bin",
+      "size": 31925,
+      "ckey": "BE09A69C6906658FD191E6A1F640BA83",
+      "ekey": "E4356BAA0004A2758D665EFC457B2EBB",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3B256DC92E8DBDC6AB054DD4E82F6C04973AF962E1D46B3040A5942A52746C6C"
+    },
+    {
+      "path": "monequip.bin",
+      "cascPath": "data:data\\global\\excel\\monequip.bin",
+      "size": 1264,
+      "ckey": "8CCA1E601550CDE7D20DF28FF7077FC3",
+      "ekey": "5435FA808A22D68DEA47619D553E1351",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D99930FA66DA9B03E60305266D6D0D3D7E24E3AAC5E742E1AE9967A2107DC8AD"
+    },
+    {
+      "path": "monequip.txt",
+      "cascPath": "data:data\\global\\excel\\monequip.txt",
+      "size": 1764,
+      "ckey": "409D3924778617F98CBF270FFC35504E",
+      "ekey": "71D4793187C692A62B2C62516FEFA3CC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F731A867DC96C1F44D23E48B6E819B976280DA907F7A95FCA0DBFE97D9E83F0A"
+    },
+    {
+      "path": "monlvl.bin",
+      "cascPath": "data:data\\global\\excel\\monlvl.bin",
+      "size": 13324,
+      "ckey": "FCD70F54692495E8D0856B3E22657BB5",
+      "ekey": "9E43119CE2326BA2AA8C3BB86C03EF6A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "7DC108D66DF6BAD7032BD6678D23F9864B398F2B71EE24C3AC88528DC7832499"
+    },
+    {
+      "path": "monlvl.txt",
+      "cascPath": "data:data\\global\\excel\\monlvl.txt",
+      "size": 14707,
+      "ckey": "3A638A83029A8F0F61CDB0520CA2EA0C",
+      "ekey": "B1187D7A51D972D6183129DF8BBC3FF0",
+      "available": true,
+      "nameType": 0,
+      "sha256": "BDA243EFE1D1E9591F75B8CF97AC73F78FF691362381F35CC000233EB46C092A"
+    },
+    {
+      "path": "monmode.bin",
+      "cascPath": "data:data\\global\\excel\\monmode.bin",
+      "size": 580,
+      "ckey": "9826709FFDF4859CE3CEA46C2D98040D",
+      "ekey": "5A1956783AD2C72EB2BB301A60BE8707",
+      "available": true,
+      "nameType": 0,
+      "sha256": "71792AAA383158063667ADDDC1DD22A0DDEA1CB03ECB076A80F4BF8DB4DF6A9D"
+    },
+    {
+      "path": "monmode.txt",
+      "cascPath": "data:data\\global\\excel\\monmode.txt",
+      "size": 238,
+      "ckey": "1B1162651F55019924F5A09ABFF6B305",
+      "ekey": "B2FF97BC51F95DDFB51B7EF9DF137287",
+      "available": true,
+      "nameType": 0,
+      "sha256": "2663C45B5CA74916DB0114335BABE7FC6DD9D357322892DF501F7850E4385B52"
+    },
+    {
+      "path": "monpet.bin",
+      "cascPath": "data:data\\global\\excel\\monpet.bin",
+      "size": 21484,
+      "ckey": "B76E4C0B1659FF7510A50F5E77E795E4",
+      "ekey": "EB190B96138B2C6A336395A7E29118D2",
+      "available": true,
+      "nameType": 0,
+      "sha256": "108B42DB4B006ECCFF57CD5D7E5BF85DD96270B59DAE5EF8B63EBCFAD5113FE1"
+    },
+    {
+      "path": "monpet.txt",
+      "cascPath": "data:data\\global\\excel\\monpet.txt",
+      "size": 116484,
+      "ckey": "B9CA11F0C3D81C9CBE644EC62D8B627F",
+      "ekey": "6F9B0D7B9C02FBD2D2BDEB46A33E4EB9",
+      "available": true,
+      "nameType": 0,
+      "sha256": "44963AE6373A8B58FFAF82DF1A256E8F844F86D1B67B347A4B20064905CC788D"
+    },
+    {
+      "path": "monplace.txt",
+      "cascPath": "data:data\\global\\excel\\monplace.txt",
+      "size": 658,
+      "ckey": "74428F002BA2D5C52703889AF88724AA",
+      "ekey": "E6542927DD3496973BA492E8324DBCF6",
+      "available": true,
+      "nameType": 0,
+      "sha256": "1BC9F2D3ACF57B65EB7036641C54E7424E5F235BFCD79A71A4EC040B46BC0B75"
+    },
+    {
+      "path": "monpreset.bin",
+      "cascPath": "data:data\\global\\excel\\monpreset.bin",
+      "size": 924,
+      "ckey": "6CDBE2DE22DB7FD12293141BCF5D4523",
+      "ekey": "8142F0974472F0A5DA7EEA4EB4A25AAA",
+      "available": true,
+      "nameType": 0,
+      "sha256": "97DFB2D0C391F842601F748628033D2C3081EB3027D016EB82944E5C6A76AE59"
+    },
+    {
+      "path": "monpreset.txt",
+      "cascPath": "data:data\\global\\excel\\monpreset.txt",
+      "size": 3603,
+      "ckey": "6C99A999CE1D46A9E135C1E16EDF9FFD",
+      "ekey": "DEDF5AE5E3E272F150E91C7CFABE4BE4",
+      "available": true,
+      "nameType": 0,
+      "sha256": "235BEDD087A3D66BA647B62D35F67D678E1D4B2C3CC6549D1BF31D17B2B4003D"
+    },
+    {
+      "path": "monprop.bin",
+      "cascPath": "data:data\\global\\excel\\monprop.bin",
+      "size": 4060,
+      "ckey": "BFED5D2192E4B429AF64A735D39313E0",
+      "ekey": "AEDDBA6210FCDA973268C21029A4CE65",
+      "available": true,
+      "nameType": 0,
+      "sha256": "BC85BF2F9607EC8FC0CCACF82E0B1C1E2FC02EDA80D1DC81D2D66DC39CC92DB9"
+    },
+    {
+      "path": "monprop.txt",
+      "cascPath": "data:data\\global\\excel\\monprop.txt",
+      "size": 2454,
+      "ckey": "A26A5F4CED8CB495F9509F5388AF25AD",
+      "ekey": "BF7B69C9252E2934F0FD88BC8109E243",
+      "available": true,
+      "nameType": 0,
+      "sha256": "2E7B22F19AA571F1EE3CCA8426E219D146471B0B13A25C5FB70A452C2C8C9F4D"
+    },
+    {
+      "path": "monseq.bin",
+      "cascPath": "data:data\\global\\excel\\monseq.bin",
+      "size": 6184,
+      "ckey": "904DCD7D497FC0AD7162A0FA1286B454",
+      "ekey": "551E234B0560CD32AD934B1400596EBD",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D122A76C8BE8B51358F090AFD523A13EB9B31E5EDB7B995844744CB7815A0EF9"
+    },
+    {
+      "path": "monseq.txt",
+      "cascPath": "data:data\\global\\excel\\monseq.txt",
+      "size": 28393,
+      "ckey": "3DA07990BF1B2BF47A5B2FFD793B7E20",
+      "ekey": "0CC55543F2FC9F37EB2A73964C8DEC02",
+      "available": true,
+      "nameType": 0,
+      "sha256": "A48A884A654CAB7CAFE0BE2764FA8A77F428A9B48855D27461D133A1F553898C"
+    },
+    {
+      "path": "monsounds.bin",
+      "cascPath": "data:data\\global\\excel\\monsounds.bin",
+      "size": 22204,
+      "ckey": "F9438C06AE8A31361D0A913CBA5A9F40",
+      "ekey": "7B907C24982660343EC1835A07DBFA88",
+      "available": true,
+      "nameType": 0,
+      "sha256": "A57665169673391DBFC2FF462AF45359C00DD28B3EFE7E0DAF824BDED07A6989"
+    },
+    {
+      "path": "monsounds.txt",
+      "cascPath": "data:data\\global\\excel\\monsounds.txt",
+      "size": 25111,
+      "ckey": "B96A74707E0775A3EFC0EEBEECFAB68D",
+      "ekey": "105C77316E1A5A041B7EEE6C7AD87FA9",
+      "available": true,
+      "nameType": 0,
+      "sha256": "8AB5439DCF8D26B1B0F1B3A3413E07EDFBC6C0F2FF83F90A5F5D3604029988F0"
+    },
+    {
+      "path": "monstats.bin",
+      "cascPath": "data:data\\global\\excel\\monstats.bin",
+      "size": 381512,
+      "ckey": "6D6AB867FA4A25E021E07DB455A5342F",
+      "ekey": "55AD33E6FD69BDF0D7E40CB2BDA98D40",
+      "available": true,
+      "nameType": 0,
+      "sha256": "DECDB2FC22BA3AA888278720395AC24FCA8282F252291CA750AB22AAC77F4765"
+    },
+    {
+      "path": "monstats.txt",
+      "cascPath": "data:data\\global\\excel\\monstats.txt",
+      "size": 494490,
+      "ckey": "B0B8BF1C1E3092F1BA212445EF6F91D3",
+      "ekey": "AB4237663E6032836BF1B297C745757F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "8831FCE35FC549A4849B13A1BD467EB34913F58B8269C0C1BBFA76AEABB6D32E"
+    },
+    {
+      "path": "monstats2.bin",
+      "cascPath": "data:data\\global\\excel\\monstats2.bin",
+      "size": 184412,
+      "ckey": "DAABF31D69619F18768C98FAAA7470D9",
+      "ekey": "AD4F158B330769F2101B747CE35CB158",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F13B15EAFDF4B9EF2416A0DBC55202A5FB81E076AE47111551098E46A2AB1248"
+    },
+    {
+      "path": "monstats2.txt",
+      "cascPath": "data:data\\global\\excel\\monstats2.txt",
+      "size": 140282,
+      "ckey": "2F5DDDF038E01A0C36F8C656D0FD3EEB",
+      "ekey": "9186DCA2407DA432F5864D7D4528DCD9",
+      "available": true,
+      "nameType": 0,
+      "sha256": "A5D0F396D7916299F0925EBFBE13FBF61F1DED6D4B0577FA861CCA81BAC04C92"
+    },
+    {
+      "path": "montype.bin",
+      "cascPath": "data:data\\global\\excel\\montype.bin",
+      "size": 712,
+      "ckey": "16F139EB85AF779CEB317789FB6C338B",
+      "ekey": "7F338194E2C3B3B18C73956B148BDBCA",
+      "available": true,
+      "nameType": 0,
+      "sha256": "6555AE02AA7FFDCFADF042D4FE60DDA894CDF4AAD743D3BA2086484232E74C0B"
+    },
+    {
+      "path": "montype.txt",
+      "cascPath": "data:data\\global\\excel\\montype.txt",
+      "size": 1312,
+      "ckey": "489B573E6F7B90454E5835DC233BBD39",
+      "ekey": "D4E698D581F212FDBEC908E41354B0B1",
+      "available": true,
+      "nameType": 0,
+      "sha256": "956F8D116381D526985630858E6CDCB3941D446A92699DC074E8A7047616EF5F"
+    },
+    {
+      "path": "monumod.bin",
+      "cascPath": "data:data\\global\\excel\\monumod.bin",
+      "size": 1444,
+      "ckey": "2F591656D276A70FB12B2B929A6DEB89",
+      "ekey": "B2861A58E043FB57F350530A1A709EA0",
+      "available": true,
+      "nameType": 0,
+      "sha256": "23EC176F2604A2ED5A6D40CA79FAAD30CF538FA04D0C8A8517CF908358FA70C9"
+    },
+    {
+      "path": "monumod.txt",
+      "cascPath": "data:data\\global\\excel\\monumod.txt",
+      "size": 3236,
+      "ckey": "0FD26E905A7527AA47A959BDBD1EEE18",
+      "ekey": "D69C425F1D9BC00CD08B16C61B9C3A27",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3A192913D0F45FCD6FA3660B080040027586C5224AF0D6A749FAE7AE912FD0AD"
+    },
+    {
+      "path": "npc.bin",
+      "cascPath": "data:data\\global\\excel\\npc.bin",
+      "size": 1296,
+      "ckey": "E7F44DE4906878E9D413B34CCB1BF97F",
+      "ekey": "47521ED5E5C95B5C6F04912C030B37DC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "7BC6BF435C382570145BB16567DD022D2D59D8B4CF744F3F157DF1A9D2886973"
+    },
+    {
+      "path": "npc.txt",
+      "cascPath": "data:data\\global\\excel\\npc.txt",
+      "size": 1289,
+      "ckey": "407209DBF41DE1164069171A7E1E904E",
+      "ekey": "1249AA9EE4B53AF852746E0E923F8A2A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "A08A6E0F9F3E8A9C3341D73D07B9F4A8E580B7C155F4439CD7E79A43E05080E5"
+    },
+    {
+      "path": "objects.bin",
+      "cascPath": "data:data\\global\\excel\\objects.bin",
+      "size": 211324,
+      "ckey": "4A678B76215DB061DABA35165042656D",
+      "ekey": "208119F3ABB97903D94ED36BEC7171BC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "E6A366FA28A0B593408722E97522B754B22CFA90B919D0C7A8E8F9F0D6D66E86"
+    },
+    {
+      "path": "objects.txt",
+      "cascPath": "data:data\\global\\excel\\objects.txt",
+      "size": 208570,
+      "ckey": "C489EA575938D687A93978DB6BADEBE5",
+      "ekey": "7FACFD95893C75EAF64CA15FA302219E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "2E39BD709D38386ED5657693F202767E733E85691F4BD680372E219E93579DC7"
+    },
+    {
+      "path": "objecttokens.bin",
+      "cascPath": "data:data\\global\\excel\\objecttokens.bin",
+      "size": 21136,
+      "ckey": "8ECF230588F6A5FD89E1EA456D411533",
+      "ekey": "DD117EB257D919260AA201C0CD3C0AD6",
+      "available": true,
+      "nameType": 0,
+      "sha256": "5B4C8401C86395471E15F531F89D7A9F8980E52106D16AE897DEDAC73966B6A1"
+    },
+    {
+      "path": "objgroup.bin",
+      "cascPath": "data:data\\global\\excel\\objgroup.bin",
+      "size": 6388,
+      "ckey": "53B202F1825D4C20D9758A54A6C53ACE",
+      "ekey": "8722C567EA95507CD30E5D2D93B831F8",
+      "available": true,
+      "nameType": 0,
+      "sha256": "C85B86FC1AA29FA80C44B21A388B608FE244F07C62429A7CDED1B6DD3B762E1C"
+    },
+    {
+      "path": "objgroup.txt",
+      "cascPath": "data:data\\global\\excel\\objgroup.txt",
+      "size": 10333,
+      "ckey": "6C139E27BAAC7CF7235C87D4570A3864",
+      "ekey": "469E269A79A8DD4D65A39C5230F6456A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4B16D5F6E4FC35985148D7576519F484F5E270A22ABB697D247CDBD2A836D8B7"
+    },
+    {
+      "path": "objmode.bin",
+      "cascPath": "data:data\\global\\excel\\objmode.bin",
+      "size": 292,
+      "ckey": "CB90BCFF54EE1053686A365DB5C485C8",
+      "ekey": "B1E38A5413A26915B2FD225EAE440AA3",
+      "available": true,
+      "nameType": 0,
+      "sha256": "1CFBD113DBD6BF4804DDC33622F40A5E6C183C8F2830ECF240807D55F2202059"
+    },
+    {
+      "path": "objmode.txt",
+      "cascPath": "data:data\\global\\excel\\objmode.txt",
+      "size": 114,
+      "ckey": "9A0CC0A8B1ED1C535C73E62C630DD872",
+      "ekey": "177CF8CED458802BA2591A400AF941DB",
+      "available": true,
+      "nameType": 0,
+      "sha256": "23FD7AB06A6942239C75DDD97540D89B16FCD88F51A956E61794700353BABEC3"
+    },
+    {
+      "path": "objpreset.bin",
+      "cascPath": "data:data\\global\\excel\\objpreset.bin",
+      "size": 7012,
+      "ckey": "999AF93B0C1BCBE3385D82306A7C2535",
+      "ekey": "69A734796246108F7D3F58F4496D418A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "B15BFA892D32071057F4431F039C031D9A4EA44570D3A3D4F69ECFDF247B2A57"
+    },
+    {
+      "path": "objpreset.txt",
+      "cascPath": "data:data\\global\\excel\\objpreset.txt",
+      "size": 13096,
+      "ckey": "503A14663C9B54DCDEA513660335AEFA",
+      "ekey": "BEC34CFF7DA878BD65CDABD1B85115F4",
+      "available": true,
+      "nameType": 0,
+      "sha256": "277F58C9216433BBDDC3F39CE9193526A35256481F2DEB9BC312E27F6C3EED1C"
+    },
+    {
+      "path": "objtype.txt",
+      "cascPath": "data:data\\global\\excel\\objtype.txt",
+      "size": 9052,
+      "ckey": "A4CAABE348BBFC2796A5F917B4BFCB31",
+      "ekey": "387EA7A2C2565302A4495A395826E57A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "7F06868DBDAD44C10A4F4C6742238568430ECC2F0CEF6DE7D092D6CF48EFDCB0"
+    },
+    {
+      "path": "overlay.bin",
+      "cascPath": "data:data\\global\\excel\\overlay.bin",
+      "size": 74820,
+      "ckey": "ECEED1E0A2B2C5EC1161FEC1C0FFA7B8",
+      "ekey": "21A844B769A1665326A7D4B004EC61A2",
+      "available": true,
+      "nameType": 0,
+      "sha256": "679D301E16BDCF09F0317FD663224BF5F46D6DACEE7A40A45B122179B4BC3697"
+    },
+    {
+      "path": "overlay.txt",
+      "cascPath": "data:data\\global\\excel\\overlay.txt",
+      "size": 32489,
+      "ckey": "E39CF1F75DE4D1793EF09E6A4077C571",
+      "ekey": "A584E0F70D0BA8FB5DE56B970006AD46",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D683B4D70F9242FD55F4697A0152FD552CCCEC0A28920D88DCF0AEE84FE36BA9"
+    },
+    {
+      "path": "pettype.bin",
+      "cascPath": "data:data\\global\\excel\\pettype.bin",
+      "size": 4404,
+      "ckey": "B07C01724395AEA39323C4246CD74162",
+      "ekey": "FC43F2CDCADFA1772BF870340EB0838A",
+      "available": true,
+      "nameType": 0,
+      "sha256": "41892FE3D625E7C82D906F02F4F9F79A428DDDA7E6FB467296811DB6B719342A"
+    },
+    {
+      "path": "pettype.txt",
+      "cascPath": "data:data\\global\\excel\\pettype.txt",
+      "size": 1565,
+      "ckey": "1F5A113D7D8B16C1A4757850F47D9FB1",
+      "ekey": "973D1FD3CC983818DDE0519A564B7D44",
+      "available": true,
+      "nameType": 0,
+      "sha256": "56B3FF2DA487A53F39BE9E5E5E9D1609966E37CFE7FD408375B1BFF8336DF975"
+    },
+    {
+      "path": "playerclass.bin",
+      "cascPath": "data:data\\global\\excel\\playerclass.bin",
+      "size": 420,
+      "ckey": "1B8818143A5FDA05D88363738A53F137",
+      "ekey": "9433774891B1D82D33BB0841FD98FCC0",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3E26273370FED3ADDE0DBE8BEAA07F0719516C74F8930E9C8D978824AD0E21D9"
+    },
+    {
+      "path": "playerclass.txt",
+      "cascPath": "data:data\\global\\excel\\playerclass.txt",
+      "size": 141,
+      "ckey": "2E5D2F993B58F86BFDF436D9155B9C45",
+      "ekey": "A3DC09AFFDC1FC94085A8EAF75F19B35",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F0D3AC87EE6D565D7B311BE4023D808FFA50BF36C331A2C6A298BE9178D2457A"
+    },
+    {
+      "path": "plrmode.bin",
+      "cascPath": "data:data\\global\\excel\\plrmode.bin",
+      "size": 724,
+      "ckey": "216A3A6B62F7A2A3EC54E6F1F0E438BA",
+      "ekey": "8F76273A333C10884A268D5068E4A09C",
+      "available": true,
+      "nameType": 0,
+      "sha256": "2516E64ACA39FB828CF4F01E93698EBCD28B7AAD8C00D504C0A5C91094FC1777"
+    },
+    {
+      "path": "plrmode.txt",
+      "cascPath": "data:data\\global\\excel\\plrmode.txt",
+      "size": 302,
+      "ckey": "541564EC81C46B542F9C391333239D84",
+      "ekey": "A11367972F2226BDF32D0AE107017EDF",
+      "available": true,
+      "nameType": 0,
+      "sha256": "23106DA08603BC215624E2837F3990B5ED4B5521BBE8B4A80B0EA6B6502FB8E3"
+    },
+    {
+      "path": "plrtype.bin",
+      "cascPath": "data:data\\global\\excel\\plrtype.bin",
+      "size": 292,
+      "ckey": "2AF047D565EA63F5F48A881F90BB1C0C",
+      "ekey": "50BDE16C10AD88DF53E56DC1C74F63BF",
+      "available": true,
+      "nameType": 0,
+      "sha256": "2F2B267CA0F9A22A9727306EDF75F6DB40FD91918DDBE1DF28DA564A435AFA63"
+    },
+    {
+      "path": "plrtype.txt",
+      "cascPath": "data:data\\global\\excel\\plrtype.txt",
+      "size": 126,
+      "ckey": "DD6E81B53219E9F2B9B3C27FFCDC59D4",
+      "ekey": "AC3FA9E3585474E66C43B89F21B5E9BC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "9155B6AA48974EBE619B0CFE65A8750C19A15C6F410B7A511D5251A0B2D28B0C"
+    },
+    {
+      "path": "properties.bin",
+      "cascPath": "data:data\\global\\excel\\properties.bin",
+      "size": 13636,
+      "ckey": "A0BA480F181307F3B89DF0E717D03FBC",
+      "ekey": "E19B36BDEF03FFD07A2EFB1EF579443E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "95D6038CF98CC250AFB86B04FB6AECD56FEF964735E169B8F0F3F773599DE8DE"
+    },
+    {
+      "path": "properties.txt",
+      "cascPath": "data:data\\global\\excel\\properties.txt",
+      "size": 37952,
+      "ckey": "862009E43295BE572856BA671A7B1E9D",
+      "ekey": "26B8FB6848736E6AECCAA212E864F07D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "382528362751C68646E98D4A296C357276AB9A1EE0B7053C29E5DF6B6252A1EF"
+    },
+    {
+      "path": "propertygroups.bin",
+      "cascPath": "data:data\\global\\excel\\propertygroups.bin",
+      "size": 6604,
+      "ckey": "387843866F51AE35E6C4F81337C09279",
+      "ekey": "233C4E2BF8D6AA993BE6F21ACB151A50",
+      "available": true,
+      "nameType": 0,
+      "sha256": "673AAE5ACB3E61546C92AFD0A4092AB799DCBF4F57E0380C7A4336B8EAF1D4CC"
+    },
+    {
+      "path": "propertygroups.txt",
+      "cascPath": "data:data\\global\\excel\\propertygroups.txt",
+      "size": 3779,
+      "ckey": "C404F62258AAF5FB095BBB6AAAD2F55E",
+      "ekey": "66BEDF712A7CFA086FCB1C7560830915",
+      "available": true,
+      "nameType": 0,
+      "sha256": "926D7F3C937D325D60AECEBDCF25E246449B5004BE48A14DE1E30918FACDFE64"
+    },
+    {
+      "path": "qualityitems.bin",
+      "cascPath": "data:data\\global\\excel\\qualityitems.bin",
+      "size": 356,
+      "ckey": "E43786E0C624DCD4BD9C1AC81A76E9F2",
+      "ekey": "A7E584DDC87B435AED858B7FD69E5835",
+      "available": true,
+      "nameType": 0,
+      "sha256": "35B1BB03212736C9273B152666F7D6873386671F6F6A50AE03B2AD3634F9E697"
+    },
+    {
+      "path": "qualityitems.txt",
+      "cascPath": "data:data\\global\\excel\\qualityitems.txt",
+      "size": 459,
+      "ckey": "7409723FB65065B72244CCCD2975F0D5",
+      "ekey": "75467685ED6D952C56C925EEADD849AA",
+      "available": true,
+      "nameType": 0,
+      "sha256": "2AADD8C89316F3C58DD958839776AB01C3937A5E2E5D03188FC26B27309F4444"
+    },
+    {
+      "path": "rareprefix.bin",
+      "cascPath": "data:data\\global\\excel\\rareprefix.bin",
+      "size": 3316,
+      "ckey": "CC62DFBBAA0C906353776180D263F0DD",
+      "ekey": "9744B9D946E5E019ABFA99A69B280A99",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3138A4E84B612611CFE6D929E5DE8E800E417C3F26EE9E98EE203F4D41D49617"
+    },
+    {
+      "path": "rareprefix.txt",
+      "cascPath": "data:data\\global\\excel\\rareprefix.txt",
+      "size": 1474,
+      "ckey": "A3CE335722A5BFB8BD2326EED09087A0",
+      "ekey": "86B01EA0CD0FFA6CE5F8DBDE2EDA6154",
+      "available": true,
+      "nameType": 0,
+      "sha256": "5CA9268675AB07CFBBCC74380BEE6F76793A16DF4FD9D534EF1E87FFDE1CC289"
+    },
+    {
+      "path": "raresuffix.bin",
+      "cascPath": "data:data\\global\\excel\\raresuffix.bin",
+      "size": 11164,
+      "ckey": "D65F7CF55ED0AE3657BE5703BB3C7411",
+      "ekey": "6E2EF37B541D4A4A179664A2D3496B4D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "710F9AC7F3012D804AE8A70F04E9B28A97B259FC042B9A5D2CACF23B984518D4"
+    },
+    {
+      "path": "raresuffix.txt",
+      "cascPath": "data:data\\global\\excel\\raresuffix.txt",
+      "size": 4384,
+      "ckey": "569E5CFCA330858159825616729C6A69",
+      "ekey": "24AC7445119A31E694ABAF35092F4096",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3E1C88BB069730D42F0586A3E585B67B05C7A010920ED727D0432101A956F493"
+    },
+    {
+      "path": "runes.bin",
+      "cascPath": "data:data\\global\\excel\\runes.bin",
+      "size": 41996,
+      "ckey": "3B0EE8CDBA212367A486169D8EA3117B",
+      "ekey": "65CF0085575F001A742E9D74C0C44B5F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "57E1F7BA208BB5FC431C5A4B7C4D727A3DD6FB0A1B5EB58059721161E1241FFF"
+    },
+    {
+      "path": "runes.txt",
+      "cascPath": "data:data\\global\\excel\\runes.txt",
+      "size": 25003,
+      "ckey": "251D1D7265BC7D603794EC6A7CE18F9D",
+      "ekey": "4CEC6DD4CD1ED76C1B90D9C13CBAAA32",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4822D163649517A6A0A552E86B20B50ACCDE0EFE450ECE5A9FB986308582F4C8"
+    },
+    {
+      "path": "runeworduicategories.bin",
+      "cascPath": "data:data\\global\\excel\\runeworduicategories.bin",
+      "size": 44,
+      "ckey": "7742E950D2330BE5AAC7C2F2CD327C57",
+      "ekey": "926E3CC395D1E74B4659CCA75E378419",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D559DEEE185BB81CD6B890CFDA99F772B0578E44AABF0A4714AFE210D7D4C1DE"
+    },
+    {
+      "path": "runeworduicategories.txt",
+      "cascPath": "data:data\\global\\excel\\runeworduicategories.txt",
+      "size": 106,
+      "ckey": "D24E747E19301D51926F8BF1A158CC01",
+      "ekey": "3EFE2FA6106271ABF43CEAA29B1C9493",
+      "available": true,
+      "nameType": 0,
+      "sha256": "9ECA4880FCCCE2F00E1FB0C0E4807DDCB738E607F56E416AE248A03BE0B52CC9"
+    },
+    {
+      "path": "setitems.bin",
+      "cascPath": "data:data\\global\\excel\\setitems.bin",
+      "size": 64404,
+      "ckey": "C96AA54969D5233BFC88581959C7DEE9",
+      "ekey": "ABB030836399C79D11B9190239C229C5",
+      "available": true,
+      "nameType": 0,
+      "sha256": "6959928A2AC497168E8B9C7D980B2D1038E189EAA9FEA43FC572D37BCB90A2EB"
+    },
+    {
+      "path": "setitems.txt",
+      "cascPath": "data:data\\global\\excel\\setitems.txt",
+      "size": 31325,
+      "ckey": "A2A0D4CE40327AB946EAC14112F4EF80",
+      "ekey": "21BD433CD1024FA6F71C0DE9C717AD86",
+      "available": true,
+      "nameType": 0,
+      "sha256": "1AA7E5DBB16E27442634A630489B3EEEBC37F568BF90A1AFA761EA1E54557DB4"
+    },
+    {
+      "path": "sets.bin",
+      "cascPath": "data:data\\global\\excel\\sets.bin",
+      "size": 10504,
+      "ckey": "DAE2D7C21D579DB7CC3DBEF47F46D6E6",
+      "ekey": "8C251DB24637FEC84AABC062FAA0BEA0",
+      "available": true,
+      "nameType": 0,
+      "sha256": "B05D16C0B7E1A88946A0AFFF7C47C2869007DE7392374FF26786ED2B076C4C5C"
+    },
+    {
+      "path": "sets.txt",
+      "cascPath": "data:data\\global\\excel\\sets.txt",
+      "size": 7114,
+      "ckey": "84315A83EE5B2984AAFA768FDB7BEAA2",
+      "ekey": "DBE572AF1408A20D4994420779DA9E94",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3717D71FFB5A89087B1BFB9B191B625D11FDA1232DE9AC3E50697D1C894F9614"
+    },
+    {
+      "path": "shrines.bin",
+      "cascPath": "data:data\\global\\excel\\shrines.bin",
+      "size": 648,
+      "ckey": "13A7620A2282013E2189821DBEC87B9B",
+      "ekey": "E3CBFBF4FCBE5498E90DC6A793A53A2E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "9F29EB9EB29B2ECEFE1D5337AEAD1A2AD9B529E24360F4CED399C13ADCC1D926"
+    },
+    {
+      "path": "shrines.txt",
+      "cascPath": "data:data\\global\\excel\\shrines.txt",
+      "size": 2474,
+      "ckey": "9F2EB1DFA20EFFE8E6462EB0C5893772",
+      "ekey": "689FAD57F686A547C38915880CC3FEBE",
+      "available": true,
+      "nameType": 0,
+      "sha256": "B937A0F5F20C3471B1FF035807E500B3DEDA21193EB637F49A918A27D89EBE93"
+    },
+    {
+      "path": "skillcalc.txt",
+      "cascPath": "data:data\\global\\excel\\skillcalc.txt",
+      "size": 5225,
+      "ckey": "154C6F40B655FE927BBCCB3293AF203E",
+      "ekey": "DFF600E8B68DFD44890786193B2C8533",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4028D9985368B89FE5D84A93F60177ECC34957599A170A4F8496DDD169636A4F"
+    },
+    {
+      "path": "skilldesc.bin",
+      "cascPath": "data:data\\global\\excel\\skilldesc.bin",
+      "size": 78904,
+      "ckey": "EAD92BAD05CAC036CA1B94A5566486A8",
+      "ekey": "6B387E973B4E3DDF05FB09C60F416153",
+      "available": true,
+      "nameType": 0,
+      "sha256": "6A67C575C996419C45A24C39050CC67AE4B6983B65FE83CCDE0902630507F7C1"
+    },
+    {
+      "path": "skilldesc.txt",
+      "cascPath": "data:data\\global\\excel\\skilldesc.txt",
+      "size": 95092,
+      "ckey": "FEA803A53A3D06DA5683024B8917DA24",
+      "ekey": "1F5019A2F9C8B055B8E21C2670355CB4",
+      "available": true,
+      "nameType": 0,
+      "sha256": "CDF11C518EAB9FE678616A237FC64B28CEA5EA51649EC641A14E09B06EA34B38"
+    },
+    {
+      "path": "skilldesccode.bin",
+      "cascPath": "data:data\\global\\excel\\skilldesccode.bin",
+      "size": 9753,
+      "ckey": "9D61A48DEC5F3E9B884D13C850FE1EAC",
+      "ekey": "5042B85BB08C3DF43A525D233CE78711",
+      "available": true,
+      "nameType": 0,
+      "sha256": "9744CFD6A8FF0E27E593773863805EC7EB2E07BCBAE5ED45E2BAAC2DCCF7B400"
+    },
+    {
+      "path": "skills.bin",
+      "cascPath": "data:data\\global\\excel\\skills.bin",
+      "size": 320896,
+      "ckey": "E27C3EF9032EFDFD45245DCC5136CB04",
+      "ekey": "E804F32B9029C6C3B7B3A72645942B1E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "46F88F32255AA522AD05044A60B480A895D48AFF4B0A2FF9CB02CC34A2C2C48E"
+    },
+    {
+      "path": "skills.txt",
+      "cascPath": "data:data\\global\\excel\\skills.txt",
+      "size": 270115,
+      "ckey": "C99D0AE4D49A399143DEB25823B87B16",
+      "ekey": "4ECAD22F9D195DEA09D028BB4C999E39",
+      "available": true,
+      "nameType": 0,
+      "sha256": "56944CB6B6B0F3C57F7B690977987A732AFEAFC961FA9DC969E7796E54C93F3F"
+    },
+    {
+      "path": "skillscode.bin",
+      "cascPath": "data:data\\global\\excel\\skillscode.bin",
+      "size": 10324,
+      "ckey": "E0B36AAEDF35AC2DA663D5FA55A0C4B6",
+      "ekey": "6B1164F2C3BBBE179B7CCB3D72E1215E",
+      "available": true,
+      "nameType": 0,
+      "sha256": "673B2AFA461548C7F0471BA95C8747240F57216BE21B9A1AF45224A5A8314AC1"
+    },
+    {
+      "path": "soundchannels.json",
+      "cascPath": "data:data\\global\\excel\\soundchannels.json",
+      "size": 7494,
+      "ckey": "058581758F611937024D6C00211EC6F6",
+      "ekey": "6C841B0F095BCE76F7C5FC8C8F735E26",
+      "available": true,
+      "nameType": 0,
+      "sha256": "872DD8E46817BC6D7023ED3222B6422277E201C88C4E3D520501938819333D10"
+    },
+    {
+      "path": "soundenviron.bin",
+      "cascPath": "data:data\\global\\excel\\soundenviron.bin",
+      "size": 14596,
+      "ckey": "67B011E5AE14A9380C0730B53881D194",
+      "ekey": "82318CF88947F034D79DA2D2F93AFF50",
+      "available": true,
+      "nameType": 0,
+      "sha256": "81EB0E3CFB9E8AE3071D85C61AC9A59E6205DC22E36294686F00D6712D688BD5"
+    },
+    {
+      "path": "soundenviron.txt",
+      "cascPath": "data:data\\global\\excel\\soundenviron.txt",
+      "size": 20261,
+      "ckey": "EB6810DAC2AF68856CA473DEAF3D2517",
+      "ekey": "49287C15C9304B4A50B29354D102428B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F7C4F82380D239A82DCE54E2987B8F624933C16A4FB100150B7CEC7243A00F78"
+    },
+    {
+      "path": "sounds.bin",
+      "cascPath": "data:data\\global\\excel\\sounds.bin",
+      "size": 3716860,
+      "ckey": "8857ED76B9EE282FBF28AF7061A844BF",
+      "ekey": "6BDB2A8EDD4D08CBA293D550407543B7",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D4F53447B5C1F5564773A63180FF85C35D8FAB4CB31AA393A65C68DB11AAF323"
+    },
+    {
+      "path": "sounds.txt",
+      "cascPath": "data:data\\global\\excel\\sounds.txt",
+      "size": 2022802,
+      "ckey": "FC8F6F2D694202E150AFB48FB1695E57",
+      "ekey": "0E45BAF9701EF103396E7277DE8E2678",
+      "available": true,
+      "nameType": 0,
+      "sha256": "C80B4D612E6F33EDFEA589D2FB6757B8FB92FADD8FC8A87A6E89CA6EEEE2A512"
+    },
+    {
+      "path": "states.bin",
+      "cascPath": "data:data\\global\\excel\\states.bin",
+      "size": 15780,
+      "ckey": "731B590F40F1774469A68C23A029628D",
+      "ekey": "56409AA87BDF7537C7697E82A5F2220B",
+      "available": true,
+      "nameType": 0,
+      "sha256": "4E1397B008816C299479517292F6BCE8C3DA768600AFB7B1DE5C12102BF8EB7A"
+    },
+    {
+      "path": "states.txt",
+      "cascPath": "data:data\\global\\excel\\states.txt",
+      "size": 26643,
+      "ckey": "47A19B0D6A7D7FE160234D3D38AE32E5",
+      "ekey": "70568292B1D1908A8A1FC57E6787F462",
+      "available": true,
+      "nameType": 0,
+      "sha256": "EDCA1756AD868308E91DD088708D69B3A583B6187EDD0C0C001D4DBB8644D5C7"
+    },
+    {
+      "path": "storepage.txt",
+      "cascPath": "data:data\\global\\excel\\storepage.txt",
+      "size": 85,
+      "ckey": "F1D1F4CF6353C91614D519646B3D9BDF",
+      "ekey": "2535142358B51E85AA1820C087B4B7FD",
+      "available": true,
+      "nameType": 0,
+      "sha256": "8F9CDD23C8B6A77DC0674AE2F2941B7E7E600EC0962EA96FC3C2E8A508AAE690"
+    },
+    {
+      "path": "superuniques.bin",
+      "cascPath": "data:data\\global\\excel\\superuniques.bin",
+      "size": 3436,
+      "ckey": "10B6FD679BBA562FBE5093349DCAA980",
+      "ekey": "8D012CA795A01D9F72AC224A0648B3AE",
+      "available": true,
+      "nameType": 0,
+      "sha256": "63538017858B36E3891557FB736C285E147B9F855412A1BFD3512071F14A4611"
+    },
+    {
+      "path": "superuniques.txt",
+      "cascPath": "data:data\\global\\excel\\superuniques.txt",
+      "size": 10518,
+      "ckey": "BA018F5A6D239DCC7A10EAC581A535F9",
+      "ekey": "58A12973EF11B9C82E1F371FC50AF8AA",
+      "available": true,
+      "nameType": 0,
+      "sha256": "F585DDB62B8F7E973A6343D278BDB6A243444CCBA93EF95C0EACD8FAB9F41720"
+    },
+    {
+      "path": "tccode.bin",
+      "cascPath": "data:data\\global\\excel\\tccode.bin",
+      "size": 711,
+      "ckey": "AA9831A3EDA29DFB93A814F902053897",
+      "ekey": "54C714A7C09244EA01CFA99493EDB978",
+      "available": true,
+      "nameType": 0,
+      "sha256": "617A8BFD6887E2DC81DBD31C2809C716CFE1D76AD41F60A9E90AB90FC7D3B676"
+    },
+    {
+      "path": "treasureclassex.bin",
+      "cascPath": "data:data\\global\\excel\\treasureclassex.bin",
+      "size": 1048380,
+      "ckey": "31679E1EF7C1061D85DB7C59586E0F0D",
+      "ekey": "03E3BE468275E9195FD793E37471EF45",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3C9B4305A0809C352E5A8ACF74CF3B6FC61F82585C7D8F88D6C2321C8AA774EA"
+    },
+    {
+      "path": "treasureclassex.txt",
+      "cascPath": "data:data\\global\\excel\\treasureclassex.txt",
+      "size": 162624,
+      "ckey": "6ED1B7AAE1460DA39609CAF0E85A1F11",
+      "ekey": "1FA5ED9676275CD340B81CC08C4171D5",
+      "available": true,
+      "nameType": 0,
+      "sha256": "3ABBFC59535E67CF52B0256B3518623EDBA072EB4235E7D1824A7F847ABECA6D"
+    },
+    {
+      "path": "uniqueappellation.bin",
+      "cascPath": "data:data\\global\\excel\\uniqueappellation.bin",
+      "size": 54,
+      "ckey": "C9C711897600A164B3C2540E41AC39C7",
+      "ekey": "FE1F4272EAD9DDD39E9290FDDB58CFFA",
+      "available": true,
+      "nameType": 0,
+      "sha256": "D5743375BF5D5539799663080716E36EE18EC74FF89B890AC61831D370D0DECC"
+    },
+    {
+      "path": "uniqueappellation.txt",
+      "cascPath": "data:data\\global\\excel\\uniqueappellation.txt",
+      "size": 294,
+      "ckey": "B1E60D247D262B6D35E2D77FF48B5A83",
+      "ekey": "6A76CF79EB0847590373EEB38937C7FC",
+      "available": true,
+      "nameType": 0,
+      "sha256": "FBB5661F61F578219CD6B72B6709A319C0EE906FB9B1FB44F018AB17C3AA4C1A"
+    },
+    {
+      "path": "uniqueitems.bin",
+      "cascPath": "data:data\\global\\excel\\uniqueitems.bin",
+      "size": 152428,
+      "ckey": "3F141AD5DF7B5BA085D6C13395EFEC41",
+      "ekey": "0AA3942745A34DC98D65378FA2EE4083",
+      "available": true,
+      "nameType": 0,
+      "sha256": "EC71D8B0E4F29D726EEC3F64E62D963E33B26CFAFDF53ED13B74CF99547B6974"
+    },
+    {
+      "path": "uniqueitems.txt",
+      "cascPath": "data:data\\global\\excel\\uniqueitems.txt",
+      "size": 84464,
+      "ckey": "0E25B5231DB0804391B7C92D467A0383",
+      "ekey": "54550F42EB0541975BEB6485823F272D",
+      "available": true,
+      "nameType": 0,
+      "sha256": "C9E01849630742F630BABB0BDD33B2E0F5689BD0E13E71F1DA69F8E3E8D238A2"
+    },
+    {
+      "path": "uniqueprefix.bin",
+      "cascPath": "data:data\\global\\excel\\uniqueprefix.bin",
+      "size": 110,
+      "ckey": "D98C84F00C3D5C7DAA4301A319E9EA5D",
+      "ekey": "796F3D6FD091F15DC56B6BB91CC76D09",
+      "available": true,
+      "nameType": 0,
+      "sha256": "FEEF153FE5292AD607CBA993DC223D0F82A6E4B0F7591A11F98141E4F70D15A3"
+    },
+    {
+      "path": "uniqueprefix.txt",
+      "cascPath": "data:data\\global\\excel\\uniqueprefix.txt",
+      "size": 392,
+      "ckey": "60E4BADC64FE97D77EE23F4D8963CDFD",
+      "ekey": "AE77E5CF4D6769B5A9A9420842ACCE8F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "564CE70637B464C3CFE735C898310208B062751F80C5952AFB78BBFB48F45369"
+    },
+    {
+      "path": "uniquesuffix.bin",
+      "cascPath": "data:data\\global\\excel\\uniquesuffix.bin",
+      "size": 142,
+      "ckey": "A06CC6C6C94F386F82662A24ECA3E0BC",
+      "ekey": "6C9683834977CBBFDF22BFFABE99374F",
+      "available": true,
+      "nameType": 0,
+      "sha256": "79F3983A50B9EFBBB14CCCE270AE7F2EB5F280FFCD1665E984BB607F5A4F9D9B"
+    },
+    {
+      "path": "uniquesuffix.txt",
+      "cascPath": "data:data\\global\\excel\\uniquesuffix.txt",
+      "size": 527,
+      "ckey": "318331B07F6671AB866AA0B5595196C5",
+      "ekey": "B52374FE02EB7541D567D13FDAE6EF00",
+      "available": true,
+      "nameType": 0,
+      "sha256": "5C9597373FD8C3621C94AFC95AA80487C59C81349C663635A2CAE2F156E862F7"
+    },
+    {
+      "path": "wanderingmon.bin",
+      "cascPath": "data:data\\global\\excel\\wanderingmon.bin",
+      "size": 6,
+      "ckey": "FA8DFB1F27432111209CCEBAA2439C0D",
+      "ekey": "59FB98EBC49E12FA2787D9A7E56F5ED4",
+      "available": true,
+      "nameType": 0,
+      "sha256": "92BB808A9633C6BDA908973DEDA6EE89F02D24EE064A8B9B96E5A21AF1BBC77D"
+    },
+    {
+      "path": "wanderingmon.txt",
+      "cascPath": "data:data\\global\\excel\\wanderingmon.txt",
+      "size": 15,
+      "ckey": "DFDBAAA49FB228EF018726D920EC3811",
+      "ekey": "4FDD0F3B76404DB4216EFDF58E7874DD",
+      "available": true,
+      "nameType": 0,
+      "sha256": "8CE585FD155E5230C378CB9F05E8DC779C357BF97688F21286D92516E3D8EC41"
+    },
+    {
+      "path": "weapons.bin",
+      "cascPath": "data:data\\global\\excel\\weapons.bin",
+      "size": 137092,
+      "ckey": "ED883AC3267D875546ADE07AE4643A8F",
+      "ekey": "6F43B2FF35E9C7F7682F426AD15DD257",
+      "available": true,
+      "nameType": 0,
+      "sha256": "8A340C12FA978C4784AEC919EF524686B7ED12143CB946540617EE8E65D1EA6D"
+    },
+    {
+      "path": "weapons.txt",
+      "cascPath": "data:data\\global\\excel\\weapons.txt",
+      "size": 119607,
+      "ckey": "24E00FB2ACDD4EAE28D2B6F770BAE29C",
+      "ekey": "9C413665590B443B088C2298F6D57314",
+      "available": true,
+      "nameType": 0,
+      "sha256": "B0890901F87FD42FCB474CE835B6E1A9FE1E66DBAB4E7C2F236A3D9C3224F923"
+    }
+  ]
+}

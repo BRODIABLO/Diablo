@@ -1,6 +1,6 @@
 # BKVCombat 0.1 — Release 1 Damage Core
 
-Dernière mise à jour : 15 août 2026
+Dernière mise à jour : 19 août 2026
 
 ## Décision et état
 
@@ -97,6 +97,13 @@ appliquées par son codec à des copies de travail; elle n’est pas construite 
 le lot actuel.
 
 ## Prochain gate
+
+Le gate de démarrage ouvert par l’update D2R `3.3.93847` est fermé : la mission
+parallèle `bkvince-d2r33-data-alignment.md` a porté les trois TXT autorisés,
+synchronisé leurs hashes et atteint le jeu avec la pile complète à `24/24`,
+sans récidive de `D2Common/src/Items/Items.cpp:1990`; Vincent confirme que cela
+fonctionne. Les preuves 92777 restent valides historiquement et ne constituent
+toujours pas, à elles seules, une qualification binaire générale de 3.3.
 
 1. Vérifier en solo avec `GameTestRunner` les caps et multiplicateurs
    Critical/Deadly, les quatre

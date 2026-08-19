@@ -5804,7 +5804,7 @@ function ItemEditorModal({
                   <option key={entry.id} value={entry.id}>{entry.name}</option>
                 ))}
               </select>
-              <small>Native 3-bit variant from the governed D2R 3.2 LowQualityItems table.</small>
+              <small>Native 3-bit variant from the governed D2R 3.3 LowQualityItems table.</small>
             </label>
           )}
           {(options.defenseEnabled || options.itemLevelEnabled) && (

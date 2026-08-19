@@ -49,6 +49,7 @@ Les `.txt` restent la source ; **pas de base de données**. Les dossiers `local/
 | `data-VNP/` | Mod Vanilla++ servant d'inspiration pour BKVince | **read-only** |
 | `excel-vanilla2.4/` | données vanilla Diablo II 2.4 | **read-only** |
 | `data-vanilla3.2/` | extraction locale CASCView de D2R 3.2 ; seul `data/data/global/excel` est versionné | **read-only** |
+| `data-vanilla3.3/` | extraction directe du CASC officiel D2R 3.3.93847 ; seul `data/data/global/excel` est versionné | **read-only** |
 | `Mission/` | besoins et intentions | modifiable |
 | `addons/` | plugins, patches et add-ons autonomes destinés à une publication communautaire indépendante de BKVince | modifiable |
 | `reverse-engineering/` | ateliers persistants et preuves natives pour D2R 3.2 | modifiable |

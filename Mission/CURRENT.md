@@ -1,6 +1,6 @@
 # Mission courante
 
-Dernière mise à jour : 11 août 2026
+Dernière mise à jour : 19 août 2026
 
 ## Priorité active
 
@@ -30,14 +30,26 @@ NO-GO parce que plusieurs fonctionnalités PluginPack sont désactivées dans la
 baseline et que les incidents render préexistants `dxgi/plugin-items` et
 `PopcornUber` ne sont pas fermés.
 
+L’update officielle D2R `3.3.93847` a ouvert un gate environnemental temporaire :
+[BKVince — alignement data D2R 3.3.93847](bkvince-d2r33-data-alignment.md).
+Le port TXT ciblé, les hashes runtime et le cold start pile complète sont
+maintenant validés : `27` plugins, `17` patches, `24/24`, aucune récidive de
+`Items.cpp:1990`, puis confirmation de Vincent que le jeu fonctionne. Ce gate
+ne suspend donc plus la reprise de BKVCombat. La mission data reste ouverte
+pour les observations Council/Herald/Shard/Sunder et ne qualifie pas encore les
+DLL ou memory patches 92777 comme compatibles « 3.2+ ».
+
 ## Prochain gate
 
-Exécuter la matrice solo : Critical/Deadly, les quatre classes CB,
+Reprendre la matrice solo BKVCombat : Critical/Deadly, les quatre classes CB,
 ranged/player-count/CBE, les trois stacks OW, Life/Mana Steal et Life Tap. Le
 premier hit doit aussi prouver la négociation lazy MeleeSplash→BKVCombat et
 l’absence de double CB/OW. Reprendre la matrice universelle seulement après
 fermeture des fonctions PluginPack désactivées et des incidents render, sans
-neutraliser de composant tiers. Aucun succès gameplay n’est encore revendiqué.
+neutraliser de composant tiers. En parallèle, observer en jeu les deltas data
+3.3 Council/Herald/Shard/Sunder; `QtyTester.d2s/.d2rl` ayant été réécrits lors
+du démarrage réussi, ne pas revendiquer un contrôle 149/149 byte-exact. Aucun
+succès gameplay BKVCombat n’est encore revendiqué.
 
 ## Frontière Git active
 

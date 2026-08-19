@@ -18,7 +18,10 @@ const EXCLUDED_DIRECTORIES = new Set([
   'analysis-cache',
   '__pycache__',
 ]);
-const SELECTIVE_SUBTREES = ['data-vanilla3.2/data/data/global/excel'];
+const SELECTIVE_SUBTREES = [
+  'data-vanilla3.2/data/data/global/excel',
+  'data-vanilla3.3/data/data/global/excel',
+];
 const D2R_TXT_ROOTS = [
   'data-TCP',
   'data-BKVince',
@@ -27,6 +30,7 @@ const D2R_TXT_ROOTS = [
   'data-VNP',
   'excel-vanilla2.4',
   'data-vanilla3.2',
+  'data-vanilla3.3',
 ];
 const CRLF_TXT_ROOTS = [
   'data-TCP',
