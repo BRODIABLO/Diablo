@@ -504,6 +504,98 @@ test('the approved map rule excludes exactly 248 occurrences without changing Ma
   assert.equal(preview.conflicts.filter((conflict) => conflict.id === 'magicsuffix.txt:569').length, 1);
 });
 
+test('the round 2 checkpoint resolves poison exactly and preserves every other product decision', () => {
+  const sourceDecisions = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'Mission', 'pd2-affixes-decisions-v3-round1-remediated-proposed.json'),
+    'utf8',
+  ));
+  const readyDecisions = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'Mission', 'pd2-affixes-decisions-v3-round1-ready-for-round2.json'),
+    'utf8',
+  ));
+  const previousPreview = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'Mission', 'pd2-affixes-decisions-v3-round1-remediated-preview.json'),
+    'utf8',
+  ));
+  const readyPreview = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'Mission', 'pd2-affixes-decisions-v3-round1-ready-for-round2-preview.json'),
+    'utf8',
+  ));
+  const poisonNote = 'Preserve exact PD2 total poison damage within BKVince serialization';
+  const custom = (customValue) => ({
+    decision: 'CUSTOM', customValue, notes: poisonNote, automatic: false,
+  });
+  assert.deepEqual(readyDecisions.entries['magicprefix.txt:558'].fields.mod1param, custom('58'));
+  assert.deepEqual(readyDecisions.entries['magicprefix.txt:558'].fields.mod1min, custom('1000'));
+  assert.deepEqual(readyDecisions.entries['magicprefix.txt:558'].fields.mod1max, custom('1000'));
+  assert.deepEqual(readyDecisions.entries['magicprefix.txt:559'].fields.mod1param, custom('100'));
+  assert.deepEqual(readyDecisions.entries['magicprefix.txt:559'].fields.mod1min, custom('985'));
+  assert.deepEqual(readyDecisions.entries['magicprefix.txt:559'].fields.mod1max, custom('985'));
+
+  const normalized = structuredClone(readyDecisions);
+  for (const [id, fields] of Object.entries({
+    'magicprefix.txt:558': ['mod1param', 'mod1min', 'mod1max'],
+    'magicprefix.txt:559': ['mod1param', 'mod1min', 'mod1max'],
+  })) {
+    for (const field of fields) normalized.entries[id].fields[field] = structuredClone(sourceDecisions.entries[id].fields[field]);
+  }
+  normalized.entries['magicsuffix.txt:569'].notes = sourceDecisions.entries['magicsuffix.txt:569'].notes;
+  normalized.exportedAt = sourceDecisions.exportedAt;
+  assert.deepEqual(normalized, sourceDecisions, 'a product decision outside the approved poison/dependency changes drifted');
+
+  const maxLevelChoice = (selection) => Object.fromEntries(
+    Object.entries(selection.fields ?? {}).filter(([field]) => field.toLowerCase() === 'maxlevel'),
+  );
+  for (const [id, selection] of Object.entries(sourceDecisions.entries)) {
+    assert.deepEqual(maxLevelChoice(readyDecisions.entries[id]), maxLevelChoice(selection), `${id}: MaxLevel changed`);
+  }
+  assert.deepEqual(readyDecisions.entries['magicprefix.txt:350'].fields.itype6, {
+    decision: 'CUSTOM', customValue: 'weap', notes: 'weap (Weapon)', automatic: false,
+  });
+  assert.deepEqual(readyDecisions.entries['magicprefix.txt:417'].fields.itype6, {
+    decision: 'CUSTOM', customValue: 'armo', notes: 'armo (Armor)', automatic: false,
+  });
+  assert.deepEqual(readyDecisions.entries['magicsuffix.txt:175'].fields.itype4, {
+    decision: 'CUSTOM', customValue: '', notes: 'Vider itype4', automatic: false,
+  });
+  assert.equal(readyDecisions.entries['magicsuffix.txt:913'].lineDecision, 'EXCLUDE_PD2_AFFIX');
+  assert.equal(Object.values(readyDecisions.entries).filter((selection) => (
+    selection.lineDecision === 'EXCLUDE_PD2_AFFIX' && selection.notes === APPROVED_MAP_EXCLUSION_NOTE
+  )).length, 248);
+  const automaticSelections = Object.values(readyDecisions.entries)
+    .map((selection) => Object.values(selection.fields ?? {}).filter((choice) => choice.automatic === true).length)
+    .filter(Boolean);
+  assert.equal(automaticSelections.length, 83);
+  assert.equal(automaticSelections.reduce((total, count) => total + count, 0), 249);
+
+  const ironMaiden = readyDecisions.entries['magicsuffix.txt:569'];
+  assert.equal(ironMaiden.notes, 'DEPENDENCY APPROVED — IMPLEMENTATION DEFERRED');
+  assert.deepEqual(Object.fromEntries(Object.entries(ironMaiden.fields).map(([field, choice]) => [field, choice.decision])), {
+    mod1code: 'ADOPT_PD2', mod1param: 'ADOPT_PD2', mod1min: 'ADOPT_PD2', mod1max: 'ADOPT_PD2',
+  });
+
+  assert.deepEqual(readyPreview.proposedManifest, {
+    changedCells: 1383,
+    appendedRows: 7,
+    rejectedRows: 249,
+    auditedOccurrences: 655,
+    conflicts: 1,
+    incomplete: 296,
+  });
+  assert.equal(readyPreview.proposedManifest.changedCells - previousPreview.proposedManifest.changedCells, 15);
+  assert.equal(readyPreview.cells.filter((cell) => cell.id === 'magicprefix.txt:558').length, 7);
+  assert.equal(readyPreview.cells.filter((cell) => cell.id === 'magicprefix.txt:559').length, 8);
+  assert.deepEqual(readyPreview.conflicts, [{
+    id: 'magicsuffix.txt:569',
+    kind: 'SkillParameter',
+    code: '444',
+    reason: 'Numeric skill parameter is not name-stable (Iron Maiden Proc / unused_bkv_merc_skill_444).',
+  }]);
+  assert.equal(readyPreview.ready, false);
+  assert.equal(readyPreview.serializationPlan.withinUint16Limit, true);
+  assert(Object.values(readyPreview.serializationPlan.tables).every((table) => table.within11BitLimit));
+});
+
 test('poison calculations expose capped and exact-total-compatible alternatives without choosing one', () => {
   assert.deepEqual(poisonDamageMetrics(308, 125), {
     encodedDamage: 308,
