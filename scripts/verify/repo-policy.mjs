@@ -429,17 +429,28 @@ function discoverZipFiles(repoRoot) {
     '--exclude-standard',
     '--',
     '*.zip',
-  ]).stdout).map(normalizeRepoPath).sort();
+  ]).stdout)
+    .map(normalizeRepoPath)
+    .filter((filePath) => fs.existsSync(path.join(repoRoot, filePath)))
+    .sort();
 }
 
 export function verifyZipContents(repoRoot) {
   const policyPath = path.join(repoRoot, 'scripts', 'verify', 'zip-policy.json');
   const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
   const discovered = discoverZipFiles(repoRoot);
-  const expectedArchives = Object.keys(policy.archives || {}).sort();
+  const archiveDefinitions = policy.archives || {};
+  const expectedArchives = Object.keys(archiveDefinitions).sort();
   const failures = [];
   for (const filePath of discovered) {
-    const definition = policy.archives[filePath];
+    if (
+      policy.repositoryArchivePolicy?.trackedAddonArchives === false
+      && isWithin(filePath, 'addons')
+    ) {
+      failures.push(`${filePath}: addon release ZIPs must stay ignored locally and be published as GitHub Release assets`);
+      continue;
+    }
+    const definition = archiveDefinitions[filePath];
     if (!definition) {
       failures.push(`${filePath}: archive is not declared in zip-policy.json`);
       continue;

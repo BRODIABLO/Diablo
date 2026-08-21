@@ -9,6 +9,10 @@ dist/
 *.exp
 /data-BKVince/d2rloader/plugins/*-src/build/
 
+# Archives de release locales : publier les ZIP dans les GitHub Releases,
+# jamais dans l'historique du dépôt principal.
+/addons/**/*.zip
+
 # Variables d'environnement
 .env
 .env.*

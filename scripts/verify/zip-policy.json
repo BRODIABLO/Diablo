@@ -1,6 +1,10 @@
 {
-  "version": 1,
-  "archives": {
+  "version": 2,
+  "repositoryArchivePolicy": {
+    "trackedAddonArchives": false,
+    "distribution": "Publish validated ZIP files as GitHub Release assets in the product repository; keep local addon ZIP files ignored."
+  },
+  "historicalArchives": {
     "addons/AdvancedItemTooltips/AdvancedItemTooltips-3.0.0.zip": {
       "kind": "plugin",
       "legacy": true,

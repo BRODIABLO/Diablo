@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-19T15:48:34.1045362+00:00",
+    "generatedAt":  "2026-08-21T17:04:53.3614972+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -526,16 +526,6 @@
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
-                                                                            },
-                                                                            {
-                                                                                "name":  "AdvancedItemTooltips-3.0.0.zip",
-                                                                                "path":  "addons/AdvancedItemTooltips/AdvancedItemTooltips-3.0.0.zip",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "AdvancedItemTooltips-3.3.0.zip",
-                                                                                "path":  "addons/AdvancedItemTooltips/AdvancedItemTooltips-3.3.0.zip",
-                                                                                "kind":  "file"
                                                                             }
                                                                         ]
                                                        },
@@ -614,11 +604,6 @@
                                                                                              ]
                                                                             },
                                                                             {
-                                                                                "name":  "BKVCombat-0.1.0.zip",
-                                                                                "path":  "addons/BKVCombat/BKVCombat-0.1.0.zip",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
                                                                                 "name":  "CHANGELOG.md",
                                                                                 "path":  "addons/BKVCombat/CHANGELOG.md",
                                                                                 "kind":  "file"
@@ -651,41 +636,6 @@
                                                                         ]
                                                        },
                                                        {
-                                                           "name":  "BulkSkillPointAllocation",
-                                                           "path":  "addons/BulkSkillPointAllocation",
-                                                           "kind":  "directory",
-                                                           "meta":  {
-                                                                        "role":  "x-external-addon-package",
-                                                                        "summary":  "Archive publique du plugin hybride d’attribution groupée des points de compétence.",
-                                                                        "agentAccess":  "read-write"
-                                                                    },
-                                                           "children":  [
-                                                                            {
-                                                                                "name":  "BulkSkillPointAllocation.zip",
-                                                                                "path":  "addons/BulkSkillPointAllocation/BulkSkillPointAllocation.zip",
-                                                                                "kind":  "file"
-                                                                            }
-                                                                        ]
-                                                       },
-                                                       {
-                                                           "name":  "CharmInventoryAuras",
-                                                           "path":  "addons/CharmInventoryAuras",
-                                                           "kind":  "directory",
-                                                           "meta":  {
-                                                                        "role":  "x-public-d2rloader-package",
-                                                                        "summary":  "Archive publique sans README du plugin mod-local CharmInventoryAuras pour D2RLoader 3.2.92777.",
-                                                                        "agentAccess":  "read-write",
-                                                                        "status":  "active"
-                                                                    },
-                                                           "children":  [
-                                                                            {
-                                                                                "name":  "CharmInventoryAuras.zip",
-                                                                                "path":  "addons/CharmInventoryAuras/CharmInventoryAuras.zip",
-                                                                                "kind":  "file"
-                                                                            }
-                                                                        ]
-                                                       },
-                                                       {
                                                            "name":  "CharmZone",
                                                            "path":  "addons/CharmZone",
                                                            "kind":  "directory",
@@ -712,11 +662,6 @@
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
-                                                                            },
-                                                                            {
-                                                                                "name":  "CharmZone.zip",
-                                                                                "path":  "addons/CharmZone/CharmZone.zip",
-                                                                                "kind":  "file"
                                                                             },
                                                                             {
                                                                                 "name":  "README.md",
@@ -794,59 +739,6 @@
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
-                                                                            },
-                                                                            {
-                                                                                "name":  "ConfigurableCharsiReward.zip",
-                                                                                "path":  "addons/ConfigurableCharsiReward/ConfigurableCharsiReward.zip",
-                                                                                "kind":  "file"
-                                                                            }
-                                                                        ]
-                                                       },
-                                                       {
-                                                           "name":  "CubeQuickMove",
-                                                           "path":  "addons/CubeQuickMove",
-                                                           "kind":  "directory",
-                                                           "meta":  {
-                                                                        "role":  "x-d2rloader-package-candidate",
-                                                                        "summary":  "Archive technique candidate DLL + JSON du plugin hybride CubeQuickMove 0.1.0; publication finale conditionnée par la matrice gameplay.",
-                                                                        "agentAccess":  "read-write",
-                                                                        "status":  "experimental"
-                                                                    },
-                                                           "children":  [
-                                                                            {
-                                                                                "name":  "CubeQuickMove.zip",
-                                                                                "path":  "addons/CubeQuickMove/CubeQuickMove.zip",
-                                                                                "kind":  "file"
-                                                                            }
-                                                                        ]
-                                                       },
-                                                       {
-                                                           "name":  "DurabilityResistance",
-                                                           "path":  "addons/DurabilityResistance",
-                                                           "kind":  "directory",
-                                                           "meta":  {
-                                                                        "role":  "x-public-d2rloader-package",
-                                                                        "summary":  "Archive publique sans README du plugin mod-local DurabilityResistance pour D2RLoader 3.2.92777.",
-                                                                        "agentAccess":  "read-write",
-                                                                        "status":  "active"
-                                                                    },
-                                                           "children":  [
-                                                                            {
-                                                                                "name":  "DurabilityResistance.zip",
-                                                                                "path":  "addons/DurabilityResistance/DurabilityResistance.zip",
-                                                                                "kind":  "file"
-                                                                            }
-                                                                        ]
-                                                       },
-                                                       {
-                                                           "name":  "EnhancedDamageMinMaxFix",
-                                                           "path":  "addons/EnhancedDamageMinMaxFix",
-                                                           "kind":  "directory",
-                                                           "children":  [
-                                                                            {
-                                                                                "name":  "EnhancedDamageMinMaxFix.zip",
-                                                                                "path":  "addons/EnhancedDamageMinMaxFix/EnhancedDamageMinMaxFix.zip",
-                                                                                "kind":  "file"
                                                                             }
                                                                         ]
                                                        },
@@ -882,11 +774,6 @@
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
-                                                                            },
-                                                                            {
-                                                                                "name":  "EquippedItemToCube.zip",
-                                                                                "path":  "addons/EquippedItemToCube/EquippedItemToCube.zip",
-                                                                                "kind":  "file"
                                                                             }
                                                                         ]
                                                        },
@@ -901,11 +788,6 @@
                                                                         "status":  "active"
                                                                     },
                                                            "children":  [
-                                                                            {
-                                                                                "name":  "FloatingDamage.zip",
-                                                                                "path":  "addons/FloatingDamage/FloatingDamage.zip",
-                                                                                "kind":  "file"
-                                                                            },
                                                                             {
                                                                                 "name":  "README.md",
                                                                                 "path":  "addons/FloatingDamage/README.md",
@@ -930,25 +812,8 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
-                                                                                "name":  "FourCharacterItemCodes.zip",
-                                                                                "path":  "addons/FourCharacterItemCodes/FourCharacterItemCodes.zip",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
                                                                                 "name":  "README.md",
                                                                                 "path":  "addons/FourCharacterItemCodes/README.md",
-                                                                                "kind":  "file"
-                                                                            }
-                                                                        ]
-                                                       },
-                                                       {
-                                                           "name":  "GambleScreenLimit",
-                                                           "path":  "addons/GambleScreenLimit",
-                                                           "kind":  "directory",
-                                                           "children":  [
-                                                                            {
-                                                                                "name":  "GambleScreenLimit.zip",
-                                                                                "path":  "addons/GambleScreenLimit/GambleScreenLimit.zip",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
@@ -1067,11 +932,6 @@
                                                                                              ]
                                                                             },
                                                                             {
-                                                                                "name":  "MassID.zip",
-                                                                                "path":  "addons/MassID/MassID.zip",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
                                                                                 "name":  "README.md",
                                                                                 "path":  "addons/MassID/README.md",
                                                                                 "kind":  "file"
@@ -1165,11 +1025,6 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
-                                                                                "name":  "MeleeSplash-0.1.0.zip",
-                                                                                "path":  "addons/MeleeSplash/MeleeSplash-0.1.0.zip",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
                                                                                 "name":  "NATIVE-HOOKS.md",
                                                                                 "path":  "addons/MeleeSplash/NATIVE-HOOKS.md",
                                                                                 "kind":  "file"
@@ -1192,18 +1047,6 @@
                                                                             {
                                                                                 "name":  "VALIDATION.md",
                                                                                 "path":  "addons/MeleeSplash/VALIDATION.md",
-                                                                                "kind":  "file"
-                                                                            }
-                                                                        ]
-                                                       },
-                                                       {
-                                                           "name":  "NoEtherealItemTypes",
-                                                           "path":  "addons/NoEtherealItemTypes",
-                                                           "kind":  "directory",
-                                                           "children":  [
-                                                                            {
-                                                                                "name":  "NoEtherealItemTypes.zip",
-                                                                                "path":  "addons/NoEtherealItemTypes/NoEtherealItemTypes.zip",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
@@ -1268,35 +1111,8 @@
                                                                                              ]
                                                                             },
                                                                             {
-                                                                                "name":  "ProgressiveAffixesPlugin-0.1.0.zip",
-                                                                                "path":  "addons/ProgressiveAffixesPlugin/ProgressiveAffixesPlugin-0.1.0.zip",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "ProgressiveAffixesPlugin-0.2.0.zip",
-                                                                                "path":  "addons/ProgressiveAffixesPlugin/ProgressiveAffixesPlugin-0.2.0.zip",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "ProgressiveAffixesPlugin-0.2.1.zip",
-                                                                                "path":  "addons/ProgressiveAffixesPlugin/ProgressiveAffixesPlugin-0.2.1.zip",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
                                                                                 "name":  "README.md",
                                                                                 "path":  "addons/ProgressiveAffixesPlugin/README.md",
-                                                                                "kind":  "file"
-                                                                            }
-                                                                        ]
-                                                       },
-                                                       {
-                                                           "name":  "QtyDisplayIssue",
-                                                           "path":  "addons/QtyDisplayIssue",
-                                                           "kind":  "directory",
-                                                           "children":  [
-                                                                            {
-                                                                                "name":  "QtyDisplayIssue.zip",
-                                                                                "path":  "addons/QtyDisplayIssue/QtyDisplayIssue.zip",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
@@ -1472,26 +1288,6 @@
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
-                                                                            },
-                                                                            {
-                                                                                "name":  "RemoteStash-0.3.6.zip",
-                                                                                "path":  "addons/RemoteStash/RemoteStash-0.3.6.zip",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "RemoteStash-1.0.0.zip",
-                                                                                "path":  "addons/RemoteStash/RemoteStash-1.0.0.zip",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "RemoteStash-1.1.7.zip",
-                                                                                "path":  "addons/RemoteStash/RemoteStash-1.1.7.zip",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "RemoteStash-1.2.0.zip",
-                                                                                "path":  "addons/RemoteStash/RemoteStash-1.2.0.zip",
-                                                                                "kind":  "file"
                                                                             }
                                                                         ]
                                                        },
@@ -1625,23 +1421,6 @@
                                                                             {
                                                                                 "name":  "README.md",
                                                                                 "path":  "addons/StaticFieldRework/README.md",
-                                                                                "kind":  "file"
-                                                                            },
-                                                                            {
-                                                                                "name":  "StaticFieldRework-0.1.0.zip",
-                                                                                "path":  "addons/StaticFieldRework/StaticFieldRework-0.1.0.zip",
-                                                                                "kind":  "file"
-                                                                            }
-                                                                        ]
-                                                       },
-                                                       {
-                                                           "name":  "Transmogrify",
-                                                           "path":  "addons/Transmogrify",
-                                                           "kind":  "directory",
-                                                           "children":  [
-                                                                            {
-                                                                                "name":  "Transmogrify.zip",
-                                                                                "path":  "addons/Transmogrify/Transmogrify.zip",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
@@ -36525,7 +36304,7 @@
                                                        }
                                                    ]
                                   },
-{
+                                  {
                                       "name":  "data-VNP",
                                       "path":  "data-VNP",
                                       "kind":  "directory",
@@ -39755,12 +39534,12 @@
                                                            "path":  "Mission/bkvince-d2r33-data-alignment.md",
                                                            "kind":  "file"
                                                        },
-{
+                                                       {
                                                            "name":  "bkvince-d2r33-vanilla-manifest.json",
                                                            "path":  "Mission/bkvince-d2r33-vanilla-manifest.json",
                                                            "kind":  "file"
                                                        },
-{
+                                                       {
                                                            "name":  "bkvince-hero-editor.md",
                                                            "path":  "Mission/bkvince-hero-editor.md",
                                                            "kind":  "file",
@@ -41058,7 +40837,7 @@
                                                                                 "path":  "scripts/migrate-bkvince/port-d2r33-data.js",
                                                                                 "kind":  "file"
                                                                             },
-{
+                                                                            {
                                                                                 "name":  "port-mercenary-command.js",
                                                                                 "path":  "scripts/migrate-bkvince/port-mercenary-command.js",
                                                                                 "kind":  "file"
