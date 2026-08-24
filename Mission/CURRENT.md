@@ -1,8 +1,38 @@
 # Mission courante
 
-Dernière mise à jour : 19 août 2026
+Dernière mise à jour : 24 août 2026
 
 ## Priorité active
+
+[Softcoded Player Sequence Tables — D2R 3.3.93847](player-sequence-tables-3.3.md)
+
+État : **la phase 1 documentaire est extraite et reproductible**. La baseline
+couvre 25 groupes, 14 classes d'armes, 350 routes, 47 tableaux runtime et 808
+records. Elle inclut les séquences 24 `Cleave` et 25 `Mirrored Blades`, recoupe
+les octets runtime avec l'image native gouvernée et conserve D2MOO uniquement
+comme oracle sémantique legacy. Aucune DLL ni modification gameplay n'appartient
+à cette phase.
+
+### Gates encore ouverts de BKVCombat
+
+Faire relire la baseline par Vincent, puis prouver le contrat complet de
+chargement, de propriété et de durée de vie des groupes, des descripteurs de 24
+octets et des records de six octets. Comparer ensuite les formats externes et
+le mécanisme de remplacement en exigeant longueurs variables, repli vanilla
+fail-closed, validation stricte, absence de cache de pointeur dangereux et
+coexistence avec la pile complète. Aucune incubation de DLL ne commence avant
+ce choix architectural.
+
+### Frontière Git historique de BKVCombat
+
+La mission active couvre `Mission/player-sequence-tables-3.3.md`, les scripts
+`player-sequences*` et `Capture-PlayerSequences.ps1`, ainsi que les preuves sous
+`reverse-engineering/d2r-3.2.92777/player-sequences/`. La ROADMAP, le pointeur
+courant, le workstream, le cadastre, `package.json`, `known-rvas.json` et
+`findings.md` sont partagés. La capture mémoire brute reste locale et ignorée.
+Aucun commit ni push n'est effectué sans demande explicite de Vincent.
+
+## Priorité précédente conservée — BKVCombat
 
 [BKVCombat 0.1 — Release 1 Damage Core](bkvcombat-0.1.md)
 

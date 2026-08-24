@@ -769,3 +769,38 @@ Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de
 controle, octets/signature, caller/callee ou validation runtime. Les simples
 ressemblances et les anciennes adresses 2.4 restent dans cette page avec une
 confiance explicite.
+
+## Player sequence tables — baseline D2R 3.3.93847
+
+- `SKILLS_GetSeqNumFromSkill` à `0x33DBC0` lit pour un joueur le byte
+  `SkillsTxt.seqnum` à `+0x33` au site `0x33DC42`. Le chemin monstre reste
+  distinct; aucune équivalence avec `monseq.txt` n'est inférée.
+- `DATATBLS_GetSeqRecordFromUnit` à `0x3CB890` indexe la table runtime
+  `0x2386650[seqnum]`, sélectionne une des 14 classes d'armes via la table
+  `0x2386730`, puis choisit le record selon le mode et la frame.
+- Le descripteur mesure 24 octets. La preuve native à `0x3CB987` construit
+  `index * 3 * 8`; les champs capturés sont pointeur de records, nombre de
+  frames de séquence, nombre de frames d'animation et QWORD auxiliaire `0x100`.
+- Un record mesure six octets : `uint16 sequence`, puis les bytes `mode`,
+  `frame`, `direction` et `event`. La baseline contient 808 records, 47
+  tableaux runtime et 44 contenus uniques.
+- La table contient un slot nul suivi de 25 groupes actifs et 14 classes
+  d'armes, soit 350 routes : 235 présentes et 115 nulles. Les groupes 24
+  `Cleave` et 25 `Mirrored Blades` sont propres au runtime courant par rapport
+  à l'oracle D2MOO utilisé.
+- Les 23 groupes legacy et 34 tableaux nommés par
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316` correspondent exactement aux
+  routes et octets courants qu'ils décrivent. D2MOO reste une preuve sémantique
+  seulement; aucune adresse, structure ou ABI 32 bits n'est transposée.
+- Tous les groupes, descripteurs et records capturés sous D2R 3.3.93847 ont un
+  témoin byte-exact dans l'image d'analyse gouvernée. Le groupe 6 `Inferno` a
+  deux seeds statiques identiques (`0x1992660` et `0x1992DF0`), mais une route
+  runtime unique; l'extracteur conserve explicitement cette ambiguïté au lieu
+  de fabriquer une unicité.
+- Le seed statique du mapping des 14 classes est unique à `0x19EAF70` et
+  concorde avec la table runtime `0x2386730`.
+- Les sorties normalisées, le manifeste de hashes, le captureur runtime et les
+  TSV déterministes sont gouvernés par
+  `Mission/player-sequence-tables-3.3.md`. Cette phase ne prouve pas encore le
+  contrat de propriété, la durée de vie, le remplacement de longueurs variables
+  ni l'autorité multijoueur; ces points bloquent toute implantation.

@@ -76,7 +76,9 @@
     "generate:bkvince-bkvcombat-stats": "node scripts/migrate-bkvince/apply-bkvcombat-stats.js --apply",
     "test:bkvince-bkvcombat-stats": "node scripts/migrate-bkvince/apply-bkvcombat-stats.js --check",
     "generate:bkvince-bk17-update": "node scripts/migrate-bkvince/apply-bkdiablo-v17.js --apply",
-    "test:bkvince-bk17-update": "node scripts/migrate-bkvince/apply-bkdiablo-v17.js --check"
+    "test:bkvince-bk17-update": "node scripts/migrate-bkvince/apply-bkdiablo-v17.js --check",
+    "generate:player-sequences": "node scripts/reverse-engineering/player-sequences.mjs --write",
+    "test:player-sequences": "node --test scripts/reverse-engineering/player-sequences.test.mjs"
   },
   "devDependencies": {
     "@d2runewizard/d2s": "2.0.132",

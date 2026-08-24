@@ -2946,6 +2946,46 @@
       "confidence": "high",
       "source": "Mission/floating-damage-portage-3.2.md",
       "notes": "Exact five-byte call E8 78 AC EA FF from SUNITDMG_ExecuteEvents to STATLIST_SetUnitStat for the main target HP mutation. The unique 21-byte context begins at 0x44D083 and passes defender, stat 6, the post-damage fixed-point HP and layer 0; R14 and RDI still hold attacker and D2Damage. FloatingDamage 1.2.1 redirects only this call through a private near relay, invokes the original setter with unchanged arguments, and reports the visible old/new HP delta. Runtime proved fixed 169472->168480 yields popup 4."
+    },
+    {
+      "rva": "0x33DBC0",
+      "name": "SKILLS_GetSeqNumFromSkill",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/player-sequence-tables-3.3.md; reverse-engineering/d2r-3.2.92777/player-sequences/d2r-3.3.93847-player-sequences.manifest.json",
+      "notes": "Current D2R 3.3.93847 sequence selector. The player path reads the compiled SkillsTxt seqnum byte at +0x33 at 0x33DC42; the monster path remains distinct. Entry bytes and control flow are verified in the governed image whose useful native identity is shared with the current retail target."
+    },
+    {
+      "rva": "0x3CB890",
+      "name": "DATATBLS_GetSeqRecordFromUnit",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/player-sequence-tables-3.3.md; reverse-engineering/d2r-3.2.92777/player-sequences/d2r-3.3.93847-player-sequences.manifest.json",
+      "notes": "Resolves a player sequence descriptor from seqnum, player mode and weapon class, then addresses six-byte animation sequence records. The 24-byte descriptor stride is proven at 0x3CB987 by the 3*8 index construction. Runtime capture and static-image byte witnesses agree for D2R 3.3.93847."
+    },
+    {
+      "rva": "0x2386650",
+      "name": "DATATBLS_PlayerWeaponsSequenceTable",
+      "kind": "data-table",
+      "confidence": "high",
+      "source": "Mission/player-sequence-tables-3.3.md; scripts/reverse-engineering/Capture-PlayerSequences.ps1; reverse-engineering/d2r-3.2.92777/player-sequences/d2r-3.3.93847-player-sequence-runtime.json",
+      "notes": "Runtime BSS pointer table indexed by seqnum. Slot 0 is null and slots 1 through 25 route to 14-descriptor groups; current groups 24 and 25 are Cleave and Mirrored Blades. All captured descriptor and record bytes cross-match governed static-image seeds."
+    },
+    {
+      "rva": "0x2386730",
+      "name": "DATATBLS_PlayerWeaponClassMap",
+      "kind": "data-table",
+      "confidence": "high",
+      "source": "Mission/player-sequence-tables-3.3.md; scripts/reverse-engineering/Capture-PlayerSequences.ps1; reverse-engineering/d2r-3.2.92777/player-sequences/d2r-3.3.93847-player-sequence-runtime.json",
+      "notes": "Runtime map for the 14 player weapon-animation classes consumed by DATATBLS_GetSeqRecordFromUnit. The captured bytes match the unique static seed at RVA 0x19EAF70 exactly."
+    },
+    {
+      "rva": "0x19EAF70",
+      "name": "DATATBLS_PlayerWeaponClassMap_StaticSeed",
+      "kind": "data-table",
+      "confidence": "high",
+      "source": "Mission/player-sequence-tables-3.3.md; reverse-engineering/d2r-3.2.92777/player-sequences/d2r-3.3.93847-player-sequences.manifest.json",
+      "notes": "Unique governed-image seed for the 14-byte player weapon-class routing map copied to runtime RVA 0x2386730. Exact bytes are verified by the deterministic extractor against the D2R 3.3.93847 capture."
     }
   ]
 }

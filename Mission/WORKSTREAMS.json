@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-19",
+  "updatedAt": "2026-08-24",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -661,6 +661,20 @@
       ]
     },
     {
+      "id": "player-sequence-tables",
+      "name": "Softcoded Player Sequence Tables",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/player-sequence-tables-3.3.md",
+      "nextGate": "Review the extracted D2R 3.3.93847 baseline, then prove the complete loading, ownership and lifetime contract for variable-length groups, descriptors and records before selecting an external format or incubating a plugin.",
+      "include": [
+        "Mission/player-sequence-tables-3.3.md",
+        "reverse-engineering/d2r-3.2.92777/player-sequences/**",
+        "scripts/reverse-engineering/player-sequences*",
+        "scripts/reverse-engineering/Capture-PlayerSequences.ps1"
+      ]
+    },
+    {
       "id": "workstream-registry",
       "name": "Workstream Registry",
       "status": "maintenance",
@@ -768,7 +782,8 @@
         "tde-inspiration-bkvince",
         "pd2-inspiration-bkvince",
         "pd2-affixes-merge",
-        "workstream-registry"
+        "workstream-registry",
+        "player-sequence-tables"
       ],
       "reason": "Root commands serve governed data/plugin tests and repository organization."
     },
@@ -831,7 +846,8 @@
         "mass-id",
         "require-item-display-for-pickup",
         "base-mod-features",
-        "pd2-inspiration-bkvince"
+        "pd2-inspiration-bkvince",
+        "player-sequence-tables"
       ],
       "reason": "Governed native evidence registry shared by native plugin missions."
     },
@@ -858,7 +874,8 @@
         "mass-id",
         "require-item-display-for-pickup",
         "base-mod-features",
-        "pd2-inspiration-bkvince"
+        "pd2-inspiration-bkvince",
+        "player-sequence-tables"
       ],
       "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."
     },

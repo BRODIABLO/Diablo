@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-21T17:04:53.3614972+00:00",
+    "generatedAt":  "2026-08-24T23:05:34.7131741+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -40028,6 +40028,11 @@
                                                            "name":  "yupgoolg-hd-assets-audit.md",
                                                            "path":  "Mission/yupgoolg-hd-assets-audit.md",
                                                            "kind":  "file"
+                                                       },
+{
+                                                           "name":  "player-sequence-tables-3.3.md",
+                                                           "path":  "Mission/player-sequence-tables-3.3.md",
+                                                           "kind":  "file"
                                                        }
                                                    ]
                                   },
@@ -40166,6 +40171,33 @@
                                                                                 "name":  "workbench.json",
                                                                                 "path":  "reverse-engineering/d2r-3.2.92777/workbench.json",
                                                                                 "kind":  "file"
+                                                                            },
+{
+                                                                                "name":  "player-sequences",
+                                                                                "path":  "reverse-engineering/d2r-3.2.92777/player-sequences",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "d2r-3.3.93847-player-sequence-map.tsv",
+                                                                                                     "path":  "reverse-engineering/d2r-3.2.92777/player-sequences/d2r-3.3.93847-player-sequence-map.tsv",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "d2r-3.3.93847-player-sequence-records.tsv",
+                                                                                                     "path":  "reverse-engineering/d2r-3.2.92777/player-sequences/d2r-3.3.93847-player-sequence-records.tsv",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "d2r-3.3.93847-player-sequence-runtime.json",
+                                                                                                     "path":  "reverse-engineering/d2r-3.2.92777/player-sequences/d2r-3.3.93847-player-sequence-runtime.json",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "d2r-3.3.93847-player-sequences.manifest.json",
+                                                                                                     "path":  "reverse-engineering/d2r-3.2.92777/player-sequences/d2r-3.3.93847-player-sequences.manifest.json",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
                                                                             }
                                                                         ]
                                                        },
@@ -40989,6 +41021,21 @@
                                                                             {
                                                                                 "name":  "Runtime-Tools.ps1",
                                                                                 "path":  "scripts/reverse-engineering/Runtime-Tools.ps1",
+                                                                                "kind":  "file"
+                                                                            },
+{
+                                                                                "name":  "Capture-PlayerSequences.ps1",
+                                                                                "path":  "scripts/reverse-engineering/Capture-PlayerSequences.ps1",
+                                                                                "kind":  "file"
+                                                                            },
+{
+                                                                                "name":  "player-sequences.mjs",
+                                                                                "path":  "scripts/reverse-engineering/player-sequences.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+{
+                                                                                "name":  "player-sequences.test.mjs",
+                                                                                "path":  "scripts/reverse-engineering/player-sequences.test.mjs",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
