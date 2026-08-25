@@ -1359,6 +1359,86 @@
                                                                         ]
                                                        },
                                                        {
+                                                         "name": "ResistanceFloor",
+                                                         "path": "addons/ResistanceFloor",
+                                                         "kind": "directory",
+                                                         "meta": {
+                                                           "role": "x-standalone-d2rloader-addon",
+                                                           "summary": "Plugin autonome Resistance Floor 0.2.0 de la RuffnecKk Suite : configure jusqu'à -1000 le minimum des six résistances pour joueurs, compagnons et monstres optionnels, avec affichage joueur synchronisé.",
+                                                           "agentAccess": "read-write",
+                                                           "status": "experimental"
+                                                         },
+                                                         "children": [
+                                                           {
+                                                             "name": "src",
+                                                             "path": "addons/ResistanceFloor/src",
+                                                             "kind": "directory",
+                                                             "children": [
+                                                               {
+                                                                 "name": "CMakeLists.txt",
+                                                                 "path": "addons/ResistanceFloor/src/CMakeLists.txt",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "floor_relays.asm",
+                                                                 "path": "addons/ResistanceFloor/src/floor_relays.asm",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "overlay_host_api.hpp",
+                                                                 "path": "addons/ResistanceFloor/src/overlay_host_api.hpp",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "plugin.cpp",
+                                                                 "path": "addons/ResistanceFloor/src/plugin.cpp",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "plugin.rc",
+                                                                 "path": "addons/ResistanceFloor/src/plugin.rc",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "policy_tests.cpp",
+                                                                 "path": "addons/ResistanceFloor/src/policy_tests.cpp",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "resistance_floor_policy.hpp",
+                                                                 "path": "addons/ResistanceFloor/src/resistance_floor_policy.hpp",
+                                                                 "kind": "file"
+                                                               }
+                                                             ]
+                                                           },
+                                                           {
+                                                             "name": "NATIVE-CONTRACT.md",
+                                                             "path": "addons/ResistanceFloor/NATIVE-CONTRACT.md",
+                                                             "kind": "file"
+                                                           },
+                                                           {
+                                                             "name": "README.md",
+                                                             "path": "addons/ResistanceFloor/README.md",
+                                                             "kind": "file"
+                                                           },
+                                                           {
+                                                             "name": "ResistanceFloor.dll",
+                                                             "path": "addons/ResistanceFloor/ResistanceFloor.dll",
+                                                             "kind": "file"
+                                                           },
+                                                           {
+                                                             "name": "ruffneckk-resistance-floor.toml",
+                                                             "path": "addons/ResistanceFloor/ruffneckk-resistance-floor.toml",
+                                                             "kind": "file"
+                                                           },
+                                                           {
+                                                             "name": "VALIDATION.md",
+                                                             "path": "addons/ResistanceFloor/VALIDATION.md",
+                                                             "kind": "file"
+                                                           }
+                                                         ]
+                                                       },
+                                                       {
                                                            "name":  "StaticFieldRework",
                                                            "path":  "addons/StaticFieldRework",
                                                            "kind":  "directory",
