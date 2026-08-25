@@ -1,6 +1,6 @@
 # Softcoded Player Sequence Tables — D2R 3.3.93847
 
-Dernière mise à jour : 24 août 2026
+Dernière mise à jour : 25 août 2026
 
 ## Intention produit
 
@@ -23,7 +23,7 @@ indépendants et ne modifie, lie ni redistribue aucune DLL d'eezstreet.
 
 Le format public retenu est une paire TXT normalisée : une table explicite des
 350 routes `(seqnum, weaponclass, recordset)` et une table des recordsets
-partagés `(recordset, mode, frame, dir, event)`. Le plugin compile ces sources
+nommés `(recordset, mode, frame, dir, event)`. Le plugin compile ces sources
 au démarrage dans une arène immuable de durée de vie processus, puis remplace
 uniquement les 25 pointeurs de groupes à `0x2386658..0x238671F`. Aucun hook de
 code n'est ajouté. Le fichier absent préserve strictement vanilla; une source
@@ -101,7 +101,8 @@ mod-locaux PASS; gameplay, reload et multijoueur encore non exécutés**.
 Le candidat autonome `PlayerSequenceTables` 0.1.0 produit :
 
 - `playerseqmap.txt`, matrice exhaustive de 350 routes;
-- `playerseq.txt`, 44 recordsets dédupliqués et 757 records;
+- `playerseq.txt`, 47 recordsets natifs indépendants et 808 records, dont 44
+  contenus actuellement uniques;
 - un parseur strict qui borne `seqnum`, classes d'armes, modes, frames,
   directions, events, tailles et références;
 - une arène native immuable regroupant les 350 descripteurs et tous les
@@ -113,8 +114,8 @@ Le candidat autonome `PlayerSequenceTables` 0.1.0 produit :
 
 Les tables générées restent en CRLF, sans BOM et passent un round-trip
 byte-exact. Leurs SHA-256 sont respectivement
-`3D00E1BB391E2A19878B164ECAE45CDC2C35239ADC081816C93D3CCFCA3E47F9`
-et `BDD70BC115EC8A3E9B207DDFDD1C999B23D41A6561E60DE21FEC0C7B8D245589`.
+`FA3AFD197906399911AA6D6BDFDF8FEBD4E630648B5533018ED2C8B5E5F4A46D`
+et `2A49C6B8E3BAE28DB1E8FB965B7A3E00565C18080D30FBED625AECFAFBA7A252`.
 Deux builds Release propres produisent la même DLL de SHA-256
 `66D5C5EF9BA530740082A0C1C6BAFCABC02116E7C65D7A7C1F424AA20E4B2F2B`.
 
@@ -137,13 +138,21 @@ chargement : la transaction passe dans les portées globale et mod-locale.
 
 Les quatre politiques d'entrée ont été exercées sans neutraliser le reste de la
 pile. L'absence des deux tables charge le plugin en laissant vanilla inchangé;
-la paire valide journalise 235 routes, 44 recordsets, 757 records et le hash
-combiné `F1C043E1D66E48C86BB4ED4E0A4FF7E8B57F4B68ACA5854340C20D60B1EA4EAA`;
+la paire corrigée journalise 235 routes, 47 recordsets, 808 records et le hash
+combiné `8E93E155E600FCF9302A120FD3D3D62B5FD209E475A48BD67E80BB62BAB7E696`;
 une table manquante ou un mode invalide à la ligne 2 refuse le chargement avant
-construction de l'arène ou écriture. Les deux portées conservent 32 plugins et
-18 patches, dont les cinq plugins eezstreet. Avec les tables valides, les cold
-starts globaux puis mod-locaux atteignent `24/24`, compilent 190 tables TXT et
-journalisent `D2R startup complete`.
+construction de l'arène ou écriture. Le cold start corrigé mod-local du 25 août
+conserve les 34 plugins et 18 patches alors actifs, dont les cinq plugins
+eezstreet, atteint `24/24`, compile 190 tables TXT et journalise
+`D2R startup complete`. La preuve globale antérieure reste valide pour la DLL,
+mais la paire TXT corrigée n'a pas été rejouée dans cette portée.
+
+Le signalement de Warren a révélé un défaut du générateur public : il
+canonialisait par hash trois paires de tableaux natifs distincts dont les
+octets sont actuellement identiques. La correction conserve désormais leurs
+noms et propriétaires séparés : Blade Fury/Cleave HTH, Cleave 1HT/1HS et
+Mirrored Blades 1HT/1HS. Le comportement baseline reste identique, mais chaque
+tableau peut maintenant être modifié sans coupler l'autre.
 
 Deux tentatives antérieures avaient reproduit l'incident graphique intermittent
 connu `dxgi.dll + 0x38B1C1`. Il reste consigné, mais n'est plus un blocker actif :
@@ -158,6 +167,8 @@ et le profil mod-local final, sans nouveau rapport de crash.
 - autorité hôte/joiner et égalité obligatoire du hash des tables;
 - canal de distribution des deux TXT essentiels, le ZIP de plugin restant
   limité par politique à la DLL et au TOML.
+- matrice dual-build D2R 3.2.92777 exigée avant toute publication; le test
+  courant reste explicitement limité à D2R 3.3.93847.
 
 ## Prochain gate
 

@@ -21,8 +21,9 @@ test('normalizes the governed runtime into the public two-table contract', () =>
     availableRoutes: 235,
     nullRoutes: 115,
     sourceArrays: 47,
-    uniqueRecordSets: 44,
-    records: 757,
+    recordSets: 47,
+    uniqueContents: 44,
+    records: 808,
   });
   assert.deepEqual(result.routeTable.headers, [
     'seqnum', '*sequence', 'weaponclass', 'recordset', '*eol',
@@ -40,11 +41,39 @@ test('normalizes the governed runtime into the public two-table contract', () =>
   assert(routes.filter((route) => route.seqnum === '24').every((route) => route['*sequence'] === 'Cleave'));
   assert(routes.filter((route) => route.seqnum === '25').every((route) => route['*sequence'] === 'MirroredBlades'));
 
-  const recordSets = new Set(objects(result.recordTable).map((row) => row.recordset));
-  assert.equal(recordSets.size, 44);
+  const recordRows = objects(result.recordTable);
+  const recordSets = new Set(recordRows.map((row) => row.recordset));
+  assert.equal(recordSets.size, 47);
   for (const route of routes) {
     assert(!route.recordset || recordSets.has(route.recordset));
   }
+
+  const route = (seqnum, weaponclass) => routes.find(
+    (row) => row.seqnum === String(seqnum) && row.weaponclass === weaponclass,
+  );
+  assert.equal(route(23, 'HTH').recordset, 'gPlayerSequenceBladeFury');
+  assert.equal(route(24, 'HTH').recordset, 'D2R_PlayerSequenceCleave_HTH');
+  assert.equal(route(24, 'BOW').recordset, 'D2R_PlayerSequenceCleave_HTH');
+  assert.equal(route(24, '1HT').recordset, 'D2R_PlayerSequenceCleave_1HT');
+  assert.equal(route(24, '1HS').recordset, 'D2R_PlayerSequenceCleave_1HS');
+  assert.equal(route(25, '1HT').recordset, 'D2R_PlayerSequenceMirroredBlades_1HT');
+  assert.equal(route(25, '1HS').recordset, 'D2R_PlayerSequenceMirroredBlades_1HS');
+
+  const content = (recordset) => recordRows
+    .filter((row) => row.recordset === recordset)
+    .map(({ recordset: ignored, ...row }) => row);
+  assert.deepEqual(
+    content('gPlayerSequenceBladeFury'),
+    content('D2R_PlayerSequenceCleave_HTH'),
+  );
+  assert.deepEqual(
+    content('D2R_PlayerSequenceCleave_1HT'),
+    content('D2R_PlayerSequenceCleave_1HS'),
+  );
+  assert.deepEqual(
+    content('D2R_PlayerSequenceMirroredBlades_1HT'),
+    content('D2R_PlayerSequenceMirroredBlades_1HS'),
+  );
 });
 
 test('writes CRLF, BOM-free, byte-exact public tables', () => {

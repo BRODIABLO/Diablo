@@ -69,8 +69,11 @@ record set:
 | `*eol` | Must be `0` |
 
 The supplied baseline exactly reproduces D2R 3.3.93847: 350 routes, 235
-available routes, 115 null routes, 44 de-duplicated record sets and 757 native
-records. Several routes may deliberately share one record set.
+available routes, 115 null routes, 47 independently named native record sets
+and 808 native records. Those record sets currently contain 44 unique byte
+sequences. Several routes may deliberately share one record set, but distinct
+native arrays remain separately editable even when their current records are
+byte-identical.
 
 ## Loading and failure behavior
 

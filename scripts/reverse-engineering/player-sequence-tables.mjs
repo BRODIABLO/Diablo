@@ -78,21 +78,10 @@ export function buildPlayerSequenceTables() {
     contentByArray.set(arrayName, sha256(bytes));
   }
 
-  const canonicalByHash = new Map();
-  for (const mapping of mappings) {
-    if (mapping.available !== '1') continue;
-    const contentHash = contentByArray.get(mapping.array_name);
-    assert(contentHash, `Missing records for ${mapping.array_name}`);
-    if (!canonicalByHash.has(contentHash)) {
-      canonicalByHash.set(contentHash, mapping.array_name);
-    }
-  }
-  assert.equal(canonicalByHash.size, 44, 'The governed runtime must expose 44 unique contents');
-
-  const canonicalByArray = new Map();
-  for (const [arrayName, contentHash] of contentByArray) {
-    canonicalByArray.set(arrayName, canonicalByHash.get(contentHash));
-  }
+  // Content identity is diagnostic only. Distinct native arrays must remain
+  // independently editable even when their current records are byte-identical.
+  const uniqueContents = new Set(contentByArray.values());
+  assert.equal(uniqueContents.size, 44, 'The governed runtime must expose 44 unique contents');
 
   const routeRows = mappings.map((mapping, index) => {
     const sequence = Math.floor(index / 14) + 1;
@@ -101,18 +90,17 @@ export function buildPlayerSequenceTables() {
       seqnum: mapping.sequence_id,
       '*sequence': mapping.sequence_name,
       weaponclass: mapping.weapon_class,
-      recordset: mapping.available === '1' ? canonicalByArray.get(mapping.array_name) : '',
+      recordset: mapping.available === '1' ? mapping.array_name : '',
       '*eol': 0,
     };
   });
 
   const recordRows = [];
-  for (const canonicalName of canonicalByHash.values()) {
-    const sourceRows = recordsByArray.get(canonicalName);
-    assert(sourceRows?.length, `Missing canonical record set ${canonicalName}`);
+  for (const [arrayName, sourceRows] of recordsByArray) {
+    assert(sourceRows.length, `Missing native record set ${arrayName}`);
     for (const record of sourceRows) {
       recordRows.push({
-        recordset: canonicalName,
+        recordset: arrayName,
         mode: record.mode_code,
         frame: record.frame,
         dir: record.direction,
@@ -124,7 +112,7 @@ export function buildPlayerSequenceTables() {
 
   assert.equal(routeRows.filter((row) => row.recordset).length, 235);
   assert.equal(routeRows.filter((row) => !row.recordset).length, 115);
-  assert.equal(recordRows.length, 757, 'Content de-duplication must retain 757 records');
+  assert.equal(recordRows.length, 808, 'Native record-set ownership must retain 808 records');
 
   const routeTable = makeTable(
     ['seqnum', '*sequence', 'weaponclass', 'recordset', '*eol'],
@@ -142,7 +130,8 @@ export function buildPlayerSequenceTables() {
       availableRoutes: routeRows.filter((row) => row.recordset).length,
       nullRoutes: routeRows.filter((row) => !row.recordset).length,
       sourceArrays: recordsByArray.size,
-      uniqueRecordSets: canonicalByHash.size,
+      recordSets: recordsByArray.size,
+      uniqueContents: uniqueContents.size,
       records: recordRows.length,
     },
   };

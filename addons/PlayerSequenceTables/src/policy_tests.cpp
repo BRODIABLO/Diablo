@@ -59,14 +59,20 @@ int main() {
     assert(ParsePlayerSequenceTables(routeText, recordText, parsed, error));
     assert(parsed.recordSetByRoute.size() == 350);
     assert(parsed.availableRoutes == 235);
-    assert(parsed.recordSets.size() == 44);
+    assert(parsed.recordSets.size() == 47);
     std::size_t records{};
     for (const auto& recordSet : parsed.recordSets) {
         assert(!recordSet.name.empty());
         assert(!recordSet.records.empty());
         records += recordSet.records.size();
     }
-    assert(records == 757);
+    assert(records == 808);
+    assert(parsed.recordSetByRoute[(23 - 1) * WeaponClassCount]
+        != parsed.recordSetByRoute[(24 - 1) * WeaponClassCount]);
+    assert(parsed.recordSetByRoute[(24 - 1) * WeaponClassCount + 1]
+        != parsed.recordSetByRoute[(24 - 1) * WeaponClassCount + 3]);
+    assert(parsed.recordSetByRoute[(25 - 1) * WeaponClassCount + 1]
+        != parsed.recordSetByRoute[(25 - 1) * WeaponClassCount + 3]);
 
     auto invalidRoutes = routeText;
     ReplaceOnce(invalidRoutes, "\r\n1\tJab\t1HT\t", "\r\n1\tJab\tHTH\t");
