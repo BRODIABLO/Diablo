@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-26",
+  "updatedAt": "2026-08-25",
   "target": {
     "game": "D2R 3.2",
     "build": 92777,
@@ -39,9 +39,9 @@
   "implementationSummary": {
     "implementedAt": "2026-07-26",
     "targetPatchFiles": 20,
-    "targetPatchSites": 61,
+    "targetPatchSites": 63,
     "newPatchFiles": 17,
-    "newPatchSites": 54,
+    "newPatchSites": 56,
     "newlyImplementedEntries": 40,
     "validation": {
       "targetImageArtifact": "codex-d2r-92777-decrypted.exe",
@@ -49,7 +49,7 @@
       "expectedByteMismatches": 0,
       "overlaps": 0,
       "staticPatchFilesValidated": 20,
-      "staticPatchSitesValidated": 61,
+      "staticPatchSitesValidated": 63,
       "thornsAndBurnPatchSha256": "AF35CC9093B52EFE5476C2D9E8D74EEE8B6F9043BFD5923DA368DC29862CFC79",
       "thornsAndBurnRuntimeByteIdentical": true,
       "thornsAndBurnRuntimeLoadStatus": "awaiting-next-launch",
@@ -76,7 +76,17 @@
       "normalAreaLevelScalingGuardRva": "0x543D32",
       "normalAreaLevelScalingGuardBytes": "4585F67E19",
       "normalAreaLevelScalingRuntimeValidation": "passed-2026-08-06: Helena entered the Rogue Encampment with Anor restored, no LevelId assertion and no new crash report; startup 24/24, patches 18/18, plugins 13/13",
-      "status": "static-validation-runtime-sync-and-cold-start-passed-awaiting-gameplay-validation"
+      "hitChanceBoundsRuntimeTarget": "D2R 3.3.93847",
+      "hitChanceBoundsPatchPath": "data-BKVince/d2rloader/patches/ruffneckk-hit-chance-0-100.json",
+      "hitChanceBoundsDisplayPipeline": "Outgoing Character Screen path 0x1514700 -> 0x14E7FE0 and incoming Character Screen path 0x15149F0 -> 0x1514CA0 are distinct. The incoming formatter carried an additional vanilla 5%-95% clamp at 0x1514CBD..0x1514CCE after the raw chance calculation.",
+      "hitChanceBoundsCorrection": "Add lower operand 0x1514CBF (05 -> 00) and upper operand 0x1514CCA (5F000000 -> 64000000); static and runtime validation recorded after deployment.",
+      "hitChanceBoundsSourceSha256": "FF859045E8304AC6F5B7C9ECA58453A708A7824857847A8C4E04BEADF2DCED9E",
+      "hitChanceBoundsRuntimeSha256": "FF859045E8304AC6F5B7C9ECA58453A708A7824857847A8C4E04BEADF2DCED9E",
+      "hitChanceBoundsRuntimeWrites": 9,
+      "hitChanceBoundsColdStart": "passed-2026-08-25: D2R 3.3.93847 build key 623f7a1f73eabb08ccb2b2046e3f9164; Hit Chance Bounds [mod] — 9 changes; 32 plugins loaded; 18 memory patches applied; D2R startup complete",
+      "hitChanceBoundsGameplay": "passed-user-confirmed-2026-08-25: Vincent confirmed that the defensive Character Screen tooltip now displays the intended 0% incoming hit chance",
+      "hitChanceBoundsReleaseState": "staged-under-Unreleased-for-the-next-RuffnecKk-D2RLoader-Suite-release",
+      "status": "static-runtime-cold-start-and-gameplay-validation-passed-release-staged"
     },
     "patches": [
       {
@@ -88,7 +98,7 @@
         "entries": ["Disable item quantity", "Infinite Town Portal and Identify Tomes"]
       },
       {
-        "path": "data-BKVince/d2rloader/patches/hit-chance-bounds.json",
+        "path": "data-BKVince/d2rloader/patches/ruffneckk-hit-chance-0-100.json",
         "entries": ["Hit Chance % (Display Fix)", "Hit Chance % (Lower Bound)", "Hit Chance % (Upper Bound)"]
       },
       {
@@ -563,9 +573,10 @@
       },
       {
         "name": "Hit Chance % (Display Fix)",
-        "classification": "patch-site-located",
+        "classification": "patch-site-corrected",
         "confidence": "high",
-        "sites": [{ "rva": "0x14E801A", "expected": "7537", "futureIntent": "Make the branch unconditional so a 0% value can be displayed." }]
+        "sites": [{ "rva": "0x14E801A", "expected": "7537", "replacement": "EB37", "intent": "Make the outgoing Character Screen branch unconditional so a calculated 0% value is formatted instead of returning an empty string." }],
+        "decision": "The incoming Character Screen does not use this empty-string gate. It calculates the raw defensive chance through 0x15149F0 and passes EAX through the unique call pair 0x14E8242/0x14E8262 to the separate formatter at 0x1514CA0."
       },
       {
         "name": "Autogold: send higher cost to pickup function",
@@ -729,9 +740,10 @@
         "sites": [
           { "rva": "0x44BD57", "expected": "05000000" },
           { "rva": "0x14E8068", "expected": "05" },
-          { "rva": "0x15149C2", "expected": "05" }
+          { "rva": "0x15149C2", "expected": "05" },
+          { "rva": "0x1514CBF", "expected": "05", "replacement": "00", "role": "incoming Character Screen formatter lower-bound operand" }
         ],
-        "futureIntent": "Change all lower bounds from 5 to 0."
+        "decision": "Change every governed lower bound from 5 to 0. The original three-site inventory missed the post-calculation incoming formatter: its unique sequence at 0x1514CBD clamps ECX before formatting charmontohit1X/charmontohit2X."
       },
       {
         "name": "Hit Chance % (Upper Bound)",
@@ -740,9 +752,10 @@
         "sites": [
           { "rva": "0x44BD45", "expected": "5F000000" },
           { "rva": "0x14E8073", "expected": "5F000000" },
-          { "rva": "0x15149CD", "expected": "5F000000" }
+          { "rva": "0x15149CD", "expected": "5F000000" },
+          { "rva": "0x1514CCA", "expected": "5F000000", "replacement": "64000000", "role": "incoming Character Screen formatter upper-bound operand" }
         ],
-        "futureIntent": "Change all upper bounds from 95 to 100 (64000000)."
+        "decision": "Change every governed upper bound from 95 to 100 (64000000), including the incoming Character Screen formatter paired with the newly proven lower-bound operand."
       },
       {
         "name": "Autogold: allow higher cost in server check",

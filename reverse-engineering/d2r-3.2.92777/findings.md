@@ -834,6 +834,32 @@ controle, octets/signature, caller/callee ou validation runtime. Les simples
 ressemblances et les anciennes adresses 2.4 restent dans cette page avec une
 confiance explicite.
 
+## Hit Chance Bounds — clamp défensif de la fiche de personnage
+
+- Le runtime courant D2R 3.3.93847 réutilise le corpus natif vérifié provenant
+  du build 92777. Le patch BKVince initial appliquait bien ses sept écritures en
+  mémoire, mais la capture gameplay conservait `5%` pour
+  `Average chance %s will hit you`.
+- Le chemin offensif de la fiche de personnage passe par le calculateur
+  `0x1514700` puis son formateur à `0x14E7FE0`. Les opérandes déjà gouvernés à
+  `0x15149C2/0x15149CD` et `0x14E8068/0x14E8073` appartiennent à ce chemin; les
+  deux premiers ne constituent pas un second chemin gameplay autoritaire.
+- Le chemin défensif distinct appelle `0x15149F0` depuis `0x14E8242`, conserve
+  son résultat brut dans `EBX`, puis appelle le formateur `0x1514CA0` depuis
+  `0x14E8262` avec la chance en `ECX` et la sortie texte en `RDX`.
+- Le formateur défensif réappliquait le clamp vanilla dans la séquence unique
+  `83 F9 05 7D 07 BF 05 00 00 00 EB 0A B8 5F 00 00 00` à `0x1514CBD`.
+  L'opérande basse est `0x1514CBF`; l'opérande haute commence à `0x1514CCA`.
+- La même fonction sélectionne ensuite les chaînes localisées 10104
+  `charmontohit1X` et 10105 `charmontohit2X`. La signature stricte
+  `B9 78 27 00 00 E8 ?? ?? ?? ?? 4C 8B CB 89 7C 24 20` est unique à
+  `0x1514DBD`, ce qui rattache le clamp oublié au texte observé sans inférence
+  fondée sur la seule proximité.
+- Le correctif minimal ajoute `05 -> 00` à `0x1514CBF` et
+  `5F 00 00 00 -> 64 00 00 00` à `0x1514CCA`. Le jet gameplay gouverné à
+  `0x44BD56` reste distinct; la validation visuelle de l'infobulle ne remplace
+  pas une validation fonctionnelle du combat.
+
 ## Cast Triggers — événement doactive et niveau source
 
 - Le handler serveur central `0x43ACB0` porte l'ABI observée

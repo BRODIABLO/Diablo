@@ -3074,6 +3074,38 @@
       "confidence": "high",
       "source": "Mission/configurable-resistance-floor-3.3.md",
       "notes": "Four-byte -100 operand of MOV EAX,-100 at 0x14E7299 in the Character Screen loop shared by Fire, Lightning, Cold and Poison. The containing witness 8D 4F 4B 83 F9 5F 7C 05 B9 5F 00 00 00 B8 9C FF FF FF is unique in the governed corpus, and four branch sources select maximum-resistance stats 40, 42, 44 and 46 before reaching the same clamp. Resistance Floor writes only this operand with the configured player floor."
+    },
+    {
+      "rva": "0x15149F0",
+      "name": "UI_CalculateIncomingHitChance",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/memory-patches-portage-3.2.json; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Character Screen defensive hit-chance calculator. Its single direct caller at 0x14E8242 retains the EAX result in EBX and passes it as ECX to UI_FormatIncomingHitChanceTooltip at 0x14E8262. The function computes the raw monster-versus-player chance and returns without a terminal 5%-95% clamp; the remaining vanilla clamp is owned by the formatter."
+    },
+    {
+      "rva": "0x1514CA0",
+      "name": "UI_FormatIncomingHitChanceTooltip",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/memory-patches-portage-3.2.json; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Character Screen formatter called only from 0x14E8262 with the calculated chance in ECX and the output string in RDX. It clamps the incoming value in the unique 18-byte sequence at 0x1514CBD, then formats localization id 10104 charmontohit1X or 10105 charmontohit2X. This is the post-calculation clamp omitted by the original seven-write Hit Chance Bounds patch."
+    },
+    {
+      "rva": "0x1514CBF",
+      "name": "UI_IncomingHitChanceLowerBoundOperand",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "data-BKVince/d2rloader/patches/ruffneckk-hit-chance-0-100.json; Mission/memory-patches-portage-3.2.json",
+      "notes": "Immediate byte 05 in CMP ECX,5 at 0x1514CBD inside UI_FormatIncomingHitChanceTooltip. The containing sequence 83 F9 05 7D 07 BF 05 00 00 00 EB 0A B8 5F 00 00 00 is unique in the governed build-92777 corpus reused for D2R 3.3.93847. Hit Chance Bounds writes 00 so valid non-negative calculated chances can reach 0%."
+    },
+    {
+      "rva": "0x1514CCA",
+      "name": "UI_IncomingHitChanceUpperBoundOperand",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "data-BKVince/d2rloader/patches/ruffneckk-hit-chance-0-100.json; Mission/memory-patches-portage-3.2.json",
+      "notes": "Four-byte immediate 5F 00 00 00 in MOV EAX,95 at 0x1514CC9 inside UI_FormatIncomingHitChanceTooltip. It shares the unique governed clamp sequence beginning at 0x1514CBD. Hit Chance Bounds writes 64 00 00 00 so the defensive Character Screen formatter uses the same 100% ceiling as the gameplay and offensive display paths."
     }
   ]
 }
