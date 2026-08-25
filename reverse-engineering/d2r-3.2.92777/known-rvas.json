@@ -3050,6 +3050,30 @@
       "confidence": "high",
       "source": "Mission/fourth-skill-tree-3.2.md",
       "notes": "Authoritative server callback with observed ABI (game, player, packet, packetSize) -> int32. A controlled D2R 3.3.93847 runtime read proved slot 0x3B of the server callback table at D2R+0x1D2A790 points here. It requires exactly five bytes, decodes the skill id at +1 and additional-rank marker at +3, validates the id against the compiled SkillsTxt count, resolves the skill and its MaxLvl, reads the current base rank, then applies ranks through the native server mutation helper at 0x438670 until the request is exhausted or a validation/cap/mutation fails. The callback never reads SkillPage, SkillRow or SkillColumn, so authoritative allocation is independent of the UI page number."
+    },
+    {
+      "rva": "0x4524C4",
+      "name": "ResistanceFloorUncappedClampImmediate",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/configurable-resistance-floor-3.3.md",
+      "notes": "Five-byte MOV ECX,-100 in the uncapped negative-resistance path of SUNITDMG_ApplyResistancesAndAbsorb. The extended witness B9 9C FF FF FF 3B D9 0F 4F CB EB 51 is unique in the governed corpus reused for D2R 3.3.93847. Resistance Floor redirects only this MOV through a near relay, selects a floor from defender Unit* at context+0x10 and resistance stat id at record+0x08, then resumes at 0x4524C9 before the original CMP/CMOV/JMP."
+    },
+    {
+      "rva": "0x4524E7",
+      "name": "ResistanceFloorCappedClampImmediate",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/configurable-resistance-floor-3.3.md",
+      "notes": "Five-byte MOV ECX,-100 in the capped resistance path of SUNITDMG_ApplyResistancesAndAbsorb. The extended witness B9 9C FF FF FF 3B D9 0F 4F CB 8B D8 is unique in the governed corpus reused for D2R 3.3.93847. Resistance Floor redirects only this MOV through a near relay and resumes at 0x4524EC, preserving the plugin-items upper-cap operands at 0x4524D6 and 0x4524DE."
+    },
+    {
+      "rva": "0x14E729A",
+      "name": "CharacterScreenResistanceFloorOperand",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/configurable-resistance-floor-3.3.md",
+      "notes": "Four-byte -100 operand of MOV EAX,-100 at 0x14E7299 in the Character Screen loop shared by Fire, Lightning, Cold and Poison. The containing witness 8D 4F 4B 83 F9 5F 7C 05 B9 5F 00 00 00 B8 9C FF FF FF is unique in the governed corpus, and four branch sources select maximum-resistance stats 40, 42, 44 and 46 before reaching the same clamp. Resistance Floor writes only this operand with the configured player floor."
     }
   ]
 }

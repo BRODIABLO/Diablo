@@ -1,4 +1,4 @@
-# Configurable Resistance Floor — D2R 3.3.93847
+# Configurable Resistance Floor — D2R 3.2.92777 and 3.3.93847
 
 ## Decision and product contract
 
@@ -31,10 +31,10 @@ modified.
 
 ## Governed native evidence
 
-The current product target is D2R 3.3.93847. Its governed native evidence
-reuses the verified common corpus under
-`reverse-engineering/d2r-3.2.92777/`; the historical path records provenance,
-not a different product target.
+The product targets are D2R 3.2.92777 and 3.3.93847 with one DLL. Their
+governed native evidence reuses the verified common corpus under
+`reverse-engineering/d2r-3.2.92777/`; the historical path records provenance
+for the shared native image.
 
 `SUNITDMG_ApplyResistancesAndAbsorb` at RVA `0x4523E0` receives the resistance
 context in RCX, the current 0x40-byte damage record in RDX and `dontAbsorb` in
@@ -75,12 +75,10 @@ elemental/poison resistance values. The unique witness
 `0x14E728C`; the `-100` operand begins at `0x14E729A`. The plugin writes only
 that four-byte operand when native display synchronization is enabled.
 
-Physical and Magic have no native numeric Character Screen slots. Their
-optional extended readout uses the versioned MapSense OverlayHost v2 contract
-and the exact ImGui ABI fingerprint `0xF401021D19150002`. MapSense remains an
-optional provider: absent or incompatible providers are refused without
-affecting gameplay or the four native values. Both load orders are supported by
-an immediate registration attempt and another on `LocalPlayerReady`.
+Physical and Magic have no native numeric Character Screen slots. They remain
+covered by the gameplay floor, but Resistance Floor does not add a custom
+readout for them or depend on another plugin for display. Vincent explicitly
+removed that integration from the product contract on 24 August 2026.
 
 ## Ownership and coexistence audit
 
@@ -93,9 +91,6 @@ an immediate registration attempt and another on `LocalPlayerReady`.
   `resistance floor` returns no implementation.
 - Monster Display retains ownership of its resolver-entry interception.
 - Plugin-items retains ownership of the two upper-cap operands.
-- MapSense retains ownership of the shared D3D12/ImGui renderer. Resistance
-  Floor registers only as an OverlayHost v2 client and never installs a second
-  renderer.
 - Floating Damage remains an observer of resolved damage and requires no
   integration change.
 
@@ -114,9 +109,8 @@ an immediate registration attempt and another on `LocalPlayerReady`.
    other record receives vanilla `-100`.
 6. Keep file I/O, parsing and logging out of the per-damage path. Optional usage
    counters use bounded atomics only.
-7. Update the four native Character Screen values with the player floor. Read
-   Physical and Magic on D2R's UI thread, publish POD atomics and render the two
-   extra lines only while Character state 2 is open.
+7. Update the four native Character Screen values with the player floor. Do not
+   add custom Physical/Magic display code or a cross-plugin display dependency.
 8. Keep hot reload and hot unload unsupported for the first release candidate.
    Supported rollback is a cold restart after removing the DLL/TOML.
 
@@ -140,17 +134,17 @@ an immediate registration attempt and another on `LocalPlayerReady`.
 
 - full active Suite plus all five eezstreet DLLs, with no disabled plugin or
   PluginPack feature;
-- global and mod-local scope, plus both relevant load orders with Monster
-  Display, plugin-items and MapSense;
+- global and mod-local scope, plus coexistence with Monster Display and
+  plugin-items;
 - player, hireling, summon, pet, revive, converted unit, ordinary monster,
   champion, unique, superunique and boss;
 - Physical, Magic, Fire, Lightning, Cold and Poison at `-99`, `-100`, `-101`,
   `-250`, `-1000` and below-floor input;
 - Burn, difficulty penalties, pierce, immunities and upper caps remain composed;
-- Character Screen four native values plus extended Physical/Magic readout;
+- Character Screen four native values; Physical/Magic remain gameplay-only;
 - solo, host, joiner and PvP with identical configs; the host remains gameplay
   authoritative and clients require matching TOML for matching local display;
-- dense-pack performance with Floating Damage and MapSense active;
+- dense-pack performance with the full active plugin stack;
 - checked 11x worst-case multiplier and final int32/fixed-point overflow edges.
 
 ## Rollback
@@ -162,34 +156,34 @@ is required.
 
 ## Implementation and validation status — 2026-08-24
 
-- The standalone 0.2.0 candidate is implemented under
+- The standalone 0.3.0 candidate is implemented under
   `addons/ResistanceFloor/` with its dedicated English TOML, source, policy
   tests, MASM mid-hooks, documentation and public candidate archive.
-- Its configuration version 2 TOML uses player-facing sections and labels: `players`,
+- Its configuration version 3 TOML uses player-facing sections and labels: `players`,
   `companions`, `monsters`, `minimum_resistance`, `character_screen` and
   `troubleshooting`.
-- Release x64 compilation and the 1/1 policy/source-contract suite pass with
-  warnings treated as errors. A second clean build is byte-identical:
-  `32504A5E5CE8921EC24CCFC361DE4BD531F4A17F8B16F566805C3CC8B5C77DDC`.
+- Release x64 compilation and reproducibility evidence are recorded in
+  `addons/ResistanceFloor/VALIDATION.md`.
 - The DLL is x64, ASLR/high-entropy-ASLR/NX compatible and exports exactly the
   three D2RLoader entry points. The ZIP contains only the DLL and TOML; the
   README stays beside it.
 - The installed D2R 3.3.93847 version, Build Key, `.build.info` hash and
   `D2R.exe` hash match the governed baseline exactly. Source and BKVince
   mod-local deployment hashes match.
-- A fresh 0.2.0 mod-local cold start accepts `config_version = 2`, resolves the
-  dedicated BKVince TOML and loads the expected player-facing values. It loads
-  31 plugins, applies 18 memory patches and completes startup 24/24 with the
-  full active stack. The earlier 0.1.0 candidate proved mod/global duplicate
-  arbitration and global-only scope; those unchanged scope paths were not
-  rerun for the terminology-only migration. The final installation is
-  mod-local BKVince, global test copies are absent and D2R is stopped.
+- An external tester loaded the final 0.3.0 candidate and confirmed its
+  functional gameplay and native display behavior. The earlier 0.1.0 candidate
+  proved mod/global duplicate arbitration and global-only scope. A fresh
+  governed 0.3.0 cold start with the complete active stack remains part of the
+  release-specific qualification matrix.
 - The diagnostic candidate first exposed a D2RLoader contract mismatch:
   `PatchJmpRel32` requires its tracked safety-check size to equal the five-byte
   jump size. The final implementation keeps the independent twelve-byte
   preflight witness and supplies the exact five-byte `MOV` witness to the
   tracked write. Both relays and the Character Screen operand are confirmed
   operational in fresh plugin logs.
-- Gameplay, display, overflow and multiplayer gates remain `not run`; see
+- External gameplay confirms that player and configured-monster resistances
+  below `-100` affect actual damage and that the native display follows the new
+  floor. Vincent accepted 0.3.0 for the next Suite release on 25 August 2026.
+  Companion-specific, overflow and separate multiplayer gates remain open; see
   `addons/ResistanceFloor/VALIDATION.md` for the explicit matrix.
 - ROADMAP was intentionally not edited, following Vincent's instruction.

@@ -29,7 +29,7 @@ auto ReadFile(const std::filesystem::path& path) -> std::string {
 }
 
 constexpr std::string_view ValidToml = R"toml(
-config_version = 2
+config_version = 3
 enabled = true
 [players]
 enabled = true
@@ -42,9 +42,6 @@ enabled = false
 minimum_resistance = -999
 [character_screen]
 show_resistances_below_minus_100 = true
-show_physical_and_magic = true
-position_from_left = 24
-position_from_bottom = 180
 [troubleshooting]
 show_usage_counters = false
 )toml";
@@ -60,7 +57,7 @@ void TestParsing() {
     std::string error;
     CHECK(ParseToml(ValidToml, config, error));
     CHECK(error.empty());
-    CHECK(config.schemaVersion == 2);
+    CHECK(config.schemaVersion == 3);
     CHECK(config.enabled);
     CHECK(config.players.enabled);
     CHECK(config.players.floor == -1000);
@@ -68,9 +65,6 @@ void TestParsing() {
     CHECK(!config.monsters.enabled);
     CHECK(config.monsters.floor == -999);
     CHECK(config.display.syncCharacterScreen);
-    CHECK(config.display.showPhysicalAndMagic);
-    CHECK(config.display.x == 24);
-    CHECK(config.display.yFromBottom == 180);
     CHECK(!config.diagnostics);
 
     auto replace = [](std::string text, std::string_view from,
@@ -90,8 +84,8 @@ void TestParsing() {
         "minimum_resistance = -1000",
         "minimum_resistance = -99")));
     CHECK(!Parses(replace(std::string(ValidToml), "enabled = true", "enabled = 1")));
-    CHECK(!Parses(replace(std::string(ValidToml), "config_version = 2", "config_version = 1")));
-    CHECK(!Parses(replace(std::string(ValidToml), "config_version = 2\n", "")));
+    CHECK(!Parses(replace(std::string(ValidToml), "config_version = 3", "config_version = 2")));
+    CHECK(!Parses(replace(std::string(ValidToml), "config_version = 3\n", "")));
     CHECK(!Parses(replace(std::string(ValidToml), "config_version", "schema_version")));
     CHECK(!Parses(replace(std::string(ValidToml), "minimum_resistance", "floor")));
     CHECK(!Parses(replace(
@@ -100,12 +94,12 @@ void TestParsing() {
     CHECK(!Parses(std::string(ValidToml) + "\nunknown = true\n"));
     CHECK(!Parses(replace(
         std::string(ValidToml),
-        "position_from_left = 24",
-        "position_from_left = -1")));
+        "show_resistances_below_minus_100 = true",
+        "show_resistances_below_minus_100 = true\nshow_physical_and_magic = true")));
     CHECK(!Parses(replace(
         std::string(ValidToml),
-        "position_from_bottom = 180",
-        "position_from_bottom = 4001")));
+        "show_resistances_below_minus_100 = true",
+        "show_resistances_below_minus_100 = true\nposition_from_left = 24")));
 }
 
 void TestPolicy() {
@@ -130,10 +124,6 @@ void TestPolicy() {
     config.enabled = false;
     CHECK(SelectConfiguredFloor(config, UnitClass::Player, 36) == -100);
 
-    CHECK(ClampDisplayedResistance(-1200, -1000, 50) == -1000);
-    CHECK(ClampDisplayedResistance(-250, -1000, 50) == -250);
-    CHECK(ClampDisplayedResistance(80, -1000, 50) == 50);
-    CHECK(ClampDisplayedResistance(0, -1000, 95) == 0);
 }
 
 void TestCandidatesAndRel32() {
@@ -163,6 +153,10 @@ void TestSourceContracts() {
     CHECK(plugin.find("0x4524E7") != std::string::npos);
     CHECK(plugin.find("0x14E729A") != std::string::npos);
     CHECK(plugin.find("RegisterConsoleCommand") != std::string::npos);
+    CHECK(plugin.find("MapSense") == std::string::npos);
+    CHECK(plugin.find("OverlayHost") == std::string::npos);
+    CHECK(plugin.find("ImGui") == std::string::npos);
+    CHECK(plugin.find("show_physical_and_magic") == std::string::npos);
     CHECK(relay.find("movdqu xmmword ptr [rsp+50h], xmm0") != std::string::npos);
     CHECK(relay.find("mov rcx, qword ptr [rsi+10h]") != std::string::npos);
     CHECK(relay.find("mov edx, dword ptr [r14+8h]") != std::string::npos);
@@ -170,9 +164,12 @@ void TestSourceContracts() {
     CHECK(toml.find("minimum_resistance = -1000") != std::string::npos);
     CHECK(toml.find("show_resistances_below_minus_100 = true")
         != std::string::npos);
+    CHECK(toml.find("config_version = 3") != std::string::npos);
     CHECK(toml.find("show_usage_counters = false") != std::string::npos);
     CHECK(toml.find("[targets.") == std::string::npos);
     CHECK(toml.find("floor =") == std::string::npos);
+    CHECK(toml.find("show_physical_and_magic") == std::string::npos);
+    CHECK(toml.find("position_from_") == std::string::npos);
 }
 
 } // namespace

@@ -54,29 +54,15 @@ The native Fire, Lightning, Cold and Poison Character Screen values share the
 operand at `0x14E729A`. Its full eighteen-byte witness at `0x14E728C` must match
 before it is changed.
 
-Physical and Magic have no native Character Screen slots. Their optional local
-player readout is a versioned client of RuffnecKk MapSense OverlayHost v2. It
-requires the exact ImGui ABI fingerprint `0xF401021D19150002`, never creates a
-second renderer and performs D2R UI/stat queries on D2RLoader's UI thread before
-publishing atomic values to the render callback. The provider may be absent or
-ABI-incompatible without affecting gameplay or the four native values.
-
-The optional readout validates these current-runtime entries before use:
-
-- local data context at `0x08B2D0`;
-- local player lookup at `0x09A480`;
-- UI-state query at `0x0CE500`;
-- unit-stat query at `0x2F5020`.
-
-The UI-state entry may be unchanged or singly owned by the compatible
-`ruffneckk-remote-stash` inline hook reported by DiagnosticsService v1.
+Physical and Magic have no native Character Screen slots. They remain covered
+by the gameplay floor, but Resistance Floor does not create custom values for
+them or depend on another plugin for display.
 
 ## Shared ownership boundary
 
 Resistance Floor does not write the upper-cap operands at `0x4524D6`
 (Physical) or `0x4524DE` (Magic and elemental). Those bytes remain owned by D2R
-or the active compatible cap plugin. The optional readout observes their active
-byte values only to mirror the effective cap.
+or the active compatible cap plugin.
 
 No eezstreet plugin is modified, linked or redistributed. There is no
 `ModScopedOnly` flag, proprietary merge key or dependency on PluginPack.

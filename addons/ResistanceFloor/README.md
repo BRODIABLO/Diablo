@@ -1,4 +1,4 @@
-# Resistance Floor 0.2.0
+# Resistance Floor 0.3.0
 
 Lets configured units fall below D2R's vanilla `-100` resistance floor.
 
@@ -28,11 +28,10 @@ Ordinary monsters keep the vanilla `-100` minimum by default. Set
 `monsters.enabled = true` if their resistance should also be allowed to fall
 as low as the value in `monsters.minimum_resistance`.
 
-The four native Character Screen values use the configured player floor. When
-RuffnecKk MapSense with OverlayHost v2 is active, a compact extension beside
-the Character Screen also shows the local player's Physical and Magic
-resistance. MapSense is optional: its absence never disables the gameplay
-change or the four native values.
+The four native Character Screen values—Fire, Lightning, Cold and Poison—use
+the configured player floor. Physical and Magic resistance remain covered by
+the gameplay change, but D2R has no native Character Screen values for them and
+this plugin does not add a custom display.
 
 At `-1000`, a matching damage type can reach eleven times its pre-resistance
 damage. This is an intentional consequence of the configured floor.
@@ -69,11 +68,10 @@ Character Screen options are grouped separately:
 ```toml
 [character_screen]
 show_resistances_below_minus_100 = true
-show_physical_and_magic = true
 ```
 
-Version 0.2.0 uses `config_version = 2`. Replace an earlier 0.1.0 candidate
-TOML instead of mixing its former technical setting names with this format.
+Version 0.3.0 uses `config_version = 3`. Replace an earlier candidate TOML
+instead of mixing removed settings with this format.
 
 Unknown keys, missing required settings and out-of-range values make the plugin
 refuse activation instead of guessing. Existing upper resistance caps remain
@@ -82,7 +80,7 @@ the lower bound.
 
 ## Compatibility
 
-- Target: Diablo II: Resurrected 3.3.93847.
+- Targets: Diablo II: Resurrected 3.2.92777 and 3.3.93847 with the same DLL.
 - Loader: governed D2RLoader/PluginSDK v3 baseline.
 - Scope: global or mod-local; the plugin is not mod-scoped-only.
 - Ownership: two independently signed lower-clamp sites and the native local

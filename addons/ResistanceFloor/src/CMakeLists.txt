@@ -1,6 +1,6 @@
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     cmake_minimum_required(VERSION 3.28)
-    project(ResistanceFloor VERSION 0.2.0 LANGUAGES C CXX RC ASM_MASM)
+    project(ResistanceFloor VERSION 0.3.0 LANGUAGES C CXX RC ASM_MASM)
     include(CTest)
 else()
     enable_language(RC)
@@ -32,34 +32,6 @@ if(NOT TARGET tomlplusplus::tomlplusplus)
     FetchContent_MakeAvailable(tomlplusplus)
 endif()
 
-if(NOT TARGET ResistanceFloorImGui)
-    FetchContent_Declare(
-        imgui
-        GIT_REPOSITORY https://github.com/ocornut/imgui.git
-        GIT_TAG f401021d5a5d56fe2304056c391e78f81c8d4b8f
-    )
-    FetchContent_MakeAvailable(imgui)
-    add_library(ResistanceFloorImGui STATIC
-        "${imgui_SOURCE_DIR}/imgui.cpp"
-        "${imgui_SOURCE_DIR}/imgui_draw.cpp"
-        "${imgui_SOURCE_DIR}/imgui_tables.cpp"
-        "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
-    )
-    target_include_directories(ResistanceFloorImGui PUBLIC
-        "${imgui_SOURCE_DIR}"
-    )
-    target_compile_features(ResistanceFloorImGui PUBLIC cxx_std_20)
-    target_compile_definitions(ResistanceFloorImGui PRIVATE
-        WIN32_LEAN_AND_MEAN
-        NOMINMAX
-        UNICODE
-        _UNICODE
-    )
-    if(MSVC)
-        target_compile_options(ResistanceFloorImGui PRIVATE /W3 /WX- /utf-8)
-    endif()
-endif()
-
 add_library(ResistanceFloor SHARED
     floor_relays.asm
     plugin.cpp
@@ -74,7 +46,6 @@ target_compile_definitions(ResistanceFloor PRIVATE
 )
 target_link_libraries(ResistanceFloor PRIVATE
     D2RLPlugin::D2RLPlugin
-    ResistanceFloorImGui
     tomlplusplus::tomlplusplus
 )
 set_target_properties(ResistanceFloor PROPERTIES

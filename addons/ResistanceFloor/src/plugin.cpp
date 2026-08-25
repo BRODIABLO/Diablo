@@ -1,13 +1,8 @@
 #include <D2RLPlugin/api.h>
-#include <D2RLPlugin/diagnostics.h>
-#include <D2RLPlugin/lifecycle_events.h>
-#include <D2RLPlugin/threads.h>
 
-#include "overlay_host_api.hpp"
 #include "resistance_floor_policy.hpp"
 
 #include <Windows.h>
-#include <imgui.h>
 
 #include <algorithm>
 #include <array>
@@ -20,7 +15,6 @@
 #include <iterator>
 #include <limits>
 #include <string>
-#include <string_view>
 
 extern "C" void ResistanceFloorFirstMidHook();
 extern "C" void ResistanceFloorSecondMidHook();
@@ -31,13 +25,7 @@ namespace {
 
 using namespace ruffneckk::resistance_floor;
 
-static_assert(IMGUI_VERSION_NUM
-    == static_cast<int>(RuffnecKk::OverlayHost::ImGuiVersionNumber));
-
 constexpr wchar_t ConfigFileName[] = L"ruffneckk-resistance-floor.toml";
-constexpr char OverlayOwner[] = "ruffneckk-resistance-floor";
-constexpr std::int32_t CharacterInterfaceState = 2;
-constexpr std::uint64_t UiRefreshPeriodMs = 100;
 constexpr std::size_t MaximumOwnerDepth = 8;
 constexpr std::size_t RelayStride = 32;
 constexpr std::size_t RelayBytes = RelayStride * 2;
@@ -47,7 +35,7 @@ constexpr char DefaultConfig[] = R"toml(# Resistance Floor
 # Choose how low each group can push its six damage resistances.
 
 # File format version. Leave this value unchanged.
-config_version = 2
+config_version = 3
 enabled = true
 
 [players]
@@ -70,14 +58,6 @@ minimum_resistance = -1000
 # Lets Fire, Lightning, Cold and Poison display values lower than -100.
 show_resistances_below_minus_100 = true
 
-# Adds Physical and Magic while the Character Screen is open.
-# This requires RuffnecKk MapSense; the resistance rules work without it.
-show_physical_and_magic = true
-
-# Position of the Physical and Magic box, in pixels.
-position_from_left = 24
-position_from_bottom = 180
-
 [troubleshooting]
 # Adds usage counters to the resistance-floor console status.
 show_usage_counters = false
@@ -87,14 +67,8 @@ constexpr std::uintptr_t FirstFloorSiteRva = 0x4524C4;
 constexpr std::uintptr_t FirstFloorContinuationRva = 0x4524C9;
 constexpr std::uintptr_t SecondFloorSiteRva = 0x4524E7;
 constexpr std::uintptr_t SecondFloorContinuationRva = 0x4524EC;
-constexpr std::uintptr_t PhysicalCapOperandRva = 0x4524D6;
-constexpr std::uintptr_t ElementalCapOperandRva = 0x4524DE;
 constexpr std::uintptr_t CharacterDisplayWitnessRva = 0x14E728C;
 constexpr std::uintptr_t CharacterDisplayFloorOperandRva = 0x14E729A;
-constexpr std::uintptr_t GetLocalDataContextRva = 0x08B2D0;
-constexpr std::uintptr_t GetLocalPlayerRva = 0x09A480;
-constexpr std::uintptr_t IsUiStateOpenRva = 0x0CE500;
-constexpr std::uintptr_t GetUnitStatRva = 0x2F5020;
 constexpr std::uintptr_t GetUnitTypeRva = 0x34B9D0;
 constexpr std::uintptr_t GetMinionOwnerRva = 0x4A53C0;
 
@@ -114,28 +88,6 @@ constexpr std::array<std::uint8_t, 18> CharacterDisplayWitnessExpected{
 constexpr std::array<std::uint8_t, 4> VanillaFloorOperandExpected{
     0x9C, 0xFF, 0xFF, 0xFF,
 };
-constexpr std::array<std::uint8_t, 32> GetLocalDataContextExpected{
-    0x8B, 0x05, 0x2E, 0x84, 0x99, 0x02, 0xC3, 0xCC,
-    0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC,
-    0x8B, 0x05, 0x76, 0x84, 0x99, 0x02, 0xC3, 0xCC,
-    0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC,
-};
-constexpr std::array<std::uint8_t, 32> GetLocalPlayerExpected{
-    0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83,
-    0xEC, 0x20, 0x83, 0xF9, 0x08, 0x0F, 0x83, 0x85,
-    0x00, 0x00, 0x00, 0x8B, 0xD9, 0x48, 0x89, 0x5C,
-    0x24, 0x38, 0x48, 0x83, 0xFB, 0x08, 0x72, 0x19,
-};
-constexpr std::array<std::uint8_t, 15> IsUiStateOpenExpected{
-    0x48, 0x63, 0xC1, 0x48, 0x8D, 0x0D, 0x96, 0xC8,
-    0x95, 0x02, 0x0F, 0xB6, 0x04, 0x08, 0xC3,
-};
-constexpr std::array<std::uint8_t, 32> GetUnitStatExpected{
-    0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x6C,
-    0x24, 0x18, 0x48, 0x89, 0x74, 0x24, 0x20, 0x57,
-    0x48, 0x83, 0xEC, 0x20, 0x41, 0x0F, 0xB7, 0xE8,
-    0x8B, 0xFA, 0x48, 0x8B, 0xD9, 0x48, 0x85, 0xC9,
-};
 constexpr std::array<std::uint8_t, 32> GetUnitTypeExpected{
     0x48, 0x83, 0xEC, 0x28, 0x48, 0x85, 0xC9, 0x75,
     0x1D, 0x88, 0x4C, 0x24, 0x30, 0x48, 0x8D, 0x4C,
@@ -150,11 +102,6 @@ constexpr std::array<std::uint8_t, 36> GetMinionOwnerExpected{
     0xEC, 0x65, 0xEA, 0xFF,
 };
 
-using GetLocalDataContextFn = std::int32_t(__fastcall*)() noexcept;
-using GetLocalPlayerFn = void*(__fastcall*)(std::int32_t) noexcept;
-using IsUiStateOpenFn = std::int32_t(__fastcall*)(std::int32_t) noexcept;
-using GetUnitStatFn = std::int32_t(__fastcall*)(
-    void*, std::int32_t, std::uint16_t) noexcept;
 using GetUnitTypeFn = std::int32_t(__fastcall*)(void*) noexcept;
 using GetMinionOwnerFn = void*(__fastcall*)(void*) noexcept;
 
@@ -163,26 +110,9 @@ std::uint8_t* Base{};
 Config Settings{};
 std::string LoadedConfigPath{"embedded defaults"};
 void* RelayPage{};
-GetLocalDataContextFn GetLocalDataContext{};
-GetLocalPlayerFn GetLocalPlayer{};
-IsUiStateOpenFn IsUiStateOpen{};
-GetUnitStatFn GetUnitStat{};
 GetUnitTypeFn GetUnitType{};
 GetMinionOwnerFn GetMinionOwner{};
-const D2RL::DiagnosticsServiceV1* DiagnosticsService{};
-const D2RL::ThreadServiceV1* ThreadService{};
-const D2RL::LifecycleServiceV1* LifecycleService{};
-std::array<D2RL::Lifecycle::ListenerHandle, 3> LifecycleHandles{};
 std::atomic_bool Operational{};
-std::atomic_bool ExtendedInfrastructureReady{};
-std::atomic_bool OverlayAttached{};
-std::atomic<const RuffnecKk::OverlayHost::HostApiV2*> OverlayApi{};
-std::atomic_bool RefreshQueued{};
-std::atomic<std::uint64_t> NextRefreshTick{};
-std::atomic_bool CharacterOpen{};
-std::atomic_bool ExtendedValuesValid{};
-std::atomic<std::int32_t> DisplayPhysical{};
-std::atomic<std::int32_t> DisplayMagic{};
 std::atomic<std::uint64_t> PlayerSelections{};
 std::atomic<std::uint64_t> PlayerOwnedSelections{};
 std::atomic<std::uint64_t> MonsterSelections{};
@@ -193,7 +123,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "resistance-floor",
     .name = "Resistance Floor",
-    .version = "0.2.0",
+    .version = "0.3.0",
     .author = "RuffnecKk",
     .description = "Lets configured units fall below the vanilla resistance floor.",
     .flags = D2RL::PluginFlags::Shared | D2RL::PluginFlags::NativeHooks,
@@ -243,20 +173,6 @@ auto Matches(
         const std::array<std::uint8_t, Size>& expected) noexcept -> bool {
     return Base != nullptr
         && std::memcmp(Base + rva, expected.data(), expected.size()) == 0;
-}
-
-auto IsExecutableAddress(const void* address) noexcept -> bool {
-    if (!address) return false;
-    MEMORY_BASIC_INFORMATION region{};
-    if (VirtualQuery(address, &region, sizeof(region)) == 0
-            || region.State != MEM_COMMIT) {
-        return false;
-    }
-    const auto protection = region.Protect & 0xFFU;
-    return protection == PAGE_EXECUTE
-        || protection == PAGE_EXECUTE_READ
-        || protection == PAGE_EXECUTE_READWRITE
-        || protection == PAGE_EXECUTE_WRITECOPY;
 }
 
 auto ConfigCandidates() -> std::vector<std::filesystem::path> {
@@ -364,63 +280,6 @@ auto LoadConfig() noexcept -> bool {
     return true;
 }
 
-auto QueryDiagnosticsService() noexcept -> bool {
-    const auto result = Context->QueryService(
-        D2RL::ServiceId::Diagnostics,
-        D2RL::DiagnosticsServiceV1Version,
-        &DiagnosticsService);
-    if (result != D2RL::ServiceQueryResult::Success) {
-        DiagnosticsService = nullptr;
-        return true;
-    }
-    if (!D2RL::HasDiagnosticsServiceV1Field(
-            DiagnosticsService, D2RL::DiagnosticsServiceV1RequiredSize)
-            || DiagnosticsService->queryHookStatus == nullptr) {
-        Context->LogError(
-            "ResistanceFloor: DiagnosticsService v1 returned an invalid contract.");
-        DiagnosticsService = nullptr;
-        return false;
-    }
-    return true;
-}
-
-auto ValidateUiStateEntry() noexcept -> bool {
-    if (!DiagnosticsService) {
-        return Matches(IsUiStateOpenRva, IsUiStateOpenExpected);
-    }
-    const D2RL::Diagnostics::HookQuery query{
-        .structSize = D2RL::Diagnostics::HookQuerySize,
-        .flags = 0,
-        .rva = IsUiStateOpenRva,
-        .expected = IsUiStateOpenExpected.data(),
-        .expectedSize = static_cast<std::uint32_t>(
-            IsUiStateOpenExpected.size()),
-        .reserved = 0,
-    };
-    D2RL::Diagnostics::HookStatus status{
-        .structSize = D2RL::Diagnostics::HookStatusSize,
-    };
-    const auto result = DiagnosticsService->queryHookStatus(
-        Context, &query, &status);
-    if (result != D2RL::Diagnostics::Result::Success
-            || status.structSize < D2RL::Diagnostics::HookStatusRequiredSize) {
-        return false;
-    }
-    if (status.state == D2RL::Diagnostics::ModificationState::Unchanged) {
-        return Matches(IsUiStateOpenRva, IsUiStateOpenExpected);
-    }
-    const auto ownerLength = std::find(
-        std::begin(status.ownerPluginId), std::end(status.ownerPluginId), '\0')
-        - std::begin(status.ownerPluginId);
-    const std::string_view owner{
-        status.ownerPluginId, static_cast<std::size_t>(ownerLength)};
-    return status.state == D2RL::Diagnostics::ModificationState::Tracked
-        && status.kind == D2RL::Diagnostics::ModificationKind::InlineHook
-        && status.ownerCount == 1
-        && owner == "ruffneckk-remote-stash"
-        && IsExecutableAddress(Base + IsUiStateOpenRva);
-}
-
 auto ValidateCoreRuntime() noexcept -> bool {
     struct Check {
         bool matched;
@@ -454,19 +313,6 @@ auto ValidateCoreRuntime() noexcept -> bool {
             "ResistanceFloor: Character Screen resistance signature mismatch; plugin refused.");
         TraceLoad(
             "ResistanceFloor: Character Screen resistance signature mismatch; plugin refused.");
-        return false;
-    }
-    return true;
-}
-
-auto ValidateExtendedRuntime() noexcept -> bool {
-    if (!Settings.display.showPhysicalAndMagic) return false;
-    if (!Matches(GetLocalDataContextRva, GetLocalDataContextExpected)
-            || !Matches(GetLocalPlayerRva, GetLocalPlayerExpected)
-            || !Matches(GetUnitStatRva, GetUnitStatExpected)
-            || !ValidateUiStateEntry()) {
-        Context->LogWarn(
-            "ResistanceFloor: extended Physical/Magic display validation failed; gameplay and native Character Screen synchronization remain active.");
         return false;
     }
     return true;
@@ -642,254 +488,6 @@ void CountSelection(UnitClass unitClass, std::int32_t floor) noexcept {
     }
 }
 
-auto ReadActiveCap(std::uintptr_t operandRva, std::int32_t fallback) noexcept
-        -> std::int32_t {
-    if (!Base) return fallback;
-    const auto value = static_cast<std::int32_t>(Base[operandRva]);
-    return value >= 0 && value <= 100 ? value : fallback;
-}
-
-void __cdecl RefreshExtendedValues(
-        const D2RL::PluginContext*, void*) noexcept {
-    RefreshQueued.store(false, std::memory_order_release);
-    if (!Operational.load(std::memory_order_acquire)
-            || !ExtendedInfrastructureReady.load(std::memory_order_acquire)
-            || !IsUiStateOpen || !GetLocalDataContext
-            || !GetLocalPlayer || !GetUnitStat) {
-        CharacterOpen.store(false, std::memory_order_release);
-        ExtendedValuesValid.store(false, std::memory_order_release);
-        return;
-    }
-    if (IsUiStateOpen(CharacterInterfaceState) == 0) {
-        CharacterOpen.store(false, std::memory_order_release);
-        ExtendedValuesValid.store(false, std::memory_order_release);
-        return;
-    }
-    const auto dataContext = GetLocalDataContext();
-    void* player = GetLocalPlayer(dataContext);
-    if (!player) {
-        CharacterOpen.store(false, std::memory_order_release);
-        ExtendedValuesValid.store(false, std::memory_order_release);
-        return;
-    }
-    const auto floor = SelectConfiguredFloor(
-        Settings, UnitClass::Player, PhysicalResistanceStat);
-    const auto physical = ClampDisplayedResistance(
-        GetUnitStat(player, PhysicalResistanceStat, 0),
-        floor,
-        ReadActiveCap(PhysicalCapOperandRva, 50));
-    const auto magic = ClampDisplayedResistance(
-        GetUnitStat(player, MagicResistanceStat, 0),
-        floor,
-        ReadActiveCap(ElementalCapOperandRva, 95));
-    DisplayPhysical.store(physical, std::memory_order_relaxed);
-    DisplayMagic.store(magic, std::memory_order_relaxed);
-    ExtendedValuesValid.store(true, std::memory_order_release);
-    CharacterOpen.store(true, std::memory_order_release);
-}
-
-void __cdecl OverlayBeforeFrame(
-        const RuffnecKk::OverlayHost::FrameContextV2* frame,
-        void*) noexcept {
-    if (!frame
-            || frame->structSize < RuffnecKk::OverlayHost::FrameContextV2Size
-            || frame->version != RuffnecKk::OverlayHost::ApiVersion2
-            || !Operational.load(std::memory_order_acquire)
-            || !ExtendedInfrastructureReady.load(std::memory_order_acquire)
-            || !ThreadService || !ThreadService->runOnUiThread) {
-        return;
-    }
-    const auto now = GetTickCount64();
-    auto next = NextRefreshTick.load(std::memory_order_acquire);
-    if (now < next
-            || !NextRefreshTick.compare_exchange_strong(
-                next, now + UiRefreshPeriodMs,
-                std::memory_order_acq_rel,
-                std::memory_order_acquire)
-            || RefreshQueued.exchange(true, std::memory_order_acq_rel)) {
-        return;
-    }
-    if (ThreadService->runOnUiThread(
-            Context, RefreshExtendedValues, nullptr)
-            != D2RL::Threads::Result::Success) {
-        RefreshQueued.store(false, std::memory_order_release);
-    }
-}
-
-void __cdecl OverlayRender(
-        const RuffnecKk::OverlayHost::FrameContextV2* frame,
-        void*) noexcept {
-    if (!frame
-            || frame->structSize < RuffnecKk::OverlayHost::FrameContextV2Size
-            || frame->version != RuffnecKk::OverlayHost::ApiVersion2
-            || !frame->imguiContext
-            || !CharacterOpen.load(std::memory_order_acquire)
-            || !ExtendedValuesValid.load(std::memory_order_acquire)) {
-        return;
-    }
-    auto* previous = ImGui::GetCurrentContext();
-    ImGui::SetCurrentContext(
-        static_cast<ImGuiContext*>(frame->imguiContext));
-    const auto y = std::max(
-        0.0F,
-        frame->displayHeight
-            - static_cast<float>(Settings.display.yFromBottom));
-    ImGui::SetNextWindowPos(
-        ImVec2(static_cast<float>(Settings.display.x), y),
-        ImGuiCond_Always);
-    ImGui::SetNextWindowBgAlpha(0.72F);
-    constexpr auto flags = ImGuiWindowFlags_NoDecoration
-        | ImGuiWindowFlags_AlwaysAutoResize
-        | ImGuiWindowFlags_NoSavedSettings
-        | ImGuiWindowFlags_NoFocusOnAppearing
-        | ImGuiWindowFlags_NoNav
-        | ImGuiWindowFlags_NoInputs
-        | ImGuiWindowFlags_NoMove;
-    if (ImGui::Begin("##RuffnecKkResistanceFloorExtended", nullptr, flags)) {
-        ImGui::TextColored(
-            ImVec4(0.82F, 0.72F, 0.56F, 1.0F),
-            "Physical Resistance: %d%%",
-            DisplayPhysical.load(std::memory_order_relaxed));
-        ImGui::TextColored(
-            ImVec4(0.72F, 0.55F, 0.92F, 1.0F),
-            "Magic Resistance: %d%%",
-            DisplayMagic.load(std::memory_order_relaxed));
-    }
-    ImGui::End();
-    ImGui::SetCurrentContext(previous);
-}
-
-void __cdecl OverlayContextDestroying(
-        const RuffnecKk::OverlayHost::FrameContextV2*,
-        void*) noexcept {
-    CharacterOpen.store(false, std::memory_order_release);
-    ExtendedValuesValid.store(false, std::memory_order_release);
-}
-
-void __cdecl OverlayHostStopped(void*) noexcept {
-    OverlayAttached.store(false, std::memory_order_release);
-    OverlayApi.store(nullptr, std::memory_order_release);
-    CharacterOpen.store(false, std::memory_order_release);
-    ExtendedValuesValid.store(false, std::memory_order_release);
-}
-
-auto TryAttachOverlayHost() noexcept -> bool {
-    if (!ExtendedInfrastructureReady.load(std::memory_order_acquire)
-            || OverlayAttached.load(std::memory_order_acquire)) {
-        return OverlayAttached.load(std::memory_order_acquire);
-    }
-    HMODULE module = GetModuleHandleW(L"RuffnecKkMapSense.dll");
-    if (!module) {
-        module = GetModuleHandleW(L"d2rl-ruffneckk-mapsense.dll");
-    }
-    if (!module) return false;
-    const auto getter = reinterpret_cast<
-        RuffnecKk::OverlayHost::GetHostApiV2Fn>(GetProcAddress(
-            module, "RuffnecKkMapSenseGetOverlayHostApi"));
-    if (!getter) return false;
-    const auto* api = getter(
-        RuffnecKk::OverlayHost::ApiVersion2,
-        RuffnecKk::OverlayHost::HostApiV2Size);
-    if (!api
-            || api->structSize < RuffnecKk::OverlayHost::HostApiV2Size
-            || api->version != RuffnecKk::OverlayHost::ApiVersion2
-            || api->imguiAbiFingerprint
-                != RuffnecKk::OverlayHost::ImGuiAbiFingerprint
-            || !api->registerClient || !api->unregisterClient) {
-        return false;
-    }
-    const RuffnecKk::OverlayHost::ClientV2 client{
-        .structSize = RuffnecKk::OverlayHost::ClientV2Size,
-        .version = RuffnecKk::OverlayHost::ApiVersion2,
-        .owner = OverlayOwner,
-        .imguiAbiFingerprint =
-            RuffnecKk::OverlayHost::ImGuiAbiFingerprint,
-        .contextCreated = nullptr,
-        .contextDestroying = OverlayContextDestroying,
-        .hostStopped = OverlayHostStopped,
-        .beforeFrame = OverlayBeforeFrame,
-        .render = OverlayRender,
-        .userData = nullptr,
-    };
-    if (!api->registerClient(&client)) return false;
-    OverlayApi.store(api, std::memory_order_release);
-    OverlayAttached.store(true, std::memory_order_release);
-    return true;
-}
-
-void __cdecl OnGameplayEvent(
-        const D2RL::PluginContext*,
-        const D2RL::Lifecycle::GameplayEvent* event,
-        void*) noexcept {
-    if (!D2RL::Lifecycle::HasGameplayEventField(
-            event, D2RL::Lifecycle::GameplayEventRequiredSize)) {
-        return;
-    }
-    if (event->kind == D2RL::Lifecycle::GameplayEventKind::LocalPlayerReady) {
-        (void)TryAttachOverlayHost();
-    } else if (event->kind == D2RL::Lifecycle::GameplayEventKind::GameJoined
-            || event->kind == D2RL::Lifecycle::GameplayEventKind::GameLeft) {
-        CharacterOpen.store(false, std::memory_order_release);
-        ExtendedValuesValid.store(false, std::memory_order_release);
-        RefreshQueued.store(false, std::memory_order_release);
-        NextRefreshTick.store(0, std::memory_order_release);
-    }
-}
-
-auto RegisterExtendedServices() noexcept -> bool {
-    if (!Settings.display.showPhysicalAndMagic) return false;
-    if (Context->QueryService(
-            D2RL::ServiceId::Thread,
-            D2RL::ThreadServiceV1Version,
-            &ThreadService) != D2RL::ServiceQueryResult::Success
-            || !D2RL::HasThreadServiceV1Field(
-                ThreadService, D2RL::ThreadServiceV1RequiredSize)
-            || !ThreadService->runOnUiThread) {
-        Context->LogWarn(
-            "ResistanceFloor: ThreadService v1 is unavailable; extended Physical/Magic display is disabled.");
-        ThreadService = nullptr;
-        return false;
-    }
-    if (Context->QueryService(
-            D2RL::ServiceId::Lifecycle,
-            D2RL::LifecycleServiceV1Version,
-            &LifecycleService) != D2RL::ServiceQueryResult::Success
-            || !D2RL::HasLifecycleServiceV1Field(
-                LifecycleService, D2RL::LifecycleServiceV1RequiredSize)
-            || !LifecycleService->registerGameplayEventListener
-            || !LifecycleService->unregisterGameplayEventListener) {
-        Context->LogWarn(
-            "ResistanceFloor: LifecycleService v1 is unavailable; late MapSense load cannot be detected.");
-        LifecycleService = nullptr;
-        return true;
-    }
-    constexpr std::array kinds{
-        D2RL::Lifecycle::GameplayEventKind::GameJoined,
-        D2RL::Lifecycle::GameplayEventKind::LocalPlayerReady,
-        D2RL::Lifecycle::GameplayEventKind::GameLeft,
-    };
-    for (std::size_t index = 0; index < kinds.size(); ++index) {
-        const D2RL::Lifecycle::GameplayEventListener listener{
-            .structSize = D2RL::Lifecycle::GameplayEventListenerSize,
-            .flags = 0,
-            .kind = kinds[index],
-            .reserved = 0,
-            .callback = OnGameplayEvent,
-            .userData = nullptr,
-        };
-        if (LifecycleService->registerGameplayEventListener(
-                Context, &listener, &LifecycleHandles[index])
-                != D2RL::Lifecycle::Result::Success
-                || LifecycleHandles[index]
-                    == D2RL::Lifecycle::InvalidHandle) {
-            Context->LogWarn(
-                "ResistanceFloor: an optional lifecycle listener could not be registered.");
-            return true;
-        }
-    }
-    return true;
-}
-
 auto Status(
         D2R::Game::Client*,
         const D2RL::ConsoleCommandContext* command,
@@ -901,16 +499,13 @@ auto Status(
     std::snprintf(
         message,
         sizeof(message),
-        "Resistance Floor 0.2.0: active=%s; players=%s/%d; companions=%s/%d; monsters=%s/%d; character-screen=%s; physical-magic=%s/%s; usage-counters=%s; selections=%llu/%llu/%llu; vanilla=%llu; config=%s.",
+        "Resistance Floor 0.3.0: active=%s; players=%s/%d; companions=%s/%d; monsters=%s/%d; character-screen=%s; usage-counters=%s; selections=%llu/%llu/%llu; vanilla=%llu; config=%s.",
         Operational.load(std::memory_order_acquire) ? "true" : "false",
         Settings.players.enabled ? "on" : "off", Settings.players.floor,
         Settings.playerOwnedUnits.enabled ? "on" : "off",
         Settings.playerOwnedUnits.floor,
         Settings.monsters.enabled ? "on" : "off", Settings.monsters.floor,
         Settings.display.syncCharacterScreen ? "on" : "off",
-        Settings.display.showPhysicalAndMagic ? "on" : "off",
-        OverlayAttached.load(std::memory_order_acquire)
-            ? "attached" : "provider-unavailable",
         Settings.diagnostics ? "on" : "off",
         static_cast<unsigned long long>(
             PlayerSelections.load(std::memory_order_relaxed)),
@@ -927,20 +522,10 @@ auto Status(
 
 void ResetState() noexcept {
     Operational.store(false, std::memory_order_release);
-    ExtendedInfrastructureReady.store(false, std::memory_order_release);
-    OverlayAttached.store(false, std::memory_order_release);
-    OverlayApi.store(nullptr, std::memory_order_release);
-    RefreshQueued.store(false, std::memory_order_release);
-    NextRefreshTick.store(0, std::memory_order_release);
-    CharacterOpen.store(false, std::memory_order_release);
-    ExtendedValuesValid.store(false, std::memory_order_release);
-    DisplayPhysical.store(0, std::memory_order_relaxed);
-    DisplayMagic.store(0, std::memory_order_relaxed);
     PlayerSelections.store(0, std::memory_order_relaxed);
     PlayerOwnedSelections.store(0, std::memory_order_relaxed);
     MonsterSelections.store(0, std::memory_order_relaxed);
     VanillaFallbacks.store(0, std::memory_order_relaxed);
-    LifecycleHandles.fill(D2RL::Lifecycle::InvalidHandle);
 }
 
 } // namespace
@@ -976,7 +561,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     Context = context;
     Base = reinterpret_cast<std::uint8_t*>(context->exeBase);
     ResetState();
-    TraceLoad("Resistance Floor 0.2.0 load started.", true);
+    TraceLoad("Resistance Floor 0.3.0 load started.", true);
     if (!Base) {
         TraceLoad("Load refused: D2R executable base is unavailable.");
         return false;
@@ -995,7 +580,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     }
     if (!Settings.enabled) {
         context->LogInfo(
-            "Resistance Floor 0.2.0 by RuffnecKk loaded disabled; no patch or overlay client was installed.");
+            "Resistance Floor 0.3.0 by RuffnecKk loaded disabled; no patch was installed.");
         return true;
     }
     const auto* runtimeBuild = D2RL::GetBuildName(context);
@@ -1008,10 +593,6 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         return false;
     }
     TraceLoad("Governed D2R build accepted.");
-    if (!QueryDiagnosticsService()) {
-        TraceLoad("Load refused: DiagnosticsService v1 contract is invalid.");
-        return false;
-    }
     if (!ValidateCoreRuntime()) return false;
     TraceLoad("Core runtime signatures validated.");
 
@@ -1021,23 +602,11 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     Operational.store(true, std::memory_order_release);
     TraceLoad("Gameplay and native display mutations are operational.");
 
-    if (ValidateExtendedRuntime()) {
-        GetLocalDataContext = At<GetLocalDataContextFn>(GetLocalDataContextRva);
-        GetLocalPlayer = At<GetLocalPlayerFn>(GetLocalPlayerRva);
-        IsUiStateOpen = At<IsUiStateOpenFn>(IsUiStateOpenRva);
-        GetUnitStat = At<GetUnitStatFn>(GetUnitStatRva);
-        ExtendedInfrastructureReady.store(
-            RegisterExtendedServices(), std::memory_order_release);
-        if (ExtendedInfrastructureReady.load(std::memory_order_acquire)) {
-            (void)TryAttachOverlayHost();
-        }
-    }
-
     char message[768]{};
     std::snprintf(
         message,
         sizeof(message),
-        "Resistance Floor 0.2.0 by RuffnecKk active for D2R %s; players=%d; companions=%d; monsters=%s/%d; Character Screen=%s; Physical/Magic provider=%s; installation=%s; TOML=%s.",
+        "Resistance Floor 0.3.0 by RuffnecKk active for D2R %s; players=%d; companions=%d; monsters=%s/%d; Character Screen=%s; installation=%s; TOML=%s.",
         runtimeBuild,
         SelectConfiguredFloor(Settings, UnitClass::Player, FireResistanceStat),
         SelectConfiguredFloor(
@@ -1045,8 +614,6 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         Settings.monsters.enabled ? "enabled" : "disabled",
         Settings.monsters.floor,
         Settings.display.syncCharacterScreen ? "enabled" : "disabled",
-        OverlayAttached.load(std::memory_order_acquire)
-            ? "MapSense OverlayHost v2" : "optional/unavailable",
         context->loadScope == D2RL::LoadScope::Mod ? "mod-local" : "global",
         LoadedConfigPath.c_str());
     context->LogInfo(message);
@@ -1056,32 +623,6 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
 
 D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
     Operational.store(false, std::memory_order_release);
-    ExtendedInfrastructureReady.store(false, std::memory_order_release);
-    CharacterOpen.store(false, std::memory_order_release);
-    ExtendedValuesValid.store(false, std::memory_order_release);
-
-    const auto* api = OverlayApi.exchange(nullptr, std::memory_order_acq_rel);
-    if (OverlayAttached.exchange(false, std::memory_order_acq_rel)
-            && api && api->unregisterClient) {
-        (void)api->unregisterClient(OverlayOwner);
-    }
-    if (LifecycleService && Context
-            && LifecycleService->unregisterGameplayEventListener) {
-        for (const auto handle : LifecycleHandles) {
-            if (handle != D2RL::Lifecycle::InvalidHandle) {
-                (void)LifecycleService->unregisterGameplayEventListener(
-                    Context, handle);
-            }
-        }
-    }
-    RefreshQueued.store(false, std::memory_order_release);
-    ThreadService = nullptr;
-    LifecycleService = nullptr;
-    DiagnosticsService = nullptr;
-    GetLocalDataContext = nullptr;
-    GetLocalPlayer = nullptr;
-    IsUiStateOpen = nullptr;
-    GetUnitStat = nullptr;
     GetUnitType = nullptr;
     GetMinionOwner = nullptr;
     Context = nullptr;

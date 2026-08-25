@@ -36,13 +36,10 @@ struct TargetConfig {
 
 struct DisplayConfig {
     bool syncCharacterScreen{true};
-    bool showPhysicalAndMagic{true};
-    std::int32_t x{24};
-    std::int32_t yFromBottom{180};
 };
 
 struct Config {
-    std::uint32_t schemaVersion{2};
+    std::uint32_t schemaVersion{3};
     bool enabled{true};
     TargetConfig players{true, MinimumFloor};
     TargetConfig playerOwnedUnits{true, MinimumFloor};
@@ -82,14 +79,6 @@ constexpr auto SelectConfiguredFloor(
         return VanillaFloor;
     }
     return target->enabled ? target->floor : VanillaFloor;
-}
-
-constexpr auto ClampDisplayedResistance(
-        std::int32_t value,
-        std::int32_t floor,
-        std::int32_t cap) noexcept -> std::int32_t {
-    if (cap < floor) return floor;
-    return std::clamp(value, floor, cap);
 }
 
 constexpr auto CanEncodeRel32(
@@ -251,11 +240,11 @@ inline auto ParseToml(
         Config parsed{};
         const auto* schemaNode = root.get("config_version");
         const auto* schema = schemaNode ? schemaNode->as_integer() : nullptr;
-        if (!schema || schema->get() != 2) {
-            error = "config_version must be integer 2";
+        if (!schema || schema->get() != 3) {
+            error = "config_version must be integer 3";
             return false;
         }
-        parsed.schemaVersion = 2;
+        parsed.schemaVersion = 3;
         if (!ReadRequiredBool(root, "enabled", "enabled", parsed.enabled, error)) {
             return false;
         }
@@ -278,25 +267,11 @@ inline auto ParseToml(
         if (!display
                 || !ValidateKeys(
                     *display, "character_screen.",
-                    {"show_resistances_below_minus_100",
-                     "show_physical_and_magic", "position_from_left",
-                     "position_from_bottom"}, error)
+                    {"show_resistances_below_minus_100"}, error)
                 || !ReadRequiredBool(
                     *display, "show_resistances_below_minus_100",
                     "character_screen.show_resistances_below_minus_100",
-                    parsed.display.syncCharacterScreen, error)
-                || !ReadRequiredBool(
-                    *display, "show_physical_and_magic",
-                    "character_screen.show_physical_and_magic",
-                    parsed.display.showPhysicalAndMagic, error)
-                || !ReadRequiredInt(
-                    *display, "position_from_left",
-                    "character_screen.position_from_left", 0, 4000,
-                    parsed.display.x, error)
-                || !ReadRequiredInt(
-                    *display, "position_from_bottom",
-                    "character_screen.position_from_bottom", 0,
-                    4000, parsed.display.yFromBottom, error)) {
+                    parsed.display.syncCharacterScreen, error)) {
             return false;
         }
 

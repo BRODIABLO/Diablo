@@ -1,10 +1,10 @@
-# Resistance Floor 0.2.0 validation
+# Resistance Floor 0.3.0 validation
 
-Validation date: 2026-08-24
-Target: Diablo II: Resurrected 3.3.93847
-Plugin SHA-256: `32504A5E5CE8921EC24CCFC361DE4BD531F4A17F8B16F566805C3CC8B5C77DDC`
-Configuration SHA-256: `2D1DD966AB3F5CA54F3D09F8AB6DB0A38624802F04890EA408D011AD3D89C2BC`
-Candidate ZIP SHA-256: `4821D0AAFD3C1FBFC2702A5CA15E9857A9219BE06D3749C753EBE0AA8B55BA88`
+Validation date: 2026-08-25
+Targets: Diablo II: Resurrected 3.2.92777 and 3.3.93847
+Plugin SHA-256: `A3685451B8E5D1119AD10F75F5EE70760C0387E8FA42E8E2A540C0C929F642BB`
+Configuration SHA-256: `063AF09EAF5BBF5ADCD4E11A88FA1C2B1F93AD13826789E04B25A10C037224B0`
+Candidate ZIP SHA-256: `6724100183AD4EE79FE2D8E86972EE64CD33034E8CB5557CC07BFA8477653C71`
 
 ## Automated gates
 
@@ -12,13 +12,13 @@ Candidate ZIP SHA-256: `4821D0AAFD3C1FBFC2702A5CA15E9857A9219BE06D3749C753EBE0AA
 - Policy and source-contract test suite: PASS, 1/1.
 - Byte reproducibility: PASS; two builds, including one clean build, produced
   the same plugin hash.
-- Player-facing configuration version 2 names, strict TOML types, required
+- Player-facing configuration version 3 names, strict TOML types, required
   settings, unknown-key rejection and bounds `[-1000, -100]`: PASS.
 - PE contract: PASS; x64, ASLR, high-entropy ASLR, NX and exactly the three
   D2RLoader exports.
 - Governed RVA JSON parse and workbench status: PASS.
 - PluginSDK commit: `4933e2c42cb2592958cd0df3b6dc5003102252d1`.
-- ImGui/OverlayHost ABI commit: `f401021d5a5d56fe2304056c391e78f81c8d4b8f`.
+- Cross-plugin display dependency: none.
 - Candidate archive contents: PASS; DLL and TOML only. README remains beside
   the archive for human review.
 
@@ -43,38 +43,39 @@ inventory includes all five eezstreet plugins and the active RuffnecKk Suite.
 
 | Installation | Status | Evidence |
 |---|---|---|
-| Mod-local BKVince 0.2.0 | PASS | Fresh run: `config_version = 2` accepted from the dedicated mod-local TOML; players and companions `-1000`, monsters disabled/`-1000`; both gameplay relays and the native Character Screen operand installed; 31 plugins, 18 memory patches, startup 24/24 complete. |
-| Global plus mod-local duplicate | prior PASS / not rerun | Candidate 0.1.0 proved that the mod-local instance wins and the global duplicate is skipped. Scope-selection code did not change in 0.2.0; this row was not rerun for the terminology-only configuration migration. |
-| Global only | prior PASS / not rerun | Candidate 0.1.0 proved global-only loading and global TOML selection. Scope-selection code did not change in 0.2.0; this row was not rerun for the terminology-only configuration migration. |
+| Mod-local BKVince 0.3.0 | PENDING | Fresh full-stack cold start with `config_version = 3`. |
+| Global plus mod-local duplicate | prior PASS / not rerun | Candidate 0.1.0 proved that the mod-local instance wins and the global duplicate is skipped. Scope-selection code is unchanged in 0.3.0. |
+| Global only | prior PASS / not rerun | Candidate 0.1.0 proved global-only loading and global TOML selection. Scope-selection code is unchanged in 0.3.0. |
 
 The final runtime installation is mod-local under BKVince. Its DLL and dedicated
-TOML are byte-identical to the 0.2.0 sources; the D2RLoader-generated companion
-TOML was also refreshed so no old technical labels remain visible. Global test
-copies are absent and D2R was stopped. No installed plugin or PluginPack feature
-was disabled during the fresh 0.2.0 run.
+TOML will be checked byte-for-byte against the 0.3.0 sources after deployment.
+The D2RLoader-generated companion TOML is also refreshed so removed settings do
+not remain visible. No installed plugin or PluginPack feature may be disabled.
 
 An initial diagnostic run was correctly refused because D2RLoader requires a
 tracked `jmp-rel32` safety-check size equal to the five-byte patch size. The
 final implementation retains the independent full twelve-byte preflight
 witness, then supplies the exact five-byte `MOV` witness to the tracked write.
-The fresh mod-local row uses the final byte-identical 0.2.0 candidate; the two
+The fresh mod-local row will use the final byte-identical 0.3.0 candidate; the two
 scope-retention rows explicitly preserve their earlier 0.1.0 provenance.
 
 ## Functional gameplay matrix
 
 | Case | Status | Expected proof |
 |---|---|---|
-| Player six-type floor at `-1000` | not run | Controlled resistance debuff and damage comparison. |
+| Player resistance floor below `-100` | external PASS | Tester confirmed that resistance affects actual in-game damage below `-100`, not only the displayed value. |
 | Hireling, summon, pet and Revive ownership | not run | Owned unit receives configured floor; ordinary monster remains at `-100`. |
-| Monster opt-in | not run | Cold restart with monsters enabled, then controlled damage comparison. |
-| Native Fire/Lightning/Cold/Poison display | not run | Character Screen visibly passes below `-100`. |
-| Physical/Magic MapSense extension | not run | Readout appears only with Character Screen open and matches active values. |
+| Monster opt-in | external PASS | Tester confirmed that configured monsters are functionally affected below `-100`. |
+| Native Fire/Lightning/Cold/Poison display | external PASS | Tester confirmed that the native display passes below `-100`. |
 | Eleven-times damage edge and integer safety | not run | Controlled highest-damage cases without overflow or instability. |
 | Solo, host and client authority | not run | Separate observations for each network role. |
 
-Compilation and a mixed startup do not close these gameplay gates. No runtime
-or functional success is claimed until uncontested fresh logs and in-game
-observations exist.
+The external functional confirmation was reported by Vincent on 25 August
+2026. Monster Display's separate hardcoded display floor remains owned by that
+plugin; yinyin confirmed that Monster Display will be updated independently.
+Vincent accepted Resistance Floor as functional and ready for inclusion in the
+next RuffnecKk D2RLoader Suite release. Rows still marked `not run` remain open
+for the release-specific qualification matrix.
 
 ## Scope boundaries
 

@@ -1651,11 +1651,6 @@
                                                                  "kind": "file"
                                                                },
                                                                {
-                                                                 "name": "overlay_host_api.hpp",
-                                                                 "path": "addons/ResistanceFloor/src/overlay_host_api.hpp",
-                                                                 "kind": "file"
-                                                               },
-                                                               {
                                                                  "name": "plugin.cpp",
                                                                  "path": "addons/ResistanceFloor/src/plugin.cpp",
                                                                  "kind": "file"
