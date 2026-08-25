@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-24T23:05:34.7131741+00:00",
+    "generatedAt":  "2026-08-25T13:22:14.6717103+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -908,6 +908,87 @@
                                                                             {
                                                                                 "name":  "README.md",
                                                                                 "path":  "addons/FourCharacterItemCodes/README.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "FourthSkillTree",
+                                                           "path":  "addons/FourthSkillTree",
+                                                           "kind":  "directory",
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "fixtures",
+                                                                                "path":  "addons/FourthSkillTree/fixtures",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "fourth-skill-tree.toml",
+                                                                                                     "path":  "addons/FourthSkillTree/fixtures/fourth-skill-tree.toml",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "modinfo.json",
+                                                                                                     "path":  "addons/FourthSkillTree/fixtures/modinfo.json",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/FourthSkillTree/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/FourthSkillTree/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "fourth_skill_tree_policy.hpp",
+                                                                                                     "path":  "addons/FourthSkillTree/src/fourth_skill_tree_policy.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/FourthSkillTree/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/FourthSkillTree/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "policy_tests.cpp",
+                                                                                                     "path":  "addons/FourthSkillTree/src/policy_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "FourthSkillTree.dll",
+                                                                                "path":  "addons/FourthSkillTree/FourthSkillTree.dll",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "fourth-skill-tree.toml",
+                                                                                "path":  "addons/FourthSkillTree/fourth-skill-tree.toml",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "NATIVE-CONTRACT.md",
+                                                                                "path":  "addons/FourthSkillTree/NATIVE-CONTRACT.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/FourthSkillTree/README.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "VALIDATION.md",
+                                                                                "path":  "addons/FourthSkillTree/VALIDATION.md",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
@@ -39738,6 +39819,11 @@
                                                                                 "name":  "default-test-character.json",
                                                                                 "path":  "game-tests/fixtures/default-test-character.json",
                                                                                 "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "fourth-skill-tree-amazon.json",
+                                                                                "path":  "game-tests/fixtures/fourth-skill-tree-amazon.json",
+                                                                                "kind":  "file"
                                                                             }
                                                                         ]
                                                        },
@@ -39746,6 +39832,11 @@
                                                            "path":  "game-tests/scenarios",
                                                            "kind":  "directory",
                                                            "children":  [
+                                                                            {
+                                                                                "name":  "fourth-skill-tree-save-reload.json",
+                                                                                "path":  "game-tests/scenarios/fourth-skill-tree-save-reload.json",
+                                                                                "kind":  "file"
+                                                                            },
                                                                             {
                                                                                 "name":  "smoke-launch-save-exit.json",
                                                                                 "path":  "game-tests/scenarios/smoke-launch-save-exit.json",
@@ -41240,6 +41331,16 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
+                                                                                "name":  "Create-FourthSkillTreeCharacter.mjs",
+                                                                                "path":  "scripts/reverse-engineering/Create-FourthSkillTreeCharacter.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "Create-FourthSkillTreeFixture.mjs",
+                                                                                "path":  "scripts/reverse-engineering/Create-FourthSkillTreeFixture.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "d2r32.ps1",
                                                                                 "path":  "scripts/reverse-engineering/d2r32.ps1",
                                                                                 "kind":  "file"
@@ -41247,6 +41348,11 @@
                                                                             {
                                                                                 "name":  "d2r32.py",
                                                                                 "path":  "scripts/reverse-engineering/d2r32.py",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "Expand-FourthSkillTreeSave.mjs",
+                                                                                "path":  "scripts/reverse-engineering/Expand-FourthSkillTreeSave.mjs",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

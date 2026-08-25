@@ -1,0 +1,12 @@
+# Fourth Skill Tree Framework
+# This first milestone validates the active mod's table contract.
+
+# File format version. Leave this value unchanged.
+config_version = 1
+
+# Keep this disabled until the mod contains intentional SkillPage = 4 rows.
+enabled = false
+
+[diagnostics]
+# Log one summary line for every class found in skills.txt.
+enabled = false

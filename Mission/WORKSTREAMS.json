@@ -302,18 +302,21 @@
     },
     {
       "id": "fourth-skill-tree",
-      "name": "FourthSkillTree",
-      "status": "paused",
+      "name": "FourthSkillTree Framework",
+      "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/fourth-skill-tree-3.2.md",
-      "nextGate": "After the five PluginPack gameplay batches and eezstreet review, verify the governed 92777 workbench and prove the SkillPage 4 compiler path, fourth-tab controller path, mouse/controller navigation and collision-free hook ownership before any implementation.",
+      "nextGate": "Create a current-runtime-native 31-skill character with unspent points, then prove skill 456 allocation, save/reload and dynamic respec before host/joiner; direct expansion of an older 30-skill save reached the menu but closed D2R at player materialization. Preserve plugin-skills as the unique UI_DispatchMessage owner, qualify the same artifact separately on D2R 3.2.92777, and finish the remaining 0..3 UI-consumer inventory before implementing the five-state panel.",
       "include": [
         "Mission/fourth-skill-tree-3.2.md",
         "addons/FourthSkillTree/**",
-        "data-BKVince/d2rloader/config/fourth-skill-tree.toml",
-        "data-BKVince/d2rloader/plugins/FourthSkillTree-src/**",
-        "data-BKVince/d2rloader/plugins/FourthSkillTree.dll*",
-        "scripts/reverse-engineering/fourth-skill-tree*"
+        "scripts/reverse-engineering/Create-FourthSkillTreeCharacter.mjs",
+        "scripts/reverse-engineering/Create-FourthSkillTreeFixture.mjs",
+        "scripts/reverse-engineering/Expand-FourthSkillTreeSave.mjs",
+        "game-tests/fixtures/fourth-skill-tree-amazon.json",
+        "game-tests/scenarios/fourth-skill-tree-save-reload.json",
+        "reverse-engineering/d2r-3.2.92777/known-rvas.json",
+        "reverse-engineering/d2r-3.2.92777/findings.md"
       ]
     },
     {
@@ -829,6 +832,7 @@
     {
       "pattern": "reverse-engineering/d2r-3.2.92777/known-rvas.json",
       "workstreams": [
+        "fourth-skill-tree",
         "extended-item-stats",
         "advanced-item-tooltips",
         "advanced-item-tooltips-public-intermod",
@@ -858,6 +862,7 @@
     {
       "pattern": "reverse-engineering/d2r-3.2.92777/findings.md",
       "workstreams": [
+        "fourth-skill-tree",
         "extended-item-stats",
         "advanced-item-tooltips",
         "advanced-item-tooltips-public-intermod",
@@ -1020,6 +1025,22 @@
         "bkvince-d2r33-data-alignment"
       ],
       "reason": "Generated Hero Editor constants remain owned by the editor and are checked for byte-identical output after the retail vanilla source switch."
+    },
+    {
+      "pattern": "game-tests/fixtures/fourth-skill-tree-amazon.json",
+      "workstreams": [
+        "fourth-skill-tree",
+        "pd2-inspiration-bkvince"
+      ],
+      "reason": "The FourthSkillTree mission owns this fixture while the existing PD2 workstream still governs the shared game-tests harness tree."
+    },
+    {
+      "pattern": "game-tests/scenarios/fourth-skill-tree-save-reload.json",
+      "workstreams": [
+        "fourth-skill-tree",
+        "pd2-inspiration-bkvince"
+      ],
+      "reason": "The FourthSkillTree mission owns this scenario while the existing PD2 workstream still governs the shared game-tests harness tree."
     }
   ]
 }

@@ -1,0 +1,62 @@
+{
+  "id": "fourth-skill-tree-save-reload",
+  "fixture": "fourth-skill-tree-amazon",
+  "steps": [
+    {
+      "action": "launch_or_reuse_game"
+    },
+    {
+      "action": "focus_game"
+    },
+    {
+      "action": "dismiss_loader_warning"
+    },
+    {
+      "action": "dismiss_title_screen"
+    },
+    {
+      "action": "select_character"
+    },
+    {
+      "action": "enter_game"
+    },
+    {
+      "action": "select_difficulty"
+    },
+    {
+      "action": "wait_for_in_game"
+    },
+    {
+      "action": "capture",
+      "name": "first-load"
+    },
+    {
+      "action": "save_and_exit"
+    },
+    {
+      "action": "wait_for_character_select"
+    },
+    {
+      "action": "select_character"
+    },
+    {
+      "action": "enter_game"
+    },
+    {
+      "action": "select_difficulty"
+    },
+    {
+      "action": "wait_for_in_game"
+    },
+    {
+      "action": "capture",
+      "name": "second-load"
+    },
+    {
+      "action": "save_and_exit"
+    },
+    {
+      "action": "wait_for_character_select"
+    }
+  ]
+}

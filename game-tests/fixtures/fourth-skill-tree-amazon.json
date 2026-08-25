@@ -1,0 +1,13 @@
+{
+  "id": "fourth-skill-tree-amazon",
+  "characterName": "ama",
+  "files": [
+    "ama.d2s",
+    "ama.key",
+    "ama.ctl",
+    "ama.map",
+    "ama.ma0"
+  ],
+  "sourceSha256": "0872b19927baa1acfff683b734267c5cf4d4ef5a751d52f9100a9f566d0d16fe",
+  "preserveWorkingCopy": true
+}

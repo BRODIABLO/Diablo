@@ -1,0 +1,8 @@
+# Fourth Skill Tree Framework runtime fixture
+# Never distribute this enabled diagnostic configuration as the default.
+
+config_version = 1
+enabled = true
+
+[diagnostics]
+enabled = true

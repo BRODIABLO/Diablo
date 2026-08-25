@@ -1,8 +1,58 @@
 # Mission courante
 
-Dernière mise à jour : 24 août 2026
+Dernière mise à jour : 25 août 2026
 
 ## Priorité active
+
+[FourthSkillTree Framework — moteur générique pour D2R 3.2.92777 et 3.3.93847](fourth-skill-tree-3.2.md)
+
+État : **jalon 0.1.0 implanté; contrat data, persistance rank-zero, allocation
+serveur et parcours de respec d'un 31e skill prouvés statiquement**. Le produit est un framework public pour
+modders, jamais un service de construction d'arbres. Le mod actif reste
+l'autorité de ses skills, prérequis, positions, textes, assets et balance. La
+DLL autonome RuffnecKk Suite demeure hybride globale/mod-locale, avec un TOML
+limité à la politique du moteur et aucun hook dans ce premier jalon. La même
+DLL accepte exactement les build names `92777` et `93847`; seule la matrice
+runtime 3.3 est exécutée à ce jour, sans succès 3.2 implicite.
+
+Les preuves statiques courantes établissent quatre états UI, dont l'index 3 est
+déjà `General Skills`; la quatrième page de classe exige donc cinq états. Le
+setter `0x14C3B10` et la navigation `0x14C6BBC..0x14C6BFF` bornent actuellement
+à 3. La branche d'allocation `0x14C69D6` envoie un identifiant de skill par la
+commande native `0x3B`; le callback serveur `0x4B3EE0` accepte tout identifiant
+SkillsTxt compilé sans lire la page. Le respec `0x580F20` délègue à `0x4360F0`,
+qui parcourt la liste complète des skills de classe et rembourse les rangs. Le
+dispatcher UI commun `0x843D90` reste la propriété du broker `plugin-skills`;
+FourthSkillTree ne doit pas en prendre un second hook.
+
+Le fixture Amazon compile réellement 31 skills sous la pile complète, puis un
+`.d2s` isolé conserve `NumSkills = 31` et 31 rangs nuls après deux cycles Save
+and Exit/rechargement. Un second fixture a placé le skill 456 sur une cellule
+native Barbarian afin d'isoler l'allocation; une sauvegarde gameplay level 99
+étendue proprement à 31 rangs apparaît au menu, mais D2R ferme à la
+matérialisation du joueur et le fichier reste inchangé. L'allocation investie,
+le respec dynamique, le réseau et le panneau à cinq états restent donc ouverts.
+
+## Prochain gate
+
+Produire un personnage de preuve entièrement matérialisé et sauvegardé par le
+runtime courant avec 31 skills et des points disponibles, sans greffe d'une
+sauvegarde 30-skills. Prouver ensuite allocation, Save and Exit/relecture et
+respec du skill 456; seulement après, exécuter hôte/joiner et terminer
+l'inventaire des consommateurs UI 0..3 avant le panneau à cinq états. La même
+matrice doit ensuite être exécutée séparément sous D2R 3.2.92777.
+
+## Frontière Git active
+
+La mission couvre `Mission/fourth-skill-tree-3.2.md`,
+`addons/FourthSkillTree/**`, la configuration dédiée, les scripts de preuve
+`fourth-skill-tree*` et les promotions natives strictement nécessaires. La
+ROADMAP, `Mission/CURRENT.md`, `Mission/WORKSTREAMS.json`, le cadastre,
+`known-rvas.json`, `findings.md`, les outils de build et les registres Suite sont
+partagés. Aucun contenu d'arbre n'est écrit dans BKVince. Aucun commit ni push
+n'est effectué sans demande explicite de Vincent.
+
+## Priorité précédente conservée — Softcoded Player Sequence Tables
 
 [Softcoded Player Sequence Tables — D2R 3.3.93847](player-sequence-tables-3.3.md)
 
@@ -17,14 +67,14 @@ globale et mod-locale atteignent `24/24` avec la pile complète à 32 plugins/18
 patches et 190 tables compilées. Le profil final est restauré mod-local sans
 doublon global et aucun processus D2R ne reste actif.
 
-## Prochain gate
+### Gate conservé — Softcoded Player Sequence Tables
 
 Exécuter gameplay legacy/Cleave/Mirrored Blades/route nulle et un edit réversible
 après redémarrage, puis transitions menu/partie, unload/reload et hôte/client
 avec hash identique. Le canal de distribution des deux TXT doit aussi être fixé
 avant catalogue public ou ZIP.
 
-## Frontière Git active
+### Frontière Git conservée — Softcoded Player Sequence Tables
 
 La mission active couvre `Mission/player-sequence-tables-3.3.md`,
 `addons/PlayerSequenceTables/**`, les scripts `player-sequence*` et

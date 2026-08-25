@@ -3042,6 +3042,14 @@
       "confidence": "high",
       "source": "Mission/ruffneckk-cast-triggers.md",
       "notes": "Returns Unit+0x00 for a non-null Unit and the native invalid unit type 6 for null. Cast Triggers requires type 0 player before dispatching doactive. Its strict 32-byte entry signature is unique in the governed corpus."
+    },
+    {
+      "rva": "0x4B3EE0",
+      "name": "D2GAME_PACKETCALLBACK_Rcv0x3B_AllocateSkillPoints",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/fourth-skill-tree-3.2.md",
+      "notes": "Authoritative server callback with observed ABI (game, player, packet, packetSize) -> int32. A controlled D2R 3.3.93847 runtime read proved slot 0x3B of the server callback table at D2R+0x1D2A790 points here. It requires exactly five bytes, decodes the skill id at +1 and additional-rank marker at +3, validates the id against the compiled SkillsTxt count, resolves the skill and its MaxLvl, reads the current base rank, then applies ranks through the native server mutation helper at 0x438670 until the request is exhausted or a validation/cap/mutation fails. The callback never reads SkillPage, SkillRow or SkillColumn, so authoritative allocation is independent of the UI page number."
     }
   ]
 }

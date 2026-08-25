@@ -763,6 +763,70 @@ La référence sémantique
 explique les champs et le flux historique; aucune adresse, structure ou ABI
 32 bits n'a été transposée.
 
+## FourthSkillTree Framework — persistance dynamique des skills de classe
+
+- La cible produit est D2R 3.3.93847 et réutilise le corpus natif gouverné de
+  provenance 92777. `DATATBLS_GetClassSkillCount 0x33CB30` retourne le compte
+  compilé par classe depuis le contexte actif; sa signature stricte de 32 octets
+  est unique. `DATATBLS_GetClassSkillIdByIndex 0x33DDE0` retourne l'identifiant
+  SkillsTxt d'un index de classe et possède également une signature stricte de
+  32 octets unique.
+- Le writer de l'en-tête D2S appelle `0x33CB30` à `0x534519`, puis stocke `AL`
+  dans le byte `NumSkills`. Le témoin à wildcards
+  `E8 ?? ?? ?? ?? 49 8B CF 88 45 9A E8` est unique.
+- Le writer de la section skills écrit le magic `if` (`0x6669`) à `0x52F557`,
+  puis boucle de zéro jusqu'au compte dynamique obtenu à
+  `0x52F58A/0x52F5D7`. Pour chaque index, il appelle `0x33DDE0`, résout le skill
+  par `SKILLS_GetSkillById 0x33DCD0`, lit son rang de base par
+  `SKILLS_GetBaseLevel 0x33D1E0` et écrit exactement un byte. Il n'existe donc
+  aucune constante 30 dans cette boucle native de sérialisation.
+- Le lecteur vérifie le même magic `if` à `0x52EC98`, utilise le compte sauvé
+  pour parcourir les bytes, borne chaque index contre le compte compilé courant,
+  ajoute les rangs par le chemin natif puis avance le curseur de `2 + count` à
+  `0x52ED52..0x52ED5A`. Une sauvegarde plus longue reste donc structurellement
+  délimitée sans section propriétaire.
+- La référence de format épinglée
+  `D2SSharp@f26f21897db5c0075e74defca1e31d1930080750` confirme séparément que
+  `Character.NumSkills` est un byte lu et écrit dans l'en-tête
+  (`src/D2SSharp/Model/Character.cs:32-33,102-104,143-145`) et que la section
+  `if` contient un tableau de rangs de longueur `skillCount`, un byte par skill
+  (`src/D2SSharp/Model/SkillsSection.cs:7-15,36-37,78-103`). Sa constante 30 est
+  le défaut vanilla de la bibliothèque, pas une borne présente dans le layout
+  sérialisé.
+- Cette preuve ferme l'hypothèse d'un format D2S intrinsèquement limité à 30 :
+  le chemin statique natif est déjà piloté par le compte de skills compilé et
+  peut représenter jusqu'à 255 entrées par le byte d'en-tête. Elle ne remplace
+  pas le gate runtime : un fixture de 31 skills doit encore prouver compilation,
+  allocation, Save and Exit, relecture, respec et hôte/joiner sous la pile
+  complète avant toute promesse publique.
+- Une lecture runtime contrôlée de D2R 3.3.93847 prouve que la case `0x3B` du
+  tableau serveur à `D2R+0x1D2A790` contient le pointeur
+  `D2GAME_PACKETCALLBACK_Rcv0x3B_AllocateSkillPoints 0x4B3EE0`. Le handler
+  exige cinq octets, lit l'identifiant de skill à `packet+1` et le marqueur de
+  ranks supplémentaires à `packet+3`, borne l'identifiant contre le nombre
+  total de lignes SkillsTxt compilées, résout le skill, son `MaxLvl` et son rang
+  de base, puis applique les rangs par le helper serveur `0x438670`.
+- Aucun accès à `SkillPage`, `SkillRow` ni `SkillColumn` n'existe dans ce
+  callback. L'autorité serveur d'allocation est donc démontrée indépendante de
+  la page UI; la validation dynamique du 31e skill reste requise pour fermer le
+  trajet complet client, sauvegarde et gameplay.
+- Le respec autoritaire `D2GAME_PLAYER_ResetStatsAndSkills 0x580F20`, reçu par
+  l'opcode `0x39`, appelle `D2GAME_PLAYER_ResetSkills 0x4360F0`. Cette fonction
+  parcourt la liste compilée complète des skills de la classe, retire chaque
+  rang de base et crédite leur somme dans le stat 5. Elle n'applique ni filtre
+  `SkillPage` ni borne 30; un 31e skill investi doit donc entrer dans le parcours
+  natif, sous réserve du témoin dynamique encore ouvert.
+- `UI_DispatchMessage 0x843D90` demeure la propriété unique du broker
+  `plugin-skills`; RemoteStash redirige seulement le callsite étroit
+  `UI_ButtonWidget_OnClick+0xE2`. FourthSkillTree doit composer avec ce broker
+  et ne pas installer un second hook sur l'entrée commune.
+- Le probe d'allocation du 25 août place le skill 456 sur une cellule native
+  Barbarian et étend une sauvegarde gameplay courante de 30 à 31 rangs, avec
+  en-tête, checksum et marqueur `JM` cohérents. D2R affiche le personnage level
+  99 au menu mais ferme pendant sa matérialisation; le `.d2s` reste
+  byte-identique. La greffe directe ne fournit donc aucune preuve d'allocation
+  investie et ne sera pas utilisée comme base du prochain témoin.
+
 ## Discipline de promotion
 
 Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de
