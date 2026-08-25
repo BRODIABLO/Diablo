@@ -770,6 +770,50 @@ controle, octets/signature, caller/callee ou validation runtime. Les simples
 ressemblances et les anciennes adresses 2.4 restent dans cette page avec une
 confiance explicite.
 
+## Cast Triggers — événement doactive et niveau source
+
+- Le handler serveur central `0x43ACB0` porte l'ABI observée
+  `(game, unit, skillId, skillLevel, a5, a6, a7) -> int32`. Ses huit callsites
+  directs distinguent les exécutions manuelles `a5=1,a6=0,a7=0` des casts
+  d'item `a6=1`. Le retour non nul est produit seulement après le SrvDoFunc ou
+  le missile serveur réussi; Cast Triggers dispatch donc après ce retour.
+- Le lookup contextuel `0x097790` utilise les tables `+0x11B0/+0x11B8` et le
+  stride SkillsTxt `0x2EC` à `0x09780B`. Les offsets `flags +0x24`,
+  `anim +0x30`, `seqtrans +0x32` conservent l'ordre sémantique D2MOO après les
+  champs modernes insérés. Le filtre accepte `SC=10` ou `SQ=18` transitant
+  vers `SC`, et rejette le bit `repeat` 11. Inferno reste donc exclu tandis que
+  Lightning/Chain Lightning sont des casts non répétitifs admis.
+- L'événement natif `doactive` est l'index 4. Aucun appel natif du dispatcher
+  n'a été trouvé avec cet index; le wrapper `0x44D570` accepte un dommage nul,
+  construit le contexte attendu et appelle `0x5881E0`. Le plugin ne remplace
+  aucune fonction de table d'événements.
+- EventFunc20 `0x583B30` lit l'identifiant de stat dans le high word de son
+  payload, obtient la chance sur l'unité, effectue le jet modulo 100, puis
+  décode le skill id et son niveau à l'aide du shift/masque contextuels. Il
+  appelle `0x5896E0` aux callsites `0x583C7F/0x583CB4` ou `0x589820` à
+  `0x583CE1`. Melee Splash reste propriétaire de l'entrée EventFunc20 et
+  transmet le chemin natif; Cast Triggers ne la hooke pas.
+- Les ABI des casters sont `(caster,skillId,skillLevel,target,flag)` pour
+  `0x5896E0` et `(caster,skillId,skillLevel,x,y,flag)` pour `0x589820`. Leurs
+  signatures strictes étendues à 45 et 43 octets sont uniques. Cast Triggers
+  substitue le niveau zéro uniquement dans son TLS `doactive`, puis suspend ce
+  contexte pendant le cast déclenché afin qu'aucun proc imbriqué ne l'hérite.
+- D2MOO PropertyFunc11 masque le niveau avec `63` avant de l'ajouter au skill
+  décalé de six bits. `max=64` devient donc le marqueur zéro sans prendre une
+  valeur fixe 1..63. Ce point est une preuve sémantique du format historique;
+  le round-trip exact par le compilateur ItemStatCost/Properties D2R 3.3 et le
+  niveau effectif observé restent des gates gameplay du fixture intermod.
+- Le patch PluginPack Whirlwind CTC à `0x589736` et son équivalent position à
+  `0x58986B` se trouvent dans les corps natifs, après les prologues possédés par
+  Cast Triggers. Aucun overlap de bytes n'est présent; le cold start pile
+  complète reste néanmoins le gate de coexistence autoritaire.
+- Références sémantiques uniquement :
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`,
+  `source/D2Game/src/SKILLS/Skills.cpp:2445-2582`,
+  `source/D2Game/src/SKILLS/SkillItem.cpp:1632-1680,1925-2040` et
+  `source/D2Common/src/Items/ItemMods.cpp:3634-3698`. Aucune adresse,
+  structure ni ABI 32 bits n'est transposée.
+
 ## Player sequence tables — baseline D2R 3.3.93847
 
 - `SKILLS_GetSeqNumFromSkill` à `0x33DBC0` lit pour un joueur le byte

@@ -636,6 +636,100 @@
                                                                         ]
                                                        },
                                                        {
+                                                         "name": "CastTriggers",
+                                                         "path": "addons/CastTriggers",
+                                                         "kind": "directory",
+                                                         "meta": {
+                                                           "role": "x-public-intermod-d2rloader-addon",
+                                                           "summary": "DLL autonome RuffnecKk qui déclenche des propriétés CTC natives lors des sorts manuels non répétés, avec niveaux cible fixe ou hérité du sort source, sans dépendance BKVince.",
+                                                           "agentAccess": "read-write",
+                                                           "status": "experimental"
+                                                         },
+                                                         "children": [
+                                                           {
+                                                             "name": "package",
+                                                             "path": "addons/CastTriggers/package",
+                                                             "kind": "directory",
+                                                             "children": [
+                                                               {
+                                                                 "name": "d2rl-ruffneckk-cast-triggers.dll",
+                                                                 "path": "addons/CastTriggers/package/d2rl-ruffneckk-cast-triggers.dll",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "ruffneckk-cast-triggers.toml",
+                                                                 "path": "addons/CastTriggers/package/ruffneckk-cast-triggers.toml",
+                                                                 "kind": "file"
+                                                               }
+                                                             ]
+                                                           },
+                                                           {
+                                                             "name": "src",
+                                                             "path": "addons/CastTriggers/src",
+                                                             "kind": "directory",
+                                                             "children": [
+                                                               {
+                                                                 "name": "cast_triggers_policy.hpp",
+                                                                 "path": "addons/CastTriggers/src/cast_triggers_policy.hpp",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "CMakeLists.txt",
+                                                                 "path": "addons/CastTriggers/src/CMakeLists.txt",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "plugin.cpp",
+                                                                 "path": "addons/CastTriggers/src/plugin.cpp",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "plugin.rc",
+                                                                 "path": "addons/CastTriggers/src/plugin.rc",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "policy_tests.cpp",
+                                                                 "path": "addons/CastTriggers/src/policy_tests.cpp",
+                                                                 "kind": "file"
+                                                               }
+                                                             ]
+                                                           },
+                                                           {
+                                                             "name": "tools",
+                                                             "path": "addons/CastTriggers/tools",
+                                                             "kind": "directory",
+                                                             "children": [
+                                                               {
+                                                                 "name": "build-test-fixture.cjs",
+                                                                 "path": "addons/CastTriggers/tools/build-test-fixture.cjs",
+                                                                 "kind": "file"
+                                                               }
+                                                             ]
+                                                           },
+                                                           {
+                                                             "name": "INTERMOD-GUIDE.md",
+                                                             "path": "addons/CastTriggers/INTERMOD-GUIDE.md",
+                                                             "kind": "file"
+                                                           },
+                                                           {
+                                                             "name": "README.md",
+                                                             "path": "addons/CastTriggers/README.md",
+                                                             "kind": "file"
+                                                           },
+                                                           {
+                                                             "name": "ruffneckk-cast-triggers.toml",
+                                                             "path": "addons/CastTriggers/ruffneckk-cast-triggers.toml",
+                                                             "kind": "file"
+                                                           },
+                                                           {
+                                                             "name": "VALIDATION.md",
+                                                             "path": "addons/CastTriggers/VALIDATION.md",
+                                                             "kind": "file"
+                                                           }
+                                                         ]
+                                                       },
+                                                       {
                                                            "name":  "CharmZone",
                                                            "path":  "addons/CharmZone",
                                                            "kind":  "directory",
@@ -40053,6 +40147,17 @@
                                                            "name":  "RingMercenaire.txt",
                                                            "path":  "Mission/RingMercenaire.txt",
                                                            "kind":  "file"
+                                                       },
+                                                       {
+                                                         "name": "ruffneckk-cast-triggers.md",
+                                                         "path": "Mission/ruffneckk-cast-triggers.md",
+                                                         "kind": "file",
+                                                         "meta": {
+                                                           "role": "x-public-intermod-plugin-mission",
+                                                           "summary": "Mission et gates de qualification du plugin public Cast Triggers pour D2R 3.3.93847.",
+                                                           "agentAccess": "read-write",
+                                                           "status": "active"
+                                                         }
                                                        },
                                                        {
                                                            "name":  "sounds-of-variation-bkvince.md",

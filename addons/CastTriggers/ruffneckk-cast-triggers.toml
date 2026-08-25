@@ -1,0 +1,18 @@
+# RuffnecKk Cast Triggers
+# Triggers item skills when players successfully cast non-repeating spells.
+
+enabled = true
+
+[on_cast]
+# Empty means every eligible spell. A non-empty list narrows source skills to
+# these numeric Skills.txt IDs. It cannot opt attacks or repeating skills in.
+include_skill_ids = []
+
+# Applied after include_skill_ids. Use this for custom spells that should never
+# activate cast-on-cast item properties.
+exclude_skill_ids = []
+
+[diagnostics]
+# Writes source and target skill levels to the plugin log. The
+# cast-triggers console command exposes counters even when this is false.
+enabled = false

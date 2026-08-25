@@ -2986,6 +2986,62 @@
       "confidence": "high",
       "source": "Mission/player-sequence-tables-3.3.md; reverse-engineering/d2r-3.2.92777/player-sequences/d2r-3.3.93847-player-sequences.manifest.json",
       "notes": "Unique governed-image seed for the 14-byte player weapon-class routing map copied to runtime RVA 0x2386730. Exact bytes are verified by the deterministic extractor against the D2R 3.3.93847 capture."
+    },
+    {
+      "rva": "0x43ACB0",
+      "name": "D2GAME_SKILLS_ServerDoHandler",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-cast-triggers.md; addons/CastTriggers/README.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/SKILLS/Skills.cpp:2445-2582",
+      "notes": "Authoritative server skill do-handler with observed x64 ABI int32 (game, unit, skillId, skillLevel, consumeResources, itemCast, itemEffect). Eight direct callers prove manual executions use consumeResources=1,itemCast=0,itemEffect=0, while native item CTC uses itemCast=1. The function resolves the context-aware SkillsTxt row, executes its SrvDo handler and returns nonzero only on success. Cast Triggers wraps the unique strict 32-byte entry and dispatches doactive only after a successful manual player cast; D2MOO is semantic evidence only."
+    },
+    {
+      "rva": "0x44D570",
+      "name": "D2GAME_ApplyUnitStatEvent",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-cast-triggers.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Safe wrapper with observed ABI int32 (game, eventId, sourceUnit, targetUnit, damage). It constructs the native event context, accepts a null damage pointer and calls D2GAME_DispatchUnitStatEventList at 0x5881E0. Cast Triggers invokes it with event 4 doactive after a successful eligible cast. Its strict 18-byte entry signature is unique in the governed corpus reused for current D2R 3.3.93847."
+    },
+    {
+      "rva": "0x97790",
+      "name": "DATATBLS_GetSkillsTxtRecordForContext",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-cast-triggers.md; addons/CastTriggers/README.md",
+      "notes": "Context-aware SkillsTxt lookup with observed ABI (uint8 dataContext, int32 skillId) -> compiled record pointer. It resolves the per-context table at +0x11B0/+0x11B8 and multiplies the validated row index by the proven 0x2EC record stride at 0x9780B. Cast Triggers reads the flags QWORD at +0x24, player animation at +0x30 and sequence transition at +0x32. Its strict 40-byte entry signature is unique."
+    },
+    {
+      "rva": "0x5896E0",
+      "name": "SKILLITEM_CastOnTarget",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-cast-triggers.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/SKILLS/SkillItem.cpp:1925-2040",
+      "notes": "Native item-skill caster for a unit target with observed ABI int32 (caster, skillId, skillLevel, target, flag). EventFunc20 calls it at 0x583C7F and 0x583CB4 after its native chance roll and target-policy selection. Cast Triggers wraps the unique strict 45-byte entry, substitutes only its internal level-zero marker, and suspends the dispatch context while the triggered skill runs so nested procs cannot inherit the source level. The PluginPack Whirlwind CTC patch is later in the original body at 0x589736 and does not overlap this entry ownership."
+    },
+    {
+      "rva": "0x589820",
+      "name": "SKILLITEM_CastAtPosition",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-cast-triggers.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/SKILLS/SkillItem.cpp:1925-2040",
+      "notes": "Native item-skill position caster with observed ABI int32 (caster, skillId, skillLevel, x, y, flag). EventFunc20 calls it at 0x583CE1 when no unit target is selected. Cast Triggers wraps the unique strict 43-byte entry and applies the same bounded level-zero substitution and recursion suspension as the target path. The PluginPack state patch at 0x58986B is inside the original body and does not overlap entry ownership."
+    },
+    {
+      "rva": "0x48FE20",
+      "name": "SUNIT_GetTargetUnit",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-cast-triggers.md",
+      "notes": "Resolves the current server target with observed ABI (game, sourceUnit) -> targetUnit. Cast Triggers uses it after a successful source cast so EventFunc20 retains native unit-target behavior. Its strict 30-byte entry signature is unique in the governed corpus."
+    },
+    {
+      "rva": "0x34B9D0",
+      "name": "UNITS_GetUnitType",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-cast-triggers.md",
+      "notes": "Returns Unit+0x00 for a non-null Unit and the native invalid unit type 6 for null. Cast Triggers requires type 0 player before dispatching doactive. Its strict 32-byte entry signature is unique in the governed corpus."
     }
   ]
 }
