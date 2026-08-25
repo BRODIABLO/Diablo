@@ -628,6 +628,22 @@
       "notes": "Pre-roll ethereal eligibility call to ITEMS_HasDurability, returning to 0x4432F9. Ethereal Item Rules redirects only this call to the strict helper at 0x46D840 so durable indestructible items reach the configured roll while genuinely durability-free bases remain excluded; the post-application call at 0x443507 stays vanilla."
     },
     {
+      "rva": "0x44CB32",
+      "name": "SUNITDMG_GenericBurnProductionAdd",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md",
+      "notes": "Unique extended witness 81 C3 3C 01 00 00 41 0F 48 DE in the common 92777/93847 corpus. The native path has already multiplied the existing Burn numerator into EBX and advanced the unit seed into R8D, then incorrectly adds numeric stat id 316 as flat damage. Burn Damage Fix replaces only the six-byte ADD with a rel32 relay, consumes the current random value without advancing the seed again, adds the max-exclusive burningmin/burningmax roll after passive_fire_mastery, recreates the sign flag and resumes at 0x44CB38."
+    },
+    {
+      "rva": "0x451380",
+      "name": "SUNITDMG_ApplyBurnDamage",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md",
+      "notes": "Unique 23-byte entry signature 45 85 C9 0F 8E E6 01 00 00 48 89 6C 24 20 56 41 56 41 57 48 83 EC 40 in the common 92777/93847 corpus. ABI (attacker, defender, burnDamage, burnLength) -> void. Burn Damage Fix resolves positive Burn through the live Fire Resistance path before calling the original trampoline; it does not change duration or tick scheduling."
+    },
+    {
       "rva": "0x4506A1",
       "name": "AbsorbPercentageCapImmediate",
       "kind": "patch-site",
@@ -640,8 +656,8 @@
       "name": "SUNITDMG_ApplyResistancesAndAbsorb",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/floating-damage-portage-3.2.md",
-      "notes": "D2R 3.2 equivalent proven from the unique 12-entry damage-stat loop at 0x44EC44, matching damage offsets, resistance/pierce/absorb flow, fixed-point percentage branches, and the post-resolution observer call at 0x452651."
+      "source": "Mission/floating-damage-portage-3.2.md; Mission/burn-damage-fix.md",
+      "notes": "Common 92777/93847 function proven from the unique 12-entry damage-stat loop at 0x44EC44, matching damage offsets, resistance/pierce/absorb flow, fixed-point percentage branches, and the post-resolution observer call at 0x452651. Burn Damage Fix deliberately calls the live address and never owns or requires vanilla entry bytes because Monster Display may hook this shared resolver in either load order."
     },
     {
       "rva": "0x4524D6",
@@ -2232,8 +2248,16 @@
       "name": "STATES_CheckState",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/mass-id-3.2.md",
-      "notes": "Checks whether a unit has a state id with observed x64 ABI (unit, stateId) -> int32. Both native shared-stash handlers pass state 0xBA before accepting an auxiliary player as a shared-stash proxy. Caller 0x33A231 independently iterates state ids and calls this same predicate. Its strict 32-byte entry begins 48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 8B DA."
+      "source": "Mission/mass-id-3.2.md; Mission/burn-damage-fix.md",
+      "notes": "Checks whether a unit has a state id with observed x64 ABI (unit, stateId) -> int32. Both native shared-stash handlers pass state 0xBA before accepting an auxiliary player as a shared-stash proxy. Caller 0x33A231 independently iterates state ids and calls this same predicate. Burn Damage Fix borrows it without patching to witness state burning (115) after a positive native Burn application when diagnostics are enabled. Its strict 32-byte entry is 48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 8B DA 48 8B F1 E8 07 68 01 00 85 C0 74 0E 83 E8 01."
+    },
+    {
+      "rva": "0x3354C0",
+      "name": "STATES_ToggleState",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/D2States.cpp:22-28",
+      "notes": "Observed x64 ABI (unit, stateId, enable) -> void. SUNITDMG_ApplyBurnDamage calls it at 0x45143C with defender, native state burning 115 and enable=1 after rejecting non-positive duration or damage. Burn Damage Fix never calls or patches this function; its overlay witness reads the resulting state through STATES_CheckState. The strict 32-byte entry is 48 89 5C 24 08 48 89 6C 24 18 48 89 74 24 20 57 48 83 EC 20 41 8B E8 8B DA 48 8B F1 85 D2 78 38."
     },
     {
       "rva": "0x388BA0",

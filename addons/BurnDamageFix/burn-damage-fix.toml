@@ -1,0 +1,19 @@
+# Burn Damage Fix
+# Restores generic Burn production and applies Fire Resistance to Burn.
+
+# File format version. Leave this value unchanged.
+config_version = 1
+
+# Master switch. When false, the plugin loads without installing native hooks.
+enabled = true
+
+[fixes]
+# Uses burningmin, burningmax and passive_fire_mastery for generic Burn damage.
+normalize_generic_burn = true
+
+# Resolves applied Burn through the live native Fire Resistance path.
+apply_fire_resistance = true
+
+[diagnostics]
+# Adds production, resistance and native burning-state witness counters.
+enabled = false

@@ -636,6 +636,83 @@
                                                                         ]
                                                        },
                                                        {
+                                                         "name": "BurnDamageFix",
+                                                         "path": "addons/BurnDamageFix",
+                                                         "kind": "directory",
+                                                         "meta": {
+                                                           "role": "x-standalone-d2rloader-addon",
+                                                           "summary": "Plugin hybride Burn Damage Fix 2.0.0 de la RuffnecKk Suite : restaure la production Burn générique, applique la Fire Resistance native et observe passivement le state burning.",
+                                                           "agentAccess": "read-write",
+                                                           "status": "experimental"
+                                                         },
+                                                         "children": [
+                                                           {
+                                                             "name": "package",
+                                                             "path": "addons/BurnDamageFix/package",
+                                                             "kind": "directory",
+                                                             "children": [
+                                                               {
+                                                                 "name": "BurnDamageFix.dll",
+                                                                 "path": "addons/BurnDamageFix/package/BurnDamageFix.dll",
+                                                                 "kind": "file"
+                                                               }
+                                                             ]
+                                                           },
+                                                           {
+                                                             "name": "src",
+                                                             "path": "addons/BurnDamageFix/src",
+                                                             "kind": "directory",
+                                                             "children": [
+                                                               {
+                                                                 "name": "burn_damage_fix_policy.hpp",
+                                                                 "path": "addons/BurnDamageFix/src/burn_damage_fix_policy.hpp",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "burn_damage_fix_policy_tests.cpp",
+                                                                 "path": "addons/BurnDamageFix/src/burn_damage_fix_policy_tests.cpp",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "burn_damage_fix_relay.asm",
+                                                                 "path": "addons/BurnDamageFix/src/burn_damage_fix_relay.asm",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "CMakeLists.txt",
+                                                                 "path": "addons/BurnDamageFix/src/CMakeLists.txt",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "plugin.cpp",
+                                                                 "path": "addons/BurnDamageFix/src/plugin.cpp",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "plugin.rc",
+                                                                 "path": "addons/BurnDamageFix/src/plugin.rc",
+                                                                 "kind": "file"
+                                                               }
+                                                             ]
+                                                           },
+                                                           {
+                                                             "name": "burn-damage-fix.toml",
+                                                             "path": "addons/BurnDamageFix/burn-damage-fix.toml",
+                                                             "kind": "file"
+                                                           },
+                                                           {
+                                                             "name": "NATIVE-HOOKS.md",
+                                                             "path": "addons/BurnDamageFix/NATIVE-HOOKS.md",
+                                                             "kind": "file"
+                                                           },
+                                                           {
+                                                             "name": "README.md",
+                                                             "path": "addons/BurnDamageFix/README.md",
+                                                             "kind": "file"
+                                                           }
+                                                         ]
+                                                       },
+                                                       {
                                                          "name": "CastTriggers",
                                                          "path": "addons/CastTriggers",
                                                          "kind": "directory",
@@ -39925,6 +40002,16 @@
                                                                         "summary":  "Décisions, preuves reverse engineering et gates du plugin d’attribution groupée des skills.",
                                                                         "agentAccess":  "read-write"
                                                                     }
+                                                       },
+                                                       {
+                                                         "name": "burn-damage-fix.md",
+                                                         "path": "Mission/burn-damage-fix.md",
+                                                         "kind": "file",
+                                                         "meta": {
+                                                           "role": "x-mission-native-plugin",
+                                                           "summary": "Décisions, preuves dual-build, contrat d’overlay witness et gates de livraison du plugin Burn Damage Fix.",
+                                                           "agentAccess": "read-write"
+                                                         }
                                                        },
                                                        {
                                                            "name":  "charm-inventory-auras-3.2.md",

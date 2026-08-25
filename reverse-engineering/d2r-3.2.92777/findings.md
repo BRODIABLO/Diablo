@@ -904,6 +904,43 @@ confiance explicite.
   `source/D2Common/src/Items/ItemMods.cpp:3634-3698`. Aucune adresse,
   structure ni ABI 32 bits n'est transposée.
 
+## Burn Damage Fix — production générique et Fire Resistance
+
+- Le corpus commun aux cibles 92777 et 93847 contient à `0x44CB32` le témoin
+  unique `81 C3 3C 01 00 00 41 0F 48 DE`. Le chemin a déjà multiplié le Burn
+  existant dans `EBX` et avancé le seed unité dans `R8D`, puis additionne à
+  tort l'ID de stat `316` comme dommage plat.
+- Les stats `burningmin=316`, `burningmax=317` et
+  `passive_fire_mastery=329` sont identiques dans les tables 3.2 et 3.3. Le
+  producteur missile `0x465799/0x465B40` confirme qu'elles décrivent un range
+  de dommage et une maîtrise, pas une constante de DPS.
+- Le helper RNG natif `0x4501E0` avance le seed une seule fois puis réduit le
+  low32 courant par masque pour une puissance de deux ou modulo sinon. Le
+  relais Burn consomme donc `R8D` sans nouvel appel RNG et conserve la borne
+  maximum exclusive prouvée sémantiquement par
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`.
+- `SUNITDMG_ApplyBurnDamage 0x451380` stocke ensuite le Burn sous forme de
+  `HPREGEN` négatif. Burn Damage Fix résout la quantité au moment de
+  l'application avec le record Fire natif et `dontAbsorb=1`.
+- Cette fonction rejette une durée ou un dommage non positif, puis appelle
+  `STATES_ToggleState 0x3354C0` avec le défenseur, le state `burning` 115 et
+  `enable=1`. Les tables vanilla 3.2, vanilla 3.3 et BKVince relient toutes le
+  state 115 à l'overlay `burning` 224, dont l'asset est
+  `Expansion\\On_Fire`; l'absence d'overlay signalée n'est donc pas une absence
+  de mapping dans les données actuelles.
+- Le témoin optionnel de Burn Damage Fix emprunte `STATES_CheckState 0x3351B0`
+  après le trampoline original et uniquement pour un Burn résolu positif avec
+  durée positive. Il compte `active/missing`, ne toggle aucun state et ne crée
+  aucun overlay; le gameplay doit encore rapprocher ce compteur de l'effet
+  visuel réel.
+- `SUNITDMG_ApplyResistancesAndAbsorb 0x4523E0` reste un seam partagé. Le plugin
+  appelle son adresse vivante sans valider les octets vanilla, afin que Monster
+  Display et les relais internes de Resistance Floor soient observés quel que
+  soit l'ordre de chargement.
+- Le scan des DLL actives trouve la référence `0x4523E0` uniquement dans
+  Monster Display, aucune référence aux seams possédés dans Monster Display ou
+  Bind And Summon, et aucun overlap avec l'entrée Melee Splash `0x44C030`.
+
 ## Player sequence tables — baseline D2R 3.3.93847
 
 - `SKILLS_GetSeqNumFromSkill` à `0x33DBC0` lit pour un joueur le byte

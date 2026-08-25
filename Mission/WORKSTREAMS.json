@@ -386,6 +386,19 @@
       ]
     },
     {
+      "id": "burn-damage-fix",
+      "name": "Burn Damage Fix",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/burn-damage-fix.md",
+      "nextGate": "Collect the positive Burn gameplay/overlay witness on 92777 and 93847, qualify resistance/pierce/absorb/kill-XP/multiplayer and clean shutdown, monitor the intermittent 93847 dxgi crash, and retest the complete 92777 stack after RogueScoutMovement is fixed without disabling it.",
+      "include": [
+        "Mission/burn-damage-fix.md",
+        "addons/BurnDamageFix/**",
+        "data-BKVince/d2rloader/plugins/BurnDamageFix.dll"
+      ]
+    },
+    {
       "id": "extended-merc",
       "name": "ExtendedMerc",
       "status": "active",
