@@ -1,0 +1,351 @@
+seqnum	*sequence	weaponclass	recordset	*eol
+1	Jab	HTH	gPlayerSequenceHandToHand1	0
+1	Jab	1HT	gPlayerSequenceJab_BOW	0
+1	Jab	2HT	gPlayerSequenceJab_1HS	0
+1	Jab	1HS		0
+1	Jab	2HS		0
+1	Jab	BOW		0
+1	Jab	XBW		0
+1	Jab	STF		0
+1	Jab	1JS		0
+1	Jab	1JT		0
+1	Jab	1SS		0
+1	Jab	1ST		0
+1	Jab	HT1		0
+1	Jab	HT2		0
+2	Sacrifice	HTH	gPlayerSequenceHandToHand2	0
+2	Sacrifice	1HT		0
+2	Sacrifice	2HT		0
+2	Sacrifice	1HS	gPlayerSequenceSacrifice_1HT	0
+2	Sacrifice	2HS	gPlayerSequenceSacrifice_STF	0
+2	Sacrifice	BOW		0
+2	Sacrifice	XBW		0
+2	Sacrifice	STF		0
+2	Sacrifice	1JS		0
+2	Sacrifice	1JT		0
+2	Sacrifice	1SS		0
+2	Sacrifice	1ST		0
+2	Sacrifice	HT1		0
+2	Sacrifice	HT2		0
+3	Chastise	HTH	gPlayerSequenceHandToHand2	0
+3	Chastise	1HT		0
+3	Chastise	2HT		0
+3	Chastise	1HS	gPlayerSequenceChastise_1HT	0
+3	Chastise	2HS		0
+3	Chastise	BOW		0
+3	Chastise	XBW		0
+3	Chastise	STF		0
+3	Chastise	1JS		0
+3	Chastise	1JT		0
+3	Chastise	1SS		0
+3	Chastise	1ST		0
+3	Chastise	HT1		0
+3	Chastise	HT2		0
+4	Charge	HTH	gPlayerSequenceCharge	0
+4	Charge	1HT	gPlayerSequenceCharge	0
+4	Charge	2HT	gPlayerSequenceCharge	0
+4	Charge	1HS	gPlayerSequenceCharge	0
+4	Charge	2HS	gPlayerSequenceCharge	0
+4	Charge	BOW		0
+4	Charge	XBW		0
+4	Charge	STF	gPlayerSequenceCharge	0
+4	Charge	1JS		0
+4	Charge	1JT		0
+4	Charge	1SS		0
+4	Charge	1ST		0
+4	Charge	HT1		0
+4	Charge	HT2		0
+5	Defiance	HTH	gPlayerSequenceHandToHand2	0
+5	Defiance	1HT		0
+5	Defiance	2HT		0
+5	Defiance	1HS	gPlayerSequenceDefiance_1HT	0
+5	Defiance	2HS		0
+5	Defiance	BOW		0
+5	Defiance	XBW		0
+5	Defiance	STF		0
+5	Defiance	1JS		0
+5	Defiance	1JT		0
+5	Defiance	1SS		0
+5	Defiance	1ST		0
+5	Defiance	HT1		0
+5	Defiance	HT2		0
+6	Inferno	HTH	gPlayerSequenceInferno	0
+6	Inferno	1HT	gPlayerSequenceInferno	0
+6	Inferno	2HT	gPlayerSequenceInferno	0
+6	Inferno	1HS	gPlayerSequenceInferno	0
+6	Inferno	2HS	gPlayerSequenceInferno	0
+6	Inferno	BOW	gPlayerSequenceInferno	0
+6	Inferno	XBW	gPlayerSequenceInferno	0
+6	Inferno	STF	gPlayerSequenceInferno	0
+6	Inferno	1JS	gPlayerSequenceInferno	0
+6	Inferno	1JT	gPlayerSequenceInferno	0
+6	Inferno	1SS	gPlayerSequenceInferno	0
+6	Inferno	1ST	gPlayerSequenceInferno	0
+6	Inferno	HT1	gPlayerSequenceInferno	0
+6	Inferno	HT2	gPlayerSequenceInferno	0
+7	Strafe	HTH	gPlayerSequenceHandToHand1	0
+7	Strafe	1HT		0
+7	Strafe	2HT		0
+7	Strafe	1HS		0
+7	Strafe	2HS		0
+7	Strafe	BOW	gPlayerSequenceStrafe_2HS	0
+7	Strafe	XBW	gPlayerSequenceStrafe_2HT	0
+7	Strafe	STF		0
+7	Strafe	1JS		0
+7	Strafe	1JT		0
+7	Strafe	1SS		0
+7	Strafe	1ST		0
+7	Strafe	HT1		0
+7	Strafe	HT2		0
+8	Impale	HTH	gPlayerSequenceHandToHand1	0
+8	Impale	1HT	gPlayerSequenceImpale_BOW	0
+8	Impale	2HT	gPlayerSequenceImpale_1HS	0
+8	Impale	1HS		0
+8	Impale	2HS		0
+8	Impale	BOW		0
+8	Impale	XBW		0
+8	Impale	STF		0
+8	Impale	1JS		0
+8	Impale	1JT		0
+8	Impale	1SS		0
+8	Impale	1ST		0
+8	Impale	HT1		0
+8	Impale	HT2		0
+9	Fend	HTH	gPlayerSequenceHandToHand1	0
+9	Fend	1HT	gPlayerSequenceFend_BOW	0
+9	Fend	2HT	gPlayerSequenceFend_1HS	0
+9	Fend	1HS		0
+9	Fend	2HS		0
+9	Fend	BOW		0
+9	Fend	XBW		0
+9	Fend	STF		0
+9	Fend	1JS		0
+9	Fend	1JT		0
+9	Fend	1SS		0
+9	Fend	1ST		0
+9	Fend	HT1		0
+9	Fend	HT2		0
+10	Whirlwind	HTH	gPlayerSequenceWhirlwind	0
+10	Whirlwind	1HT	gPlayerSequenceWhirlwind	0
+10	Whirlwind	2HT	gPlayerSequenceWhirlwind	0
+10	Whirlwind	1HS	gPlayerSequenceWhirlwind	0
+10	Whirlwind	2HS	gPlayerSequenceWhirlwind	0
+10	Whirlwind	BOW		0
+10	Whirlwind	XBW		0
+10	Whirlwind	STF	gPlayerSequenceWhirlwind	0
+10	Whirlwind	1JS	gPlayerSequenceWhirlwind	0
+10	Whirlwind	1JT	gPlayerSequenceWhirlwind	0
+10	Whirlwind	1SS	gPlayerSequenceWhirlwind	0
+10	Whirlwind	1ST	gPlayerSequenceWhirlwind	0
+10	Whirlwind	HT1	gPlayerSequenceWhirlwind	0
+10	Whirlwind	HT2	gPlayerSequenceWhirlwind	0
+11	DoubleSwing	HTH	gPlayerSequenceDoubleSwing	0
+11	DoubleSwing	1HT	gPlayerSequenceDoubleSwing	0
+11	DoubleSwing	2HT	gPlayerSequenceDoubleSwing	0
+11	DoubleSwing	1HS	gPlayerSequenceDoubleSwing	0
+11	DoubleSwing	2HS	gPlayerSequenceDoubleSwing	0
+11	DoubleSwing	BOW	gPlayerSequenceDoubleSwing	0
+11	DoubleSwing	XBW	gPlayerSequenceDoubleSwing	0
+11	DoubleSwing	STF	gPlayerSequenceDoubleSwing	0
+11	DoubleSwing	1JS	gPlayerSequenceDoubleSwing	0
+11	DoubleSwing	1JT	gPlayerSequenceDoubleSwing	0
+11	DoubleSwing	1SS	gPlayerSequenceDoubleSwing	0
+11	DoubleSwing	1ST	gPlayerSequenceDoubleSwing	0
+11	DoubleSwing	HT1	gPlayerSequenceDoubleSwing	0
+11	DoubleSwing	HT2	gPlayerSequenceDoubleSwing	0
+12	Lightning	HTH	gPlayerSequenceLightning	0
+12	Lightning	1HT	gPlayerSequenceLightning	0
+12	Lightning	2HT	gPlayerSequenceLightning	0
+12	Lightning	1HS	gPlayerSequenceLightning	0
+12	Lightning	2HS	gPlayerSequenceLightning	0
+12	Lightning	BOW	gPlayerSequenceLightning	0
+12	Lightning	XBW	gPlayerSequenceLightning	0
+12	Lightning	STF	gPlayerSequenceLightning	0
+12	Lightning	1JS	gPlayerSequenceLightning	0
+12	Lightning	1JT	gPlayerSequenceLightning	0
+12	Lightning	1SS	gPlayerSequenceLightning	0
+12	Lightning	1ST	gPlayerSequenceLightning	0
+12	Lightning	HT1	gPlayerSequenceLightning	0
+12	Lightning	HT2	gPlayerSequenceLightning	0
+13	Leap	HTH	gPlayerSequenceLeap	0
+13	Leap	1HT	gPlayerSequenceLeap	0
+13	Leap	2HT	gPlayerSequenceLeap	0
+13	Leap	1HS	gPlayerSequenceLeap	0
+13	Leap	2HS	gPlayerSequenceLeap	0
+13	Leap	BOW	gPlayerSequenceLeap	0
+13	Leap	XBW	gPlayerSequenceLeap	0
+13	Leap	STF	gPlayerSequenceLeap	0
+13	Leap	1JS	gPlayerSequenceLeap	0
+13	Leap	1JT	gPlayerSequenceLeap	0
+13	Leap	1SS	gPlayerSequenceLeap	0
+13	Leap	1ST	gPlayerSequenceLeap	0
+13	Leap	HT1	gPlayerSequenceLeap	0
+13	Leap	HT2	gPlayerSequenceLeap	0
+14	LeapAttack	HTH	gPlayerSequenceLeapAttack_HTH	0
+14	LeapAttack	1HT	gPlayerSequenceLeapAttack_BOW_1HT	0
+14	LeapAttack	2HT	gPlayerSequenceLeapAttack_1HS_XBW	0
+14	LeapAttack	1HS	gPlayerSequenceLeapAttack_BOW_1HT	0
+14	LeapAttack	2HS	gPlayerSequenceLeapAttack_STF	0
+14	LeapAttack	BOW		0
+14	LeapAttack	XBW		0
+14	LeapAttack	STF	gPlayerSequenceLeapAttack_1HS_XBW	0
+14	LeapAttack	1JS	gPlayerSequenceLeapAttack_HTH	0
+14	LeapAttack	1JT	gPlayerSequenceLeapAttack_HTH	0
+14	LeapAttack	1SS	gPlayerSequenceLeapAttack_HTH	0
+14	LeapAttack	1ST	gPlayerSequenceLeapAttack_HTH	0
+14	LeapAttack	HT1	gPlayerSequenceLeapAttack_HTH	0
+14	LeapAttack	HT2	gPlayerSequenceLeapAttack_HTH	0
+15	DoubleThrow	HTH	gPlayerSequenceDoubleThrow	0
+15	DoubleThrow	1HT	gPlayerSequenceDoubleThrow	0
+15	DoubleThrow	2HT	gPlayerSequenceDoubleThrow	0
+15	DoubleThrow	1HS	gPlayerSequenceDoubleThrow	0
+15	DoubleThrow	2HS	gPlayerSequenceDoubleThrow	0
+15	DoubleThrow	BOW	gPlayerSequenceDoubleThrow	0
+15	DoubleThrow	XBW	gPlayerSequenceDoubleThrow	0
+15	DoubleThrow	STF	gPlayerSequenceDoubleThrow	0
+15	DoubleThrow	1JS	gPlayerSequenceDoubleThrow	0
+15	DoubleThrow	1JT	gPlayerSequenceDoubleThrow	0
+15	DoubleThrow	1SS	gPlayerSequenceDoubleThrow	0
+15	DoubleThrow	1ST	gPlayerSequenceDoubleThrow	0
+15	DoubleThrow	HT1	gPlayerSequenceDoubleThrow	0
+15	DoubleThrow	HT2	gPlayerSequenceDoubleThrow	0
+16	DragonClaw	HTH	gPlayerSequenceDragonClaw_HTH_HT1	0
+16	DragonClaw	1HT		0
+16	DragonClaw	2HT		0
+16	DragonClaw	1HS		0
+16	DragonClaw	2HS		0
+16	DragonClaw	BOW		0
+16	DragonClaw	XBW		0
+16	DragonClaw	STF		0
+16	DragonClaw	1JS		0
+16	DragonClaw	1JT		0
+16	DragonClaw	1SS		0
+16	DragonClaw	1ST		0
+16	DragonClaw	HT1	gPlayerSequenceDragonClaw_HTH_HT1	0
+16	DragonClaw	HT2	gPlayerSequenceDragonClaw_HT2	0
+17	Projection	HTH	gPlayerSequenceProjection	0
+17	Projection	1HT	gPlayerSequenceProjection	0
+17	Projection	2HT	gPlayerSequenceProjection	0
+17	Projection	1HS	gPlayerSequenceProjection	0
+17	Projection	2HS	gPlayerSequenceProjection	0
+17	Projection	BOW	gPlayerSequenceProjection	0
+17	Projection	XBW	gPlayerSequenceProjection	0
+17	Projection	STF	gPlayerSequenceProjection	0
+17	Projection	1JS		0
+17	Projection	1JT		0
+17	Projection	1SS		0
+17	Projection	1ST		0
+17	Projection	HT1	gPlayerSequenceProjection	0
+17	Projection	HT2	gPlayerSequenceProjection	0
+18	ArcticBlast	HTH	gPlayerSequenceArcticBlast	0
+18	ArcticBlast	1HT	gPlayerSequenceArcticBlast	0
+18	ArcticBlast	2HT	gPlayerSequenceArcticBlast	0
+18	ArcticBlast	1HS	gPlayerSequenceArcticBlast	0
+18	ArcticBlast	2HS	gPlayerSequenceArcticBlast	0
+18	ArcticBlast	BOW	gPlayerSequenceArcticBlast	0
+18	ArcticBlast	XBW	gPlayerSequenceArcticBlast	0
+18	ArcticBlast	STF	gPlayerSequenceArcticBlast	0
+18	ArcticBlast	1JS	gPlayerSequenceArcticBlast	0
+18	ArcticBlast	1JT	gPlayerSequenceArcticBlast	0
+18	ArcticBlast	1SS	gPlayerSequenceArcticBlast	0
+18	ArcticBlast	1ST	gPlayerSequenceArcticBlast	0
+18	ArcticBlast	HT1	gPlayerSequenceArcticBlast	0
+18	ArcticBlast	HT2	gPlayerSequenceArcticBlast	0
+19	DragonTalon	HTH	gPlayerSequenceDragonTalon	0
+19	DragonTalon	1HT	gPlayerSequenceDragonTalon	0
+19	DragonTalon	2HT	gPlayerSequenceDragonTalon	0
+19	DragonTalon	1HS	gPlayerSequenceDragonTalon	0
+19	DragonTalon	2HS	gPlayerSequenceDragonTalon	0
+19	DragonTalon	BOW	gPlayerSequenceDragonTalon	0
+19	DragonTalon	XBW	gPlayerSequenceDragonTalon	0
+19	DragonTalon	STF	gPlayerSequenceDragonTalon	0
+19	DragonTalon	1JS		0
+19	DragonTalon	1JT		0
+19	DragonTalon	1SS		0
+19	DragonTalon	1ST		0
+19	DragonTalon	HT1	gPlayerSequenceDragonTalon	0
+19	DragonTalon	HT2	gPlayerSequenceDragonTalon	0
+20	DragonBreath	HTH	gPlayerSequenceDragonBreath	0
+20	DragonBreath	1HT	gPlayerSequenceDragonBreath	0
+20	DragonBreath	2HT	gPlayerSequenceDragonBreath	0
+20	DragonBreath	1HS	gPlayerSequenceDragonBreath	0
+20	DragonBreath	2HS	gPlayerSequenceDragonBreath	0
+20	DragonBreath	BOW	gPlayerSequenceDragonBreath	0
+20	DragonBreath	XBW	gPlayerSequenceDragonBreath	0
+20	DragonBreath	STF		0
+20	DragonBreath	1JS		0
+20	DragonBreath	1JT		0
+20	DragonBreath	1SS		0
+20	DragonBreath	1ST		0
+20	DragonBreath	HT1	gPlayerSequenceDragonBreath	0
+20	DragonBreath	HT2	gPlayerSequenceDragonBreath	0
+21	DragonFlight	HTH	gPlayerSequenceDragonFlight	0
+21	DragonFlight	1HT	gPlayerSequenceDragonFlight	0
+21	DragonFlight	2HT	gPlayerSequenceDragonFlight	0
+21	DragonFlight	1HS	gPlayerSequenceDragonFlight	0
+21	DragonFlight	2HS	gPlayerSequenceDragonFlight	0
+21	DragonFlight	BOW	gPlayerSequenceDragonFlight	0
+21	DragonFlight	XBW	gPlayerSequenceDragonFlight	0
+21	DragonFlight	STF	gPlayerSequenceDragonFlight	0
+21	DragonFlight	1JS	gPlayerSequenceDragonFlight	0
+21	DragonFlight	1JT	gPlayerSequenceDragonFlight	0
+21	DragonFlight	1SS	gPlayerSequenceDragonFlight	0
+21	DragonFlight	1ST	gPlayerSequenceDragonFlight	0
+21	DragonFlight	HT1	gPlayerSequenceDragonFlight	0
+21	DragonFlight	HT2	gPlayerSequenceDragonFlight	0
+22	Unmorph	HTH	gPlayerSequenceUnmorph	0
+22	Unmorph	1HT	gPlayerSequenceUnmorph	0
+22	Unmorph	2HT	gPlayerSequenceUnmorph	0
+22	Unmorph	1HS	gPlayerSequenceUnmorph	0
+22	Unmorph	2HS	gPlayerSequenceUnmorph	0
+22	Unmorph	BOW	gPlayerSequenceUnmorph	0
+22	Unmorph	XBW	gPlayerSequenceUnmorph	0
+22	Unmorph	STF	gPlayerSequenceUnmorph	0
+22	Unmorph	1JS	gPlayerSequenceUnmorph	0
+22	Unmorph	1JT	gPlayerSequenceUnmorph	0
+22	Unmorph	1SS	gPlayerSequenceUnmorph	0
+22	Unmorph	1ST	gPlayerSequenceUnmorph	0
+22	Unmorph	HT1	gPlayerSequenceUnmorph	0
+22	Unmorph	HT2	gPlayerSequenceUnmorph	0
+23	BladeFury	HTH	gPlayerSequenceBladeFury	0
+23	BladeFury	1HT	gPlayerSequenceBladeFury	0
+23	BladeFury	2HT	gPlayerSequenceBladeFury	0
+23	BladeFury	1HS	gPlayerSequenceBladeFury	0
+23	BladeFury	2HS	gPlayerSequenceBladeFury	0
+23	BladeFury	BOW	gPlayerSequenceBladeFury	0
+23	BladeFury	XBW	gPlayerSequenceBladeFury	0
+23	BladeFury	STF	gPlayerSequenceBladeFury	0
+23	BladeFury	1JS	gPlayerSequenceBladeFury	0
+23	BladeFury	1JT	gPlayerSequenceBladeFury	0
+23	BladeFury	1SS	gPlayerSequenceBladeFury	0
+23	BladeFury	1ST	gPlayerSequenceBladeFury	0
+23	BladeFury	HT1	gPlayerSequenceBladeFury	0
+23	BladeFury	HT2	gPlayerSequenceBladeFury	0
+24	Cleave	HTH	gPlayerSequenceBladeFury	0
+24	Cleave	1HT	D2R_PlayerSequenceCleave_1HT	0
+24	Cleave	2HT	D2R_PlayerSequenceCleave_2HT	0
+24	Cleave	1HS	D2R_PlayerSequenceCleave_1HT	0
+24	Cleave	2HS	D2R_PlayerSequenceCleave_2HS	0
+24	Cleave	BOW	gPlayerSequenceBladeFury	0
+24	Cleave	XBW	gPlayerSequenceBladeFury	0
+24	Cleave	STF	D2R_PlayerSequenceCleave_STF	0
+24	Cleave	1JS	gPlayerSequenceBladeFury	0
+24	Cleave	1JT	gPlayerSequenceBladeFury	0
+24	Cleave	1SS	gPlayerSequenceBladeFury	0
+24	Cleave	1ST	gPlayerSequenceBladeFury	0
+24	Cleave	HT1	gPlayerSequenceBladeFury	0
+24	Cleave	HT2	gPlayerSequenceBladeFury	0
+25	MirroredBlades	HTH	D2R_PlayerSequenceMirroredBlades_HTH	0
+25	MirroredBlades	1HT	D2R_PlayerSequenceMirroredBlades_1HT	0
+25	MirroredBlades	2HT	D2R_PlayerSequenceMirroredBlades_2HT	0
+25	MirroredBlades	1HS	D2R_PlayerSequenceMirroredBlades_1HT	0
+25	MirroredBlades	2HS	D2R_PlayerSequenceMirroredBlades_2HS	0
+25	MirroredBlades	BOW	D2R_PlayerSequenceMirroredBlades_BOW	0
+25	MirroredBlades	XBW	D2R_PlayerSequenceMirroredBlades_BOW	0
+25	MirroredBlades	STF	D2R_PlayerSequenceMirroredBlades_STF	0
+25	MirroredBlades	1JS	D2R_PlayerSequenceMirroredBlades_1HT	0
+25	MirroredBlades	1JT	D2R_PlayerSequenceMirroredBlades_1HT	0
+25	MirroredBlades	1SS	D2R_PlayerSequenceMirroredBlades_1HT	0
+25	MirroredBlades	1ST	D2R_PlayerSequenceMirroredBlades_1HT	0
+25	MirroredBlades	HT1	D2R_PlayerSequenceMirroredBlades_HTH	0
+25	MirroredBlades	HT2	D2R_PlayerSequenceMirroredBlades_HTH	0

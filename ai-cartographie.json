@@ -1146,6 +1146,97 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "PlayerSequenceTables",
+                                                           "path":  "addons/PlayerSequenceTables",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-public-intermod-d2rloader-addon",
+                                                                        "summary":  "DLL autonome RuffnecKk qui charge deux tables TXT de séquences joueur, les compile dans une arène immuable et remplace uniquement les 25 pointeurs de groupes sous D2R 3.3.93847.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "experimental"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "data",
+                                                                                "path":  "addons/PlayerSequenceTables/data",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "global",
+                                                                                                     "path":  "addons/PlayerSequenceTables/data/global",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "excel",
+                                                                                                                          "path":  "addons/PlayerSequenceTables/data/global/excel",
+                                                                                                                          "kind":  "directory",
+                                                                                                                          "children":  [
+                                                                                                                                           {
+                                                                                                                                               "name":  "playerseq.txt",
+                                                                                                                                               "path":  "addons/PlayerSequenceTables/data/global/excel/playerseq.txt",
+                                                                                                                                               "kind":  "file"
+                                                                                                                                           },
+                                                                                                                                           {
+                                                                                                                                               "name":  "playerseqmap.txt",
+                                                                                                                                               "path":  "addons/PlayerSequenceTables/data/global/excel/playerseqmap.txt",
+                                                                                                                                               "kind":  "file"
+                                                                                                                                           }
+                                                                                                                                       ]
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/PlayerSequenceTables/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/PlayerSequenceTables/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "player_sequence_policy.hpp",
+                                                                                                     "path":  "addons/PlayerSequenceTables/src/player_sequence_policy.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/PlayerSequenceTables/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/PlayerSequenceTables/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "policy_tests.cpp",
+                                                                                                     "path":  "addons/PlayerSequenceTables/src/policy_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/PlayerSequenceTables/README.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "ruffneckk-player-sequence-tables.toml",
+                                                                                "path":  "addons/PlayerSequenceTables/ruffneckk-player-sequence-tables.toml",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "VALIDATION.md",
+                                                                                "path":  "addons/PlayerSequenceTables/VALIDATION.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "ProgressiveAffixesPlugin",
                                                            "path":  "addons/ProgressiveAffixesPlugin",
                                                            "kind":  "directory",
@@ -41221,6 +41312,26 @@
 {
                                                                                 "name":  "player-sequences.test.mjs",
                                                                                 "path":  "scripts/reverse-engineering/player-sequences.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+{
+                                                                                "name":  "player-sequence-tables.mjs",
+                                                                                "path":  "scripts/reverse-engineering/player-sequence-tables.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+{
+                                                                                "name":  "player-sequence-tables.test.mjs",
+                                                                                "path":  "scripts/reverse-engineering/player-sequence-tables.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+{
+                                                                                "name":  "player-sequence-tables-compatibility.mjs",
+                                                                                "path":  "scripts/reverse-engineering/player-sequence-tables-compatibility.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+{
+                                                                                "name":  "player-sequence-tables-compatibility.test.mjs",
+                                                                                "path":  "scripts/reverse-engineering/player-sequence-tables-compatibility.test.mjs",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]

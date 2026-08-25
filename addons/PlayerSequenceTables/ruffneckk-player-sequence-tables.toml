@@ -1,0 +1,8 @@
+# RuffnecKk Player Sequence Tables
+# Loads editable player animation sequences from the active mod's TXT tables.
+
+enabled = true
+
+[diagnostics]
+# Logs resolved table paths, counts, and the combined SHA-256 table hash.
+enabled = false

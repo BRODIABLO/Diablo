@@ -78,7 +78,10 @@
     "generate:bkvince-bk17-update": "node scripts/migrate-bkvince/apply-bkdiablo-v17.js --apply",
     "test:bkvince-bk17-update": "node scripts/migrate-bkvince/apply-bkdiablo-v17.js --check",
     "generate:player-sequences": "node scripts/reverse-engineering/player-sequences.mjs --write",
-    "test:player-sequences": "node --test scripts/reverse-engineering/player-sequences.test.mjs"
+    "test:player-sequences": "node --test scripts/reverse-engineering/player-sequences.test.mjs",
+    "generate:player-sequence-tables": "node scripts/reverse-engineering/player-sequence-tables.mjs --write",
+    "test:player-sequence-tables": "node --test scripts/reverse-engineering/player-sequence-tables.test.mjs",
+    "test:player-sequence-compatibility": "node --test scripts/reverse-engineering/player-sequence-tables-compatibility.test.mjs"
   },
   "devDependencies": {
     "@d2runewizard/d2s": "2.0.132",

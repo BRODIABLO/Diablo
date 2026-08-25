@@ -6,31 +6,34 @@ Dernière mise à jour : 24 août 2026
 
 [Softcoded Player Sequence Tables — D2R 3.3.93847](player-sequence-tables-3.3.md)
 
-État : **la phase 1 documentaire est extraite et reproductible**. La baseline
-couvre 25 groupes, 14 classes d'armes, 350 routes, 47 tableaux runtime et 808
-records. Elle inclut les séquences 24 `Cleave` et 25 `Mirrored Blades`, recoupe
-les octets runtime avec l'image native gouvernée et conserve D2MOO uniquement
-comme oracle sémantique legacy. Aucune DLL ni modification gameplay n'appartient
-à cette phase.
+État : **le candidat autonome 0.1.0 est implanté et reproductible; politiques
+d'entrée, coexistence Loader et cold starts globaux/mod-locaux `24/24` qualifiés;
+gameplay encore non exécuté**. Deux TXT normalisés exposent 350 routes et 44 recordsets/757 records.
+Tests Node, CTest, intégrité TSV, audit de 330 écritures et deux builds Release
+passent; la DLL vaut SHA-256
+`66D5C5EF9BA530740082A0C1C6BAFCABC02116E7C65D7A7C1F424AA20E4B2F2B`.
+Les cas absent/valide/incomplet/invalide passent avant écriture, les portées
+globale et mod-locale atteignent `24/24` avec la pile complète à 32 plugins/18
+patches et 190 tables compilées. Le profil final est restauré mod-local sans
+doublon global et aucun processus D2R ne reste actif.
 
-### Gates encore ouverts de BKVCombat
+## Prochain gate
 
-Faire relire la baseline par Vincent, puis prouver le contrat complet de
-chargement, de propriété et de durée de vie des groupes, des descripteurs de 24
-octets et des records de six octets. Comparer ensuite les formats externes et
-le mécanisme de remplacement en exigeant longueurs variables, repli vanilla
-fail-closed, validation stricte, absence de cache de pointeur dangereux et
-coexistence avec la pile complète. Aucune incubation de DLL ne commence avant
-ce choix architectural.
+Exécuter gameplay legacy/Cleave/Mirrored Blades/route nulle et un edit réversible
+après redémarrage, puis transitions menu/partie, unload/reload et hôte/client
+avec hash identique. Le canal de distribution des deux TXT doit aussi être fixé
+avant catalogue public ou ZIP.
 
-### Frontière Git historique de BKVCombat
+## Frontière Git active
 
-La mission active couvre `Mission/player-sequence-tables-3.3.md`, les scripts
-`player-sequences*` et `Capture-PlayerSequences.ps1`, ainsi que les preuves sous
+La mission active couvre `Mission/player-sequence-tables-3.3.md`,
+`addons/PlayerSequenceTables/**`, les scripts `player-sequence*` et
+`Capture-PlayerSequences.ps1`, ainsi que les preuves sous
 `reverse-engineering/d2r-3.2.92777/player-sequences/`. La ROADMAP, le pointeur
-courant, le workstream, le cadastre, `package.json`, `known-rvas.json` et
-`findings.md` sont partagés. La capture mémoire brute reste locale et ignorée.
-Aucun commit ni push n'est effectué sans demande explicite de Vincent.
+courant, le workstream, le cadastre, `package.json`, l'outil de build natif,
+`.gitattributes`, `known-rvas.json` et `findings.md` sont partagés. Les captures
+et builds restent locaux et ignorés. Aucun commit ni push n'est effectué sans
+demande explicite de Vincent.
 
 ## Priorité précédente conservée — BKVCombat
 

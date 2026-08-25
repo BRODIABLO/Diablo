@@ -666,11 +666,15 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/player-sequence-tables-3.3.md",
-      "nextGate": "Review the extracted D2R 3.3.93847 baseline, then prove the complete loading, ownership and lifetime contract for variable-length groups, descriptors and records before selecting an external format or incubating a plugin.",
+      "nextGate": "Validate legacy, Cleave, Mirrored Blades and null-route gameplay plus one reversible edit after restart, then cover menu/game transitions, unload/reload and host/client hash equality and settle the two-TXT distribution channel before publication.",
       "include": [
+        ".gitattributes",
         "Mission/player-sequence-tables-3.3.md",
+        "addons/PlayerSequenceTables/**",
         "reverse-engineering/d2r-3.2.92777/player-sequences/**",
         "scripts/reverse-engineering/player-sequences*",
+        "scripts/reverse-engineering/player-sequence-tables*",
+        "scripts/reverse-engineering/Build-NativePlugins.ps1",
         "scripts/reverse-engineering/Capture-PlayerSequences.ps1"
       ]
     },

@@ -81,6 +81,27 @@ function Invoke-Checked {
     }
 }
 
+function Get-Sha256Hex {
+    param(
+        [Parameter(Mandatory)]
+        [string]$LiteralPath
+    )
+
+    $stream = [IO.File]::OpenRead($LiteralPath)
+    try {
+        $algorithm = [Security.Cryptography.SHA256]::Create()
+        try {
+            return ([BitConverter]::ToString($algorithm.ComputeHash($stream))).Replace('-', '')
+        }
+        finally {
+            $algorithm.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
 function Get-NativeProjects {
     param(
         [Parameter(Mandatory)]
@@ -220,14 +241,23 @@ foreach ($nativeProject in $projects) {
         ) -Description "Native tests for $($nativeProject.Name)"
     }
 
-    $artifact = Get-ChildItem -LiteralPath $buildDirectory -Recurse -File -Filter "$($nativeProject.Name).dll" |
-        Where-Object { $_.FullName -notmatch '[\\/]_deps[\\/]' } |
+    $artifactCandidates = @(
+        Get-ChildItem -LiteralPath $buildDirectory -Recurse -File -Filter '*.dll' |
+            Where-Object { $_.FullName -notmatch '[\\/]_deps[\\/]' }
+    )
+    $artifact = $artifactCandidates |
+        Where-Object Name -eq "$($nativeProject.Name).dll" |
         Select-Object -First 1
+    if ($null -eq $artifact -and $artifactCandidates.Count -eq 1) {
+        # Public Suite DLLs use a stable d2rl-ruffneckk-* OUTPUT_NAME while
+        # retaining a readable CMake project name.
+        $artifact = $artifactCandidates[0]
+    }
     if ($null -eq $artifact) {
         throw "Expected DLL was not produced for $($nativeProject.Name)."
     }
 
-    $hash = (Get-FileHash -LiteralPath $artifact.FullName -Algorithm SHA256).Hash
+    $hash = Get-Sha256Hex -LiteralPath $artifact.FullName
     $results += [pscustomobject]@{
         name = $nativeProject.Name
         source = $nativeProject.Source.Substring($repoRoot.Length + 1).Replace('\', '/')
