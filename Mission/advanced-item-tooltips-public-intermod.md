@@ -526,3 +526,88 @@ la configuration publique par défaut a le SHA-256
 Les six suites CTest Release avaient passé avant la création de l'archive;
 aucun cold start ni test visuel en jeu supplémentaire n'a été exécuté pour
 cette livraison.
+
+## Audit D2ItemToolkit — 26 août 2026
+
+Vincent demande d'évaluer
+[`ResurrectedTrader/D2ItemToolkit`](https://github.com/ResurrectedTrader/D2ItemToolkit)
+pour Advanced Item Tooltips. L'audit porte sur le commit amont
+`9be83e5c58cb1c88740473813f746139a76573b6`, comparé au moteur AIT 3.4.0,
+aux dix tables porteuses de propriétés parmi les quinze tables réellement
+chargées depuis BKVince et au corpus natif commun D2R
+3.2.92777/3.3.93847.
+
+### Faits vérifiés
+
+- D2ItemToolkit réimplémente en C# et TypeScript le moteur de tooltip de
+  Diablo II 1.14d. Son README exclut explicitement D2R, qualifie l'API de
+  pré-1.0 et précise que le code a été produit sans relecture humaine. Le code
+  est MIT, mais les tables 1.14d embarquées restent la propriété de Blizzard.
+- Sa valeur probante vient surtout de son oracle différentiel C#/TypeScript,
+  de ses captures 1.14d et de sa modélisation commentée des fonctions de
+  `Properties.txt`. Ni ses adresses 32 bits, ni ses structures, ni ses tables
+  ne sont transposables dans la DLL D2R.
+- AIT décode actuellement les fonctions `1-10`, `13`, `15`, `16`, `21`, `22`
+  et `24`. D2ItemToolkit modélise en plus `11`, `12`, `14`, `17`, `18`, `19`,
+  `20`, `23` et `36`.
+- Le snapshot BKVince audité contient 239 codes de propriété distincts sur les
+  surfaces chargées par AIT; 206 se résolvent dans `properties.txt`. Les 33
+  références non résolues appartiennent aux familles PD2 déjà présentes
+  (`virulent-*`, `gelid-*`, `magnetic-*`, `incendiary-*`, `breaching-*`,
+  `mystical-*`, plus `magdam-rand` et `skilltab-war`) et constituent une dette
+  de données indépendante de D2ItemToolkit. Les dix fichiers sont CRLF et leur
+  round-trip avec `scripts/build-data/tsv.js` est byte-exact; `cubemain.txt`
+  comportait déjà des changements locaux avant cet audit et n'a pas été
+  modifié.
+- Le workbench gouverné commun aux builds D2R 3.2.92777 et 3.3.93847 est
+  vérifié. Il prouve déjà l'encodage couche skill/niveau utilisé par la
+  fonction 11 dans le rendu `descfunc=15`, ainsi que
+  `ITEMS_GetMaxSockets 0x36EAD0`. Il ne contient pas encore de preuve native
+  gouvernée suffisante pour transposer les fonctions 17 et 19. D2MOO au commit
+  épinglé `19019806df7f3e877fa105b05395d1e3597e2316` confirme seulement leur
+  sémantique historique 1.10f.
+
+### Tri des fonctions supplémentaires
+
+- `11` est très fréquent (367 références), mais `min` est la chance et `max`
+  le niveau du skill : ce ne sont pas les bornes d'un même jet. L'omettre des
+  plages scalaires AIT est correct.
+- `12` (Ormus' Robes) et `36` (22 références BKVince) font varier la couche —
+  le skill ou la classe — tandis que la valeur affichée reste fixe. Ce sont de
+  possibles métadonnées de sélection, pas des plages numériques à ajouter à
+  la ligne.
+- `18` encode une formule temporelle complète sans jet; `20` et `23` sont des
+  états fixes (`Indestructible`, `Ethereal`). Ils n'apportent aucune plage AIT.
+- `14` expose un seul jet BKVince visible, le préfixe `Mechanist's` à 1-2
+  sockets. Une future prise en charge devrait utiliser la borne native
+  `ITEMS_GetMaxSockets`, déjà gouvernée, et décider explicitement si la ligne
+  structurelle `Socketed (N)` peut recevoir une annotation.
+- `17` apparaît dans 305 références, mais le paramètre prévaut sur `min/max`.
+  Il ne reste que 13 vrais jets lorsque ce paramètre est nul : neuf concernent
+  une composante de durée froid/élémentaire qui n'est pas une grandeur
+  indépendante dans la ligne AIT, et quatre sont des coefficients par niveau
+  réellement visibles (`Civerb's Icon` Mana 12-14, `Natalya's Shadow` Life
+  8-12, `Fortitude` Life 8-12 et `Smoke` Strength 3-5). Leur rendu exact exige
+  encore la preuve D2R de la valeur stockée et du niveau de contexte utilisé.
+- `19` couvre 14 sources de charges. D2ItemToolkit sait annoter la plage des
+  charges courantes initiales, par exemple `[2-9]`, mais cette valeur diminue
+  ensuite pendant le jeu. Avant toute reprise, il faut décider si AIT doit
+  montrer un jet initial, une capacité maximale ou l'état courant, puis
+  prouver l'encodage D2R et le comportement après consommation/réparation.
+
+### Décision et gate de reprise
+
+La recommandation est de ne pas ajouter D2ItemToolkit comme dépendance, de ne
+pas embarquer ses tables 1.14d et de ne pas porter son moteur complet. Il reste
+une référence externe utile pour formuler des hypothèses, construire des
+fixtures adversariales et comparer les sémantiques de `Properties.txt`, chaque
+hypothèse devant ensuite être prouvée indépendamment dans D2R.
+
+Aucune évolution AIT n'est justifiée par cet audit seul : aucune friction
+joueur mesurée ne demande aujourd'hui ces lignes, et les gains démontrés se
+limitent à un affixe sockets et quatre coefficients par niveau. Une reprise
+future exige d'abord une capture ou demande joueur concrète, puis un lot borné
+et réversible : preuve native D2R 3.2/3.3, fixture BKVince représentative,
+implémentation fail-closed sans nouvelle dépendance, CTest et validation
+visuelle. L'ordre recommandé est `func14`, puis les quatre cas utiles de
+`func17`; `func19` reste séparé jusqu'à décision produit sur les charges.
