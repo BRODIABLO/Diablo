@@ -2,10 +2,29 @@
 
 ## État
 
-**CLOS — validation visuelle confirmée par Vincent le 20 juillet 2026.** Les
-imports retenus sont installés dans la source et le runtime BKVince. Les VFX de
-missiles/skills demeurent volontairement exclus de cette livraison et ne
-constituent pas un reste à faire de la mission close.
+**CLOS — rollback sélectif exécuté le 26 août 2026; cold start non exécuté sur
+instruction explicite de Vincent.** La source gouvernée et le profil runtime
+`mods/BKVince` ne contiennent plus les apparences NPC/Cain, les plaques
+lumineuses, les VFX de buffs ni l'agrandissement de la Rogue hireling provenant
+de Yupgoolg. L'allowlist vérifiée a retiré exactement 101 fichiers identiques
+par SHA-256 entre source et runtime; `fade.json` a été restauré depuis l'état
+BKVince antérieur au commit d'import `774fcac`, avec le SHA-256
+`E5D3E5D1C7A159E6E4DE761FF229B506556FF8DA8CFF66D7544BBE3612C7715E`
+des deux côtés.
+
+Vincent conserve explicitement le coffre 3D agrandi `bank.json` ainsi que les
+15 overrides et dépendances de waypoints. `act2hire.json`, désormais fourni par
+New Emilio 1.3, et les polices `exocetblizzardot-medium.otf` et `kodia.ttf`,
+désormais fournies par TCP/Caleb, restent également intactes car leurs octets
+ne proviennent plus de Yupgoolg. Les 17 JSON conservés du coffre, des waypoints
+et de Fade passent leur validation syntaxique; aucune référence textuelle
+restante vers les familles Yupgoolg retirées n'a été retrouvée dans les JSON
+BKVince. D2RLoader a été fermé pour libérer le profil; l'agent ne l'a pas
+relancé, mais une nouvelle instance de son interface a ensuite été observée à
+16:02:48. `D2R.exe` est demeuré absent : aucun cold start, test visuel ou
+gameplay n'est inféré de ce rollback statique.
+
+### Historique de l'import désormais partiellement désinstallé
 
 Installation directe autorisée par Vincent le 20 juillet 2026, sans campagne de
 test préalable, à l'exception explicite des VFX de missiles/skills qui restent
@@ -22,6 +41,18 @@ layout initialement tentés ont été retirés. La définition Yupgoolg
 modèle, le squelette et les textures vanilla et applique seulement une échelle
 visuelle uniforme de `2.0` au torse du coffre. La grille, les cases, la capacité
 et tous les layouts d'inventaire BKVince restent inchangés.
+
+Correctif du 16 août 2026 : le runtime BKVince propre a révélé un damier de
+texture manquante derrière les plaques de Warriv et Kashya. Les 24 particules de
+plaques référencent `data/hd/nickname/textures/graphic/empty_nick.texture` comme
+masque alpha. Ce fichier était présent dans le MPQ Yupgoolg et dans le lot de
+staging visuellement validé, mais avait été omis du manifeste d'import final.
+La copie exacte de 4 194 348 octets, SHA-256
+`B4946DC8C99408D9AB3A129D33FB601237504047496DAFC17894535430FDD299`, est
+désormais installée dans la source gouvernée et le runtime ordinaire
+`mods/BKVince`. Le cold start du bon profil atteint les 24 étapes de démarrage
+avec 16/16 patchsets appliqués; l'observation en jeu de Warriv/Kashya reste le
+gate fonctionnel ouvert.
 
 Retour ciblé demandé par Vincent après vérification visuelle : l'apparence
 Rogue/Navi a été retirée de la source et du runtime. Le rollback supprime
