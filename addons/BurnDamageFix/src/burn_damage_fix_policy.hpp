@@ -6,24 +6,62 @@
 #include <cstdint>
 #include <filesystem>
 #include <limits>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace ruffneckk::burn_damage_fix {
 
-inline constexpr std::int64_t ConfigVersion = 1;
+inline constexpr std::int64_t ConfigVersion = 2;
+inline constexpr std::int32_t StatRegenerationEvent = 3;
+inline constexpr std::int32_t BurningState = 115;
+inline constexpr std::int32_t FireHitOverlay = 81;
+inline constexpr std::uint16_t NativeBurningOverlay = 224;
+inline constexpr std::uint16_t EmptyStateOverlay = 0xFFFF;
+inline constexpr std::int32_t UnitDoOverlayStat = 178;
+inline constexpr std::int32_t PreservePositiveResistanceAndImmunity = 0;
+inline constexpr std::int32_t DefaultOverlayRepeatFrames = 10;
+inline constexpr std::int32_t MinimumOverlayRepeatFrames = 1;
+inline constexpr std::int32_t MaximumOverlayRepeatFrames = 250;
+
+struct FireResistanceMetadata {
+    std::int32_t resistanceStat;
+    std::int32_t maximumResistanceStat;
+    std::int32_t pierceStat;
+    std::int32_t immunityPierceStat;
+    std::int32_t absorbPercentStat;
+    std::int32_t absorbFlatStat;
+    std::int32_t damageReductionIndex;
+    std::int32_t attackerGate;
+    std::int32_t flags28;
+    std::int32_t reserved2C;
+    std::uint8_t logFlag;
+};
+
+inline constexpr FireResistanceMetadata BurnFireResistance{
+    .resistanceStat = 39,
+    .maximumResistanceStat = 40,
+    .pierceStat = 333,
+    .immunityPierceStat = 189,
+    .absorbPercentStat = -1,
+    .absorbFlatStat = -1,
+    .damageReductionIndex = 2,
+    .attackerGate = 0,
+    .flags28 = 1,
+    .reserved2C = 0,
+    .logFlag = 8,
+};
 
 struct Config {
     bool enabled{true};
     bool normalizeGenericBurn{true};
     bool applyFireResistance{true};
+    bool replayFireHit{true};
+    bool suppressNativeBurning{true};
+    std::int32_t overlayRepeatFrames{DefaultOverlayRepeatFrames};
     bool diagnostics{false};
 };
-
-inline auto IsSupportedBuild(std::string_view build) noexcept -> bool {
-    return build == "92777" || build == "93847";
-}
 
 inline auto ShouldResolveBurn(
         const Config& config,
@@ -39,6 +77,63 @@ inline auto ShouldWitnessBurningState(
         std::int32_t burnLength) noexcept -> bool {
     return config.enabled && config.diagnostics
         && resolvedBurnDamage > 0 && burnLength > 0;
+}
+
+inline auto ShouldReplayFireHit(
+        const Config& config,
+        std::int32_t eventType,
+        std::uint32_t gameFrame) noexcept -> bool {
+    return config.enabled && config.replayFireHit
+        && eventType == StatRegenerationEvent
+        && config.overlayRepeatFrames >= MinimumOverlayRepeatFrames
+        && config.overlayRepeatFrames <= MaximumOverlayRepeatFrames
+        && gameFrame
+            % static_cast<std::uint32_t>(config.overlayRepeatFrames) == 0;
+}
+
+inline auto ShouldSuppressNativeBurning(const Config& config) noexcept
+        -> bool {
+    return config.enabled && config.replayFireHit
+        && config.suppressNativeBurning;
+}
+
+enum class NativeBurningOverlayAction {
+    Suppress,
+    AlreadySuppressed,
+    PreserveCustom,
+};
+
+inline auto ClassifyNativeBurningOverlay(
+        std::uint16_t overlay) noexcept -> NativeBurningOverlayAction {
+    if (overlay == NativeBurningOverlay) {
+        return NativeBurningOverlayAction::Suppress;
+    }
+    if (overlay == EmptyStateOverlay) {
+        return NativeBurningOverlayAction::AlreadySuppressed;
+    }
+    return NativeBurningOverlayAction::PreserveCustom;
+}
+
+enum class ResistanceResolverStatus {
+    Unchanged,
+    TrackedInlineHook,
+    Other,
+};
+
+inline auto AcceptResistanceResolver(
+        ResistanceResolverStatus status,
+        bool vanillaSignatureMatches,
+        bool liveEntryIsExecutable,
+        std::uint32_t ownerCount,
+        std::string_view ownerPluginId) noexcept -> bool {
+    if (status == ResistanceResolverStatus::Unchanged) {
+        return vanillaSignatureMatches && liveEntryIsExecutable
+            && ownerCount == 0;
+    }
+    return status == ResistanceResolverStatus::TrackedInlineHook
+        && liveEntryIsExecutable
+        && ownerCount == 1
+        && ownerPluginId == "monsterdisplay";
 }
 
 inline auto CalculatePercentage(
@@ -90,7 +185,8 @@ inline auto ParseToml(
         for (const auto& [key, value] : root) {
             (void)value;
             if (key != "config_version" && key != "enabled"
-                    && key != "fixes" && key != "diagnostics") {
+                    && key != "fixes" && key != "overlay"
+                    && key != "diagnostics") {
                 error = "unknown top-level setting or section: "
                     + std::string(key.str());
                 return false;
@@ -100,10 +196,15 @@ inline auto ParseToml(
         const auto* versionNode = root.get("config_version");
         const auto* enabledNode = root.get("enabled");
         const auto* fixesNode = root.get("fixes");
+        const auto* overlayNode = root.get("overlay");
         const auto* diagnosticsNode = root.get("diagnostics");
-        if (!versionNode || !versionNode->is_integer()
-                || versionNode->value<std::int64_t>() != ConfigVersion) {
-            error = "config_version must be integer 1";
+        const auto configVersion = versionNode
+            ? versionNode->value<std::int64_t>()
+            : std::optional<std::int64_t>{};
+        if (!versionNode || !versionNode->is_integer() || !configVersion
+                || (*configVersion != 1
+                    && *configVersion != ConfigVersion)) {
+            error = "config_version must be integer 1 or 2";
             return false;
         }
         if (!enabledNode || !enabledNode->is_boolean()) {
@@ -111,10 +212,19 @@ inline auto ParseToml(
             return false;
         }
         const auto* fixes = fixesNode ? fixesNode->as_table() : nullptr;
+        const auto* overlay = overlayNode ? overlayNode->as_table() : nullptr;
         const auto* diagnostics = diagnosticsNode
             ? diagnosticsNode->as_table() : nullptr;
         if (!fixes) {
             error = "fixes must be a table";
+            return false;
+        }
+        if (!overlay && *configVersion == ConfigVersion) {
+            error = "overlay must be a table";
+            return false;
+        }
+        if (overlay && *configVersion == 1) {
+            error = "overlay requires config_version 2";
             return false;
         }
         if (!diagnostics) {
@@ -136,9 +246,26 @@ inline auto ParseToml(
                 return false;
             }
         }
+        if (overlay) {
+            for (const auto& [key, value] : *overlay) {
+                (void)value;
+                if (key != "enabled" && key != "repeat_frames"
+                        && key != "suppress_native_burning") {
+                    error = "unknown overlay setting: "
+                        + std::string(key.str());
+                    return false;
+                }
+            }
+        }
 
         const auto* normalizeNode = fixes->get("normalize_generic_burn");
         const auto* resistanceNode = fixes->get("apply_fire_resistance");
+        const auto* overlayEnabledNode = overlay
+            ? overlay->get("enabled") : nullptr;
+        const auto* overlayRepeatNode = overlay
+            ? overlay->get("repeat_frames") : nullptr;
+        const auto* suppressNativeBurningNode = overlay
+            ? overlay->get("suppress_native_burning") : nullptr;
         const auto* diagnosticsEnabledNode = diagnostics->get("enabled");
         if (!normalizeNode || !normalizeNode->is_boolean()) {
             error = "fixes.normalize_generic_burn must be a boolean";
@@ -147,6 +274,29 @@ inline auto ParseToml(
         if (!resistanceNode || !resistanceNode->is_boolean()) {
             error = "fixes.apply_fire_resistance must be a boolean";
             return false;
+        }
+        auto overlayRepeat = static_cast<std::int64_t>(
+            DefaultOverlayRepeatFrames);
+        if (overlay) {
+            if (!overlayEnabledNode || !overlayEnabledNode->is_boolean()) {
+                error = "overlay.enabled must be a boolean";
+                return false;
+            }
+            if (!overlayRepeatNode || !overlayRepeatNode->is_integer()) {
+                error = "overlay.repeat_frames must be an integer";
+                return false;
+            }
+            overlayRepeat = *overlayRepeatNode->value<std::int64_t>();
+            if (overlayRepeat < MinimumOverlayRepeatFrames
+                    || overlayRepeat > MaximumOverlayRepeatFrames) {
+                error = "overlay.repeat_frames must be between 1 and 250";
+                return false;
+            }
+            if (suppressNativeBurningNode
+                    && !suppressNativeBurningNode->is_boolean()) {
+                error = "overlay.suppress_native_burning must be a boolean";
+                return false;
+            }
         }
         if (!diagnosticsEnabledNode || !diagnosticsEnabledNode->is_boolean()) {
             error = "diagnostics.enabled must be a boolean";
@@ -157,7 +307,23 @@ inline auto ParseToml(
         parsed.enabled = *enabledNode->value<bool>();
         parsed.normalizeGenericBurn = *normalizeNode->value<bool>();
         parsed.applyFireResistance = *resistanceNode->value<bool>();
+        if (overlay) {
+            parsed.replayFireHit = *overlayEnabledNode->value<bool>();
+            if (suppressNativeBurningNode) {
+                parsed.suppressNativeBurning =
+                    *suppressNativeBurningNode->value<bool>();
+            }
+        } else {
+            // Version 1 predates the two dispatcher hooks. Preserve its
+            // behavior until the user opts in by migrating to version 2.
+            parsed.replayFireHit = false;
+        }
+        parsed.overlayRepeatFrames = static_cast<std::int32_t>(overlayRepeat);
         parsed.diagnostics = *diagnosticsEnabledNode->value<bool>();
+        if (parsed.replayFireHit && !parsed.applyFireResistance) {
+            error = "overlay.enabled requires fixes.apply_fire_resistance";
+            return false;
+        }
         result = parsed;
         error.clear();
         return true;

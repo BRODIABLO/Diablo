@@ -112,8 +112,8 @@
       "name": "STATLIST_GetUnitStat",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/configurable-larzuk-sockets-3.2.md",
-      "notes": "Reads a unit stat with ABI (unit, statId, layer). ITEMS_AddSockets calls it with stat 0xC2 to preserve an existing socket count on set and unique items. ForceLarzukSockets uses the same getter only to refuse overwriting an already-socketed item."
+      "source": "Mission/configurable-larzuk-sockets-3.2.md; Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp",
+      "notes": "Reads a unit stat with ABI (unit, statId, layer). ITEMS_AddSockets calls it with stat 0xC2 to preserve an existing socket count on set and unique items. ForceLarzukSockets uses the same getter only to refuse overwriting an already-socketed item. Burn Damage Fix fingerprints its unique 32-byte entry, reads burningmin 316, burningmax 317 and passive_fire_mastery 329 for generic production, and observes unit_dooverlay 178 before native last-write-wins visual arbitration."
     },
     {
       "rva": "0x2F5C60",
@@ -200,8 +200,8 @@
       "name": "GetDataTablesForContext",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/no-ethereal-item-types-3.2.md",
-      "notes": "Returns the active compiled data-table container for the classic or expansion context. NoEtherealItemTypes uses it to resolve configured codes against the runtime itemtypes records."
+      "source": "Mission/no-ethereal-item-types-3.2.md; Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Returns the active compiled data-table container with observed ABI DataTables* (uint8 dataContext). Its strict entry guards the context to 0..3. Burn Damage Fix 2.2 borrows it after GetItemDataContext, reads the StatesTxt record base at DataTables+0x290 and count at +0x298, and fingerprints the independent compiler and state-toggle witnesses for both offsets before any access."
     },
     {
       "rva": "0x314070",
@@ -256,8 +256,8 @@
       "name": "GetItemDataContext",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/no-ethereal-item-types-3.2.md",
-      "notes": "Returns the data-table context byte for an item unit immediately before item-record and item-type lookups."
+      "source": "Mission/no-ethereal-item-types-3.2.md; Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Returns the data-table context byte at Unit+0x1BD with observed ABI uint8 (Unit*). Despite its historical name, STATES_ToggleState calls it for arbitrary units before resolving the matching data tables. Burn Damage Fix 2.2 borrows its strict 47-byte body to select the active compiled StatesTxt context without persisting a Unit pointer."
     },
     {
       "rva": "0x349720",
@@ -328,8 +328,8 @@
       "name": "UNITS_GetUnitType",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/ed-min-max-jewel-fix-3.2.md",
-      "notes": "Returns the unit type used throughout the 92777 stat paths (0 player, 1 monster, 4 item). EnhancedDamageMinMaxFix limits inventory correction to players and monsters."
+      "source": "Mission/ed-min-max-jewel-fix-3.2.md; Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp",
+      "notes": "Returns the unit type used throughout the common 92777/93847 stat paths (0 player, 1 monster, 4 item). EnhancedDamageMinMaxFix limits inventory correction to players and monsters. Burn Damage Fix fingerprints its unique entry, guards each event dispatcher with the expected player/monster type and classifies units in the synthetic Fire-resolution context."
     },
     {
       "rva": "0x36AE00",
@@ -656,8 +656,8 @@
       "name": "SUNITDMG_ApplyResistancesAndAbsorb",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/floating-damage-portage-3.2.md; Mission/burn-damage-fix.md",
-      "notes": "Common 92777/93847 function proven from the unique 12-entry damage-stat loop at 0x44EC44, matching damage offsets, resistance/pierce/absorb flow, fixed-point percentage branches, and the post-resolution observer call at 0x452651. Burn Damage Fix deliberately calls the live address and never owns or requires vanilla entry bytes because Monster Display may hook this shared resolver in either load order."
+      "source": "Mission/floating-damage-portage-3.2.md; Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Common 92777/93847 Fire-resistance resolver with observed call ABI (damageInfo, resistanceRecord, dontAbsorb); callers ignore its return value. The strict unique 32-byte vanilla entry signature is 48 89 6C 24 18 56 41 54 41 55 41 56 41 57 48 83 EC 50 4C 8B 3A 33 ED 45 8B E8 4C 8B F2 48 8B F1. Burn Damage Fix never hooks this function and calls its live address. It accepts either the exact unowned vanilla entry or exactly one DiagnosticsService-tracked inline owner whose plugin id is monsterdisplay; every internal resistance, pierce, reduction and absorb layout witness remains strict. An unknown, untracked or ambiguous modification refuses loading."
     },
     {
       "rva": "0x4524D6",
@@ -1296,8 +1296,8 @@
       "name": "EVENT_SetEvent",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/prevent-merc-death-in-town-3.2.md",
-      "notes": "Schedules a unit event with x64 ABI (game, unit, eventType, expireFrame, customId, customParam) -> void. The monster stat-regeneration callback uses event type 3 at game frame + 1 before processing a nonzero life tick."
+      "source": "Mission/prevent-merc-death-in-town-3.2.md; Mission/burn-damage-fix.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/GAME/Event.cpp:331-341",
+      "notes": "Schedules a unit event with observed native Windows x64 ABI void (game, unit, eventType, expireFrame, customId, customParam, arg7). The semantics of arg7 remain unproven. After sub rsp,0x48, the prologue reads incoming stack arguments 5, 6 and 7 at rsp+0x70, rsp+0x78 and rsp+0x80, inserts the internal callback argument and calls the timer initializer at 0x48BE80. Its strict unique 32-byte entry signature is 48 83 EC 48 8B 84 24 80 00 00 00 89 44 24 38 8B 44 24 78 89 44 24 30 8B 44 24 70 89 44 24 28 48. The player and monster stat-regeneration callsites at 0x42E634 and 0x448CA0 schedule event type 3 at game frame plus one. D2MOO's six-argument prototype is semantic evidence only and does not describe the native D2R ABI."
     },
     {
       "rva": "0x480650",
@@ -2249,15 +2249,15 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/mass-id-3.2.md; Mission/burn-damage-fix.md",
-      "notes": "Checks whether a unit has a state id with observed x64 ABI (unit, stateId) -> int32. Both native shared-stash handlers pass state 0xBA before accepting an auxiliary player as a shared-stash proxy. Caller 0x33A231 independently iterates state ids and calls this same predicate. Burn Damage Fix borrows it without patching to witness state burning (115) after a positive native Burn application when diagnostics are enabled. Its strict 32-byte entry is 48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 8B DA 48 8B F1 E8 07 68 01 00 85 C0 74 0E 83 E8 01."
+      "notes": "Checks whether a unit has a state id with observed x64 ABI (unit, stateId) -> int32. Both native shared-stash handlers pass state 0xBA before accepting an auxiliary player as a shared-stash proxy. Caller 0x33A231 independently iterates state ids and calls this same predicate. Burn Damage Fix borrows it without patching to witness state burning (115) for diagnostics and to gate immediate and periodic fire_hit replay. Its strict 32-byte entry is 48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 8B DA 48 8B F1 E8 07 68 01 00 85 C0 74 0E 83 E8 01."
     },
     {
       "rva": "0x3354C0",
       "name": "STATES_ToggleState",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/burn-damage-fix.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/D2States.cpp:22-28",
-      "notes": "Observed x64 ABI (unit, stateId, enable) -> void. SUNITDMG_ApplyBurnDamage calls it at 0x45143C with defender, native state burning 115 and enable=1 after rejecting non-positive duration or damage. Burn Damage Fix never calls or patches this function; its overlay witness reads the resulting state through STATES_CheckState. The strict 32-byte entry is 48 89 5C 24 08 48 89 6C 24 18 48 89 74 24 20 57 48 83 EC 20 41 8B E8 8B DA 48 8B F1 85 D2 78 38."
+      "source": "Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/D2States.cpp:22-28",
+      "notes": "Observed x64 ABI (unit, stateId, enable) -> void. SUNITDMG_ApplyBurnDamage calls it at 0x45143C with defender, native state burning 115 and enable=1 after rejecting non-positive duration or damage. Burn Damage Fix never calls or patches this function; 2.2 conditionally replaces only compiled state 115 overlay1 before the original Burn application reaches this toggle, and still reads the resulting state through STATES_CheckState. The strict 32-byte entry is 48 89 5C 24 08 48 89 6C 24 18 48 89 74 24 20 57 48 83 EC 20 41 8B E8 8B DA 48 8B F1 85 D2 78 38."
     },
     {
       "rva": "0x388BA0",
@@ -2792,8 +2792,8 @@
       "name": "UNITS_GetGame",
       "kind": "function",
       "confidence": "high",
-      "source": "addons/BKVCombat/NATIVE-CONTRACT.md",
-      "notes": "Confirmed-static unit-to-game accessor with logical bounds 0x48FF00..0x48FF3A, validated 32-byte entry signature and ABI Game* (Unit*). For a valid unit it returns the pointer at unit+0xD8; BKVCombat uses it transiently while creating server-owned Open Wounds stat lists."
+      "source": "addons/BKVCombat/NATIVE-CONTRACT.md; Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp",
+      "notes": "Confirmed-static unit-to-game accessor with logical bounds 0x48FF00..0x48FF3A, validated 32-byte entry signature and ABI Game* (Unit*). For a valid unit it returns the pointer at unit+0xD8; BKVCombat uses it transiently while creating server-owned Open Wounds stat lists. Burn Damage Fix fingerprints the same entry and obtains the authoritative game from the attacker, or the defender when no attacker exists, before native Fire resolution."
     },
     {
       "rva": "0x2F5940",
@@ -3130,6 +3130,118 @@
       "confidence": "high",
       "source": "data-BKVince/d2rloader/patches/ruffneckk-hit-chance-0-100.json; Mission/memory-patches-portage-3.2.json",
       "notes": "Four-byte immediate 5F 00 00 00 in MOV EAX,95 at 0x1514CC9 inside UI_FormatIncomingHitChanceTooltip. It shares the unique governed clamp sequence beginning at 0x1514CBD. Hit Chance Bounds writes 64 00 00 00 so the defensive Character Screen formatter uses the same 100% ceiling as the gameplay and offensive display paths."
+    },
+    {
+      "rva": "0x300830",
+      "name": "DATATBLS_GetDifficultyRecord",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Returns the native difficulty record with observed Windows x64 ABI (dataSet, difficulty) -> pointer. The unique 38-byte witness at 0x44DF40 proves the call order and the source bytes at Game+0x106 and Game+0x104. Burn Damage Fix fingerprints the resolver's unique 32-byte entry before constructing its synthetic Fire-resolution context."
+    },
+    {
+      "rva": "0x307EB3",
+      "name": "DATATBLS_CompileStatesTxt_OverlayFieldWitness",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 33-byte read-only field-descriptor witness inside the StatesTxt compiler. It assigns TXT field type 0x16 to record offset +0x02, then begins the same descriptor for +0x04. Together with the subsequent +0x06/+0x08 descriptors, this proves that the first compiled state overlay is the 16-bit word at record+0x02."
+    },
+    {
+      "rva": "0x3083D7",
+      "name": "DATATBLS_CompileStatesTxt_RecordStrideWitness",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 22-byte instruction-aligned read-only prefix in the StatesTxt loader. It passes record size 0x44 to the governed table compiler before installing the resulting vector. The immediately following CALL is deliberately excluded because D2RLoader may redirect that compiler integration surface before plugins load; its target is irrelevant to the stride proof. Burn Damage Fix fingerprints only this stable prefix before calculating state 115 as base + 115*0x44."
+    },
+    {
+      "rva": "0x30843C",
+      "name": "DATATBLS_CompileStatesTxt_VectorLayoutWitness",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 26-byte read-only witness in the StatesTxt loader. It takes the destination vector at DataTables+0x290 and transfers the newly compiled state records into it. The associated state count is independently witnessed at DataTables+0x298 by STATES_ToggleState."
+    },
+    {
+      "rva": "0x349020",
+      "name": "UNITS_SetOverlay",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; Mission/mechanics-native-proof-92777.md; addons/BurnDamageFix/src/plugin.cpp; addons/BKVCombat/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/Units/Units.cpp:2120-2143",
+      "notes": "Applies a direct overlay to a unit with observed Windows x64 ABI void (unit, overlayId, unusedLayer). The entry validates the overlay index, obtains or allocates a stat list with internal flag 0x80, writes the overlay ID to unit_dooverlay stat 178 and refreshes the unit. Its strict unique 24-byte entry signature is 48 89 5C 24 18 55 57 41 56 48 83 EC 30 45 8B F0 8B FA 48 8B D9 48 85 C9. BKVCombat borrows it for Crushing Blow. Burn Damage Fix 2.1 also borrows it without hooking and applies fire_hit overlay 81 on layer 0 immediately after a positive state-confirmed Burn application, then periodically while state burning 115 remains active and the unit is alive. The direct-overlay channel is last-write-wins; Burn Damage Fix counts a foreign prior value before replacing it. Direct unit targeting does not guarantee that each emitted particle remains attached after spawning."
+    },
+    {
+      "rva": "0x34916C",
+      "name": "UNITS_SetOverlay_UnitDoOverlayStatWitness",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique read-only 30-byte witness 0F B6 8B BD 01 00 00 44 0F B7 CF 41 B8 B2 00 00 00 48 8B D6 44 89 74 24 20 E8 96 9E FA FF inside UNITS_SetOverlay. The MOV R8D,0xB2 proves that the overlay ID is written as unit_dooverlay stat 178; the separate 0x80 constant is a stat-list flag, not a stat ID. Burn Damage Fix fingerprints this witness before reading stat 178 for diagnostic arbitration."
+    },
+    {
+      "rva": "0x3AF240",
+      "name": "MONSTERS_GetHirelingTypeId",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; addons/BKVCombat/src/plugin.cpp",
+      "notes": "Returns zero for an ordinary monster and a nonzero hireling type for a hireling. Burn Damage Fix fingerprints its unique 24-byte entry and excludes hirelings from the monster-attacker/defender flags passed to the native Fire resolver. BKVCombat uses the same helper to distinguish hirelings in Crushing Blow and Open Wounds policy."
+    },
+    {
+      "rva": "0x3354E0",
+      "name": "STATES_ToggleState_DataTablesLayoutWitness",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 32-byte read-only witness inside STATES_ToggleState. It calls GetItemDataContext, passes AL to GetDataTablesForContext, and loads the signed-safe state count from DataTables+0x298 before checking the requested id. Burn Damage Fix fingerprints this exact context/count contract before reading compiled state 115."
+    },
+    {
+      "rva": "0x394640",
+      "name": "StatesTxtRecord_EmptyOverlaySentinelWitness",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 47-byte initializer for records of stride 0x44. It zeroes the remaining record fields, writes dword 0xFFFF0000 at +0 and advances by 0x44; combined with the native StatesTxt field descriptor, this proves state id 0 at +0 and the empty first-overlay sentinel 0xFFFF at +2. Burn Damage Fix 2.2 uses only an atomic compare/exchange 224 -> 0xFFFF and therefore preserves custom overlay ids."
+    },
+    {
+      "rva": "0x34C2C0",
+      "name": "SUNIT_IsDead",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/UNIT/SUnit.cpp:1942-1967",
+      "notes": "Unit-death predicate with observed Windows x64 ABI int32 (unit). It reports dead for a null or death-flagged unit, for player death/dead modes 0/17, for monster death/dead modes 0/12 and conservatively for unsupported unit types. Burn Damage Fix and Revive Overhaul borrow it without patching. Its strict unique 32-byte entry signature is 48 83 EC 28 48 85 C9 75 1D 88 4C 24 30 48 8D 4C 24 30 E8 59 94 FF FF 84 C0 74 4D CC B8 01 00 00."
+    },
+    {
+      "rva": "0x42E615",
+      "name": "D2GAME_PlayerStatRegenGameFrameLayoutWitness",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique read-only witness 44 8B 89 70 01 00 00 48 8B DA 89 44 24 28 41 FF C1 inside player stat regeneration. It proves that the current server frame is the dword at Game+0x170 immediately before scheduling the next stat-regeneration event. Burn Damage Fix 2.1 fingerprints this layout before using the frame to cadence fire_hit replay."
+    },
+    {
+      "rva": "0x42CE30",
+      "name": "D2GAME_EVENTS_PlayerEventDispatcher",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/GAME/Event.cpp:179-275; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/PLAYER/PlrModes.cpp:1717-1748",
+      "notes": "Authoritative player-event dispatcher with observed Windows x64 ABI void (game, unit, eventType, callbackArg0, callbackArg1, callbackArg2). It bounds eventType to 0..14 and forwards callback arguments 4, 5 and 6 to the selected handler; event type 3 selects player stat regeneration at 0x42E600. Its two direct callers are 0x48CB2F and 0x48CBC4. The strict unique 32-byte entry signature is 48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 20 57 48 83 EC 30 49 63 D8 41 8B F9 48 8B F2 48 8B E9. Burn Damage Fix 2.1 owns this entry exclusively only while periodic overlay replay is enabled and forwards all six original arguments unchanged."
+    },
+    {
+      "rva": "0x447420",
+      "name": "MONSTERMODE_EventHandler",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/GAME/Event.cpp:179-275; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/MONSTER/MonsterMode.cpp:72-91,2126-2154",
+      "notes": "Authoritative monster-event dispatcher with observed Windows x64 ABI void (game, unit, eventType, callbackArg0, callbackArg1, callbackArg2). It validates unit type 1, bounds eventType to 0..14 and forwards callback arguments 4, 5 and 6 to the selected handler; event type 3 selects monster stat regeneration at 0x448C00. Its only direct caller is 0x48C83F. The strict unique 39-byte entry signature is 48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 57 48 83 EC 50 80 3D 61 76 66 02 00 41 8B E9 49 63 F8 48 8B DA 48 8B F1. Burn Damage Fix 2.1 owns this entry exclusively only while periodic overlay replay is enabled and forwards all six original arguments unchanged."
+    },
+    {
+      "rva": "0x44DF40",
+      "name": "SUNITDMG_GameDifficultyDataSetLayoutWitness",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 38-byte read-only witness 48 89 4C 24 30 0F B6 91 04 01 00 00 48 8B F9 48 89 4C 24 40 4D 8B F9 0F B6 89 06 01 00 00 49 8B F0 E8 CA 28 EB FF. Inside SUNITDMG_CalculateTotalDamage it proves difficulty at Game+0x104, data-set context at Game+0x106 and the call order GetDifficultyRecord(dataSet,difficulty). Burn Damage Fix 2.1 fingerprints this layout before using the same offsets in its synthetic Fire resolution context."
     }
   ]
 }

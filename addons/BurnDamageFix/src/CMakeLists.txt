@@ -1,6 +1,6 @@
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     cmake_minimum_required(VERSION 3.28)
-    project(BurnDamageFix VERSION 2.0.0 LANGUAGES CXX RC ASM_MASM)
+    project(BurnDamageFix VERSION 2.2.0 LANGUAGES CXX RC ASM_MASM)
     include(CTest)
 else()
     enable_language(RC)
@@ -72,6 +72,9 @@ endif()
 if(BUILD_TESTING)
     add_executable(BurnDamageFixTests burn_damage_fix_policy_tests.cpp)
     target_compile_features(BurnDamageFixTests PRIVATE cxx_std_20)
+    target_compile_definitions(BurnDamageFixTests PRIVATE
+        BURN_DAMAGE_FIX_PLUGIN_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/plugin.cpp"
+    )
     target_link_libraries(BurnDamageFixTests PRIVATE
         tomlplusplus::tomlplusplus
     )

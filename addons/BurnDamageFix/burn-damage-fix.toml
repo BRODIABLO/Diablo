@@ -1,8 +1,8 @@
 # Burn Damage Fix
-# Restores generic Burn production and applies Fire Resistance to Burn.
+# Restores generic Burn production, Fire defenses, and a target-bound flame.
 
 # File format version. Leave this value unchanged.
-config_version = 1
+config_version = 2
 
 # Master switch. When false, the plugin loads without installing native hooks.
 enabled = true
@@ -13,6 +13,17 @@ normalize_generic_burn = true
 
 # Resolves applied Burn through the live native Fire Resistance path.
 apply_fire_resistance = true
+
+[overlay]
+# Replays the unit-bound fire_hit overlay while the native burning state exists.
+enabled = true
+
+# Re-emit every 0.4 seconds at D2R's 25 server frames per second.
+repeat_frames = 10
+
+# Removes the native stationary burning flame while fire_hit replay is active.
+# Existing version 2 configurations default to true when this key is absent.
+suppress_native_burning = true
 
 [diagnostics]
 # Adds production, resistance and native burning-state witness counters.

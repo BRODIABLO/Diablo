@@ -920,26 +920,115 @@ confiance explicite.
   maximum exclusive prouvée sémantiquement par
   `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`.
 - `SUNITDMG_ApplyBurnDamage 0x451380` stocke ensuite le Burn sous forme de
-  `HPREGEN` négatif. Burn Damage Fix résout la quantité au moment de
-  l'application avec le record Fire natif et `dontAbsorb=1`.
+  `HPREGEN` négatif. Le record Fire D2R de `0x40` octets porte résistance `39`,
+  maximum `40`, pierce `333`, pierce d'immunité `189`, absorb `%/plat`
+  `142/143`, index de réduction `2`, flag `+0x28=1` et log flag `8`.
+- Le troisième argument du résolveur `0x4523E0` est conservé dans `R13D`. Le
+  témoin unique `0x45251F` prouve qu'une valeur non nulle remplace toute
+  résistance positive par zéro via `min(résistance,0)`, puis `0x452658` saute
+  aussi l'absorb. La 2.0.0 appelait avec `1` et neutralisait donc par erreur
+  résistance positive et immunité. La 2.1.0 appelle avec `0`, utilise les
+  sentinelles absorb `-1/-1` et garde explicitement `reductions[2]=0` pour
+  exclure MDR sans supprimer les défenses Fire.
 - Cette fonction rejette une durée ou un dommage non positif, puis appelle
   `STATES_ToggleState 0x3354C0` avec le défenseur, le state `burning` 115 et
   `enable=1`. Les tables vanilla 3.2, vanilla 3.3 et BKVince relient toutes le
   state 115 à l'overlay `burning` 224, dont l'asset est
   `Expansion\\On_Fire`; l'absence d'overlay signalée n'est donc pas une absence
   de mapping dans les données actuelles.
-- Le témoin optionnel de Burn Damage Fix emprunte `STATES_CheckState 0x3351B0`
-  après le trampoline original et uniquement pour un Burn résolu positif avec
-  durée positive. Il compte `active/missing`, ne toggle aucun state et ne crée
-  aucun overlay; le gameplay doit encore rapprocher ce compteur de l'effet
-  visuel réel.
-- `SUNITDMG_ApplyResistancesAndAbsorb 0x4523E0` reste un seam partagé. Le plugin
-  appelle son adresse vivante sans valider les octets vanilla, afin que Monster
-  Display et les relais internes de Resistance Floor soient observés quel que
-  soit l'ordre de chargement.
-- Le scan des DLL actives trouve la référence `0x4523E0` uniquement dans
-  Monster Display, aucune référence aux seams possédés dans Monster Display ou
-  Bind And Summon, et aucun overlap avec l'entrée Melee Splash `0x44C030`.
+- Le compilateur StatesTxt passe explicitement un stride `0x44` au callsite
+  unique `0x3083D7`, puis installe le vecteur résultant à
+  `DataTables+0x290` au témoin `0x30843C`. `STATES_ToggleState` appelle
+  `GetItemDataContext 0x34A0E0`, transmet le byte à
+  `GetDataTablesForContext 0x300A90` et lit le nombre de states à
+  `DataTables+0x298` dans le témoin unique `0x3354E0`.
+- Le premier cold start 2.2 a refusé proprement le chargement parce que le
+  témoin de stride englobait aussi le `CALL` suivant, que l'intégration du
+  compilateur TXT de D2RLoader peut rediriger avant le chargement des plugins.
+  Le préfixe instruction-aligné de 22 octets arrêté avant ce `CALL` reste unique
+  à `0x3083D7` et prouve intégralement l'argument `0x44`; la cible du `CALL`
+  n'est ni consommée ni possédée par Burn Damage Fix.
+- La séquence de descripteurs native à `0x307EB3` associe le type
+  name-to-word `0x16` à l'offset record `+0x02`, puis aux offsets
+  `+0x04/+0x06/+0x08`; le premier word d'overlay est donc directement prouvé à
+  `StateRecord+0x02`. L'initialiseur unique de records `0x44` à `0x394640`
+  écrit `0xFFFF0000` à `+0`, ce qui combine state id zéro à `+0` et sentinelle
+  d'overlay vide `0xFFFF` à `+2`. Ces offsets et cette sentinelle proviennent du
+  binaire D2R gouverné, pas d'une transposition de structure D2MOO.
+- Burn Damage Fix 2.2 réutilise le hook d'application déjà possédé à
+  `0x451380` et n'ajoute aucun hook exécutable. Juste avant le trampoline
+  original, il vérifie contexte, count, base, stride, id 115, alignement et page
+  writable, puis effectue un compare/exchange atomique strict
+  `overlay1 224 -> 0xFFFF`. Une valeur déjà vide est acceptée; toute valeur
+  custom est préservée. La mutation reste process-local, ne réécrit aucun
+  `states.txt` et est restaurée au déchargement seulement si la DLL possède
+  encore la même cellule inchangée.
+- Burn Damage Fix 2.0 utilisait `STATES_CheckState 0x3351B0` uniquement comme
+  témoin passif après une application positive : il ne créait aucun overlay.
+  Le gameplay BKVince du 26 août 2026 a confirmé le DoT, le kill-credit/XP et
+  deux states actifs (`resolved=2`, `burning-state=2/0`). Ce comportement est
+  conservé ici comme preuve historique, pas comme description de la branche
+  2.1.
+- Burn Damage Fix 2.1 emprunte `UNITS_SetOverlay 0x349020` sans le patcher et
+  rejoue l'overlay `fire_hit` 81 sur la couche 0. Il le fait une première fois
+  après une application Burn positive dont le state `burning` 115 est confirmé,
+  puis périodiquement pendant les événements de stat-regeneration. Chaque replay
+  exige encore le state 115 actif et `SUNIT_IsDead 0x34C2C0 == 0`; il cesse donc
+  naturellement à l'expiration du Burn ou à la mort. Aucun pointeur d'unité,
+  GUID ou état parallèle n'est conservé entre deux callbacks.
+- `D2GAME_EVENTS_PlayerEventDispatcher 0x42CE30` possède l'ABI native à six
+  arguments `(game, unit, eventType, callbackArg0, callbackArg1,
+  callbackArg2) -> void`. Il borne `eventType` à `0..14`, sélectionne
+  `0x42E600` pour le type 3 et possède deux xrefs directes, `0x48CB2F` et
+  `0x48CBC4`. Son entrée unique de 32 octets est `48 89 5C 24 08 48 89 6C 24
+  10 48 89 74 24 20 57 48 83 EC 30 49 63 D8 41 8B F9 48 8B F2 48 8B E9`.
+- `MONSTERMODE_EventHandler 0x447420` possède la même ABI native à six
+  arguments. Il vérifie le type monstre, borne l'événement à `0..14`,
+  sélectionne `D2GAME_MONSTER_ApplyStatRegen 0x448C00` pour le type 3 et possède
+  une seule xref directe, `0x48C83F`. Son entrée unique de 39 octets est `48 89
+  5C 24 10 48 89 6C 24 18 48 89 74 24 20 57 48 83 EC 50 80 3D 61 76 66 02
+  00 41 8B E9 49 63 F8 48 8B DA 48 8B F1`.
+- Ces deux dispatchers sont synchrones dans le chemin serveur de la file
+  d'événements. Le replay précède le callback original, vérifie explicitement le
+  type joueur 0 ou monstre 1, ne requiert ni résolution GUID, ni collection
+  globale, ni worker thread, puis transmet les six arguments originaux exactement
+  une fois.
+- Le témoin unique `0x42E615` lit le frame serveur à `Game+0x170`. Le témoin
+  unique de 38 octets à `0x44DF40` lit la difficulté à `Game+0x104`, le contexte
+  data à `Game+0x106`, puis appelle `GetDifficultyRecord(dataSet,difficulty)` à
+  `0x300830`. La 2.1.0 vérifie ces deux layouts avant toute lecture directe.
+- Les CALL uniques `0x42E634` et `0x448CA0` vers `EVENT_SetEvent` prouvent que
+  les callbacks reprogramment le type 3 à `gameFrame+1`, mais ne sont pas
+  retenus comme hooks : `plugin-misc` possède l'entrée monstre `0x448C00` et
+  peut court-circuiter son callsite interne. Les dispatchers sont en amont de
+  cette divergence.
+- `EVENT_SetEvent 0x48B720` possède sept arguments natifs, et non six :
+  `(game, unit, eventType, expireFrame, customId, customParam, arg7) -> void`.
+  Après `sub rsp,0x48`, son prologue lit les arguments entrants 5, 6 et 7 à
+  `[rsp+0x70]`, `[rsp+0x78]` et `[rsp+0x80]`. La sémantique du septième argument
+  reste inconnue; le prototype D2MOO à six arguments est sémantique seulement.
+- `UNITS_SetOverlay 0x349020` est confirmé par 39 appels directs, son
+  allocation/mise à jour d'une stat-list au flag `0x80`, son ABI
+  `(unit, overlayId, unusedLayer) -> void` et sa signature unique de 24 octets.
+  Le témoin interne unique de 30 octets à `0x34916C` prouve que le setter écrit
+  l'ID dans `unit_dooverlay` stat `178` (`0xB2`); `0x80` n'est pas un ID de stat.
+  Cette stat retient le dernier write direct et ne prouve pas qu'une animation
+  reste active. Burn Damage Fix 2.1 compte un overlay étranger puis applique
+  `fire_hit` selon l'arbitrage natif last-write-wins. Le setter cible bien
+  l'unité, mais une particule déjà émise peut rester à son emplacement; le replay
+  périodique émet les suivantes à la position courante.
+- `SUNITDMG_ApplyResistancesAndAbsorb 0x4523E0` reste un seam partagé que Burn
+  Damage Fix ne hooke pas. La 2.1.0 exige soit sa signature vanilla unique de
+  32 octets, soit exactement un inline hook suivi par DiagnosticsService et
+  possédé par `monsterdisplay`; tous les témoins internes de record, résistance,
+  pierce, réduction et absorb restent stricts. Toute modification inconnue,
+  non suivie ou multi-propriétaire refuse le chargement.
+- L'audit de coexistence ne trouve aucun propriétaire de `0x42CE30` ou
+  `0x447420` parmi Monster Display, Bind And Summon, Melee Splash et les autres
+  composants actifs de la Suite. Les ressemblances dans Bind And Summon sont
+  des entrées `.pdata`, pas du code. Monster Display partage seulement
+  `0x4523E0`; BKVCombat emprunte `UNITS_SetOverlay`; Melee Splash possède
+  `0x44C030`; et le seam `plugin-misc 0x448C00` est volontairement évité.
 
 ## Player sequence tables — baseline D2R 3.3.93847
 
