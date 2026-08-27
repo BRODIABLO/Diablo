@@ -240,7 +240,7 @@ Identités exactes de cette pile au moment de l'audit :
 | `patches/ignore-target-defense-champions-uniques.json` | 362 | `4831786F90C471590010862DF18FBC8E88A7C02C5571CFA350411944F2090C13` |
 | `patches/player-difficulty-overrides.json` | 1 801 | `83DB69A08143BB1951FEE051164E810D8D4936F237AB39B920B3568B9661F58B` |
 | `patches/thorns-and-burn-kill-credit.json` | 1 138 | `AF35CC9093B52EFE5476C2D9E8D74EEE8B6F9043BFD5923DA368DC29862CFC79` |
-| `patches/normal-area-level-scaling.json` | 391 | `7967DC5B919839FA16EF31F71EC74FE60CDA00158B4EB1367225AA9CFF87BC98` |
+| `patches/ruffneckk-normal-area-scaling.json` | 431 | `B2C2E0B69C77869BC16AA7984FB76B36C6DB40063870A583722788A3F3076018` |
 | `BKVince.mpq/D2RPlugins.json` | 15 777 | `7F3CE0442BF8DF3A4D308D1F8E1D3DBF9E7085021A6BB696B4BAA6C6E85F8C86` |
 
 Les valeurs gouvernant les projections pN dans ce `D2RPlugins.json` sont
@@ -252,12 +252,23 @@ leurs cellules/configurations n'est utilisée comme preuve numérique dans ce
 rapport; une photographie hashée de toute la pile relève d'un futur cold start,
 qui n'est ni exécuté ni revendiqué par cet audit-only.
 
-Le patch `normal-area-level-scaling.json` gouverne spécifiquement le lookup
-Normal BKV au RVA92777 `0x543D32` : il remplace
-`45 85 FF 74 19` par `45 85 F6 7E 19` (`test r14d` puis `jle`) afin d'utiliser
-le niveau de zone lorsqu'un `LevelId` de room est positif, et le niveau de base
-sinon. C'est pourquoi la Countess BKV niveau brut8 consulte le niveau de zone7
-en Normal; cette extension BKV ne provient pas de la règle D2MOO NM/H.
+Le correctif privé `ruffneckk-normal-area-scaling.json` gouverne maintenant le
+lookup au RVA92777 `0x543D2D`. La room passe par le wrapper null-safe
+`0x2EFC10`, puis son véritable `LevelId` est conservé dans `[rsp+0xB8]`.
+La séquence BKVince remplace les dix octets uniques
+`80 FA 01 74 1E 45 85 FF 74 19` par
+`83 BC 24 B8 00 00 00 00 7E 19` : un `LevelId` positif rejoint l'area scaling,
+y compris en Normal, tandis que zéro conserve le niveau monstre de base. Les
+contrôles `noRatio`, boss, desecrate et monster-region suivants restent natifs.
+
+L'ancienne réécriture RuffnecKk de cinq octets testait à tort `r14d`, déjà
+transformé en booléen. Le remplacement de deux octets proposé par
+`yinyin333333` active correctement Normal, mais le test pile complète BKVince
+du 27 août a produit l'assertion `eLevelId > 0` pendant le chargement. Vincent
+retient donc la variante Expansion-only propre à BKVince et ordonne son retrait
+de la RuffnecKk D2RLoader Suite. Le comportement Countess et le cas du
+mercenaire restauré sans room restent à revalider avant de promouvoir cette
+conclusion comme preuve gameplay.
 
 Workbench natif disponible : image D2R canonique
 `CC59119DC2A6C7D43D088098FC162EAFA4AE1299B2079126AEF43C1ACA914715`,

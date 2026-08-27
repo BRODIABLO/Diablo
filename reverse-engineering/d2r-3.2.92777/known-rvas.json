@@ -924,12 +924,28 @@
       "notes": "Computes per-monster player-count bonuses. BKVince hooks it with strict expected bytes to cap monster HP scaling independently at players 8 while the requested difficulty can remain 65535."
     },
     {
-      "rva": "0x543D32",
-      "name": "MonsterStatsAreaLevelGuard",
+      "rva": "0x543D2D",
+      "name": "BKVincePositiveRoomLevelGuard",
       "kind": "patch-site",
       "confidence": "high",
       "source": "Mission/memory-patches-portage-3.2.json",
-      "notes": "Native `test r15d,r15d; je 0x543D50` prevents area-level scaling in Normal difficulty. The original BKVince NOP enabled Normal scaling but also sent a roomless restored Rogue mercenary through DATATBLS_GetMonsterLevelInArea with LevelId 0. Runtime tracing on build 92777 proved source room null, LevelId 0 and target UNIT_MONSTER class 271. The governed patch replaces the five bytes with `test r14d,r14d; jle 0x543D50`, preserving area scaling for positive room-derived LevelIds and selecting the native monstats base-level fallback otherwise."
+      "notes": "The unique native sequence `80 FA 01 74 1E 45 85 FF 74 19` contains the classic-game and Normal-difficulty skips. In the private BKVince Expansion profile it is replaced by `83 BC 24 B8 00 00 00 00 7E 19`, which compares the actual null-safe DRLGROOM_GetLevelId result spilled at [rsp+0xB8] against zero and falls back at 0x543D50 when no positive room LevelId exists. This intentionally BKVince-only write remains excluded from the public RuffnecKk D2RLoader Suite."
+    },
+    {
+      "rva": "0x543D32",
+      "name": "MonsterStatsAreaLevelGuard",
+      "kind": "historical-patch-site",
+      "confidence": "high",
+      "source": "Mission/memory-patches-portage-3.2.json",
+      "notes": "Native `test r15d,r15d; je 0x543D50` prevents area-level scaling when the effective difficulty index is Normal. The former RuffnecKk rewrite `45 85 F6 7E 19` was invalidated because the surrounding control flow overwrites r14d with a boolean before this gate, so r14d is not the positive room LevelId claimed by the former description. The corrected BKVince-only owner starts at 0x543D2D and tests [rsp+0xB8] instead."
+    },
+    {
+      "rva": "0x543D35",
+      "name": "YinyinNormalAreaLevelDifficultySkip",
+      "kind": "external-patch-site",
+      "confidence": "high",
+      "source": "Mission/memory-patches-portage-3.2.json",
+      "notes": "yinyin333333's external patch changes only the native `je 0x543D50` bytes `74 19` to two NOPs. It directly enables Normal and preserves the classic-game and later eligibility checks, but the 2026-08-27 BKVince full-stack load then reached the D2Common LvlTbls.cpp:284 assertion with eLevelId zero. It is therefore rejected for BKVince, overlaps the private ten-byte owner at 0x543D2D, and must never coexist with it."
     },
     {
       "rva": "0x5546B0",

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "name": "BKVince Normal Area Level Scaling",
+  "description": "Uses area levels when BKVince provides a positive room LevelId.",
+  "patches": [
+    {
+      "description": "Use area scaling for positive room LevelIds and the base monster level otherwise",
+      "op": "bytes",
+      "rva": "0x543D2D",
+      "expected": "80 FA 01 74 1E 45 85 FF 74 19",
+      "bytes": "83 BC 24 B8 00 00 00 00 7E 19"
+    }
+  ]
+}

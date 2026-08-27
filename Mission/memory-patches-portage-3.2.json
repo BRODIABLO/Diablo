@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-25",
+  "updatedAt": "2026-08-27",
   "target": {
     "game": "D2R 3.2",
     "build": 92777,
@@ -73,9 +73,17 @@
       "monsterHpCapValidation": "runtime-hook-and-command-smoke-passed-awaiting-boss-gameplay-validation",
       "infiniteTomesPatchAppliedAt": "0x5817BD",
       "rejectedTomeSitesRemainVanilla": ["0x47145D", "0x4F5849"],
-      "normalAreaLevelScalingGuardRva": "0x543D32",
-      "normalAreaLevelScalingGuardBytes": "4585F67E19",
-      "normalAreaLevelScalingRuntimeValidation": "passed-2026-08-06: Helena entered the Rogue Encampment with Anor restored, no LevelId assertion and no new crash report; startup 24/24, patches 18/18, plugins 13/13",
+      "normalAreaLevelScalingGuardRva": "0x543D2D",
+      "normalAreaLevelScalingGuardExpected": "80FA01741E4585FF7419",
+      "normalAreaLevelScalingGuardBytes": "83BC24B8000000007E19",
+      "normalAreaLevelScalingPatchPath": "data-BKVince/d2rloader/patches/ruffneckk-normal-area-scaling.json",
+      "normalAreaLevelScalingPatchAuthor": "RuffnecKk",
+      "normalAreaLevelScalingPatchSha256": "B2C2E0B69C77869BC16AA7984FB76B36C6DB40063870A583722788A3F3076018",
+      "normalAreaLevelScalingScope": "BKVince Expansion-only; intentionally excluded from the public RuffnecKk D2RLoader Suite",
+      "normalAreaLevelScalingRuntimeValidation": "partial-passed-2026-08-27: source and runtime SHA-256 match B2C2E0B69C77869BC16AA7984FB76B36C6DB40063870A583722788A3F3076018; D2R 3.3.93847 full-stack cold start loaded BKVince Normal Area Level Scaling [mod] with 1 change, all 38 plugins, all 18 memory patches and D2R startup complete; effective Normal area-level behavior and the roomless restored Rogue mercenary regression case remain gameplay-pending",
+      "normalAreaLevelScalingColdStart": "passed-2026-08-27: D2R 3.3.93847 build key 623f7a1f73eabb08ccb2b2046e3f9164; BKVince Normal Area Level Scaling [mod] — 1 change; 38 plugins loaded; 18 memory patches applied; D2R startup complete 24/24",
+      "normalAreaLevelScalingGameplay": "pending-user-session-2026-08-27",
+      "normalAreaLevelScalingSuiteReleaseState": "removed-2026-08-27: excluded from the current local v1.3.0 release candidate, now 18 patch assets and 38 total release assets; previous public releases and tags remain unchanged",
       "hitChanceBoundsRuntimeTarget": "D2R 3.3.93847",
       "hitChanceBoundsPatchPath": "data-BKVince/d2rloader/patches/ruffneckk-hit-chance-0-100.json",
       "hitChanceBoundsDisplayPipeline": "Outgoing Character Screen path 0x1514700 -> 0x14E7FE0 and incoming Character Screen path 0x15149F0 -> 0x1514CA0 are distinct. The incoming formatter carried an additional vanilla 5%-95% clamp at 0x1514CBD..0x1514CCE after the raw chance calculation.",
@@ -90,8 +98,8 @@
     },
     "patches": [
       {
-        "path": "data-BKVince/d2rloader/patches/normal-area-level-scaling.json",
-        "entries": ["Scale Normal monsters by area level with a null-LevelId fallback"]
+        "path": "data-BKVince/d2rloader/patches/ruffneckk-normal-area-scaling.json",
+        "entries": ["Use area scaling only when BKVince provides a positive room LevelId"]
       },
       {
         "path": "data-BKVince/d2rloader/patches/infinite-item-quantity-and-tomes.json",
@@ -542,10 +550,14 @@
       },
       {
         "name": "Make monsters scale off area level on normal",
-        "classification": "implemented-runtime-validated",
+        "classification": "bkvince-specific-patch-cold-start-passed-gameplay-pending",
         "confidence": "high",
-        "sites": [{ "rva": "0x543D32", "expected": "4585FF7419", "replacement": "4585F67E19", "instruction": "test r14d, r14d; jle 0x543D50" }],
-        "decision": "Keep Normal area-level scaling when the room-derived LevelId is positive, but take the native monstats base-level fallback when the room is absent and the derived LevelId is zero. A live build-92777 trace proved the failing path restored roguehire class 271 with a null room and LevelId 0; levels.txt itself remained byte-exact and complete. The corrected patch loaded successfully and Helena entered the Rogue Encampment with Anor restored without the LvlTbls assertion or a new crash report."
+        "sites": [{ "rva": "0x543D2D", "expected": "80FA01741E4585FF7419", "replacement": "83BC24B8000000007E19", "instruction": "cmp dword ptr [rsp + 0xB8], 0; jle 0x543D50", "author": "RuffnecKk" }],
+        "rejectedAlternatives": [
+          { "rva": "0x543D32", "replacement": "4585F67E19", "reason": "The former RuffnecKk rewrite tested r14d after it had been overwritten with a boolean, so it did not test the room LevelId." },
+          { "rva": "0x543D35", "replacement": "9090", "author": "yinyin333333", "reason": "The two-byte Normal skip removal enables the intended path but admitted a BKVince call with LevelId zero and produced the D2Common LvlTbls.cpp:284 assertion during the 2026-08-27 full-stack load." }
+        ],
+        "decision": "Vincent selected a BKVince Expansion-only correction on 2026-08-27 and ordered the incompatible public Suite artifact removed. DRLGROOM_GetLevelId is reached through the null-safe wrapper at 0x2EFC10 and its result is stored at [rsp+0xB8] before the gate. The ten-byte replacement compares that actual value against zero: positive rooms use the existing area-level path in every BKVince difficulty, while roomless calls fall back to the base monster level. The following noRatio, boss, desecrate and monster-region checks remain native. The classic-game exclusion is intentionally not retained because this artifact is private to the BKVince Expansion profile and must not be distributed as a general inter-mod patch."
       },
       {
         "name": "Make umon field in levels.txt work on all difficulties",

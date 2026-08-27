@@ -1064,3 +1064,37 @@ confiance explicite.
   `Mission/player-sequence-tables-3.3.md`. Cette phase ne prouve pas encore le
   contrat de propriété, la durée de vie, le remplacement de longueurs variables
   ni l'autorité multijoueur; ces points bloquent toute implantation.
+
+## Scaling des monstres par area level en Normal — garde BKVince
+
+- Le chemin commun 92777/93847 dérive `r15d` de l'index de difficulté effectif :
+  zéro en Normal, un en Nightmare et deux en Hell. Le couple natif à
+  `0x543D32` est `test r15d,r15d; je 0x543D50`; le saut à `0x543D35` exclut
+  donc directement le chemin d'area level en Normal.
+- La room passe par le wrapper null-safe `0x2EFC10`, qui retourne zéro en
+  l'absence de room puis relaie `DRLGROOM_GetLevelId 0x360FC0`. L'appelant
+  conserve ce véritable `LevelId` dans `[rsp+0xB8]` à `0x543C60` avant les
+  tests d'éligibilité.
+- L'ancienne réécriture RuffnecKk `45 85 F6 7E 19` est invalidée. Le flux
+  `0x543CE3..0x543D14` écrase `r14d` avec un booléen avant le gate; il ne teste
+  pas le `LevelId` positif annoncé. Le cold start et le témoin mercenaire du
+  6 août prouvaient une absence de crash, pas l'effet de scaling.
+- La patch externe de `yinyin333333` neutralise correctement le saut Normal
+  avec `90 90` à `0x543D35`, mais le test pile complète BKVince du 27 août a
+  produit l'assertion `eLevelId > 0` de `LvlTbls.cpp:284` pendant le chargement.
+  Le même profil a ensuite chargé avec l'ancien garde, ce qui rend l'admission
+  d'un appel BKVince sans room par la version yinyin hautement probable; l'unité
+  exacte reste à identifier et ne doit pas être inventée.
+- Vincent retient donc une correction privée BKVince Expansion-only. La séquence
+  unique de dix octets à `0x543D2D`,
+  `80 FA 01 74 1E 45 85 FF 74 19`, devient
+  `83 BC 24 B8 00 00 00 00 7E 19`, soit
+  `cmp dword ptr [rsp+0xB8],0; jle 0x543D50`. Un `LevelId` positif rejoint le
+  chemin d'area level, y compris en Normal; zéro conserve le niveau monstre de
+  base. Les contrôles `noRatio`, boss, desecrate et monster-region suivants
+  restent natifs.
+- Ce remplacement retire volontairement le gate classic-game. Il appartient
+  seulement au profil BKVince Expansion et doit être absent de la RuffnecKk
+  D2RLoader Suite. Le cold start pile complète est passé le 27 août; un témoin
+  effectif Normal et le cas sans room restent requis avant qualification
+  gameplay.
