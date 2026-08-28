@@ -1,0 +1,109 @@
+# RuffnecKk MapSense configuration.
+# Configure normal settings in the in-game MapSense menu.
+# Only navigation.custom_levels.targets is intended for manual editing.
+
+schema_version = 8
+
+[general]
+# Enables the plugin, reveal engine, in-frame settings panel, and Controls actions.
+enabled = true
+
+[overlay]
+# Enables MapSense additions to D2R's native automap when their live collectors are available.
+enabled = true
+# Legacy diagnostic-scene switch retained for schema 2 compatibility. Keep disabled.
+diagnostic_preview = false
+# Compatibility key: MapSense additions follow the native automap by design.
+follow_native_automap = true
+opacity = 1.00
+scale = 1.00
+frame_rate = 60
+
+[monsters]
+# Every monster category is always visible; the tables below only style them.
+# Scans loaded monsters within this many true world subtiles of the local player.
+detection_radius = 60
+# Applies to marker outlines shared by every monster category.
+marker_thickness = 2.00
+
+[monsters.normal]
+shape = "player_cross"
+color = "#FFFFFFFF"
+size = 18.00
+
+[monsters.minion]
+shape = "player_cross"
+color = "#FFD43BFF"
+size = 18.00
+
+[monsters.champion]
+shape = "player_cross"
+color = "#3D8BFFFF"
+size = 20.00
+
+[monsters.unique]
+shape = "player_cross"
+color = "#FF8A24FF"
+size = 22.00
+
+[monsters.super_unique_boss]
+shape = "player_cross"
+color = "#FF3B30FF"
+size = 24.00
+
+[immunities]
+enabled = true
+# Uses colored letters above markers or a segmented halo around them.
+style = "colored_i"
+indicator_size = 14.00
+halo_thickness = 2.00
+physical = "#D8C39AFF"
+fire = "#F23D1FFF"
+cold = "#33A6FFFF"
+lightning = "#FFE02EFF"
+poison = "#57E03DFF"
+magic = "#C75CFFFF"
+
+[navigation]
+# Configure this and every navigation switch/color in the MapSense menu.
+line_thickness = 2.00
+
+[navigation.waypoint]
+enabled = true
+color = "#3D8BFFFF"
+
+[navigation.progression]
+enabled = true
+color = "#57E03DFF"
+
+[navigation.quests]
+# Marks exact active quest targets, including the correct Tal Rasha tomb.
+enabled = true
+color = "#FF3B30FF"
+
+[navigation.custom_levels]
+# This switch and color are also available in the MapSense menu.
+enabled = false
+color = "#C75CFFFF"
+# Edit only this list manually. Each entry must contain exactly one level_id
+# or level_name. Level IDs are the safest choice when a name is ambiguous.
+targets = [
+  { level_id = 12 },                  # Pit Level 1
+  { level_name = "Mausoleum" },       # levelId 19
+  { level_name = "Ancient Tunnels" }, # levelId 65
+  { level_id = 119 },                 # Icy Cellar
+]
+
+[menu]
+# Keeps a small movable MapSense launcher visible while the panel is collapsed.
+show_launcher = true
+# Opens the full settings panel at startup instead of the launcher.
+start_expanded = false
+# Saves the launcher/panel position in this file after dragging ends.
+remember_position = true
+position_x = 0.86
+position_y = 0.04
+
+[diagnostics]
+# Logs reveal, renderer, input, and automap diagnostics. Leave disabled for normal play.
+enabled = false

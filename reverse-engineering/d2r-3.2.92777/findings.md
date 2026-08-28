@@ -1141,3 +1141,188 @@ confiance explicite.
   `D2Game/src/SKILLS/SkillDruid.cpp`. Aucune adresse ni structure 32 bits n'est
   transposée. Les RVA et octets ci-dessus proviennent exclusivement du corpus
   natif gouverné commun aux cibles 3.2.92777 et 3.3.93847.
+
+## MapSense — premier marqueur d'unité dans l'automap native
+
+- `AUTOMAP_RenderUnit 0xD76E0` reçoit `(Unit*, AutomapContext*)`. Sa signature
+  stricte de 32 octets est unique et aucun propriétaire concurrent n'apparaît
+  dans le PluginPack eezstreet épinglé. L'ancien observateur MapSense qui visait
+  la même entrée demeure hors de la cible CMake.
+- Le chemin natif appelle `UNITS_GetClientCoordX 0x34AF60`,
+  `UNITS_GetClientCoordY 0x34AFB0`, puis
+  `AUTOMAP_ProjectClientCoordinatesToScreen 0xD4910`. Le couple projeté est comparé au
+  rectangle `context+0x18/+0x1C/+0x20/+0x24`, puis transmis sans translation
+  additionnelle à l'icône native `0xD6DB0`.
+- `UI_GetNativeWidth 0x7F510` et `UI_GetNativeHeight 0x7F4A0` bornent l'espace
+  UI natif. Leur égalité exacte avec `ImGui::DisplaySize` reste une gate
+  dynamique : MapSense n'applique un ratio que lorsque les deux échelles sont
+  finies, positives et uniformes; toute discordance supprime le marqueur.
+- `UNITS_GetUnitMode 0x34AB60` lit `Unit+0x0C`. Le témoin unique `0x51F280`
+  prouve le type monstre 1, `MonsterData*` à `Unit+0x10`, les flags de rang à
+  `MonsterData+0x1A` et le masque haut rang `0x0E`. Le bit minion `0x10` reste
+  corroboré historiquement; son rejet de la catégorie normale est conservateur.
+- Le prototype 0.5.0 appelle toujours l'original en premier et exactement une
+  fois, filtre un monstre normal vivant dans un rayon circulaire fixe de 60,
+  puis publie seulement un POD atomique expirant après 120 ms. Aucun pointeur
+  D2R ne traverse vers le thread Present et aucune énumération globale n'est
+  ajoutée. Le témoin gameplay doit encore confirmer modes, classification,
+  alignement, zoom et comportement centre/gauche/droite/ultrawide.
+
+## MapSense — unités de projection et topologie extérieure Vis/Warp
+
+### Hypothèse rejetée — visibilité native de l'automap et du menu Pause
+
+- PrimeMH au commit `92b6a97d8e56346f8b63a88bb647c1af044d2c8b`
+  décrit bien un tableau `MenuStates` où `pause_menu_visible` est à `+0x09` et
+  `automap_visible` à `+0x0A`. Son clone local utilise toutefois encore une
+  ancienne base codée en dur, `0x1EBD158`; cette structure ne permet donc pas
+  de transposer directement les offsets vers le runtime 3.3.93847.
+- L'association proposée entre cette structure et les octets `0x2AA6A69` /
+  `0x2AA6A6A` était une inférence non démontrée à partir de deux écritures
+  adjacentes dans la grande routine de recherche/initialisation `0x1234D0`.
+  Les instructions `SETE` à `0x12351D` et `0x1235A9` prouvent leurs seules
+  destinations, pas la sémantique des deux octets.
+- La preuve runtime du 27 août 2026 réfute l'hypothèse : `0x2AA6A6A` restait à
+  zéro pendant que l'automap native était visiblement ouverte. Le candidat
+  MapSense 0.10.2 qui exigeait cet octet a donc supprimé tous les marqueurs et
+  a été retiré du runtime. Les quatre identifications ont été supprimées de
+  `known-rvas.json`; elles ne doivent plus être consommées comme états UI.
+- MapSense 0.10.3 traite Tab et Escape à leur message Win32 initial pour vider
+  immédiatement ses pixels mis en cache, puis laisse le prochain passage
+  gouverné d'`AUTOMAP_RenderUnit` republier les marqueurs au retour en jeu.
+  Cette correction ne revendique aucune nouvelle identification native.
+- Le contrat visuel est `automap_visible != 0 && pause_menu_visible == 0`.
+  Lors du premier passage visible vers caché, MapSense invalide également les
+  projections et marqueurs mémorisés : aucune frame âgée de 250 ms ne peut
+  réapparaître sur le menu Pause ou après une fermeture remappée.
+
+- Les getters `0x34AF60/0x34AFB0` lisent `Unit+0x38 -> Path+0x08/+0x0C` :
+  ce sont les coordonnées client/dimétriques déjà consommées par
+  `AUTOMAP_ProjectClientCoordinatesToScreen 0xD4910`, pas les subtiles monde.
+  L'écrivain du Path conserve séparément les subtiles à `+0x10/+0x14`, appelle
+  `PATH_ConvertSubtileToClientCoordinates 0x334E00`, puis range le résultat à
+  `+0x08/+0x0C`. Le corps gouverné de `0x334E00` prouve exactement
+  `clientX = 16 * (subtileX - subtileY)` et
+  `clientY = 8 * (subtileX + subtileY)`.
+- Le résolveur MapSense produisait waypoint et sorties en subtiles
+  (`gameTile * 5 + relativeSubtile`), mais la candidate 0.9.6 passait ces
+  valeurs directement à `0xD4910` tout en projetant le joueur avec les getters
+  client. La 0.9.7 a corrigé cette unité; son témoin gameplay du 26 août montre
+  toutefois deux erreurs résiduelles distinctes : le preset du waypoint ne
+  coïncide pas avec la position finale de son objet actif, et le centre d'une
+  bordure de room ne coïncide pas avec l'ouverture traversable réelle.
+- Le waypoint 0.9.8 reste d'abord sélectionné par le preset objet exact et son
+  bit `ObjectsTxt.SubClass & 0x40`. Le témoin `0x3289EE` prouve ensuite le
+  pointeur `ActiveRoom*` à `DrlgRoom+0x58`; `DUNGEON_GetFirstUnitInRoom
+  0x2EFD90` retourne `ActiveRoom+0xA8`, et `UNITS_GetNextUnitInRoom 0x34B4A0`
+  suit `Unit+0x160`. Après validation type objet, classe et room, MapSense
+  conserve sans conversion les coordonnées de l'Unit données par
+  `0x34AF60/0x34AFB0`, exactement comme `AUTOMAP_RenderUnit`. L'absence de
+  room ou d'Unit active produit un résultat partiel retryable, jamais le preset
+  approximatif.
+- Les sorties directes entre niveaux extérieurs ne sont pas garanties dans le
+  seul vecteur de rooms voisines déjà matérialisé. Le wrapper pur
+  `DRLGLEVEL_GetVisArray 0x360880`, ABI `(uint8 context, Level*) -> int32_t*`,
+  lit le niveau et son Drlg puis délègue à `0x360800`. Celui-ci retourne le
+  tableau dynamique `Vis[8]` du noeud `Drlg+0x118` (`levelId +0x00`, Vis
+  `+0x04`, Warp `+0x24`, suivant `+0x48`) ou le repli LevelsTxt à `+0x48`.
+- `DRLGLEVEL_GetWarpId 0x3DAAD0`, ABI
+  `(uint8 context, Level*, uint8 slot) -> int32`, applique la même sélection
+  dynamique et lit `Warp[slot]`, avec repli LevelsTxt à `+0x68`. La 0.9.8
+  accepte seulement une paire réciproque dont les deux Warp valent `-1` et
+  dont les rooms portent le bit de slot `1 << (slot + 4)` à `DrlgRoom+0x50`.
+- Le linker natif mutateur `0x361750` prouve pour ce chemin `Warp=-1` la règle
+  géométrique : les gaps des rectangles `DrlgRoom+0x60/+0x64/+0x68/+0x6C`
+  doivent être strictement inférieurs à six game tiles sur les deux axes. La
+  0.9.8 utilise ce contrat seulement pour identifier les paires candidates;
+  aucun centre ou midpoint géométrique de room ne sert encore de destination.
+- `DUNGEON_GetCollisionGridFromRoom 0x2EFB30` retourne `ActiveRoom+0x38` et
+  possède une signature stricte unique de 32 octets. Le témoin unique
+  `0x36697B` prouve `CollisionGrid+0x20` pour le pointeur de cellules `uint16`,
+  l'origine X/Y à `+0/+4` et la largeur à `+8`; `0x3669E6` prouve la hauteur à
+  `+0x0C`. Le constructeur `0x363A90` copie les coordonnées subtiles de room
+  dans cet en-tête et place les cellules inline à `+0x28`.
+- Pour une paire de rooms cardinalement adjacentes, MapSense 0.9.8 balaie le
+  bord de collision de la room source déjà active et sa cellule immédiatement
+  intérieure. Une position appartient au passage uniquement si les deux masks
+  ont le bit mur `1` absent. Les runs de deux subtiles ou moins sont rejetés;
+  le centre du plus large run valide devient l'unique ancre, avec un tie-break
+  déterministe. Si la room ou sa collision n'est pas encore active, aucune
+  ligne approximative n'est publiée et le refresh reste retryable.
+- Le parcours des niveaux déjà présents est borné et cyclique-sûr depuis
+  `Drlg+0x868`, via `Level+0x1B8`, avec `Level+0x1C8` pour le Drlg et
+  `Level+0x1F8` pour l'identifiant. `DRLG_GetLevel 0x3267C0`,
+  `DRLG_InitLevel 0x3271C0`, le constructeur de liens `0x361750`, le rebuild
+  `0x3608A0`, l'insertion vectorielle `0x3612E0` et toute fonction
+  Add/RemoveRoomData ne sont jamais appelés par le nouveau chemin : une donnée
+  absente reste partielle et retryable.
+- La candidate source 0.9.8 ajoute les signatures strictes des accès Unit,
+  ActiveRoom et CollisionGrid à l'empreinte fail-closed commune aux cibles
+  3.2.92777 et 3.3.93847. Le build Release `/W4 /WX` et CTest `1/1` passent le
+  26 août 2026. Elle n'est ni déployée ni lancée; l'alignement exact observé en
+  jeu reste donc `NOT RUN`.
+- Le témoin gameplay 0.9.9 affine le défaut intérieur : Tamoe Highland expose
+  `raw=1 native=0 exact=0`, Barracks expose également un RoomTile brut mais
+  aucune sortie exacte, et Jail Level 1 ne conserve que le lien de retour vers
+  Barracks. La ligne mauve Pit est absente et les lignes vertes Barracks/Jail 1
+  ne sont jamais publiées. Ce n'est pas une erreur de politique de niveaux :
+  les cibles 7→26, 28→29 et 29→30 sont déjà exactes dans la table explicite.
+- `DRLGWARP_ResolveRoomTileLink 0x3DA9A0` explique la perte. Après avoir
+  matérialisé la source, `0x3DA9C6` lit sa chaîne à `DrlgRoom+0x78`,
+  `0x3DA9D0/0x3DA9D4` lisent `RoomTile+0x20 -> LvlWarp+0x2C`, puis
+  `0x3DA9FB` suit immédiatement `RoomTile+0x00` vers le `DrlgRoom`
+  destination. Le helper exige ensuite à `0x3DA9FE..0x3DAA15` une chaîne
+  réciproque à destination et retourne nul si elle n'est pas encore
+  matérialisée. Ce gate réciproque est utile à l'ABI complète du helper, mais
+  il n'est pas requis pour identifier le niveau cible du preset source.
+- La 0.10.0 initialise d'abord, dans le DRLG client gouverné, la cible verte et
+  les cibles mauves configurées qui figurent parmi les huit voisins `Vis` du
+  niveau courant, par `DRLG_GetLevel 0x3267C0` puis
+  `DRLG_InitLevel 0x3271C0` lorsque nécessaire. Elle matérialise ensuite chaque
+  room source par `DRLGROOM_CreateActiveRoom 0x3289A0`, lit directement le
+  `DrlgRoom*` destination à `RoomTile+0x00`, obtient son LevelId par
+  `DRLGROOM_GetLevelId 0x360FC0`, et associe `LvlWarp+0x2C` au `PresetUnit`
+  type 5 exact. Le témoin fail-closed de 15 octets à `0x3DA9FB` couvre la
+  lecture directe et la preuve de layout; aucun centre de room ni autre point
+  approché n'est réintroduit.
+- Les tests hors jeu 0.10.0 couvrent toute la progression explicite de l'acte I,
+  dont Stony Field→Underground Passage 1, Underground Passage 1→Dark Wood,
+  Barracks→Jail 1, Jail 1/2/3, Cathedral et Catacombs 1/2/3/4. Les branches
+  configurées Pit Level 1 et Underground Passage Level 2 sont vérifiées comme
+  destinations mauves. Release `/W4 /WX`, quatre exports et CTest `1/1`
+  passent; la DLL n'est ni déployée ni lancée.
+- Références sémantiques uniquement :
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`, notamment
+  `D2Common/src/Units/Units.cpp:283-323,582-594` et
+  `D2Common/src/D2Dungeon.cpp:1303-1310`, ainsi que
+  `D2RMH@32d55b8ab9a3e9b380103e73e3c8d328cd4f3ad4`,
+  `d2mapapi/mapdata.cpp:55-168,240-380`, pour l'intersection des ouvertures de
+  collision. Aucune adresse, structure ou ABI 32 bits n'est transposée.
+
+## MapSense 0.12.0 — table cliente complète et tombe correcte de Duriel
+
+- `CLIENT_GetUnitByIdAndType 0x9A5D0` résout par RIP relatif la table cliente à
+  `D2R+0x2A23910`, masque le bucket avec `0x7F` et applique un stride de
+  `0x400` octets par type. Cela prouve 128 pointeurs de bucket par type; le type
+  monstre 1 commence donc à `table+0x400`.
+- Le helper `0x9F270` charge une tête de bucket, compare `Unit+0x08` à l'id et
+  `Unit+0x00` au type, puis suit `Unit+0x158`. Son bloc complet de 41 octets et
+  l'entrée de 28 octets de `0x9A5D0` sont fingerprintés fail-closed. MapSense
+  parcourt uniquement les 128 buckets monstres, toutes les 50 ms au plus,
+  avec plafonds par bucket et par scan; aucun pointeur Unit n'est conservé.
+- Cette collecte remplace la dépendance incorrecte au sous-ensemble déjà choisi
+  par `AUTOMAP_RenderUnit`. Le rayon reste un cercle euclidien en vraies
+  coordonnées DynamicPath world-subtile, borné à 30..220. Des compteurs séparés
+  `0..80`, `81..140`, `141..220` et `>220` rendent la portée observable.
+- `DRLG_GetHoradricStaffTombLevelId 0x326A70` retourne `Drlg+0x120`; MapSense
+  n'accepte que les ids 66..72. Le target Level est initialisé seul, puis la
+  sortie publiée réutilise l'ancre RoomTile exacte déjà résolue par Navigation.
+- `QUESTRECORD_GetQuestState 0x325C50` est appelé sur le record client de la
+  difficulté courante chargé depuis `D2R+0x2A48778`, dont le témoin unique est
+  à `0x114C20`. L'index sémantique A2Q6=14 et RewardGranted=0 vient de
+  `D2MOO@3b21043b99e987bad41cf0f7b49f1f246db52d5c`; RVA, ABI, pointeur et octets
+  x64 viennent exclusivement du corpus D2R gouverné.
+- Avant RewardGranted, la même ancre de tombe correcte est une destination de
+  quête rouge. Après RewardGranted, elle devient la progression verte pour le
+  farm de Duriel. Un record, un id ou une sortie encore indisponible reste
+  `PartialRetryable`; aucune tombe approximative n'est publiée.

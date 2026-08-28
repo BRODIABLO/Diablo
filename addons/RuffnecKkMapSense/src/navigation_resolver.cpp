@@ -1,0 +1,2299 @@
+#include "navigation_resolver.hpp"
+
+#include "navigation_engine.hpp"
+#include "navigation_level_catalog.hpp"
+#include "navigation_policy.hpp"
+#include "reveal_engine.hpp"
+
+#include <D2RLPlugin/api.h>
+
+#include <Windows.h>
+
+#include <array>
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <optional>
+#include <span>
+#include <string>
+#include <variant>
+
+namespace RuffnecKk::MapSense {
+namespace {
+
+constexpr std::uintptr_t GetLocalDataContextRva = 0x08B2D0;
+constexpr std::uintptr_t GetLocalPlayerRva = 0x09A480;
+constexpr std::uintptr_t GetDrlgRoomFromActiveRoomRva = 0x192B20;
+constexpr std::uintptr_t GetCollisionGridRva = 0x2EFB30;
+constexpr std::uintptr_t GetFirstUnitInRoomRva = 0x2EFD90;
+constexpr std::uintptr_t IsRoomInTownRva = 0x2F0750;
+constexpr std::uintptr_t DrlgRoomActiveRoomWitnessRva = 0x3289EE;
+constexpr std::uintptr_t GetUnitClassIdRva = 0x349860;
+constexpr std::uintptr_t GetUnitDataContextRva = 0x34A0E0;
+constexpr std::uintptr_t GetUnitClientCoordXRva = 0x34AF60;
+constexpr std::uintptr_t GetUnitClientCoordYRva = 0x34AFB0;
+constexpr std::uintptr_t GetUnitRoomRva = 0x34B440;
+constexpr std::uintptr_t GetNextUnitInRoomRva = 0x34B4A0;
+constexpr std::uintptr_t GetUnitTypeRva = 0x34B9D0;
+constexpr std::uintptr_t LevelListLayoutWitnessRva = 0x3267C0;
+constexpr std::uintptr_t GetHoradricStaffTombLevelIdRva = 0x326A70;
+constexpr std::uintptr_t GetQuestStateRva = 0x325C50;
+constexpr std::uintptr_t ClientQuestRecordPointerRva = 0x2A48778;
+constexpr std::uintptr_t ClientQuestRecordWitnessRva = 0x114C20;
+constexpr std::uintptr_t GetDrlgRoomLevelIdRva = 0x360FC0;
+constexpr std::uintptr_t GetLevelVisCoreRva = 0x360800;
+constexpr std::uintptr_t GetLevelVisNodeWitnessRva = 0x36083A;
+constexpr std::uintptr_t GetLevelVisDynamicWitnessRva = 0x360866;
+constexpr std::uintptr_t GetLevelVisRva = 0x360880;
+constexpr std::uintptr_t NearRoomLayoutWitnessRva = 0x3614C0;
+constexpr std::uintptr_t NearRoomGeometryWitnessRva = 0x361530;
+constexpr std::uintptr_t NearRoomSortWitnessRva = 0x3616A9;
+constexpr std::uintptr_t GetObjectsTxtRecordCountRva = 0x38FC70;
+constexpr std::uintptr_t GetObjectsTxtRecordRva = 0x38FD00;
+constexpr std::uintptr_t GetLevelWarpRva = 0x3DAAD0;
+constexpr std::uintptr_t GetLevelWarpNodeWitnessRva = 0x3DAB1D;
+constexpr std::uintptr_t GetLevelWarpDynamicWitnessRva = 0x3DAB4E;
+constexpr std::uintptr_t FindWaypointRoomAndCoordinatesRva = 0x3DAD90;
+constexpr std::uintptr_t RoomTileLayoutWitnessRva = 0x3DA910;
+constexpr std::uintptr_t RoomTileDestinationLayoutWitnessRva = 0x3DA9FB;
+constexpr std::uintptr_t WaypointLayoutWitnessRva = 0x3DADEC;
+constexpr std::uintptr_t OutdoorVisibilityFlagWitnessRva = 0x36177B;
+constexpr std::uintptr_t OutdoorVisibilityGeometryWitnessRva = 0x3617B3;
+constexpr std::uintptr_t CollisionGridLayoutWitnessRva = 0x36697B;
+constexpr std::uintptr_t CollisionGridHeightWitnessRva = 0x3669E6;
+
+constexpr std::size_t DrlgRoomRoomsNearOffset = 0x10;
+constexpr std::size_t DrlgRoomRoomsNearCountOffset = 0x18;
+constexpr std::size_t DrlgRoomNextOffset = 0x48;
+constexpr std::size_t DrlgRoomVisibilityFlagsOffset = 0x50;
+constexpr std::size_t DrlgRoomActiveRoomOffset = 0x58;
+constexpr std::size_t DrlgRoomTileXOffset = 0x60;
+constexpr std::size_t DrlgRoomTileYOffset = 0x64;
+constexpr std::size_t DrlgRoomWidthOffset = 0x68;
+constexpr std::size_t DrlgRoomHeightOffset = 0x6C;
+constexpr std::size_t DrlgRoomRoomTileOffset = 0x78;
+constexpr std::size_t DrlgRoomLevelOffset = 0x90;
+constexpr std::size_t DrlgRoomPresetUnitOffset = 0x98;
+constexpr std::size_t LevelFirstRoomOffset = 0x10;
+constexpr std::size_t LevelNextOffset = 0x1B8;
+constexpr std::size_t LevelDrlgOffset = 0x1C8;
+constexpr std::size_t LevelIdOffset = 0x1F8;
+constexpr std::size_t DrlgFirstLevelOffset = 0x868;
+constexpr std::size_t PresetClassIdOffset = 0x04;
+constexpr std::size_t PresetRelativeXOffset = 0x08;
+constexpr std::size_t PresetNextOffset = 0x10;
+constexpr std::size_t PresetUnitTypeOffset = 0x20;
+constexpr std::size_t PresetRelativeYOffset = 0x24;
+constexpr std::size_t RoomTileDestinationRoomOffset = 0x00;
+constexpr std::size_t RoomTileNextOffset = 0x08;
+constexpr std::size_t RoomTileLvlWarpOffset = 0x20;
+constexpr std::size_t LvlWarpSourceIdOffset = 0x2C;
+constexpr std::size_t ObjectsTxtSubClassOffset = 0x127;
+constexpr std::size_t CollisionGridOriginXOffset = 0x00;
+constexpr std::size_t CollisionGridOriginYOffset = 0x04;
+constexpr std::size_t CollisionGridWidthOffset = 0x08;
+constexpr std::size_t CollisionGridHeightOffset = 0x0C;
+constexpr std::size_t CollisionGridCellsOffset = 0x20;
+
+constexpr std::uint32_t PresetObject = 2U;
+constexpr std::uint32_t PresetMonster = 1U;
+constexpr std::uint32_t PresetLevelExit = 5U;
+constexpr std::int32_t UnitObject = 2;
+constexpr std::uint8_t ObjectsTxtWaypointSubClass = 0x40U;
+constexpr std::int32_t SubtilesPerGameTile = 5;
+constexpr std::int32_t MaximumSupportedLevelId = 65'535;
+constexpr std::int32_t CanyonOfTheMagiLevelId = 46;
+constexpr std::int32_t FirstTalRashaTombLevelId = 66;
+constexpr std::int32_t LastTalRashaTombLevelId = 72;
+constexpr std::int32_t ActTwoQuestSixStateFlag = 14;
+constexpr std::int32_t QuestRewardGrantedFlag = 0;
+constexpr std::size_t MaximumRoomsPerLevel = 4'096U;
+constexpr std::size_t MaximumPresetsPerRoom = 8'192U;
+constexpr std::size_t MaximumRoomTilesPerRoom = 1'024U;
+constexpr std::size_t MaximumNearRoomsPerRoom = 64U;
+constexpr std::size_t MaximumWaypointPresetsPerRoom = 64U;
+constexpr std::size_t MaximumUnitsPerRoom = 16'384U;
+constexpr std::size_t MaximumLevelsPerDrlg = 512U;
+constexpr std::size_t MaximumOutdoorRoomComparisons = 1'000'000U;
+constexpr std::uint64_t MaximumCollisionCellsPerRoom = 16'777'216U;
+constexpr std::size_t VisibilitySlotCount = 8U;
+
+using GetLocalDataContextFn = std::int32_t(__fastcall*)() noexcept;
+using GetLocalPlayerFn = void*(__fastcall*)(std::int32_t) noexcept;
+using GetDrlgRoomFromActiveRoomFn = void*(__fastcall*)(void*) noexcept;
+using GetCollisionGridFn = void*(__fastcall*)(void*) noexcept;
+using GetFirstUnitInRoomFn = void*(__fastcall*)(void*) noexcept;
+using IsRoomInTownFn = std::int32_t(__fastcall*)(void* activeRoom) noexcept;
+using GetUnitClassIdFn = std::int32_t(__fastcall*)(void*) noexcept;
+using GetUnitDataContextFn = std::uint8_t(__fastcall*)(
+    const void* unit) noexcept;
+using GetUnitClientCoordFn = std::int32_t(__fastcall*)(void*) noexcept;
+using GetUnitRoomFn = void*(__fastcall*)(void*) noexcept;
+using GetNextUnitInRoomFn = void*(__fastcall*)(void*) noexcept;
+using GetUnitTypeFn = std::int32_t(__fastcall*)(void*) noexcept;
+using GetDrlgRoomLevelIdFn = std::int32_t(__fastcall*)(void*) noexcept;
+using GetHoradricStaffTombLevelIdFn = std::int32_t(__fastcall*)(
+    void*) noexcept;
+using GetQuestStateFn = std::int32_t(__fastcall*)(
+    void* questRecord,
+    std::int32_t quest,
+    std::int32_t state) noexcept;
+using GetLevelVisFn = std::int32_t*(__fastcall*)(
+    std::uint8_t dataContext,
+    void* level) noexcept;
+using GetLevelWarpFn = std::int32_t(__fastcall*)(
+    std::uint8_t dataContext,
+    void* level,
+    std::uint8_t slot) noexcept;
+using GetObjectsTxtRecordCountFn = std::int32_t(__fastcall*)(
+    std::uint8_t dataContext) noexcept;
+using GetObjectsTxtRecordFn = std::uint8_t*(__fastcall*)(
+    std::uint8_t dataContext,
+    std::int32_t recordId) noexcept;
+using FindWaypointRoomAndCoordinatesFn = void*(__fastcall*)(
+    std::uint8_t dataContext,
+    void* level,
+    std::int32_t* tileX,
+    std::int32_t* tileY) noexcept;
+
+struct CandidateBatch final {
+    std::int32_t levelId{UnknownNavigationLevelId};
+    bool inTown{};
+    std::array<NavigationExitCandidate, MaximumNavigationDestinations> exits{};
+    std::size_t exitCount{};
+    std::array<
+        Detail::NavigationExitSelection,
+        MaximumNavigationDestinations> exitSelections{};
+    std::size_t exitSelectionCount{};
+    NavigationPointCandidate waypoint{};
+    bool hasWaypoint{};
+    std::int32_t waypointNativeTileX{-1};
+    std::int32_t waypointNativeTileY{-1};
+    std::int32_t waypointExactSubtileX{-1};
+    std::int32_t waypointExactSubtileY{-1};
+    std::int32_t waypointExactClientX{};
+    std::int32_t waypointExactClientY{};
+    bool pendingWaypoint{};
+    NavigationPointCandidate correctTomb{};
+    std::int32_t correctTombLevelId{UnknownNavigationLevelId};
+    bool hasCorrectTomb{};
+    bool hasCorrectTombState{};
+    bool durielRewardGranted{};
+    bool pendingCorrectTomb{};
+    std::uint64_t roomCount{};
+    std::uint64_t presetCount{};
+    std::uint64_t rawRoomTileCount{};
+    std::uint64_t nativeRoomTileCount{};
+    std::uint64_t exactRoomTileCount{};
+    std::uint64_t pendingRoomTileRoomCount{};
+    std::uint64_t requestedTargetLevelCount{};
+    std::uint64_t initializedTargetLevelCount{};
+    std::uint64_t pendingTargetLevelCount{};
+    std::uint64_t nearRoomLinkCount{};
+    std::uint64_t outdoorOpeningCount{};
+    std::uint64_t pendingCollisionRoomCount{};
+    std::uint64_t visibilitySlotCount{};
+    std::uint64_t visibilityPairCount{};
+    std::uint64_t pendingVisibilityTargetCount{};
+    bool traversalLimited{};
+};
+
+const D2RL::PluginContext* Context{};
+std::uint8_t* Base{};
+GetLocalDataContextFn GetLocalDataContext{};
+GetLocalPlayerFn GetLocalPlayer{};
+GetDrlgRoomFromActiveRoomFn GetDrlgRoomFromActiveRoom{};
+GetCollisionGridFn GetCollisionGrid{};
+GetFirstUnitInRoomFn GetFirstUnitInRoom{};
+IsRoomInTownFn IsRoomInTown{};
+GetUnitClassIdFn GetUnitClassId{};
+GetUnitDataContextFn GetUnitDataContext{};
+GetUnitClientCoordFn GetUnitClientCoordX{};
+GetUnitClientCoordFn GetUnitClientCoordY{};
+GetUnitRoomFn GetUnitRoom{};
+GetNextUnitInRoomFn GetNextUnitInRoom{};
+GetUnitTypeFn GetUnitType{};
+GetDrlgRoomLevelIdFn GetDrlgRoomLevelId{};
+GetHoradricStaffTombLevelIdFn GetHoradricStaffTombLevelId{};
+GetQuestStateFn GetQuestState{};
+GetLevelVisFn GetLevelVis{};
+GetLevelWarpFn GetLevelWarp{};
+GetObjectsTxtRecordCountFn GetObjectsTxtRecordCount{};
+GetObjectsTxtRecordFn GetObjectsTxtRecord{};
+FindWaypointRoomAndCoordinatesFn FindWaypointRoomAndCoordinates{};
+std::atomic_bool Active{};
+std::atomic_bool Diagnostics{};
+std::atomic_uint64_t Refreshes{};
+std::atomic_uint64_t Rooms{};
+std::atomic_uint64_t Presets{};
+std::atomic_uint64_t Exits{};
+std::atomic_uint64_t Waypoints{};
+std::atomic_uint64_t Published{};
+std::atomic_uint64_t UnresolvedNames{};
+std::atomic_uint64_t Failures{};
+std::atomic_uint64_t TraversalLimits{};
+std::atomic_uint64_t PartialRefreshes{};
+std::atomic_uint64_t VisibilitySlots{};
+std::atomic_uint64_t VisibilityPairs{};
+std::atomic_uint64_t PendingVisibilityTargets{};
+std::atomic_int32_t LastLevelId{UnknownNavigationLevelId};
+std::atomic_uint32_t LastDestinationCount{};
+std::atomic_int32_t LastWaypointX{};
+std::atomic_int32_t LastWaypointY{};
+std::atomic_int32_t LastProgressionX{};
+std::atomic_int32_t LastProgressionY{};
+std::atomic_uint64_t LastDiagnosticFingerprint{UINT64_MAX};
+
+template <typename Function>
+[[nodiscard]] auto At(std::uintptr_t rva) noexcept -> Function {
+    return reinterpret_cast<Function>(Base + rva);
+}
+
+[[nodiscard]] auto MakeDestinationId(
+        std::uint32_t type,
+        std::int32_t id,
+        std::int32_t subtileX,
+        std::int32_t subtileY) noexcept -> std::uint64_t {
+    auto hash = UINT64_C(1469598103934665603);
+    const std::array values{
+        type,
+        static_cast<std::uint32_t>(id),
+        static_cast<std::uint32_t>(subtileX),
+        static_cast<std::uint32_t>(subtileY),
+    };
+    for (const auto value : values) {
+        for (std::uint32_t shift = 0U; shift < 32U; shift += 8U) {
+            hash ^= static_cast<std::uint8_t>(value >> shift);
+            hash *= UINT64_C(1099511628211);
+        }
+    }
+    return hash;
+}
+
+[[nodiscard]] auto IsPresetWithinRoom(
+        std::int32_t roomWidth,
+        std::int32_t roomHeight,
+        std::int32_t relativeX,
+        std::int32_t relativeY) noexcept -> bool {
+    if (roomWidth <= 0 || roomHeight <= 0
+        || relativeX < 0 || relativeY < 0) {
+        return false;
+    }
+    const auto maximumX = static_cast<std::int64_t>(roomWidth)
+        * SubtilesPerGameTile;
+    const auto maximumY = static_cast<std::int64_t>(roomHeight)
+        * SubtilesPerGameTile;
+    return static_cast<std::int64_t>(relativeX) <= maximumX
+        && static_cast<std::int64_t>(relativeY) <= maximumY;
+}
+
+[[nodiscard]] auto IsAlignedPointer(const void* pointer) noexcept -> bool;
+
+[[nodiscard]] auto CheckedGameTileCoordinate(
+        std::int32_t roomTile,
+        std::int32_t relativeSubtile,
+        std::int32_t& output) noexcept -> bool {
+    if (relativeSubtile < 0) return false;
+    const auto value = static_cast<std::int64_t>(roomTile)
+        + relativeSubtile / SubtilesPerGameTile;
+    if (value < 0
+        || value > (std::numeric_limits<std::int32_t>::max)()) {
+        return false;
+    }
+    output = static_cast<std::int32_t>(value);
+    return true;
+}
+
+[[nodiscard]] auto ReadRoomRectangleUnchecked(
+        const std::uint8_t* room,
+        Detail::NavigationRoomRectangle& rectangle) noexcept -> bool {
+    if (!IsAlignedPointer(room)) return false;
+    auto* const level = *reinterpret_cast<std::uint8_t* const*>(
+        room + DrlgRoomLevelOffset);
+    if (!IsAlignedPointer(level)) return false;
+    if (GetDrlgRoomLevelId == nullptr) return false;
+    const auto levelId = GetDrlgRoomLevelId(
+        const_cast<std::uint8_t*>(room));
+    const auto tileX = *reinterpret_cast<const std::int32_t*>(
+        room + DrlgRoomTileXOffset);
+    const auto tileY = *reinterpret_cast<const std::int32_t*>(
+        room + DrlgRoomTileYOffset);
+    const auto width = *reinterpret_cast<const std::int32_t*>(
+        room + DrlgRoomWidthOffset);
+    const auto height = *reinterpret_cast<const std::int32_t*>(
+        room + DrlgRoomHeightOffset);
+    if (levelId <= 0 || levelId > MaximumSupportedLevelId
+        || tileX < 0 || tileY < 0 || width <= 0 || height <= 0) {
+        return false;
+    }
+    const auto right = static_cast<std::int64_t>(tileX) + width;
+    const auto bottom = static_cast<std::int64_t>(tileY) + height;
+    if (right > (std::numeric_limits<std::int32_t>::max)()
+        || bottom > (std::numeric_limits<std::int32_t>::max)()) {
+        return false;
+    }
+    rectangle = {
+        .levelId = levelId,
+        .tileX = tileX,
+        .tileY = tileY,
+        .width = width,
+        .height = height,
+    };
+    return true;
+}
+
+enum class CollisionGridReadResult : std::uint8_t {
+    Ready,
+    Pending,
+    Invalid,
+};
+
+[[nodiscard]] auto ReadCollisionGridUnchecked(
+        std::uint8_t dataContext,
+        std::uint8_t* room,
+        const Detail::NavigationRoomRectangle& rectangle,
+        Detail::NavigationCollisionGridView& output) noexcept
+        -> CollisionGridReadResult {
+    auto* activeRoom = *reinterpret_cast<std::uint8_t**>(
+        room + DrlgRoomActiveRoomOffset);
+    if (activeRoom == nullptr) {
+        activeRoom = static_cast<std::uint8_t*>(
+            MaterializeClientRoom(dataContext, room));
+    }
+    if (activeRoom == nullptr) return CollisionGridReadResult::Pending;
+    if (!IsAlignedPointer(activeRoom)
+        || GetDrlgRoomFromActiveRoom(activeRoom) != room) {
+        return CollisionGridReadResult::Invalid;
+    }
+    auto* const collision = static_cast<std::uint8_t*>(
+        GetCollisionGrid(activeRoom));
+    if (collision == nullptr) return CollisionGridReadResult::Pending;
+    if (!IsAlignedPointer(collision)) {
+        return CollisionGridReadResult::Invalid;
+    }
+    const auto originX = *reinterpret_cast<const std::int32_t*>(
+        collision + CollisionGridOriginXOffset);
+    const auto originY = *reinterpret_cast<const std::int32_t*>(
+        collision + CollisionGridOriginYOffset);
+    const auto width = *reinterpret_cast<const std::int32_t*>(
+        collision + CollisionGridWidthOffset);
+    const auto height = *reinterpret_cast<const std::int32_t*>(
+        collision + CollisionGridHeightOffset);
+    auto* const cells = *reinterpret_cast<const std::uint16_t* const*>(
+        collision + CollisionGridCellsOffset);
+    if (originX < 0 || originY < 0 || width < 2 || height < 2) {
+        return CollisionGridReadResult::Invalid;
+    }
+    const auto cellCount = static_cast<std::uint64_t>(width)
+        * static_cast<std::uint64_t>(height);
+    if (cellCount == 0U || cellCount > MaximumCollisionCellsPerRoom
+        || cells == nullptr
+        || (reinterpret_cast<std::uintptr_t>(cells)
+            & (alignof(std::uint16_t) - 1U)) != 0U) {
+        return CollisionGridReadResult::Invalid;
+    }
+    const auto expectedOriginX = static_cast<std::int64_t>(rectangle.tileX)
+        * SubtilesPerGameTile;
+    const auto expectedOriginY = static_cast<std::int64_t>(rectangle.tileY)
+        * SubtilesPerGameTile;
+    const auto expectedWidth = static_cast<std::int64_t>(rectangle.width)
+        * SubtilesPerGameTile;
+    const auto expectedHeight = static_cast<std::int64_t>(rectangle.height)
+        * SubtilesPerGameTile;
+    if (originX != expectedOriginX || originY != expectedOriginY
+        || width != expectedWidth || height != expectedHeight) {
+        return CollisionGridReadResult::Invalid;
+    }
+    output = {
+        .originX = originX,
+        .originY = originY,
+        .width = width,
+        .height = height,
+        .cells = std::span(
+            cells,
+            static_cast<std::size_t>(cellCount)),
+    };
+    return CollisionGridReadResult::Ready;
+}
+
+[[nodiscard]] auto ResolveOutdoorCollisionOpeningUnchecked(
+        std::uint8_t dataContext,
+        std::uint8_t* sourceRoom,
+        std::uint8_t* targetRoom,
+        const Detail::NavigationRoomRectangle& source,
+        const Detail::NavigationRoomRectangle& target,
+        CandidateBatch& batch,
+        Detail::NavigationOutdoorOpening& output,
+        bool& found) noexcept -> bool {
+    found = false;
+    Detail::NavigationCollisionGridView sourceGrid{};
+    const auto sourceReadResult = ReadCollisionGridUnchecked(
+        dataContext,
+        sourceRoom,
+        source,
+        sourceGrid);
+    if (sourceReadResult == CollisionGridReadResult::Pending) {
+        ++batch.pendingCollisionRoomCount;
+        return true;
+    }
+    if (sourceReadResult == CollisionGridReadResult::Invalid) return false;
+    Detail::NavigationCollisionGridView targetGrid{};
+    const auto targetReadResult = ReadCollisionGridUnchecked(
+        dataContext,
+        targetRoom,
+        target,
+        targetGrid);
+    if (targetReadResult == CollisionGridReadResult::Pending) {
+        ++batch.pendingCollisionRoomCount;
+        return true;
+    }
+    if (targetReadResult == CollisionGridReadResult::Invalid) return false;
+    if (!Detail::FindOutdoorCollisionOpening(
+            source,
+            target,
+            sourceGrid,
+            targetGrid,
+            output)) {
+        return true;
+    }
+    found = true;
+    ++batch.outdoorOpeningCount;
+    return true;
+}
+
+void UpsertExitCandidate(
+        CandidateBatch& batch,
+        Detail::NavigationExitSelection selection) noexcept {
+    if (!Detail::UpsertExitSelection(
+            batch.levelId,
+            batch.exitSelections,
+            batch.exitSelectionCount,
+            selection)) {
+        batch.traversalLimited = batch.exitSelectionCount
+            >= batch.exitSelections.size();
+    }
+}
+
+[[nodiscard]] auto ResolveDynamicProgressionObjectsUnchecked(
+        std::uint8_t dataContext,
+        std::uint8_t* activeRoom,
+        std::int32_t currentLevelId,
+        CandidateBatch& batch) noexcept -> bool {
+    if (!HasDynamicMainProgressionTargetFor(currentLevelId)) return true;
+    if (!IsAlignedPointer(activeRoom)) return false;
+
+    auto* unit = static_cast<std::uint8_t*>(
+        GetFirstUnitInRoom(activeRoom));
+    std::size_t unitCount{};
+    while (unit != nullptr && unitCount < MaximumUnitsPerRoom) {
+        if (!IsAlignedPointer(unit)) return false;
+        auto* const nextUnit = static_cast<std::uint8_t*>(
+            GetNextUnitInRoom(unit));
+        if (nextUnit == unit) {
+            batch.traversalLimited = true;
+            return false;
+        }
+
+        if (GetUnitType(unit) == UnitObject) {
+            const auto classId = GetUnitClassId(unit);
+            const auto targetLevelId = DynamicMainProgressionTargetFor(
+                currentLevelId,
+                classId);
+            if (targetLevelId.has_value()
+                && GetUnitDataContext(unit) == dataContext
+                && GetUnitRoom(unit) == activeRoom) {
+                const auto exactClientX = GetUnitClientCoordX(unit);
+                const auto exactClientY = GetUnitClientCoordY(unit);
+                NavigationNativePoint subtile{};
+                if (!ConvertNavigationClientToSubtileCoordinates(
+                        exactClientX,
+                        exactClientY,
+                        subtile)) {
+                    return false;
+                }
+                UpsertExitCandidate(
+                    batch,
+                    Detail::NavigationExitSelection{
+                        .candidate = NavigationExitCandidate{
+                            .destinationId = MakeDestinationId(
+                                static_cast<std::uint32_t>(UnitObject),
+                                classId,
+                                subtile.x,
+                                subtile.y),
+                            .targetLevelId = *targetLevelId,
+                            .subtileX = subtile.x,
+                            .subtileY = subtile.y,
+                            .exactClientX = exactClientX,
+                            .exactClientY = exactClientY,
+                            .useExactClientCoordinates = true,
+                        },
+                        .evidence =
+                            Detail::NavigationExitEvidence::RuntimeObject,
+                    });
+                if (batch.traversalLimited) return false;
+            }
+        }
+
+        unit = nextUnit;
+        ++unitCount;
+    }
+    if (unit != nullptr) {
+        batch.traversalLimited = true;
+        return false;
+    }
+    return true;
+}
+
+void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
+    batch.exitCount = 0U;
+    for (std::size_t index = 0U;
+         index < batch.exitSelectionCount
+         && batch.exitCount < batch.exits.size();
+         ++index) {
+        const auto& selection = batch.exitSelections[index];
+        if (selection.candidate.targetLevelId <= 0
+            || selection.candidate.targetLevelId == batch.levelId
+            || selection.candidate.subtileX < 0
+            || selection.candidate.subtileY < 0) {
+            continue;
+        }
+        batch.exits[batch.exitCount++] = selection.candidate;
+    }
+}
+
+[[nodiscard]] auto IsAlignedPointer(const void* pointer) noexcept -> bool {
+    return pointer != nullptr
+        && (reinterpret_cast<std::uintptr_t>(pointer)
+            & (alignof(void*) - 1U)) == 0U;
+}
+
+// Floyd's algorithm detects malformed cycles without allocations. Returning
+// true also covers a chain that exceeds its safety ceiling; both conditions
+// invalidate the complete publication instead of producing partial lines.
+[[nodiscard]] auto HasCycleOrExceedsLimitUnchecked(
+        std::uint8_t* head,
+        std::size_t nextOffset,
+        std::size_t maximumNodes) noexcept -> bool {
+    auto* slow = head;
+    auto* fast = head;
+    std::size_t steps{};
+    while (fast != nullptr && steps < maximumNodes) {
+        if (!IsAlignedPointer(fast)) return true;
+        fast = *reinterpret_cast<std::uint8_t**>(fast + nextOffset);
+        if (fast != nullptr) {
+            if (!IsAlignedPointer(fast)) return true;
+            fast = *reinterpret_cast<std::uint8_t**>(fast + nextOffset);
+        }
+        if (slow != nullptr) {
+            if (!IsAlignedPointer(slow)) return true;
+            slow = *reinterpret_cast<std::uint8_t**>(slow + nextOffset);
+        }
+        ++steps;
+        if (slow != nullptr && slow == fast) return true;
+    }
+    return fast != nullptr;
+}
+
+[[nodiscard]] auto ResolveExactWaypointUnchecked(
+        std::uint8_t dataContext,
+        std::uint8_t* level,
+        std::int32_t levelId,
+        CandidateBatch& batch) noexcept -> bool {
+    std::int32_t nativeTileX{-1};
+    std::int32_t nativeTileY{-1};
+    auto* const waypointRoom = static_cast<std::uint8_t*>(
+        FindWaypointRoomAndCoordinates(
+            dataContext,
+            level,
+            &nativeTileX,
+            &nativeTileY));
+    batch.waypointNativeTileX = nativeTileX;
+    batch.waypointNativeTileY = nativeTileY;
+    if (waypointRoom == nullptr) return true;
+    if (!IsAlignedPointer(waypointRoom)
+        || *reinterpret_cast<std::uint8_t**>(
+            waypointRoom + DrlgRoomLevelOffset) != level) {
+        return false;
+    }
+
+    Detail::NavigationRoomRectangle roomRectangle{};
+    if (!ReadRoomRectangleUnchecked(waypointRoom, roomRectangle)
+        || roomRectangle.levelId != levelId) {
+        return false;
+    }
+    const auto objectRecordCount = GetObjectsTxtRecordCount(dataContext);
+    if (objectRecordCount <= 0 || objectRecordCount > 1'000'000) {
+        return false;
+    }
+
+    auto* preset = *reinterpret_cast<std::uint8_t**>(
+        waypointRoom + DrlgRoomPresetUnitOffset);
+    if (HasCycleOrExceedsLimitUnchecked(
+            preset,
+            PresetNextOffset,
+            MaximumPresetsPerRoom)) {
+        batch.traversalLimited = true;
+        return false;
+    }
+    std::array<
+        Detail::NavigationWaypointPresetCandidate,
+        MaximumWaypointPresetsPerRoom> candidates{};
+    std::size_t candidateCount{};
+    std::size_t presetCount{};
+    while (preset != nullptr && presetCount < MaximumPresetsPerRoom) {
+        const auto presetType = *reinterpret_cast<const std::uint32_t*>(
+            preset + PresetUnitTypeOffset);
+        const auto classId = *reinterpret_cast<const std::int32_t*>(
+            preset + PresetClassIdOffset);
+        const auto relativeX = *reinterpret_cast<const std::int32_t*>(
+            preset + PresetRelativeXOffset);
+        const auto relativeY = *reinterpret_cast<const std::int32_t*>(
+            preset + PresetRelativeYOffset);
+        if (presetType == PresetObject
+            && classId >= 0 && classId < objectRecordCount
+            && IsPresetWithinRoom(
+                roomRectangle.width,
+                roomRectangle.height,
+                relativeX,
+                relativeY)) {
+            auto* const record = GetObjectsTxtRecord(dataContext, classId);
+            // ObjectsTxt is a packed 0x168-byte table. A valid record is not
+            // required to keep pointer-size alignment.
+            if (record == nullptr) return false;
+            if ((record[ObjectsTxtSubClassOffset]
+                    & ObjectsTxtWaypointSubClass) != 0U) {
+                std::int32_t candidateNativeTileX{};
+                std::int32_t candidateNativeTileY{};
+                std::int32_t subtileX{};
+                std::int32_t subtileY{};
+                if (!CheckedGameTileCoordinate(
+                        roomRectangle.tileX,
+                        relativeX,
+                        candidateNativeTileX)
+                    || !CheckedGameTileCoordinate(
+                        roomRectangle.tileY,
+                        relativeY,
+                        candidateNativeTileY)
+                    || !CheckedNavigationSubtileCoordinate(
+                        roomRectangle.tileX,
+                        relativeX,
+                        subtileX)
+                    || !CheckedNavigationSubtileCoordinate(
+                        roomRectangle.tileY,
+                        relativeY,
+                        subtileY)) {
+                    return false;
+                }
+                if (candidateCount >= candidates.size()) {
+                    batch.traversalLimited = true;
+                    return false;
+                }
+                candidates[candidateCount++] = {
+                    .nativeTileX = candidateNativeTileX,
+                    .nativeTileY = candidateNativeTileY,
+                    .subtileX = subtileX,
+                    .subtileY = subtileY,
+                    .classId = classId,
+                };
+            }
+        }
+        preset = *reinterpret_cast<std::uint8_t**>(
+            preset + PresetNextOffset);
+        ++presetCount;
+    }
+    if (preset != nullptr) {
+        batch.traversalLimited = true;
+        return false;
+    }
+    const auto exact = Detail::SelectExactWaypointPreset(
+        nativeTileX,
+        nativeTileY,
+        std::span(candidates.data(), candidateCount));
+    if (!exact.has_value()) {
+        batch.pendingWaypoint = true;
+        return true;
+    }
+
+    // PrimeMH's generated POI contract uses the exact preset world position,
+    // not a nearby runtime Unit sharing the same object class. Keep the raw
+    // subtile pair authoritative all the way to the projection boundary.
+    NavigationNativePoint derivedClient{};
+    if (!ConvertNavigationSubtileToClientCoordinates(
+            exact->subtileX,
+            exact->subtileY,
+            derivedClient)) {
+        return false;
+    }
+    batch.waypointExactSubtileX = exact->subtileX;
+    batch.waypointExactSubtileY = exact->subtileY;
+    batch.waypointExactClientX = derivedClient.x;
+    batch.waypointExactClientY = derivedClient.y;
+    batch.waypoint = {
+        .destinationId = MakeDestinationId(
+            PresetObject,
+            levelId,
+            exact->subtileX,
+            exact->subtileY),
+        .subtileX = exact->subtileX,
+        .subtileY = exact->subtileY,
+        .useExactClientCoordinates = false,
+    };
+    batch.hasWaypoint = true;
+    return true;
+}
+
+[[nodiscard]] auto ResolveRoomTileExitsUnchecked(
+        std::uint8_t dataContext,
+        std::uint8_t* room,
+        std::int32_t currentLevelId,
+        CandidateBatch& batch) noexcept -> bool {
+    // D2R creates a room's RoomTile chain lazily. Materialize every source
+    // room before reading +0x78; otherwise only the player's already-active
+    // room contributes exits (the Barracks/Jail 1 failure observed in-game).
+    auto* const activeRoom = static_cast<std::uint8_t*>(
+        MaterializeClientRoom(dataContext, room));
+    if (activeRoom == nullptr) {
+        ++batch.pendingRoomTileRoomCount;
+        return true;
+    }
+    if (!IsAlignedPointer(activeRoom)
+        || GetDrlgRoomFromActiveRoom(activeRoom) != room) {
+        return false;
+    }
+    if (!ResolveDynamicProgressionObjectsUnchecked(
+            dataContext,
+            activeRoom,
+            currentLevelId,
+            batch)) {
+        return false;
+    }
+
+    Detail::NavigationRoomRectangle sourceRectangle{};
+    if (!ReadRoomRectangleUnchecked(room, sourceRectangle)
+        || sourceRectangle.levelId != currentLevelId) {
+        return false;
+    }
+
+    auto* roomTile = *reinterpret_cast<std::uint8_t**>(
+        room + DrlgRoomRoomTileOffset);
+    if (HasCycleOrExceedsLimitUnchecked(
+            roomTile,
+            RoomTileNextOffset,
+            MaximumRoomTilesPerRoom)) {
+        batch.traversalLimited = true;
+        return false;
+    }
+
+    std::array<
+        Detail::NavigationRoomTileLinkCandidate,
+        MaximumNavigationDestinations> resolvedSources{};
+    std::size_t resolvedSourceCount{};
+    std::size_t roomTileCount{};
+    while (roomTile != nullptr
+        && roomTileCount < MaximumRoomTilesPerRoom) {
+        auto* const lvlWarp = *reinterpret_cast<std::uint8_t**>(
+            roomTile + RoomTileLvlWarpOffset);
+        if (!IsAlignedPointer(lvlWarp)) {
+            return false;
+        }
+        const auto sourceId = *reinterpret_cast<const std::int32_t*>(
+            lvlWarp + LvlWarpSourceIdOffset);
+        if (sourceId >= 0 && sourceId <= MaximumSupportedLevelId) {
+            ++batch.rawRoomTileCount;
+            auto* const destinationRoom =
+                *reinterpret_cast<std::uint8_t**>(
+                    roomTile + RoomTileDestinationRoomOffset);
+            if (destinationRoom == nullptr) {
+                ++batch.pendingRoomTileRoomCount;
+                roomTile = *reinterpret_cast<std::uint8_t**>(
+                    roomTile + RoomTileNextOffset);
+                ++roomTileCount;
+                continue;
+            }
+            Detail::NavigationRoomRectangle destinationRectangle{};
+            if (!ReadRoomRectangleUnchecked(
+                    destinationRoom,
+                    destinationRectangle)) {
+                return false;
+            }
+            ++batch.nativeRoomTileCount;
+            bool duplicate{};
+            for (std::size_t index = 0U;
+                    index < resolvedSourceCount;
+                    ++index) {
+                if (resolvedSources[index].sourcePresetId == sourceId) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (!duplicate) {
+                if (resolvedSourceCount >= resolvedSources.size()) {
+                    batch.traversalLimited = true;
+                    return false;
+                }
+                resolvedSources[resolvedSourceCount++] = {
+                    .sourcePresetId = sourceId,
+                    .targetLevelId = destinationRectangle.levelId,
+                };
+            }
+        }
+        roomTile = *reinterpret_cast<std::uint8_t**>(
+            roomTile + RoomTileNextOffset);
+        ++roomTileCount;
+    }
+    if (roomTile != nullptr) {
+        batch.traversalLimited = true;
+        return false;
+    }
+
+    // 0x3DA9FB proves RoomTile+0 is the destination DrlgRoom. Do not call the
+    // native helper at 0x3DA9A0 here: that helper additionally requires the
+    // destination's reciprocal RoomTile and returns null while that unrelated
+    // side is still lazy, even though this source-side exact exit is complete.
+    auto* preset = *reinterpret_cast<std::uint8_t**>(
+        room + DrlgRoomPresetUnitOffset);
+    if (HasCycleOrExceedsLimitUnchecked(
+            preset,
+            PresetNextOffset,
+            MaximumPresetsPerRoom)) {
+        batch.traversalLimited = true;
+        return false;
+    }
+    std::size_t presetCount{};
+    while (preset != nullptr && presetCount < MaximumPresetsPerRoom) {
+        const auto presetType = *reinterpret_cast<const std::uint32_t*>(
+            preset + PresetUnitTypeOffset);
+        const auto presetId = *reinterpret_cast<const std::int32_t*>(
+            preset + PresetClassIdOffset);
+        const auto relativeX = *reinterpret_cast<const std::int32_t*>(
+            preset + PresetRelativeXOffset);
+        const auto relativeY = *reinterpret_cast<const std::int32_t*>(
+            preset + PresetRelativeYOffset);
+        const auto isWithinRoom = IsPresetWithinRoom(
+                sourceRectangle.width,
+                sourceRectangle.height,
+                relativeX,
+                relativeY);
+        if (isWithinRoom) {
+            const auto presetProgression = PresetMainProgressionTargetFor(
+                currentLevelId,
+                presetType,
+                presetId);
+            if (presetProgression.has_value()) {
+                std::int32_t subtileX{};
+                std::int32_t subtileY{};
+                if (!CheckedNavigationSubtileCoordinate(
+                        sourceRectangle.tileX,
+                        relativeX,
+                        subtileX)
+                    || !CheckedNavigationSubtileCoordinate(
+                        sourceRectangle.tileY,
+                        relativeY,
+                        subtileY)) {
+                    return false;
+                }
+                const auto evidence = presetProgression->kind
+                        == NavigationPresetProgressionKind::Boss
+                    ? Detail::NavigationExitEvidence::BossPreset
+                    : Detail::NavigationExitEvidence::QuestPreset;
+                UpsertExitCandidate(
+                    batch,
+                    Detail::NavigationExitSelection{
+                        .candidate = NavigationExitCandidate{
+                            .destinationId = MakeDestinationId(
+                                presetType,
+                                presetId,
+                                subtileX,
+                                subtileY),
+                            .targetLevelId =
+                                presetProgression->targetLevelId,
+                            .subtileX = subtileX,
+                            .subtileY = subtileY,
+                        },
+                        .evidence = evidence,
+                    });
+                if (batch.traversalLimited) return false;
+            }
+        }
+        if (presetType == PresetLevelExit && isWithinRoom) {
+            const auto targetLevelId = Detail::SelectRoomTileTargetLevel(
+                presetId,
+                std::span(
+                    resolvedSources.data(),
+                    resolvedSourceCount));
+            if (targetLevelId && *targetLevelId != currentLevelId) {
+                std::int32_t subtileX{};
+                std::int32_t subtileY{};
+                if (!CheckedNavigationSubtileCoordinate(
+                        sourceRectangle.tileX,
+                        relativeX,
+                        subtileX)
+                    || !CheckedNavigationSubtileCoordinate(
+                        sourceRectangle.tileY,
+                        relativeY,
+                        subtileY)) {
+                    return false;
+                }
+                UpsertExitCandidate(
+                    batch,
+                    Detail::NavigationExitSelection{
+                        .candidate = NavigationExitCandidate{
+                            .destinationId = MakeDestinationId(
+                                PresetLevelExit,
+                                *targetLevelId,
+                                subtileX,
+                                subtileY),
+                            .targetLevelId = *targetLevelId,
+                            .subtileX = subtileX,
+                            .subtileY = subtileY,
+                        },
+                        .evidence = Detail::NavigationExitEvidence::RoomTile,
+                    });
+                ++batch.exactRoomTileCount;
+            }
+        }
+        preset = *reinterpret_cast<std::uint8_t**>(
+            preset + PresetNextOffset);
+        ++presetCount;
+        ++batch.presetCount;
+    }
+    if (preset != nullptr) {
+        batch.traversalLimited = true;
+        return false;
+    }
+    return !batch.traversalLimited;
+}
+
+[[nodiscard]] auto ResolveOutdoorVisibilityRoomPairsUnchecked(
+        std::uint8_t dataContext,
+        std::uint8_t* sourceLevel,
+        std::uint8_t* targetLevel,
+        std::uint8_t sourceSlot,
+        std::uint8_t reciprocalSlot,
+        std::int32_t currentLevelId,
+        std::int32_t targetLevelId,
+        CandidateBatch& batch) noexcept -> bool {
+    auto* sourceRoom = *reinterpret_cast<std::uint8_t**>(
+        sourceLevel + LevelFirstRoomOffset);
+    auto* const targetRoomHead = *reinterpret_cast<std::uint8_t**>(
+        targetLevel + LevelFirstRoomOffset);
+    if (HasCycleOrExceedsLimitUnchecked(
+            sourceRoom,
+            DrlgRoomNextOffset,
+            MaximumRoomsPerLevel)
+        || HasCycleOrExceedsLimitUnchecked(
+            targetRoomHead,
+            DrlgRoomNextOffset,
+            MaximumRoomsPerLevel)) {
+        batch.traversalLimited = true;
+        return false;
+    }
+
+    const auto sourceMask = std::uint32_t{1}
+        << (static_cast<std::uint32_t>(sourceSlot) + 4U);
+    const auto reciprocalMask = std::uint32_t{1}
+        << (static_cast<std::uint32_t>(reciprocalSlot) + 4U);
+    std::size_t comparisons{};
+    std::size_t sourceRoomCount{};
+    while (sourceRoom != nullptr
+        && sourceRoomCount < MaximumRoomsPerLevel) {
+        if (!IsAlignedPointer(sourceRoom)) return false;
+        const auto sourceFlags = *reinterpret_cast<const std::uint32_t*>(
+            sourceRoom + DrlgRoomVisibilityFlagsOffset);
+        if ((sourceFlags & sourceMask) != 0U) {
+            Detail::NavigationRoomRectangle sourceRectangle{};
+            if (!ReadRoomRectangleUnchecked(sourceRoom, sourceRectangle)
+                || sourceRectangle.levelId != currentLevelId) {
+                return false;
+            }
+            auto* targetRoom = targetRoomHead;
+            std::size_t targetRoomCount{};
+            while (targetRoom != nullptr
+                && targetRoomCount < MaximumRoomsPerLevel) {
+                if (++comparisons > MaximumOutdoorRoomComparisons) {
+                    batch.traversalLimited = true;
+                    return false;
+                }
+                if (!IsAlignedPointer(targetRoom)) return false;
+                const auto targetFlags =
+                    *reinterpret_cast<const std::uint32_t*>(
+                        targetRoom + DrlgRoomVisibilityFlagsOffset);
+                if ((targetFlags & reciprocalMask) != 0U) {
+                    Detail::NavigationRoomRectangle targetRectangle{};
+                    if (!ReadRoomRectangleUnchecked(
+                            targetRoom,
+                            targetRectangle)
+                        || targetRectangle.levelId != targetLevelId) {
+                        return false;
+                    }
+                    Detail::NavigationOutdoorOpening opening{};
+                    bool foundOpening{};
+                    if (!ResolveOutdoorCollisionOpeningUnchecked(
+                            dataContext,
+                            sourceRoom,
+                            targetRoom,
+                            sourceRectangle,
+                            targetRectangle,
+                            batch,
+                            opening,
+                            foundOpening)) {
+                        return false;
+                    }
+                    if (foundOpening) {
+                        UpsertExitCandidate(
+                            batch,
+                            Detail::NavigationExitSelection{
+                                .candidate = NavigationExitCandidate{
+                                    .destinationId = MakeDestinationId(
+                                        PresetLevelExit,
+                                        targetLevelId,
+                                        opening.subtileX,
+                                        opening.subtileY),
+                                    .targetLevelId = targetLevelId,
+                                    .subtileX = opening.subtileX,
+                                    .subtileY = opening.subtileY,
+                                },
+                                .evidence = Detail::NavigationExitEvidence::
+                                    OutdoorCollision,
+                                .spanSubtiles = opening.spanSubtiles,
+                            });
+                        if (batch.traversalLimited) return false;
+                    }
+                }
+                targetRoom = *reinterpret_cast<std::uint8_t**>(
+                    targetRoom + DrlgRoomNextOffset);
+                ++targetRoomCount;
+            }
+        }
+        sourceRoom = *reinterpret_cast<std::uint8_t**>(
+            sourceRoom + DrlgRoomNextOffset);
+        ++sourceRoomCount;
+    }
+    return true;
+}
+
+[[nodiscard]] auto ResolveOutdoorVisibilityLinksUnchecked(
+        const ClientLevelView& current,
+        std::int32_t currentLevelId,
+        CandidateBatch& batch) noexcept -> bool {
+    const auto dataContext = current.dataContext;
+    auto* const level = static_cast<std::uint8_t*>(current.level);
+    if (GetLevelVis == nullptr || GetLevelWarp == nullptr) return false;
+    if (!IsAlignedPointer(level) || !IsAlignedPointer(current.drlg)) {
+        return false;
+    }
+    auto* const sourceVis = GetLevelVis(dataContext, level);
+    if (sourceVis == nullptr) return false;
+
+    std::array<std::int32_t, VisibilitySlotCount> sourceTargets{};
+    for (std::size_t slot = 0U; slot < VisibilitySlotCount; ++slot) {
+        sourceTargets[slot] = sourceVis[slot];
+    }
+    for (std::size_t slot = 0U; slot < VisibilitySlotCount; ++slot) {
+        const auto targetLevelId = sourceTargets[slot];
+        if (targetLevelId <= 0
+            || targetLevelId > MaximumSupportedLevelId
+            || targetLevelId == currentLevelId
+            || GetLevelWarp(
+                dataContext,
+                level,
+                static_cast<std::uint8_t>(slot)) != -1) {
+            continue;
+        }
+        ++batch.visibilitySlotCount;
+
+        void* targetLevelPointer{};
+        if (!ResolveClientLevelById(
+                current,
+                targetLevelId,
+                targetLevelPointer)) {
+            ++batch.pendingVisibilityTargetCount;
+            continue;
+        }
+        auto* const targetLevel = static_cast<std::uint8_t*>(
+            targetLevelPointer);
+        auto* const targetVis = GetLevelVis(dataContext, targetLevel);
+        if (targetVis == nullptr) return false;
+        std::array<std::int32_t, VisibilitySlotCount> targetLinks{};
+        for (std::size_t reciprocal = 0U;
+                reciprocal < VisibilitySlotCount;
+                ++reciprocal) {
+            targetLinks[reciprocal] = targetVis[reciprocal];
+        }
+        for (std::size_t reciprocal = 0U;
+                reciprocal < VisibilitySlotCount;
+                ++reciprocal) {
+            if (targetLinks[reciprocal] != currentLevelId
+                || GetLevelWarp(
+                    dataContext,
+                    targetLevel,
+                    static_cast<std::uint8_t>(reciprocal)) != -1) {
+                continue;
+            }
+            ++batch.visibilityPairCount;
+            if (!ResolveOutdoorVisibilityRoomPairsUnchecked(
+                    dataContext,
+                    level,
+                    targetLevel,
+                    static_cast<std::uint8_t>(slot),
+                    static_cast<std::uint8_t>(reciprocal),
+                    currentLevelId,
+                    targetLevelId,
+                    batch)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+[[nodiscard]] auto ResolveOutdoorBordersUnchecked(
+        std::uint8_t dataContext,
+        std::uint8_t* room,
+        std::int32_t currentLevelId,
+        CandidateBatch& batch) noexcept -> bool {
+    Detail::NavigationRoomRectangle sourceRectangle{};
+    if (!ReadRoomRectangleUnchecked(room, sourceRectangle)
+        || sourceRectangle.levelId != currentLevelId) {
+        return false;
+    }
+    // D2R stores the governed near-room vector as pointer/size/capacity at
+    // +0x10/+0x18/+0x20. The previous prototype incorrectly interpreted
+    // +0x50 (room flags) as the count, which suppressed outdoor exits.
+    const auto nearCount = *reinterpret_cast<const std::size_t*>(
+        room + DrlgRoomRoomsNearCountOffset);
+    if (nearCount > MaximumNearRoomsPerRoom) return false;
+    batch.nearRoomLinkCount += nearCount;
+    if (nearCount == 0U) return true;
+    auto** const nearRooms = *reinterpret_cast<std::uint8_t***>(
+        room + DrlgRoomRoomsNearOffset);
+    if (!IsAlignedPointer(nearRooms)) return false;
+    for (std::size_t index = 0U; index < nearCount; ++index) {
+        auto* const neighbour = nearRooms[index];
+        if (!IsAlignedPointer(neighbour)) return false;
+        Detail::NavigationRoomRectangle neighbourRectangle{};
+        if (!ReadRoomRectangleUnchecked(neighbour, neighbourRectangle)) {
+            return false;
+        }
+        if (neighbourRectangle.levelId == currentLevelId) continue;
+        Detail::NavigationOutdoorOpening opening{};
+        bool foundOpening{};
+        if (!ResolveOutdoorCollisionOpeningUnchecked(
+                dataContext,
+                room,
+                neighbour,
+                sourceRectangle,
+                neighbourRectangle,
+                batch,
+                opening,
+                foundOpening)) {
+            return false;
+        }
+        if (!foundOpening) {
+            continue;
+        }
+        UpsertExitCandidate(
+            batch,
+            Detail::NavigationExitSelection{
+                .candidate = NavigationExitCandidate{
+                    .destinationId = MakeDestinationId(
+                        PresetLevelExit,
+                        neighbourRectangle.levelId,
+                        opening.subtileX,
+                        opening.subtileY),
+                    .targetLevelId = neighbourRectangle.levelId,
+                    .subtileX = opening.subtileX,
+                    .subtileY = opening.subtileY,
+                },
+                .evidence = Detail::NavigationExitEvidence::OutdoorCollision,
+                .spanSubtiles = opening.spanSubtiles,
+            });
+        if (batch.traversalLimited) return false;
+    }
+    return true;
+}
+
+[[nodiscard]] auto InitializeRequestedTargetLevelsUnchecked(
+        const ClientLevelView& current,
+        std::span<const std::int32_t> customTargetLevelIds,
+        CandidateBatch& batch) noexcept -> bool {
+    auto* const sourceVis = GetLevelVis(
+        current.dataContext,
+        current.level);
+    if (sourceVis == nullptr) return false;
+    std::array<std::int32_t, VisibilitySlotCount> visibleTargetIds{};
+    for (std::size_t slot = 0U; slot < VisibilitySlotCount; ++slot) {
+        visibleTargetIds[slot] = sourceVis[slot];
+    }
+
+    std::array<
+        std::int32_t,
+        MaximumCustomLevelTargets + MaximumMainProgressionTargets> targetIds{};
+    const auto targetCount = BuildNavigationPreparationTargets(
+        current.levelId,
+        customTargetLevelIds,
+        targetIds);
+    for (std::size_t index = 0U; index < targetCount; ++index) {
+        // A global custom list may contain destinations from every act. Never
+        // ask the current act's DRLG to create an unrelated Level; only direct
+        // Vis neighbours are eligible for initialization in this refresh.
+        if (!Detail::IsDirectVisibleTarget(
+                current.levelId,
+                targetIds[index],
+                visibleTargetIds)) {
+            continue;
+        }
+        ++batch.requestedTargetLevelCount;
+        void* targetLevel{};
+        if (!ResolveClientLevelById(current, targetIds[index], targetLevel)) {
+            ++batch.pendingTargetLevelCount;
+            continue;
+        }
+        if (!IsAlignedPointer(targetLevel)) return false;
+        ++batch.initializedTargetLevelCount;
+    }
+    return true;
+}
+
+[[nodiscard]] auto PrepareCanyonCorrectTombUnchecked(
+        const ClientLevelView& current,
+        CandidateBatch& batch) noexcept -> bool {
+    if (current.levelId != CanyonOfTheMagiLevelId) return true;
+    if (Base == nullptr || GetHoradricStaffTombLevelId == nullptr
+        || GetQuestState == nullptr || !IsAlignedPointer(current.drlg)) {
+        return false;
+    }
+
+    const auto tombLevelId = GetHoradricStaffTombLevelId(current.drlg);
+    if (tombLevelId < FirstTalRashaTombLevelId
+        || tombLevelId > LastTalRashaTombLevelId) {
+        batch.pendingCorrectTomb = true;
+        return true;
+    }
+    batch.correctTombLevelId = tombLevelId;
+
+    void* const questRecord = *reinterpret_cast<void**>(
+        Base + ClientQuestRecordPointerRva);
+    if (!IsAlignedPointer(questRecord)) {
+        batch.pendingCorrectTomb = true;
+        return true;
+    }
+    batch.durielRewardGranted = GetQuestState(
+        questRecord,
+        ActTwoQuestSixStateFlag,
+        QuestRewardGrantedFlag) != 0;
+    batch.hasCorrectTombState = true;
+
+    ++batch.requestedTargetLevelCount;
+    void* targetLevel{};
+    if (!ResolveClientLevelById(current, tombLevelId, targetLevel)) {
+        ++batch.pendingTargetLevelCount;
+        batch.pendingCorrectTomb = true;
+        return true;
+    }
+    if (!IsAlignedPointer(targetLevel)) return false;
+    ++batch.initializedTargetLevelCount;
+    return true;
+}
+
+void FinalizeCanyonCorrectTomb(CandidateBatch& batch) noexcept {
+    if (batch.levelId != CanyonOfTheMagiLevelId) return;
+    if (!batch.hasCorrectTombState
+        || batch.correctTombLevelId == UnknownNavigationLevelId) {
+        batch.pendingCorrectTomb = true;
+        return;
+    }
+    for (std::size_t index = 0U; index < batch.exitCount; ++index) {
+        const auto& exit = batch.exits[index];
+        if (exit.targetLevelId != batch.correctTombLevelId) continue;
+        batch.correctTomb = {
+            .destinationId = exit.destinationId,
+            .subtileX = exit.subtileX,
+            .subtileY = exit.subtileY,
+            .exactClientX = exit.exactClientX,
+            .exactClientY = exit.exactClientY,
+            .useExactClientCoordinates = exit.useExactClientCoordinates,
+        };
+        batch.hasCorrectTomb = true;
+        batch.pendingCorrectTomb = false;
+        return;
+    }
+    batch.pendingCorrectTomb = true;
+}
+
+[[nodiscard]] auto EnumerateCurrentLevelUnchecked(
+        std::int32_t expectedLevelId,
+        std::span<const std::int32_t> customTargetLevelIds,
+        CandidateBatch& batch) noexcept -> bool {
+    __try {
+        if (GetLocalDataContext == nullptr || GetLocalPlayer == nullptr
+            || GetDrlgRoomFromActiveRoom == nullptr
+            || GetCollisionGrid == nullptr
+            || GetFirstUnitInRoom == nullptr
+            || IsRoomInTown == nullptr
+            || GetUnitClassId == nullptr
+            || GetUnitDataContext == nullptr
+            || GetUnitClientCoordX == nullptr
+            || GetUnitClientCoordY == nullptr
+            || GetUnitRoom == nullptr
+            || GetNextUnitInRoom == nullptr
+            || GetUnitType == nullptr
+            || GetDrlgRoomLevelId == nullptr
+            || GetHoradricStaffTombLevelId == nullptr
+            || GetQuestState == nullptr
+            || GetLevelVis == nullptr
+            || GetLevelWarp == nullptr
+            || GetObjectsTxtRecordCount == nullptr
+            || GetObjectsTxtRecord == nullptr
+            || FindWaypointRoomAndCoordinates == nullptr) {
+            return false;
+        }
+        ClientLevelView current{};
+        if (!ResolveCurrentClientLevelView(current)
+            || current.dataContext >= 8U) {
+            return false;
+        }
+        auto* const activeRoom = static_cast<std::uint8_t*>(
+            current.activeRoom);
+        auto* const level = static_cast<std::uint8_t*>(current.level);
+        if (!IsAlignedPointer(activeRoom)
+            || !IsAlignedPointer(level)
+            || !IsAlignedPointer(current.drlg)) {
+            return false;
+        }
+        const auto levelId = current.levelId;
+        if (levelId <= 0 || levelId > MaximumSupportedLevelId
+            || (expectedLevelId != UnknownNavigationLevelId
+                && expectedLevelId != levelId)) {
+            return false;
+        }
+        batch.levelId = levelId;
+        batch.inTown = IsRoomInTown(activeRoom) != 0;
+        if (batch.inTown) return true;
+
+        // DRLG links are lazy. Initialize only the requested progression and
+        // configured targets before source-room materialization so forward
+        // links such as Barracks -> Jail 1 and Jail 1 -> Jail 2 exist during
+        // this same refresh.
+        if (!PrepareCanyonCorrectTombUnchecked(current, batch)) {
+            return false;
+        }
+        if (!InitializeRequestedTargetLevelsUnchecked(
+                current,
+                customTargetLevelIds,
+                batch)) {
+            return false;
+        }
+
+        if (!ResolveExactWaypointUnchecked(
+                current.dataContext,
+                level,
+                levelId,
+                batch)) {
+            return false;
+        }
+        if (!ResolveOutdoorVisibilityLinksUnchecked(
+                current,
+                levelId,
+                batch)) {
+            return false;
+        }
+
+        auto* room = *reinterpret_cast<std::uint8_t**>(
+            level + LevelFirstRoomOffset);
+        if (HasCycleOrExceedsLimitUnchecked(
+                room,
+                DrlgRoomNextOffset,
+                MaximumRoomsPerLevel)) {
+            batch.traversalLimited = true;
+            return false;
+        }
+        std::size_t roomCount{};
+        while (room != nullptr && roomCount < MaximumRoomsPerLevel) {
+            if (!IsAlignedPointer(room)
+                || *reinterpret_cast<std::uint8_t**>(
+                    room + DrlgRoomLevelOffset) != level) {
+                return false;
+            }
+            if (!ResolveRoomTileExitsUnchecked(
+                    current.dataContext,
+                    room,
+                    levelId,
+                    batch)
+                || !ResolveOutdoorBordersUnchecked(
+                    current.dataContext,
+                    room,
+                    levelId,
+                    batch)) {
+                return false;
+            }
+            auto* const nextRoom = *reinterpret_cast<std::uint8_t**>(
+                room + DrlgRoomNextOffset);
+            room = nextRoom;
+            ++roomCount;
+            ++batch.roomCount;
+        }
+        if (room != nullptr) batch.traversalLimited = true;
+        if (batch.traversalLimited) return false;
+        FinalizeExitCandidates(batch);
+        FinalizeCanyonCorrectTomb(batch);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+[[nodiscard]] auto ValidateRuntime(
+        const D2RL::PluginContext* context) noexcept -> bool {
+    constexpr std::array<std::uint8_t, 10U> localContextExpected{
+        0x8B, 0x05, 0x2E, 0x84, 0x99, 0x02, 0xC3, 0xCC,
+        0xCC, 0xCC};
+    constexpr std::array<std::uint8_t, 19U> localPlayerExpected{
+        0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83,
+        0xEC, 0x20, 0x83, 0xF9, 0x08, 0x0F, 0x83, 0x85,
+        0x00, 0x00, 0x00};
+    constexpr std::array<std::uint8_t, 16U> activeRoomDrlgExpected{
+        0x48, 0x8B, 0x41, 0x18, 0xC3, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC};
+    constexpr std::array<std::uint8_t, 32U> collisionGridExpected{
+        0x48, 0x8B, 0x41, 0x38, 0xC3, 0xCC, 0xCC, 0xCC,
+        0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC,
+        0x48, 0x85, 0xC9, 0x75, 0x0B, 0x0F, 0x57, 0xC0,
+        0x0F, 0x11, 0x02, 0x0F, 0x11, 0x42, 0x10, 0xC3};
+    constexpr std::array<std::uint8_t, 16U> firstUnitInRoomExpected{
+        0x48, 0x8B, 0x81, 0xA8, 0x00, 0x00, 0x00, 0xC3,
+        0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC};
+    constexpr std::array<std::uint8_t, 25U> isRoomInTownExpected{
+        0x48, 0x83, 0xEC, 0x28, 0x48, 0x85, 0xC9, 0x75,
+        0x07, 0x33, 0xC0, 0x48, 0x83, 0xC4, 0x28, 0xC3,
+        0x48, 0x8B, 0x49, 0x18, 0xE8, 0x57, 0x08, 0x07,
+        0x00};
+    constexpr std::array<std::uint8_t, 24U> drlgRoomActiveRoomExpected{
+        0x48, 0x8B, 0x43, 0x58, 0x48, 0x8B, 0x5C, 0x24,
+        0x30, 0x48, 0x83, 0xC4, 0x20, 0x5F, 0xC3, 0xCC,
+        0xCC, 0xCC, 0x40, 0x53, 0x56, 0x57, 0x41, 0x54};
+    constexpr std::array<std::uint8_t, 46U> unitClassIdExpected{
+        0x48, 0x83, 0xEC, 0x28, 0x48, 0x85, 0xC9, 0x75,
+        0x1D, 0x88, 0x4C, 0x24, 0x30, 0x48, 0x8D, 0x4C,
+        0x24, 0x30, 0xE8, 0x49, 0xCB, 0xFF, 0xFF, 0x84,
+        0xC0, 0x74, 0x01, 0xCC, 0xB8, 0xFF, 0xFF, 0xFF,
+        0xFF, 0x48, 0x83, 0xC4, 0x28, 0xC3, 0x8B, 0x41,
+        0x04, 0x48, 0x83, 0xC4, 0x28, 0xC3};
+    constexpr std::array<std::uint8_t, 47U> unitDataContextExpected{
+        0x48, 0x83, 0xEC, 0x28, 0x48, 0x85, 0xC9, 0x75,
+        0x1A, 0x88, 0x4C, 0x24, 0x30, 0x48, 0x8D, 0x4C,
+        0x24, 0x30, 0xE8, 0x49, 0xC7, 0xFF, 0xFF, 0x84,
+        0xC0, 0x74, 0x01, 0xCC, 0x32, 0xC0, 0x48, 0x83,
+        0xC4, 0x28, 0xC3, 0x0F, 0xB6, 0x81, 0xBD, 0x01,
+        0x00, 0x00, 0x48, 0x83, 0xC4, 0x28, 0xC3};
+    constexpr std::array<std::uint8_t, 32U> unitClientCoordXExpected{
+        0x40, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B,
+        0xD9, 0x48, 0x85, 0xC9, 0x75, 0x13, 0x88, 0x4C,
+        0x24, 0x30, 0x48, 0x8D, 0x4C, 0x24, 0x30, 0xE8,
+        0x94, 0xA3, 0xFF, 0xFF, 0x84, 0xC0, 0x74, 0x01};
+    constexpr std::array<std::uint8_t, 32U> unitClientCoordYExpected{
+        0x40, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B,
+        0xD9, 0x48, 0x85, 0xC9, 0x75, 0x13, 0x88, 0x4C,
+        0x24, 0x30, 0x48, 0x8D, 0x4C, 0x24, 0x30, 0xE8,
+        0x94, 0x9D, 0xFF, 0xFF, 0x84, 0xC0, 0x74, 0x01};
+    constexpr std::array<std::uint8_t, 90U> unitRoomExpected{
+        0x40, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B,
+        0xD9, 0x48, 0x85, 0xC9, 0x75, 0x13, 0x88, 0x4C,
+        0x24, 0x30, 0x48, 0x8D, 0x4C, 0x24, 0x30, 0xE8,
+        0x54, 0xA7, 0xFF, 0xFF, 0x84, 0xC0, 0x74, 0x01,
+        0xCC, 0x8B, 0x0B, 0x83, 0xE9, 0x02, 0x74, 0x25,
+        0x83, 0xE9, 0x02, 0x74, 0x20, 0x83, 0xF9, 0x01,
+        0x74, 0x1B, 0x48, 0x8B, 0x4B, 0x38, 0x48, 0x85,
+        0xC9, 0x74, 0x0A, 0x48, 0x83, 0xC4, 0x20, 0x5B,
+        0xE9, 0xAB, 0x67, 0xFF, 0xFF, 0x33, 0xC0, 0x48,
+        0x83, 0xC4, 0x20, 0x5B, 0xC3, 0x48, 0x8B, 0x43,
+        0x38, 0x48, 0x8B, 0x00, 0x48, 0x83, 0xC4, 0x20,
+        0x5B, 0xC3};
+    constexpr std::array<std::uint8_t, 46U> nextUnitInRoomExpected{
+        0x40, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B,
+        0xD9, 0x48, 0x85, 0xC9, 0x75, 0x20, 0x88, 0x4C,
+        0x24, 0x30, 0x48, 0x8D, 0x4C, 0x24, 0x30, 0xE8,
+        0xB4, 0x9E, 0xFF, 0xFF, 0x84, 0xC0, 0x74, 0x01,
+        0xCC, 0x48, 0x8B, 0x83, 0x60, 0x01, 0x00, 0x00,
+        0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3};
+    constexpr std::array<std::uint8_t, 32U> unitTypeExpected{
+        0x48, 0x83, 0xEC, 0x28, 0x48, 0x85, 0xC9, 0x75,
+        0x1D, 0x88, 0x4C, 0x24, 0x30, 0x48, 0x8D, 0x4C,
+        0x24, 0x30, 0xE8, 0x39, 0x9E, 0xFF, 0xFF, 0x84,
+        0xC0, 0x74, 0x01, 0xCC, 0xB8, 0x06, 0x00, 0x00};
+    constexpr std::array<std::uint8_t, 48U> levelListLayoutExpected{
+        0x48, 0x89, 0x6C, 0x24, 0x10, 0x48, 0x89, 0x74,
+        0x24, 0x18, 0x57, 0x48, 0x81, 0xEC, 0x80, 0x02,
+        0x00, 0x00, 0x48, 0x8B, 0x82, 0x68, 0x08, 0x00,
+        0x00, 0x41, 0x8B, 0xF8, 0x48, 0x8B, 0xF2, 0x0F,
+        0xB6, 0xE9, 0x48, 0x85, 0xC0, 0x74, 0x21, 0x66,
+        0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00};
+    constexpr std::array<std::uint8_t, 16U> drlgRoomLevelIdExpected{
+        0x48, 0x8B, 0x81, 0x90, 0x00, 0x00, 0x00, 0x8B,
+        0x80, 0xF8, 0x01, 0x00, 0x00, 0xC3, 0xCC, 0xCC};
+    constexpr std::array<std::uint8_t, 31U> getLevelVisCoreExpected{
+        0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74,
+        0x24, 0x18, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48,
+        0x8B, 0x9A, 0x18, 0x01, 0x00, 0x00, 0x41, 0x8B,
+        0xF8, 0x0F, 0xB6, 0xF1, 0x48, 0x85, 0xDB};
+    constexpr std::array<std::uint8_t, 44U> getLevelVisNodeExpected{
+        0x3B, 0x3B, 0x74, 0x28, 0x48, 0x8B, 0x5B, 0x48,
+        0x48, 0x85, 0xDB, 0x75, 0xDA, 0x8B, 0xD7, 0x40,
+        0x0F, 0xB6, 0xCE, 0xE8, 0xAE, 0xB9, 0xFC, 0xFF,
+        0x48, 0x83, 0xC0, 0x48, 0x48, 0x8B, 0x5C, 0x24,
+        0x30, 0x48, 0x8B, 0x74, 0x24, 0x40, 0x48, 0x83,
+        0xC4, 0x20, 0x5F, 0xC3};
+    constexpr std::array<std::uint8_t, 20U> getLevelVisDynamicExpected{
+        0x48, 0x8B, 0x74, 0x24, 0x40, 0x48, 0x8D, 0x43,
+        0x04, 0x48, 0x8B, 0x5C, 0x24, 0x30, 0x48, 0x83,
+        0xC4, 0x20, 0x5F, 0xC3};
+    constexpr std::array<std::uint8_t, 19U> getLevelVisExpected{
+        0x44, 0x8B, 0x82, 0xF8, 0x01, 0x00, 0x00, 0x48,
+        0x8B, 0x92, 0xC8, 0x01, 0x00, 0x00, 0xE9, 0x6D,
+        0xFF, 0xFF, 0xFF};
+    constexpr std::array<std::uint8_t, 64U> nearRoomLayoutExpected{
+        0x4C, 0x8B, 0xDC, 0x48, 0x83, 0xEC, 0x68, 0x48,
+        0x8B, 0x81, 0x90, 0x00, 0x00, 0x00, 0x45, 0x33,
+        0xD2, 0x49, 0x89, 0x73, 0xF0, 0x48, 0xC7, 0x41,
+        0x18, 0x00, 0x00, 0x00, 0x00, 0x4D, 0x89, 0x73,
+        0xD0, 0x4C, 0x8B, 0xF1, 0x48, 0x8B, 0x70, 0x10,
+        0x49, 0x89, 0x73, 0x10, 0x48, 0x85, 0xF6, 0x0F,
+        0x84, 0xEB, 0x01, 0x00, 0x00, 0x49, 0x89, 0x5B,
+        0x18, 0x49, 0xB8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    constexpr std::array<std::uint8_t, 68U> nearRoomGeometryExpected{
+        0x41, 0x8B, 0x46, 0x60, 0x8B, 0x4E, 0x60, 0x3B,
+        0xC1, 0x7D, 0x08, 0x41, 0x2B, 0x4E, 0x68, 0x2B,
+        0xC8, 0xEB, 0x07, 0x2B, 0x46, 0x68, 0x2B, 0xC1,
+        0x8B, 0xC8, 0x41, 0x8B, 0x56, 0x64, 0x8B, 0x46,
+        0x64, 0x3B, 0xD0, 0x7D, 0x08, 0x41, 0x2B, 0x46,
+        0x6C, 0x2B, 0xC2, 0xEB, 0x07, 0x2B, 0x56, 0x6C,
+        0x2B, 0xD0, 0x8B, 0xC2, 0x83, 0xF9, 0x06, 0x0F,
+        0x8D, 0x3C, 0x01, 0x00, 0x00, 0x83, 0xF8, 0x06,
+        0x0F, 0x8D, 0x33, 0x01};
+    constexpr std::array<std::uint8_t, 100U> nearRoomSortExpected{
+        0x48, 0x8B, 0x76, 0x48, 0x48, 0x89, 0x74, 0x24,
+        0x78, 0x48, 0x85, 0xF6, 0x0F, 0x85, 0x75, 0xFE,
+        0xFF, 0xFF, 0x4D, 0x8B, 0x56, 0x18, 0x4C, 0x8B,
+        0x7C, 0x24, 0x30, 0x4C, 0x8B, 0x6C, 0x24, 0x40,
+        0x4C, 0x8B, 0x64, 0x24, 0x48, 0x48, 0x8B, 0x7C,
+        0x24, 0x50, 0x48, 0x8B, 0x6C, 0x24, 0x60, 0x48,
+        0x8B, 0x9C, 0x24, 0x80, 0x00, 0x00, 0x00, 0x4D,
+        0x8B, 0x4E, 0x10, 0x4C, 0x8B, 0x74, 0x24, 0x38,
+        0x48, 0x8B, 0x74, 0x24, 0x58, 0x49, 0x83, 0xFA,
+        0x01, 0x76, 0x54, 0x49, 0x83, 0xEA, 0x01, 0x4D,
+        0x8B, 0xDA, 0x74, 0x4B, 0x0F, 0x1F, 0x00, 0x33,
+        0xD2, 0x0F, 0x1F, 0x40, 0x00, 0x66, 0x66, 0x0F,
+        0x1F, 0x84, 0x00, 0x00};
+    constexpr std::array<std::uint8_t, 20U> objectsCountExpected{
+        0x48, 0x83, 0xEC, 0x28, 0xE8, 0x17, 0x0E, 0xF7,
+        0xFF, 0x8B, 0x80, 0x30, 0x15, 0x00, 0x00, 0x48,
+        0x83, 0xC4, 0x28, 0xC3};
+    constexpr std::array<std::uint8_t, 36U> objectsRecordExpected{
+        0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74,
+        0x24, 0x20, 0x57, 0x48, 0x83, 0xEC, 0x30, 0x8B,
+        0xDA, 0xE8, 0x7A, 0x0D, 0xF7, 0xFF, 0x48, 0x8B,
+        0xF0, 0x8B, 0xFB, 0x48, 0x3B, 0x98, 0x30, 0x15,
+        0x00, 0x00, 0x72, 0x14};
+    constexpr std::array<std::uint8_t, 15U>
+        roomTileDestinationLayoutExpected{
+            0x48, 0x8B, 0x38, 0x48, 0x8B, 0x57, 0x78, 0x48,
+            0x85, 0xD2, 0x74, 0xDC, 0x48, 0x39, 0x1A};
+    constexpr std::array<std::uint8_t, 40U> getLevelWarpExpected{
+        0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C,
+        0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x20, 0x57,
+        0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0x9A, 0xC8,
+        0x01, 0x00, 0x00, 0x0F, 0xB6, 0xE9, 0x8B, 0xBA,
+        0xF8, 0x01, 0x00, 0x00, 0x41, 0x0F, 0xB6, 0xF0};
+    constexpr std::array<std::uint8_t, 28U> getLevelWarpNodeExpected{
+        0x3B, 0x3B, 0x74, 0x2D, 0x48, 0x8B, 0x5B, 0x48,
+        0x48, 0x85, 0xDB, 0x75, 0xDA, 0x8B, 0xD7, 0x40,
+        0x0F, 0xB6, 0xCD, 0xE8, 0xCB, 0x16, 0xF5, 0xFF,
+        0x8B, 0x44, 0xB0, 0x68};
+    constexpr std::array<std::uint8_t, 6U> getLevelWarpDynamicExpected{
+        0x8B, 0x44, 0xB3, 0x24, 0xEB, 0xE5};
+    constexpr std::array<std::uint8_t, 50U>
+        outdoorVisibilityFlagExpected{
+            0x83, 0xC1, 0x04, 0xBD, 0x01, 0x00, 0x00, 0x00,
+            0xD3, 0xE5, 0x45, 0x0F, 0xB6, 0xF8, 0x48, 0x8B,
+            0xF2, 0x45, 0x8B, 0xCD, 0x48, 0x85, 0xFF, 0x0F,
+            0x84, 0xE3, 0x00, 0x00, 0x00, 0x44, 0x8B, 0x74,
+            0x24, 0x78, 0x0F, 0x1F, 0x00, 0x85, 0x6F, 0x50,
+            0x0F, 0x84, 0xC5, 0x00, 0x00, 0x00, 0x41, 0x83,
+            0xFE, 0xFF};
+    constexpr std::array<std::uint8_t, 66U>
+        outdoorVisibilityGeometryExpected{
+            0x8B, 0x46, 0x60, 0x8B, 0x4F, 0x60, 0x3B, 0xC1,
+            0x7D, 0x07, 0x2B, 0x4E, 0x68, 0x2B, 0xC8, 0xEB,
+            0x07, 0x2B, 0x47, 0x68, 0x2B, 0xC1, 0x8B, 0xC8,
+            0x8B, 0x56, 0x64, 0x8B, 0x47, 0x64, 0x3B, 0xD0,
+            0x7D, 0x07, 0x2B, 0x46, 0x6C, 0x2B, 0xC2, 0xEB,
+            0x07, 0x2B, 0x57, 0x6C, 0x2B, 0xD0, 0x8B, 0xC2,
+            0x83, 0xF9, 0x06, 0x0F, 0x8D, 0x82, 0x00, 0x00,
+            0x00, 0x83, 0xF8, 0x06, 0x0F, 0x8D, 0x79, 0x00,
+            0x00, 0x00};
+    constexpr std::array<std::uint8_t, 43U> collisionGridLayoutExpected{
+        0x4C, 0x8B, 0x53, 0x20, 0x4D, 0x85, 0xD2, 0x0F,
+        0x84, 0x6A, 0x03, 0x00, 0x00, 0x44, 0x8B, 0x03,
+        0x45, 0x8D, 0x5F, 0x01, 0x44, 0x8B, 0x4B, 0x04,
+        0x33, 0xC0, 0x45, 0x3B, 0xC5, 0x48, 0x89, 0x74,
+        0x24, 0x50, 0x48, 0x63, 0x73, 0x08, 0x0F, 0x9D,
+        0xC0, 0x48, 0x89};
+    constexpr std::array<std::uint8_t, 15U> collisionGridHeightExpected{
+        0x8B, 0x4B, 0x0C, 0x41, 0x03, 0xC9, 0x41, 0x3B,
+        0xCB, 0x0F, 0x4F, 0xC2, 0x83, 0xF8, 0x0C};
+    constexpr std::array<std::uint8_t, 24U> resolveWaypointExpected{
+        0x48, 0x89, 0x6C, 0x24, 0x18, 0x57, 0x41, 0x56,
+        0x41, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B,
+        0x7A, 0x10, 0x4D, 0x8B, 0xF1, 0x4D, 0x8B, 0xF8};
+    constexpr std::array<std::uint8_t, 88U> roomTileLayoutExpected{
+        0x40, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B,
+        0x59, 0x78, 0x48, 0x8B, 0xC2, 0x48, 0x8B, 0xC8,
+        0x48, 0x8D, 0x15, 0x99, 0x31, 0x93, 0x01, 0x41,
+        0xB8, 0x17, 0x02, 0x00, 0x00, 0xE8, 0x2E, 0xEF,
+        0xF6, 0xFF, 0x48, 0x85, 0xDB, 0x74, 0x29, 0x0F,
+        0xB6, 0xC8, 0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00,
+        0x48, 0x8B, 0x43, 0x20, 0x39, 0x48, 0x2C, 0x74,
+        0x11, 0x48, 0x8B, 0x5B, 0x08, 0x48, 0x85, 0xDB,
+        0x75, 0xEE, 0x33, 0xC0, 0x48, 0x83, 0xC4, 0x20,
+        0x5B, 0xC3, 0x83, 0x7B, 0x10, 0x00, 0x75, 0x02,
+        0x33, 0xC0, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3};
+    constexpr std::array<std::uint8_t, 112U> waypointLayoutExpected{
+        0x48, 0x8B, 0x9F, 0x98, 0x00, 0x00, 0x00, 0x48,
+        0x85, 0xDB, 0x74, 0x66, 0x83, 0x7B, 0x20, 0x02,
+        0x75, 0x24, 0x8B, 0x73, 0x04, 0x40, 0x0F, 0xB6,
+        0xCD, 0xE8, 0x66, 0x4E, 0xFB, 0xFF, 0x3B, 0xF0,
+        0x7D, 0x14, 0x8B, 0xD6, 0x40, 0x0F, 0xB6, 0xCD,
+        0xE8, 0xE7, 0x4E, 0xFB, 0xFF, 0xF6, 0x80, 0x27,
+        0x01, 0x00, 0x00, 0x40, 0x75, 0x0E, 0x48, 0x8B,
+        0x5B, 0x10, 0x48, 0x85, 0xDB, 0x75, 0xCD, 0x48,
+        0x8B, 0xC7, 0xEB, 0x31, 0xB8, 0x67, 0x66, 0x66,
+        0x66, 0xF7, 0x6B, 0x08, 0xB8, 0x67, 0x66, 0x66,
+        0x66, 0xD1, 0xFA, 0x8B, 0xCA, 0xC1, 0xE9, 0x1F,
+        0x03, 0xD1, 0x03, 0x57, 0x60, 0x41, 0x89, 0x17,
+        0xF7, 0x6B, 0x24, 0xD1, 0xFA, 0x8B, 0xCA, 0xC1,
+         0xE9, 0x1F, 0x03, 0xD1, 0x03, 0x57, 0x64, 0x41};
+    constexpr std::array<std::uint8_t, 15U> staffTombLevelExpected{
+        0x48, 0x85, 0xC9, 0x74, 0x07, 0x8B, 0x81, 0x20,
+        0x01, 0x00, 0x00, 0xC3, 0x33, 0xC0, 0xC3};
+    constexpr std::array<std::uint8_t, 32U> questStateExpected{
+        0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74,
+        0x24, 0x18, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x41,
+        0x8B, 0xF0, 0x8B, 0xDA, 0x48, 0x8B, 0xF9, 0x48,
+        0x85, 0xC9, 0x75, 0x13, 0x88, 0x4C, 0x24, 0x38};
+    constexpr std::array<std::uint8_t, 21U> clientQuestRecordExpected{
+        0x48, 0x8B, 0x0D, 0x51, 0x3B, 0x93, 0x02, 0x45,
+        0x33, 0xC0, 0x41, 0x8D, 0x50, 0x29, 0xE8, 0x1D,
+        0x10, 0x21, 0x00, 0x85, 0xC0};
+    const auto check = [context](
+            std::uintptr_t rva,
+            const auto& expected) noexcept {
+        return context->CheckExpectedBytes(
+            rva,
+            expected.data(),
+            static_cast<std::uint32_t>(expected.size()));
+    };
+    return check(GetLocalDataContextRva, localContextExpected)
+        && check(GetLocalPlayerRva, localPlayerExpected)
+        && check(GetDrlgRoomFromActiveRoomRva, activeRoomDrlgExpected)
+        && check(GetCollisionGridRva, collisionGridExpected)
+        && check(GetFirstUnitInRoomRva, firstUnitInRoomExpected)
+        && check(IsRoomInTownRva, isRoomInTownExpected)
+        && check(
+            DrlgRoomActiveRoomWitnessRva,
+            drlgRoomActiveRoomExpected)
+        && check(GetUnitClassIdRva, unitClassIdExpected)
+        && check(GetUnitDataContextRva, unitDataContextExpected)
+        && check(GetUnitClientCoordXRva, unitClientCoordXExpected)
+        && check(GetUnitClientCoordYRva, unitClientCoordYExpected)
+        && check(GetUnitRoomRva, unitRoomExpected)
+        && check(GetNextUnitInRoomRva, nextUnitInRoomExpected)
+        && check(GetUnitTypeRva, unitTypeExpected)
+        && check(LevelListLayoutWitnessRva, levelListLayoutExpected)
+        && check(
+            GetHoradricStaffTombLevelIdRva,
+            staffTombLevelExpected)
+        && check(GetQuestStateRva, questStateExpected)
+        && check(
+            ClientQuestRecordWitnessRva,
+            clientQuestRecordExpected)
+        && check(GetDrlgRoomLevelIdRva, drlgRoomLevelIdExpected)
+        && check(GetLevelVisCoreRva, getLevelVisCoreExpected)
+        && check(GetLevelVisNodeWitnessRva, getLevelVisNodeExpected)
+        && check(
+            GetLevelVisDynamicWitnessRva,
+            getLevelVisDynamicExpected)
+        && check(GetLevelVisRva, getLevelVisExpected)
+        && check(NearRoomLayoutWitnessRva, nearRoomLayoutExpected)
+        && check(NearRoomGeometryWitnessRva, nearRoomGeometryExpected)
+        && check(NearRoomSortWitnessRva, nearRoomSortExpected)
+        && check(GetObjectsTxtRecordCountRva, objectsCountExpected)
+        && check(GetObjectsTxtRecordRva, objectsRecordExpected)
+        && check(RoomTileLayoutWitnessRva, roomTileLayoutExpected)
+        && check(
+            RoomTileDestinationLayoutWitnessRva,
+            roomTileDestinationLayoutExpected)
+        && check(GetLevelWarpRva, getLevelWarpExpected)
+        && check(GetLevelWarpNodeWitnessRva, getLevelWarpNodeExpected)
+        && check(
+            GetLevelWarpDynamicWitnessRva,
+            getLevelWarpDynamicExpected)
+        && check(
+            OutdoorVisibilityFlagWitnessRva,
+            outdoorVisibilityFlagExpected)
+        && check(
+            OutdoorVisibilityGeometryWitnessRva,
+            outdoorVisibilityGeometryExpected)
+        && check(
+            CollisionGridLayoutWitnessRva,
+            collisionGridLayoutExpected)
+        && check(
+            CollisionGridHeightWitnessRva,
+            collisionGridHeightExpected)
+        && check(
+            FindWaypointRoomAndCoordinatesRva,
+            resolveWaypointExpected)
+        && check(WaypointLayoutWitnessRva, waypointLayoutExpected);
+}
+
+[[nodiscard]] auto ResolveCustomTargetIds(
+        std::span<const CustomLevelTarget> targets,
+        std::array<std::int32_t, MaximumCustomLevelTargets>& ids) noexcept
+        -> std::size_t {
+    std::size_t count{};
+    for (const auto& target : targets) {
+        std::optional<std::int32_t> resolved;
+        if (const auto* const id = std::get_if<std::int32_t>(&target)) {
+            resolved = *id;
+        } else if (const auto* const name = std::get_if<std::string>(&target)) {
+            resolved = ResolveCanonicalLevelName(*name);
+            if (!resolved) {
+                UnresolvedNames.fetch_add(1U, std::memory_order_relaxed);
+                if (Diagnostics.load(std::memory_order_acquire)
+                    && Context != nullptr) {
+                    char message[256]{};
+                    std::snprintf(
+                        message,
+                        sizeof(message),
+                        "MapSense navigation: level_name '%.*s' is unknown or ambiguous; use level_id.",
+                        static_cast<int>(name->size()),
+                        name->c_str());
+                    Context->LogWarn(message);
+                }
+                continue;
+            }
+        }
+        if (!resolved || *resolved <= 0
+            || *resolved > MaximumSupportedLevelId) {
+            continue;
+        }
+        bool duplicate{};
+        for (std::size_t index = 0U; index < count; ++index) {
+            if (ids[index] == *resolved) {
+                duplicate = true;
+                break;
+            }
+        }
+        if (!duplicate && count < ids.size()) ids[count++] = *resolved;
+    }
+    return count;
+}
+
+void MixDiagnosticValue(
+        std::uint64_t& hash,
+        std::uint64_t value) noexcept {
+    for (std::uint32_t shift = 0U; shift < 64U; shift += 8U) {
+        hash ^= static_cast<std::uint8_t>(value >> shift);
+        hash *= UINT64_C(1099511628211);
+    }
+}
+
+void LogBoundedNavigationDiagnostics(
+        const CandidateBatch& batch,
+        std::span<const NavigationSubtileDestination> destinations,
+        std::int32_t publishedWaypointX,
+        std::int32_t publishedWaypointY,
+        std::int32_t publishedProgressionX,
+        std::int32_t publishedProgressionY) noexcept {
+    if (!Diagnostics.load(std::memory_order_acquire) || Context == nullptr) {
+        return;
+    }
+    auto fingerprint = UINT64_C(1469598103934665603);
+    MixDiagnosticValue(
+        fingerprint,
+        static_cast<std::uint32_t>(batch.levelId));
+    MixDiagnosticValue(fingerprint, batch.inTown ? 1U : 0U);
+    MixDiagnosticValue(
+        fingerprint,
+        static_cast<std::uint32_t>(batch.waypointNativeTileX));
+    MixDiagnosticValue(
+        fingerprint,
+        static_cast<std::uint32_t>(batch.waypointNativeTileY));
+    MixDiagnosticValue(
+        fingerprint,
+        static_cast<std::uint32_t>(batch.waypointExactSubtileX));
+    MixDiagnosticValue(
+        fingerprint,
+        static_cast<std::uint32_t>(batch.waypointExactSubtileY));
+    MixDiagnosticValue(
+        fingerprint,
+        static_cast<std::uint32_t>(batch.waypointExactClientX));
+    MixDiagnosticValue(
+        fingerprint,
+        static_cast<std::uint32_t>(batch.waypointExactClientY));
+    MixDiagnosticValue(fingerprint, batch.pendingWaypoint ? 1U : 0U);
+    MixDiagnosticValue(
+        fingerprint,
+        static_cast<std::uint32_t>(batch.correctTombLevelId));
+    MixDiagnosticValue(fingerprint, batch.hasCorrectTombState ? 1U : 0U);
+    MixDiagnosticValue(fingerprint, batch.durielRewardGranted ? 1U : 0U);
+    MixDiagnosticValue(fingerprint, batch.hasCorrectTomb ? 1U : 0U);
+    MixDiagnosticValue(fingerprint, batch.pendingCorrectTomb ? 1U : 0U);
+    MixDiagnosticValue(fingerprint, batch.rawRoomTileCount);
+    MixDiagnosticValue(fingerprint, batch.nativeRoomTileCount);
+    MixDiagnosticValue(fingerprint, batch.exactRoomTileCount);
+    MixDiagnosticValue(fingerprint, batch.pendingRoomTileRoomCount);
+    MixDiagnosticValue(fingerprint, batch.requestedTargetLevelCount);
+    MixDiagnosticValue(fingerprint, batch.initializedTargetLevelCount);
+    MixDiagnosticValue(fingerprint, batch.pendingTargetLevelCount);
+    MixDiagnosticValue(fingerprint, batch.nearRoomLinkCount);
+    MixDiagnosticValue(fingerprint, batch.outdoorOpeningCount);
+    MixDiagnosticValue(fingerprint, batch.pendingCollisionRoomCount);
+    MixDiagnosticValue(fingerprint, batch.visibilitySlotCount);
+    MixDiagnosticValue(fingerprint, batch.visibilityPairCount);
+    MixDiagnosticValue(fingerprint, batch.pendingVisibilityTargetCount);
+    MixDiagnosticValue(fingerprint, batch.exitSelectionCount);
+    for (std::size_t index = 0U;
+            index < batch.exitSelectionCount;
+            ++index) {
+        const auto& selection = batch.exitSelections[index];
+        MixDiagnosticValue(
+            fingerprint,
+            selection.candidate.destinationId);
+        MixDiagnosticValue(
+            fingerprint,
+            static_cast<std::uint32_t>(
+                selection.candidate.targetLevelId));
+        MixDiagnosticValue(
+            fingerprint,
+            static_cast<std::uint32_t>(selection.candidate.subtileX));
+        MixDiagnosticValue(
+            fingerprint,
+            static_cast<std::uint32_t>(selection.candidate.subtileY));
+        MixDiagnosticValue(
+            fingerprint,
+            static_cast<std::uint32_t>(
+                selection.candidate.exactClientX));
+        MixDiagnosticValue(
+            fingerprint,
+            static_cast<std::uint32_t>(
+                selection.candidate.exactClientY));
+        MixDiagnosticValue(
+            fingerprint,
+            selection.candidate.useExactClientCoordinates ? 1U : 0U);
+        MixDiagnosticValue(
+            fingerprint,
+            static_cast<std::uint8_t>(selection.evidence));
+        MixDiagnosticValue(
+            fingerprint,
+            static_cast<std::uint32_t>(selection.spanSubtiles));
+    }
+    MixDiagnosticValue(fingerprint, destinations.size());
+    for (const auto& destination : destinations) {
+        MixDiagnosticValue(fingerprint, destination.destinationId);
+        MixDiagnosticValue(
+            fingerprint,
+            static_cast<std::uint32_t>(destination.subtileX));
+        MixDiagnosticValue(
+            fingerprint,
+            static_cast<std::uint32_t>(destination.subtileY));
+        MixDiagnosticValue(
+            fingerprint,
+            static_cast<std::uint8_t>(destination.kind));
+        MixDiagnosticValue(
+            fingerprint,
+            static_cast<std::uint32_t>(destination.exactClientX));
+        MixDiagnosticValue(
+            fingerprint,
+            static_cast<std::uint32_t>(destination.exactClientY));
+        MixDiagnosticValue(
+            fingerprint,
+            destination.useExactClientCoordinates ? 1U : 0U);
+    }
+    if (LastDiagnosticFingerprint.exchange(
+            fingerprint,
+            std::memory_order_acq_rel) == fingerprint) {
+        return;
+    }
+
+    char message[768]{};
+    std::snprintf(
+        message,
+        sizeof(message),
+        "MapSense navigation: level=%d town=%d; waypoint native-tile=(%d,%d) exact-subtile=(%d,%d) exact-client=(%d,%d) pending=%d published-subtile=(%d,%d); correct-tomb=%d state=%d reward=%d found=%d pending=%d; exits raw=%llu linked=%llu exact=%llu roomtile-pending=%llu near-links=%llu outdoor-openings=%llu collision-pending=%llu target-levels=%llu/%llu pending=%llu vis-slots=%llu vis-pairs=%llu vis-pending=%llu candidates=%zu published=%zu; progression-subtile=(%d,%d).",
+        batch.levelId,
+        batch.inTown ? 1 : 0,
+        batch.waypointNativeTileX,
+        batch.waypointNativeTileY,
+        batch.waypointExactSubtileX,
+        batch.waypointExactSubtileY,
+        batch.waypointExactClientX,
+        batch.waypointExactClientY,
+        batch.pendingWaypoint ? 1 : 0,
+        publishedWaypointX,
+        publishedWaypointY,
+        batch.correctTombLevelId,
+        batch.hasCorrectTombState ? 1 : 0,
+        batch.durielRewardGranted ? 1 : 0,
+        batch.hasCorrectTomb ? 1 : 0,
+        batch.pendingCorrectTomb ? 1 : 0,
+        static_cast<unsigned long long>(batch.rawRoomTileCount),
+        static_cast<unsigned long long>(batch.nativeRoomTileCount),
+        static_cast<unsigned long long>(batch.exactRoomTileCount),
+        static_cast<unsigned long long>(batch.pendingRoomTileRoomCount),
+        static_cast<unsigned long long>(batch.nearRoomLinkCount),
+        static_cast<unsigned long long>(batch.outdoorOpeningCount),
+        static_cast<unsigned long long>(batch.pendingCollisionRoomCount),
+        static_cast<unsigned long long>(batch.initializedTargetLevelCount),
+        static_cast<unsigned long long>(batch.requestedTargetLevelCount),
+        static_cast<unsigned long long>(batch.pendingTargetLevelCount),
+        static_cast<unsigned long long>(batch.visibilitySlotCount),
+        static_cast<unsigned long long>(batch.visibilityPairCount),
+        static_cast<unsigned long long>(
+            batch.pendingVisibilityTargetCount),
+        batch.exitCount,
+        destinations.size(),
+        publishedProgressionX,
+        publishedProgressionY);
+    Context->LogInfo(message);
+
+    const auto preferredProgression = MainProgressionTargetFor(batch.levelId);
+    const auto selectedProgression = batch.hasCorrectTomb
+            && batch.durielRewardGranted
+        ? std::optional<std::int32_t>(batch.correctTombLevelId)
+        : SelectMainProgressionTargetFor(
+            batch.levelId,
+            std::span(batch.exits.data(), batch.exitCount));
+    std::snprintf(
+        message,
+        sizeof(message),
+        "MapSense diagnostic resolver: level=%d preferred-progression=%d selected-progression=%d candidate-found=%d selection-count=%zu destination-count=%zu.",
+        batch.levelId,
+        preferredProgression.value_or(UnknownNavigationLevelId),
+        selectedProgression.value_or(UnknownNavigationLevelId),
+        selectedProgression.has_value() ? 1 : 0,
+        batch.exitSelectionCount,
+        destinations.size());
+    Context->LogInfo(message);
+
+    for (std::size_t index = 0U;
+            index < batch.exitSelectionCount;
+            ++index) {
+        const auto& selection = batch.exitSelections[index];
+        const char* evidence = "outdoor-collision";
+        if (selection.evidence == Detail::NavigationExitEvidence::RoomTile) {
+            evidence = "room-tile";
+        } else if (selection.evidence
+                == Detail::NavigationExitEvidence::RuntimeObject) {
+            evidence = "runtime-object";
+        }
+        std::snprintf(
+            message,
+            sizeof(message),
+            "MapSense diagnostic exit[%zu]: target-level=%d subtile=(%d,%d) exact-client=(%d,%d/%d) evidence=%s span=%d id=%llu.",
+            index,
+            selection.candidate.targetLevelId,
+            selection.candidate.subtileX,
+            selection.candidate.subtileY,
+            selection.candidate.exactClientX,
+            selection.candidate.exactClientY,
+            selection.candidate.useExactClientCoordinates ? 1 : 0,
+            evidence,
+            selection.spanSubtiles,
+            static_cast<unsigned long long>(
+                selection.candidate.destinationId));
+        Context->LogInfo(message);
+    }
+
+    for (std::size_t index = 0U;
+            index < destinations.size();
+            ++index) {
+        const auto& destination = destinations[index];
+        std::snprintf(
+            message,
+            sizeof(message),
+            "MapSense diagnostic published[%zu]: kind=%u subtile=(%d,%d) id=%llu.",
+            index,
+            static_cast<unsigned>(destination.kind),
+            destination.subtileX,
+            destination.subtileY,
+            static_cast<unsigned long long>(destination.destinationId));
+        Context->LogInfo(message);
+    }
+}
+
+void ResetCounters() noexcept {
+    Refreshes.store(0U, std::memory_order_relaxed);
+    Rooms.store(0U, std::memory_order_relaxed);
+    Presets.store(0U, std::memory_order_relaxed);
+    Exits.store(0U, std::memory_order_relaxed);
+    Waypoints.store(0U, std::memory_order_relaxed);
+    Published.store(0U, std::memory_order_relaxed);
+    UnresolvedNames.store(0U, std::memory_order_relaxed);
+    Failures.store(0U, std::memory_order_relaxed);
+    TraversalLimits.store(0U, std::memory_order_relaxed);
+    PartialRefreshes.store(0U, std::memory_order_relaxed);
+    VisibilitySlots.store(0U, std::memory_order_relaxed);
+    VisibilityPairs.store(0U, std::memory_order_relaxed);
+    PendingVisibilityTargets.store(0U, std::memory_order_relaxed);
+    LastLevelId.store(UnknownNavigationLevelId, std::memory_order_relaxed);
+    LastDestinationCount.store(0U, std::memory_order_relaxed);
+    LastWaypointX.store(0, std::memory_order_relaxed);
+    LastWaypointY.store(0, std::memory_order_relaxed);
+    LastProgressionX.store(0, std::memory_order_relaxed);
+    LastProgressionY.store(0, std::memory_order_relaxed);
+    LastDiagnosticFingerprint.store(UINT64_MAX, std::memory_order_relaxed);
+}
+
+} // namespace
+
+auto InitializeNavigationResolver(
+        const D2RL::PluginContext* context,
+        bool diagnostics) noexcept -> bool {
+    ShutdownNavigationResolver();
+    if (!D2RL::HasContext(context) || context->exeBase == 0U) return false;
+    Context = context;
+    Base = reinterpret_cast<std::uint8_t*>(context->exeBase);
+    Diagnostics.store(diagnostics, std::memory_order_release);
+    ResetCounters();
+    if (!ValidateRuntime(context)) {
+        Context = nullptr;
+        Base = nullptr;
+        return false;
+    }
+    GetLocalDataContext = At<GetLocalDataContextFn>(GetLocalDataContextRva);
+    GetLocalPlayer = At<GetLocalPlayerFn>(GetLocalPlayerRva);
+    GetDrlgRoomFromActiveRoom = At<GetDrlgRoomFromActiveRoomFn>(
+        GetDrlgRoomFromActiveRoomRva);
+    GetCollisionGrid = At<GetCollisionGridFn>(GetCollisionGridRva);
+    GetFirstUnitInRoom = At<GetFirstUnitInRoomFn>(
+        GetFirstUnitInRoomRva);
+    IsRoomInTown = At<IsRoomInTownFn>(IsRoomInTownRva);
+    GetUnitClassId = At<GetUnitClassIdFn>(GetUnitClassIdRva);
+    GetUnitDataContext = At<GetUnitDataContextFn>(GetUnitDataContextRva);
+    GetUnitClientCoordX = At<GetUnitClientCoordFn>(GetUnitClientCoordXRva);
+    GetUnitClientCoordY = At<GetUnitClientCoordFn>(GetUnitClientCoordYRva);
+    GetUnitRoom = At<GetUnitRoomFn>(GetUnitRoomRva);
+    GetNextUnitInRoom = At<GetNextUnitInRoomFn>(GetNextUnitInRoomRva);
+    GetUnitType = At<GetUnitTypeFn>(GetUnitTypeRva);
+    GetDrlgRoomLevelId = At<GetDrlgRoomLevelIdFn>(
+        GetDrlgRoomLevelIdRva);
+    GetHoradricStaffTombLevelId = At<GetHoradricStaffTombLevelIdFn>(
+        GetHoradricStaffTombLevelIdRva);
+    GetQuestState = At<GetQuestStateFn>(GetQuestStateRva);
+    GetLevelVis = At<GetLevelVisFn>(GetLevelVisRva);
+    GetLevelWarp = At<GetLevelWarpFn>(GetLevelWarpRva);
+    GetObjectsTxtRecordCount = At<GetObjectsTxtRecordCountFn>(
+        GetObjectsTxtRecordCountRva);
+    GetObjectsTxtRecord = At<GetObjectsTxtRecordFn>(
+        GetObjectsTxtRecordRva);
+    FindWaypointRoomAndCoordinates =
+        At<FindWaypointRoomAndCoordinatesFn>(
+            FindWaypointRoomAndCoordinatesRva);
+    Active.store(true, std::memory_order_release);
+    return true;
+}
+
+void ShutdownNavigationResolver() noexcept {
+    Active.store(false, std::memory_order_release);
+    GetLocalDataContext = nullptr;
+    GetLocalPlayer = nullptr;
+    GetDrlgRoomFromActiveRoom = nullptr;
+    GetCollisionGrid = nullptr;
+    GetFirstUnitInRoom = nullptr;
+    IsRoomInTown = nullptr;
+    GetUnitClassId = nullptr;
+    GetUnitDataContext = nullptr;
+    GetUnitClientCoordX = nullptr;
+    GetUnitClientCoordY = nullptr;
+    GetUnitRoom = nullptr;
+    GetNextUnitInRoom = nullptr;
+    GetUnitType = nullptr;
+    GetDrlgRoomLevelId = nullptr;
+    GetHoradricStaffTombLevelId = nullptr;
+    GetQuestState = nullptr;
+    GetLevelVis = nullptr;
+    GetLevelWarp = nullptr;
+    GetObjectsTxtRecordCount = nullptr;
+    GetObjectsTxtRecord = nullptr;
+    FindWaypointRoomAndCoordinates = nullptr;
+    Base = nullptr;
+    Context = nullptr;
+}
+
+auto RefreshNavigationDestinations(
+        std::uint64_t sessionGeneration,
+        std::int32_t expectedLevelId,
+        std::span<const CustomLevelTarget> customTargets) noexcept
+        -> NavigationRefreshResult {
+    if (!Active.load(std::memory_order_acquire)) {
+        return NavigationRefreshResult::Failed;
+    }
+    Refreshes.fetch_add(1U, std::memory_order_relaxed);
+
+    std::array<std::int32_t, MaximumCustomLevelTargets> customIds{};
+    const auto customIdCount = ResolveCustomTargetIds(
+        customTargets,
+        customIds);
+    CandidateBatch batch{};
+    if (!EnumerateCurrentLevelUnchecked(
+            expectedLevelId,
+            std::span(customIds.data(), customIdCount),
+            batch)) {
+        Rooms.fetch_add(batch.roomCount, std::memory_order_relaxed);
+        Presets.fetch_add(batch.presetCount, std::memory_order_relaxed);
+        if (batch.traversalLimited) {
+            TraversalLimits.fetch_add(1U, std::memory_order_relaxed);
+        }
+        Failures.fetch_add(1U, std::memory_order_relaxed);
+        LogBoundedNavigationDiagnostics(
+            batch,
+            std::span<const NavigationSubtileDestination>{},
+            0,
+            0,
+            0,
+            0);
+        return NavigationRefreshResult::Failed;
+    }
+
+    std::array<NavigationSubtileDestination, MaximumNavigationDestinations>
+        destinations{};
+    const auto correctTombQuestTargets = batch.hasCorrectTomb
+            && !batch.durielRewardGranted
+        ? std::span<const NavigationPointCandidate>(&batch.correctTomb, 1U)
+        : std::span<const NavigationPointCandidate>{};
+    const auto correctTombProgressionOverride = batch.hasCorrectTomb
+            && batch.durielRewardGranted
+        ? std::optional<std::int32_t>(batch.correctTombLevelId)
+        : std::nullopt;
+    const auto destinationCount = BuildNavigationDestinations(
+        NavigationPolicyInput{
+            .currentLevelId = batch.levelId,
+            .inTown = batch.inTown,
+            .exits = std::span(batch.exits.data(), batch.exitCount),
+            .waypoint = batch.hasWaypoint ? &batch.waypoint : nullptr,
+            .questTargets = correctTombQuestTargets,
+            .customTargetLevelIds = std::span(
+                customIds.data(),
+                customIdCount),
+            .progressionTargetOverride = correctTombProgressionOverride,
+        },
+        destinations);
+
+    Rooms.fetch_add(batch.roomCount, std::memory_order_relaxed);
+    Presets.fetch_add(batch.presetCount, std::memory_order_relaxed);
+    Exits.fetch_add(batch.exitCount, std::memory_order_relaxed);
+    Waypoints.fetch_add(batch.hasWaypoint ? 1U : 0U, std::memory_order_relaxed);
+    VisibilitySlots.fetch_add(
+        batch.visibilitySlotCount,
+        std::memory_order_relaxed);
+    VisibilityPairs.fetch_add(
+        batch.visibilityPairCount,
+        std::memory_order_relaxed);
+    PendingVisibilityTargets.fetch_add(
+        batch.pendingVisibilityTargetCount,
+        std::memory_order_relaxed);
+
+    // Publishing an empty town batch is intentional: it clears any line from
+    // the level that was active before the transition without inventing a POI.
+    if (!BindNavigationLevelForPublish(sessionGeneration, batch.levelId)
+        || !PublishNavigationDestinations(
+            sessionGeneration,
+            batch.levelId,
+            destinations.data(),
+            destinationCount)) {
+        Failures.fetch_add(1U, std::memory_order_relaxed);
+        return NavigationRefreshResult::Failed;
+    }
+    Published.fetch_add(destinationCount, std::memory_order_relaxed);
+    LastLevelId.store(batch.levelId, std::memory_order_relaxed);
+    LastDestinationCount.store(
+        static_cast<std::uint32_t>(destinationCount),
+        std::memory_order_relaxed);
+    LastWaypointX.store(0, std::memory_order_relaxed);
+    LastWaypointY.store(0, std::memory_order_relaxed);
+    LastProgressionX.store(0, std::memory_order_relaxed);
+    LastProgressionY.store(0, std::memory_order_relaxed);
+    std::int32_t publishedWaypointX{};
+    std::int32_t publishedWaypointY{};
+    std::int32_t publishedProgressionX{};
+    std::int32_t publishedProgressionY{};
+    for (std::size_t index = 0U; index < destinationCount; ++index) {
+        const auto& destination = destinations[index];
+        if (destination.kind == NavigationLineKind::Waypoint) {
+            publishedWaypointX = destination.subtileX;
+            publishedWaypointY = destination.subtileY;
+            LastWaypointX.store(destination.subtileX, std::memory_order_relaxed);
+            LastWaypointY.store(destination.subtileY, std::memory_order_relaxed);
+        } else if (destination.kind == NavigationLineKind::Progression) {
+            publishedProgressionX = destination.subtileX;
+            publishedProgressionY = destination.subtileY;
+            LastProgressionX.store(destination.subtileX, std::memory_order_relaxed);
+            LastProgressionY.store(destination.subtileY, std::memory_order_relaxed);
+        }
+    }
+    LogBoundedNavigationDiagnostics(
+        batch,
+        std::span(destinations.data(), destinationCount),
+        publishedWaypointX,
+        publishedWaypointY,
+        publishedProgressionX,
+        publishedProgressionY);
+
+    if (batch.inTown) return NavigationRefreshResult::Complete;
+
+    const auto completeness = EvaluateNavigationResolutionCompleteness(
+        batch.levelId,
+        std::span(batch.exits.data(), batch.exitCount));
+    if (batch.pendingWaypoint || batch.pendingCorrectTomb
+        || batch.pendingCollisionRoomCount != 0U
+        || batch.pendingRoomTileRoomCount != 0U
+        || completeness
+            == NavigationResolutionCompleteness::PartialRetryable) {
+        PartialRefreshes.fetch_add(1U, std::memory_order_relaxed);
+        return NavigationRefreshResult::PartialRetryable;
+    }
+    return NavigationRefreshResult::Complete;
+}
+
+auto IsNavigationResolverActive() noexcept -> bool {
+    return Active.load(std::memory_order_acquire);
+}
+
+auto GetNavigationResolverCounters() noexcept -> NavigationResolverCounters {
+    return {
+        .refreshes = Refreshes.load(std::memory_order_relaxed),
+        .rooms = Rooms.load(std::memory_order_relaxed),
+        .presets = Presets.load(std::memory_order_relaxed),
+        .exits = Exits.load(std::memory_order_relaxed),
+        .waypoints = Waypoints.load(std::memory_order_relaxed),
+        .published = Published.load(std::memory_order_relaxed),
+        .unresolvedNames = UnresolvedNames.load(std::memory_order_relaxed),
+        .failures = Failures.load(std::memory_order_relaxed),
+        .traversalLimits = TraversalLimits.load(std::memory_order_relaxed),
+        .partialRefreshes = PartialRefreshes.load(std::memory_order_relaxed),
+        .visibilitySlots = VisibilitySlots.load(std::memory_order_relaxed),
+        .visibilityPairs = VisibilityPairs.load(std::memory_order_relaxed),
+        .pendingVisibilityTargets = PendingVisibilityTargets.load(
+            std::memory_order_relaxed),
+        .lastLevelId = LastLevelId.load(std::memory_order_relaxed),
+        .lastDestinationCount = LastDestinationCount.load(
+            std::memory_order_relaxed),
+        .lastWaypointX = LastWaypointX.load(std::memory_order_relaxed),
+        .lastWaypointY = LastWaypointY.load(std::memory_order_relaxed),
+        .lastProgressionX = LastProgressionX.load(std::memory_order_relaxed),
+        .lastProgressionY = LastProgressionY.load(std::memory_order_relaxed),
+    };
+}
+
+} // namespace RuffnecKk::MapSense
