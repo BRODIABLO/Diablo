@@ -1098,3 +1098,46 @@ confiance explicite.
   D2RLoader Suite. Le cold start pile complète est passé le 27 août; un témoin
   effectif Normal et le cas sans room restent requis avant qualification
   gameplay.
+
+## Armageddon et Hurricane en chance-to-cast
+
+- Le helper serveur d'effet d'objet à `0x589930` refuse immédiatement une
+  ligne SkillsTxt dont le word `ItemEffect` à `+0x20A` vaut zéro. Une fixture
+  Fallen a reproduit l'assertion `ptSkill->nItemEffect != 0`; forcer
+  temporairement `ItemEffect=1` supprime cette assertion sans faire apparaître
+  Armageddon.
+- Le callback partagé `SrvDo124` à `0x575DE0` appelle
+  `UNITS_GetUsedSkill`, puis refuse le lancement si le noeud absent ou son
+  SkillsTxt ne désigne pas le skill demandé. C'est le second gate indépendant
+  du défaut CtC.
+- La liste de skills est à `Unit+0x100`, son premier noeud à `+0x00` et le
+  used skill à `+0x18`. Un noeud D2Skill porte son SkillsTxt à `+0x00`, son
+  suivant à `+0x08`, son seed `Param1` à `+0x24`, son niveau à `+0x40`, son
+  owner GUID à `+0x4C` et le filtre du resolver à `+0x54`.
+- L'active callback Armageddon à `0x574E90` résout obligatoirement le skill via
+  `SKILLS_GetHighestLevelSkillFromUnitAndId` à `0x33DD40`, puis consomme et
+  renouvelle `Param1`. L'active callback Hurricane à `0x575600` ne dépend plus
+  d'un noeud de skill une fois l'état initial créé.
+- Le mécanisme retenu dans `Mission/armageddon-ctc-fix.md` reste synchrone et
+  borné : `ItemEffect` est restauré après le helper, le used skill synthétique
+  est stack-local pendant SrvDo124, et le noeud Armageddon synthétique est lié
+  seulement pendant chaque active callback. Aucun noeud fabriqué n'est
+  persistant ni sérialisé.
+- Le témoin d'expiration à 250 frames a confirmé que l'état natif s'arrête, mais
+  a révélé que la table interne 0.1.0 conservait encore sa graine. La 0.1.1
+  emprunte sans le hooker `STATES_CheckState 0x3351B0`, dont la signature
+  stricte de 32 octets est unique, pour effacer l'entrée avant le callback si
+  l'état a disparu. Après un retour zéro, une seconde vérification efface
+  l'entrée seulement si le callback vient de retirer l'état.
+- Le retour du callback ne constitue pas seul une preuve d'expiration : la
+  référence sémantique D2MOO supprime l'événement et retourne zéro si l'état est
+  absent (`SkillDruid.cpp:1074-1081`), mais peut aussi retourner zéro après
+  avoir replanifié l'événement lorsque la pièce ou la création du missile ne
+  convient pas (`SkillDruid.cpp:1122-1150`). Le prédicat d'état est donc le
+  discriminateur correct; aucune adresse D2MOO n'est transposée.
+- La preuve sémantique est corroborée par
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`, fichiers
+  `D2Game/src/SKILLS/SkillItem.cpp` et
+  `D2Game/src/SKILLS/SkillDruid.cpp`. Aucune adresse ni structure 32 bits n'est
+  transposée. Les RVA et octets ci-dessus proviennent exclusivement du corpus
+  natif gouverné commun aux cibles 3.2.92777 et 3.3.93847.

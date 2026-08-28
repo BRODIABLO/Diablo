@@ -530,6 +530,66 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "ArmageddonCtCFix",
+                                                           "path":  "addons/ArmageddonCtCFix",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-public-intermod-d2rloader-addon",
+                                                                        "summary":  "DLL autonome RuffnecKk qui corrige le lancement chance-to-cast d’Armageddon et Hurricane par des noeuds de skill synthétiques strictement transitoires, sans dépendance BKVince.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "experimental"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/ArmageddonCtCFix/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "armageddon_ctc_policy.hpp",
+                                                                                                     "path":  "addons/ArmageddonCtCFix/src/armageddon_ctc_policy.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/ArmageddonCtCFix/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/ArmageddonCtCFix/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/ArmageddonCtCFix/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "policy_tests.cpp",
+                                                                                                     "path":  "addons/ArmageddonCtCFix/src/policy_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/ArmageddonCtCFix/README.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "ruffneckk-armageddon-ctc-fix.toml",
+                                                                                "path":  "addons/ArmageddonCtCFix/ruffneckk-armageddon-ctc-fix.toml",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "VALIDATION.md",
+                                                                                "path":  "addons/ArmageddonCtCFix/VALIDATION.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "BKVCombat",
                                                            "path":  "addons/BKVCombat",
                                                            "kind":  "directory",
@@ -39343,6 +39403,17 @@
                                                            "name":  "advanced-item-tooltips-public-intermod.md",
                                                            "path":  "Mission/advanced-item-tooltips-public-intermod.md",
                                                            "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "armageddon-ctc-fix.md",
+                                                           "path":  "Mission/armageddon-ctc-fix.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-public-intermod-plugin-mission",
+                                                                        "summary":  "Mission, preuves natives et qualification D2R 3.3 du plugin public Armageddon CtC Fix, avec couverture 3.2 par équivalence native gouvernée.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "active"
+                                                                    }
                                                        },
                                                        {
                                                            "name":  "base-mod-features-3.2.md",

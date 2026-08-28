@@ -313,7 +313,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/charm-inventory-auras-3.2.md",
-      "notes": "Returns the skill list stored through the player-unit path at +0x100. Active left and right skill pointers are at skillList+0x08 and +0x10; skill identity is the signed SkillsTxt ID plus owner GUID."
+      "notes": "Returns the skill list stored through the unit path at +0x100. The list head is at +0x00, active left and right skill pointers are at +0x08 and +0x10, and the used skill is at +0x18. Skill identity is the signed SkillsTxt ID plus owner GUID. ArmageddonCtCFix additionally proves these list-head and used-skill fields through SrvDo124 and the 0x33DD40 resolver; see Mission/armageddon-ctc-fix.md."
     },
     {
       "rva": "0x34B870",
@@ -2264,8 +2264,8 @@
       "name": "STATES_CheckState",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/mass-id-3.2.md; Mission/burn-damage-fix.md",
-      "notes": "Checks whether a unit has a state id with observed x64 ABI (unit, stateId) -> int32. Both native shared-stash handlers pass state 0xBA before accepting an auxiliary player as a shared-stash proxy. Caller 0x33A231 independently iterates state ids and calls this same predicate. Burn Damage Fix borrows it without patching to witness state burning (115) for diagnostics and to gate immediate and periodic fire_hit replay. Its strict 32-byte entry is 48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 8B DA 48 8B F1 E8 07 68 01 00 85 C0 74 0E 83 E8 01."
+      "source": "Mission/mass-id-3.2.md; Mission/burn-damage-fix.md; Mission/armageddon-ctc-fix.md",
+      "notes": "Checks whether a unit has a state id with observed x64 ABI (unit, stateId) -> int32. Both native shared-stash handlers pass state 0xBA before accepting an auxiliary player as a shared-stash proxy. Caller 0x33A231 independently iterates state ids and calls this same predicate. Burn Damage Fix borrows it without patching to witness state burning (115) for diagnostics and to gate immediate and periodic fire_hit replay. Armageddon CtC Fix 0.1.1 borrows it without patching to erase a retained random seed only when Armageddon's native state has actually expired. Its strict 32-byte entry is 48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 8B DA 48 8B F1 E8 07 68 01 00 85 C0 74 0E 83 E8 01."
     },
     {
       "rva": "0x3354C0",
@@ -3048,8 +3048,8 @@
       "name": "DATATBLS_GetSkillsTxtRecordForContext",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/ruffneckk-cast-triggers.md; addons/CastTriggers/README.md",
-      "notes": "Context-aware SkillsTxt lookup with observed ABI (uint8 dataContext, int32 skillId) -> compiled record pointer. It resolves the per-context table at +0x11B0/+0x11B8 and multiplies the validated row index by the proven 0x2EC record stride at 0x9780B. Cast Triggers reads the flags QWORD at +0x24, player animation at +0x30 and sequence transition at +0x32. Its strict 40-byte entry signature is unique."
+      "source": "Mission/ruffneckk-cast-triggers.md; addons/CastTriggers/README.md; Mission/armageddon-ctc-fix.md",
+      "notes": "Context-aware SkillsTxt lookup with observed ABI (uint8 dataContext, int32 skillId) -> compiled record pointer. It resolves the per-context table at +0x11B0/+0x11B8 and multiplies the validated row index by the proven 0x2EC record stride at 0x9780B. Cast Triggers reads the flags QWORD at +0x24, player animation at +0x30 and sequence transition at +0x32. Its strict 40-byte entry signature is unique. ArmageddonCtCFix uses the same ABI for its two supported skills and fingerprints this entry before installing any hook."
     },
     {
       "rva": "0x5896E0",
@@ -3258,6 +3258,46 @@
       "confidence": "high",
       "source": "Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique 38-byte read-only witness 48 89 4C 24 30 0F B6 91 04 01 00 00 48 8B F9 48 89 4C 24 40 4D 8B F9 0F B6 89 06 01 00 00 49 8B F0 E8 CA 28 EB FF. Inside SUNITDMG_CalculateTotalDamage it proves difficulty at Game+0x104, data-set context at Game+0x106 and the call order GetDifficultyRecord(dataSet,difficulty). Burn Damage Fix 2.1 fingerprints this layout before using the same offsets in its synthetic Fire resolution context."
+    },
+    {
+      "rva": "0x589930",
+      "name": "SKILLITEM_HandleItemEffectSkill",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/armageddon-ctc-fix.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/SKILLS/SkillItem.cpp:1898-2104",
+      "notes": "Authoritative server item-effect helper with observed ABI (game, unit, skillId, skillLevel, target, x, y, unitTypeOut, unitGuidOut, xOut, yOut, flag) -> int32. It resolves the context SkillsTxt record and refuses a zero ItemEffect word at record+0x20A before entering native target selection and the central skill handler. It saves the current target unit and first-point coordinates, temporarily installs the passed unit or position, applies SkillsTxt ItemTarget semantics, executes the central handler, then restores the saved descriptor. Its entry and semantics are byte-identical in the governed common corpus for 92777 and 93847. ArmageddonCtCFix owns this entry only for a thread-local item cast of configured skill IDs 249 and 250."
+    },
+    {
+      "rva": "0x575DE0",
+      "name": "SKILLS_SrvDo124_Armageddon_Hurricane",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/armageddon-ctc-fix.md",
+      "notes": "Shared authoritative start callback for Armageddon and Hurricane with ABI (game, unit, skillId, skillLevel) -> int32. It requires UNITS_GetUsedSkill to identify the requested skill, creates or refreshes the aura state and active event, then stores a random periodic seed at D2Skill+0x24. A native chance-to-cast call has no matching used skill, which is the second proven failure gate after ItemEffect."
+    },
+    {
+      "rva": "0x574E90",
+      "name": "SKILLS_SrvDo146_ArmageddonActive",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/armageddon-ctc-fix.md",
+      "notes": "Armageddon active-state callback with ABI (game, unit, skillId, skillLevel) -> int32. After validating the state it resolves the highest matching skill through 0x33DD40, consumes the seed at D2Skill+0x24, updates that seed and schedules the next active event. ArmageddonCtCFix temporarily links a stack-local surrogate only when its own synthetic CtC start retained a seed for the exact unit identity. Version 0.1.1 borrows the separately fingerprinted STATES_CheckState predicate at 0x3351B0 before this callback and after a zero return so natural expiration erases the retained seed without treating every native zero return as expiration."
+    },
+    {
+      "rva": "0x575600",
+      "name": "SKILLS_SrvDo145_HurricaneActive",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/armageddon-ctc-fix.md",
+      "notes": "Hurricane active-state callback with ABI (game, unit, skillId, skillLevel) -> int32. Unlike Armageddon's active callback it does not resolve or retain a D2Skill node after SrvDo124 has successfully established the state and event. ArmageddonCtCFix therefore does not hook this entry."
+    },
+    {
+      "rva": "0x33DD40",
+      "name": "SKILLS_GetHighestLevelSkillFromUnitAndId",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/armageddon-ctc-fix.md",
+      "notes": "Resolves the highest eligible D2Skill for a unit and skill ID with observed ABI (unit, skillId, selectionFlag) -> D2Skill*. The false-selection path scans SkillList+0x00, identifies each node through its SkillsTxt pointer at +0x00 and filters the node flag at +0x54. Armageddon's active callback calls it with selectionFlag false."
     }
   ]
 }
