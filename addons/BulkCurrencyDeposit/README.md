@@ -86,6 +86,28 @@ For a standard loose-file mod this means editing an ordinary JSON file below
 repacking a binary MPQ archive. The exact stash layout filename and coordinates
 remain owned by the active mod.
 
+## Match Dimentio's Charm Inventory button
+
+Dimentio permitted reuse of the optional button sprites. A local Charm
+Inventory customization can therefore use the same validated mold by replacing
+only these two members in its companion MPQ:
+
+```text
+data/hd/global/ui/d2rloader/charm-inv/button_mold.sprite
+  <- assets/button-mold.sprite
+data/hd/global/ui/d2rloader/charm-inv/button_mold.lowend.sprite
+  <- assets/button-mold.lowend.sprite
+```
+
+The normal and low-end source hashes are respectively
+`1D538B74295588757E5DA0C1417F29A147CB7F44B80A041504806D35DBA339DD`
+and
+`39DFF56F0BF7CE2F51E9C277C1836F1406491718074AF917DDFED79E268029A3`.
+The BKVince runtime test on August 28, 2026 changed exactly these two of the
+18 MPQ members, kept Dimentio's Charm Inventory 0.19.0 DLL byte-identical and
+was visually accepted as a clean UI match. This repository does not distribute
+the modified third-party MPQ.
+
 ## Language
 
 The tooltip follows the active D2R client language automatically. The DLL

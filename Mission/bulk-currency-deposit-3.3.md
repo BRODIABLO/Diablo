@@ -1,6 +1,6 @@
 # Bulk Currency Deposit — D2R 3.3
 
-Dernière mise à jour : 25 août 2026
+Dernière mise à jour : 28 août 2026
 
 ## Décision et état
 
@@ -116,6 +116,23 @@ portée mod-locale. Aucun plugin n'est rejeté ou refusé. L'assertion TACT conn
 est capturée et ignorée par le Loader après le startup complet; elle reste
 externe à Currency. Ce cold start ne remplace pas le témoin visuel en jeu du
 nouveau mold ni la qualification séparée sous D2R `3.2.92777`.
+
+Le 28 août 2026, les deux mêmes molds sont intégrés localement au MPQ compagnon
+de Dimentio Charm Inventory `0.19.0` afin d'aligner visuellement les boutons des
+deux plugins. Le candidat de 9 587 401 octets, SHA-256
+`A463A548E5DEF0913AB35EF9B524B1F941D57C516C651A73029DD9F754DF3F62`,
+diffère du MPQ original dans exactement deux de ses dix-huit membres :
+`button_mold.sprite` vaut
+`1D538B74295588757E5DA0C1417F29A147CB7F44B80A041504806D35DBA339DD`
+et `button_mold.lowend.sprite` vaut
+`39DFF56F0BF7CE2F51E9C277C1836F1406491718074AF917DDFED79E268029A3`.
+La DLL Dimentio reste byte-identique, SHA-256
+`CFC57AA34780E056987926CDA9AEBAD7476F7491464FFBFC9E816ECBE4309A1B`.
+Un cold start de la pile complète atteint `D2R startup complete` avec 36
+plugins chargés; l'échec Revive Overhaul observé est antérieur au changement et
+hors de ce lot. Vincent valide ensuite en jeu le rendu comme très propre. Le
+MPQ tiers reconstruit demeure local et n'est pas redistribué; les deux sources
+autorisées et leurs hashes suffisent à reproduire précisément ce delta visuel.
 
 Vincent a approuvé l'implantation puis le rebranding complet le 20 août 2026.
 Le produit est une DLL autonome de la RuffnecKk D2RLoader Suite, hybride
