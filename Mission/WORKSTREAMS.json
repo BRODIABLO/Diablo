@@ -114,10 +114,10 @@
     {
       "id": "remote-stash",
       "name": "RemoteStash",
-      "status": "active",
+      "status": "maintenance",
       "owner": "Vincent + Codex",
       "mission": "Mission/remote-stash-3.2.md",
-      "nextGate": "Have an external modder integrate the configuration-free 0.2.25 inter-mod kit into a third-party desktop inventory layout and validate exact layout-owned placement, item and gold transfers, quick move, and persistence; then cover controller and multiplayer host/join behavior.",
+      "nextGate": "Remote Stash 2.2.0 is selected for release, packaged with exact DLL/TOML hashes, and installed in the global D2R 3.3.93847 runtime. Commit and push the autonomous RuffnecKk Suite repository explicitly before publishing its GitHub asset; resolve and requalify the unrelated Revive Overhaul load failure before claiming full-Suite coexistence.",
       "include": [
         "Mission/remote-stash-3.2.md",
         "addons/RemoteStash/**",

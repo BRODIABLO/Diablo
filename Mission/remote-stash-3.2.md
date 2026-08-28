@@ -1,15 +1,12 @@
-# RemoteStash — D2R 3.2.92777
+# RemoteStash — D2R 3.3.93847 (corpus natif commun 3.2.92777)
 
-Dernière mise à jour : 8 août 2026
+Dernière mise à jour : 28 août 2026
 
-Statut : maintenance active sur la candidate autonome `RemoteStash 1.1.5`.
-La release publique 1.0.0 reste la dernière version validée en jeu. La 1.1.5
-conserve le hotkey réactif, sa consommation et l'interface persistante, mais
-laisse le stash natif ouvrir son panneau Inventory compagnon afin de préserver
-la composition desktop complète. Son build, ses tests statiques et son cold
-start complet passent; le témoin gameplay reste ouvert. Le bouton reste
-entièrement défini par le layout desktop du mod hôte et le plugin demeure
-autonome, avec coexistence optionnelle du PluginPack.
+Statut : `Remote Stash 2.2.0` est la version de release retenue par Vincent.
+Son binaire reproductible est installé et validé dans le runtime global D2R
+3.3.93847, son manifeste est promu et son archive publique stricte est prête
+localement. La release 2.0.0 reste la dernière version déjà publiée tant que
+la 2.2.0 n'est pas envoyée au dépôt produit RuffnecKk D2RLoader Suite.
 
 ## Décisions confirmées
 
@@ -1070,3 +1067,539 @@ items, or et persistance de RemoteStash.
 - L'ajout structurel de l'archive a régénéré le cadastre; son validateur retourne
   `VALID`. Le comportement gameplay 1.2.0 est la promotion sans changement de
   la candidate 1.1.11 déjà confirmée par Vincent.
+
+## Nettoyage du chemin critique UI — candidate 1.2.1 — 12 août 2026
+
+- Un test gameplay prolongé de la 1.2.0 révèle des chutes ponctuelles de
+  framerate lors de l'ouverture et de la fermeture du Remote Stash. Le
+  comportement fonctionnel demeure correct, mais la 1.2.0 n'est donc pas
+  retenue comme preuve finale de fluidité.
+- L'audit retrouve un hook diagnostique temporaire sur
+  `QueueSerializedPacket 0xEE360`. Tant que le stash était visible, ce hook
+  inspectait chaque paquet sérialisé et pouvait construire puis écrire jusqu'à
+  256 traces `GOLD-PROBE` synchrones. Le handler gold écrivait aussi une trace
+  `GOLD-SERVER-PROBE`; les ouvertures et fermetures au hotkey produisaient
+  plusieurs autres `LogInfo` depuis leur chemin UI.
+- La 1.2.1 retire entièrement le hook `0xEE360`, ses signatures, compteurs et
+  traces temporaires. Elle retire aussi les logs routiniers d'ouverture,
+  fermeture et création de session. Les erreurs, les compteurs consultables par
+  `remote-stash`, les transferts d'or et toute la logique de mouvement continu
+  restent inchangés.
+- Le build Release x64 et CTest passent `2/2`; le self-test du workbench 92777
+  passe et `git diff --check` ne rapporte aucune erreur. La DLL candidate porte
+  la version `1.2.1`, mesure `180224` octets et son SHA-256 est
+  `FB0F678934E4A51F35C6D253985606EA0EC531FE4922F4A6EB02D1A0FB10FC13`.
+- Le gameplay reste `not run`. Le prochain témoin doit comparer plusieurs
+  ouvertures et fermetures au hotkey, puis confirmer que le clic gauche maintenu
+  continue encore le déplacement et que les transferts d'items et d'or restent
+  fonctionnels.
+- La DLL candidate est installée byte-identique dans la portée globale; la
+  configuration existante est préservée. Aucun cold start ni lancement gameplay
+  n'est effectué automatiquement et aucun ZIP public 1.2.1 n'est produit avant
+  le témoin de fluidité.
+
+## Arbitrage natif des panneaux — candidate 1.2.2 — 12 août 2026
+
+- Vincent confirme que la 1.2.1 élimine les chutes de framerate observées à
+  l'ouverture et à la fermeture. Le test révèle toutefois que le Remote Stash
+  refuse aussi les fermetures demandées par Quest, Character et Waypoint : le
+  panneau stash demeure alors dominant au lieu de céder sa place selon
+  l'arbitrage UI natif.
+- La cause est la politique générale de `HookCloseInterfaceState`, qui
+  supprimait toute fermeture de l'état stash `0x18` pendant une session distante
+  sauf bouton X, Escape ou réponse serveur. Cette condition bloquait donc une
+  décision native valide sans distinguer son origine.
+- La 1.2.2 limite désormais cette suppression à la portée thread-local déjà
+  prouvée pour la cascade exacte du clic dans le monde
+  `0x102590 -> UI_CloseActiveInterfaceStates 0xC8240 -> UI_CloseInterfaceState`.
+  Les fermetures demandées par un autre panneau repassent dans le gestionnaire
+  natif; aucune liste de panneaux et aucun nouveau hook ne sont ajoutés.
+- Lorsqu'une fermeture native fait réellement tomber l'état stash à zéro, la
+  session RemoteStash cliente est désactivée et une seule requête de fermeture
+  est envoyée au serveur. Une réponse de fermeture déjà initiée par le serveur
+  ne produit pas de paquet retour, et la fermeture au hotkey demeure sans
+  doublon parce qu'elle désactive la session avant la transition UI.
+- Le build Release x64 et CTest passent `2/2`; le self-test du workbench 92777
+  passe et `git diff --check` ne rapporte aucune erreur. La DLL candidate porte
+  la version `1.2.2`, mesure `180224` octets et son SHA-256 est
+  `38BE20C2CC1EB19FDC769B416FB71D2425EC279369EEBBB3187CFFB625822FCA`.
+- Le gameplay 1.2.2 reste `not run`. Le témoin doit vérifier Quest, Character et
+  Waypoint comme remplacements du Remote Stash, puis reconfirmer la persistance
+  du stash pendant le déplacement, la coexistence avec Inventory, le hotkey,
+  Escape, le bouton X et les transferts d'items et d'or.
+
+## Repli d'ouverture des panneaux concurrents — candidate 1.2.3 — 12 août 2026
+
+- Le gameplay invalide entièrement la 1.2.2 pour la livraison : le hotkey ouvre
+  de nouveau Inventory, le mouvement continu est interrompu et Quest/Character
+  ne remplacent toujours pas le stash. Le Waypoint, en revanche, remplace
+  correctement RemoteStash; cette différence prouve que sa fermeture explicite
+  serveur fonctionne déjà et ne doit pas recevoir de traitement particulier.
+- L'audit confirme que le callsite `0x102590` appartient bien à une action dans
+  le monde. Quest et Character ne sont donc pas bloqués par la portée de
+  mouvement : leur première demande d'ouverture est refusée tant que le stash
+  distant occupe le groupe UI concurrent.
+- La 1.2.3 restaure la politique de fermeture éprouvée de la 1.2.1, y compris
+  l'ouverture du stash seul et la continuité du clic maintenu. Dans
+  `UI_OpenInterfaceState`, un repli borné s'applique uniquement si une session
+  RemoteStash est active, si le stash est réellement ouvert, si le panneau
+  demandé n'est ni Stash ni Inventory et si D2R confirme que cette première
+  demande n'a pas ouvert le panneau.
+- Ce repli ferme alors la session distante, laisse fermer le stash avec la
+  fonction native et rejoue exactement une fois la demande d'ouverture
+  originale. Un Waypoint ou tout panneau qui réussit du premier coup ne passe
+  jamais par ce chemin; aucun identifiant Quest/Character/Waypoint n'est codé en
+  dur et les panneaux de mods utilisant l'arbitrage natif bénéficient du même
+  comportement.
+- Le chemin général retourne avant toute lecture UI supplémentaire lorsque la
+  session distante est inactive ou que Stash/Inventory est demandé. Aucun
+  nouveau hook, polling ou log synchrone n'est ajouté. Deux compteurs silencieux
+  mesurent seulement les retries et leurs échecs dans la commande de statut.
+- Le build Release x64 et CTest passent `2/2`; le self-test du workbench 92777
+  passe et `git diff --check` ne rapporte aucune erreur. La DLL candidate porte
+  la version `1.2.3`, mesure `180736` octets et son SHA-256 est
+  `40822F957D65F73F12CCF75CAA972C6781114A0B6CDA6AC4A3FB1C80BC938191`.
+- Le gameplay 1.2.3 reste `not run`. Il doit d'abord reconfirmer les trois
+  garanties 1.2.1 — stash seul, mouvement continu et fermeture indépendante —
+  puis Quest, Character et Waypoint comme remplacements.
+
+## Cession explicite et ouverture Inventory fluide — candidate 1.2.4 — 12 août 2026
+
+- Le témoin gameplay 1.2.3 confirme que RemoteStash et Inventory ont retrouvé
+  leurs ouvertures et fermetures autonomes et que Waypoint remplace correctement
+  le stash. Quest et Character restent toutefois derrière le stash. Ouvrir
+  Inventory pendant un déplacement avec RemoteStash visible interrompt aussi
+  le clic gauche maintenu.
+- Le critère de repli 1.2.3 était incorrect : D2R marque Quest ou Character
+  ouvert même lorsque le stash demeure visuellement dominant. Tester seulement
+  `UI_GetInterfaceState` après la première demande ne permet donc pas de détecter
+  cet échec d'arbitrage.
+- La 1.2.4 retire ce retry et cède explicitement la session distante avant
+  l'ouverture de Character (`2`), Skill Tree (`4`) ou Quest (`0x0F`). Ces états
+  sont corroborés par les callsites du build 92777 et la nomenclature sémantique
+  D2MOO. Waypoint (`0x14`) conserve son trajet natif déjà validé; Inventory (`1`)
+  reste volontairement exclu afin de pouvoir coexister avec RemoteStash.
+- Lorsque Inventory est ouvert pendant une session distante visible, la
+  transition réutilise exactement la protection thread-local déjà prouvée pour
+  l'ouverture au hotkey : les remises à zéro de souris `0x8D510` sont supprimées
+  et les six globals effacés par `0x8D540` sont restaurés après son finalizer.
+  Aucun clic, mouvement, polling ou hook supplémentaire n'est synthétisé.
+- Le build Release x64 et CTest passent `2/2`; le self-test du workbench 92777
+  passe et `git diff --check` ne rapporte aucune erreur. Les DLL du build, des
+  deux emplacements du package et du runtime global sont byte-identiques :
+  version `1.2.4`, taille `181248`, SHA-256
+  `92D7652C002A47B86A05E7FA7D0B57AB67864A60AFB5BDA3A7431EBCA7355AC3`.
+- Le JSON global est préservé (`enabled=true`, `hotkey=;`, `consume=true`) et
+  aucun jeu n'est relancé automatiquement. Le gameplay 1.2.4 reste `not run` :
+  valider Quest, Character et Skill Tree comme remplacements, Waypoint sans
+  régression, puis l'ouverture d'Inventory pendant le clic gauche maintenu avec
+  les deux panneaux autonomes.
+
+## Instrumentation ciblée des arbitrages UI — candidate 1.2.5 — 12 août 2026
+
+- Le test gameplay 1.2.4 invalide la candidate : Quest et Character ne
+  remplacent toujours pas RemoteStash, tandis que Waypoint le remplace.
+  Ouvrir Inventory pendant un clic gauche maintenu avec RemoteStash visible
+  interrompt encore le mouvement. L'autonomie d'ouverture et de fermeture de
+  RemoteStash et Inventory demeure fonctionnelle.
+- La 1.2.5 ne modifie pas cette politique d'arbitrage. Elle ajoute une
+  instrumentation bornée, armée seulement après une ouverture distante, sur
+  Inventory (`1`), Character (`2`), Skill Tree (`4`), l'état alternatif
+  observé `0x0E`, Quest (`0x0F`), Waypoint (`0x14`) et Stash (`0x18`).
+- Chaque trace compare avant/après les états UI `0x18`, `0x16`, Inventory et
+  le panneau demandé, ainsi que l'état de la session distante, le résultat de
+  l'ouverture et le RVA de l'appelant. Les désactivations de session consignent
+  maintenant leur véritable appelant. Les plafonds sont de 32 ouvertures et
+  16 désactivations par ouverture distante.
+- Le build Release x64 et CTest passent `2/2`. Les DLL du build, des deux
+  emplacements du package et du runtime global sont byte-identiques : version
+  `1.2.5`, taille `183296`, SHA-256
+  `D50283E5EADD12507F35A5383AF13A5B4F108F314A95CC372617C1ABF7C20B5E`.
+- Le JSON global reste inchangé, avec le hotkey `;`; D2RLoader a été arrêté
+  pour le déploiement et n'a pas été relancé. Le gameplay 1.2.5 reste
+  `not run`; reproduire successivement Quest, Character, Waypoint puis
+  Inventory pendant un clic gauche maintenu et collecter les lignes
+  `RemoteStash DIAG` du log.
+
+## Instrumentation du distributeur natif des panneaux — candidate 1.2.6 — 12 août 2026
+
+- Le test 1.2.5 a confirmé que Quest, Character, Waypoint et Inventory ne
+  repassent pas par `UI_OpenInterfaceState` lorsque leurs panneaux existent
+  déjà. La sonde précédente ne pouvait donc pas observer ces activations.
+- L'atelier gouverné du build 92777 identifie dix appels directs à
+  `UI_DispatchMessage` dans le gestionnaire natif des panneaux, aux RVA
+  `0x244A09`, `0x244EA6`, `0x245F6C`, `0x24649B`, `0x246930`, `0x246DB0`,
+  `0x247140`, `0x247633`, `0x247E64` et `0x248479`.
+- La 1.2.6 redirige uniquement ces dix appels vers une sonde transparente :
+  le message original traverse la chaîne de coexistence inchangée, puis une
+  trace bornée compare avant/après les états Stash, Inventory, Character,
+  Skills, `0x0E`, Quest et Waypoint. Aucun nouvel arbitrage ou close n'est
+  appliqué par cette candidate diagnostique.
+- La validation gameplay doit ouvrir RemoteStash puis activer Quest,
+  Character, Waypoint et Inventory. Les lignes
+  `RemoteStash DIAG panel-dispatch` permettront d'identifier le callsite et
+  l'état réellement associé à chaque commande avant d'implanter le correctif.
+- Le cold start global du 12 août charge la 1.2.6 avec le PluginPack comme
+  propriétaire du broker UI, le JSON global `hotkey=;` et aucune erreur de
+  hook. Le build et les deux tests CTest passent; la DLL déployée mesure
+  `185344` octets et porte le SHA-256
+  `83A1022FB4FA1975AA8067C30E6C4EFB2D83134B2EA0369FBD0793A1C7A6B2C7`.
+- Vincent a reproduit successivement Quest, Character, Waypoint et Inventory
+  après l'ouverture distante. Aucune ligne `DIAG panel-dispatch` n'a été
+  produite : les dix callsites instrumentés ne sont donc pas le chemin des
+  commandes réellement utilisées en jeu. Cette hypothèse est invalidée; la
+  1.2.6 ne constitue pas un correctif gameplay.
+- Le prochain diagnostic recommandé vise le gestionnaire des panneaux déjà
+  créés à `0x27F2B0` et ses sept xrefs gouvernées. Cette fonction maintient la
+  liste des états du panneau, ferme l'état courant via `UI_CloseInterfaceState`
+  et choisit le nouvel état; elle est une convergence plus basse que les
+  branches de distribution invalidées par le test 1.2.6.
+
+## Arbitrage central des panneaux existants — candidate 1.2.7 — 12 août 2026
+
+- L'hypothèse finale de la 1.2.6 était encore trop haute dans la pile. Le
+  désassemblage gouverné identifie `UI_ToggleInterfaceState 0xCDE00` comme la
+  route centrale des panneaux déjà créés : ABI observée
+  `(int32 state, bool secondary) -> bool`, signature stricte unique de 68
+  octets, puis appel au garde commun `0xD00B0` avec l'opération toggle `2`.
+- La 1.2.7 retire entièrement les dix sondes `UI_DispatchMessage` invalidées.
+  Dans le hook central toggle, Character (`2`), Skill Tree (`4`) et Quest
+  (`0x0F`) désactivent la session distante et ferment nativement le stash
+  `0x18` avant que D2R exécute exactement la transition demandée. Waypoint
+  conserve son chemin serveur déjà fonctionnel et Inventory (`1`) reste
+  autorisé à coexister.
+- Quand Inventory `1` est fermé et qu'il est togglé pendant qu'un RemoteStash
+  est visible, la 1.2.7 applique uniquement autour de ce toggle la protection
+  thread-local déjà validée contre les remises à zéro du clic maintenu. Une
+  fermeture Inventory ou toute transition sans session distante reste native.
+- Le build Release x64 et CTest passent `2/2`; le self-test du workbench 92777
+  passe et `git diff --check` ne rapporte aucune erreur. La preuve stable de
+  `UI_ToggleInterfaceState 0xCDE00` est promue dans `known-rvas.json`.
+- Le gameplay 1.2.7 reste `not run`. Il doit confirmer Quest, Character et
+  Skill Tree comme remplacements, Waypoint sans régression, puis Inventory
+  ouvert pendant un clic gauche maintenu avec ouverture et fermeture autonome
+  des deux panneaux.
+
+## Cession par la matrice native de compatibilité — candidate 1.2.8 — 12 août 2026
+
+- Le gameplay 1.2.7 prouve que le hook `UI_ToggleInterfaceState 0xCDE00`
+  fonctionne pour Inventory : ouvrir Inventory avec RemoteStash visible ne
+  coupe plus le clic de déplacement maintenu. Quest, Character, Skill Tree et
+  Waypoint ne remplacent toutefois pas RemoteStash; le compteur de cession
+  reste à zéro. Le toggle n'est donc pas leur convergence d'arbitrage.
+- Le garde partagé `0xD00B0`, appelé par Close (`0xC7DC0`), Open (`0xCD823`)
+  et Toggle (`0xCDE67`), applique la matrice native de compatibilité. Après
+  acceptation, il parcourt les 32 états et appelle
+  `UI_CloseInterfaceState 0xC7D30` depuis l'unique callsite `0xD05F8` lorsqu'un
+  état actif doit céder sa place. La signature exacte `E8 33 77 FF FF` est
+  unique dans l'image 92777.
+- La 1.2.8 ne code plus aucun identifiant Quest, Character, Skill Tree ou
+  Waypoint. Si et seulement si ce callsite natif ordonne la fermeture du stash
+  distant `0x18`, le plugin désactive d'abord sa session serveur synthétique,
+  laisse la fermeture native s'exécuter, puis compte le résultat. Toute autre
+  fermeture automatique demeure protégée comme en 1.2.7. Cette politique
+  conserve donc la matrice D2R comme autorité et s'étend aux panneaux de mods.
+- Le hook Toggle reste limité à la fluidité Inventory déjà validée. Le build
+  Release x64 et CTest passent `2/2`; le self-test du workbench passe et
+  `git diff --check` ne rapporte aucune erreur. La DLL candidate mesure
+  `181760` octets et porte le SHA-256
+  `9923AAFC1C0BC44BFEE23065F582F365D32688732833FF55AB87FA345CE5BBBA`.
+- Le gameplay 1.2.8 reste `not run` : reconfirmer la fluidité Inventory, puis
+  Quest, Character, Skill Tree et Waypoint comme remplacements de RemoteStash.
+
+## Cession au gestionnaire des panneaux créés — candidate 1.2.9 — 12 août 2026
+
+- Le gameplay 1.2.8 confirme que la fluidité d'Inventory reste correcte, mais
+  invalide le callsite `0xD05F8` comme convergence de remplacement : aucun de
+  Quest, Character, Skill Tree ou Waypoint ne remplace RemoteStash.
+- Le désassemblage gouverné confirme finalement le rôle de `0x27F2B0`. Cette
+  entrée reçoit un groupe de panneaux et l'identifiant demandé, recherche cet
+  identifiant dans la liste du groupe à `+0x168` / `+0x188`, ferme la sélection
+  courante par `UI_CloseInterfaceState`, puis ouvre la nouvelle par
+  `UI_OpenInterfaceState`. Ses appels directs passent notamment Character `2`,
+  Skills `4` et Quest `0x0E`.
+- La 1.2.9 accroche cette entrée unique avec sa signature stricte de 17 octets.
+  Si RemoteStash est actif et visible, elle cède la session seulement lorsque
+  l'état demandé appartient réellement à la liste du groupe. Inventory `1` et
+  Stash `0x18` restent exclus afin de conserver la coexistence et le hotkey.
+  Le layout et les coordonnées du mod ne participent pas à cette décision.
+- Une trace bornée aux huit premiers cas consigne aussi le RVA d'une fermeture
+  stash non liée au mouvement qui serait encore supprimée. Elle doit identifier
+  le chemin Waypoint si celui-ci ne traverse pas le gestionnaire `0x27F2B0`.
+- Le prochain test doit d'abord reconfirmer la fluidité Inventory, puis essayer
+  Character, Skills, Quest et Waypoint comme remplacements. Le gameplay 1.2.9
+  confirme la fluidité, mais aucun des quatre remplacements ne fonctionne.
+
+## Cession au teardown général natif — candidate 1.2.10 — 12 août 2026
+
+- La trace bornée de la 1.2.9 capture la fermeture réellement demandée pendant
+  les essais de remplacement : `UI_CloseInterfaceState(0x18, false)` revient à
+  `0x22A9FE`, donc provient de l'unique callsite `0x22A9F9` dans la routine
+  `0x22A7E0`. Cette routine ferme successivement les états `0x18`, `0x19` et
+  `0x0B` dans un teardown général de panneaux.
+- La politique RemoteStash classait encore ce callsite connu comme une fermeture
+  automatique à supprimer. La 1.2.10 le laisse désormais passer uniquement
+  hors de `RemoteMovementUiCloseScope`; la cascade de déplacement demeure donc
+  protégée, tandis qu'une transition de panneau peut désactiver la session
+  distante et effectuer sa fermeture native.
+- Le hook expérimental `0x27F2B0` de la 1.2.9 est retiré puisqu'il n'est jamais
+  atteint par ce chemin gameplay. La signature unique `E8 32 D3 E9 FF` du
+  callsite réellement observé est ajoutée au gate strict du build 92777.
+- Validation attendue : la fluidité Inventory doit rester intacte et Character,
+  Skills, Quest ainsi que Waypoint doivent chacun remplacer RemoteStash.
+- Le build Release x64 et CTest passent `2/2`; le self-test du workbench passe.
+  Les trois copies package/runtime sont byte-identiques à la DLL source de
+  `181760` octets, SHA-256
+  `6752AAFB5CD539F6B493DCC0D14A4E8AB6F9D4A479FBE6EC82D6E53163F2D845`.
+  Le cold start charge la 1.2.10 avec le broker PluginPack et le hotkey global
+  `;`; la matrice gameplay de remplacement reste `not run` jusqu'au retour de
+  Vincent.
+
+## Baseline RuffnecKk D2RLoader Suite — Remote Stash 2.0.0 — 18 août 2026
+
+- Vincent désigne explicitement cette refonte comme le Remote Stash
+  autoritaire de son futur dépôt RuffnecKk D2RLoader Suite. La candidate locale
+  `1.6.0`, jamais publiée, est donc renumérotée directement `2.0.0`; les mises à
+  jour futures partiront de cette baseline.
+- La 2.0.0 est générique et ne contient aucune adaptation BKVince. Elle
+  enregistre son propre enfant du panneau standard `PlayerInventory`, embarque
+  le coffre RuffnecKk et calcule sa position depuis la géométrie du panneau
+  réellement chargé. La position, l'ancre, les offsets, les dimensions, les
+  quatre frames et des sprites `SpA1` personnalisés sont configurables en TOML.
+- Aucun fichier BKVince n'a été modifié pour le test. Son ancien widget
+  `remote_stash` et ses sprites externes sont volontairement restés présents :
+  le plugin a masqué ce widget au runtime et a conservé le véritable
+  `gold_button`. L'ancienne configuration globale 1.5.0 a également été
+  conservée, ce qui prouve la migration sans réinitialisation utilisateur.
+- Le témoin gameplay de Vincent sur l'implantation finale, alors numérotée
+  localement 1.6.0, est `passed` : le bouton physique ouvre Remote Stash, aucun
+  modal Drop Gold parasite n'apparaît, le transfert d'or fonctionne et le
+  bouton d'or natif conserve son comportement. Les logs du 18 août montrent le
+  masquage de l'ancien widget, le placement du bouton plugin à `95,1641` en
+  `176x112`, l'activation SDK du bouton et l'ouverture de la session serveur.
+- Le renommage 2.0.0 ne modifie que les métadonnées et textes de version. Deux
+  builds Release propres avec avertissements fatals sont byte-identiques; les
+  deux tests ciblés passent. La DLL mesure `538112` octets et porte le SHA-256
+  `D21E80D45398356604CAED4DD724A182AB117F62BC527F0BE964FCEE8A82AB1A`.
+  Les contrôles de politique de la Suite et de propriété des écritures natives
+  sont `VALID`.
+- L'archive publique stricte
+  `RuffnecKk-remote-stash-v2.0.0.zip` contient uniquement
+  `plugins/d2rl-ruffneckk-remote-stash.dll`; son SHA-256 est
+  `519C9B48245324C156E4C363BCCE34A4B4BE0347D7F18F82FDC1B261D8DEA785`.
+  Le README anglais reste à côté du ZIP et hors de l'archive, SHA-256
+  `B8057F006EC074316B6815AADB58937823479C0DC82EB03BBA9D7F41181745DF`.
+- Le runtime global porte exactement la DLL 2.0.0 testée. Le cold start du
+  18 août accepte D2R `3.2.92777`, charge Remote Stash 2.0.0 avec le bouton
+  plugin et le sprite embarqué, puis termine `24/24` avec `26 plugins` et
+  `19 memory patches`; les cinq plugins eezstreet restent actifs.
+- La matrice gameplay propre au binaire renuméroté 2.0.0 reste formellement
+  `not run`, même si son code fonctionnel est identique au témoin réussi. Le
+  placement personnalisé, le sprite personnalisé, le repli de sprite invalide
+  et les parcours multijoueur hôte/client restent également `not run` au
+  runtime; leurs politiques et bornes sont couvertes statiquement.
+- Retour arrière exact : arrêter D2R/D2RLoader et restaurer la DLL 1.6.0
+  sauvegardée sous
+  `analysis-cache/runtime-backups/remote-stash-1.6.0-before-2.0.0-20260818/`,
+  SHA-256
+  `FC594437F1363590EF0DD8C7920D85BAFE1953F3E80CC53560CBF1B7B9140DE4`.
+
+## Panel distant gouverné par D2RLoader — preuve de concept — 20 août 2026
+
+- Vincent exige que l'ouverture d'un coffre physique conserve sans changement
+  le comportement vanilla. Seule une session explicitement ouverte par Remote
+  Stash doit utiliser le cycle de vie d'un panel D2RLoader comparable à Charm
+  Inventory.
+- L'inspection de Charm Inventory 0.19.0 confirme un panel enregistré auprès du
+  `PanelServiceV1`, avec une composition `GameplayLeftSlot`; Remote Stash 2.0.1
+  utilise encore l'état natif du stash `0x18`, ce qui explique son caractère
+  dominant et le blocage de commandes de gameplay comme Show Items.
+- La preuve de concept autorisée doit enregistrer un `BankPanel` propre au
+  plugin, basé sur `BankExpansionLayoutHD.json` afin de réutiliser le layout du
+  mod actif. L'ouverture `0x18` n'est détournée que lorsque la session cliente
+  distante est active; toute ouverture physique continue d'appeler le chemin
+  natif original.
+- Le premier gate gameplay doit prouver : coffre physique inchangé, Remote
+  Stash visible avec les tabs du mod actif, Show Items disponible, remplacement
+  normal par les panels de gameplay, hotkey de fermeture fonctionnel et aucun
+  changement aux transactions Personal/Shared. Une impossibilité d'instancier
+  correctement le `BankPanel` dérivé invalidera le PanelService v1 comme
+  solution suffisante et imposera une route de stock dédiée dans D2RLoader.
+- Retour arrière : restaurer la DLL globale Remote Stash 2.0.1 conservée avant
+  le déploiement de la candidate; aucun fichier de données BKVince ni aucune DLL
+  tierce ne doit être modifié.
+
+## Limite confirmée de PanelService v1 — 20 août 2026
+
+- Les candidates expérimentales 2.1.0 et 2.1.1 ont invalidé la dérivation
+  directe de `BankExpansionLayoutHD.json`. Avec l'ouverture native du stash,
+  D2R réactive le cycle modal de l'état `0x18`; sans le paquet natif
+  d'ouverture, le `BankPanel` apparaît sans modèle de stash utilisable. Le
+  bouton physique et le hotkey aboutissent alors à un panneau incomplet et ne
+  reproduisent pas Charm Inventory.
+- La différence avec Charm Inventory est maintenant établie : ce plugin possède
+  une page d'inventaire personnalisée que `PanelServiceV1::bindPlayerPageGrid`
+  sait lier. Remote Stash doit au contraire composer le modèle et les onglets du
+  stash natif déjà résolus par le mod actif; aucune opération équivalente
+  n'existe dans `PanelServiceV1`.
+- Le SDK officiel courant ne publie que `PanelServiceV1` version `1`, taille
+  `96`, dont la dernière opération est `unregisterControllerRoute`. Le
+  `D2RCore.dll` 1.1.0-beta installé ne révèle aucune V2 ni liaison stock-stash,
+  et le code source du fournisseur `D2RCore` n'est présent ni dans le workspace
+  ni dans les dépôts publics de l'organisation D2RLoader. Modifier uniquement
+  le header du SDK créerait donc une ABI fictive que le loader installé ne peut
+  pas exécuter.
+- La solution propre exige une extension versionnée fournie par D2RLoader — une
+  V2 ou un service séparé — capable d'initialiser et de composer le stash stock
+  dans un panel plugin sans activer le cycle modal `0x18`. Cette route doit
+  préserver les layouts et onglets du mod actif, l'arbitrage UISwitcher, Escape,
+  clavier/souris et manette, tout en laissant le coffre physique entièrement
+  vanilla. Remote Stash pourra ensuite consommer cette API de manière
+  autonome, refuser proprement une ABI incompatible et conserver ses sessions
+  de transfert existantes.
+- L'implantation côté Remote Stash est bloquée par cette capacité manquante du
+  fournisseur, et non par une dépendance envers un autre plugin. Aucun nouveau
+  hook natif de contournement n'est retenu. Les changements source des
+  candidates 2.1.x ont été entièrement retirés. Le runtime global a été remis
+  sur l'artefact pré-POC stable (métadonnées 2.0.0), SHA-256
+  `9431884405F571DC3E3A5467AF359EF2957A39B2A0091BCF93896EADEE6CFACD`,
+  sans relancer le jeu.
+
+## Correctifs d'interaction Remote Stash 2.0.3 — candidate statique — 28 août 2026
+
+- Vincent autorise par `GO` le portage dans la source RuffnecKk des correctifs
+  décrits par `RemoteStash-hotkey-item-interaction-bug-report.md`. La DLL externe
+  analysée, SHA-256
+  `5740D19108C53E4DF47CDA0108B96681615E2D463C55369676F24802EC9BC0AE`,
+  contient bien les quatre mécanismes annoncés, mais elle refuse tout build
+  autre que 92777 ou 93847. Cette allowlist de numéro de build viole la
+  politique Suite du 25 août; la DLL externe n'est ni installée ni publiée.
+- Le bypass de proximité couvre maintenant toute page stash `4` lorsque la
+  portée serveur distante ou la session cliente distante est active. Il ne
+  dépend plus des deux seuls return-sites Quick Move; drag, held-item deposit,
+  retrait et Ctrl-click partagent ainsi le même gate distant.
+- La transition native de stash conserve toujours le `transitionFlag` demandé.
+  La portée hotkey ne force plus `false`, car le mode `2, true` enregistre les
+  cibles natives de routage des items.
+- `remoteOnly` ne referme plus le panneau Inventory compagnon après l'ouverture.
+  Ce panneau reste indépendant du toggle, mais peut demeurer visible pendant la
+  session parce que le routage natif du stash en dépend. Le README et le TOML
+  anglais documentent explicitement ce comportement.
+- L'ancien ticket Cube temporisé de la 2.0.2 est entièrement retiré. La 2.0.3
+  détecte l'état `0x19`, les panneaux visibles `HoradricCubeLayout` ou
+  `HoradricCubePanel`, ou l'onglet intégré seulement si `BankPanel` et son enfant
+  `convert` sont tous deux visibles. Elle ferme l'état Cube s'il est actif,
+  garantit Inventory `1`, puis, au premier open réussi, appelle
+  `StashInterfaceTransition(2, true)` et marque l'UI dirty. Une récupération
+  bornée rejoue le dismiss si le stash est déjà visible mais que la première
+  ouverture reste incohérente. Les traces `RemoteStash live[...]` couvrent les
+  étapes queue, recovery, finalize et failure.
+- La candidate ne contient plus aucune allowlist de build-name : l'identité
+  reçue est seulement journalisée, puis l'empreinte fail-closed vérifie les
+  fonctions, callsites, signatures et témoins de layout déjà gouvernés, y
+  compris `GetUiState 0xCE500`, `UI_OpenInterfaceState 0xCD7C0`,
+  `UI_CloseInterfaceState 0xC7D30`, `UI_ApplyInterfaceModeTransition 0x11FB80`,
+  `UI_FindTopLevelPanel 0x846170`, `UI_FindChildWidgetByName 0x856220` et
+  `UI_MarkDirty 0x843FC0`. Le corpus commun 92777/93847 est vérifié et la
+  référence PluginPack demeure épinglée à
+  `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`.
+- Trois builds Release avec avertissements fatals produisent byte-exactement la
+  même DLL : version PE/PluginInfo `2.0.3`, taille `543744`, SHA-256
+  `F82530CAB01451560E21868E2A1CD63C6918F6D60E10BDE5DB60DB7B0C41AFB9`.
+  Les deux builds propres passent chacun CTest `1/1`; la DLL expose exactement
+  `D2RLoaderGetPluginInfo`, `D2RLoaderLoadPlugin` et
+  `D2RLoaderUnloadPlugin`, reste non signée, contient les nouveaux témoins Cube
+  et ne contient ni `92777`, ni `93847`, ni le message d'allowlist interdit.
+  `Test-NativeWrites.ps1` est `VALID` avec 18 plugins, 116 écritures Suite et
+  quatre call-throughs composables; `Test-Suite.ps1` est également `VALID`.
+- Seul le hash canonique du TOML source est actualisé dans le manifeste
+  (`DFDF0CB12B837A20AAC5D44766F6E9D43F08475A332500B58DBF195BD744D2AA`).
+  La DLL packagée et la DLL du jeu restent inchangées : le hash candidat n'est
+  pas promu dans l'allowlist de release avant qualification runtime.
+- **Runtime/gameplay : NOT RUN.** Prochain gate distinct : déployer exactement
+  la DLL candidate sous D2R 3.3.93847 avec la pile complète active, puis tester
+  loin du coffre physique les six scénarios du rapport — held item + hotkey,
+  UI fermée + hotkey, Cube + hotkey au premier open, Cube + bouton au premier
+  open, contrôle sans Cube et fermeture/reopen — ainsi que cold start, or,
+  Personal/Shared, sauvegarde/relecture et absence de régression des cinq DLL
+  eezstreet. Aucun rollback runtime n'est requis pour ce lot statique.
+
+## Contrat de fermeture explicite Remote Stash 2.2.0 — décision — 28 août 2026
+
+- Vincent confirme en jeu sous D2R 3.3.93847 les quatre régressions ciblées de
+  la 2.0.3 : objet tenu + hotkey, premier open depuis les UI fermées, Cube +
+  hotkey et Cube + bouton sont `PASS`. La DLL globale testée porte le SHA-256
+  `F82530CAB01451560E21868E2A1CD63C6918F6D60E10BDE5DB60DB7B0C41AFB9`.
+- Le cold start complet charge Remote Stash 2.0.3 et les cinq DLL eezstreet,
+  mais D2RLoader termine avec `36` plugins chargés et `1` plugin en échec :
+  Revive Overhaul mod-local. Cet incident préexistant est extérieur aux quatre
+  correctifs Remote Stash; il laisse néanmoins la gate de coexistence Suite
+  globale ouverte.
+- Vincent autorise par `GO` le remplacement du contrat ambigu
+  `hotkey_mode = "remoteOnly" | "remoteAndInventory"` par le booléen TOML
+  `close_remote_stash_and_inventory_together`. La valeur `true` ferme
+  Inventory avec Remote Stash lorsque le raccourci ferme la session; `false`
+  ferme seulement Remote Stash. L'ouverture conserve toujours le compagnon
+  Inventory requis par le routage natif des objets.
+- Le bouton physique reste hors de ce réglage : il est nécessairement utilisé
+  depuis un Inventory déjà ouvert et continue de fermer seulement Remote
+  Stash. Les anciens fichiers portant `hotkey_mode` restent acceptés et sont
+  traduits `remoteOnly -> false` et `remoteAndInventory -> true`; déclarer les
+  deux formes dans le même fichier doit être refusé comme configuration
+  ambiguë.
+- Les anciennes POC PanelService ont déjà utilisé les numéros expérimentaux
+  `2.1.0` et `2.1.1`. Cette évolution reprend donc à `2.2.0` afin de ne pas
+  réutiliser une identité binaire historique. Elle ne modifie aucun hook, RVA,
+  octet attendu, layout natif ni ABI; seul le parseur TOML, la politique de
+  toggle, les diagnostics, les tests et la documentation changent.
+- La 2.2.0 remplace l'enum publique par un booléen interne, conserve `false`
+  comme valeur par défaut et applique le couplage uniquement au raccourci. Le
+  parseur accepte le nouveau booléen et les deux valeurs legacy, mais refuse
+  les doublons, les valeurs invalides et tout fichier déclarant simultanément
+  l'ancienne et la nouvelle forme. Les tests couvrent l'ouverture compagnon,
+  la fermeture couplée `true`, la fermeture indépendante `false`, le bouton
+  physique et toutes les routes de migration ou de rejet du TOML.
+- Trois builds Release avec avertissements fatals produisent byte-exactement la
+  même DLL : PE/PluginInfo `2.2.0`, taille `543744`, SHA-256
+  `5FE934305F2387ED01D805BBDAA000A8443576E3908B2FCEAD5FB175D5F4B4CF`.
+  Chaque build passe CTest `1/1`; les exports restent limités à
+  `D2RLoaderGetPluginInfo`, `D2RLoaderLoadPlugin` et
+  `D2RLoaderUnloadPlugin`. `Test-NativeWrites.ps1` est `VALID` avec 18
+  plugins, 116 écritures Suite et quatre call-throughs composables;
+  `Test-Suite.ps1` est aussi `VALID` avec 18 plugins déclarés et présents.
+- Deux cold starts ont déployé ce hash exact dans le dossier global, d'abord
+  avec le legacy `hotkey_mode = "remoteOnly"`, résolu en `closeTogether=false`,
+  puis avec `close_remote_stash_and_inventory_together = true`, résolu en
+  `closeTogether=true`. Les deux démarrages atteignent `24/24`; Remote Stash
+  2.2.0 et les cinq DLL eezstreet chargent. D2RLoader rapporte toujours `36`
+  plugins chargés et l'unique échec Revive Overhaul mod-local, extérieur à ce
+  changement et non neutralisé pendant les essais.
+- Vincent confirme `PASS` en jeu pour le comportement final `true` : loin du
+  coffre physique, le premier appui sur `;` ouvre Remote Stash et Inventory,
+  et le second ferme les deux. La configuration runtime finale conserve cette
+  valeur, SHA-256
+  `1CCF73C349DF5715269139A2D0F577A88F651B8AD7C18E0FBEF366614B63FC1A`.
+  La DLL installée conserve le hash candidat ci-dessus; aucune relance
+  supplémentaire du jeu n'est nécessaire pour la promotion de l'archive.
+- Le runtime 2.0.3 précédent et son TOML legacy ont été sauvegardés sous
+  `analysis-cache/runtime-backups/remote-stash-2.0.3-before-2.2.0-20260828-150300`.
+- Vincent retient explicitement la 2.2.0 comme version de release. L'allowlist
+  du dépôt produit promeut la version et le SHA-256 DLL
+  `5FE934305F2387ED01D805BBDAA000A8443576E3908B2FCEAD5FB175D5F4B4CF`;
+  le TOML public conserve sa valeur par défaut `false` et le SHA-256
+  `57E378C69133C485FBDA5B2877E03F111B061AC55597A21706B76C869B1D7399`.
+  Le TOML personnel déjà installé reste préservé à `true`.
+- L'archive locale
+  `addons/RemoteStash/package/RuffnecKk-remote-stash-v2.2.0.zip`, taille
+  `546599`, SHA-256
+  `F1E57900AD6104E727629E3812B3E8D0DC6592419D2B090021960EAFDA268C63`,
+  contient exactement `plugins/d2rl-ruffneckk-remote-stash.dll` et
+  `config/ruffneckk-remote-stash.toml`; leurs hashes internes égalent les
+  artefacts build/runtime et source gouvernés. Aucun README, source, PDB, log
+  ni binaire tiers n'est inclus.
+- Le README anglais destiné à la relecture humaine reste à côté du ZIP sous
+  `addons/RemoteStash/package/README.txt`, hors archive, SHA-256
+  `405DB98024F2FCE7649C236DD762BBF6111E242DF3D048DC6DEF618083480692`.
+  La publication GitHub et le commit/push du dépôt autonome RuffnecKk Suite
+  restent des opérations séparées. La gate de coexistence Suite globale reste
+  ouverte tant que l'échec Revive Overhaul n'est pas résolu et requalifié.

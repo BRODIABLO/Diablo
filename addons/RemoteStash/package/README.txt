@@ -1,77 +1,66 @@
-REMOTE STASH 1.2.1
+REMOTE STASH 2.2.0
 Author: RuffnecKk
 Reverse-engineering reference: D2MOO
 
-Opens and closes the player stash from an inventory button or configurable
-hotkey, including outside town. The installed mod keeps control of its stash
-tabs and inventory layout.
-
-The remote stash remains open while the character moves. Close it with the
-same hotkey, Escape, or the stash close button.
-If the inventory is also open, moving leaves both panels visible.
-When the hotkey opens Remote Stash by itself, the companion inventory panel is
-closed after D2R finishes constructing the stash. An inventory that was already
-open remains open. Closing Remote Stash with its hotkey also leaves that
-independently opened inventory visible.
-
+Opens the player stash from a configurable hotkey or Inventory button,
+including outside town. The active mod keeps control of its stash tabs and
+Inventory layout.
 
 REQUIREMENTS
 
-- Diablo II: Resurrected 3.2.92777
-- D2RLoader
+- Diablo II: Resurrected 3.3.93847 (runtime qualified)
+- Diablo II: Resurrected 3.2.92777 (covered by governed native equivalence)
+- D2RLoader 1.1.0-beta or a compatible API v3 loader
 
-Remote Stash is standalone. It does not require PluginPack or another plugin.
+Remote Stash is standalone. Install it globally or mod-locally, never in both
+scopes at the same time.
 
+INSTALL
 
-INSTALL THE PLUGIN
+Global installation:
 
-Global:
-Copy the included d2rloader folder into your D2R installation folder.
+- Copy plugins/d2rl-ruffneckk-remote-stash.dll to
+  <D2R>/d2rloader/plugins/.
+- Copy config/ruffneckk-remote-stash.toml to
+  <D2R>/d2rloader/config/.
 
-Mod-local:
-Copy RemoteStash.dll to:
-<D2R>/mods/<ModName>/d2rloader/plugins/
+Mod-local installation:
 
-Copy RemoteStash.json to:
-<D2R>/mods/<ModName>/d2rloader/config/
+- Copy the DLL to <D2R>/mods/<ModName>/d2rloader/plugins/.
+- Copy the TOML to <D2R>/mods/<ModName>/d2rloader/config/.
 
+CONFIGURATION
 
-HOTKEY
+The hotkey always opens Remote Stash with the Inventory companion required by
+D2R item routing. Set:
 
-Edit RemoteStash.json and set enabled to true.
-The default hotkey is S. Press it again to close the stash.
-Set consume to true to prevent the same key from reaching the game.
-Native D2R actions bound to that key are suppressed for that key press only.
-Restart the game after changing the config.
+close_remote_stash_and_inventory_together = true
 
+to close both panels with the hotkey. Set it to false to close only Remote
+Stash and leave Inventory open. The physical Inventory button always closes
+only Remote Stash.
 
-ADD THE INVENTORY BUTTON
+Legacy 2.0.x values remain supported:
 
-Merge merge-snippets/playerinventory-button.json into the children array of
-your active playerinventoryoriginallayouthd.json.
+- hotkey_mode = "remoteOnly" maps to false.
+- hotkey_mode = "remoteAndInventory" maps to true.
 
-Replace SET_X_FOR_YOUR_LAYOUT and SET_Y_FOR_YOUR_LAYOUT with coordinates for
-your own inventory layout. Vanilla desktop reference: x 93, y 1347.
+Do not declare the legacy and new settings together. Ambiguous or invalid
+configuration is rejected explicitly.
 
-If your expansion layout replaces the original children, also merge:
-merge-snippets/playerinventory-expansion-child.json
+ITEM ROUTING
 
-Do not change these values:
-name: remote_stash
-onClickMessage: PlayerInventoryPanelMessage:DropGold
+When the Horadric Cube is visible, Remote Stash dismisses the Cube companion,
+restores Inventory, and completes the native stash transition on the first
+open. Drag-and-drop, held-item deposit, withdrawal, and Ctrl-click then share
+the same remote-session routing.
 
-The original gold button remains unchanged.
+The plugin-owned Inventory button and its default four-state RuffnecKk chest
+artwork are embedded in the DLL. No Inventory JSON merge or sprite copy is
+required.
 
+CREDITS
 
-SPRITE
-
-A ready-to-use chest sprite is included under mod-data/data/.
-Merge that data folder into your mod's MPQ data folder. You may replace the
-sprite files or change the filename in the button layout.
-
-
-TEST
-
-Test Personal, Shared, and any custom stash tabs outside town. Verify normal
-drag-and-drop, Ctrl + left click, save and exit, and reconnecting the character.
-Use a disposable character for the first test.
+D2MOO provided semantic reference material for historical Diablo II engine
+behavior. Every D2R address, signature, layout witness, and runtime contract
+used by this plugin was verified separately against the governed D2R corpus.
