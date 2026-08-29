@@ -1386,6 +1386,28 @@ et atteint `D2R startup complete` avec 36 plugins chargés et 18 patches. L'uniq
 échec Revive Overhaul est préexistant et hors MapSense; aucune rafale
 `sFillLocation()` fraîche ni erreur MapSense n'apparaît dans les logs du test.
 
+### Candidat autorisé 0.12.5 — synchronisation visuelle D3D12
+
+Vincent observe depuis les derniers candidats des flashes ou artefacts brefs à
+droite de l'écran, y compris au menu principal. Une capture reproductible montre
+un artefact transitoire dans cette région; les logs ne montrent ni retrait du
+périphérique ni réinitialisation GPU. La régression plausible est le changement
+0.12.3 qui sautait un frame overlay lorsque la fence du back buffer n'était pas
+terminée. Le candidat 0.12.5 restaure l'attente stricte par back buffer avant la
+réutilisation de son command allocator, sans modifier les correctifs
+`sFillLocation` ni la navigation verte/rouge de 0.12.4.
+
+État : **SOURCE, BUILD, CTEST, SELF-TEST NATIF, PE, EXPORTS, DÉPLOIEMENT,
+COLD START ET LOGS PASS; CONFIRMATION VISUELLE HUMAINE À FAIRE**. La DLL Release x64 mesure
+2 113 024 octets, porte PE 0.12.5, expose les quatre exports attendus et vaut
+SHA-256 `67AA43A32657EBB3AC9AFA2D1D719C80C2B2E2EEEE512DEE4C9531EFC1301CD9`.
+Sa copie mod-locale est byte-identique. Le cold start officiel 3.3.93847 atteint
+36 plugins, 18 patches et l'unique échec Revive Overhaul déjà connu. MapSense
+initialise son renderer D3D12 sur la queue exacte sans timeout de fence, erreur
+DXGI, erreur MapSense ni nouvelle rafale `sFillLocation`. Une frame du menu est
+visuellement propre; le caractère intermittent du problème exige toutefois la
+confirmation directe de Vincent avant de fermer le gate.
+
 ### Tâche planifiée 0.13.0 — noms des levels et des shrines
 
 Le 29 août 2026, Vincent confirme l'ajout à la ROADMAP des noms de levels et de

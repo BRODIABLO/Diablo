@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(RuffnecKkMapSense VERSION 0.12.4 LANGUAGES C CXX RC)
+project(RuffnecKkMapSense VERSION 0.12.5 LANGUAGES C CXX RC)
 
 include(FetchContent)
 

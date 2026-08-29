@@ -1,12 +1,17 @@
 # RuffnecKk MapSense
 
 RuffnecKk MapSense is an experimental D2RLoader client plugin for Diablo II:
-Resurrected targeting builds 3.2.92777 and 3.3.93847. Version 0.12.4 is the
+Resurrected targeting builds 3.2.92777 and 3.3.93847. Version 0.12.5 is the
 current source candidate and combines the native
 map-reveal foundation, a compact in-game settings panel, simultaneous
 hostile-monster markers, configurable immunity indicators, and Direct
 navigation with static normal-quest routes and exact quest-object endpoints.
 Labels, GPS, and projectile collectors remain planned.
+
+Version 0.12.5 restores strict per-back-buffer GPU fence synchronization in
+the D3D12 overlay host. It retains the 0.12.4 quest-navigation behavior while
+preventing reuse of an overlay command allocator before its previous GPU work
+has completed.
 
 ## Live monster markers
 
