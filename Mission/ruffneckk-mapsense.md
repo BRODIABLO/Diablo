@@ -1181,6 +1181,30 @@ produit aucun nouvel événement `nvlddmkm` ou `LiveKernelEvent 0x141`. Ce gate
 est **PASS source/build/déploiement/cold start technique**; il ne revendique pas
 encore les témoins gameplay distincts du lot Canyon/rayon.
 
+### Correctif planifié 0.12.3 — suppression autonome du spam sFillLocation
+
+Le 29 août 2026, Vincent place ce correctif avant tout travail de labels. La
+trace native identifie le CALL de diagnostic négatif à `0x3E1F2B`, empreinte
+`E8 60 FC 63 00`; la branche rejoint ensuite le chemin qui saute déjà le
+remplissage. L'implantation devra vérifier cette empreinte fail-closed et NOPer
+uniquement le CALL via le service suivi D2RLoader. Aucun sidecar de patch propre
+à BKVince ne fera partie du produit autonome.
+
+État : **PLANNED; source, build, déploiement, cold start et gameplay NOT RUN**.
+
+### Tâche planifiée 0.13.0 — noms des levels et des shrines
+
+Vincent confirme l'ajout à la ROADMAP, avec une dépendance stricte envers le
+PASS complet de la 0.12.3. PrimeMH à la révision épinglée
+`92b6a97d8e56346f8b63a88bb647c1af044d2c8b` reste une référence
+comportementale : noms blancs ombrés au-dessus des sorties, noms dorés ombrés
+au-dessus des shrines et effet dynamique. Aucun code, asset ou tableau statique
+PrimeMH ne sera copié. MapSense conservera son rendu D3D12 in-frame et publiera
+des snapshots POD bornés; les shrines consommés disparaîtront et les wells
+ordinaires resteront hors périmètre.
+
+État : **PLANNED; BLOCKED BY 0.12.3; aucune implantation commencée**.
+
 ## Validation future
 
 - configurations absente, valide et invalide;

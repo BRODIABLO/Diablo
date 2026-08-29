@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-24",
+  "updatedAt": "2026-08-29",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -714,6 +714,18 @@
         "scripts/checkpoint/**",
         "scripts/runtime/**",
         "scripts/workstreams/**"
+      ]
+    },
+    {
+      "id": "ruffneckk-mapsense",
+      "name": "RuffnecKk MapSense",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/ruffneckk-mapsense.md",
+      "nextGate": "Implement and qualify MapSense 0.12.3 before any label work: install the fail-closed tracked NOP patch only when the exact five-byte sFillLocation diagnostic CALL at RVA 0x3E1F2B matches, reduce and deduplicate unnecessary room materialization, then pass Release /W4 /WX, CTest, PE/exports, full-stack cold start and gameplay witnesses for no sFillLocation spam, Reveal, waypoint, Tamoe-to-Monastery, FPS and fluidity. MapSense 0.13.0 level and shrine labels are planned but blocked until this gate passes.",
+      "include": [
+        "Mission/ruffneckk-mapsense.md",
+        "addons/RuffnecKkMapSense/**"
       ]
     }
   ],
