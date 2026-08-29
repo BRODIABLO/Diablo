@@ -2,7 +2,7 @@
 # Configure normal settings in the in-game MapSense menu.
 # Only navigation.custom_levels.targets is intended for manual editing.
 
-schema_version = 8
+schema_version = 9
 
 [general]
 # Enables the plugin, reveal engine, in-frame settings panel, and Controls actions.
@@ -21,35 +21,37 @@ frame_rate = 60
 
 [monsters]
 # Every monster category is always visible; the tables below only style them.
-# Scans loaded monsters within this many true world subtiles of the local player.
-detection_radius = 60
-# Applies to marker outlines shared by every monster category.
-marker_thickness = 2.00
+# X and player_cross use their category's thickness. Dot uses a fixed outline.
 
 [monsters.normal]
 shape = "player_cross"
 color = "#FFFFFFFF"
 size = 18.00
+thickness = 2.00
 
 [monsters.minion]
 shape = "player_cross"
 color = "#FFD43BFF"
 size = 18.00
+thickness = 2.00
 
 [monsters.champion]
 shape = "player_cross"
 color = "#3D8BFFFF"
 size = 20.00
+thickness = 2.00
 
 [monsters.unique]
 shape = "player_cross"
 color = "#FF8A24FF"
 size = 22.00
+thickness = 2.00
 
 [monsters.super_unique_boss]
 shape = "player_cross"
 color = "#FF3B30FF"
 size = 24.00
+thickness = 2.00
 
 [immunities]
 enabled = true

@@ -738,6 +738,11 @@ auto WaitForFenceValueLocked(std::uint64_t value) noexcept -> bool {
         == WAIT_OBJECT_0;
 }
 
+auto IsFenceValueCompleteLocked(std::uint64_t value) noexcept -> bool {
+    if (value == 0U) return true;
+    return Fence && Fence->GetCompletedValue() >= value;
+}
+
 auto WaitForGpuIdleLocked() noexcept -> bool {
     if (!CommandQueue || !Fence || !FenceEvent) return true;
     const std::uint64_t value = NextFenceValue++;
@@ -1174,13 +1179,11 @@ auto RenderPanelFrame(
     const UINT frameIndex = swapChain->GetCurrentBackBufferIndex();
     if (frameIndex >= Frames.size()) return false;
     auto& frame = Frames[frameIndex];
-    if (!WaitForFenceValueLocked(frame.fenceValue)) {
-        RendererPoisoned = true;
-        RendererInitializedPublished.store(false, std::memory_order_release);
-        LogWarning(
-            "MapSense: GPU rendering disabled because submitted work did not reach its fence safely.");
-        return false;
-    }
+    // Present is D2R's latency-critical path. Reusing an allocator before its
+    // fence completes is invalid, but waiting here serializes the game behind
+    // plugin GPU work. Skip only this overlay frame and let D2R Present
+    // immediately; a later back-buffer pass retries after the fence advances.
+    if (!IsFenceValueCompleteLocked(frame.fenceValue)) return true;
 
     const auto now = std::chrono::steady_clock::now();
     const float deltaSeconds = LastFrameTime.time_since_epoch().count() == 0

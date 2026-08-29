@@ -1,6 +1,5 @@
 #include "native_automap_marker.hpp"
 
-#include "mapsense_config.hpp"
 #include "navigation_engine.hpp"
 
 #include <D2RLPlugin/api.h>
@@ -20,6 +19,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace RuffnecKk::MapSense {
 namespace {
@@ -74,13 +74,18 @@ constexpr std::int32_t LightningResistanceStatId = 41;
 constexpr std::int32_t ColdResistanceStatId = 43;
 constexpr std::int32_t PoisonResistanceStatId = 45;
 constexpr std::uint64_t MarkerLifetimeMilliseconds = 250;
-constexpr std::uint64_t MonsterTableScanIntervalMilliseconds = 50;
+// Discovery is deliberately slower than the bounded live refresh. Positions
+// are refreshed from copied unit ids; repeating the full metadata/immunity
+// walk at marker cadence would put the expensive work back on the renderer hot
+// path.
+constexpr std::uint64_t MonsterTableScanIntervalMilliseconds = 100;
 constexpr std::size_t UnitHashBucketCount = 128;
+constexpr std::size_t DistanceBandCount = 4;
 constexpr std::size_t UnitHashTypeStride = UnitHashBucketCount
     * sizeof(void*);
-constexpr std::size_t MaximumUnitsPerMonsterTableScan = 32'768;
+constexpr std::size_t MaximumUnitsPerMonsterTableScan =
+    MaximumNativeAutomapMarkers;
 constexpr std::size_t MaximumUnitsPerMonsterBucket = 8'192;
-constexpr std::size_t InitialMarkerReserve = 2'048;
 constexpr std::uint64_t ObservationsPerChunk = 4'096;
 constexpr std::uint64_t InitialObservationChunkCount = 16;
 constexpr std::uint32_t ObservationBufferCount = 2;
@@ -103,6 +108,12 @@ struct Candidate final {
     std::uint64_t epoch{};
 };
 
+struct TrackedMonster final {
+    std::uint32_t unitId{};
+    MonsterRank rank{MonsterRank::Normal};
+    std::uint8_t immunityMask{};
+};
+
 struct MonsterScanContext final {
     void* automapContext{};
     std::uint16_t playerSubtileX{};
@@ -115,6 +126,19 @@ struct MonsterScanContext final {
     std::int32_t clipHeight{};
     std::uint64_t currentTick{};
     std::uint64_t epoch{};
+};
+
+struct AtomicFlagRelease final {
+    std::atomic_flag& flag;
+
+    explicit AtomicFlagRelease(std::atomic_flag& value) noexcept
+        : flag(value) {}
+    AtomicFlagRelease(const AtomicFlagRelease&) = delete;
+    auto operator=(const AtomicFlagRelease&) -> AtomicFlagRelease& = delete;
+
+    ~AtomicFlagRelease() {
+        flag.clear(std::memory_order_release);
+    }
 };
 
 struct ObservationChunk final {
@@ -166,6 +190,9 @@ using ProjectClientToAutomapFn = NativePoint*(__fastcall*)(
 using RenderAutomapUnitFn = void(__fastcall*)(
     void* unit,
     void* automapContext) noexcept;
+using GetUnitByIdAndTypeFn = void*(__fastcall*)(
+    std::uint32_t unitId,
+    std::uint32_t unitType) noexcept;
 
 std::uint8_t* Base{};
 GetLocalDataContextFn GetLocalDataContext{};
@@ -187,6 +214,7 @@ GetNativePointerFn GetUnitRoom{};
 GetLevelIdFn GetDrlgRoomLevelId{};
 IsRoomInTownFn IsRoomInTown{};
 GetMonStatsRecordFn GetMonStatsRecord{};
+GetUnitByIdAndTypeFn GetUnitByIdAndType{};
 ProjectClientToAutomapFn ProjectClientToAutomap{};
 RenderAutomapUnitFn OriginalRenderAutomapUnit{};
 const D2RL::PluginContext* DiagnosticContext{};
@@ -197,7 +225,6 @@ std::atomic_bool ImmunityCollectionEnabled{};
 std::atomic<std::uint64_t> Epoch{};
 std::atomic<std::uint64_t> LastAutomapPulseTick{};
 std::atomic<std::uint64_t> LastMonsterTableScanTick{};
-std::atomic<std::int32_t> MarkerRadius{DefaultNativeAutomapMarkerRadius};
 std::atomic<std::uint64_t> PublishedSequence{};
 std::atomic<std::uint64_t> TrackedMarkerCount{};
 Detail::NavigationProjectionDiagnosticCache NavigationProjectionDiagnostics;
@@ -208,9 +235,18 @@ std::int32_t PendingObservationBuffer{-1};
 std::uint64_t RendererEpoch{};
 std::uint64_t LastPurgeTick{};
 std::unordered_map<std::uint32_t, Candidate> MarkerCache;
+std::vector<TrackedMonster> TrackedMonsters;
+std::vector<TrackedMonster> DiscoveryScratch;
+std::uint64_t TrackedMonsterEpoch{};
+std::atomic_flag TrackedMonsterLock = ATOMIC_FLAG_INIT;
+std::atomic<std::uint64_t> TrackedMonsterCount{};
+std::int64_t PerformanceCounterFrequency{};
 
 std::atomic<std::uint64_t> AutomapPulses{};
 std::atomic<std::uint64_t> MonsterTableScans{};
+std::atomic<std::uint64_t> MonsterPositionRefreshes{};
+std::atomic<std::uint64_t> TrackedIdsResolved{};
+std::atomic<std::uint64_t> TrackedIdsMissing{};
 std::atomic<std::uint64_t> MonsterBucketsVisited{};
 std::atomic<std::uint64_t> MonsterTraversalLimits{};
 std::atomic<std::uint64_t> UnitsObserved{};
@@ -225,10 +261,12 @@ std::atomic<std::uint64_t> HostilesThrough80{};
 std::atomic<std::uint64_t> HostilesFrom81Through140{};
 std::atomic<std::uint64_t> HostilesFrom141Through220{};
 std::atomic<std::uint64_t> HostilesBeyond220{};
-std::atomic<std::uint64_t> RadiusRejected{};
-std::atomic<std::uint64_t> WithinRadius{};
 std::atomic<std::uint64_t> ProjectionRejected{};
 std::atomic<std::uint64_t> NativeClipRejected{};
+std::array<std::atomic<std::uint64_t>, DistanceBandCount>
+    AcceptedByDistanceBand{};
+std::array<std::atomic<std::uint64_t>, DistanceBandCount>
+    ClipRejectedByDistanceBand{};
 std::atomic<std::uint64_t> CandidatesAccepted{};
 std::atomic<std::uint64_t> MarkersInserted{};
 std::atomic<std::uint64_t> MarkersRefreshed{};
@@ -236,8 +274,13 @@ std::atomic<std::uint64_t> MarkersExpired{};
 std::atomic<std::uint64_t> ContentionWaits{};
 std::atomic<std::uint64_t> StorageFailures{};
 std::atomic<std::uint64_t> AccessFaults{};
+std::atomic<std::uint64_t> MaximumDiscoveryMicroseconds{};
+std::atomic<std::uint64_t> TotalDiscoveryMicroseconds{};
+std::atomic<std::uint64_t> DiscoveryTimingSamples{};
+std::atomic<std::uint64_t> MaximumRefreshMicroseconds{};
+std::atomic<std::uint64_t> TotalRefreshMicroseconds{};
+std::atomic<std::uint64_t> RefreshTimingSamples{};
 std::atomic<std::uint64_t> MaximumHostileDistanceSquared{};
-std::atomic<std::uint64_t> MaximumWithinRadiusDistanceSquared{};
 std::atomic<std::uint64_t> MaximumAcceptedDistanceSquared{};
 std::atomic<std::uint64_t> MaximumPublishedDistanceSquared{};
 std::atomic<NativeAutomapLevelObservedCallback> LevelObservedCallback{};
@@ -250,7 +293,9 @@ static_assert(sizeof(NativeAutomapMarkerSnapshot) == 40U);
 static_assert(sizeof(NativePoint) == sizeof(std::uint64_t));
 static_assert(UnitHashTypeStride == 0x400U);
 static_assert(
-    DefaultNativeAutomapMarkerRadius == DefaultMonsterDetectionRadius);
+    static_cast<std::size_t>(
+        Detail::WorldSubtileDistanceBand::Beyond220) + 1U
+    == DistanceBandCount);
 static_assert(
     Detail::MaximumNavigationProjectionDiagnosticEntries
     >= MaximumNavigationDestinations);
@@ -276,6 +321,21 @@ void UpdateMaximum(
 auto DistanceFromSquared(std::uint64_t squared) noexcept -> std::uint32_t {
     return static_cast<std::uint32_t>(std::llround(
         std::sqrt(static_cast<long double>(squared))));
+}
+
+[[nodiscard]] auto PerformanceCounterMicroseconds() noexcept
+        -> std::uint64_t {
+    LARGE_INTEGER counter{};
+    if (QueryPerformanceCounter(&counter) == FALSE
+        || counter.QuadPart < 0 || PerformanceCounterFrequency <= 0) {
+        return 0U;
+    }
+    const auto wholeSeconds = counter.QuadPart / PerformanceCounterFrequency;
+    const auto remainder = counter.QuadPart % PerformanceCounterFrequency;
+    return static_cast<std::uint64_t>(wholeSeconds) * UINT64_C(1000000)
+        + static_cast<std::uint64_t>(
+            (remainder * INT64_C(1000000))
+                / PerformanceCounterFrequency);
 }
 
 auto IsRecent(
@@ -551,11 +611,15 @@ void ResetPublishedMarkers(bool resetCounters) noexcept {
     LastAutomapPulseTick.store(0U, std::memory_order_release);
     LastMonsterTableScanTick.store(0U, std::memory_order_release);
     TrackedMarkerCount.store(0U, std::memory_order_release);
+    TrackedMonsterCount.store(0U, std::memory_order_release);
     PublishedSequence.fetch_add(1U, std::memory_order_acq_rel);
 
     if (!resetCounters) return;
     AutomapPulses.store(0U, std::memory_order_relaxed);
     MonsterTableScans.store(0U, std::memory_order_relaxed);
+    MonsterPositionRefreshes.store(0U, std::memory_order_relaxed);
+    TrackedIdsResolved.store(0U, std::memory_order_relaxed);
+    TrackedIdsMissing.store(0U, std::memory_order_relaxed);
     MonsterBucketsVisited.store(0U, std::memory_order_relaxed);
     MonsterTraversalLimits.store(0U, std::memory_order_relaxed);
     UnitsObserved.store(0U, std::memory_order_relaxed);
@@ -570,10 +634,14 @@ void ResetPublishedMarkers(bool resetCounters) noexcept {
     HostilesFrom81Through140.store(0U, std::memory_order_relaxed);
     HostilesFrom141Through220.store(0U, std::memory_order_relaxed);
     HostilesBeyond220.store(0U, std::memory_order_relaxed);
-    RadiusRejected.store(0U, std::memory_order_relaxed);
-    WithinRadius.store(0U, std::memory_order_relaxed);
     ProjectionRejected.store(0U, std::memory_order_relaxed);
     NativeClipRejected.store(0U, std::memory_order_relaxed);
+    for (auto& counter : AcceptedByDistanceBand) {
+        counter.store(0U, std::memory_order_relaxed);
+    }
+    for (auto& counter : ClipRejectedByDistanceBand) {
+        counter.store(0U, std::memory_order_relaxed);
+    }
     CandidatesAccepted.store(0U, std::memory_order_relaxed);
     MarkersInserted.store(0U, std::memory_order_relaxed);
     MarkersRefreshed.store(0U, std::memory_order_relaxed);
@@ -581,8 +649,13 @@ void ResetPublishedMarkers(bool resetCounters) noexcept {
     ContentionWaits.store(0U, std::memory_order_relaxed);
     StorageFailures.store(0U, std::memory_order_relaxed);
     AccessFaults.store(0U, std::memory_order_relaxed);
+    MaximumDiscoveryMicroseconds.store(0U, std::memory_order_relaxed);
+    TotalDiscoveryMicroseconds.store(0U, std::memory_order_relaxed);
+    DiscoveryTimingSamples.store(0U, std::memory_order_relaxed);
+    MaximumRefreshMicroseconds.store(0U, std::memory_order_relaxed);
+    TotalRefreshMicroseconds.store(0U, std::memory_order_relaxed);
+    RefreshTimingSamples.store(0U, std::memory_order_relaxed);
     MaximumHostileDistanceSquared.store(0U, std::memory_order_relaxed);
-    MaximumWithinRadiusDistanceSquared.store(0U, std::memory_order_relaxed);
     MaximumAcceptedDistanceSquared.store(0U, std::memory_order_relaxed);
     MaximumPublishedDistanceSquared.store(0U, std::memory_order_relaxed);
 }
@@ -698,6 +771,16 @@ constexpr auto NextObservationState(std::uint64_t state) noexcept
     }
 }
 
+void RecordRefreshDistanceBand(
+        std::array<std::atomic<std::uint64_t>, DistanceBandCount>& counters,
+        std::uint64_t distanceSquared) noexcept {
+    const auto band = Detail::ClassifyWorldSubtileDistanceSquared(
+        distanceSquared);
+    counters[static_cast<std::size_t>(band)].fetch_add(
+        1U,
+        std::memory_order_relaxed);
+}
+
 void RecordHostileDistanceBand(std::uint64_t distanceSquared) noexcept {
     switch (Detail::ClassifyWorldSubtileDistanceSquared(distanceSquared)) {
         case Detail::WorldSubtileDistanceBand::Through80:
@@ -715,20 +798,18 @@ void RecordHostileDistanceBand(std::uint64_t distanceSquared) noexcept {
     }
 }
 
-auto BuildCandidate(
+auto DiscoverTrackedMonster(
         void* unit,
         const MonsterScanContext& scan,
-        Candidate& candidate) noexcept -> bool {
+        TrackedMonster& tracked) noexcept -> bool {
     __try {
-        if (!IsAlignedPointer(unit) || scan.automapContext == nullptr
+        if (!IsAlignedPointer(unit)
             || GetUnitStat == nullptr || GetUnitAlignment == nullptr
             || GetUnitId == nullptr || GetUnitClassId == nullptr
             || GetUnitDataContext == nullptr || GetUnitMode == nullptr
             || GetDynamicPath == nullptr
-            || GetUnitClientX == nullptr || GetUnitClientY == nullptr
             || PathGetX == nullptr || PathGetY == nullptr
-            || GetMonStatsRecord == nullptr
-            || ProjectClientToAutomap == nullptr) {
+            || GetMonStatsRecord == nullptr) {
             return false;
         }
 
@@ -790,7 +871,7 @@ auto BuildCandidate(
             MetadataFaults.fetch_add(1U, std::memory_order_relaxed);
             return false;
         }
-        candidate.rank = Detail::ClassifyMonsterRankFlags(
+        tracked.rank = Detail::ClassifyMonsterRankFlags(
             monsterData[MonsterRankFlagsOffset]);
 
         void* const unitPath = GetDynamicPath(unit);
@@ -807,10 +888,6 @@ auto BuildCandidate(
             MetadataFaults.fetch_add(1U, std::memory_order_relaxed);
             return false;
         }
-        const auto deltaX = static_cast<std::int64_t>(unitSubtileX)
-            - static_cast<std::int64_t>(scan.playerSubtileX);
-        const auto deltaY = static_cast<std::int64_t>(unitSubtileY)
-            - static_cast<std::int64_t>(scan.playerSubtileY);
         const auto distanceSquared = Detail::SquaredWorldSubtileDistance(
             static_cast<std::uint16_t>(unitSubtileX),
             static_cast<std::uint16_t>(unitSubtileY),
@@ -818,21 +895,69 @@ auto BuildCandidate(
             scan.playerSubtileY);
         UpdateMaximum(MaximumHostileDistanceSquared, distanceSquared);
         RecordHostileDistanceBand(distanceSquared);
-        const auto radius = static_cast<std::int64_t>(
-            MarkerRadius.load(std::memory_order_acquire));
-        if (deltaX < -radius || deltaX > radius
-            || deltaY < -radius || deltaY > radius) {
-            RadiusRejected.fetch_add(1U, std::memory_order_relaxed);
-            return false;
-        }
-        const auto radiusSquared = static_cast<std::uint64_t>(radius * radius);
-        if (distanceSquared > radiusSquared) {
-            RadiusRejected.fetch_add(1U, std::memory_order_relaxed);
-            return false;
-        }
-        WithinRadius.fetch_add(1U, std::memory_order_relaxed);
-        UpdateMaximum(MaximumWithinRadiusDistanceSquared, distanceSquared);
 
+        tracked.unitId = GetUnitId(unit);
+        if (tracked.unitId == UINT32_MAX) return false;
+        if (ImmunityCollectionEnabled.load(std::memory_order_acquire)) {
+            tracked.immunityMask = Detail::BuildMonsterImmunityMask(
+                std::array<std::int32_t, 6>{
+                GetUnitStat(unit, PhysicalResistanceStatId, 0U),
+                GetUnitStat(unit, FireResistanceStatId, 0U),
+                GetUnitStat(unit, ColdResistanceStatId, 0U),
+                GetUnitStat(unit, LightningResistanceStatId, 0U),
+                GetUnitStat(unit, PoisonResistanceStatId, 0U),
+                GetUnitStat(unit, MagicResistanceStatId, 0U),
+            });
+        }
+        return true;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        AccessFaults.fetch_add(1U, std::memory_order_relaxed);
+        return false;
+    }
+}
+
+auto RefreshTrackedMonster(
+        const TrackedMonster& tracked,
+        const MonsterScanContext& scan,
+        Candidate& candidate) noexcept -> bool {
+    __try {
+        if (GetUnitByIdAndType == nullptr || GetUnitMode == nullptr
+            || GetDynamicPath == nullptr || PathGetX == nullptr
+            || PathGetY == nullptr || GetUnitClientX == nullptr
+            || GetUnitClientY == nullptr
+            || ProjectClientToAutomap == nullptr) {
+            return false;
+        }
+
+        void* const unit = GetUnitByIdAndType(
+            tracked.unitId,
+            UnitMonster);
+        if (!IsAlignedPointer(unit)) {
+            TrackedIdsMissing.fetch_add(1U, std::memory_order_relaxed);
+            return false;
+        }
+        TrackedIdsResolved.fetch_add(1U, std::memory_order_relaxed);
+
+        const auto mode = GetUnitMode(unit);
+        if (mode == MonsterModeDeath || mode == MonsterModeDead) return false;
+
+        void* const unitPath = GetDynamicPath(unit);
+        if (!IsAlignedPointer(unitPath)) return false;
+        const auto unitSubtileX = PathGetX(unitPath);
+        const auto unitSubtileY = PathGetY(unitPath);
+        constexpr auto MaximumPathCoordinate = static_cast<std::int32_t>(
+            (std::numeric_limits<std::uint16_t>::max)());
+        if (unitSubtileX < 0 || unitSubtileX > MaximumPathCoordinate
+            || unitSubtileY < 0 || unitSubtileY > MaximumPathCoordinate) {
+            return false;
+        }
+
+        const auto distanceSquared = Detail::SquaredWorldSubtileDistance(
+            static_cast<std::uint16_t>(unitSubtileX),
+            static_cast<std::uint16_t>(unitSubtileY),
+            scan.playerSubtileX,
+            scan.playerSubtileY);
         const auto unitX = GetUnitClientX(unit);
         const auto unitY = GetUnitClientY(unit);
         NativePoint projected{};
@@ -854,29 +979,26 @@ auto BuildCandidate(
             || static_cast<std::int64_t>(projected.y)
                 >= static_cast<std::int64_t>(scan.clipTop) + scan.clipHeight) {
             NativeClipRejected.fetch_add(1U, std::memory_order_relaxed);
+            RecordRefreshDistanceBand(
+                ClipRejectedByDistanceBand,
+                distanceSquared);
             return false;
         }
 
-        candidate.unitId = GetUnitId(unit);
-        if (candidate.unitId == UINT32_MAX) return false;
-        candidate.x = projected.x;
-        candidate.y = projected.y;
-        candidate.nativeWidth = scan.nativeWidth;
-        candidate.nativeHeight = scan.nativeHeight;
-        if (ImmunityCollectionEnabled.load(std::memory_order_acquire)) {
-            candidate.immunityMask = Detail::BuildMonsterImmunityMask(
-                std::array<std::int32_t, 6>{
-                GetUnitStat(unit, PhysicalResistanceStatId, 0U),
-                GetUnitStat(unit, FireResistanceStatId, 0U),
-                GetUnitStat(unit, ColdResistanceStatId, 0U),
-                GetUnitStat(unit, LightningResistanceStatId, 0U),
-                GetUnitStat(unit, PoisonResistanceStatId, 0U),
-                GetUnitStat(unit, MagicResistanceStatId, 0U),
-            });
-        }
-        candidate.distanceSquared = distanceSquared;
-        candidate.observedTick = scan.currentTick;
-        candidate.epoch = scan.epoch;
+        RecordRefreshDistanceBand(AcceptedByDistanceBand, distanceSquared);
+
+        candidate = {
+            .unitId = tracked.unitId,
+            .x = projected.x,
+            .y = projected.y,
+            .nativeWidth = scan.nativeWidth,
+            .nativeHeight = scan.nativeHeight,
+            .rank = tracked.rank,
+            .immunityMask = tracked.immunityMask,
+            .distanceSquared = distanceSquared,
+            .observedTick = scan.currentTick,
+            .epoch = scan.epoch,
+        };
         UpdateMaximum(MaximumAcceptedDistanceSquared, distanceSquared);
         return true;
     }
@@ -886,7 +1008,10 @@ auto BuildCandidate(
     }
 }
 
-void ConsiderCandidate(const Candidate& candidate) noexcept {
+auto BeginObservationFrame(
+        std::uint64_t epoch,
+        ObservationBuffer*& output) noexcept -> bool {
+    output = nullptr;
     for (std::uint32_t attempt = 0U; attempt < 2U; ++attempt) {
         const auto observationState = ActiveObservationState.load(
             std::memory_order_acquire);
@@ -899,42 +1024,22 @@ void ConsiderCandidate(const Candidate& candidate) noexcept {
             ContentionWaits.fetch_add(1U, std::memory_order_relaxed);
             continue;
         }
-        if (candidate.epoch != Epoch.load(std::memory_order_acquire)) {
+        if (epoch != Epoch.load(std::memory_order_acquire)) {
             buffer.writers.fetch_sub(1U, std::memory_order_acq_rel);
-            return;
+            return false;
         }
-        if (buffer.epoch.load(std::memory_order_acquire)
-                != candidate.epoch) {
-            buffer.writers.fetch_sub(1U, std::memory_order_acq_rel);
-            return;
+        if (buffer.epoch.load(std::memory_order_acquire) != epoch) {
+            // The producer owns this active buffer until writers reaches zero.
+            // Initialize a fresh epoch immediately instead of dropping the
+            // first marker frame while waiting for Present to rotate buffers.
+            buffer.count.store(0U, std::memory_order_relaxed);
+            buffer.epoch.store(epoch, std::memory_order_release);
         }
-
-        auto index = buffer.count.load(std::memory_order_acquire);
-        ObservationChunk* chunk{};
-        for (;;) {
-            chunk = EnsureObservationChunk(
-                buffer,
-                index / ObservationsPerChunk);
-            if (chunk == nullptr) {
-                StorageFailures.fetch_add(1U, std::memory_order_relaxed);
-                buffer.writers.fetch_sub(1U, std::memory_order_acq_rel);
-                return;
-            }
-            if (buffer.count.compare_exchange_weak(
-                    index,
-                    index + 1U,
-                    std::memory_order_acq_rel,
-                    std::memory_order_acquire)) {
-                break;
-            }
-        }
-        chunk->observations[index % ObservationsPerChunk] = candidate;
-        CandidatesAccepted.fetch_add(1U, std::memory_order_relaxed);
-        PublishedSequence.fetch_add(1U, std::memory_order_acq_rel);
-        buffer.writers.fetch_sub(1U, std::memory_order_acq_rel);
-        return;
+        output = &buffer;
+        return true;
     }
     ContentionWaits.fetch_add(1U, std::memory_order_relaxed);
+    return false;
 }
 
 [[nodiscard]] auto ClaimMonsterTableScan(
@@ -956,12 +1061,15 @@ void ConsiderCandidate(const Candidate& candidate) noexcept {
     }
 }
 
-void ScanClientMonsterTable(const MonsterScanContext& scan) noexcept {
+void DiscoverClientMonsterTable(const MonsterScanContext& scan) noexcept {
+    const auto started = PerformanceCounterMicroseconds();
+    bool complete = true;
     __try {
         if (Base == nullptr) return;
         auto** const buckets = reinterpret_cast<void**>(
             Base + ClientUnitHashTableRva + UnitHashTypeStride);
         MonsterTableScans.fetch_add(1U, std::memory_order_relaxed);
+        DiscoveryScratch.clear();
 
         std::size_t totalUnits{};
         for (std::size_t bucketIndex = 0U;
@@ -980,7 +1088,8 @@ void ScanClientMonsterTable(const MonsterScanContext& scan) noexcept {
                     MonsterTraversalLimits.fetch_add(
                         1U,
                         std::memory_order_relaxed);
-                    return;
+                    complete = false;
+                    break;
                 }
 
                 auto* const unitBytes = static_cast<std::uint8_t*>(unit);
@@ -989,9 +1098,9 @@ void ScanClientMonsterTable(const MonsterScanContext& scan) noexcept {
                 ++totalUnits;
                 ++bucketUnits;
 
-                Candidate candidate{};
-                if (BuildCandidate(unit, scan, candidate)) {
-                    ConsiderCandidate(candidate);
+                TrackedMonster tracked{};
+                if (DiscoverTrackedMonster(unit, scan, tracked)) {
+                    DiscoveryScratch.push_back(tracked);
                 }
 
                 if (next == unit) {
@@ -1002,10 +1111,77 @@ void ScanClientMonsterTable(const MonsterScanContext& scan) noexcept {
                 }
                 unit = next;
             }
+            if (!complete) break;
+        }
+        if (complete
+            && Epoch.load(std::memory_order_acquire) == scan.epoch) {
+            TrackedMonsters.swap(DiscoveryScratch);
+            TrackedMonsterCount.store(
+                static_cast<std::uint64_t>(TrackedMonsters.size()),
+                std::memory_order_release);
         }
     }
     __except (EXCEPTION_EXECUTE_HANDLER) {
         AccessFaults.fetch_add(1U, std::memory_order_relaxed);
+    }
+    const auto finished = PerformanceCounterMicroseconds();
+    if (started != 0U && finished >= started) {
+        const auto elapsed = finished - started;
+        UpdateMaximum(MaximumDiscoveryMicroseconds, elapsed);
+        TotalDiscoveryMicroseconds.fetch_add(
+            elapsed,
+            std::memory_order_relaxed);
+        DiscoveryTimingSamples.fetch_add(1U, std::memory_order_relaxed);
+    }
+}
+
+void RefreshTrackedMonsters(const MonsterScanContext& scan) noexcept {
+    const auto started = PerformanceCounterMicroseconds();
+    MonsterPositionRefreshes.fetch_add(1U, std::memory_order_relaxed);
+
+    ObservationBuffer* buffer{};
+    if (!BeginObservationFrame(scan.epoch, buffer)
+        || buffer == nullptr) {
+        return;
+    }
+
+    auto* chunk = buffer->first;
+    std::uint64_t published{};
+    for (const auto& tracked : TrackedMonsters) {
+        Candidate candidate{};
+        if (!RefreshTrackedMonster(tracked, scan, candidate)) continue;
+
+        if (published != 0U
+            && published % ObservationsPerChunk == 0U) {
+            chunk = chunk != nullptr
+                ? chunk->next.load(std::memory_order_acquire)
+                : nullptr;
+        }
+        if (chunk == nullptr) {
+            StorageFailures.fetch_add(1U, std::memory_order_relaxed);
+            break;
+        }
+        chunk->observations[published % ObservationsPerChunk] = candidate;
+        ++published;
+        CandidatesAccepted.fetch_add(1U, std::memory_order_relaxed);
+    }
+    if (scan.epoch == Epoch.load(std::memory_order_acquire)) {
+        // Replace the producer buffer with one complete latest-position frame.
+        // Repeated native pulses overwrite it instead of appending duplicate
+        // unit IDs while Present is late.
+        buffer->count.store(published, std::memory_order_release);
+        PublishedSequence.fetch_add(1U, std::memory_order_acq_rel);
+    } else {
+        buffer->count.store(0U, std::memory_order_release);
+    }
+    buffer->writers.fetch_sub(1U, std::memory_order_acq_rel);
+
+    const auto finished = PerformanceCounterMicroseconds();
+    if (started != 0U && finished >= started) {
+        const auto elapsed = finished - started;
+        UpdateMaximum(MaximumRefreshMicroseconds, elapsed);
+        TotalRefreshMicroseconds.fetch_add(elapsed, std::memory_order_relaxed);
+        RefreshTimingSamples.fetch_add(1U, std::memory_order_relaxed);
     }
 }
 
@@ -1032,7 +1208,6 @@ __declspec(noinline) void __fastcall HookRenderAutomapUnit(
 
     const auto currentTick = static_cast<std::uint64_t>(GetTickCount64());
     BeginAutomapPulse(currentTick);
-    if (!ClaimMonsterTableScan(currentTick)) return;
     const auto epoch = Epoch.load(std::memory_order_acquire);
     MonsterScanContext scan{};
     if (!BuildMonsterScanContext(
@@ -1043,7 +1218,23 @@ __declspec(noinline) void __fastcall HookRenderAutomapUnit(
             scan)) {
         return;
     }
-    ScanClientMonsterTable(scan);
+
+    if (TrackedMonsterLock.test_and_set(std::memory_order_acquire)) {
+        ContentionWaits.fetch_add(1U, std::memory_order_relaxed);
+        return;
+    }
+    const AtomicFlagRelease trackedMonsterRelease{TrackedMonsterLock};
+    if (TrackedMonsterEpoch != epoch) {
+        TrackedMonsters.clear();
+        DiscoveryScratch.clear();
+        TrackedMonsterCount.store(0U, std::memory_order_release);
+        TrackedMonsterEpoch = epoch;
+        LastMonsterTableScanTick.store(0U, std::memory_order_release);
+    }
+    if (ClaimMonsterTableScan(currentTick)) {
+        DiscoverClientMonsterTable(scan);
+    }
+    RefreshTrackedMonsters(scan);
 }
 
 auto ValidateRuntime(const D2RL::PluginContext* context) noexcept -> bool {
@@ -1254,7 +1445,11 @@ auto InitializeNativeAutomapMarker(
     }
     try {
         MarkerCache.clear();
-        MarkerCache.reserve(InitialMarkerReserve);
+        MarkerCache.reserve(MaximumRecentNativeAutomapMarkers);
+        TrackedMonsters.clear();
+        TrackedMonsters.reserve(MaximumUnitsPerMonsterTableScan);
+        DiscoveryScratch.clear();
+        DiscoveryScratch.reserve(MaximumUnitsPerMonsterTableScan);
     } catch (...) {
         context->LogWarn(
             "MapSense: renderer marker cache could not be reserved; marker hook refused.");
@@ -1264,6 +1459,13 @@ auto InitializeNativeAutomapMarker(
     PendingObservationBuffer = -1;
     RendererEpoch = 0U;
     LastPurgeTick = 0U;
+    TrackedMonsterEpoch = 0U;
+    TrackedMonsterLock.clear(std::memory_order_release);
+    LARGE_INTEGER performanceFrequency{};
+    PerformanceCounterFrequency = QueryPerformanceFrequency(
+        &performanceFrequency) != FALSE
+        ? performanceFrequency.QuadPart
+        : 0;
 
     Base = reinterpret_cast<std::uint8_t*>(context->exeBase);
     GetLocalDataContext = At<GetLocalDataContextFn>(
@@ -1286,6 +1488,8 @@ auto InitializeNativeAutomapMarker(
     GetDrlgRoomLevelId = At<GetLevelIdFn>(GetDrlgRoomLevelIdRva);
     IsRoomInTown = At<IsRoomInTownFn>(IsRoomInTownRva);
     GetMonStatsRecord = At<GetMonStatsRecordFn>(GetMonStatsRecordRva);
+    GetUnitByIdAndType = At<GetUnitByIdAndTypeFn>(
+        ClientUnitHashTableWitnessRva);
     ProjectClientToAutomap = At<ProjectClientToAutomapFn>(
         ProjectClientToAutomapRva);
     CollectionEnabled.store(false, std::memory_order_release);
@@ -1323,6 +1527,7 @@ auto InitializeNativeAutomapMarker(
         GetDrlgRoomLevelId = nullptr;
         IsRoomInTown = nullptr;
         GetMonStatsRecord = nullptr;
+        GetUnitByIdAndType = nullptr;
         ProjectClientToAutomap = nullptr;
         DiagnosticContext = nullptr;
         context->LogWarn(
@@ -1359,17 +1564,6 @@ void SetNativeAutomapMarkerEnabled(bool enabled) noexcept {
         enabled,
         std::memory_order_acq_rel);
     if (previous != enabled) ResetPublishedMarkers(false);
-}
-
-void SetNativeAutomapMarkerRadius(std::int32_t radius) noexcept {
-    const auto clamped = std::clamp(
-        radius,
-        MinimumMonsterDetectionRadius,
-        MaximumMonsterDetectionRadius);
-    const auto previous = MarkerRadius.exchange(
-        clamped,
-        std::memory_order_acq_rel);
-    if (previous != clamped) ResetPublishedMarkers(true);
 }
 
 void SetNativeAutomapImmunityCollectionEnabled(bool enabled) noexcept {
@@ -1455,6 +1649,13 @@ auto AcquireNativeAutomapMarkers(
                         }
                         const auto existing = MarkerCache.find(marker.unitId);
                         if (existing == MarkerCache.end()) {
+                            if (MarkerCache.size()
+                                >= MaximumRecentNativeAutomapMarkers) {
+                                StorageFailures.fetch_add(
+                                    1U,
+                                    std::memory_order_relaxed);
+                                continue;
+                            }
                             MarkerCache.emplace(marker.unitId, marker);
                             MarkersInserted.fetch_add(
                                 1U,
@@ -1562,6 +1763,14 @@ auto GetNativeAutomapMarkerCounters() noexcept
         .automapPulses = AutomapPulses.load(std::memory_order_relaxed),
         .monsterTableScans = MonsterTableScans.load(
             std::memory_order_relaxed),
+        .monsterPositionRefreshes = MonsterPositionRefreshes.load(
+            std::memory_order_relaxed),
+        .trackedCurrent = TrackedMonsterCount.load(
+            std::memory_order_relaxed),
+        .trackedIdsResolved = TrackedIdsResolved.load(
+            std::memory_order_relaxed),
+        .trackedIdsMissing = TrackedIdsMissing.load(
+            std::memory_order_relaxed),
         .monsterBucketsVisited = MonsterBucketsVisited.load(
             std::memory_order_relaxed),
         .monsterTraversalLimits = MonsterTraversalLimits.load(
@@ -1587,11 +1796,25 @@ auto GetNativeAutomapMarkerCounters() noexcept
             std::memory_order_relaxed),
         .hostilesBeyond220 = HostilesBeyond220.load(
             std::memory_order_relaxed),
-        .radiusRejected = RadiusRejected.load(std::memory_order_relaxed),
-        .withinRadius = WithinRadius.load(std::memory_order_relaxed),
         .projectionRejected = ProjectionRejected.load(
             std::memory_order_relaxed),
         .nativeClipRejected = NativeClipRejected.load(
+            std::memory_order_relaxed),
+        .acceptedThrough80 = AcceptedByDistanceBand[0].load(
+            std::memory_order_relaxed),
+        .acceptedFrom81Through140 = AcceptedByDistanceBand[1].load(
+            std::memory_order_relaxed),
+        .acceptedFrom141Through220 = AcceptedByDistanceBand[2].load(
+            std::memory_order_relaxed),
+        .acceptedBeyond220 = AcceptedByDistanceBand[3].load(
+            std::memory_order_relaxed),
+        .clipRejectedThrough80 = ClipRejectedByDistanceBand[0].load(
+            std::memory_order_relaxed),
+        .clipRejectedFrom81Through140 = ClipRejectedByDistanceBand[1].load(
+            std::memory_order_relaxed),
+        .clipRejectedFrom141Through220 = ClipRejectedByDistanceBand[2].load(
+            std::memory_order_relaxed),
+        .clipRejectedBeyond220 = ClipRejectedByDistanceBand[3].load(
             std::memory_order_relaxed),
         .candidatesAccepted = CandidatesAccepted.load(
             std::memory_order_relaxed),
@@ -1608,12 +1831,20 @@ auto GetNativeAutomapMarkerCounters() noexcept
         .storageFailures = StorageFailures.load(
             std::memory_order_relaxed),
         .accessFaults = AccessFaults.load(std::memory_order_relaxed),
-        .configuredRadius = MarkerRadius.load(std::memory_order_relaxed),
+        .maximumDiscoveryMicroseconds = MaximumDiscoveryMicroseconds.load(
+            std::memory_order_relaxed),
+        .totalDiscoveryMicroseconds = TotalDiscoveryMicroseconds.load(
+            std::memory_order_relaxed),
+        .discoveryTimingSamples = DiscoveryTimingSamples.load(
+            std::memory_order_relaxed),
+        .maximumRefreshMicroseconds = MaximumRefreshMicroseconds.load(
+            std::memory_order_relaxed),
+        .totalRefreshMicroseconds = TotalRefreshMicroseconds.load(
+            std::memory_order_relaxed),
+        .refreshTimingSamples = RefreshTimingSamples.load(
+            std::memory_order_relaxed),
         .maximumHostileDistance = DistanceFromSquared(
             MaximumHostileDistanceSquared.load(std::memory_order_relaxed)),
-        .maximumWithinRadiusDistance = DistanceFromSquared(
-            MaximumWithinRadiusDistanceSquared.load(
-                std::memory_order_relaxed)),
         .maximumAcceptedDistance = DistanceFromSquared(
             MaximumAcceptedDistanceSquared.load(std::memory_order_relaxed)),
         .maximumPublishedDistance = DistanceFromSquared(

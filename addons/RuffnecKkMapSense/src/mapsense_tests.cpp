@@ -102,6 +102,106 @@ void CheckNavigationProjectionDiagnosticCacheContract() {
     CHECK(!cache.ShouldLog(7, 0U, UINT64_MAX, UINT64_MAX));
 }
 
+void CheckRevealPersistenceContract() {
+    using namespace RuffnecKk::MapSense;
+
+    RevealPersistenceState state;
+    state.ResetProcess();
+    state.BeginSession(101U);
+
+    CHECK(state.Difficulty() == UnknownRevealDifficulty);
+    CHECK(state.ObserveDifficulty(UnknownRevealDifficulty)
+        == RevealDifficultyObservation::Invalid);
+    CHECK(!state.HasAnyIntent());
+    CHECK(!state.RememberLevel(0, 3));
+    CHECK(!state.RememberAct(0, 0));
+    CHECK(!state.SetRevealAll(0, true));
+
+    CHECK(state.ObserveDifficulty(0)
+        == RevealDifficultyObservation::Initialized);
+    CHECK(state.RememberLevel(0, 3));
+    CHECK(state.RememberLevel(0, 3));
+    CHECK(state.RememberAct(0, 0));
+    CHECK(state.RememberAct(0, 0));
+    CHECK(state.SetRevealAll(0, true));
+    CHECK(state.HasAnyIntent(0));
+    CHECK(state.ShouldReplayLevel(0, 3));
+    CHECK(state.HasReplayIntentForLevel(0, 0, 3));
+    CHECK(state.HasReplayIntentForLevel(0, 1, 40));
+    CHECK(state.ShouldReplayCurrentLevel(0, 0, 3));
+    CHECK(state.ShouldReplayCurrentLevel(0, 1, 40));
+
+    CHECK(state.MarkLevelAccepted(0, 3));
+    CHECK(!state.ShouldReplayLevel(0, 3));
+    CHECK(!state.ShouldReplayCurrentLevel(0, 0, 3));
+    CHECK(state.ShouldReplayCurrentLevel(0, 0, 4));
+    CHECK(state.IsLevelAccepted(0, 3));
+
+    // Re-entering the same session cannot accidentally reopen accepted work.
+    state.BeginSession(101U);
+    CHECK(!state.ShouldReplayLevel(0, 3));
+    CHECK(!state.ShouldReplayCurrentLevel(0, 0, 3));
+
+    // A new game in the same difficulty replays stable ids on fresh geometry.
+    state.BeginSession(102U);
+    CHECK(state.ShouldReplayLevel(0, 3));
+    CHECK(state.ShouldReplayCurrentLevel(0, 0, 3));
+    CHECK(state.ShouldReplayCurrentLevel(0, 1, 40));
+
+    // Unknown difficulty is fail-closed and cannot consume or reuse the state.
+    CHECK(state.ObserveDifficulty(UnknownRevealDifficulty)
+        == RevealDifficultyObservation::Invalid);
+    CHECK(!state.ShouldReplayLevel(UnknownRevealDifficulty, 3));
+    CHECK(!state.ShouldReplayCurrentLevel(
+        UnknownRevealDifficulty, 0, 3));
+    CHECK(state.ShouldReplayLevel(0, 3));
+
+    // A real act transition cannot credit the accepted old-act reveal to the
+    // newly entered act. The current DRLG's LevelId supplies the stable ActId.
+    CHECK(RevealActForLevelId(39) == 0);
+    CHECK(RevealActForLevelId(40) == 1);
+    CHECK(RevealActForLevelId(74) == 1);
+    CHECK(RevealActForLevelId(75) == 2);
+    CHECK(RevealActForLevelId(102) == 2);
+    CHECK(RevealActForLevelId(103) == 3);
+    CHECK(RevealActForLevelId(108) == 3);
+    CHECK(RevealActForLevelId(109) == 4);
+    CHECK(RevealActForLevelId(137) == 4);
+    CHECK(RevealActForLevelId(0) == -1);
+    CHECK(RevealActForLevelId(138) == -1);
+    CHECK(state.ShouldReplayCurrentLevel(
+        0, RevealActForLevelId(39), 39));
+    CHECK(state.MarkLevelAccepted(0, 39));
+    CHECK(!state.ShouldReplayCurrentLevel(
+        0, RevealActForLevelId(39), 39));
+    CHECK(state.ShouldReplayCurrentLevel(
+        0, RevealActForLevelId(40), 40));
+
+    // Every real 0/1/2 transition invalidates all remembered intents.
+    CHECK(state.ObserveDifficulty(1)
+        == RevealDifficultyObservation::Changed);
+    CHECK(state.Difficulty() == 1);
+    CHECK(!state.HasAnyIntent());
+    CHECK(!state.ShouldReplayLevel(1, 3));
+    CHECK(!state.ShouldReplayCurrentLevel(1, 0, 3));
+
+    CHECK(state.RememberLevel(1, 40));
+    CHECK(state.RememberAct(1, 2));
+    CHECK(state.SetRevealAll(1, true));
+    CHECK(state.ObserveDifficulty(2)
+        == RevealDifficultyObservation::Changed);
+    CHECK(state.Difficulty() == 2);
+    CHECK(!state.HasAnyIntent());
+
+    CHECK(state.RememberLevel(2, 109));
+    CHECK(state.RememberAct(2, 4));
+    CHECK(state.SetRevealAll(2, true));
+    CHECK(state.ObserveDifficulty(0)
+        == RevealDifficultyObservation::Changed);
+    CHECK(state.Difficulty() == 0);
+    CHECK(!state.HasAnyIntent());
+}
+
 void CheckNavigationEngineContract() {
     using namespace RuffnecKk::MapSense;
 
@@ -822,6 +922,20 @@ void CheckNavigationResolverHelpers() {
     };
     Detail::NavigationOutdoorOpening opening{};
 
+    std::int32_t checkedSubtile{123};
+    CHECK(Detail::TryAddNavigationSubtileOffset(
+        (std::numeric_limits<std::int32_t>::max)() - 1,
+        1,
+        checkedSubtile));
+    CHECK(checkedSubtile == (std::numeric_limits<std::int32_t>::max)());
+    checkedSubtile = 123;
+    CHECK(!Detail::TryAddNavigationSubtileOffset(
+        (std::numeric_limits<std::int32_t>::max)(),
+        1,
+        checkedSubtile));
+    CHECK(checkedSubtile == 123);
+    CHECK(!Detail::TryAddNavigationSubtileOffset(-1, 1, checkedSubtile));
+
     sourceCollisionCells.fill(1U);
     neighbourCollisionCells.fill(1U);
     for (std::int32_t y = 2; y < 7; ++y) {
@@ -839,6 +953,28 @@ void CheckNavigationResolverHelpers() {
     CHECK(opening.subtileX == 510);
     CHECK(opening.subtileY == 1'004);
     CHECK(opening.spanSubtiles == 5);
+
+    // The absolute midpoint remains representable even when adding it to the
+    // grid origin as an intermediate 32-bit expression would overflow.
+    constexpr std::int32_t highTileY = 214'748'364;
+    constexpr std::int32_t highOriginY = highTileY * 5;
+    sourceCollisionCells.fill(1U);
+    neighbourCollisionCells.fill(1U);
+    for (std::int32_t y = 7; y < 10; ++y) {
+        setCell(sourceCollisionCells, 8, y, 0U);
+        setCell(sourceCollisionCells, 9, y, 0U);
+        setCell(neighbourCollisionCells, 0, y, 0U);
+        setCell(neighbourCollisionCells, 1, y, 0U);
+    }
+    CHECK(Detail::FindOutdoorCollisionOpening(
+        Detail::NavigationRoomRectangle{3, 100, highTileY, 2, 2},
+        Detail::NavigationRoomRectangle{4, 102, highTileY, 2, 2},
+        collisionGrid(sourceCollisionCells, 500, highOriginY),
+        collisionGrid(neighbourCollisionCells, 510, highOriginY),
+        opening));
+    CHECK(opening.subtileX == 510);
+    CHECK(opening.subtileY == highOriginY + 8);
+    CHECK(opening.spanSubtiles == 3);
 
     sourceCollisionCells.fill(1U);
     neighbourCollisionCells.fill(1U);
@@ -942,6 +1078,362 @@ void CheckNavigationResolverHelpers() {
         collisionGrid(neighbourCollisionCells, 510, 1'000),
         opening));
 
+    // Room fragments from both sides of one real level boundary must merge
+    // before intersection. The endpoint stays on the current level's outer
+    // edge, not on an arbitrary destination Room edge.
+    std::array fragmentedSourceSpans{
+        Detail::NavigationBoundarySpan{
+            3, Detail::NavigationBoundarySide::Right, 1'040, 1'043},
+        Detail::NavigationBoundarySpan{
+            3, Detail::NavigationBoundarySide::Right, 1'043, 1'047},
+    };
+    std::array fragmentedTargetSpans{
+        Detail::NavigationBoundarySpan{
+            26, Detail::NavigationBoundarySide::Right, 1'039, 1'044},
+        Detail::NavigationBoundarySpan{
+            26, Detail::NavigationBoundarySide::Right, 1'044, 1'048},
+    };
+    std::size_t mergedSourceSpanCount{};
+    std::size_t mergedTargetSpanCount{};
+    CHECK(Detail::MergeOutdoorBoundarySpans(
+        fragmentedSourceSpans,
+        fragmentedSourceSpans.size(),
+        mergedSourceSpanCount));
+    CHECK(Detail::MergeOutdoorBoundarySpans(
+        fragmentedTargetSpans,
+        fragmentedTargetSpans.size(),
+        mergedTargetSpanCount));
+    CHECK(mergedSourceSpanCount == 1U);
+    CHECK(mergedTargetSpanCount == 1U);
+    CHECK(fragmentedSourceSpans[0].startSubtile == 1'040);
+    CHECK(fragmentedSourceSpans[0].endSubtile == 1'047);
+    CHECK(fragmentedTargetSpans[0].startSubtile == 1'039);
+    CHECK(fragmentedTargetSpans[0].endSubtile == 1'048);
+    const auto levelBounds = Detail::NavigationLevelSubtileBounds{
+        .left = 500,
+        .top = 1'000,
+        .right = 800,
+        .bottom = 1'300,
+    };
+    CHECK(Detail::FindUniqueOutdoorLevelBoundaryOpening(
+        levelBounds,
+        26,
+        std::span(fragmentedSourceSpans).first(mergedSourceSpanCount),
+        std::span(fragmentedTargetSpans).first(mergedTargetSpanCount),
+        opening) == Detail::NavigationOutdoorBoundaryMatchResult::Found);
+    CHECK(opening.subtileX == 799);
+    CHECK(opening.subtileY == 1'043);
+    CHECK(opening.spanSubtiles == 7);
+
+    // Runtime spans retain the exact RoomsNear pair and its fixed seam. Two
+    // fragments of that same pair may merge, and the endpoint must stay on
+    // the source cell beside the shared seam rather than being reconstructed
+    // from the complete level's outer bounds.
+    std::array pairedSourceFragments{
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 7,
+            .side = Detail::NavigationBoundarySide::Right,
+            .startSubtile = 1'040,
+            .endSubtile = 1'043,
+            .fixedSubtile = 650,
+            .sourceRoomIdentity = 0x1000U,
+            .targetRoomIdentity = 0x2000U,
+        },
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 7,
+            .side = Detail::NavigationBoundarySide::Right,
+            .startSubtile = 1'043,
+            .endSubtile = 1'047,
+            .fixedSubtile = 650,
+            .sourceRoomIdentity = 0x1000U,
+            .targetRoomIdentity = 0x2000U,
+        },
+    };
+    std::array pairedTargetFragments{
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 26,
+            .side = Detail::NavigationBoundarySide::Right,
+            .startSubtile = 1'039,
+            .endSubtile = 1'044,
+            .fixedSubtile = 650,
+            .sourceRoomIdentity = 0x1000U,
+            .targetRoomIdentity = 0x2000U,
+        },
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 26,
+            .side = Detail::NavigationBoundarySide::Right,
+            .startSubtile = 1'044,
+            .endSubtile = 1'048,
+            .fixedSubtile = 650,
+            .sourceRoomIdentity = 0x1000U,
+            .targetRoomIdentity = 0x2000U,
+        },
+    };
+    std::size_t pairedSourceCount{};
+    std::size_t pairedTargetCount{};
+    CHECK(Detail::MergeOutdoorBoundarySpans(
+        pairedSourceFragments,
+        pairedSourceFragments.size(),
+        pairedSourceCount));
+    CHECK(Detail::MergeOutdoorBoundarySpans(
+        pairedTargetFragments,
+        pairedTargetFragments.size(),
+        pairedTargetCount));
+    CHECK(pairedSourceCount == 1U);
+    CHECK(pairedTargetCount == 1U);
+    CHECK(Detail::FindUniqueOutdoorLevelBoundaryOpening(
+        levelBounds,
+        26,
+        std::span(pairedSourceFragments).first(pairedSourceCount),
+        std::span(pairedTargetFragments).first(pairedTargetCount),
+        opening) == Detail::NavigationOutdoorBoundaryMatchResult::Found);
+    CHECK(opening.subtileX == 649);
+    CHECK(opening.subtileY == 1'043);
+    CHECK(opening.spanSubtiles == 7);
+
+    // Exact RoomsNear identities remain separate even when side, fixed seam,
+    // and projected interval are identical. A target fragment from the other
+    // pair must not cross-match the first source pair.
+    std::array parallelSourceSpans{
+        pairedSourceFragments[0],
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 7,
+            .side = Detail::NavigationBoundarySide::Right,
+            .startSubtile = 1'040,
+            .endSubtile = 1'047,
+            .fixedSubtile = 650,
+            .sourceRoomIdentity = 0x3000U,
+            .targetRoomIdentity = 0x4000U,
+        },
+    };
+    std::size_t parallelSourceCount{};
+    CHECK(Detail::MergeOutdoorBoundarySpans(
+        parallelSourceSpans,
+        parallelSourceSpans.size(),
+        parallelSourceCount));
+    CHECK(parallelSourceCount == 2U);
+    const std::array crossedPairTarget{
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 26,
+            .side = Detail::NavigationBoundarySide::Right,
+            .startSubtile = 1'040,
+            .endSubtile = 1'047,
+            .fixedSubtile = 650,
+            .sourceRoomIdentity = 0x3000U,
+            .targetRoomIdentity = 0x4000U,
+        },
+    };
+    CHECK(Detail::FindUniqueOutdoorLevelBoundaryOpening(
+        levelBounds,
+        26,
+        std::span(pairedSourceFragments).first(pairedSourceCount),
+        crossedPairTarget,
+        opening) == Detail::NavigationOutdoorBoundaryMatchResult::NotFound);
+
+    // If two explicit RoomsNear pairs expose different valid seams, the
+    // resolver must fail closed instead of selecting either one.
+    const std::array explicitAmbiguousSource{
+        pairedSourceFragments[0],
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 7,
+            .side = Detail::NavigationBoundarySide::Right,
+            .startSubtile = 1'050,
+            .endSubtile = 1'056,
+            .fixedSubtile = 700,
+            .sourceRoomIdentity = 0x3000U,
+            .targetRoomIdentity = 0x4000U,
+        },
+    };
+    const std::array explicitAmbiguousTarget{
+        pairedTargetFragments[0],
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 26,
+            .side = Detail::NavigationBoundarySide::Right,
+            .startSubtile = 1'050,
+            .endSubtile = 1'056,
+            .fixedSubtile = 700,
+            .sourceRoomIdentity = 0x3000U,
+            .targetRoomIdentity = 0x4000U,
+        },
+    };
+    CHECK(Detail::FindUniqueOutdoorLevelBoundaryOpening(
+        levelBounds,
+        26,
+        explicitAmbiguousSource,
+        explicitAmbiguousTarget,
+        opening) == Detail::NavigationOutdoorBoundaryMatchResult::Ambiguous);
+
+    CHECK(Detail::HasNavigationOutdoorVisibilitySlot(0x10U, 0U));
+    CHECK(Detail::HasNavigationOutdoorVisibilitySlot(0x800U, 7U));
+    CHECK(!Detail::HasNavigationOutdoorVisibilitySlot(0x20U, 0U));
+    CHECK(!Detail::HasNavigationOutdoorVisibilitySlot(0x800U, 8U));
+    CHECK(Detail::IsNavigationPlayerPathOpen(0U));
+    CHECK(!Detail::IsNavigationPlayerPathOpen(0x0001U));
+    CHECK(!Detail::IsNavigationPlayerPathOpen(0x0008U));
+    CHECK(!Detail::IsNavigationPlayerPathOpen(0x0400U));
+    CHECK(!Detail::IsNavigationPlayerPathOpen(0x0800U));
+    CHECK(!Detail::IsNavigationPlayerPathOpen(0x1000U));
+    CHECK(Detail::IsNavigationPlayerPathOpen(0x0080U));
+    CHECK(Detail::IsNavigationPlayerPathOpen(0x0100U));
+
+    Detail::NavigationOutdoorOpening nativeMonasteryAnchor{};
+    CHECK(Detail::TryMakeNavigationLevelTileAnchor(
+        100,
+        200,
+        27,
+        13,
+        nativeMonasteryAnchor));
+    CHECK(nativeMonasteryAnchor.subtileX == 635);
+    CHECK(nativeMonasteryAnchor.subtileY == 1'065);
+    CHECK(nativeMonasteryAnchor.spanSubtiles == 0);
+    CHECK(!Detail::TryMakeNavigationLevelTileAnchor(
+        (std::numeric_limits<std::int32_t>::max)(),
+        200,
+        27,
+        13,
+        nativeMonasteryAnchor));
+
+    // Multiple exact player paths to one outdoor target are legitimate in the
+    // jungle generator. Strict callers can reject them, while runtime keeps
+    // the first geographically sorted path; width is not selection evidence.
+    const auto tamoeBounds = Detail::NavigationLevelSubtileBounds{
+        .left = 14'900,
+        .top = 4'900,
+        .right = 15'500,
+        .bottom = 5'500,
+    };
+    const std::array tamoeFacadeSource{
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 7,
+            .side = Detail::NavigationBoundarySide::Bottom,
+            .startSubtile = 15'040,
+            .endSubtile = 15'044,
+            .fixedSubtile = 5'091,
+            .sourceRoomIdentity = 0x5000U,
+            .targetRoomIdentity = 0x6000U,
+        },
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 7,
+            .side = Detail::NavigationBoundarySide::Bottom,
+            .startSubtile = 15'142,
+            .endSubtile = 15'182,
+            .fixedSubtile = 5'091,
+            .sourceRoomIdentity = 0x7000U,
+            .targetRoomIdentity = 0x8000U,
+        },
+    };
+    const std::array tamoeFacadeTarget{
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 26,
+            .side = Detail::NavigationBoundarySide::Bottom,
+            .startSubtile = 15'040,
+            .endSubtile = 15'044,
+            .fixedSubtile = 5'091,
+            .sourceRoomIdentity = 0x5000U,
+            .targetRoomIdentity = 0x6000U,
+        },
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 26,
+            .side = Detail::NavigationBoundarySide::Bottom,
+            .startSubtile = 15'142,
+            .endSubtile = 15'182,
+            .fixedSubtile = 5'091,
+            .sourceRoomIdentity = 0x7000U,
+            .targetRoomIdentity = 0x8000U,
+        },
+    };
+    CHECK(Detail::FindUniqueOutdoorLevelBoundaryOpening(
+        tamoeBounds,
+        26,
+        tamoeFacadeSource,
+        tamoeFacadeTarget,
+        opening) == Detail::NavigationOutdoorBoundaryMatchResult::Ambiguous);
+    CHECK(Detail::FindUniqueOutdoorLevelBoundaryOpening(
+        tamoeBounds,
+        26,
+        tamoeFacadeSource,
+        tamoeFacadeTarget,
+        opening,
+        Detail::NavigationOutdoorOpeningSelectionPolicy::
+            AcceptStablePlayerPath)
+        == Detail::NavigationOutdoorBoundaryMatchResult::Found);
+    CHECK(opening.subtileX == 15'042);
+    CHECK(opening.subtileY == 5'090);
+    CHECK(opening.spanSubtiles == 4);
+
+    std::array partiallyIdentifiedSpan{
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 7,
+            .side = Detail::NavigationBoundarySide::Right,
+            .startSubtile = 1'040,
+            .endSubtile = 1'047,
+            .fixedSubtile = 650,
+            .sourceRoomIdentity = 0x1000U,
+        },
+    };
+    std::size_t invalidMergedCount{};
+    CHECK(!Detail::MergeOutdoorBoundarySpans(
+        partiallyIdentifiedSpan,
+        partiallyIdentifiedSpan.size(),
+        invalidMergedCount));
+
+    // The already merged source frontier is cacheable across targets; only
+    // the independently collected destination spans carry the target id.
+    const std::array secondTargetBoundary{
+        Detail::NavigationBoundarySpan{
+            27, Detail::NavigationBoundarySide::Right, 1'041, 1'045},
+    };
+    CHECK(Detail::FindUniqueOutdoorLevelBoundaryOpening(
+        levelBounds,
+        27,
+        std::span(fragmentedSourceSpans).first(mergedSourceSpanCount),
+        secondTargetBoundary,
+        opening) == Detail::NavigationOutdoorBoundaryMatchResult::Found);
+    CHECK(opening.subtileX == 799);
+    CHECK(opening.subtileY == 1'043);
+    CHECK(opening.spanSubtiles == 4);
+
+    // A broad destination-side seam is harmless when the complete current
+    // level boundary exposes only the narrow, real road opening.
+    const std::array narrowOuterBoundary{
+        Detail::NavigationBoundarySpan{
+            3, Detail::NavigationBoundarySide::Right, 1'100, 1'104},
+    };
+    const std::array broadDestinationBoundary{
+        Detail::NavigationBoundarySpan{
+            26, Detail::NavigationBoundarySide::Right, 1'060, 1'140},
+    };
+    CHECK(Detail::FindUniqueOutdoorLevelBoundaryOpening(
+        levelBounds,
+        26,
+        narrowOuterBoundary,
+        broadDestinationBoundary,
+        opening) == Detail::NavigationOutdoorBoundaryMatchResult::Found);
+    CHECK(opening.subtileX == 799);
+    CHECK(opening.subtileY == 1'102);
+    CHECK(opening.spanSubtiles == 4);
+
+    // If two disconnected openings survive full-level validation, neither
+    // the widest nor the lowest coordinate may be guessed.
+    const std::array ambiguousSourceBoundary{
+        Detail::NavigationBoundarySpan{
+            3, Detail::NavigationBoundarySide::Left, 1'010, 1'050},
+        Detail::NavigationBoundarySpan{
+            3, Detail::NavigationBoundarySide::Right, 1'100, 1'104},
+    };
+    const std::array ambiguousTargetBoundary{
+        Detail::NavigationBoundarySpan{
+            26, Detail::NavigationBoundarySide::Left, 1'010, 1'050},
+        Detail::NavigationBoundarySpan{
+            26, Detail::NavigationBoundarySide::Right, 1'100, 1'104},
+    };
+    CHECK(Detail::FindUniqueOutdoorLevelBoundaryOpening(
+        levelBounds,
+        26,
+        ambiguousSourceBoundary,
+        ambiguousTargetBoundary,
+        opening) == Detail::NavigationOutdoorBoundaryMatchResult::Ambiguous);
+
     std::array<Detail::NavigationExitSelection, 3U> selections{};
     std::size_t selectionCount{};
     const auto makeSelection = [](
@@ -1022,6 +1514,8 @@ void CheckNavigationResolverHelpers() {
             Detail::NavigationExitEvidence::RoomTile,
             0)));
     CHECK(selections[0].candidate.destinationId == 13U);
+    CHECK(selections[0].evidence
+        == Detail::NavigationExitEvidence::RoomTile);
     CHECK(Detail::UpsertExitSelection(
         3,
         selections,
@@ -1214,15 +1708,13 @@ int main(int argc, char** argv) {
     using namespace RuffnecKk::MapSense;
 
     CheckNavigationProjectionDiagnosticCacheContract();
+    CheckRevealPersistenceContract();
     CheckNavigationEngineContract();
     CheckNavigationLevelCatalogContract();
     CheckNavigationPolicyContract();
     CheckNavigationResolverHelpers();
 
-    static_assert(CurrentConfigSchemaVersion == 8);
-    static_assert(MigrateLegacyMonsterDetectionRadius(500) == 31);
-    static_assert(MigrateLegacyMonsterDetectionRadius(1'000) == 63);
-    static_assert(MigrateLegacyMonsterDetectionRadius(2'500) == 156);
+    static_assert(CurrentConfigSchemaVersion == 9);
     static_assert(Detail::SquaredWorldSubtileDistance(0U, 0U, 3U, 4U)
         == 25U);
     static_assert(Detail::ClassifyWorldSubtileDistanceSquared(79U * 79U)
@@ -1427,7 +1919,7 @@ int main(int argc, char** argv) {
         "RuffnecKkMapSenseRevealLevel").has_value());
 
     const auto configured = ParseConfig(R"toml(
-    schema_version = 8
+    schema_version = 9
 [general]
 enabled = false
 [overlay]
@@ -1436,15 +1928,16 @@ scale = 1.25
 frame_rate = 90
 [monsters]
 detection_radius = 142
-marker_thickness = 2.50
 [monsters.normal]
 shape = "x"
 color = "#EDEDEDFF"
 size = 16
+thickness = 1.50
 [monsters.minion]
 shape = "player_cross"
 color = "#FFD43BCC"
 size = 17
+thickness = 2.50
 [monsters.champion]
 shape = "dot"
 color = "#3D8BFFFF"
@@ -1453,6 +1946,7 @@ size = 19
 shape = "player_cross"
 color = "#FF8A24FF"
 size = 23
+thickness = 4.00
 [monsters.super_unique_boss]
 shape = "dot"
 color = "#FF3B30FF"
@@ -1500,8 +1994,6 @@ enabled = true
     CHECK(configured.overlay.opacity == 0.75F);
     CHECK(configured.overlay.scale == 1.25F);
     CHECK(configured.overlay.frameRate == 90);
-    CHECK(configured.monsters.detectionRadius == 142);
-    CHECK(configured.monsters.markerThickness == 2.50F);
     CHECK(configured.monsters.normal.shape == MonsterMarkerShape::X);
     CHECK(configured.monsters.minion.shape
         == MonsterMarkerShape::PlayerCross);
@@ -1515,6 +2007,11 @@ enabled = true
     CHECK(configured.monsters.champion.size == 19.0F);
     CHECK(configured.monsters.unique.size == 23.0F);
     CHECK(configured.monsters.superUniqueBoss.size == 27.0F);
+    CHECK(configured.monsters.normal.thickness == 1.50F);
+    CHECK(configured.monsters.minion.thickness == 2.50F);
+    CHECK(configured.monsters.champion.thickness == 2.0F);
+    CHECK(configured.monsters.unique.thickness == 4.0F);
+    CHECK(configured.monsters.superUniqueBoss.thickness == 2.0F);
     CHECK(ColorToHex(configured.monsters.normal.color) == "#EDEDEDFF");
     CHECK(ColorToHex(configured.monsters.minion.color) == "#FFD43BCC");
     CHECK(ColorToHex(configured.monsters.champion.color) == "#3D8BFFFF");
@@ -1587,6 +2084,22 @@ enabled = true
         != std::string::npos);
     CHECK(serialized.find("indicator_size = 19.00")
         != std::string::npos);
+    CHECK(serialized.find("detection_radius") == std::string::npos);
+    CHECK(serialized.find("marker_thickness") == std::string::npos);
+    CHECK(serialized.find("size = 16.00\nthickness = 1.50")
+        != std::string::npos);
+    CHECK(serialized.find("size = 17.00\nthickness = 2.50")
+        != std::string::npos);
+    CHECK(serialized.find(
+        "[monsters.champion]\nshape = \"dot\"\n"
+        "color = \"#3D8BFFFF\"\nsize = 19.00\n\n")
+        != std::string::npos);
+    CHECK(serialized.find("size = 23.00\nthickness = 4.00")
+        != std::string::npos);
+    CHECK(serialized.find(
+        "[monsters.super_unique_boss]\nshape = \"dot\"\n"
+        "color = \"#FF3B30FF\"\nsize = 27.00\n\n")
+        != std::string::npos);
     CHECK(serialized.find("halo_thickness = 3.50")
         != std::string::npos);
     CHECK(serialized.find("[navigation]\nline_thickness = 3.25")
@@ -1609,8 +2122,6 @@ enabled = true
     const auto roundTrip = ParseConfig(serialized);
     CHECK(!roundTrip.enabled);
     CHECK(roundTrip.overlay.frameRate == 90);
-    CHECK(roundTrip.monsters.detectionRadius == 142);
-    CHECK(roundTrip.monsters.markerThickness == 2.50F);
     CHECK(roundTrip.monsters.normal.shape == MonsterMarkerShape::X);
     CHECK(roundTrip.monsters.minion.shape
         == MonsterMarkerShape::PlayerCross);
@@ -1624,6 +2135,11 @@ enabled = true
     CHECK(roundTrip.monsters.champion.size == 19.0F);
     CHECK(roundTrip.monsters.unique.size == 23.0F);
     CHECK(roundTrip.monsters.superUniqueBoss.size == 27.0F);
+    CHECK(roundTrip.monsters.normal.thickness == 1.50F);
+    CHECK(roundTrip.monsters.minion.thickness == 2.50F);
+    CHECK(roundTrip.monsters.champion.thickness == 2.0F);
+    CHECK(roundTrip.monsters.unique.thickness == 4.0F);
+    CHECK(roundTrip.monsters.superUniqueBoss.thickness == 2.0F);
     CHECK(ColorToHex(roundTrip.monsters.normal.color) == "#EDEDEDFF");
     CHECK(ColorToHex(roundTrip.monsters.minion.color) == "#FFD43BCC");
     CHECK(ColorToHex(roundTrip.monsters.champion.color) == "#3D8BFFFF");
@@ -1668,8 +2184,6 @@ color = "#F02030EE"
 
     const auto defaults = ParseConfig("schema_version = 4");
     CHECK(defaults.overlay.opacity == 1.0F);
-    CHECK(defaults.monsters.detectionRadius == 63);
-    CHECK(defaults.monsters.markerThickness == 2.0F);
     CHECK(defaults.monsters.normal.shape
         == MonsterMarkerShape::PlayerCross);
     CHECK(defaults.monsters.minion.shape
@@ -1685,6 +2199,11 @@ color = "#F02030EE"
     CHECK(defaults.monsters.champion.size == 20.0F);
     CHECK(defaults.monsters.unique.size == 22.0F);
     CHECK(defaults.monsters.superUniqueBoss.size == 24.0F);
+    CHECK(defaults.monsters.normal.thickness == 2.0F);
+    CHECK(defaults.monsters.minion.thickness == 2.0F);
+    CHECK(defaults.monsters.champion.thickness == 2.0F);
+    CHECK(defaults.monsters.unique.thickness == 2.0F);
+    CHECK(defaults.monsters.superUniqueBoss.thickness == 2.0F);
     CHECK(ColorToHex(defaults.monsters.normal.color) == "#FFFFFFFF");
     CHECK(ColorToHex(defaults.monsters.minion.color) == "#FFD43BFF");
     CHECK(ColorToHex(defaults.monsters.champion.color) == "#3D8BFFFF");
@@ -1747,7 +2266,6 @@ scale = 1.25
 frame_rate = 90
 [monsters]
 detection_radius = 420
-marker_thickness = 2.50
 [monsters.normal]
 color = "#EDEDEDFF"
 size = 16
@@ -1781,8 +2299,6 @@ enabled = true
     CHECK(schema3Migration.overlay.opacity == 0.75F);
     CHECK(schema3Migration.overlay.scale == 1.25F);
     CHECK(schema3Migration.overlay.frameRate == 90);
-    CHECK(schema3Migration.monsters.detectionRadius == 30);
-    CHECK(schema3Migration.monsters.markerThickness == 2.50F);
     CHECK(schema3Migration.monsters.normal.shape == MonsterMarkerShape::X);
     CHECK(schema3Migration.monsters.minion.shape == MonsterMarkerShape::X);
     CHECK(schema3Migration.monsters.champion.shape == MonsterMarkerShape::X);
@@ -1794,6 +2310,11 @@ enabled = true
     CHECK(schema3Migration.monsters.champion.size == 19.0F);
     CHECK(schema3Migration.monsters.unique.size == 23.0F);
     CHECK(schema3Migration.monsters.superUniqueBoss.size == 27.0F);
+    CHECK(schema3Migration.monsters.normal.thickness == 2.0F);
+    CHECK(schema3Migration.monsters.minion.thickness == 2.0F);
+    CHECK(schema3Migration.monsters.champion.thickness == 2.0F);
+    CHECK(schema3Migration.monsters.unique.thickness == 2.0F);
+    CHECK(schema3Migration.monsters.superUniqueBoss.thickness == 2.0F);
     CHECK(ColorToHex(schema3Migration.monsters.normal.color) == "#EDEDEDFF");
     CHECK(ColorToHex(schema3Migration.monsters.minion.color) == "#FFD43BCC");
     CHECK(ColorToHex(schema3Migration.monsters.champion.color)
@@ -1882,7 +2403,7 @@ show_with_automap_only = true
     CHECK(ColorToHex(legacyRuntime.immunities.physical) == "#D8C39AFF");
 
     CHECK(Throws([] { ParseConfig(""); }));
-    CHECK(Throws([] { ParseConfig("schema_version = 9"); }));
+    CHECK(Throws([] { ParseConfig("schema_version = 10"); }));
     CHECK(Throws([] { ParseConfig("schema_version = true"); }));
     CHECK(Throws([] {
         ParseConfig(
@@ -2052,51 +2573,52 @@ show_with_automap_only = true
     CHECK(Throws([] {
         ParseConfig("schema_version = 3\n[menu]\nposition = 0.5");
     }));
+    // detection_radius was never a scan radius: it only filtered monsters
+    // after D2R's complete client table had already been traversed. Preserve
+    // old files by accepting the retired key regardless of its former units
+    // or TOML type, then prove that the next save removes it.
+    for (const auto* retiredRadius : {
+            "schema_version = 3\n[monsters]\ndetection_radius = 59",
+            "schema_version = 4\n[monsters]\ndetection_radius = 2501",
+            "schema_version = 7\n[monsters]\ndetection_radius = 221",
+            "schema_version = 8\n[monsters]\ndetection_radius = \"retired\""}) {
+        const auto migratedRadius = ParseConfig(retiredRadius);
+        CHECK(SerializeConfig(migratedRadius).find("detection_radius")
+            == std::string::npos);
+    }
+    for (const auto* removedMasterThickness : {
+            "schema_version = 3\n[monsters]\nmarker_thickness = 2",
+            "schema_version = 8\n[monsters]\nmarker_thickness = 2",
+            "schema_version = 9\n[monsters]\nmarker_thickness = 2"}) {
+        CHECK(Throws([removedMasterThickness] {
+            ParseConfig(removedMasterThickness);
+        }));
+    }
+    const auto markerThicknessBoundaries = ParseConfig(R"toml(
+schema_version = 9
+[monsters.normal]
+shape = "x"
+thickness = 1
+[monsters.unique]
+shape = "player_cross"
+thickness = 5
+)toml");
+    CHECK(markerThicknessBoundaries.monsters.normal.thickness == 1.0F);
+    CHECK(markerThicknessBoundaries.monsters.unique.thickness == 5.0F);
     CHECK(Throws([] {
         ParseConfig(
-            "schema_version = 3\n[monsters]\ndetection_radius = 59");
+            "schema_version = 9\n[monsters.normal]\n"
+            "shape = \"x\"\nthickness = 0.5");
     }));
     CHECK(Throws([] {
         ParseConfig(
-            "schema_version = 3\n[monsters]\ndetection_radius = 601");
+            "schema_version = 9\n[monsters.normal]\n"
+            "shape = \"player_cross\"\nthickness = 5.5");
     }));
     CHECK(Throws([] {
         ParseConfig(
-            "schema_version = 4\n[monsters]\ndetection_radius = 499");
-    }));
-    const auto minimumRadius = ParseConfig(
-        "schema_version = 4\n[monsters]\ndetection_radius = 500");
-    CHECK(minimumRadius.monsters.detectionRadius == 31);
-    const auto defaultRadius = ParseConfig(
-        "schema_version = 4\n[monsters]\ndetection_radius = 1000");
-    CHECK(defaultRadius.monsters.detectionRadius == 63);
-    const auto maximumRadius = ParseConfig(
-        "schema_version = 4\n[monsters]\ndetection_radius = 2500");
-    CHECK(maximumRadius.monsters.detectionRadius == 156);
-    CHECK(Throws([] {
-        ParseConfig(
-            "schema_version = 4\n[monsters]\ndetection_radius = 2501");
-    }));
-    CHECK(Throws([] {
-        ParseConfig(
-            "schema_version = 7\n[monsters]\ndetection_radius = 29");
-    }));
-    const auto minimumWorldRadius = ParseConfig(
-        "schema_version = 7\n[monsters]\ndetection_radius = 30");
-    CHECK(minimumWorldRadius.monsters.detectionRadius == 30);
-    const auto defaultWorldRadius = ParseConfig(
-        "schema_version = 7\n[monsters]\ndetection_radius = 60");
-    CHECK(defaultWorldRadius.monsters.detectionRadius == 60);
-    const auto maximumWorldRadius = ParseConfig(
-        "schema_version = 7\n[monsters]\ndetection_radius = 220");
-    CHECK(maximumWorldRadius.monsters.detectionRadius == 220);
-    CHECK(Throws([] {
-        ParseConfig(
-            "schema_version = 7\n[monsters]\ndetection_radius = 221");
-    }));
-    CHECK(Throws([] {
-        ParseConfig(
-            "schema_version = 3\n[monsters]\nmarker_thickness = 0.5");
+            "schema_version = 9\n[monsters.normal]\n"
+            "shape = \"dot\"\nthickness = 2");
     }));
     CHECK(Throws([] {
         ParseConfig(
@@ -2378,6 +2900,14 @@ show_with_automap_only = true
     CHECK(NativeSettingsTabs[4].hasPersistentSettings);
 
     Config policyConfig{};
+    auto dotStyleWithHiddenThickness = policyConfig.monsters.normal;
+    dotStyleWithHiddenThickness.shape = MonsterMarkerShape::Dot;
+    auto sameDotStyle = dotStyleWithHiddenThickness;
+    sameDotStyle.thickness = MaximumMonsterMarkerThickness;
+    CHECK(SameMonsterMarkerStyle(dotStyleWithHiddenThickness, sameDotStyle));
+    dotStyleWithHiddenThickness.shape = MonsterMarkerShape::X;
+    sameDotStyle.shape = MonsterMarkerShape::X;
+    CHECK(!SameMonsterMarkerStyle(dotStyleWithHiddenThickness, sameDotStyle));
     policyConfig.overlay.followNativeAutomap = false;
     for (const auto key : NativeSettingsToggleKeys) {
         WriteToggle(policyConfig, key, false);
@@ -2464,8 +2994,7 @@ show_with_automap_only = true
     appliedSettings.overlay.scale = 1.25F;
     appliedSettings.overlay.frameRate = 37;
     appliedSettings.overlay.followNativeAutomap = false;
-    appliedSettings.monsters.detectionRadius = 142;
-    appliedSettings.monsters.markerThickness = 3.0F;
+    appliedSettings.monsters.normal.thickness = 3.0F;
     appliedSettings.monsters.normal.color = ParseColor("#ABCDEFCC");
     appliedSettings.monsters.normal.size = 14.0F;
     appliedSettings.hud.sessionTimer = true;
@@ -2486,8 +3015,7 @@ show_with_automap_only = true
     CHECK(!draftModel.Dirty());
     CHECK(!draftModel.Draft().enabled);
     CHECK(draftModel.Draft().overlay.opacity == 0.50F);
-    CHECK(draftModel.Draft().monsters.detectionRadius == 142);
-    CHECK(draftModel.Draft().monsters.markerThickness == 3.0F);
+    CHECK(draftModel.Draft().monsters.normal.thickness == 3.0F);
     CHECK(draftModel.Draft().monsters.normal.size == 14.0F);
     CHECK(ColorToHex(draftModel.Draft().monsters.normal.color)
         == "#ABCDEFCC");
@@ -2511,8 +3039,7 @@ show_with_automap_only = true
     CHECK(draftModel.Draft().overlay.scale == 1.0F);
     CHECK(draftModel.Draft().overlay.enabled);
     CHECK(!draftModel.Draft().overlay.diagnosticPreview);
-    CHECK(draftModel.Draft().monsters.detectionRadius == 60);
-    CHECK(draftModel.Draft().monsters.markerThickness == 2.0F);
+    CHECK(draftModel.Draft().monsters.normal.thickness == 2.0F);
     CHECK(draftModel.Draft().monsters.normal.shape
         == MonsterMarkerShape::PlayerCross);
     CHECK(draftModel.Draft().monsters.minion.shape
@@ -2550,8 +3077,7 @@ show_with_automap_only = true
     CHECK(!newlyApplied.overlay.diagnosticPreview);
     CHECK(newlyApplied.overlay.frameRate == 37);
     CHECK(!newlyApplied.overlay.followNativeAutomap);
-    CHECK(newlyApplied.monsters.detectionRadius == 60);
-    CHECK(newlyApplied.monsters.markerThickness == 2.0F);
+    CHECK(newlyApplied.monsters.normal.thickness == 2.0F);
     CHECK(newlyApplied.monsters.normal.size == 18.0F);
     CHECK(newlyApplied.hud.sessionTimer);
     CHECK(!newlyApplied.menu.showLauncher);
@@ -2568,8 +3094,8 @@ show_with_automap_only = true
             CHECK(shipped.enabled);
             CHECK(!shipped.diagnostics);
             CHECK(shipped.overlay.opacity == 1.0F);
-            CHECK(shipped.monsters.detectionRadius == 60);
-            CHECK(shipped.monsters.markerThickness == 2.0F);
+            CHECK(shippedText.find("detection_radius") == std::string::npos);
+            CHECK(shippedText.find("marker_thickness") == std::string::npos);
             CHECK(shipped.monsters.normal.shape
                 == MonsterMarkerShape::PlayerCross);
             CHECK(shipped.monsters.minion.shape
@@ -2585,6 +3111,11 @@ show_with_automap_only = true
             CHECK(shipped.monsters.champion.size == 20.0F);
             CHECK(shipped.monsters.unique.size == 22.0F);
             CHECK(shipped.monsters.superUniqueBoss.size == 24.0F);
+            CHECK(shipped.monsters.normal.thickness == 2.0F);
+            CHECK(shipped.monsters.minion.thickness == 2.0F);
+            CHECK(shipped.monsters.champion.thickness == 2.0F);
+            CHECK(shipped.monsters.unique.thickness == 2.0F);
+            CHECK(shipped.monsters.superUniqueBoss.thickness == 2.0F);
             CHECK(ColorToHex(shipped.monsters.normal.color) == "#FFFFFFFF");
             CHECK(ColorToHex(shipped.monsters.minion.color) == "#FFD43BFF");
             CHECK(ColorToHex(shipped.monsters.champion.color) == "#3D8BFFFF");

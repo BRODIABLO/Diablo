@@ -3,6 +3,7 @@
 #include "mapsense_config.hpp"
 #include "navigation_policy.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -52,8 +53,102 @@ struct NavigationOutdoorOpening final {
     std::int32_t spanSubtiles{};
 };
 
+inline constexpr std::int32_t NavigationSubtilesPerGameTile = 5;
+inline constexpr std::uint16_t NavigationPlayerPathCollisionMask = 0x1C09U;
+
+[[nodiscard]] constexpr auto IsNavigationPlayerPathOpen(
+        std::uint16_t collisionFlags) noexcept -> bool {
+    return (collisionFlags & NavigationPlayerPathCollisionMask) == 0U;
+}
+
+[[nodiscard]] constexpr auto TryMakeNavigationLevelTileAnchor(
+        std::int32_t levelTileX,
+        std::int32_t levelTileY,
+        std::int32_t offsetTileX,
+        std::int32_t offsetTileY,
+        NavigationOutdoorOpening& output) noexcept -> bool {
+    if (levelTileX < 0 || levelTileY < 0
+        || offsetTileX < 0 || offsetTileY < 0) {
+        return false;
+    }
+    const auto subtileX =
+        (static_cast<std::int64_t>(levelTileX) + offsetTileX)
+        * NavigationSubtilesPerGameTile;
+    const auto subtileY =
+        (static_cast<std::int64_t>(levelTileY) + offsetTileY)
+        * NavigationSubtilesPerGameTile;
+    if (subtileX > (std::numeric_limits<std::int32_t>::max)()
+        || subtileY > (std::numeric_limits<std::int32_t>::max)()) {
+        return false;
+    }
+    output = {
+        .subtileX = static_cast<std::int32_t>(subtileX),
+        .subtileY = static_cast<std::int32_t>(subtileY),
+        .spanSubtiles = 0,
+    };
+    return true;
+}
+
+enum class NavigationBoundarySide : std::uint8_t {
+    Left,
+    Right,
+    Top,
+    Bottom,
+};
+
+struct NavigationBoundarySpan final {
+    std::int32_t targetLevelId{UnknownNavigationLevelId};
+    NavigationBoundarySide side{NavigationBoundarySide::Left};
+    std::int32_t startSubtile{};
+    std::int32_t endSubtile{};
+    // The axis coordinate of the shared Room boundary: X for left/right and
+    // Y for top/bottom. Keeping it prevents parallel seams from collapsing
+    // merely because their projected intervals overlap.
+    std::int32_t fixedSubtile{-1};
+    // Room identities are transient keys used only during one UI-thread
+    // refresh. Together they bind both collision spans to one exact RoomsNear
+    // pair without retaining either pointer after resolution.
+    std::uintptr_t sourceRoomIdentity{};
+    std::uintptr_t targetRoomIdentity{};
+};
+
+struct NavigationLevelSubtileBounds final {
+    std::int32_t left{};
+    std::int32_t top{};
+    std::int32_t right{};
+    std::int32_t bottom{};
+};
+
+// Native collision coordinates are signed 32-bit values. Always widen before
+// combining an origin with a dimension or local position, then fail closed if
+// the absolute subtile coordinate cannot be represented by the public model.
+[[nodiscard]] constexpr auto TryAddNavigationSubtileOffset(
+        std::int32_t origin,
+        std::int32_t offset,
+        std::int32_t& output) noexcept -> bool {
+    if (origin < 0 || offset < 0) return false;
+    const auto sum = static_cast<std::int64_t>(origin)
+        + static_cast<std::int64_t>(offset);
+    if (sum > (std::numeric_limits<std::int32_t>::max)()) return false;
+    output = static_cast<std::int32_t>(sum);
+    return true;
+}
+
+enum class NavigationOutdoorBoundaryMatchResult : std::uint8_t {
+    NotFound,
+    Found,
+    Ambiguous,
+    Invalid,
+};
+
+enum class NavigationOutdoorOpeningSelectionPolicy : std::uint8_t {
+    RequireUnique,
+    AcceptStablePlayerPath,
+};
+
 enum class NavigationExitEvidence : std::uint8_t {
-    OutdoorCollision = 2U,
+    OutdoorLevelBoundary = 2U,
+    OutdoorCollision = OutdoorLevelBoundary,
     RoomTile = 3U,
     QuestPreset = 4U,
     BossPreset = 5U,
@@ -172,10 +267,16 @@ struct NavigationExitSelection final {
             static_cast<std::int64_t>(rectangle.width) * scale;
         const auto expectedHeight =
             static_cast<std::int64_t>(rectangle.height) * scale;
+        const auto gridRight = static_cast<std::int64_t>(grid.originX)
+            + static_cast<std::int64_t>(grid.width);
+        const auto gridBottom = static_cast<std::int64_t>(grid.originY)
+            + static_cast<std::int64_t>(grid.height);
         if (grid.originX != expectedOriginX
             || grid.originY != expectedOriginY
             || grid.width != expectedWidth
-            || grid.height != expectedHeight) {
+            || grid.height != expectedHeight
+            || gridRight > (std::numeric_limits<std::int32_t>::max)()
+            || gridBottom > (std::numeric_limits<std::int32_t>::max)()) {
             return false;
         }
         const auto requiredCellCount =
@@ -312,23 +413,34 @@ struct NavigationExitSelection final {
     if (bestStart < 0) return false;
 
     const auto midpoint = bestStart + bestLength / 2;
-    auto subtileX = neighbourGrid.originX;
-    auto subtileY = neighbourGrid.originY;
+    std::int32_t subtileX{};
+    std::int32_t subtileY{};
     switch (side) {
         case Side::Left:
-            subtileX += neighbourGrid.width - 1;
-            subtileY += midpoint;
-            subtileY -= neighbourGrid.originY;
+            if (!TryAddNavigationSubtileOffset(
+                    neighbourGrid.originX,
+                    neighbourGrid.width - 1,
+                    subtileX)) {
+                return false;
+            }
+            subtileY = midpoint;
             break;
         case Side::Right:
+            subtileX = neighbourGrid.originX;
             subtileY = midpoint;
             break;
         case Side::Top:
             subtileX = midpoint;
-            subtileY += neighbourGrid.height - 1;
+            if (!TryAddNavigationSubtileOffset(
+                    neighbourGrid.originY,
+                    neighbourGrid.height - 1,
+                    subtileY)) {
+                return false;
+            }
             break;
         case Side::Bottom:
             subtileX = midpoint;
+            subtileY = neighbourGrid.originY;
             break;
     }
     output = {
@@ -337,6 +449,316 @@ struct NavigationExitSelection final {
         .spanSubtiles = bestLength,
     };
     return true;
+}
+
+// Sorts and coalesces touching fragments only when they belong to the same
+// exact RoomsNear pair and fixed boundary coordinate. Anonymous spans with no
+// fixed coordinate are retained solely for source-side policy fixtures.
+[[nodiscard]] inline auto MergeOutdoorBoundarySpans(
+        std::span<NavigationBoundarySpan> spans,
+        std::size_t count,
+        std::size_t& mergedCount) noexcept -> bool {
+    mergedCount = 0U;
+    if (count > spans.size()) return false;
+    for (std::size_t index = 0U; index < count; ++index) {
+        const auto& span = spans[index];
+        if (span.targetLevelId <= 0
+            || span.startSubtile < 0
+            || span.endSubtile <= span.startSubtile) {
+            return false;
+        }
+        const auto hasExplicitIdentity = span.fixedSubtile >= 0
+            && span.sourceRoomIdentity != 0U
+            && span.targetRoomIdentity != 0U;
+        const auto isAnonymousFixture = span.fixedSubtile < 0
+            && span.sourceRoomIdentity == 0U
+            && span.targetRoomIdentity == 0U;
+        if (!hasExplicitIdentity && !isAnonymousFixture) return false;
+    }
+    std::sort(
+        spans.begin(),
+        spans.begin() + static_cast<std::ptrdiff_t>(count),
+        [](const NavigationBoundarySpan& left,
+                const NavigationBoundarySpan& right) noexcept {
+            if (left.targetLevelId != right.targetLevelId) {
+                return left.targetLevelId < right.targetLevelId;
+            }
+            if (left.side != right.side) {
+                return static_cast<std::uint8_t>(left.side)
+                    < static_cast<std::uint8_t>(right.side);
+            }
+            if (left.fixedSubtile != right.fixedSubtile) {
+                return left.fixedSubtile < right.fixedSubtile;
+            }
+            if (left.sourceRoomIdentity != right.sourceRoomIdentity) {
+                return left.sourceRoomIdentity < right.sourceRoomIdentity;
+            }
+            if (left.targetRoomIdentity != right.targetRoomIdentity) {
+                return left.targetRoomIdentity < right.targetRoomIdentity;
+            }
+            if (left.startSubtile != right.startSubtile) {
+                return left.startSubtile < right.startSubtile;
+            }
+            return left.endSubtile < right.endSubtile;
+        });
+    for (std::size_t index = 0U; index < count; ++index) {
+        const auto current = spans[index];
+        if (mergedCount != 0U) {
+            auto& previous = spans[mergedCount - 1U];
+            if (previous.targetLevelId == current.targetLevelId
+                && previous.side == current.side
+                && previous.fixedSubtile == current.fixedSubtile
+                && previous.sourceRoomIdentity
+                    == current.sourceRoomIdentity
+                && previous.targetRoomIdentity
+                    == current.targetRoomIdentity
+                && current.startSubtile <= previous.endSubtile) {
+                if (current.endSubtile > previous.endSubtile) {
+                    previous.endSubtile = current.endSubtile;
+                }
+                continue;
+            }
+        }
+        spans[mergedCount++] = current;
+    }
+    return true;
+}
+
+[[nodiscard]] constexpr auto HasNavigationOutdoorVisibilitySlot(
+        std::uint32_t roomFlags,
+        std::uint8_t slot) noexcept -> bool {
+    if (slot >= 8U) return false;
+    const auto mask = std::uint32_t{1U}
+        << (static_cast<std::uint32_t>(slot) + 4U);
+    return (roomFlags & mask) != 0U;
+}
+
+// Intersects source- and destination-side openings only when both came from
+// the same exact RoomsNear pair at the same fixed boundary coordinate. The
+// native visibility-slot and player-path filters are applied before runtime
+// spans reach this helper. Strict callers can reject multiple openings. The
+// outdoor runtime accepts the first geographically sorted proven player path:
+// jungle generation legitimately permits several exits to the same level,
+// and their width has no native selection meaning.
+[[nodiscard]] inline auto FindUniqueOutdoorLevelBoundaryOpening(
+        const NavigationLevelSubtileBounds& sourceBounds,
+        std::int32_t targetLevelId,
+        std::span<const NavigationBoundarySpan> sourceSpans,
+        std::span<const NavigationBoundarySpan> targetSpans,
+        NavigationOutdoorOpening& output,
+        NavigationOutdoorOpeningSelectionPolicy selectionPolicy =
+            NavigationOutdoorOpeningSelectionPolicy::RequireUnique) noexcept
+        -> NavigationOutdoorBoundaryMatchResult {
+    if (targetLevelId <= 0
+        || sourceBounds.left < 0 || sourceBounds.top < 0
+        || sourceBounds.right <= sourceBounds.left
+        || sourceBounds.bottom <= sourceBounds.top) {
+        return NavigationOutdoorBoundaryMatchResult::Invalid;
+    }
+
+    // Source spans use the current level id as a positive tag while target
+    // spans use the destination id. All other identity fields must match.
+    const auto sourceLevelTag = sourceSpans.empty()
+        ? UnknownNavigationLevelId : sourceSpans.front().targetLevelId;
+    for (const auto& source : sourceSpans) {
+        if (sourceLevelTag <= 0
+            || source.targetLevelId != sourceLevelTag
+            || source.startSubtile < 0
+            || source.endSubtile <= source.startSubtile) {
+            return NavigationOutdoorBoundaryMatchResult::Invalid;
+        }
+        const auto hasExplicitIdentity = source.fixedSubtile >= 0
+            && source.sourceRoomIdentity != 0U
+            && source.targetRoomIdentity != 0U;
+        const auto isAnonymousFixture = source.fixedSubtile < 0
+            && source.sourceRoomIdentity == 0U
+            && source.targetRoomIdentity == 0U;
+        if (!hasExplicitIdentity && !isAnonymousFixture) {
+            return NavigationOutdoorBoundaryMatchResult::Invalid;
+        }
+    }
+
+    bool hasCandidate{};
+    bool candidateIsAmbiguous{};
+    NavigationBoundarySide candidateSide{NavigationBoundarySide::Left};
+    std::int32_t candidateFixedSubtile{-1};
+    std::int32_t candidateStart{};
+    std::int32_t candidateEnd{};
+    const auto accept = [&hasCandidate,
+            &candidateSide,
+            &candidateFixedSubtile,
+            &candidateStart,
+            &candidateEnd,
+            &candidateIsAmbiguous,
+            selectionPolicy](const NavigationBoundarySpan& span,
+            std::int32_t start,
+            std::int32_t end) noexcept {
+        const auto spanLength = end - start;
+        if (spanLength < 3) return;
+        if (!hasCandidate) {
+            hasCandidate = true;
+            candidateSide = span.side;
+            candidateFixedSubtile = span.fixedSubtile;
+            candidateStart = start;
+            candidateEnd = end;
+            candidateIsAmbiguous = false;
+            return;
+        }
+
+        // Exact RoomsNear identities already constrained the intersection.
+        // Multiple identities may still describe the same physical run, which
+        // must not create a false ambiguity.
+        if (candidateSide == span.side
+            && candidateFixedSubtile == span.fixedSubtile
+            && candidateStart == start
+            && candidateEnd == end) {
+            return;
+        }
+
+        if (selectionPolicy
+                == NavigationOutdoorOpeningSelectionPolicy::RequireUnique) {
+            candidateIsAmbiguous = true;
+            return;
+        }
+
+        candidateIsAmbiguous = false;
+    };
+
+    const auto identityLess = [](const NavigationBoundarySpan& left,
+            const NavigationBoundarySpan& right) noexcept {
+        if (left.side != right.side) {
+            return static_cast<std::uint8_t>(left.side)
+                < static_cast<std::uint8_t>(right.side);
+        }
+        if (left.fixedSubtile != right.fixedSubtile) {
+            return left.fixedSubtile < right.fixedSubtile;
+        }
+        if (left.sourceRoomIdentity != right.sourceRoomIdentity) {
+            return left.sourceRoomIdentity < right.sourceRoomIdentity;
+        }
+        return left.targetRoomIdentity < right.targetRoomIdentity;
+    };
+    const auto sameIdentity = [&identityLess](
+            const NavigationBoundarySpan& left,
+            const NavigationBoundarySpan& right) noexcept {
+        return !identityLess(left, right) && !identityLess(right, left);
+    };
+
+    // Both inputs are produced by MergeOutdoorBoundarySpans. Their composite
+    // identity order permits a linear intersection at the governed ceiling.
+    std::size_t sourceIndex{};
+    std::size_t targetIndex{};
+    while (sourceIndex < sourceSpans.size()
+        && targetIndex < targetSpans.size()) {
+        const auto& source = sourceSpans[sourceIndex];
+        const auto& target = targetSpans[targetIndex];
+        const auto targetHasExplicitIdentity = target.fixedSubtile >= 0
+            && target.sourceRoomIdentity != 0U
+            && target.targetRoomIdentity != 0U;
+        const auto targetIsAnonymousFixture = target.fixedSubtile < 0
+            && target.sourceRoomIdentity == 0U
+            && target.targetRoomIdentity == 0U;
+        if (source.targetLevelId != sourceLevelTag
+            || target.targetLevelId != targetLevelId
+            || source.startSubtile < 0
+            || source.endSubtile <= source.startSubtile
+            || target.startSubtile < 0
+            || target.endSubtile <= target.startSubtile
+            || (!targetHasExplicitIdentity && !targetIsAnonymousFixture)) {
+            return NavigationOutdoorBoundaryMatchResult::Invalid;
+        }
+        if (identityLess(source, target)) {
+            ++sourceIndex;
+            continue;
+        }
+        if (identityLess(target, source)) {
+            ++targetIndex;
+            continue;
+        }
+        if (!sameIdentity(source, target)) {
+            return NavigationOutdoorBoundaryMatchResult::Invalid;
+        }
+        const auto start = source.startSubtile > target.startSubtile
+            ? source.startSubtile : target.startSubtile;
+        const auto end = source.endSubtile < target.endSubtile
+            ? source.endSubtile : target.endSubtile;
+        if (end > start) accept(source, start, end);
+        if (source.endSubtile <= target.endSubtile) ++sourceIndex;
+        if (target.endSubtile <= source.endSubtile) ++targetIndex;
+    }
+    if (!hasCandidate) {
+        return NavigationOutdoorBoundaryMatchResult::NotFound;
+    }
+    if (candidateIsAmbiguous) {
+        return NavigationOutdoorBoundaryMatchResult::Ambiguous;
+    }
+
+    const auto midpoint = candidateStart
+        + (candidateEnd - candidateStart) / 2;
+    const auto fixedSubtile = candidateFixedSubtile >= 0
+        ? candidateFixedSubtile
+        : candidateSide == NavigationBoundarySide::Left
+            ? sourceBounds.left
+            : candidateSide == NavigationBoundarySide::Right
+                ? sourceBounds.right
+                : candidateSide == NavigationBoundarySide::Top
+                    ? sourceBounds.top
+                    : sourceBounds.bottom;
+    switch (candidateSide) {
+        case NavigationBoundarySide::Left:
+            if (fixedSubtile < sourceBounds.left
+                || fixedSubtile >= sourceBounds.right
+                || candidateStart < sourceBounds.top
+                || candidateEnd > sourceBounds.bottom) {
+                return NavigationOutdoorBoundaryMatchResult::Invalid;
+            }
+            output = {
+                .subtileX = fixedSubtile,
+                .subtileY = midpoint,
+                .spanSubtiles = candidateEnd - candidateStart,
+            };
+            break;
+        case NavigationBoundarySide::Right:
+            if (fixedSubtile <= sourceBounds.left
+                || fixedSubtile > sourceBounds.right
+                || candidateStart < sourceBounds.top
+                || candidateEnd > sourceBounds.bottom) {
+                return NavigationOutdoorBoundaryMatchResult::Invalid;
+            }
+            output = {
+                .subtileX = fixedSubtile - 1,
+                .subtileY = midpoint,
+                .spanSubtiles = candidateEnd - candidateStart,
+            };
+            break;
+        case NavigationBoundarySide::Top:
+            if (fixedSubtile < sourceBounds.top
+                || fixedSubtile >= sourceBounds.bottom
+                || candidateStart < sourceBounds.left
+                || candidateEnd > sourceBounds.right) {
+                return NavigationOutdoorBoundaryMatchResult::Invalid;
+            }
+            output = {
+                .subtileX = midpoint,
+                .subtileY = fixedSubtile,
+                .spanSubtiles = candidateEnd - candidateStart,
+            };
+            break;
+        case NavigationBoundarySide::Bottom:
+            if (fixedSubtile <= sourceBounds.top
+                || fixedSubtile > sourceBounds.bottom
+                || candidateStart < sourceBounds.left
+                || candidateEnd > sourceBounds.right) {
+                return NavigationOutdoorBoundaryMatchResult::Invalid;
+            }
+            output = {
+                .subtileX = midpoint,
+                .subtileY = fixedSubtile - 1,
+                .spanSubtiles = candidateEnd - candidateStart,
+            };
+            break;
+    }
+    return NavigationOutdoorBoundaryMatchResult::Found;
 }
 
 // One destination is published per target level. An exact active runtime

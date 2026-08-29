@@ -1,6 +1,6 @@
 # RuffnecKk MapSense — D2R 3.2.92777 et 3.3.93847
 
-Dernière mise à jour : 28 août 2026
+Dernière mise à jour : 29 août 2026
 
 ## Décision et état
 
@@ -69,41 +69,40 @@ chaque rang dispose maintenant d'une forme indépendante parmi `x`,
 exprimaient la portée en unités client/dimétriques de 500 à 2 500; le schéma 7
 les remplace par 30 à 220 vrais subtiles monde, avec 60 par défaut.
 
-État actuel : **MapSense 0.11.2 est déployé byte-identique dans le runtime
-BKVince; son cold start pile complète est PASS et son témoin gameplay ciblé est
-EN COURS**. La
-politique verte explicite comprend 93 niveaux sources et 94 routes : 82 sorties
-statiques exactes par RoomTile/ouverture extérieure et 12 transitions de
-portail dynamiques exactes. Le candidat 0.11.2 corrige l'unité du rayon, exige
-une ouverture bilatérale pour Tamoe→Monastery et ajoute les presets exacts
-Summoner/Tome avant la création du portail Arcane. Le rayon réel,
-Tamoe→Monastery et Arcane constituent le témoin immédiat; les lignes rouges de
-quête constituent le lot suivant. Il ne crée aucun
-second `HWND`, processus, canvas plein écran, backend OpenGL/WGL ni thread de
-rendu. `Map & Reveal` conserve `Additions Opacity`, `Reveal Level`, `Reveal
-Act`, `Toggle Reveal All` et `Reveal All Off`; `Monsters` expose la portée,
-l'épaisseur et, pour chaque rang toujours actif, forme, couleur, alpha et
-taille. `Immunities` ajoute activation, style `colored_i` ou `split_halo`, taille
-des indicateurs, épaisseur du halo et six couleurs. Le sélecteur de couleur a
-été nettoyé et les tooltips s'affichent au-dessus du curseur. Position et
-réglages sont persistés dans le TOML indépendant au schéma 7 après la fin d'une
-interaction, hors thread `Present`.
+État actuel : **MapSense 0.12.3 ferme le gate anti-spam et navigation extérieure
+en source, build, déploiement, cold start et gameplay**. Le build Release passe
+`/W4 /WX`, CTest `1/1`, le self-test du corpus gouverné et l'audit des quatre
+exports. La DLL de 2 110 976 octets porte PE 0.12.3 et SHA-256
+`79041219364681CDE412BC5B9684BA43C98AC00D32B28F53D0919A04B219CB64`;
+le runtime BKVince mod-local déployé est byte-identique. Le cold start officiel
+D2R 3.3.93847 charge 36 plugins, conserve le seul échec Revive Overhaul
+préexistant, applique les 18 patches et atteint `24/24`; MapSense rapporte zéro
+erreur et installe ses deux suppressions suivies `sFillLocation`. Vincent
+confirme ensuite la disparition du spam et les lignes vertes exactes à Tamoe
+Highland→Monastery Gate, Spider Forest, Great Marsh et Flayer Jungle.
 
-Le candidat 0.11.2 conserve les trois familles Direct réellement reliées :
-waypoint bleu, progression principale verte Acts I-V et sorties personnalisées
-mauves. Activation, couleurs et épaisseur sont dans
-le menu MapSense; seule la liste mauve `level_id`/`level_name` est une édition
-TOML manuelle. Le contrôle Quests demeure dans le schéma pour compatibilité
-future, mais il est désactivé et caché du panneau tant qu'aucun adaptateur de
-quête réel ne publie une destination. Le build Release `/W4 /WX`, CTest `1/1`
-et les quatre exports passent. La DLL de 766 464 octets porte PE 0.11.2 et
-SHA-256
-`8B7CF8140C895BDBA3017741E64CDD6932C861378A0B894FB39384C86DEA2A4E`.
-Le 28 août 2026, la DLL source et le runtime mod-local concordent à
-`8B7CF8140C895BDBA3017741E64CDD6932C861378A0B894FB39384C86DEA2A4E`.
-Le cold start officiel 3.3.93847 atteint `24/24`, charge 36 plugins dont
-MapSense 0.11.2 et applique 18 patches. Le seul échec est Revive Overhaul,
-incident préexistant distinct. Le gameplay rayon/Tamoe/Arcane reste **EN COURS**.
+Le lot 0.12.1 traite ensemble les régressions observées : `Present` ne bloque
+plus sur la fence d'un back buffer encore en vol; la découverte complète des
+monstres passe à 10 Hz tandis que leurs positions courantes sont rafraîchies à
+environ 60 Hz depuis des IDs recopiés; la sortie extérieure verte utilise la
+frontière collision exacte du niveau entier et refuse les ouvertures ambiguës;
+Reveal Level, Reveal Act et Reveal All conservent leur intention entre parties
+à difficulté identique pendant la vie du processus, puis l'effacent uniquement
+lors d'un changement réel de difficulté. Le Canyon demeure inchangé : même
+RoomTile exact, rouge pendant la quête et vert après récompense. Les compteurs
+`mapsense status` distinguent maintenant réplication client, découverte,
+résolution des IDs, coût de rafraîchissement, bandes de distance et rejet par
+clip; aucun résultat visuel ou de performance n'est déduit de ces preuves
+statiques.
+
+L'architecture visible reste inchangée : aucun second `HWND`, processus,
+canvas plein écran, backend OpenGL/WGL ni thread de rendu. `Map & Reveal`
+conserve `Additions Opacity`, `Reveal Level`, `Reveal Act`, `Toggle Reveal All`
+et `Reveal All Off`; `Monsters` expose portée, épaisseur, forme, couleur, alpha
+et taille; `Immunities` conserve `colored_i`, `split_halo` et ses six couleurs.
+Les familles Direct restent waypoint bleu, progression verte Acts I–V, tombe
+de quête rouge et sorties personnalisées mauves; seule la liste mauve
+`level_id`/`level_name` exige une édition TOML manuelle.
 
 Le runtime 0.10.4 déjà testé conserve le squelette Dear ImGui DirectX 12, les
 marqueurs, les immunités resserrées, les invalidations immédiates Tab/Escape et
@@ -935,15 +934,10 @@ flood par frame corrigé. Le gate performance 0.11.1 est donc **PASS gameplay**.
 
 ## Prochain gate
 
-Gate actif : **lignes rouges de quête**. Le graphe vert Acts I-V est fermé par
-la matrice exhaustive et le correctif performance 0.11.1 est confirmé dans
-Frigid Highlands et Halls of Pain avec l'automap ouverte. Le lot rouge doit
-commencer par inventorier les objectifs réellement déterministes par état de
-quête — notamment le vrai tombeau depuis Canyon — puis publier leurs positions
-exactes sans réutiliser une sortie verte approximative. Une preuve native et
-un test automatisé par famille d'objectif remplacent une tournée manuelle de
-chaque zone; quelques témoins gameplay représentatifs resteront nécessaires
-avant une revendication runtime globale.
+Le gate MapSense 0.12.3 est **FERMÉ**. Le prochain lot autorisable est 0.13.0 :
+noms des levels et des shrines. Il reste planifié et ne commence pas sans un
+nouveau `GO`; les lignes rouges supplémentaires au-delà du Canyon demeurent un
+lot futur distinct.
 
 Le gate ciblé du filtre ennemi est **PASS** :
 Vincent a confirmé sous Tab que les PNJ/figurants n'ont plus de marqueur et que
@@ -1181,29 +1175,195 @@ produit aucun nouvel événement `nvlddmkm` ou `LiveKernelEvent 0x141`. Ce gate
 est **PASS source/build/déploiement/cold start technique**; il ne revendique pas
 encore les témoins gameplay distincts du lot Canyon/rayon.
 
-### Correctif planifié 0.12.3 — suppression autonome du spam sFillLocation
+### Candidat autorisé 0.12.1 — fluidité, frontière exacte et Reveal persistant
 
-Le 29 août 2026, Vincent place ce correctif avant tout travail de labels. La
-trace native identifie le CALL de diagnostic négatif à `0x3E1F2B`, empreinte
-`E8 60 FC 63 00`; la branche rejoint ensuite le chemin qui saute déjà le
-remplissage. L'implantation devra vérifier cette empreinte fail-closed et NOPer
-uniquement le CALL via le service suivi D2RLoader. Aucun sidecar de patch propre
-à BKVince ne fera partie du produit autonome.
+Le 28 août 2026, après les témoins montrant des marqueurs devenus saccadés, une
+baisse à environ 100 FPS à Lut Gholein, aucune différence visuelle au-delà
+d'environ 80–90 subtiles, une ancre Tamoe→Monastery encore incorrecte et la
+perte des Reveal après Save & Exit, Vincent autorise par `GO` un correctif
+unique sans négliger aucun de ces signalements. Reveal Level, Reveal Act et
+Reveal All doivent se comporter comme une exploration déjà faite entre parties
+de même difficulté; seule une transition réelle Normal/Nightmare/Hell efface
+leur intention mémorisée.
 
-État : **PLANNED; source, build, déploiement, cold start et gameplay NOT RUN**.
+Le host D3D12 conserve l'association exacte swapchain→command queue et tous les
+gates fail-closed de 0.12.0. Il ne fait toutefois plus de `Wait` de fence dans
+le chemin critique `Present` : si l'allocator du back buffer courant est encore
+en vol, seule la frame overlay est omise et D2R poursuit immédiatement son
+`Present`. Les attentes de fence restent réservées au cycle de vie du renderer,
+notamment resize et shutdown. Cette propriété ferme le blocage source; elle ne
+vaut pas encore preuve FPS en jeu.
+
+Le pipeline monstre est séparé en deux cadences bornées. Toutes les 100 ms au
+plus, la découverte lit les 128 buckets client et ne conserve que
+`{unitId, rank, immunityMask}` dans des vecteurs préalloués. Toutes les 16 ms au
+plus, un rafraîchissement résout chaque ID par le getter natif gouverné, copie
+sa position `DynamicPath` courante, projette et publie; aucun `Unit*`,
+`DynamicPath*`, contexte automap, pixel ni seed n'est retenu. La commande
+`mapsense status` ajoute le nombre suivi, les scans et rafraîchissements avec
+temps moyen/maximal, les IDs résolus/manquants, puis les acceptations et rejets
+de clip par bandes 0–80, 81–140, 141–220 et >220. Si aucune Unit hostile
+n'existe dans une bande lointaine côté client, MapSense ne peut pas l'inventer;
+si elle existe mais reste rejetée, les compteurs identifient rayon, projection
+ou viewport. Le prochain A/B runtime doit utiliser ces preuves et non la seule
+impression visuelle.
+
+La résolution extérieure abandonne le produit quadratique des flags de
+visibilité avec toutes les rooms et le fallback « ouverture la plus large ».
+Elle construit une seule fois par refresh la frontière collision extérieure du
+niveau source complet, fusionne ses spans contigus, collecte les spans cible
+par les vrais liens `RoomsNear`, puis exige exactement une ouverture partagée
+disjointe. Une ambiguïté échoue fermée; un `RoomTile` exact reste prioritaire.
+Les tests couvrent l'ouverture étroite correcte face à une large couture
+interne, le rejet de deux ouvertures, l'endpoint exact sur la frontière, la
+priorité RoomTile, les débordements et la réutilisation du cache source. Le
+résultat Tamoe→Monastery reste néanmoins **NOT RUN gameplay**, à confirmer sur
+au moins deux seeds.
+
+La persistance Reveal est intentionnelle mais limitée au processus MapSense :
+aucun TOML, save de personnage, sidecar propriétaire, DRLG, pointeur, pixel ou
+coordonnée générée n'est conservé. Les LevelIds, ActIds et l'intention Reveal
+All restent mémorisés; une nouvelle partie de même difficulté réinitialise
+seulement l'acceptation/déduplication de session et rejoue la demande lorsque la
+géométrie correspondante devient disponible, avec huit tentatives au plus
+espacées de 250 ms. L'acte est dérivé des bornes LevelId autoritaires 1–39,
+40–74, 75–102, 103–108 et 109–137 plutôt que de l'événement d'entrée. La
+difficulté provient du témoin strict `Drlg+0x830`; seules les valeurs 0–2 sont
+acceptées et toute valeur inconnue échoue fermée. Les tests prouvent la reprise
+de même difficulté, le rejet invalide et les transitions 0→1→2→0 qui effacent
+toutes les intentions. Le comportement effectif après Save & Exit et changement
+de difficulté reste **NOT RUN gameplay**.
+
+Le resolver Canyon n'est pas modifié : il conserve la bonne tombe générée et
+le même RoomTile exact, rouge pendant Acte II Q6 avant `RewardGranted`, vert
+ensuite pour farmer Duriel. Sa régression visuelle est explicitement incluse au
+gate, sans en anticiper le résultat.
+
+Le build intégré Release x64 passe `/W4 /WX`, CTest `1/1` et l'audit des quatre
+exports. La DLL mesure 1 320 960 octets, porte PE 0.12.1 et vaut SHA-256
+`DAB61AADE352C87B9CA4F57DF1184EAA663617103AC7B1B9B80182066F8C39B4`.
+Le même hash est déployé dans BKVince sans changer le TOML actif. Le cold start
+frais D2R 3.3.93847 / Build Key `623f7a1f73eabb08ccb2b2046e3f9164`
+charge MapSense 0.12.1 avec la pile complète, rapporte 36 plugins chargés, le
+seul échec Revive Overhaul préexistant, 18 memory patches et `24/24`. Les logs
+installent les hooks DXGI précoces, enregistrent la command queue exacte pendant
+la création de la swapchain, initialisent le host ImGui partagé et confirment la
+première frame Floating Damage. Aucun nouvel événement `nvlddmkm`,
+`LiveKernelEvent 0x141` ni Windows Error Reporting correspondant n'apparaît après
+ce lancement. L'état est **PASS source/build/tests statiques/déploiement/cold
+start technique; NOT RUN gameplay**.
+
+### Candidat autorisé 0.12.2 — suppression du faux rayon et des workers Reveal
+
+Le 28 août 2026, Vincent tranche que le réglage de « distance de scan » est
+trompeur et autorise par `GO` sa suppression complète. MapSense ne scanne pas
+spatialement des subtiles : il énumère la table monstre cliente complète, puis
+le rayon 0.12.1 rejetait après coup des Units déjà trouvées. La configuration
+0.12.2 ne contient donc plus `detection_radius`; les fichiers schéma 1–8 qui le
+portent encore l'acceptent et l'ignorent, puis l'omettront à la prochaine
+sauvegarde. Toute Unit hostile connue du client passe désormais jusqu'aux seuls
+gates de projection et de clip automap natifs. Les bandes 80/140/220 restent
+uniquement des diagnostics de portée réelle, jamais des filtres.
+
+La fluidité ne repose plus sur un plafond artificiel de 16 ms. Les positions
+copiées sont résolues à chaque pulse automap du joueur local, tandis que le scan
+coûteux de métadonnées/immunités reste limité à 100 ms. La revue concurrente a
+fermé deux risques avant déploiement : le hot path reste borné par la capacité
+table absolue de 32 768 IDs et rafraîchit le set suivi complet à chaque pulse;
+le producteur remplace un snapshot complet par les dernières
+positions au lieu d'empiler les mêmes IDs lorsque `Present` tarde. Les buffers
+préalloués, l'epoch et le compteur de writers restent les frontières de
+concurrence; aucune allocation n'est requise dans ce chemin par pulse.
+
+Tamoe Highland→Monastery Gate conserve maintenant la paire `RoomsNear` native
+exacte pendant toute la collecte collision : identité room source, identité room
+cible et coordonnée fixe de couture. Seuls les fragments de cette même paire
+peuvent fusionner ou s'intersecter. L'endpoint est le midpoint de l'ouverture
+sur la cellule source (`fixed` pour Left/Top, `fixed - 1` pour Right/Bottom), et
+deux paires valides restent ambiguës et échouent fermées. Les fixtures couvrent
+la paire exacte, le rejet d'une paire croisée, deux coutures parallèles et
+l'ambiguïté explicite de deux paires.
+
+Tous les chemins `ExecuteConsoleCommand` / `revealmap` et leur bridge D2RCore
+sont supprimés. Reveal Level révèle et mémorise le LevelId actif; Reveal Act et
+Reveal All révèlent le niveau actif par le callback natif déjà fingerprinté,
+puis répètent seulement cette opération courante à l'entrée de chaque niveau
+correspondant. Aucun worker d'initialisation massive d'acte ne peut donc être
+amorcé par MapSense. La persistance reste process-lifetime et se vide seulement
+sur un changement Normal/Nightmare/Hell validé. Chaque reprise est liée au
+LevelId exact : un `LevelChanged` différent renouvelle les huit essais, un
+`ActChanged` sans LevelId ne remplace pas une cible précise, et un DRLG encore
+sur l'ancien niveau est refusé sans créditer le mauvais niveau.
+
+Un build intermédiaire 0.12.2 a passé `/W4 /WX`, CTest `1/1`, PE 0.12.2 et les
+quatre exports. Après ce gate, deux fixtures ont été renforcées et les
+durcissements finaux de reprise Reveal et de publication monstre ont modifié la
+source. Vincent a ensuite explicitement demandé de ne lancer aucun autre test
+avant d'aller dormir. Conformément à cette demande, l'instance D2R existante
+n'a pas été fermée, aucun runtime n'a été déployé et aucun cold start n'a été
+lancé. L'état exact 0.12.2 demeure donc **READY FOR FINAL OFFLINE BUILD; NOT RUN
+final CTest/deployment/cold start/gameplay**. Le prochain lot doit reconstruire,
+déployer mod-local après backup, retirer seulement la clé runtime
+`detection_radius`, redémarrer une instance BKVince complète, puis vérifier
+absence de `sFillLocation`, FPS, fluidité, Tamoe→Monastery et les régressions
+Canyon/Reveal déjà passées.
+
+### Correctif autorisé 0.12.3 — suppression autonome du spam sFillLocation
+
+Le 29 août 2026, après reproduction et trace native de la rafale généralisée,
+Vincent exige que la correction appartienne à MapSense pour tous ses
+utilisateurs et refuse qu'elle dépende d'un patch JSON propre à BKVince. Le
+correctif 0.12.3 reste donc dans la DLL autonome hybride globale/mod-locale;
+aucun sidecar de patch BKVince ne fait partie du produit.
+
+MapSense réduit d'abord les matérialisations de rooms qui ne portent aucun
+preset de sortie pertinent et déduplique les demandes nécessaires pendant un
+refresh. Les matérialisations indispensables à Reveal, au waypoint ou à la
+frontière collision exacte Tamoe→Monastery restent natives. Pour celles-ci,
+la DLL devient propriétaire unique du CALL de diagnostic négatif à
+`0x3E1F2B` : elle exige l'empreinte exacte `E8 60 FC 63 00` et remplace ces
+cinq octets par des NOP via le service suivi de D2RLoader avant le premier
+usage natif. Toute différence refuse proprement le chargement; le nom et le
+numéro de build restent seulement diagnostiques. La branche native saute déjà
+le remplissage après le message, donc aucun accès hors limites ni comportement
+de room n'est modifié.
+
+Le même lot remplace la fausse sélection par largeur : Tamoe utilise l'ancre
+native unique du Monastery Gate `(Level 26 + 27, +13)`, tandis que les jungles
+acceptent un passage exact et stable lorsque leur générateur expose plusieurs
+sorties légitimes vers le même niveau. Les deux côtés exigent les bits de
+visibilité réciproques, la paire `RoomsNear` exacte et le masque de collision
+joueur complet `0x1C09`.
+
+État : **PASS**. Release `/W4 /WX`, CTest `1/1`, PE 0.12.3, quatre exports,
+self-test natif, déploiement byte-identique, cold start pile complète et témoins
+gameplay anti-spam/Tamoe/Spider Forest/Great Marsh/Flayer Jungle sont fermés sur
+D2R 3.3.93847. Le corpus commun gouverné couvre également 3.2.92777 par
+équivalence byte-exact de ces surfaces. La référence PluginPack épinglée
+`dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` ne possède ni ce symbole ni cette
+plage.
 
 ### Tâche planifiée 0.13.0 — noms des levels et des shrines
 
-Vincent confirme l'ajout à la ROADMAP, avec une dépendance stricte envers le
-PASS complet de la 0.12.3. PrimeMH à la révision épinglée
-`92b6a97d8e56346f8b63a88bb647c1af044d2c8b` reste une référence
-comportementale : noms blancs ombrés au-dessus des sorties, noms dorés ombrés
-au-dessus des shrines et effet dynamique. Aucun code, asset ou tableau statique
-PrimeMH ne sera copié. MapSense conservera son rendu D3D12 in-frame et publiera
-des snapshots POD bornés; les shrines consommés disparaîtront et les wells
-ordinaires resteront hors périmètre.
+Le 29 août 2026, Vincent confirme l'ajout à la ROADMAP des noms de levels et de
+shrines, mais impose le correctif du spam `sFillLocation` comme gate préalable.
+Le séquencement retenu est donc strict : qualifier la 0.12.3 anti-spam, puis
+ouvrir la 0.13.0 des labels. Les deux changements ne doivent pas être mélangés
+dans un même candidat afin de conserver une attribution claire des régressions.
 
-État : **PLANNED; BLOCKED BY 0.12.3; aucune implantation commencée**.
+PrimeMH à la révision épinglée
+`92b6a97d8e56346f8b63a88bb647c1af044d2c8b` est retenu comme référence
+comportementale : nom blanc ombré au-dessus des sorties, nom doré ombré au-dessus
+des shrines, lecture de l'effet dynamique et couverture des objets réellement
+observés. Son code, ses assets et ses tables statiques ne sont pas copiés. La
+future implantation MapSense doit publier des snapshots POD bornés, conserver
+le renderer D3D12 in-frame, nommer toutes les sorties adjacentes exactes et
+résoudre chaque shrine depuis son `InteractType` et les tables/locales actives
+de D2R. Un well ordinaire reste hors périmètre et un shrine consommé ne doit
+plus afficher un effet disponible.
+
+État : **PLANNED; 0.12.3 GATE PASSED; aucune source de label, configuration,
+build, déploiement ou validation gameplay n'est commencé**.
 
 ## Validation future
 
@@ -1236,10 +1396,14 @@ statique ou cold start ne sera transformé en succès gameplay.
 
 ## Rollback et frontière Git
 
-Le runtime BKVince normal porte MapSense 0.12.0, SHA-256
-`7E4F56DC7A47BB6B2EC73232D0A71248F10DB81BCD753F37FFE8BD38A5AB04D9`;
-le TOML runtime demeure sur `diagnostics = false`, SHA-256
-`B71F272932AECA9CC7B325161252BD88D96B29F198E46C5E7241B015A56AB3E7`.
+Le runtime BKVince normal porte MapSense 0.12.1, SHA-256
+`DAB61AADE352C87B9CA4F57DF1184EAA663617103AC7B1B9B80182066F8C39B4`;
+le TOML runtime demeure sur `diagnostics = false` et le rayon choisi de 170
+vrais subtiles, SHA-256
+`B6243A1ACD240BF1D6F9955AD16D462BA58A9BABA0F82459CB5E2512613E9EEE`.
+La copie byte-identique de rollback 0.12.0 (`7E4F56DC…5AB04D9`) et ce TOML
+pré-déploiement sont conservés sous
+`analysis-cache/runtime-sync-backups/mapsense-0.12.1-20260828-181409/`.
 La copie byte-identique de rollback 0.11.2 (`8B7CF814…DEA2A4E`) et le
 TOML pré-déploiement sont conservés sous
 `analysis-cache/runtime-sync-backups/mapsense-0.12.0-tdr-20260828-162856/`.

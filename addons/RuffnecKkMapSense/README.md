@@ -1,7 +1,7 @@
 # RuffnecKk MapSense
 
 RuffnecKk MapSense is an experimental D2RLoader client plugin for Diablo II:
-Resurrected targeting builds 3.2.92777 and 3.3.93847. Version 0.12.0 is the
+Resurrected targeting builds 3.2.92777 and 3.3.93847. Version 0.12.3 is the
 current source candidate and combines the native
 map-reveal foundation, a compact in-game settings panel, simultaneous
 hostile-monster markers, configurable immunity indicators, and Direct
@@ -11,27 +11,35 @@ and projectile collectors remain planned.
 ## Live monster markers
 
 While D2R's native automap is visible, MapSense uses the local-player automap
-pass as a safe rendezvous and scans D2R's complete client monster hash table at
-most once every 50 ms. The table contract is proven from the current native
+pass as a safe rendezvous for a two-tier monster pipeline. At most once every
+100 ms (10 Hz), bounded discovery scans D2R's complete client monster hash
+table and copies only the qualifying unit IDs, ranks, and immunity masks into
+reusable storage. The table contract is proven from the current native
 `CLIENT_GetUnitByIdAndType` and hash-chain witnesses: 128 buckets for monster
-type 1 and `Unit+0x158` as the next link. Traversal is read-only, bounded per
-bucket and per scan, and no Unit pointer survives the pass. Every living,
-Evil-aligned hostile inside the configured circular radius is keyed by native
-unit ID and can be drawn simultaneously. Schema 8 accepts 30 to 220 true D2
-world subtiles; newly created configurations default to 60.
-The filter reads unsigned world X/Y from each Unit's native `DynamicPath` and
-uses client/dimetric coordinates only for automap projection, so isometric
-direction no longer changes the effective radius. Closing
-the automap lets observations expire after 250 ms, so no MapSense marker is
-intended to remain on normal gameplay.
+type 1 and `Unit+0x158` as the next link. Between discovery passes, a bounded
+refresh resolves those copied IDs through `CLIENT_GetUnitByIdAndType` on every
+local-player automap pulse, reads each current `DynamicPath`, and republishes
+its current automap position without an artificial 16 ms ceiling. The hot path
+is hard-capped by the complete 32,768-entry client-table traversal limit. Each
+producer pulse replaces one complete latest-position snapshot instead of
+appending duplicate IDs while `Present` is late. No `Unit`,
+`DynamicPath`, automap-context, seed,
+or pixel pointer survives either pass, and a missing ID is discarded.
 
-The radius is an exact filter over Units already present in the client table;
-it cannot reveal a monster the server has not replicated to the client. A
-larger value can add only client-present monsters that also project inside the
-active native automap clip. Diagnostics separately count hostile observations
-in the 0–80, 81–140, 141–220, and beyond-220 bands, then radius, projection,
-clip, and publication rejects, so an unchanged picture is no longer mistaken
-for an unchanged scan.
+Every living, Evil-aligned hostile present in D2R's complete client monster
+table is keyed by native unit ID and considered simultaneously. Version 0.12.3
+has no configurable scan radius and no spatial rejection: MapSense publishes
+every qualifying client-known monster that D2R's native projection accepts
+inside the active automap clip. Closing the automap lets observations expire
+after 250 ms, so no MapSense marker is intended to remain on normal gameplay.
+
+MapSense cannot manufacture a monster the server has not replicated to the
+client and does not bypass D2R's active automap viewport. `mapsense status`
+reports the current tracked set, discovery and per-pulse refresh counts with
+average/maximum microsecond timings, resolved/missing ID lookups, and accepted
+or clip-rejected observations in the 0–80, 81–140, 141–220, and beyond-220
+world-subtile diagnostic bands. Those bands measure the real client-table and
+projection result; they do not filter it.
 
 Monster admission fails closed before the renderer-side unit-ID cache. A
 candidate must be a living `UnitMonster`, must not carry the native mercenary or
@@ -45,7 +53,11 @@ summons, converted monsters, and broader gameplay matrices remain open.
 
 Normal, Minion, Champion, Unique, and Super Unique / Boss are always visible;
 their tables configure appearance rather than visibility. Shape, color, alpha,
-and size are configurable independently for every category. Schema-4 defaults
+and size are configurable independently for every category. `x` and
+`player_cross` also expose an independent per-category thickness. `dot` exposes
+size only: its fixed one-pixel dark outline is part of the renderer and its
+configured size remains the colored disk's diameter; the outline is added
+outside it. Schema-4 defaults
 use `player_cross`: a new vector silhouette modeled after D2R's native player
 marker, with a customizable color, not the native marker texture. `x` preserves
 the earlier hollow angular cross, and `dot` provides a compact circular marker.
@@ -70,13 +82,13 @@ their scale or aspect ratio does not agree with the current ImGui frame, markers
 are suppressed instead of being drawn at uncertain positions.
 
 This is the first multi-monster visual candidate, not the final monster radar.
-Exact visual alignment, category classification, scan distance, zoom,
+Exact visual alignment, category classification, client-replication reach, zoom,
 corner-map modes, and ultrawide behavior still require in-game approval.
 
 ## Immunity indicators
 
 When immunity display is enabled, MapSense reads the live monster resistance
-stats only after the unit has passed the hostile, radius, projection, and native
+stats only after the unit has passed the hostile, projection, and native
 automap clipping gates. A resistance of 100 or greater sets one copied bit for
 Physical, Fire, Cold, Lightning, Poison, or Magic; no game pointer reaches the
 renderer cache. Disabling immunity display also disables these additional stat
@@ -148,12 +160,17 @@ and target room flag bits, and exact cardinal room adjacency. Navigation now
 uses the same captured client DRLG as Reveal, initializes the requested target
 level through the already governed `DRLG_GetLevel` / `DRLG_InitLevel` path,
 and materializes each needed client room through the fingerprinted
-`DRLGROOM_CreateActiveRoom` helper. It then reads the native collision grid and
-intersects the walkable boundary exposed by both adjacent rooms. The facing
-edge plus its inward cell must be free of the wall bit on both sides; runs
-shorter than three subtiles are rejected, and the center of the widest shared
-opening on the destination side is the endpoint. No rectangle-center,
-one-sided opening, or loaded-room fallback is published.
+`DRLGROOM_CreateActiveRoom` helper. Version 0.12.2 collects both collision sides
+for each exact native `RoomsNear` pair and retains that pair's source-room
+identity, target-room identity, and fixed seam coordinate while merging
+fragments. A type-5 `RoomTile` remains higher-priority evidence. For an outdoor
+fallback, exactly one disconnected shared opening must remain; its midpoint is
+published on the source cell beside the shared seam (`fixed` for Left/Top and
+`fixed - 1` for Right/Bottom). Parallel seams and different room pairs cannot
+be cross-matched. Multiple disconnected
+openings are ambiguous and fail closed instead of selecting the widest seam.
+No rectangle-center, internal room seam, one-sided opening, or loaded-room
+fallback is published.
 
 Transitions represented by portal objects do not use room centers or guessed
 coordinates. MapSense traverses each materialized room's bounded native Unit
@@ -170,6 +187,14 @@ client/dimetric coordinates are copied unchanged, matching D2R's own automap
 projection. Dynamic-only levels are polled at most once per second while the
 automap is rendering, stop polling as soon as their green destination exists,
 and never retry forever when a quest has not spawned the portal yet.
+
+Version 0.12.3 passively scans each room's generated presets before requesting
+native room activation. Ordinary rooms without a type-5 exit are no longer
+materialized for RoomTile discovery; dynamic portal levels retain their
+all-room scan, and type-5 exits plus exact outdoor collision pairs retain the
+activation needed to complete their native data. A bounded per-refresh cache
+also prevents the same unresolved room from being requested repeatedly by
+collision and RoomTile paths.
 
 In the Canyon of the Magi, MapSense reads the generated staff tomb from the
 active DRLG and accepts only a Tal Rasha tomb level from 66 through 72. It
@@ -229,9 +254,9 @@ panel. The current candidate contains:
 - **Reveal Act**;
 - **Toggle Reveal All**;
 - **Reveal All Off**;
-- **Detection Radius** and shared **Marker Thickness**;
-- shape, color, alpha, and marker size for Normal, Minion, Champion, Unique,
-  and Super Unique / Boss;
+- independent shape, color, alpha, and marker size for Normal, Minion,
+  Champion, Unique, and Super Unique / Boss; each `X` or `Player Cross` category
+  also exposes its own **Thickness**, while `Dot` deliberately does not;
 - immunity display mode, indicator size or halo thickness, and six element
   colors.
 - Direct-navigation thickness plus independent activation and colors for the
@@ -242,8 +267,8 @@ Each color opens in a compact picker; permanent technical RGBA fields are not
 shown in the panel. Hovering the color preview displays a custom technical
 tooltip above the pointer. Theme selection and localization are deferred.
 
-Closing or collapsing the panel returns to the launcher. Appearance, radius,
-position, and opacity changes are saved to the active MapSense configuration
+Closing or collapsing the panel returns to the launcher. Appearance, position,
+and opacity changes are saved to the active MapSense configuration
 scope. Mouse input owned by the panel is isolated from gameplay, while keyboard
 and mouse input outside
 its exact bounds remain D2R-owned. Dear ImGui does not create, show, hide, or
@@ -275,19 +300,35 @@ frames with no command lists or vertices never reset or submit a D3D12 command
 list. This leaves the shared MapSense/Floating Damage host GPU-dormant between
 visible draws.
 
+Version 0.12.1 also removes the fence wait from the latency-critical `Present`
+path. If the allocator for the current back buffer is still in flight, MapSense
+skips only that overlay frame and immediately lets D2R continue presenting; it
+retries on a later back-buffer pass after the fence advances. Fence waits remain
+limited to renderer lifecycle operations such as resize and shutdown. This is
+a source/build property of the current candidate; its gameplay FPS and marker
+fluidity gates remain to be measured.
+
 ## Configuration migration
 
-MapSense 0.12.0 writes configuration schema 8. Existing schemas 1 through 7 are
-accepted. Schemas 1 through 3 migrate with `x` for every category, preserving
+MapSense 0.12.2 writes configuration schema 9. Existing schemas 1 through 8 are
+accepted only when they do not contain a removed key. Schemas 1 through 3
+migrate with `x` for every category, preserving
 the earlier hollow angular-cross appearance instead of silently changing marker
 shapes. Legacy category visibility switches do not silently disable categories:
 schema 4 and later always display all five categories.
 
-Schema-3 detection radii are first validated against their original 60-to-600
-range. Schema-4 through schema-6 values are validated against their original
-500-to-2,500 range. These legacy client-coordinate values are then divided by
-16 with nearest-integer rounding and clamped to the schema-7 world-subtile
-range. Schema 7 defaults to 60 and validates directly against 30 to 220.
+Schema 9 removes the global `monsters.marker_thickness` prototype setting
+without a compatibility shim. Each category stores its own `thickness` when its
+shape is `x` or `player_cross`; a `dot` table accepts and writes only its shape,
+color, and size. A prototype TOML that still contains the removed global key is
+rejected until that line is removed or the file is regenerated.
+
+Version 0.12.2 retires `monsters.detection_radius` because it was only a
+post-enumeration display filter, not a scan distance. Existing schema 1 through
+8 files may still contain the key; it is accepted and ignored for compatibility,
+then omitted the next time MapSense saves the file. The runtime now considers
+the complete client monster table and retains only D2R's native projection and
+active automap-clip gates.
 
 Schema 5 adds immunity style, indicator size, and halo thickness. Earlier
 schemas retain their immunity enabled state. Only the exact former default
@@ -298,12 +339,13 @@ Schema 6 adds Direct-navigation line settings and the strict custom-level
 target list. Every ordinary navigation setting is controlled from the in-game
 panel; the target list is the sole intentional manual TOML exception.
 
-Schema 7 changes only monster-radius semantics from client/dimetric units to
-true world subtiles. Schema 8 activates the first real red quest adapter and
+Schema 7 historically changed monster-radius semantics from client/dimetric
+units to world subtiles; that setting is now retired. Schema 8 activates the
+first real red quest adapter and
 exposes its switch and color in the in-game menu. Because schema 7 kept the
 reserved quest switch hidden and disabled, its exact old false value migrates
 once to enabled; schema 8 then preserves the player's explicit choice. Saving
-any accepted legacy configuration writes schema 8.
+any accepted legacy configuration writes schema 9.
 
 ## Renderer ownership and optional coexistence
 
@@ -323,20 +365,29 @@ is expected to recover its autonomous renderer if a MapSense host goes away.
 The plugin registers four independent actions in the D2R Controls menu under
 `RuffnecKk Suite`. They intentionally have no default binding:
 
-- `Reveal Current Level` calls the native automap callback for every room in
-  the current level. Its stable logical ID remains `reveal-zone` for existing
-  bindings.
-- `Reveal Current Act` submits D2RCore's internal `revealmap` command for the
-  current act.
-- `Toggle Reveal All Acts` submits the current-act request and arms the same
-  request for each later `ActChanged` event. Press it again to disarm.
+- `Reveal Current Level` remembers the stable current LevelId and calls the
+  native automap callback for every room in that level. Its stable logical ID
+  remains `reveal-zone` for existing bindings.
+- `Reveal Current Act` remembers the act derived from the authoritative
+  LevelId ranges, reveals the active level natively, then applies the same
+  current-level operation as each later level in that act loads.
+- `Toggle Reveal All Acts` reveals the active level and arms that current-level
+  operation for every later loaded level in the current difficulty. Press it
+  again to disarm.
 - `Toggle MapSense Settings` expands or collapses the settings panel.
 
-D2R keeps only the current act's client map generator loaded. Reveal All
-therefore does not materialize five acts at once: an act is requested only when
-it is loaded during the current game session. The armed state is reset when
-that session ends or changes. `off` only disarms this progressive mode; it does
-not erase automap exploration already held by D2R.
+D2R exposes generated client geometry incrementally. Version 0.12.2 therefore
+never mass-initializes unloaded acts and never dispatches D2RCore's `revealmap`
+console worker: each active client level is revealed directly through the
+already fingerprinted room callback when it loads. The plugin keeps remembered
+LevelIds, ActIds, and Reveal All intent for the lifetime of the MapSense
+process. Save & Exit followed by a new game at the same difficulty resets only
+per-session acceptance/deduplication and reapplies matching remembered intent
+as the new geometry appears, with at most eight retries spaced 250 ms apart.
+An actual Normal/Nightmare/Hell change clears all remembered Reveal intent;
+an unknown difficulty fails closed. `off` only disarms progressive Reveal All
+and does not erase automap exploration already held by D2R. This memory is not
+written to TOML or a character save and does not survive a process restart.
 
 The equivalent console commands are:
 
@@ -351,9 +402,19 @@ mapsense menu
 ```
 
 `mapsense zone` is retained as a compatibility alias for `mapsense level`.
-`ExecuteConsoleCommand(true)` proves that D2RCore accepted a request; it does
-not by itself prove the visual result. Act and All also require D2RCore debug
-functionality not to be disabled by the active mod.
+MapSense 0.12.2 contains no `ExecuteConsoleCommand` or `revealmap` path. This
+removes one former asynchronous source of room initialization. Necessary native
+room activation can still reach D2R's guarded negative-index
+`sFillLocation()` diagnostic. Version 0.12.3 owns a fail-closed, D2RLoader-
+tracked suppression of that diagnostic CALL inside the DLL, so no separate mod
+patch is required and the underlying guarded skip behavior remains unchanged.
+
+The second `mapsense status` line describes the monster pipeline explicitly:
+tracked IDs; discovery scans and average/maximum time; position refreshes and
+average/maximum time; resolved/missing ID lookups; accepted distance bands; and
+native-clip rejects by distance band. These counters measure the complete
+client-table result but do not manufacture client Units or bypass D2R's automap
+viewport.
 
 D2RLoader InputService v1 supports no modifier or one of Ctrl, Alt, or Shift.
 Windows-key and multiple-modifier combinations require another proven input
@@ -368,10 +429,10 @@ hybrid DLL. D2RLoader creates `ruffneckk-mapsense.toml` in the matching config
 scope from the default embedded in the plugin.
 
 No Diablo II: Lord of Destruction installation, MPQ, map server, companion EXE,
-or external overlay is required. Reveal Level uses D2R's current native client
-DRLG and automap callback. Reveal Act and Reveal All use the public D2RCore
-console-dispatch export and the private `revealmap` command behind a strict
-D2RCore version check. The plugin owns two independent signature-checked hooks:
+or external overlay is required. Reveal Level, Reveal Act, and Reveal All use
+D2R's current native client DRLG and automap callback; Act and All differ only
+in the process-lifetime intent that is reapplied as matching levels load. The
+plugin owns two independent signature-checked hooks:
 the existing level-initialization hook captures the current client DRLG, while
 the automap-unit hook publishes copied monster observations and projects Direct
 navigation during the local-player pass. The separate navigation resolver adds
@@ -396,6 +457,41 @@ governed corpus proves every native surface used by MapSense byte-identical,
 with the same RVAs, signatures, layout, and ABI. Any difference reopens a
 separate runtime qualification.
 
+Version 0.12.2 is currently an offline source candidate. It removes the false
+distance control and all spatial monster filtering, refreshes every copied
+monster ID on each automap pulse within the 32,768-entry hard cap, replaces
+append-only observations with one latest-position producer snapshot, retains
+the exact paired `RoomsNear` seam for outdoor navigation, and removes every
+D2RCore `revealmap` dispatch. Reveal retries are keyed to the exact LevelId so a
+new level cannot inherit an exhausted retry budget. A strict build and CTest
+passed before the final test-only and retry/publication hardening edits; at
+Vincent's request no further test, runtime deployment, or D2R launch was made
+that night. Final `/W4 /WX`, CTest, hash, cold start, performance, fluidity,
+Tamoe-to-Monastery, and no-`sFillLocation` gates therefore remain **NOT RUN** for
+the exact final 0.12.2 source state.
+
+The 0.12.1 Release x64 source candidate passes the strict `/W4 /WX` compiler
+gate and CTest reports 1/1 passing. The DLL is 1,320,960 bytes, exposes the
+expected four exports, carries PE version 0.12.1, and has SHA-256
+`DAB61AADE352C87B9CA4F57DF1184EAA663617103AC7B1B9B80182066F8C39B4`.
+Static tests cover the bounded 10 Hz discovery/about-60 Hz position pipeline,
+distance-band diagnostics, unique whole-level outdoor-boundary opening with
+ambiguity rejection, and same-difficulty process persistence for Reveal Level,
+Reveal Act, and Reveal All with reset on every actual difficulty change. The
+Canyon policy remains unchanged: the exact generated tomb is red while the
+quest is active and green after reward. The same DLL hash is deployed mod-locally
+in the normal BKVince profile with the active TOML preserved byte-identically.
+Its fresh official D2R 3.3.93847 cold start on August 28, 2026 loads MapSense
+0.12.1 in the complete installed stack, reports 36 loaded plugins, the single
+pre-existing Revive Overhaul failure, all 18 memory patches, and reaches 24/24.
+The log installs the early DXGI ownership hooks, records the exact command queue
+at swap-chain creation, initializes the shared ImGui host, and Floating Damage
+renders its first shared frame. No new `nvlddmkm`, `LiveKernelEvent 0x141`, or
+matching Windows Error Reporting event appears after this launch. Deployment and
+cold start are therefore technically PASS. FPS/fluidity, fixed-scene radius,
+Tamoe-to-Monastery, Reveal-across-games, difficulty-change, and Canyon regression
+remain gameplay gates; none is inferred from the technical PASS.
+
 The 0.12.0 Release x64 candidate passes the strict `/W4 /WX` compiler gate and
 CTest reports 1/1 passing. The DLL is 777,216 bytes, exposes the
 expected four exports, carries PE version 0.12.0, and has SHA-256
@@ -416,7 +512,7 @@ and diagnostics separate client presence, radius, projection, clip, and
 publication. In the Canyon of the Magi, the resolver reads the generated staff
 tomb, initializes only that level, and publishes the same exact RoomTile as a
 red quest target before `RewardGranted` or a green farming target afterward.
-Schema-7 quest settings migrate once to enabled in memory; schema 8 preserves
+Schema-7 quest settings migrate once to enabled in memory; schema 8 and later preserve
 the player's explicit choice. These source, fingerprint, migration, and policy
 gates pass. The fixed-scene 30/80/140/220 comparison and the red/green Canyon
 visual witnesses remain gameplay tests rather than inferred successes.

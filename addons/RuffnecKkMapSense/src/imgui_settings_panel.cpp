@@ -427,7 +427,6 @@ struct ImmunityColorControl final {
     ImGui::SeparatorText(label);
 
     auto saveRequested = DrawMonsterMarkerShape(style.shape);
-    saveRequested |= DrawMonsterMarkerColor(style.color, dpiScale);
 
     (void)ImGui::SliderFloat(
         "Size",
@@ -437,6 +436,18 @@ struct ImmunityColorControl final {
         "%.0f px",
         ImGuiSliderFlags_AlwaysClamp);
     saveRequested |= ImGui::IsItemDeactivatedAfterEdit();
+
+    if (style.shape != MonsterMarkerShape::Dot) {
+        (void)ImGui::SliderFloat(
+            "Thickness",
+            &style.thickness,
+            MinimumMonsterMarkerThickness,
+            MaximumMonsterMarkerThickness,
+            "%.1f px",
+            ImGuiSliderFlags_AlwaysClamp);
+        saveRequested |= ImGui::IsItemDeactivatedAfterEdit();
+    }
+    saveRequested |= DrawMonsterMarkerColor(style.color, dpiScale);
 
     ImGui::PopID();
     return saveRequested;
@@ -605,28 +616,8 @@ auto DrawImGuiSettingsPanel(
                     ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::TextWrapped(
                     "All monster categories are always visible. Configure "
-                    "their shape, color, and size below.");
-
-                auto detectionRadius = static_cast<int>(
-                    config.monsters.detectionRadius);
-                (void)ImGui::SliderInt(
-                    "Detection Radius",
-                    &detectionRadius,
-                    MinimumMonsterDetectionRadius,
-                    MaximumMonsterDetectionRadius,
-                    "%d world subtiles",
-                    ImGuiSliderFlags_AlwaysClamp);
-                config.monsters.detectionRadius = detectionRadius;
-                saveRequested |= ImGui::IsItemDeactivatedAfterEdit();
-
-                (void)ImGui::SliderFloat(
-                    "Marker Thickness",
-                    &config.monsters.markerThickness,
-                    MinimumMonsterMarkerThickness,
-                    MaximumMonsterMarkerThickness,
-                    "%.1f px",
-                    ImGuiSliderFlags_AlwaysClamp);
-                saveRequested |= ImGui::IsItemDeactivatedAfterEdit();
+                    "each category independently. X and Player Cross expose "
+                    "Size and Thickness; Dot exposes Size only.");
 
                 saveRequested |= DrawMonsterMarkerStyle(
                     "Normal",

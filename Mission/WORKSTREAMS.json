@@ -722,7 +722,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/ruffneckk-mapsense.md",
-      "nextGate": "Implement and qualify MapSense 0.12.3 before any label work: install the fail-closed tracked NOP patch only when the exact five-byte sFillLocation diagnostic CALL at RVA 0x3E1F2B matches, reduce and deduplicate unnecessary room materialization, then pass Release /W4 /WX, CTest, PE/exports, full-stack cold start and gameplay witnesses for no sFillLocation spam, Reveal, waypoint, Tamoe-to-Monastery, FPS and fluidity. MapSense 0.13.0 level and shrine labels are planned but blocked until this gate passes.",
+      "nextGate": "MapSense 0.12.3 is closed after Release /W4 /WX, CTest, governed native self-test, PE/exports, byte-identical deployment, full-stack cold start and gameplay confirmation for no sFillLocation spam plus Tamoe, Spider Forest, Great Marsh and Flayer Jungle progression lines. MapSense 0.13.0 level and shrine labels is the next planned lot and requires a new explicit GO.",
       "include": [
         "Mission/ruffneckk-mapsense.md",
         "addons/RuffnecKkMapSense/**"

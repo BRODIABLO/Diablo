@@ -1291,6 +1291,14 @@ confiance explicite.
   configurées Pit Level 1 et Underground Passage Level 2 sont vérifiées comme
   destinations mauves. Release `/W4 /WX`, quatre exports et CTest `1/1`
   passent; la DLL n'est ni déployée ni lancée.
+- La trace runtime 3.3.93847 du 29 août 2026 établit que les rafales
+  `sFillLocation()` ne sont pas propres à une route : elles sont émises pendant
+  la matérialisation native de rooms. Dans `sFillLocation 0x3E1DA0`, la branche
+  d'index négatif à `0x3E1F24` appelle uniquement le logger à `0x3E1F2B`, puis
+  rejoint à `0x3E1FD8` le chemin qui saute déjà le remplissage. Le CALL exact
+  `E8 60 FC 63 00` est unique dans le corpus commun. MapSense 0.12.3 NOPe ces
+  cinq octets via le service suivi de D2RLoader sans autoriser d'accès hors
+  limites ni modifier la construction des rooms.
 - Références sémantiques uniquement :
   `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`, notamment
   `D2Common/src/Units/Units.cpp:283-323,582-594` et

@@ -13,7 +13,6 @@ struct PluginContext;
 
 namespace RuffnecKk::MapSense {
 
-inline constexpr std::int32_t DefaultNativeAutomapMarkerRadius = 60;
 inline constexpr std::int32_t ImmunityResistanceThreshold = 100;
 
 enum class MonsterImmunity : std::uint8_t {
@@ -44,9 +43,8 @@ inline constexpr std::uint32_t MonStatsInTownFlag = 1U << 10U;
 inline constexpr std::uint32_t MonStatsKillableFlag = 1U << 15U;
 inline constexpr std::int32_t EvilAlignment = 0;
 
-// D2 DynamicPath coordinates are unsigned world subtiles. Keeping this
-// distance primitive separate from client projection prevents an isometric
-// direction from changing the configured scan radius.
+// D2 DynamicPath coordinates are unsigned world subtiles. Keep diagnostic
+// distance bands independent from the isometric client projection.
 [[nodiscard]] constexpr auto SquaredWorldSubtileDistance(
         std::uint16_t leftX,
         std::uint16_t leftY,
@@ -201,9 +199,16 @@ struct NativeAutomapMarkerSnapshot final {
     std::uint64_t sequence{};
 };
 
+inline constexpr std::size_t MaximumNativeAutomapMarkers = 32'768U;
+inline constexpr std::size_t MaximumRecentNativeAutomapMarkers = 65'536U;
+
 struct NativeAutomapMarkerCounters final {
     std::uint64_t automapPulses{};
     std::uint64_t monsterTableScans{};
+    std::uint64_t monsterPositionRefreshes{};
+    std::uint64_t trackedCurrent{};
+    std::uint64_t trackedIdsResolved{};
+    std::uint64_t trackedIdsMissing{};
     std::uint64_t monsterBucketsVisited{};
     std::uint64_t monsterTraversalLimits{};
     std::uint64_t unitsObserved{};
@@ -218,10 +223,16 @@ struct NativeAutomapMarkerCounters final {
     std::uint64_t hostilesFrom81Through140{};
     std::uint64_t hostilesFrom141Through220{};
     std::uint64_t hostilesBeyond220{};
-    std::uint64_t radiusRejected{};
-    std::uint64_t withinRadius{};
     std::uint64_t projectionRejected{};
     std::uint64_t nativeClipRejected{};
+    std::uint64_t acceptedThrough80{};
+    std::uint64_t acceptedFrom81Through140{};
+    std::uint64_t acceptedFrom141Through220{};
+    std::uint64_t acceptedBeyond220{};
+    std::uint64_t clipRejectedThrough80{};
+    std::uint64_t clipRejectedFrom81Through140{};
+    std::uint64_t clipRejectedFrom141Through220{};
+    std::uint64_t clipRejectedBeyond220{};
     std::uint64_t candidatesAccepted{};
     std::uint64_t markersInserted{};
     std::uint64_t markersRefreshed{};
@@ -230,9 +241,13 @@ struct NativeAutomapMarkerCounters final {
     std::uint64_t contentionWaits{};
     std::uint64_t storageFailures{};
     std::uint64_t accessFaults{};
-    std::int32_t configuredRadius{};
+    std::uint64_t maximumDiscoveryMicroseconds{};
+    std::uint64_t totalDiscoveryMicroseconds{};
+    std::uint64_t discoveryTimingSamples{};
+    std::uint64_t maximumRefreshMicroseconds{};
+    std::uint64_t totalRefreshMicroseconds{};
+    std::uint64_t refreshTimingSamples{};
     std::uint32_t maximumHostileDistance{};
-    std::uint32_t maximumWithinRadiusDistance{};
     std::uint32_t maximumAcceptedDistance{};
     std::uint32_t maximumPublishedDistance{};
 };
@@ -251,13 +266,12 @@ void ResetNativeAutomapMarker() noexcept;
 // counters. The next native automap pass starts a fresh visible epoch.
 void InvalidateNativeAutomapMarkerFrame() noexcept;
 void SetNativeAutomapMarkerEnabled(bool enabled) noexcept;
-void SetNativeAutomapMarkerRadius(std::int32_t radius) noexcept;
 void SetNativeAutomapImmunityCollectionEnabled(bool enabled) noexcept;
 void SetNativeAutomapLevelObservedCallback(
     NativeAutomapLevelObservedCallback callback,
     void* userData) noexcept;
 
-// Copies every recent marker observed inside the configured scan radius.
+// Copies every recent marker projected from the complete client monster table.
 // The cache is keyed by native unit id and does not retain any D2R pointer.
 auto AcquireNativeAutomapMarkers(
     std::vector<NativeAutomapMarkerSnapshot>& snapshots) noexcept

@@ -2092,6 +2092,16 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "sfilllocation_diagnostic.cpp",
+                                                                                                     "path":  "addons/RuffnecKkMapSense/src/sfilllocation_diagnostic.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "sfilllocation_diagnostic.hpp",
+                                                                                                     "path":  "addons/RuffnecKkMapSense/src/sfilllocation_diagnostic.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "settings_menu.cpp",
                                                                                                      "path":  "addons/RuffnecKkMapSense/src/settings_menu.cpp",
                                                                                                      "kind":  "file"

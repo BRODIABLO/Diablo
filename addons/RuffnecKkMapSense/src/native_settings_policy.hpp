@@ -322,6 +322,8 @@ inline constexpr std::array<ImmunityPalette, 3> ImmunityPalettes{
         const MonsterMarkerStyle& right) noexcept -> bool {
     return left.shape == right.shape
         && left.size == right.size
+        && (left.shape == MonsterMarkerShape::Dot
+            || left.thickness == right.thickness)
         && SameColor(left.color, right.color);
 }
 
@@ -394,8 +396,6 @@ inline void CopyNativeSettings(
         && left.overlay.diagnosticPreview == right.overlay.diagnosticPreview
         && left.overlay.opacity == right.overlay.opacity
         && left.overlay.scale == right.overlay.scale
-        && left.monsters.detectionRadius == right.monsters.detectionRadius
-        && left.monsters.markerThickness == right.monsters.markerThickness
         && SameMonsterMarkerStyle(
             left.monsters.normal,
             right.monsters.normal)

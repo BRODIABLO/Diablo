@@ -22,12 +22,8 @@
 
 namespace RuffnecKk::MapSense {
 
-inline constexpr std::int64_t CurrentConfigSchemaVersion = 8;
+inline constexpr std::int64_t CurrentConfigSchemaVersion = 9;
 
-inline constexpr std::int32_t MinimumMonsterDetectionRadius = 30;
-inline constexpr std::int32_t DefaultMonsterDetectionRadius = 60;
-inline constexpr std::int32_t MaximumMonsterDetectionRadius = 220;
-inline constexpr std::int32_t LegacyMonsterDetectionRadiusScale = 16;
 inline constexpr float MinimumMonsterMarkerSize = 3.0F;
 inline constexpr float MaximumMonsterMarkerSize = 40.0F;
 inline constexpr float MinimumMonsterMarkerThickness = 1.0F;
@@ -86,11 +82,10 @@ struct MonsterMarkerStyle {
     RgbaColor color{};
     float size{18.0F};
     MonsterMarkerShape shape{MonsterMarkerShape::PlayerCross};
+    float thickness{2.0F};
 };
 
 struct MonsterOptions {
-    std::int32_t detectionRadius{DefaultMonsterDetectionRadius};
-    float markerThickness{2.0F};
     MonsterMarkerStyle normal{{1.0F, 1.0F, 1.0F, 1.0F}, 18.0F};
     MonsterMarkerStyle minion{{1.0F, 0.831F, 0.231F, 1.0F}, 18.0F};
     MonsterMarkerStyle champion{{0.239F, 0.545F, 1.0F, 1.0F}, 20.0F};
@@ -171,17 +166,6 @@ struct Config {
     HudOptions hud{};
     MenuOptions menu{};
 };
-
-[[nodiscard]] constexpr auto MigrateLegacyMonsterDetectionRadius(
-        std::int32_t legacyRadius) noexcept -> std::int32_t {
-    const auto roundedSubtiles =
-        (legacyRadius + LegacyMonsterDetectionRadiusScale / 2)
-        / LegacyMonsterDetectionRadiusScale;
-    return std::clamp(
-        roundedSubtiles,
-        MinimumMonsterDetectionRadius,
-        MaximumMonsterDetectionRadius);
-}
 
 inline auto IsAllowedKey(
         std::string_view key,
@@ -400,15 +384,29 @@ inline auto ReadMonsterMarkerStyle(
         const toml::table& monsters,
         std::string_view key,
         MonsterMarkerStyle fallback,
-        bool readShape) -> MonsterMarkerStyle {
+        bool readShape,
+        bool readThickness) -> MonsterMarkerStyle {
     const auto* style = ReadOptionalTable(monsters, key);
     if (style == nullptr) return fallback;
     if (readShape) {
-        RejectUnknownKeys(*style, {"shape", "color", "size"}, key);
         fallback.shape = ReadOptionalMonsterMarkerShape(
             *style,
             "shape",
             fallback.shape);
+    }
+    if (readThickness && fallback.shape != MonsterMarkerShape::Dot) {
+        RejectUnknownKeys(
+            *style,
+            {"shape", "color", "size", "thickness"},
+            key);
+        fallback.thickness = ReadOptionalFloat(
+            *style,
+            "thickness",
+            fallback.thickness,
+            MinimumMonsterMarkerThickness,
+            MaximumMonsterMarkerThickness);
+    } else if (readShape) {
+        RejectUnknownKeys(*style, {"shape", "color", "size"}, key);
     } else {
         RejectUnknownKeys(*style, {"color", "size"}, key);
     }
@@ -580,15 +578,6 @@ inline auto ParseConfig(const toml::table& root) -> Config {
         config.monsters.unique.shape = MonsterMarkerShape::X;
         config.monsters.superUniqueBoss.shape = MonsterMarkerShape::X;
     }
-    if (*schemaVersion == 3) {
-        // Schema 3 defaulted to 300 legacy client-coordinate units.
-        config.monsters.detectionRadius =
-            MigrateLegacyMonsterDetectionRadius(300);
-    } else if (*schemaVersion >= 4 && *schemaVersion < 7) {
-        // Schemas 4-6 defaulted to 1000 legacy client-coordinate units.
-        config.monsters.detectionRadius =
-            MigrateLegacyMonsterDetectionRadius(1'000);
-    }
     if (const auto* general = ReadOptionalTable(root, "general")) {
         RejectUnknownKeys(*general, {"enabled"}, "general");
         config.enabled = ReadOptional(*general, "enabled", config.enabled);
@@ -621,7 +610,7 @@ inline auto ParseConfig(const toml::table& root) -> Config {
         if (*schemaVersion == 1 || *schemaVersion == 2) {
             RejectUnknownKeys(
                 *monsters,
-                {"normal", "minion", "champion", "unique", "super_unique", "marker_size"},
+                {"detection_radius", "normal", "minion", "champion", "unique", "super_unique", "marker_size"},
                 "monsters");
 
             // Schema 1/2 visibility switches are intentionally ignored during
@@ -647,81 +636,41 @@ inline auto ParseConfig(const toml::table& root) -> Config {
         } else {
             RejectUnknownKeys(
                 *monsters,
-                {"detection_radius", "marker_thickness", "normal", "minion", "champion", "unique", "super_unique_boss"},
+                {"detection_radius", "normal", "minion", "champion", "unique", "super_unique_boss"},
                 "monsters");
-            const auto detectionRadiusFallback = *schemaVersion == 3
-                ? 300
-                : (*schemaVersion < 7
-                    ? 1'000
-                    : config.monsters.detectionRadius);
-            config.monsters.detectionRadius = ReadOptional<std::int32_t>(
-                *monsters,
-                "detection_radius",
-                detectionRadiusFallback);
-            if (*schemaVersion == 3) {
-                constexpr std::int32_t Schema3MinimumDetectionRadius = 60;
-                constexpr std::int32_t Schema3MaximumDetectionRadius = 600;
-                if (config.monsters.detectionRadius
-                            < Schema3MinimumDetectionRadius
-                        || config.monsters.detectionRadius
-                            > Schema3MaximumDetectionRadius) {
-                    throw std::runtime_error(
-                        "MapSense key is outside its supported range: detection_radius");
-                }
-                config.monsters.detectionRadius =
-                    MigrateLegacyMonsterDetectionRadius(
-                        config.monsters.detectionRadius);
-            } else if (*schemaVersion < 7) {
-                constexpr std::int32_t Schema4To6MinimumDetectionRadius = 500;
-                constexpr std::int32_t Schema4To6MaximumDetectionRadius = 2'500;
-                if (config.monsters.detectionRadius
-                            < Schema4To6MinimumDetectionRadius
-                        || config.monsters.detectionRadius
-                            > Schema4To6MaximumDetectionRadius) {
-                    throw std::runtime_error(
-                        "MapSense key is outside its supported range: detection_radius");
-                }
-                config.monsters.detectionRadius =
-                    MigrateLegacyMonsterDetectionRadius(
-                        config.monsters.detectionRadius);
-            } else if (config.monsters.detectionRadius
-                           < MinimumMonsterDetectionRadius
-                    || config.monsters.detectionRadius
-                           > MaximumMonsterDetectionRadius) {
-                throw std::runtime_error(
-                    "MapSense key is outside its supported range: detection_radius");
-            }
-            config.monsters.markerThickness = ReadOptionalFloat(
-                *monsters,
-                "marker_thickness",
-                config.monsters.markerThickness,
-                MinimumMonsterMarkerThickness,
-                MaximumMonsterMarkerThickness);
+            // detection_radius is a retired compatibility key. Keep accepting
+            // it in every supported schema, but never read, validate, migrate,
+            // or persist its value.
             config.monsters.normal = ReadMonsterMarkerStyle(
                 *monsters,
                 "normal",
                 config.monsters.normal,
-                *schemaVersion >= 4);
+                *schemaVersion >= 4,
+                *schemaVersion >= 9);
             config.monsters.minion = ReadMonsterMarkerStyle(
                 *monsters,
                 "minion",
                 config.monsters.minion,
-                *schemaVersion >= 4);
+                *schemaVersion >= 4,
+                *schemaVersion >= 9);
             config.monsters.champion = ReadMonsterMarkerStyle(
                 *monsters,
                 "champion",
                 config.monsters.champion,
-                *schemaVersion >= 4);
+                *schemaVersion >= 4,
+                *schemaVersion >= 9);
             config.monsters.unique = ReadMonsterMarkerStyle(
                 *monsters,
                 "unique",
                 config.monsters.unique,
-                *schemaVersion >= 4);
+                *schemaVersion >= 4,
+                *schemaVersion >= 9);
             config.monsters.superUniqueBoss = ReadMonsterMarkerStyle(
                 *monsters,
                 "super_unique_boss",
                 config.monsters.superUniqueBoss,
-                *schemaVersion >= 4);
+                *schemaVersion >= 4,
+                *schemaVersion >= 9);
         }
     }
     if (const auto* immunities = ReadOptionalTable(root, "immunities")) {
@@ -936,37 +885,60 @@ inline auto SerializeConfig(const Config& config) -> std::string {
         << "opacity = " << config.overlay.opacity << "\n"
         << "scale = " << config.overlay.scale << "\n"
         << "frame_rate = " << config.overlay.frameRate << "\n\n"
-        << "[monsters]\n"
-        << "# True D2 world subtiles around the local player.\n"
-        << "detection_radius = " << config.monsters.detectionRadius << "\n"
-        << "marker_thickness = " << config.monsters.markerThickness << "\n\n"
+        << "[monsters]\n\n"
         << "[monsters.normal]\n"
         << "shape = \"" << MonsterMarkerShapeToString(config.monsters.normal.shape)
         << "\"\n"
         << "color = \"" << ColorToHex(config.monsters.normal.color) << "\"\n"
-        << "size = " << config.monsters.normal.size << "\n\n"
+        << "size = " << config.monsters.normal.size << "\n";
+    if (config.monsters.normal.shape != MonsterMarkerShape::Dot) {
+        output << "thickness = " << config.monsters.normal.thickness << "\n";
+    }
+    output
+        << "\n"
         << "[monsters.minion]\n"
         << "shape = \"" << MonsterMarkerShapeToString(config.monsters.minion.shape)
         << "\"\n"
         << "color = \"" << ColorToHex(config.monsters.minion.color) << "\"\n"
-        << "size = " << config.monsters.minion.size << "\n\n"
+        << "size = " << config.monsters.minion.size << "\n";
+    if (config.monsters.minion.shape != MonsterMarkerShape::Dot) {
+        output << "thickness = " << config.monsters.minion.thickness << "\n";
+    }
+    output
+        << "\n"
         << "[monsters.champion]\n"
         << "shape = \"" << MonsterMarkerShapeToString(config.monsters.champion.shape)
         << "\"\n"
         << "color = \"" << ColorToHex(config.monsters.champion.color) << "\"\n"
-        << "size = " << config.monsters.champion.size << "\n\n"
+        << "size = " << config.monsters.champion.size << "\n";
+    if (config.monsters.champion.shape != MonsterMarkerShape::Dot) {
+        output << "thickness = " << config.monsters.champion.thickness << "\n";
+    }
+    output
+        << "\n"
         << "[monsters.unique]\n"
         << "shape = \"" << MonsterMarkerShapeToString(config.monsters.unique.shape)
         << "\"\n"
         << "color = \"" << ColorToHex(config.monsters.unique.color) << "\"\n"
-        << "size = " << config.monsters.unique.size << "\n\n"
+        << "size = " << config.monsters.unique.size << "\n";
+    if (config.monsters.unique.shape != MonsterMarkerShape::Dot) {
+        output << "thickness = " << config.monsters.unique.thickness << "\n";
+    }
+    output
+        << "\n"
         << "[monsters.super_unique_boss]\n"
         << "shape = \""
         << MonsterMarkerShapeToString(config.monsters.superUniqueBoss.shape)
         << "\"\n"
         << "color = \""
         << ColorToHex(config.monsters.superUniqueBoss.color) << "\"\n"
-        << "size = " << config.monsters.superUniqueBoss.size << "\n\n"
+        << "size = " << config.monsters.superUniqueBoss.size << "\n";
+    if (config.monsters.superUniqueBoss.shape != MonsterMarkerShape::Dot) {
+        output << "thickness = "
+               << config.monsters.superUniqueBoss.thickness << "\n";
+    }
+    output
+        << "\n"
         << "[immunities]\n"
         << "enabled = " << config.immunities.enabled << "\n"
         << "style = \""

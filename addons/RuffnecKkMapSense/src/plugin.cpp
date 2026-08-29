@@ -11,6 +11,7 @@
 #include "native_settings_policy.hpp"
 #include "overlay_host_api.hpp"
 #include "reveal_engine.hpp"
+#include "sfilllocation_diagnostic.hpp"
 
 #include <imgui.h>
 
@@ -33,6 +34,9 @@ namespace RuffnecKk::MapSense {
 namespace {
 
 constexpr std::size_t MaximumConfigBytes = 65'536;
+constexpr std::int32_t UnknownRevealLevelId = -1;
+constexpr std::uint32_t RevealReplayRetryLimit = 8U;
+constexpr std::uint32_t RevealReplayRetryDelayMilliseconds = 250U;
 constexpr std::uint32_t NavigationRefreshRetryLimit = 8U;
 constexpr std::uint32_t NavigationRefreshRetryDelayMilliseconds = 250U;
 constexpr std::uint64_t DynamicNavigationRefreshIntervalMilliseconds = 1'000U;
@@ -102,6 +106,24 @@ struct NavigationRefreshState {
 std::mutex NavigationRefreshMutex;
 NavigationRefreshState PendingNavigationRefresh{};
 PTP_TIMER NavigationRefreshTimer{};
+
+struct RevealReplayRequestState {
+    std::uint64_t sessionGeneration{};
+    std::int32_t targetLevelId{UnknownRevealLevelId};
+    std::uint32_t retriesRemaining{};
+    bool playerReady{};
+    bool reconcilePending{};
+    bool callbackQueued{};
+};
+
+std::mutex RevealReplayMutex;
+RevealPersistenceState RevealPersistence{};
+RevealReplayRequestState PendingRevealReplay{};
+PTP_TIMER RevealReplayTimer{};
+std::atomic_uint64_t AutomaticLevelRevealRequests{};
+std::atomic_uint64_t AutomaticLevelRevealAccepted{};
+std::atomic_uint64_t AutomaticLevelRevealRejected{};
+std::atomic_uint64_t AutomaticLevelRevealDuplicateRefusals{};
 
 class QueueLockGuard {
 public:
@@ -177,21 +199,22 @@ auto LoadConfig(Config& config) noexcept -> bool {
 
 void WriteOutcome(
         const D2RL::PluginContext* context,
-        RevealOutcome outcome) noexcept {
+        RevealOutcome outcome,
+        Action action) noexcept {
     if (context == nullptr) return;
     const char* message = "MapSense: reveal request failed; enter a game and try again.";
     D2RL::ConsoleMessageKind kind = D2RL::ConsoleMessageKind::Warning;
     switch (outcome) {
         case RevealOutcome::Complete:
-            message = "MapSense: current level revealed.";
-            kind = D2RL::ConsoleMessageKind::Output;
-            break;
-        case RevealOutcome::Accepted:
-            message = "MapSense: native current-act reveal request accepted.";
+            if (action == Action::RevealAct) {
+                message = "MapSense: current level revealed; Reveal Act will reveal each level in this act as it loads.";
+            } else {
+                message = "MapSense: current level revealed and remembered for new games at this difficulty.";
+            }
             kind = D2RL::ConsoleMessageKind::Output;
             break;
         case RevealOutcome::Armed:
-            message = "MapSense: Reveal All armed; native reveal requests will be submitted as acts load.";
+            message = "MapSense: Reveal All armed; each level will be revealed natively as it loads in this difficulty.";
             kind = D2RL::ConsoleMessageKind::Output;
             break;
         case RevealOutcome::Disarmed:
@@ -227,6 +250,7 @@ constexpr auto IsIdempotent(Action action) noexcept -> bool {
 auto RequestNavigationRefresh(
     std::uint64_t sessionGeneration,
     std::int32_t levelId) noexcept -> bool;
+auto ExecuteTrackedRevealAction(Action action) noexcept -> RevealOutcome;
 
 void __cdecl DrainActionsOnUi(
         const D2RL::PluginContext* context,
@@ -265,12 +289,11 @@ void __cdecl DrainActionsOnUi(
             SetD3D12ImGuiMenuOpen(true);
             continue;
         }
-        const auto outcome = ExecuteAction(request.action);
-        WriteOutcome(context, outcome);
+        const auto outcome = ExecuteTrackedRevealAction(request.action);
+        WriteOutcome(context, outcome, request.action);
         const auto revealed = request.action == Action::RevealZone
             || request.action == Action::RevealAct;
-        const auto accepted = outcome == RevealOutcome::Complete
-            || outcome == RevealOutcome::Accepted;
+        const auto accepted = outcome == RevealOutcome::Complete;
         if (revealed && accepted
             && GameplayReady.load(std::memory_order_acquire)) {
             const auto sessionGeneration = CurrentSessionGeneration.load(
@@ -585,6 +608,9 @@ void OnNativeAutomapLevelObserved(
         ArmPendingNavigationRefresh(sessionGeneration, currentLevelId, 0U);
         return;
     }
+    // Only genuinely dynamic progression contracts receive periodic refreshes.
+    // Static outdoor boundaries use the bounded level-change retry budget;
+    // rescanning their complete collision topology indefinitely can stall D2R.
     if (!HasDynamicMainProgressionTargetFor(currentLevelId)) return;
     const auto counters = GetNavigationResolverCounters();
     if (counters.lastLevelId == currentLevelId
@@ -635,6 +661,505 @@ void ShutdownNavigationRefreshTimer() noexcept {
     CloseThreadpoolTimer(timer);
 }
 
+constexpr auto IsKnownRevealAct(std::int32_t act) noexcept -> bool {
+    return act >= 0
+        && act < static_cast<std::int32_t>(RevealPersistenceActCount);
+}
+
+void ResetAutomaticLevelRevealCounters() noexcept {
+    AutomaticLevelRevealRequests.store(0U, std::memory_order_relaxed);
+    AutomaticLevelRevealAccepted.store(0U, std::memory_order_relaxed);
+    AutomaticLevelRevealRejected.store(0U, std::memory_order_relaxed);
+    AutomaticLevelRevealDuplicateRefusals.store(
+        0U,
+        std::memory_order_relaxed);
+}
+
+void ScheduleRevealReplayRetryTimer(
+        std::uint32_t delayMilliseconds) noexcept {
+    std::scoped_lock lock(RevealReplayMutex);
+    if (RevealReplayTimer == nullptr) return;
+    const auto boundedDelay = std::max(delayMilliseconds, 1U);
+    ULARGE_INTEGER dueTime{};
+    dueTime.QuadPart = static_cast<ULONGLONG>(
+        -static_cast<LONGLONG>(boundedDelay) * 10'000LL);
+    FILETIME due{
+        .dwLowDateTime = dueTime.LowPart,
+        .dwHighDateTime = dueTime.HighPart,
+    };
+    SetThreadpoolTimer(RevealReplayTimer, &due, 0U, 0U);
+}
+
+void CancelPendingRevealReplay() noexcept {
+    std::scoped_lock lock(RevealReplayMutex);
+    PendingRevealReplay.targetLevelId = UnknownRevealLevelId;
+    PendingRevealReplay.retriesRemaining = 0U;
+    PendingRevealReplay.reconcilePending = false;
+    PendingRevealReplay.callbackQueued = false;
+    if (RevealReplayTimer != nullptr) {
+        SetThreadpoolTimer(RevealReplayTimer, nullptr, 0U, 0U);
+    }
+}
+
+void ResetRevealReplayGameplaySession(
+        std::uint64_t sessionGeneration) noexcept {
+    std::scoped_lock lock(RevealReplayMutex);
+    RevealPersistence.BeginSession(sessionGeneration);
+    PendingRevealReplay = {};
+    PendingRevealReplay.sessionGeneration = sessionGeneration;
+    if (sessionGeneration != 0U) {
+        ResetAutomaticLevelRevealCounters();
+    }
+    if (RevealReplayTimer != nullptr) {
+        SetThreadpoolTimer(RevealReplayTimer, nullptr, 0U, 0U);
+    }
+}
+
+void ResetRevealReplayProcessState() noexcept {
+    std::scoped_lock lock(RevealReplayMutex);
+    RevealPersistence.ResetProcess();
+    PendingRevealReplay = {};
+    ResetAutomaticLevelRevealCounters();
+    if (RevealReplayTimer != nullptr) {
+        SetThreadpoolTimer(RevealReplayTimer, nullptr, 0U, 0U);
+    }
+}
+
+auto ObserveValidatedRevealDifficulty(
+        std::int32_t difficulty) noexcept -> bool {
+    RevealDifficultyObservation observation{};
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        observation = RevealPersistence.ObserveDifficulty(difficulty);
+        if (observation == RevealDifficultyObservation::Changed) {
+            PendingRevealReplay.targetLevelId = UnknownRevealLevelId;
+            PendingRevealReplay.retriesRemaining = 0U;
+            PendingRevealReplay.reconcilePending = false;
+            PendingRevealReplay.callbackQueued = false;
+            if (RevealReplayTimer != nullptr) {
+                SetThreadpoolTimer(RevealReplayTimer, nullptr, 0U, 0U);
+            }
+        }
+    }
+    if (observation == RevealDifficultyObservation::Invalid) return false;
+    if (observation == RevealDifficultyObservation::Changed) {
+        (void)DisableRevealAll();
+        if (Context != nullptr) {
+            Context->LogInfo(
+                "MapSense: game difficulty changed; remembered Reveal Level, Reveal Act, and Reveal All intents were cleared.");
+        }
+    }
+    return true;
+}
+
+auto HasRememberedRevealIntent() noexcept -> bool {
+    std::scoped_lock lock(RevealReplayMutex);
+    return RevealPersistence.HasAnyIntent();
+}
+
+auto ArmRevealReplayRequest(
+        std::uint64_t sessionGeneration,
+        std::int32_t targetLevelId,
+        std::uint32_t delayMilliseconds) noexcept -> bool {
+    if (!Operational.load(std::memory_order_acquire)
+        || sessionGeneration == 0U) {
+        return false;
+    }
+
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        if (PendingRevealReplay.sessionGeneration != sessionGeneration) {
+            return false;
+        }
+        if (!PendingRevealReplay.playerReady
+            || !RevealPersistence.HasAnyIntent()) {
+            return true;
+        }
+        if (PendingRevealReplay.reconcilePending) {
+            // ActChanged may arrive without a level id. It must not consume a
+            // second budget or replace a more precise LevelChanged target.
+            if (targetLevelId <= 0
+                || PendingRevealReplay.targetLevelId == targetLevelId) {
+                return true;
+            }
+        }
+        PendingRevealReplay.targetLevelId = targetLevelId;
+        PendingRevealReplay.retriesRemaining = RevealReplayRetryLimit;
+        PendingRevealReplay.reconcilePending = true;
+    }
+    ScheduleRevealReplayRetryTimer(delayMilliseconds);
+    return true;
+}
+
+auto RequestRememberedRevealForCurrentSession(
+        std::int32_t targetLevelId = UnknownRevealLevelId) noexcept -> bool {
+    if (!HasRememberedRevealIntent()) return true;
+    if (!GameplayReady.load(std::memory_order_acquire)) {
+        // The process-lifetime ids remain remembered. LocalPlayerReady will
+        // reconcile them against the new game's generated client DRLG.
+        return true;
+    }
+    const auto sessionGeneration = CurrentSessionGeneration.load(
+        std::memory_order_acquire);
+    if (sessionGeneration == 0U) return true;
+    return ArmRevealReplayRequest(sessionGeneration, targetLevelId, 0U);
+}
+
+void SetRevealReplayPlayerReady(
+        std::uint64_t sessionGeneration) noexcept {
+    std::scoped_lock lock(RevealReplayMutex);
+    if (PendingRevealReplay.sessionGeneration == sessionGeneration) {
+        PendingRevealReplay.playerReady = true;
+    }
+}
+
+auto ObserveRevealReplayAct(
+        std::uint64_t sessionGeneration,
+        std::int32_t,
+        std::int32_t) noexcept -> bool {
+    bool shouldRequest{};
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        if (PendingRevealReplay.sessionGeneration != sessionGeneration) {
+            return false;
+        }
+        shouldRequest = PendingRevealReplay.playerReady
+            && RevealPersistence.HasAnyIntent();
+    }
+    if (!shouldRequest) return true;
+    return ArmRevealReplayRequest(
+        sessionGeneration,
+        UnknownRevealLevelId,
+        0U);
+}
+
+void CompletePendingRevealReplay(
+        std::uint64_t sessionGeneration) noexcept {
+    std::scoped_lock lock(RevealReplayMutex);
+    if (PendingRevealReplay.sessionGeneration != sessionGeneration) return;
+    PendingRevealReplay.targetLevelId = UnknownRevealLevelId;
+    PendingRevealReplay.retriesRemaining = 0U;
+    PendingRevealReplay.reconcilePending = false;
+}
+
+auto RetryPendingRevealReplay(
+        std::uint64_t sessionGeneration) noexcept -> bool {
+    bool retry{};
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        if (PendingRevealReplay.sessionGeneration != sessionGeneration
+            || !PendingRevealReplay.reconcilePending) {
+            return true;
+        }
+        if (PendingRevealReplay.retriesRemaining > 1U) {
+            --PendingRevealReplay.retriesRemaining;
+            retry = true;
+        } else {
+            PendingRevealReplay.targetLevelId = UnknownRevealLevelId;
+            PendingRevealReplay.retriesRemaining = 0U;
+            PendingRevealReplay.reconcilePending = false;
+        }
+    }
+    if (retry) {
+        ScheduleRevealReplayRetryTimer(
+            RevealReplayRetryDelayMilliseconds);
+        return true;
+    }
+    return false;
+}
+
+void __cdecl RetryRememberedRevealOnUi(
+        const D2RL::PluginContext*,
+        void*) noexcept {
+    RevealReplayRequestState attempt{};
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        PendingRevealReplay.callbackQueued = false;
+        if (!PendingRevealReplay.reconcilePending) return;
+        attempt = PendingRevealReplay;
+    }
+
+    if (!Operational.load(std::memory_order_acquire)
+        || !GameplayReady.load(std::memory_order_acquire)
+        || attempt.sessionGeneration == 0U
+        || attempt.sessionGeneration
+            != CurrentSessionGeneration.load(std::memory_order_acquire)) {
+        CancelPendingRevealReplay();
+        return;
+    }
+
+    ClientLevelView current{};
+    const bool clientReady = ResolveCurrentClientLevelView(current);
+    if (!clientReady
+        || !ObserveValidatedRevealDifficulty(current.difficulty)) {
+        if (!RetryPendingRevealReplay(attempt.sessionGeneration)
+            && Context != nullptr) {
+            Context->LogWarn(
+                "MapSense: remembered reveal intent expired before the new client map became ready.");
+        }
+        return;
+    }
+
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        if (PendingRevealReplay.sessionGeneration
+                != attempt.sessionGeneration
+            || !PendingRevealReplay.reconcilePending
+            || PendingRevealReplay.targetLevelId
+                != attempt.targetLevelId) {
+            return;
+        }
+    }
+
+    // A LevelChanged target is authoritative. If D2R still exposes the prior
+    // client DRLG, retain the complete new-level budget and retry instead of
+    // consuming or crediting the wrong generated level.
+    if (attempt.targetLevelId > 0
+        && current.levelId != attempt.targetLevelId) {
+        if (!RetryPendingRevealReplay(attempt.sessionGeneration)
+            && Context != nullptr) {
+            Context->LogWarn(
+                "MapSense: remembered reveal target did not become the active client level before its bounded retries expired.");
+        }
+        return;
+    }
+
+    bool hasIntent{};
+    bool shouldReveal{};
+    const auto currentAct = RevealActForLevelId(current.levelId);
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        if (PendingRevealReplay.sessionGeneration
+                != attempt.sessionGeneration
+            || !PendingRevealReplay.reconcilePending) {
+            return;
+        }
+        if (PendingRevealReplay.targetLevelId <= 0) {
+            PendingRevealReplay.targetLevelId = current.levelId;
+        }
+        hasIntent = RevealPersistence.HasReplayIntentForLevel(
+            current.difficulty,
+            currentAct,
+            current.levelId);
+        shouldReveal = RevealPersistence.ShouldReplayCurrentLevel(
+            current.difficulty,
+            currentAct,
+            current.levelId);
+    }
+
+    if (!hasIntent) {
+        CompletePendingRevealReplay(attempt.sessionGeneration);
+        return;
+    }
+    if (!shouldReveal) {
+        AutomaticLevelRevealDuplicateRefusals.fetch_add(
+            1U,
+            std::memory_order_relaxed);
+        CompletePendingRevealReplay(attempt.sessionGeneration);
+        return;
+    }
+
+    AutomaticLevelRevealRequests.fetch_add(1U, std::memory_order_relaxed);
+    const auto outcome = RevealCurrentZone();
+    const bool accepted = outcome == RevealOutcome::Complete;
+    (accepted
+            ? AutomaticLevelRevealAccepted
+            : AutomaticLevelRevealRejected)
+        .fetch_add(1U, std::memory_order_relaxed);
+    if (accepted) {
+        {
+            std::scoped_lock lock(RevealReplayMutex);
+            if (PendingRevealReplay.sessionGeneration
+                    != attempt.sessionGeneration
+                || !PendingRevealReplay.reconcilePending) {
+                return;
+            }
+            (void)RevealPersistence.MarkLevelAccepted(
+                current.difficulty,
+                current.levelId);
+            PendingRevealReplay.targetLevelId = UnknownRevealLevelId;
+            PendingRevealReplay.retriesRemaining = 0U;
+            PendingRevealReplay.reconcilePending = false;
+        }
+        if (Context != nullptr && Settings.diagnostics) {
+            char message[224]{};
+            std::snprintf(
+                message,
+                sizeof(message),
+                "MapSense native reveal replay: accepted current level %d for session %llu.",
+                current.levelId,
+                static_cast<unsigned long long>(attempt.sessionGeneration));
+            Context->LogInfo(message);
+        }
+        return;
+    }
+
+    if (!RetryPendingRevealReplay(attempt.sessionGeneration)
+        && Context != nullptr) {
+        Context->LogWarn(
+            "MapSense: remembered reveal intent remained unavailable after its bounded native current-level retries; it stays remembered for the next matching level event.");
+    }
+}
+
+auto SchedulePendingRevealReplay() noexcept -> bool {
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        if (!PendingRevealReplay.reconcilePending
+            || PendingRevealReplay.callbackQueued) {
+            return true;
+        }
+        PendingRevealReplay.callbackQueued = true;
+    }
+
+    if (!Operational.load(std::memory_order_acquire)
+        || Context == nullptr || ThreadService == nullptr
+        || ThreadService->runOnUiThread == nullptr
+        || ThreadService->runOnUiThread(
+            Context,
+            RetryRememberedRevealOnUi,
+            nullptr) != D2RL::Threads::Result::Success) {
+        std::scoped_lock lock(RevealReplayMutex);
+        PendingRevealReplay.callbackQueued = false;
+        return false;
+    }
+    return true;
+}
+
+void CALLBACK RevealReplayTimerCallback(
+        PTP_CALLBACK_INSTANCE,
+        void*,
+        PTP_TIMER) noexcept {
+    if (!Operational.load(std::memory_order_acquire)) return;
+    std::uint64_t sessionGeneration{};
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        sessionGeneration = PendingRevealReplay.sessionGeneration;
+    }
+    if (!SchedulePendingRevealReplay()
+        && !RetryPendingRevealReplay(sessionGeneration)
+        && Context != nullptr) {
+        Context->LogWarn(
+            "MapSense: remembered reveal intent could not be queued on D2R's UI thread before its retry budget expired.");
+    } else if (Context != nullptr && Settings.diagnostics) {
+        // Queue failures are intentionally counted against the same bounded
+        // budget; successful scheduling produces no per-frame log traffic.
+        std::scoped_lock lock(RevealReplayMutex);
+        if (PendingRevealReplay.reconcilePending
+            && !PendingRevealReplay.callbackQueued) {
+            Context->LogWarn(
+                "MapSense: deferred reveal reconciliation will retry on D2R's UI thread.");
+        }
+    }
+}
+
+[[nodiscard]] auto InitializeRevealReplayTimer() noexcept -> bool {
+    std::scoped_lock lock(RevealReplayMutex);
+    if (RevealReplayTimer != nullptr) return true;
+    RevealReplayTimer = CreateThreadpoolTimer(
+        RevealReplayTimerCallback,
+        nullptr,
+        nullptr);
+    return RevealReplayTimer != nullptr;
+}
+
+void ShutdownRevealReplayTimer() noexcept {
+    PTP_TIMER timer{};
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        timer = RevealReplayTimer;
+        RevealReplayTimer = nullptr;
+        RevealPersistence.ResetProcess();
+        PendingRevealReplay = {};
+    }
+    if (timer == nullptr) return;
+    SetThreadpoolTimer(timer, nullptr, 0U, 0U);
+    WaitForThreadpoolTimerCallbacks(timer, TRUE);
+    CloseThreadpoolTimer(timer);
+}
+
+auto ExecuteTrackedRevealAction(Action action) noexcept -> RevealOutcome {
+    if (action == Action::DisableRevealAll) {
+        const auto outcome = ExecuteAction(action);
+        {
+            std::scoped_lock lock(RevealReplayMutex);
+            RevealPersistence.ClearRevealAll();
+        }
+        CancelPendingRevealReplay();
+        (void)RequestRememberedRevealForCurrentSession();
+        return outcome;
+    }
+
+    ClientLevelView current{};
+    if (!ResolveCurrentClientLevelView(current)
+        || !ObserveValidatedRevealDifficulty(current.difficulty)) {
+        return RevealOutcome::Unavailable;
+    }
+
+    const auto currentAct = RevealActForLevelId(current.levelId);
+    const auto outcome = ExecuteAction(action);
+    bool currentLevelRevealed = outcome == RevealOutcome::Complete;
+    if (action == Action::ToggleRevealAll
+        && outcome == RevealOutcome::Armed) {
+        currentLevelRevealed =
+            RevealCurrentZone() == RevealOutcome::Complete;
+    }
+    bool remembered{true};
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        if (action == Action::RevealZone
+            && outcome == RevealOutcome::Complete) {
+            remembered = RevealPersistence.RememberLevel(
+                current.difficulty,
+                current.levelId);
+            (void)RevealPersistence.MarkLevelAccepted(
+                current.difficulty,
+                current.levelId);
+        } else if (action == Action::RevealAct
+            && outcome == RevealOutcome::Complete) {
+            if (IsKnownRevealAct(currentAct)) {
+                remembered = RevealPersistence.RememberAct(
+                    current.difficulty,
+                    currentAct);
+            } else {
+                // The action succeeded, but an unknown Levels.txt id cannot be
+                // persisted safely as an Act intent.
+                remembered = false;
+            }
+            (void)RevealPersistence.MarkLevelAccepted(
+                current.difficulty,
+                current.levelId);
+        } else if (action == Action::ToggleRevealAll
+            && (outcome == RevealOutcome::Armed
+                || outcome == RevealOutcome::Disarmed)) {
+            remembered = RevealPersistence.SetRevealAll(
+                current.difficulty,
+                outcome == RevealOutcome::Armed);
+            if (outcome == RevealOutcome::Armed
+                && currentLevelRevealed) {
+                (void)RevealPersistence.MarkLevelAccepted(
+                    current.difficulty,
+                    current.levelId);
+            }
+        }
+    }
+    if (!remembered && Context != nullptr) {
+        Context->LogWarn(
+            "MapSense: a successful reveal could not be added to the bounded process-lifetime intent set.");
+    }
+
+    if (action == Action::ToggleRevealAll) {
+        CancelPendingRevealReplay();
+        if ((!currentLevelRevealed
+                || outcome == RevealOutcome::Disarmed)
+            && !RequestRememberedRevealForCurrentSession()
+            && Context != nullptr) {
+            Context->LogWarn(
+                "MapSense: remembered reveal intent could not be scheduled for the current session.");
+        }
+    }
+    return outcome;
+}
+
 void __cdecl OnGameplayEvent(
         const D2RL::PluginContext*,
         const D2RL::Lifecycle::GameplayEvent* event,
@@ -657,8 +1182,11 @@ void __cdecl OnGameplayEvent(
         MenuExpanded.store(false, std::memory_order_release);
         SetD3D12ImGuiMenuOpen(false);
         SessionEpoch.fetch_add(1, std::memory_order_acq_rel);
+        ResetRevealReplayGameplaySession(event->sessionGeneration);
         // InitLevel can run before GameJoined. Preserve the client DRLG it
-        // captured while resetting reveal progress for the new session.
+        // captured while resetting per-game diagnostics. The process-lifetime
+        // Reveal Level, Reveal Act, and Reveal All intents intentionally
+        // survive Save & Exit within the same validated difficulty.
         BeginRevealSession();
     } else if (event->kind
         == D2RL::Lifecycle::GameplayEventKind::LocalPlayerReady) {
@@ -670,6 +1198,12 @@ void __cdecl OnGameplayEvent(
             Settings.menu.startExpanded || Settings.overlay.startMenuOpen,
             std::memory_order_release);
         SetD3D12ImGuiMenuOpen(true);
+        SetRevealReplayPlayerReady(event->sessionGeneration);
+        if (!RequestRememberedRevealForCurrentSession()
+            && Context != nullptr) {
+            Context->LogWarn(
+                "MapSense: remembered reveals for the new game could not be scheduled.");
+        }
         if (IsNavigationResolverActive()
             && !RequestNavigationRefresh(
                 event->sessionGeneration,
@@ -690,27 +1224,29 @@ void __cdecl OnGameplayEvent(
         MenuExpanded.store(false, std::memory_order_release);
         SetD3D12ImGuiMenuOpen(false);
         SessionEpoch.fetch_add(1, std::memory_order_acq_rel);
+        ResetRevealReplayGameplaySession(0U);
         ResetRevealSession();
     } else if (event->kind == D2RL::Lifecycle::GameplayEventKind::ActChanged) {
         ResetNativeAutomapMarker();
-        const auto revealAllArmed = IsRevealAllArmed();
-        const auto revealQueued = revealAllArmed
-            && QueueAction(Action::RevealAct);
-        if (revealAllArmed && !revealQueued && Context != nullptr) {
+        const auto replayQueued = ObserveRevealReplayAct(
+            event->sessionGeneration,
+            event->previousValue,
+            event->currentValue);
+        if (!replayQueued && Context != nullptr) {
             Context->LogWarn(
-                "MapSense: the newly loaded act reveal request could not be queued.");
+                "MapSense: remembered reveals for the newly loaded act could not be scheduled.");
         }
         if (Settings.diagnostics && Context != nullptr) {
             char message[256]{};
             std::snprintf(
                 message,
                 sizeof(message),
-                "MapSense Reveal All diagnostic: act-change session=%llu previous=%d current=%d armed=%d queued=%d.",
+                "MapSense reveal persistence diagnostic: act-change session=%llu previous=%d current=%d armed=%d queued=%d.",
                 static_cast<unsigned long long>(event->sessionGeneration),
                 static_cast<std::int32_t>(event->previousValue),
                 static_cast<std::int32_t>(event->currentValue),
-                revealAllArmed ? 1 : 0,
-                revealQueued ? 1 : 0);
+                IsRevealAllArmed() ? 1 : 0,
+                replayQueued ? 1 : 0);
             Context->LogInfo(message);
         }
     } else if (event->kind
@@ -726,6 +1262,11 @@ void __cdecl OnGameplayEvent(
             event->sessionGeneration,
             event->currentValue);
         ResetNativeAutomapMarker();
+        if (!RequestRememberedRevealForCurrentSession(event->currentValue)
+            && Context != nullptr) {
+            Context->LogWarn(
+                "MapSense: remembered reveals for the changed level could not be scheduled.");
+        }
         if (IsNavigationResolverActive()
             && !RequestNavigationRefresh(
                 event->sessionGeneration,
@@ -746,7 +1287,7 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
     std::snprintf(
         message,
         sizeof(message),
-            "RuffnecKk MapSense 0.12.0 candidate: active=%s; gameplay=%s; reveal-all=%s; markers=%s; immunity-scan=%s; renderer-hooks=%s; renderer=%s; input=%s; menu=%s; presents=%llu; rendered=%llu; level traversals=%llu; rooms=%llu; act requests=%llu; rejected requests=%llu; failures=%llu; traversal limits=%llu; automap-pulses=%llu; table-scans=%llu; buckets=%llu; table-limits=%llu; automap units=%llu; monsters=%llu; enemy-rejects=dead/unit/class/alignment:%llu/%llu/%llu/%llu; filter-faults=%llu; hostiles=%llu; hostile-bands=0-80/81-140/141-220/>220:%llu/%llu/%llu/%llu; radius-subtiles=%d; within-radius=%llu; radius-rejects=%llu; projection-rejects=%llu; clip-rejects=%llu; max-hostile-subtiles=%u; max-within-subtiles=%u; max-accepted-subtiles=%u; max-published-subtiles=%u; accepted=%llu; inserted=%llu; refreshed=%llu; fresh=%llu; expired=%llu; marker waits=%llu; storage faults=%llu; marker faults=%llu.",
+            "RuffnecKk MapSense 0.12.3 candidate: active=%s; gameplay=%s; reveal-all=%s; markers=%s; immunity-scan=%s; renderer-hooks=%s; renderer=%s; input=%s; menu=%s; presents=%llu; rendered=%llu; level traversals=%llu; rooms=%llu; failures=%llu; traversal limits=%llu; automap-pulses=%llu; table-scans=%llu; buckets=%llu; table-limits=%llu; automap units=%llu; monsters=%llu; enemy-rejects=dead/unit/class/alignment:%llu/%llu/%llu/%llu; filter-faults=%llu; hostiles=%llu; hostile-bands=0-80/81-140/141-220/>220:%llu/%llu/%llu/%llu; projection-rejects=%llu; clip-rejects=%llu; max-hostile-subtiles=%u; max-accepted-subtiles=%u; max-published-subtiles=%u; accepted=%llu; inserted=%llu; refreshed=%llu; fresh=%llu; expired=%llu; marker waits=%llu; storage faults=%llu; marker faults=%llu.",
         IsRevealEngineActive() ? "true" : "false",
         GameplayReady.load(std::memory_order_acquire) ? "ready" : "inactive",
         IsRevealAllArmed() ? "armed" : "off",
@@ -768,8 +1309,6 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
         static_cast<unsigned long long>(renderer.renderedFrames),
         static_cast<unsigned long long>(counters.levels),
         static_cast<unsigned long long>(counters.rooms),
-        static_cast<unsigned long long>(counters.actRequests),
-        static_cast<unsigned long long>(counters.rejectedActRequests),
         static_cast<unsigned long long>(counters.failures),
         static_cast<unsigned long long>(counters.traversalLimits),
         static_cast<unsigned long long>(marker.automapPulses),
@@ -788,13 +1327,9 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
         static_cast<unsigned long long>(marker.hostilesFrom81Through140),
         static_cast<unsigned long long>(marker.hostilesFrom141Through220),
         static_cast<unsigned long long>(marker.hostilesBeyond220),
-        marker.configuredRadius,
-        static_cast<unsigned long long>(marker.withinRadius),
-        static_cast<unsigned long long>(marker.radiusRejected),
         static_cast<unsigned long long>(marker.projectionRejected),
         static_cast<unsigned long long>(marker.nativeClipRejected),
         marker.maximumHostileDistance,
-        marker.maximumWithinRadiusDistance,
         marker.maximumAcceptedDistance,
         marker.maximumPublishedDistance,
         static_cast<unsigned long long>(marker.candidatesAccepted),
@@ -806,6 +1341,69 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
         static_cast<unsigned long long>(marker.storageFailures),
         static_cast<unsigned long long>(marker.accessFaults));
     context->WriteConsoleMessage(message);
+    RevealReplayRequestState pendingReveal{};
+    std::int32_t revealDifficulty{UnknownRevealDifficulty};
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        pendingReveal = PendingRevealReplay;
+        revealDifficulty = RevealPersistence.Difficulty();
+    }
+    char revealMessage[512]{};
+    std::snprintf(
+        revealMessage,
+        sizeof(revealMessage),
+        "MapSense native reveal replay: automatic calls=%llu; accepted=%llu; rejected=%llu; duplicate refusals=%llu; session=%llu; difficulty=%d; target-level=%d; pending=%s; retries=%u.",
+        static_cast<unsigned long long>(
+            AutomaticLevelRevealRequests.load(std::memory_order_relaxed)),
+        static_cast<unsigned long long>(
+            AutomaticLevelRevealAccepted.load(std::memory_order_relaxed)),
+        static_cast<unsigned long long>(
+            AutomaticLevelRevealRejected.load(std::memory_order_relaxed)),
+        static_cast<unsigned long long>(
+            AutomaticLevelRevealDuplicateRefusals.load(
+                std::memory_order_relaxed)),
+        static_cast<unsigned long long>(pendingReveal.sessionGeneration),
+        revealDifficulty,
+        pendingReveal.targetLevelId,
+        pendingReveal.reconcilePending ? "yes" : "no",
+        pendingReveal.retriesRemaining);
+    context->WriteConsoleMessage(revealMessage);
+    const auto averageDiscoveryMicroseconds =
+        marker.discoveryTimingSamples != 0U
+        ? marker.totalDiscoveryMicroseconds / marker.discoveryTimingSamples
+        : 0U;
+    const auto averageRefreshMicroseconds =
+        marker.refreshTimingSamples != 0U
+        ? marker.totalRefreshMicroseconds / marker.refreshTimingSamples
+        : 0U;
+    char markerMessage[1024]{};
+    std::snprintf(
+        markerMessage,
+        sizeof(markerMessage),
+        "MapSense monster pipeline: tracked=%llu; discovery scans=%llu timing avg/max=%llu/%llu us (%llu samples); position refreshes=%llu timing avg/max=%llu/%llu us (%llu samples); id lookups resolved/missing=%llu/%llu; accepted-bands=0-80/81-140/141-220/>220:%llu/%llu/%llu/%llu; clip-rejected-bands=0-80/81-140/141-220/>220:%llu/%llu/%llu/%llu.",
+        static_cast<unsigned long long>(marker.trackedCurrent),
+        static_cast<unsigned long long>(marker.monsterTableScans),
+        static_cast<unsigned long long>(averageDiscoveryMicroseconds),
+        static_cast<unsigned long long>(
+            marker.maximumDiscoveryMicroseconds),
+        static_cast<unsigned long long>(marker.discoveryTimingSamples),
+        static_cast<unsigned long long>(marker.monsterPositionRefreshes),
+        static_cast<unsigned long long>(averageRefreshMicroseconds),
+        static_cast<unsigned long long>(marker.maximumRefreshMicroseconds),
+        static_cast<unsigned long long>(marker.refreshTimingSamples),
+        static_cast<unsigned long long>(marker.trackedIdsResolved),
+        static_cast<unsigned long long>(marker.trackedIdsMissing),
+        static_cast<unsigned long long>(marker.acceptedThrough80),
+        static_cast<unsigned long long>(marker.acceptedFrom81Through140),
+        static_cast<unsigned long long>(marker.acceptedFrom141Through220),
+        static_cast<unsigned long long>(marker.acceptedBeyond220),
+        static_cast<unsigned long long>(marker.clipRejectedThrough80),
+        static_cast<unsigned long long>(
+            marker.clipRejectedFrom81Through140),
+        static_cast<unsigned long long>(
+            marker.clipRejectedFrom141Through220),
+        static_cast<unsigned long long>(marker.clipRejectedBeyond220));
+    context->WriteConsoleMessage(markerMessage);
     const auto navigation = GetNavigationResolverCounters();
     const auto navigationEngine = GetNavigationEngineStatus();
     NavigationRefreshState pendingNavigation{};
@@ -1100,7 +1698,6 @@ auto DrawMapSensePanel(bool* open, void*) noexcept
         expanded,
         OnImGuiSettingsAction);
     SetNativeAutomapMarkerEnabled(Settings.overlay.enabled);
-    SetNativeAutomapMarkerRadius(Settings.monsters.detectionRadius);
     SetNativeAutomapImmunityCollectionEnabled(
         Settings.overlay.enabled && Settings.immunities.enabled);
     MenuExpanded.store(expanded, std::memory_order_release);
@@ -1438,10 +2035,6 @@ void DrawMapSenseOwnedOverlay(void*) noexcept {
     if (io.DisplaySize.x <= 0.0F || io.DisplaySize.y <= 0.0F) {
         return;
     }
-    const auto thickness = std::clamp(
-        Settings.monsters.markerThickness * Settings.overlay.scale,
-        MinimumMonsterMarkerThickness,
-        MaximumMonsterMarkerThickness);
     const auto opacity = std::clamp(
         Settings.overlay.opacity,
         0.10F,
@@ -1480,14 +2073,23 @@ void DrawMapSenseOwnedOverlay(void*) noexcept {
             MaximumMonsterMarkerSize);
         const auto color = ToImGuiColor(style.color, opacity);
         switch (style.shape) {
-            case MonsterMarkerShape::X:
+            case MonsterMarkerShape::X: {
+                const auto thickness = std::clamp(
+                    style.thickness * Settings.overlay.scale,
+                    MinimumMonsterMarkerThickness,
+                    MaximumMonsterMarkerThickness);
                 DrawClosedMarkerOutline(
                     drawList,
                     BuildCrossOutline(Vec2{x, y}, size * 0.5F),
                     color,
                     thickness);
                 break;
+            }
             case MonsterMarkerShape::PlayerCross: {
+                const auto thickness = std::clamp(
+                    style.thickness * Settings.overlay.scale,
+                    MinimumMonsterMarkerThickness,
+                    MaximumMonsterMarkerThickness);
                 const auto outline = BuildPlayerCrossOutline(Vec2{x, y}, size);
                 const auto edgeThickness = thickness
                     + std::max(1.0F, Settings.overlay.scale);
@@ -1506,17 +2108,20 @@ void DrawMapSenseOwnedOverlay(void*) noexcept {
                 break;
             }
             case MonsterMarkerShape::Dot: {
+                constexpr float OutlineThickness = 1.0F;
                 const ImVec2 center{x, y};
                 const auto radius = size * 0.5F;
-                drawList->AddCircleFilled(center, radius, color);
-                drawList->AddCircle(
+                const auto outlineColor = ToImGuiColor(
+                    RgbaColor{0.02F, 0.015F, 0.01F, 0.72F},
+                    opacity);
+                drawList->AddCircleFilled(
+                    center,
+                    radius + OutlineThickness,
+                    outlineColor);
+                drawList->AddCircleFilled(
                     center,
                     radius,
-                    ToImGuiColor(
-                        RgbaColor{0.02F, 0.015F, 0.01F, 0.72F},
-                        opacity),
-                    0,
-                    std::max(1.0F, thickness * 0.65F));
+                    color);
                 break;
             }
         }
@@ -1698,7 +2303,7 @@ constexpr D2RL::PluginInfo PluginInfo{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "ruffneckk-mapsense",
     .name = "RuffnecKk MapSense",
-    .version = "0.12.0",
+    .version = "0.12.3",
     .author = "RuffnecKk",
     .description = "Reveals maps, marks monsters, and draws direct navigation lines.",
     .flags = D2RL::PluginFlags::Client | D2RL::PluginFlags::NativeHooks,
@@ -1745,11 +2350,21 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         HostUiTaskScheduled = false;
     }
     CancelPendingNavigationRefresh(true);
+    ResetRevealReplayProcessState();
     if (!LoadConfig(Settings)) return false;
     if (!Settings.enabled) {
         context->LogInfo(
-            "RuffnecKk MapSense 0.12.0 candidate is disabled; no hook or Controls action was installed.");
+            "RuffnecKk MapSense 0.12.3 candidate is disabled; no hook or Controls action was installed.");
         return true;
+    }
+
+    try {
+        MarkerSnapshots.clear();
+        MarkerSnapshots.reserve(MaximumRecentNativeAutomapMarkers);
+    } catch (...) {
+        context->LogError(
+            "MapSense: the bounded renderer marker snapshot reserve could not be allocated.");
+        return false;
     }
 
     const auto* const buildName = D2RL::GetBuildName(context);
@@ -1760,6 +2375,8 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         "MapSense: D2R build-name '%s' is diagnostic only; native compatibility is decided by the complete fail-closed fingerprint.",
         buildName != nullptr ? buildName : "unavailable");
     context->LogInfo(buildDiagnostic);
+
+    if (!ValidateSFillLocationDiagnosticSuppression(context)) return false;
 
     if (context->QueryService(
             D2RL::ServiceId::Input,
@@ -1789,6 +2406,12 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
             "MapSense: the bounded navigation retry timer could not be created.");
         return false;
     }
+    if (!InitializeRevealReplayTimer()) {
+        context->LogError(
+            "MapSense: the bounded reveal persistence retry timer could not be created.");
+        ShutdownNavigationRefreshTimer();
+        return false;
+    }
     if (context->QueryService(
             D2RL::ServiceId::Lifecycle,
             D2RL::LifecycleServiceV1Version,
@@ -1799,17 +2422,20 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         || LifecycleService->unregisterGameplayEventListener == nullptr) {
         context->LogError(
             "MapSense: D2RLoader LifecycleService v1 is unavailable.");
+        ShutdownRevealReplayTimer();
         ShutdownNavigationRefreshTimer();
         return false;
     }
 
     if (!RegisterInputActions() || !RegisterLifecycleListeners()) {
         UnregisterServices();
+        ShutdownRevealReplayTimer();
         ShutdownNavigationRefreshTimer();
         return false;
     }
     if (!InitializeRevealEngine(context, Settings.diagnostics)) {
         UnregisterServices();
+        ShutdownRevealReplayTimer();
         ShutdownNavigationRefreshTimer();
         return false;
     }
@@ -1828,7 +2454,6 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         SetNativeAutomapLevelObservedCallback(
             OnNativeAutomapLevelObserved,
             nullptr);
-        SetNativeAutomapMarkerRadius(Settings.monsters.detectionRadius);
         SetNativeAutomapMarkerEnabled(Settings.overlay.enabled);
         SetNativeAutomapImmunityCollectionEnabled(
             Settings.overlay.enabled && Settings.immunities.enabled);
@@ -1844,6 +2469,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         == RendererHandoffResult::Failed) {
         HostApiAvailable.store(false, std::memory_order_release);
         SetNativeAutomapLevelObservedCallback(nullptr, nullptr);
+        ShutdownRevealReplayTimer();
         ShutdownNavigationRefreshTimer();
         ShutdownNativeAutomapMarker();
         ShutdownNavigationResolver();
@@ -1858,6 +2484,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     if (!StartImGuiHost()) {
         HostApiAvailable.store(false, std::memory_order_release);
         SetNativeAutomapLevelObservedCallback(nullptr, nullptr);
+        ShutdownRevealReplayTimer();
         ShutdownNavigationRefreshTimer();
         ShutdownNativeAutomapMarker();
         ShutdownNavigationResolver();
@@ -1867,6 +2494,20 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         UnregisterServices();
         context->LogError(
             "MapSense: the in-frame DirectX 12/ImGui host could not start or schedule a retry.");
+        return false;
+    }
+
+    if (!InstallSFillLocationDiagnosticSuppression(context)) {
+        HostApiAvailable.store(false, std::memory_order_release);
+        SetNativeAutomapLevelObservedCallback(nullptr, nullptr);
+        ShutdownRevealReplayTimer();
+        ShutdownNavigationRefreshTimer();
+        ShutdownNativeAutomapMarker();
+        ShutdownNavigationResolver();
+        ShutdownNavigationEngine();
+        StopImGuiHost();
+        ShutdownRevealEngine();
+        UnregisterServices();
         return false;
     }
 
@@ -1882,7 +2523,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
 
     Operational.store(true, std::memory_order_release);
     context->LogInfo(
-        "RuffnecKk MapSense 0.12.0 candidate loaded; complete client-unit monster scans, exact Canyon quest/farming navigation, true-world-subtile range, five-act Direct navigation, and immediate Tab/Escape invalidation are active.");
+        "RuffnecKk MapSense 0.12.3 candidate loaded; native current-level Reveal persistence, non-blocking rendering, bounded live monster refresh, and exact outdoor-boundary navigation are active.");
     return true;
 }
 
@@ -1897,6 +2538,8 @@ D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
     SessionEpoch.fetch_add(1, std::memory_order_acq_rel);
     SetNativeAutomapLevelObservedCallback(nullptr, nullptr);
     CancelPendingNavigationRefresh(true);
+    CancelPendingRevealReplay();
+    ShutdownRevealReplayTimer();
     ShutdownNavigationRefreshTimer();
     ShutdownNativeAutomapMarker();
     ShutdownNavigationResolver();
@@ -1915,6 +2558,7 @@ D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
     }
     ShutdownRevealEngine();
     UnregisterServices();
+    ShutdownSFillLocationDiagnosticSuppression();
     InputService = nullptr;
     LifecycleService = nullptr;
     ThreadService = nullptr;

@@ -25,6 +25,7 @@ namespace {
 constexpr std::uintptr_t GetLocalDataContextRva = 0x08B2D0;
 constexpr std::uintptr_t GetLocalPlayerRva = 0x09A480;
 constexpr std::uintptr_t GetDrlgRoomFromActiveRoomRva = 0x192B20;
+constexpr std::uintptr_t PlayerPathMaskWitnessRva = 0x2EF8F9;
 constexpr std::uintptr_t GetCollisionGridRva = 0x2EFB30;
 constexpr std::uintptr_t GetFirstUnitInRoomRva = 0x2EFD90;
 constexpr std::uintptr_t IsRoomInTownRva = 0x2F0750;
@@ -62,6 +63,7 @@ constexpr std::uintptr_t OutdoorVisibilityFlagWitnessRva = 0x36177B;
 constexpr std::uintptr_t OutdoorVisibilityGeometryWitnessRva = 0x3617B3;
 constexpr std::uintptr_t CollisionGridLayoutWitnessRva = 0x36697B;
 constexpr std::uintptr_t CollisionGridHeightWitnessRva = 0x3669E6;
+constexpr std::uintptr_t MonasteryAnchorWitnessRva = 0x3FFB60;
 
 constexpr std::size_t DrlgRoomRoomsNearOffset = 0x10;
 constexpr std::size_t DrlgRoomRoomsNearCountOffset = 0x18;
@@ -76,6 +78,8 @@ constexpr std::size_t DrlgRoomRoomTileOffset = 0x78;
 constexpr std::size_t DrlgRoomLevelOffset = 0x90;
 constexpr std::size_t DrlgRoomPresetUnitOffset = 0x98;
 constexpr std::size_t LevelFirstRoomOffset = 0x10;
+constexpr std::size_t LevelPositionXOffset = 0x24;
+constexpr std::size_t LevelPositionYOffset = 0x28;
 constexpr std::size_t LevelNextOffset = 0x1B8;
 constexpr std::size_t LevelDrlgOffset = 0x1C8;
 constexpr std::size_t LevelIdOffset = 0x1F8;
@@ -101,8 +105,13 @@ constexpr std::uint32_t PresetMonster = 1U;
 constexpr std::uint32_t PresetLevelExit = 5U;
 constexpr std::int32_t UnitObject = 2;
 constexpr std::uint8_t ObjectsTxtWaypointSubClass = 0x40U;
-constexpr std::int32_t SubtilesPerGameTile = 5;
+constexpr std::int32_t SubtilesPerGameTile =
+    Detail::NavigationSubtilesPerGameTile;
 constexpr std::int32_t MaximumSupportedLevelId = 65'535;
+constexpr std::int32_t TamoeHighlandLevelId = 7;
+constexpr std::int32_t MonasteryGateLevelId = 26;
+constexpr std::int32_t MonasteryAnchorOffsetTileX = 27;
+constexpr std::int32_t MonasteryAnchorOffsetTileY = 13;
 constexpr std::int32_t CanyonOfTheMagiLevelId = 46;
 constexpr std::int32_t FirstTalRashaTombLevelId = 66;
 constexpr std::int32_t LastTalRashaTombLevelId = 72;
@@ -115,9 +124,13 @@ constexpr std::size_t MaximumNearRoomsPerRoom = 64U;
 constexpr std::size_t MaximumWaypointPresetsPerRoom = 64U;
 constexpr std::size_t MaximumUnitsPerRoom = 16'384U;
 constexpr std::size_t MaximumLevelsPerDrlg = 512U;
-constexpr std::size_t MaximumOutdoorRoomComparisons = 1'000'000U;
+constexpr std::size_t MaximumOutdoorBoundarySpans = 16'384U;
 constexpr std::uint64_t MaximumCollisionCellsPerRoom = 16'777'216U;
 constexpr std::size_t VisibilitySlotCount = 8U;
+static_assert(
+    sizeof(Detail::NavigationBoundarySpan)
+        * MaximumOutdoorBoundarySpans * 2U
+    <= 2U * 1'024U * 1'024U);
 
 using GetLocalDataContextFn = std::int32_t(__fastcall*)() noexcept;
 using GetLocalPlayerFn = void*(__fastcall*)(std::int32_t) noexcept;
@@ -192,6 +205,10 @@ struct CandidateBatch final {
     std::uint64_t pendingTargetLevelCount{};
     std::uint64_t nearRoomLinkCount{};
     std::uint64_t outdoorOpeningCount{};
+    std::uint64_t outdoorSourceSpanCount{};
+    std::uint64_t outdoorTargetSpanCount{};
+    std::uint64_t outdoorMergedSpanCount{};
+    std::uint64_t ambiguousOutdoorTargetCount{};
     std::uint64_t pendingCollisionRoomCount{};
     std::uint64_t visibilitySlotCount{};
     std::uint64_t visibilityPairCount{};
@@ -244,6 +261,37 @@ std::atomic_int32_t LastWaypointY{};
 std::atomic_int32_t LastProgressionX{};
 std::atomic_int32_t LastProgressionY{};
 std::atomic_uint64_t LastDiagnosticFingerprint{UINT64_MAX};
+std::array<
+    Detail::NavigationBoundarySpan,
+    MaximumOutdoorBoundarySpans> OutdoorSourceSpanScratch{};
+std::array<
+    Detail::NavigationBoundarySpan,
+    MaximumOutdoorBoundarySpans> OutdoorTargetSpanScratch{};
+std::atomic_flag OutdoorSpanScratchInUse = ATOMIC_FLAG_INIT;
+
+class OutdoorSpanScratchLease final {
+public:
+    OutdoorSpanScratchLease() noexcept
+        : acquired_(!OutdoorSpanScratchInUse.test_and_set(
+            std::memory_order_acquire)) {}
+
+    ~OutdoorSpanScratchLease() {
+        if (acquired_) {
+            OutdoorSpanScratchInUse.clear(std::memory_order_release);
+        }
+    }
+
+    OutdoorSpanScratchLease(const OutdoorSpanScratchLease&) = delete;
+    auto operator=(const OutdoorSpanScratchLease&)
+        -> OutdoorSpanScratchLease& = delete;
+
+    [[nodiscard]] explicit operator bool() const noexcept {
+        return acquired_;
+    }
+
+private:
+    bool acquired_{};
+};
 
 template <typename Function>
 [[nodiscard]] auto At(std::uintptr_t rva) noexcept -> Function {
@@ -401,8 +449,14 @@ enum class CollisionGridReadResult : std::uint8_t {
         * SubtilesPerGameTile;
     const auto expectedHeight = static_cast<std::int64_t>(rectangle.height)
         * SubtilesPerGameTile;
+    const auto right = static_cast<std::int64_t>(originX)
+        + static_cast<std::int64_t>(width);
+    const auto bottom = static_cast<std::int64_t>(originY)
+        + static_cast<std::int64_t>(height);
     if (originX != expectedOriginX || originY != expectedOriginY
-        || width != expectedWidth || height != expectedHeight) {
+        || width != expectedWidth || height != expectedHeight
+        || right > (std::numeric_limits<std::int32_t>::max)()
+        || bottom > (std::numeric_limits<std::int32_t>::max)()) {
         return CollisionGridReadResult::Invalid;
     }
     output = {
@@ -417,49 +471,255 @@ enum class CollisionGridReadResult : std::uint8_t {
     return CollisionGridReadResult::Ready;
 }
 
-[[nodiscard]] auto ResolveOutdoorCollisionOpeningUnchecked(
-        std::uint8_t dataContext,
-        std::uint8_t* sourceRoom,
-        std::uint8_t* targetRoom,
+[[nodiscard]] auto DetermineOutdoorBoundarySide(
         const Detail::NavigationRoomRectangle& source,
         const Detail::NavigationRoomRectangle& target,
-        CandidateBatch& batch,
-        Detail::NavigationOutdoorOpening& output,
-        bool& found) noexcept -> bool {
-    found = false;
-    Detail::NavigationCollisionGridView sourceGrid{};
-    const auto sourceReadResult = ReadCollisionGridUnchecked(
-        dataContext,
-        sourceRoom,
-        source,
-        sourceGrid);
-    if (sourceReadResult == CollisionGridReadResult::Pending) {
-        ++batch.pendingCollisionRoomCount;
+        Detail::NavigationBoundarySide& side) noexcept -> bool {
+    const auto sourceLeft = static_cast<std::int64_t>(source.tileX);
+    const auto sourceTop = static_cast<std::int64_t>(source.tileY);
+    const auto sourceRight = sourceLeft + source.width;
+    const auto sourceBottom = sourceTop + source.height;
+    const auto targetLeft = static_cast<std::int64_t>(target.tileX);
+    const auto targetTop = static_cast<std::int64_t>(target.tileY);
+    const auto targetRight = targetLeft + target.width;
+    const auto targetBottom = targetTop + target.height;
+    const auto verticalStart = sourceTop > targetTop ? sourceTop : targetTop;
+    const auto verticalEnd = sourceBottom < targetBottom
+        ? sourceBottom : targetBottom;
+    const auto horizontalStart = sourceLeft > targetLeft
+        ? sourceLeft : targetLeft;
+    const auto horizontalEnd = sourceRight < targetRight
+        ? sourceRight : targetRight;
+    if (targetRight == sourceLeft && verticalEnd > verticalStart) {
+        side = Detail::NavigationBoundarySide::Left;
         return true;
     }
-    if (sourceReadResult == CollisionGridReadResult::Invalid) return false;
-    Detail::NavigationCollisionGridView targetGrid{};
-    const auto targetReadResult = ReadCollisionGridUnchecked(
-        dataContext,
-        targetRoom,
-        target,
-        targetGrid);
-    if (targetReadResult == CollisionGridReadResult::Pending) {
-        ++batch.pendingCollisionRoomCount;
+    if (targetLeft == sourceRight && verticalEnd > verticalStart) {
+        side = Detail::NavigationBoundarySide::Right;
         return true;
     }
-    if (targetReadResult == CollisionGridReadResult::Invalid) return false;
-    if (!Detail::FindOutdoorCollisionOpening(
-            source,
-            target,
-            sourceGrid,
-            targetGrid,
-            output)) {
+    if (targetBottom == sourceTop && horizontalEnd > horizontalStart) {
+        side = Detail::NavigationBoundarySide::Top;
         return true;
     }
-    found = true;
-    ++batch.outdoorOpeningCount;
+    if (targetTop == sourceBottom && horizontalEnd > horizontalStart) {
+        side = Detail::NavigationBoundarySide::Bottom;
+        return true;
+    }
+    return false;
+}
+
+[[nodiscard]] auto DetermineOutdoorBoundaryFixedSubtile(
+        const Detail::NavigationCollisionGridView& source,
+        const Detail::NavigationCollisionGridView& target,
+        Detail::NavigationBoundarySide side,
+        std::int32_t& fixedSubtile) noexcept -> bool {
+    const auto sourceRight = static_cast<std::int64_t>(source.originX)
+        + source.width;
+    const auto sourceBottom = static_cast<std::int64_t>(source.originY)
+        + source.height;
+    const auto targetRight = static_cast<std::int64_t>(target.originX)
+        + target.width;
+    const auto targetBottom = static_cast<std::int64_t>(target.originY)
+        + target.height;
+    constexpr auto maximum = static_cast<std::int64_t>(
+        (std::numeric_limits<std::int32_t>::max)());
+    if (sourceRight > maximum || sourceBottom > maximum
+        || targetRight > maximum || targetBottom > maximum) {
+        return false;
+    }
+
+    std::int64_t fixed{};
+    switch (side) {
+        case Detail::NavigationBoundarySide::Left:
+            if (targetRight != source.originX) return false;
+            fixed = source.originX;
+            break;
+        case Detail::NavigationBoundarySide::Right:
+            if (sourceRight != target.originX) return false;
+            fixed = sourceRight;
+            break;
+        case Detail::NavigationBoundarySide::Top:
+            if (targetBottom != source.originY) return false;
+            fixed = source.originY;
+            break;
+        case Detail::NavigationBoundarySide::Bottom:
+            if (sourceBottom != target.originY) return false;
+            fixed = sourceBottom;
+            break;
+    }
+    if (fixed < 0 || fixed > maximum) return false;
+    fixedSubtile = static_cast<std::int32_t>(fixed);
     return true;
+}
+
+[[nodiscard]] auto UpdateLevelSubtileBounds(
+        const Detail::NavigationCollisionGridView& grid,
+        Detail::NavigationLevelSubtileBounds& bounds,
+        bool& initialized) noexcept -> bool {
+    const auto right = static_cast<std::int64_t>(grid.originX) + grid.width;
+    const auto bottom = static_cast<std::int64_t>(grid.originY) + grid.height;
+    if (grid.originX < 0 || grid.originY < 0
+        || grid.width < 2 || grid.height < 2
+        || right > (std::numeric_limits<std::int32_t>::max)()
+        || bottom > (std::numeric_limits<std::int32_t>::max)()) {
+        return false;
+    }
+    if (!initialized) {
+        bounds = {
+            .left = grid.originX,
+            .top = grid.originY,
+            .right = static_cast<std::int32_t>(right),
+            .bottom = static_cast<std::int32_t>(bottom),
+        };
+        initialized = true;
+        return true;
+    }
+    if (grid.originX < bounds.left) bounds.left = grid.originX;
+    if (grid.originY < bounds.top) bounds.top = grid.originY;
+    if (right > bounds.right) bounds.right = static_cast<std::int32_t>(right);
+    if (bottom > bounds.bottom) {
+        bounds.bottom = static_cast<std::int32_t>(bottom);
+    }
+    return true;
+}
+
+[[nodiscard]] auto AppendCollisionBoundaryRuns(
+        const Detail::NavigationCollisionGridView& grid,
+        Detail::NavigationBoundarySide side,
+        bool sourceSide,
+        std::int32_t targetLevelId,
+        std::int32_t fixedSubtile,
+        std::uintptr_t sourceRoomIdentity,
+        std::uintptr_t targetRoomIdentity,
+        std::span<Detail::NavigationBoundarySpan> spans,
+        std::size_t& count) noexcept -> bool {
+    if (targetLevelId <= 0 || fixedSubtile < 0
+        || sourceRoomIdentity == 0U || targetRoomIdentity == 0U
+        || grid.width < 2 || grid.height < 2) {
+        return false;
+    }
+    const auto cell = [&grid](std::int32_t x, std::int32_t y) noexcept {
+        return grid.cells[
+            static_cast<std::size_t>(y)
+                * static_cast<std::size_t>(grid.width)
+            + static_cast<std::size_t>(x)];
+    };
+    const auto runLength = side == Detail::NavigationBoundarySide::Left
+            || side == Detail::NavigationBoundarySide::Right
+        ? grid.height : grid.width;
+    const auto coordinateOrigin = side == Detail::NavigationBoundarySide::Left
+            || side == Detail::NavigationBoundarySide::Right
+        ? grid.originY : grid.originX;
+    std::int32_t coordinateEnd{};
+    if (!Detail::TryAddNavigationSubtileOffset(
+            coordinateOrigin,
+            runLength,
+            coordinateEnd)) {
+        return false;
+    }
+    const auto openAt = [&cell, &grid, side, sourceSide](
+            std::int32_t position) noexcept {
+        switch (side) {
+            case Detail::NavigationBoundarySide::Left:
+                if (sourceSide) {
+                    return Detail::IsNavigationPlayerPathOpen(
+                               cell(0, position))
+                        && Detail::IsNavigationPlayerPathOpen(
+                            cell(1, position));
+                }
+                return Detail::IsNavigationPlayerPathOpen(
+                           cell(grid.width - 1, position))
+                    && Detail::IsNavigationPlayerPathOpen(
+                        cell(grid.width - 2, position));
+            case Detail::NavigationBoundarySide::Right:
+                if (sourceSide) {
+                    return Detail::IsNavigationPlayerPathOpen(
+                               cell(grid.width - 1, position))
+                        && Detail::IsNavigationPlayerPathOpen(
+                            cell(grid.width - 2, position));
+                }
+                return Detail::IsNavigationPlayerPathOpen(
+                           cell(0, position))
+                    && Detail::IsNavigationPlayerPathOpen(
+                        cell(1, position));
+            case Detail::NavigationBoundarySide::Top:
+                if (sourceSide) {
+                    return Detail::IsNavigationPlayerPathOpen(
+                               cell(position, 0))
+                        && Detail::IsNavigationPlayerPathOpen(
+                            cell(position, 1));
+                }
+                return Detail::IsNavigationPlayerPathOpen(
+                           cell(position, grid.height - 1))
+                    && Detail::IsNavigationPlayerPathOpen(
+                        cell(position, grid.height - 2));
+            case Detail::NavigationBoundarySide::Bottom:
+                if (sourceSide) {
+                    return Detail::IsNavigationPlayerPathOpen(
+                               cell(position, grid.height - 1))
+                        && Detail::IsNavigationPlayerPathOpen(
+                            cell(position, grid.height - 2));
+                }
+                return Detail::IsNavigationPlayerPathOpen(
+                           cell(position, 0))
+                    && Detail::IsNavigationPlayerPathOpen(
+                        cell(position, 1));
+        }
+        return false;
+    };
+    const auto append = [targetLevelId,
+            side,
+            fixedSubtile,
+            sourceRoomIdentity,
+            targetRoomIdentity,
+            &spans,
+            &count](
+            std::int32_t start,
+            std::int32_t end) noexcept {
+        if (start < 0 || end <= start || count >= spans.size()) return false;
+        spans[count++] = {
+            .targetLevelId = targetLevelId,
+            .side = side,
+            .startSubtile = start,
+            .endSubtile = end,
+            .fixedSubtile = fixedSubtile,
+            .sourceRoomIdentity = sourceRoomIdentity,
+            .targetRoomIdentity = targetRoomIdentity,
+        };
+        return true;
+    };
+
+    std::int32_t runStartPosition{-1};
+    for (std::int32_t position = 0; position < runLength; ++position) {
+        if (openAt(position)) {
+            if (runStartPosition < 0) runStartPosition = position;
+            continue;
+        }
+        if (runStartPosition >= 0) {
+            std::int32_t absoluteStart{};
+            std::int32_t absoluteEnd{};
+            if (!Detail::TryAddNavigationSubtileOffset(
+                    coordinateOrigin,
+                    runStartPosition,
+                    absoluteStart)
+                || !Detail::TryAddNavigationSubtileOffset(
+                    coordinateOrigin,
+                    position,
+                    absoluteEnd)
+                || !append(absoluteStart, absoluteEnd)) {
+                return false;
+            }
+        }
+        runStartPosition = -1;
+    }
+    if (runStartPosition < 0) return true;
+    std::int32_t absoluteStart{};
+    return Detail::TryAddNavigationSubtileOffset(
+            coordinateOrigin,
+            runStartPosition,
+            absoluteStart)
+        && append(absoluteStart, coordinateEnd);
 }
 
 void UpsertExitCandidate(
@@ -473,6 +733,372 @@ void UpsertExitCandidate(
         batch.traversalLimited = batch.exitSelectionCount
             >= batch.exitSelections.size();
     }
+}
+
+[[nodiscard]] auto ResolveNativeMonasteryAnchorUnchecked(
+        std::uint8_t* targetLevel,
+        std::int32_t currentLevelId,
+        std::int32_t targetLevelId,
+        CandidateBatch& batch) noexcept -> bool {
+    if (!IsAlignedPointer(targetLevel)
+        || currentLevelId != TamoeHighlandLevelId
+        || targetLevelId != MonasteryGateLevelId
+        || *reinterpret_cast<const std::int32_t*>(
+            targetLevel + LevelIdOffset) != targetLevelId) {
+        return false;
+    }
+    const auto levelTileX = *reinterpret_cast<const std::int32_t*>(
+        targetLevel + LevelPositionXOffset);
+    const auto levelTileY = *reinterpret_cast<const std::int32_t*>(
+        targetLevel + LevelPositionYOffset);
+    Detail::NavigationOutdoorOpening anchor{};
+    if (!Detail::TryMakeNavigationLevelTileAnchor(
+            levelTileX,
+            levelTileY,
+            MonasteryAnchorOffsetTileX,
+            MonasteryAnchorOffsetTileY,
+            anchor)) {
+        return false;
+    }
+    ++batch.outdoorOpeningCount;
+    UpsertExitCandidate(
+        batch,
+        Detail::NavigationExitSelection{
+            .candidate = NavigationExitCandidate{
+                .destinationId = MakeDestinationId(
+                    PresetLevelExit,
+                    targetLevelId,
+                    anchor.subtileX,
+                    anchor.subtileY),
+                .targetLevelId = targetLevelId,
+                .subtileX = anchor.subtileX,
+                .subtileY = anchor.subtileY,
+            },
+            .evidence = Detail::NavigationExitEvidence::OutdoorLevelBoundary,
+            .spanSubtiles = 0,
+        });
+    return !batch.traversalLimited;
+}
+
+[[nodiscard]] auto ReadSourceLevelBoundsUnchecked(
+        std::uint8_t dataContext,
+        std::uint8_t* sourceLevel,
+        std::int32_t currentLevelId,
+        CandidateBatch& batch,
+        Detail::NavigationLevelSubtileBounds& bounds,
+        bool& ready) noexcept -> bool {
+    ready = false;
+    bool initialized{};
+    bool pending{};
+    auto* room = *reinterpret_cast<std::uint8_t**>(
+        sourceLevel + LevelFirstRoomOffset);
+    std::size_t roomCount{};
+    while (room != nullptr && roomCount < MaximumRoomsPerLevel) {
+        if (!IsAlignedPointer(room)
+            || *reinterpret_cast<std::uint8_t**>(
+                room + DrlgRoomLevelOffset) != sourceLevel) {
+            return false;
+        }
+        Detail::NavigationRoomRectangle rectangle{};
+        if (!ReadRoomRectangleUnchecked(room, rectangle)
+            || rectangle.levelId != currentLevelId) {
+            return false;
+        }
+        Detail::NavigationCollisionGridView grid{};
+        const auto readResult = ReadCollisionGridUnchecked(
+            dataContext,
+            room,
+            rectangle,
+            grid);
+        if (readResult == CollisionGridReadResult::Invalid) return false;
+        if (readResult == CollisionGridReadResult::Pending) {
+            ++batch.pendingCollisionRoomCount;
+            pending = true;
+        } else if (!UpdateLevelSubtileBounds(grid, bounds, initialized)) {
+            return false;
+        }
+        room = *reinterpret_cast<std::uint8_t**>(
+            room + DrlgRoomNextOffset);
+        ++roomCount;
+    }
+    if (room != nullptr) {
+        batch.traversalLimited = true;
+        return false;
+    }
+    if (pending) return true;
+    ready = initialized;
+    return initialized;
+}
+
+[[nodiscard]] auto CollectOutdoorBoundaryPairSpansUnchecked(
+        std::uint8_t dataContext,
+        std::uint8_t* sourceLevel,
+        std::uint8_t* targetLevel,
+        std::int32_t currentLevelId,
+        std::int32_t targetLevelId,
+        std::uint8_t sourceSlot,
+        std::uint8_t reciprocalSlot,
+        std::span<Detail::NavigationBoundarySpan> sourceSpans,
+        std::size_t& sourceSpanCount,
+        std::span<Detail::NavigationBoundarySpan> targetSpans,
+        std::size_t& targetSpanCount,
+        CandidateBatch& batch,
+        bool& ready) noexcept -> bool {
+    ready = false;
+    sourceSpanCount = 0U;
+    targetSpanCount = 0U;
+    if (sourceSlot >= VisibilitySlotCount
+        || reciprocalSlot >= VisibilitySlotCount) {
+        return false;
+    }
+    bool pending{};
+    auto* room = *reinterpret_cast<std::uint8_t**>(
+        sourceLevel + LevelFirstRoomOffset);
+    std::size_t roomCount{};
+    while (room != nullptr && roomCount < MaximumRoomsPerLevel) {
+        Detail::NavigationRoomRectangle sourceRectangle{};
+        if (!IsAlignedPointer(room)
+            || *reinterpret_cast<std::uint8_t**>(
+                room + DrlgRoomLevelOffset) != sourceLevel
+            || !ReadRoomRectangleUnchecked(room, sourceRectangle)
+            || sourceRectangle.levelId != currentLevelId) {
+            return false;
+        }
+        const auto sourceVisibilityFlags =
+            *reinterpret_cast<const std::uint32_t*>(
+                room + DrlgRoomVisibilityFlagsOffset);
+        if (!Detail::HasNavigationOutdoorVisibilitySlot(
+                sourceVisibilityFlags,
+                sourceSlot)) {
+            room = *reinterpret_cast<std::uint8_t**>(
+                room + DrlgRoomNextOffset);
+            ++roomCount;
+            continue;
+        }
+        const auto nearCount = *reinterpret_cast<const std::size_t*>(
+            room + DrlgRoomRoomsNearCountOffset);
+        if (nearCount > MaximumNearRoomsPerRoom) return false;
+        batch.nearRoomLinkCount += nearCount;
+        auto** const nearRooms = *reinterpret_cast<std::uint8_t***>(
+            room + DrlgRoomRoomsNearOffset);
+        if (nearCount != 0U && !IsAlignedPointer(nearRooms)) return false;
+        for (std::size_t index = 0U; index < nearCount; ++index) {
+            auto* const targetRoom = nearRooms[index];
+            if (!IsAlignedPointer(targetRoom)) return false;
+            Detail::NavigationRoomRectangle targetRectangle{};
+            if (!ReadRoomRectangleUnchecked(targetRoom, targetRectangle)) {
+                return false;
+            }
+            if (targetRectangle.levelId != targetLevelId) continue;
+            if (*reinterpret_cast<std::uint8_t**>(
+                    targetRoom + DrlgRoomLevelOffset) != targetLevel) {
+                return false;
+            }
+            const auto targetVisibilityFlags =
+                *reinterpret_cast<const std::uint32_t*>(
+                    targetRoom + DrlgRoomVisibilityFlagsOffset);
+            if (!Detail::HasNavigationOutdoorVisibilitySlot(
+                    targetVisibilityFlags,
+                    reciprocalSlot)) {
+                continue;
+            }
+            Detail::NavigationBoundarySide side{};
+            if (!DetermineOutdoorBoundarySide(
+                    sourceRectangle,
+                    targetRectangle,
+                    side)) {
+                continue;
+            }
+            Detail::NavigationCollisionGridView sourceGrid{};
+            Detail::NavigationCollisionGridView targetGrid{};
+            const auto sourceReadResult = ReadCollisionGridUnchecked(
+                dataContext,
+                room,
+                sourceRectangle,
+                sourceGrid);
+            if (sourceReadResult == CollisionGridReadResult::Invalid) {
+                return false;
+            }
+            const auto targetReadResult = ReadCollisionGridUnchecked(
+                dataContext,
+                targetRoom,
+                targetRectangle,
+                targetGrid);
+            if (targetReadResult == CollisionGridReadResult::Invalid) {
+                return false;
+            }
+            if (sourceReadResult == CollisionGridReadResult::Pending
+                || targetReadResult == CollisionGridReadResult::Pending) {
+                if (sourceReadResult == CollisionGridReadResult::Pending) {
+                    ++batch.pendingCollisionRoomCount;
+                }
+                if (targetReadResult == CollisionGridReadResult::Pending) {
+                    ++batch.pendingCollisionRoomCount;
+                }
+                pending = true;
+                continue;
+            }
+            std::int32_t fixedSubtile{};
+            if (!DetermineOutdoorBoundaryFixedSubtile(
+                    sourceGrid,
+                    targetGrid,
+                    side,
+                    fixedSubtile)) {
+                return false;
+            }
+            const auto sourceRoomIdentity = reinterpret_cast<std::uintptr_t>(
+                room);
+            const auto targetRoomIdentity = reinterpret_cast<std::uintptr_t>(
+                targetRoom);
+            if (!AppendCollisionBoundaryRuns(
+                    sourceGrid,
+                    side,
+                    true,
+                    currentLevelId,
+                    fixedSubtile,
+                    sourceRoomIdentity,
+                    targetRoomIdentity,
+                    sourceSpans,
+                    sourceSpanCount)
+                || !AppendCollisionBoundaryRuns(
+                    targetGrid,
+                    side,
+                    false,
+                    targetLevelId,
+                    fixedSubtile,
+                    sourceRoomIdentity,
+                    targetRoomIdentity,
+                    targetSpans,
+                    targetSpanCount)) {
+                batch.traversalLimited = true;
+                return false;
+            }
+        }
+        room = *reinterpret_cast<std::uint8_t**>(
+            room + DrlgRoomNextOffset);
+        ++roomCount;
+    }
+    if (room != nullptr) {
+        batch.traversalLimited = true;
+        return false;
+    }
+    if (pending) return true;
+    ready = true;
+    return true;
+}
+
+[[nodiscard]] auto ResolveOutdoorLevelBoundaryUnchecked(
+        std::uint8_t dataContext,
+        std::uint8_t* sourceLevel,
+        std::uint8_t* targetLevel,
+        std::int32_t currentLevelId,
+        std::int32_t targetLevelId,
+        std::uint8_t sourceSlot,
+        std::uint8_t reciprocalSlot,
+        CandidateBatch& batch) noexcept -> bool {
+    if (currentLevelId == TamoeHighlandLevelId
+        && targetLevelId == MonasteryGateLevelId) {
+        return ResolveNativeMonasteryAnchorUnchecked(
+            targetLevel,
+            currentLevelId,
+            targetLevelId,
+            batch);
+    }
+    auto sourceSpans = std::span(OutdoorSourceSpanScratch);
+    auto targetSpans = std::span(OutdoorTargetSpanScratch);
+
+    Detail::NavigationLevelSubtileBounds sourceBounds{};
+    bool ready{};
+    if (!ReadSourceLevelBoundsUnchecked(
+            dataContext,
+            sourceLevel,
+            currentLevelId,
+            batch,
+            sourceBounds,
+            ready)) {
+        return false;
+    }
+    if (!ready) return true;
+
+    std::size_t sourceSpanCount{};
+    std::size_t targetSpanCount{};
+    if (!CollectOutdoorBoundaryPairSpansUnchecked(
+            dataContext,
+            sourceLevel,
+            targetLevel,
+            currentLevelId,
+            targetLevelId,
+            sourceSlot,
+            reciprocalSlot,
+            sourceSpans,
+            sourceSpanCount,
+            targetSpans,
+            targetSpanCount,
+            batch,
+            ready)) {
+        return false;
+    }
+    if (!ready) return true;
+
+    batch.outdoorSourceSpanCount += sourceSpanCount;
+    batch.outdoorTargetSpanCount += targetSpanCount;
+    std::size_t mergedSourceSpanCount{};
+    std::size_t mergedTargetSpanCount{};
+    if (!Detail::MergeOutdoorBoundarySpans(
+            sourceSpans,
+            sourceSpanCount,
+            mergedSourceSpanCount)
+        || !Detail::MergeOutdoorBoundarySpans(
+            targetSpans,
+            targetSpanCount,
+            mergedTargetSpanCount)) {
+        return false;
+    }
+    batch.outdoorMergedSpanCount += mergedSourceSpanCount
+        + mergedTargetSpanCount;
+
+    Detail::NavigationOutdoorOpening opening{};
+    const auto matchResult = Detail::FindUniqueOutdoorLevelBoundaryOpening(
+        sourceBounds,
+        targetLevelId,
+        sourceSpans.first(mergedSourceSpanCount),
+        targetSpans.first(mergedTargetSpanCount),
+        opening,
+        Detail::NavigationOutdoorOpeningSelectionPolicy::
+            AcceptStablePlayerPath);
+    if (matchResult
+            == Detail::NavigationOutdoorBoundaryMatchResult::Invalid) {
+        return false;
+    }
+    if (matchResult
+            == Detail::NavigationOutdoorBoundaryMatchResult::Ambiguous) {
+        ++batch.ambiguousOutdoorTargetCount;
+        return true;
+    }
+    if (matchResult
+            == Detail::NavigationOutdoorBoundaryMatchResult::NotFound) {
+        return true;
+    }
+
+    ++batch.outdoorOpeningCount;
+    UpsertExitCandidate(
+        batch,
+        Detail::NavigationExitSelection{
+            .candidate = NavigationExitCandidate{
+                .destinationId = MakeDestinationId(
+                    PresetLevelExit,
+                    targetLevelId,
+                    opening.subtileX,
+                    opening.subtileY),
+                .targetLevelId = targetLevelId,
+                .subtileX = opening.subtileX,
+                .subtileY = opening.subtileY,
+            },
+            .evidence = Detail::NavigationExitEvidence::
+                OutdoorLevelBoundary,
+            .spanSubtiles = opening.spanSubtiles,
+        });
+    return !batch.traversalLimited;
 }
 
 [[nodiscard]] auto ResolveDynamicProgressionObjectsUnchecked(
@@ -794,9 +1420,7 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
         && roomTileCount < MaximumRoomTilesPerRoom) {
         auto* const lvlWarp = *reinterpret_cast<std::uint8_t**>(
             roomTile + RoomTileLvlWarpOffset);
-        if (!IsAlignedPointer(lvlWarp)) {
-            return false;
-        }
+        if (!IsAlignedPointer(lvlWarp)) return false;
         const auto sourceId = *reinterpret_cast<const std::int32_t*>(
             lvlWarp + LvlWarpSourceIdOffset);
         if (sourceId >= 0 && sourceId <= MaximumSupportedLevelId) {
@@ -969,12 +1593,12 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
         std::uint8_t dataContext,
         std::uint8_t* sourceLevel,
         std::uint8_t* targetLevel,
-        std::uint8_t sourceSlot,
-        std::uint8_t reciprocalSlot,
         std::int32_t currentLevelId,
         std::int32_t targetLevelId,
+        std::uint8_t sourceSlot,
+        std::uint8_t reciprocalSlot,
         CandidateBatch& batch) noexcept -> bool {
-    auto* sourceRoom = *reinterpret_cast<std::uint8_t**>(
+    auto* const sourceRoom = *reinterpret_cast<std::uint8_t**>(
         sourceLevel + LevelFirstRoomOffset);
     auto* const targetRoomHead = *reinterpret_cast<std::uint8_t**>(
         targetLevel + LevelFirstRoomOffset);
@@ -990,87 +1614,15 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
         return false;
     }
 
-    const auto sourceMask = std::uint32_t{1}
-        << (static_cast<std::uint32_t>(sourceSlot) + 4U);
-    const auto reciprocalMask = std::uint32_t{1}
-        << (static_cast<std::uint32_t>(reciprocalSlot) + 4U);
-    std::size_t comparisons{};
-    std::size_t sourceRoomCount{};
-    while (sourceRoom != nullptr
-        && sourceRoomCount < MaximumRoomsPerLevel) {
-        if (!IsAlignedPointer(sourceRoom)) return false;
-        const auto sourceFlags = *reinterpret_cast<const std::uint32_t*>(
-            sourceRoom + DrlgRoomVisibilityFlagsOffset);
-        if ((sourceFlags & sourceMask) != 0U) {
-            Detail::NavigationRoomRectangle sourceRectangle{};
-            if (!ReadRoomRectangleUnchecked(sourceRoom, sourceRectangle)
-                || sourceRectangle.levelId != currentLevelId) {
-                return false;
-            }
-            auto* targetRoom = targetRoomHead;
-            std::size_t targetRoomCount{};
-            while (targetRoom != nullptr
-                && targetRoomCount < MaximumRoomsPerLevel) {
-                if (++comparisons > MaximumOutdoorRoomComparisons) {
-                    batch.traversalLimited = true;
-                    return false;
-                }
-                if (!IsAlignedPointer(targetRoom)) return false;
-                const auto targetFlags =
-                    *reinterpret_cast<const std::uint32_t*>(
-                        targetRoom + DrlgRoomVisibilityFlagsOffset);
-                if ((targetFlags & reciprocalMask) != 0U) {
-                    Detail::NavigationRoomRectangle targetRectangle{};
-                    if (!ReadRoomRectangleUnchecked(
-                            targetRoom,
-                            targetRectangle)
-                        || targetRectangle.levelId != targetLevelId) {
-                        return false;
-                    }
-                    Detail::NavigationOutdoorOpening opening{};
-                    bool foundOpening{};
-                    if (!ResolveOutdoorCollisionOpeningUnchecked(
-                            dataContext,
-                            sourceRoom,
-                            targetRoom,
-                            sourceRectangle,
-                            targetRectangle,
-                            batch,
-                            opening,
-                            foundOpening)) {
-                        return false;
-                    }
-                    if (foundOpening) {
-                        UpsertExitCandidate(
-                            batch,
-                            Detail::NavigationExitSelection{
-                                .candidate = NavigationExitCandidate{
-                                    .destinationId = MakeDestinationId(
-                                        PresetLevelExit,
-                                        targetLevelId,
-                                        opening.subtileX,
-                                        opening.subtileY),
-                                    .targetLevelId = targetLevelId,
-                                    .subtileX = opening.subtileX,
-                                    .subtileY = opening.subtileY,
-                                },
-                                .evidence = Detail::NavigationExitEvidence::
-                                    OutdoorCollision,
-                                .spanSubtiles = opening.spanSubtiles,
-                            });
-                        if (batch.traversalLimited) return false;
-                    }
-                }
-                targetRoom = *reinterpret_cast<std::uint8_t**>(
-                    targetRoom + DrlgRoomNextOffset);
-                ++targetRoomCount;
-            }
-        }
-        sourceRoom = *reinterpret_cast<std::uint8_t**>(
-            sourceRoom + DrlgRoomNextOffset);
-        ++sourceRoomCount;
-    }
-    return true;
+    return ResolveOutdoorLevelBoundaryUnchecked(
+        dataContext,
+        sourceLevel,
+        targetLevel,
+        currentLevelId,
+        targetLevelId,
+        sourceSlot,
+        reciprocalSlot,
+        batch);
 }
 
 [[nodiscard]] auto ResolveOutdoorVisibilityLinksUnchecked(
@@ -1136,80 +1688,14 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
                     dataContext,
                     level,
                     targetLevel,
-                    static_cast<std::uint8_t>(slot),
-                    static_cast<std::uint8_t>(reciprocal),
                     currentLevelId,
                     targetLevelId,
+                    static_cast<std::uint8_t>(slot),
+                    static_cast<std::uint8_t>(reciprocal),
                     batch)) {
                 return false;
             }
         }
-    }
-    return true;
-}
-
-[[nodiscard]] auto ResolveOutdoorBordersUnchecked(
-        std::uint8_t dataContext,
-        std::uint8_t* room,
-        std::int32_t currentLevelId,
-        CandidateBatch& batch) noexcept -> bool {
-    Detail::NavigationRoomRectangle sourceRectangle{};
-    if (!ReadRoomRectangleUnchecked(room, sourceRectangle)
-        || sourceRectangle.levelId != currentLevelId) {
-        return false;
-    }
-    // D2R stores the governed near-room vector as pointer/size/capacity at
-    // +0x10/+0x18/+0x20. The previous prototype incorrectly interpreted
-    // +0x50 (room flags) as the count, which suppressed outdoor exits.
-    const auto nearCount = *reinterpret_cast<const std::size_t*>(
-        room + DrlgRoomRoomsNearCountOffset);
-    if (nearCount > MaximumNearRoomsPerRoom) return false;
-    batch.nearRoomLinkCount += nearCount;
-    if (nearCount == 0U) return true;
-    auto** const nearRooms = *reinterpret_cast<std::uint8_t***>(
-        room + DrlgRoomRoomsNearOffset);
-    if (!IsAlignedPointer(nearRooms)) return false;
-    for (std::size_t index = 0U; index < nearCount; ++index) {
-        auto* const neighbour = nearRooms[index];
-        if (!IsAlignedPointer(neighbour)) return false;
-        Detail::NavigationRoomRectangle neighbourRectangle{};
-        if (!ReadRoomRectangleUnchecked(neighbour, neighbourRectangle)) {
-            return false;
-        }
-        if (neighbourRectangle.levelId == currentLevelId) continue;
-        Detail::NavigationOutdoorOpening opening{};
-        bool foundOpening{};
-        if (!ResolveOutdoorCollisionOpeningUnchecked(
-                dataContext,
-                room,
-                neighbour,
-                sourceRectangle,
-                neighbourRectangle,
-                batch,
-                opening,
-                foundOpening)) {
-            return false;
-        }
-        if (!foundOpening) {
-            continue;
-        }
-        UpsertExitCandidate(
-            batch,
-            Detail::NavigationExitSelection{
-                .candidate = NavigationExitCandidate{
-                    .destinationId = MakeDestinationId(
-                        PresetLevelExit,
-                        neighbourRectangle.levelId,
-                        opening.subtileX,
-                        opening.subtileY),
-                    .targetLevelId = neighbourRectangle.levelId,
-                    .subtileX = opening.subtileX,
-                    .subtileY = opening.subtileY,
-                },
-                .evidence = Detail::NavigationExitEvidence::OutdoorCollision,
-                .spanSubtiles = opening.spanSubtiles,
-            });
-        if (batch.traversalLimited) return false;
     }
     return true;
 }
@@ -1420,11 +1906,6 @@ void FinalizeCanyonCorrectTomb(CandidateBatch& batch) noexcept {
                     current.dataContext,
                     room,
                     levelId,
-                    batch)
-                || !ResolveOutdoorBordersUnchecked(
-                    current.dataContext,
-                    room,
-                    levelId,
                     batch)) {
                 return false;
             }
@@ -1632,6 +2113,24 @@ void FinalizeCanyonCorrectTomb(CandidateBatch& batch) noexcept {
             0x83, 0xF9, 0x06, 0x0F, 0x8D, 0x82, 0x00, 0x00,
             0x00, 0x83, 0xF8, 0x06, 0x0F, 0x8D, 0x79, 0x00,
             0x00, 0x00};
+    constexpr std::array<std::uint8_t, 61U> playerPathMaskExpected{
+        0xE8, 0xD2, 0x55, 0x04, 0x00, 0x8B, 0x4C, 0x24,
+        0x30, 0x48, 0x8D, 0x54, 0x24, 0x38, 0x44, 0x8B,
+        0x84, 0x24, 0x80, 0x00, 0x00, 0x00, 0x83, 0xC1,
+        0x03, 0x89, 0x4C, 0x24, 0x38, 0x41, 0xB9, 0x09,
+        0x1C, 0x00, 0x00, 0x8B, 0x4C, 0x24, 0x34, 0x83,
+        0xC1, 0x03, 0xC7, 0x44, 0x24, 0x20, 0x00, 0x00,
+        0x00, 0x00, 0x89, 0x4C, 0x24, 0x3C, 0x48, 0x8B,
+        0xCB, 0xE8, 0x59, 0x36, 0x07};
+    constexpr std::array<std::uint8_t, 60U> monasteryAnchorExpected{
+        0x49, 0x8B, 0x11, 0x8B, 0x8A, 0xF8, 0x01, 0x00,
+        0x00, 0x83, 0xE9, 0x01, 0x74, 0x30, 0x83, 0xF9,
+        0x19, 0x0F, 0x85, 0xA4, 0x00, 0x00, 0x00, 0x48,
+        0x63, 0x87, 0x30, 0x03, 0x00, 0x00, 0x48, 0x83,
+        0xC0, 0x0A, 0x48, 0x8D, 0x04, 0x40, 0x48, 0x8D,
+        0x0C, 0xC7, 0x8B, 0x42, 0x24, 0x83, 0xC0, 0x1B,
+        0x89, 0x01, 0x8B, 0x42, 0x28, 0x83, 0xC0, 0x0D,
+        0xC6, 0x41, 0x08, 0x01};
     constexpr std::array<std::uint8_t, 43U> collisionGridLayoutExpected{
         0x4C, 0x8B, 0x53, 0x20, 0x4D, 0x85, 0xD2, 0x0F,
         0x84, 0x6A, 0x03, 0x00, 0x00, 0x44, 0x8B, 0x03,
@@ -1696,6 +2195,7 @@ void FinalizeCanyonCorrectTomb(CandidateBatch& batch) noexcept {
     return check(GetLocalDataContextRva, localContextExpected)
         && check(GetLocalPlayerRva, localPlayerExpected)
         && check(GetDrlgRoomFromActiveRoomRva, activeRoomDrlgExpected)
+        && check(PlayerPathMaskWitnessRva, playerPathMaskExpected)
         && check(GetCollisionGridRva, collisionGridExpected)
         && check(GetFirstUnitInRoomRva, firstUnitInRoomExpected)
         && check(IsRoomInTownRva, isRoomInTownExpected)
@@ -1744,6 +2244,7 @@ void FinalizeCanyonCorrectTomb(CandidateBatch& batch) noexcept {
         && check(
             OutdoorVisibilityGeometryWitnessRva,
             outdoorVisibilityGeometryExpected)
+        && check(MonasteryAnchorWitnessRva, monasteryAnchorExpected)
         && check(
             CollisionGridLayoutWitnessRva,
             collisionGridLayoutExpected)
@@ -1858,6 +2359,10 @@ void LogBoundedNavigationDiagnostics(
     MixDiagnosticValue(fingerprint, batch.pendingTargetLevelCount);
     MixDiagnosticValue(fingerprint, batch.nearRoomLinkCount);
     MixDiagnosticValue(fingerprint, batch.outdoorOpeningCount);
+    MixDiagnosticValue(fingerprint, batch.outdoorSourceSpanCount);
+    MixDiagnosticValue(fingerprint, batch.outdoorTargetSpanCount);
+    MixDiagnosticValue(fingerprint, batch.outdoorMergedSpanCount);
+    MixDiagnosticValue(fingerprint, batch.ambiguousOutdoorTargetCount);
     MixDiagnosticValue(fingerprint, batch.pendingCollisionRoomCount);
     MixDiagnosticValue(fingerprint, batch.visibilitySlotCount);
     MixDiagnosticValue(fingerprint, batch.visibilityPairCount);
@@ -1967,6 +2472,18 @@ void LogBoundedNavigationDiagnostics(
         publishedProgressionY);
     Context->LogInfo(message);
 
+    std::snprintf(
+        message,
+        sizeof(message),
+        "MapSense diagnostic outdoor-boundary: source-spans=%llu target-spans=%llu merged-spans=%llu unique-openings=%llu ambiguous-targets=%llu collision-pending=%llu.",
+        static_cast<unsigned long long>(batch.outdoorSourceSpanCount),
+        static_cast<unsigned long long>(batch.outdoorTargetSpanCount),
+        static_cast<unsigned long long>(batch.outdoorMergedSpanCount),
+        static_cast<unsigned long long>(batch.outdoorOpeningCount),
+        static_cast<unsigned long long>(batch.ambiguousOutdoorTargetCount),
+        static_cast<unsigned long long>(batch.pendingCollisionRoomCount));
+    Context->LogInfo(message);
+
     const auto preferredProgression = MainProgressionTargetFor(batch.levelId);
     const auto selectedProgression = batch.hasCorrectTomb
             && batch.durielRewardGranted
@@ -1990,7 +2507,7 @@ void LogBoundedNavigationDiagnostics(
             index < batch.exitSelectionCount;
             ++index) {
         const auto& selection = batch.exitSelections[index];
-        const char* evidence = "outdoor-collision";
+        const char* evidence = "outdoor-level-boundary";
         if (selection.evidence == Detail::NavigationExitEvidence::RoomTile) {
             evidence = "room-tile";
         } else if (selection.evidence
@@ -2139,6 +2656,11 @@ auto RefreshNavigationDestinations(
     if (!Active.load(std::memory_order_acquire)) {
         return NavigationRefreshResult::Failed;
     }
+    // The refresh contract is UI-thread-only. This bounded lease both reuses
+    // the 512 KiB level-boundary scratch across all targets in one refresh and
+    // fails closed if an unexpected reentrant caller violates that contract.
+    OutdoorSpanScratchLease scratchLease;
+    if (!scratchLease) return NavigationRefreshResult::Failed;
     Refreshes.fetch_add(1U, std::memory_order_relaxed);
 
     std::array<std::int32_t, MaximumCustomLevelTargets> customIds{};

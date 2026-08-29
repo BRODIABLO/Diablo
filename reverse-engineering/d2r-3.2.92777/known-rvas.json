@@ -3514,6 +3514,30 @@
       "confidence": "high",
       "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique 27-byte native witness that verifies unit type 1, loads MonsterData* from Unit+0x10 and tests rank flags at MonsterData+0x1A with mask 0x0E. This proves the super-unique, champion and unique flag group used by MapSense. The separate minion bit 0x10 remains historically corroborated rather than proven by this exact witness, so rejecting it from the normal category is conservative."
+    },
+    {
+      "rva": "0x2EF8F9",
+      "name": "PATH_PlayerCollisionMaskWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-mapsense.md",
+      "notes": "Unique 61-byte native witness that passes collision mask 0x1C09 while evaluating a player path. The mask combines WALL 0x0001, NOPLAYER 0x0008, OBJECT 0x0400, DOOR 0x0800 and NO_PATH 0x1000. MapSense 0.12.3 fingerprints this exact witness and accepts an outdoor seam only when the edge and one interior subtile on both linked rooms are open under the complete player-path mask."
+    },
+    {
+      "rva": "0x3FFB60",
+      "name": "DRLGOUTDOORS_MonasteryGateAnchorWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-mapsense.md",
+      "notes": "Unique 60-byte native witness inside the outdoor path builder. For adjacent LevelId 26 it reads the target Level game-tile origin at +0x24/+0x28 and emits the fixed Monastery Gate anchor (originX+27, originY+13). MapSense 0.12.3 fingerprints the complete sequence and uses this native anchor for Tamoe Highland to Monastery Gate instead of selecting a collision opening on the decorative facade."
+    },
+    {
+      "rva": "0x3E1F2B",
+      "name": "DRLGROOM_sFillLocationNegativeIndexLogCall",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "addons/RuffnecKkMapSense/src/sfilllocation_diagnostic.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique five-byte CALL rel32 E8 60 FC 63 00 reached only by the guarded negative-index branch inside sFillLocation. The branch already skips the fill operation and rejoins at 0x3E1FD8 after logging, so NOPing this CALL suppresses only the repeated native diagnostic without enabling an out-of-bounds access or changing room materialization. A fresh 3.3.93847 runtime trace confirms generalized hits through MapSense collision-grid activation, while waypoint and Reveal paths can legitimately activate rooms as well."
     }
   ]
 }

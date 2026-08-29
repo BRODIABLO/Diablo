@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(RuffnecKkMapSense VERSION 0.12.0 LANGUAGES C CXX RC)
+project(RuffnecKkMapSense VERSION 0.12.3 LANGUAGES C CXX RC)
 
 include(FetchContent)
 
@@ -78,6 +78,7 @@ add_library(RuffnecKkMapSense SHARED
     overlay_scene.cpp
     plugin.cpp
     reveal_engine.cpp
+    sfilllocation_diagnostic.cpp
     plugin.rc
 )
 target_compile_features(RuffnecKkMapSense PRIVATE cxx_std_20)
