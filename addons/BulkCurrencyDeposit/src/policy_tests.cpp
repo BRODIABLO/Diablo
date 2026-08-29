@@ -158,6 +158,7 @@ exclude_item_codes = ["wms"]
 [button]
 x = 7
 y = 900
+tooltip = 'Deposit "Currency" \ Now'
 )toml";
     REQUIRE(ParseToml(valid, parsed, error));
     REQUIRE(parsed.enabled);
@@ -165,6 +166,7 @@ y = 900
     REQUIRE(parsed.itemDelayMs == 250);
     REQUIRE(parsed.button.x == 7);
     REQUIRE(parsed.button.y == 900);
+    REQUIRE(parsed.button.tooltip == "Deposit \"Currency\" \\ Now");
     REQUIRE(parsed.includeItemCodes.size() == 2);
     REQUIRE(parsed.excludeItemCodes.size() == 1);
     REQUIRE(MatchesItemCodeFilter(parsed, *rune));
@@ -179,11 +181,24 @@ y = 900
     REQUIRE(!ParseToml("[deposit]\nunknown = true\n", parsed, error));
     REQUIRE(!ParseToml("[deposit]\n[button]\nx = 32768\n", parsed, error));
     REQUIRE(!ParseToml("[deposit]\n[button]\nunknown = 1\n", parsed, error));
+    REQUIRE(!ParseToml("[deposit]\n[button]\ntooltip = \"\"\n", parsed, error));
+    const auto oversizedTooltip = std::string{"[deposit]\n[button]\ntooltip = \""}
+        + std::string(MaximumButtonTooltipBytes + 1, 'x') + "\"\n";
+    REQUIRE(!ParseToml(oversizedTooltip, parsed, error));
     REQUIRE(!ParseToml(
         "[deposit]\ninclude_item_codes = [\"r01\", \"r01\"]\n",
         parsed,
         error));
     REQUIRE(!ParseToml("enabled = true\n", parsed, error));
+
+    Config packaged{};
+    const auto packagedConfig =
+        ReadTextFile(BULK_CURRENCY_DEPOSIT_CONFIG_FILE);
+    REQUIRE(ParseToml(packagedConfig, packaged, error));
+    REQUIRE(packaged.enabled);
+    REQUIRE(!packaged.inventoryButtonEnabled);
+    REQUIRE(packaged.itemDelayMs == 100);
+    REQUIRE(packaged.button.tooltip == DefaultButtonTooltip);
 
     std::array<std::uint8_t, 0x56> itemData{};
     itemData[ItemDataInventoryPageOffset] = MainInventoryPage;
@@ -208,24 +223,13 @@ y = 900
     REQUIRE(layout.find("\"y\": 900") != std::string::npos);
     REQUIRE(layout.find("\"hoveredFrame\": 3") != std::string::npos);
     REQUIRE(layout.find("RuffnecKkBulkCurrencyDeposit") != std::string::npos);
-    REQUIRE(layout.find("@RuffnecKkBulkCurrencyDepositTooltip")
+    REQUIRE(layout.find(
+        "\"tooltipString\": \"Deposit \\\"Currency\\\" \\\\ Now\"")
         != std::string::npos);
-    REQUIRE(layout.find("\"tooltipString\": \"Deposit Currency\"")
+    REQUIRE(layout.find("@RuffnecKkBulkCurrencyDepositTooltip")
         == std::string::npos);
-
-    REQUIRE(ButtonTooltipStringId == 65101);
-    REQUIRE(ButtonLocalizationJson.find(
-        "\"Key\": \"RuffnecKkBulkCurrencyDepositTooltip\"")
-        != std::string_view::npos);
-    constexpr std::array<std::string_view, 13> localeFields{
-        "enUS", "zhTW", "deDE", "esES", "frFR", "itIT", "koKR",
-        "plPL", "esMX", "jaJP", "ptBR", "ruRU", "zhCN",
-    };
-    for (const auto locale : localeFields) {
-        REQUIRE(ButtonLocalizationJson.find(
-            std::string{"\""} + std::string{locale} + "\":")
-            != std::string_view::npos);
-    }
+    REQUIRE(EscapeJsonString("line\n\"quoted\"\\path\x01")
+        == "line\\n\\\"quoted\\\"\\\\path\\u0001");
 
     REQUIRE(IsFreshRequest(120, 100, 20));
     REQUIRE(!IsFreshRequest(121, 100, 20));
@@ -292,6 +296,7 @@ y = 900
         != std::string::npos);
     REQUIRE(source.find(".displayName = \"Bulk Currency Deposit\"")
         != std::string::npos);
+    REQUIRE(source.find(".version = \"1.1.1\"") != std::string::npos);
     REQUIRE(source.find(".category = \"RuffnecKk Suite\"")
         != std::string::npos);
     REQUIRE(source.find("D2RL::Input::Key::D") != std::string::npos);
@@ -312,6 +317,10 @@ y = 900
     REQUIRE(source.find("only D2R builds") == std::string::npos);
     REQUIRE(source.find("D2RL::GetBuildName") != std::string::npos);
     REQUIRE(source.find("D2RL::GetBuildVersion") != std::string::npos);
+    REQUIRE(source.find("ButtonLocalizationVirtualPath") == std::string::npos);
+    REQUIRE(source.find("ButtonLocalizationResource") == std::string::npos);
+    REQUIRE(source.find("strings.json") == std::string::npos);
+    REQUIRE(source.find("65101") == std::string::npos);
     REQUIRE(source.find("ValidateNativeFingerprint")
         != std::string::npos);
     REQUIRE(source.find("native fingerprint accepted")
@@ -372,7 +381,7 @@ y = 900
     REQUIRE(ownedButton.find("DepositButtonVirtualPath")
         < ownedButton.find("if (!Settings.inventoryButtonEnabled) return true;"));
     REQUIRE(ownedButton.find("ButtonLocalizationVirtualPath")
-        < ownedButton.find("DepositButtonVirtualPath"));
+        == std::string_view::npos);
     REQUIRE(ownedButton.find("if (!Settings.inventoryButtonEnabled) return true;")
         < ownedButton.find("ButtonLayoutVirtualPath"));
     REQUIRE(ownedButton.find("ButtonLayoutVirtualPath")

@@ -1,4 +1,4 @@
-# Bulk Currency Deposit 1.1.0
+# Bulk Currency Deposit 1.1.1
 
 Transfers every supported stackable currency item from the player inventory
 to its assigned Advanced Stash slot. This includes runes, gems and custom
@@ -20,8 +20,9 @@ The DLL does not use a D2R build-name or version allowlist. It logs the
 observed runtime identity, then requires its strict native fingerprint and
 Diagnostics ownership checks before installing any listener or resource. A
 mismatched build is refused safely; an unnamed build may load only when every
-required native witness matches. Official qualification is still performed
-separately on D2R 3.2.92777 and 3.3.93847.
+required native witness matches. Runtime qualification is performed on D2R
+3.3.93847. D2R 3.2.92777 is covered by the governed byte-exact equivalence of
+every native surface used by this plugin.
 
 ## Use
 
@@ -38,6 +39,7 @@ inventory_button_enabled = true
 [button]
 x = 3
 y = 813
+tooltip = "Deposit Currency"
 ```
 
 The default position is below Dimentio's standard Charm Inventory button.
@@ -74,7 +76,7 @@ adjust only the outer `rect` coordinates for that layout:
         "hoveredFrame": 3,
         "onClickMessage": "PanelManager:OpenPanel:RuffnecKkBulkCurrencyDeposit",
         "pressLabelOffset": { "x": 0, "y": 2 },
-        "tooltipString": "@RuffnecKkBulkCurrencyDepositTooltip"
+        "tooltipString": "Deposit Currency"
       }
     }
   ]
@@ -110,12 +112,11 @@ the modified third-party MPQ.
 
 ## Language
 
-The tooltip follows the active D2R client language automatically. The DLL
-registers `RuffnecKkBulkCurrencyDepositTooltip` for all 13 D2R locales through
-its virtual string table; no language setting or companion MPQ is required.
-The active mod can replace the complete plugin string resource at
-`data/local/lng/strings/d2rloader/bulk-currency-deposit/strings.json` when it
-needs different wording.
+The plugin-owned Inventory button uses the literal UTF-8 tooltip configured by
+`button.tooltip`. A mod-owned layout sets its own literal `tooltipString` in the
+layout JSON. Version 1.1.1 deliberately registers no localization string table
+and reserves no numeric string ID, preventing the button tooltip from
+overriding D2RLoader or active-mod strings.
 
 The native Advanced Stash registry decides which items can move and where they
 belong. Unsupported and ordinary non-stackable items remain in the inventory.

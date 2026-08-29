@@ -41,8 +41,6 @@ constexpr std::size_t WidgetVisibleOffset = 0x51;
 
 constexpr char ButtonLayoutVirtualPath[] =
     "data/global/ui/layouts/bulk-currency-deposit/inventory-button.json";
-constexpr char ButtonLocalizationVirtualPath[] =
-    "data/local/lng/strings/d2rloader/bulk-currency-deposit/strings.json";
 constexpr char ButtonMoldVirtualPath[] =
     "data/hd/global/ui/d2rloader/bulk-currency-deposit/button-mold.sprite";
 constexpr char ButtonMoldLowendVirtualPath[] =
@@ -85,6 +83,10 @@ exclude_item_codes = []
 # values if another mod or plugin already uses this location.
 x = 3
 y = 813
+
+# Literal UTF-8 tooltip for the optional Inventory button. Mod-owned layouts
+# set their own literal tooltipString and do not depend on a global string ID.
+tooltip = "Deposit Currency"
 )toml";
 
 constexpr std::uintptr_t GetLocalDataContextRva = 0x08B2D0;
@@ -262,8 +264,6 @@ D2RL::Panels::ChildLayoutHandle ButtonChildLayout{
     D2RL::Panels::InvalidChildLayoutHandle};
 D2RL::Resources::RegistrationHandle ButtonLayoutResource{
     D2RL::Resources::InvalidHandle};
-D2RL::Resources::RegistrationHandle ButtonLocalizationResource{
-    D2RL::Resources::InvalidHandle};
 D2RL::Resources::RegistrationHandle ButtonMoldResource{
     D2RL::Resources::InvalidHandle};
 D2RL::Resources::RegistrationHandle ButtonMoldLowendResource{
@@ -338,7 +338,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "bulk-currency-deposit",
     .name = "Bulk Currency Deposit",
-    .version = "1.1.0",
+    .version = "1.1.1",
     .author = "RuffnecKk",
     .description = "Auto transfers all your stackable currency items into their respective stash slots.",
     .flags = D2RL::PluginFlags::Shared | D2RL::PluginFlags::NativeHooks,
@@ -813,8 +813,7 @@ bool UnregisterOwnedButton() noexcept {
         && unregisterResource(DepositButtonLowendResource)
         && unregisterResource(DepositButtonResource)
         && unregisterResource(ButtonMoldLowendResource)
-        && unregisterResource(ButtonMoldResource)
-        && unregisterResource(ButtonLocalizationResource);
+        && unregisterResource(ButtonMoldResource);
 }
 
 bool RegisterOwnedButton() noexcept {
@@ -837,11 +836,6 @@ bool RegisterOwnedButton() noexcept {
         return false;
     }
     if (!RegisterResource(
-            ButtonLocalizationVirtualPath,
-            ButtonLocalizationJson.data(),
-            ButtonLocalizationJson.size(),
-            ButtonLocalizationResource)
-        || !RegisterResource(
             ButtonMoldVirtualPath, mold.data(), mold.size(), ButtonMoldResource)
         || !RegisterResource(
             ButtonMoldLowendVirtualPath,
@@ -1599,7 +1593,7 @@ auto Status(
     std::snprintf(
         message,
         sizeof(message),
-        "Bulk Currency Deposit 1.1.0: enabled=%s; Controls=%s; defaultBinding=SHIFT+D; UI=%s; buttonResources=%s; inventoryButton=%s; buttonPosition=%d,%d; delay=%ums; include=%llu; exclude=%llu; batch=%s; pending=%llu; requests=%llu; buttonRequests=%llu; coalesced=%llu; refused=%llu; stale=%llu; empty=%llu; started=%llu; completed=%llu; cancelled=%llu; queued=%llu; transferred=%llu; failed=%llu; skipped=%llu; dispatchFailures=%llu; TOML=%s.",
+        "Bulk Currency Deposit 1.1.1: enabled=%s; Controls=%s; defaultBinding=SHIFT+D; UI=%s; buttonResources=%s; inventoryButton=%s; buttonPosition=%d,%d; delay=%ums; include=%llu; exclude=%llu; batch=%s; pending=%llu; requests=%llu; buttonRequests=%llu; coalesced=%llu; refused=%llu; stale=%llu; empty=%llu; started=%llu; completed=%llu; cancelled=%llu; queued=%llu; transferred=%llu; failed=%llu; skipped=%llu; dispatchFailures=%llu; TOML=%s.",
         Settings.enabled ? "true" : "false",
         DepositAction.load(std::memory_order_acquire)
                 != D2RL::Input::InvalidHandle
@@ -1670,7 +1664,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
                 "BulkCurrencyDeposit: optional status command was not registered.");
         }
         context->LogInfo(
-            "Bulk Currency Deposit 1.1.0 by RuffnecKk loaded disabled; no Controls action, SDK listeners or resources installed.");
+            "Bulk Currency Deposit 1.1.1 by RuffnecKk loaded disabled; no Controls action, SDK listeners or resources installed.");
         return true;
     }
 
@@ -1746,7 +1740,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     std::snprintf(
         message,
         sizeof(message),
-        "Bulk Currency Deposit 1.1.0 by RuffnecKk active; native fingerprint accepted; Controls action=Bulk Currency Deposit (default SHIFT+D); buttonResources=ready; inventoryButton=%s at %d,%d; delay=%ums; routing=native Advanced Stash registry; installation=%s; TOML=%s.",
+        "Bulk Currency Deposit 1.1.1 by RuffnecKk active; native fingerprint accepted; Controls action=Bulk Currency Deposit (default SHIFT+D); buttonResources=ready; inventoryButton=%s at %d,%d; delay=%ums; routing=native Advanced Stash registry; installation=%s; TOML=%s.",
         Settings.inventoryButtonEnabled ? "injected" : "external-ready",
         Settings.button.x,
         Settings.button.y,

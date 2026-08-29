@@ -28,6 +28,8 @@ inline constexpr std::int32_t DefaultButtonX = 3;
 inline constexpr std::int32_t DefaultButtonY = 813;
 inline constexpr std::int32_t MinimumButtonCoordinate = -32768;
 inline constexpr std::int32_t MaximumButtonCoordinate = 32767;
+inline constexpr std::string_view DefaultButtonTooltip{"Deposit Currency"};
+inline constexpr std::size_t MaximumButtonTooltipBytes = 256;
 
 constexpr std::uint64_t PackActionBinding(
         std::uint32_t key,
@@ -150,6 +152,7 @@ constexpr bool AcceptUiStateEntry(
 struct ButtonConfig {
     std::int32_t x{DefaultButtonX};
     std::int32_t y{DefaultButtonY};
+    std::string tooltip{DefaultButtonTooltip};
 };
 
 struct Config {
@@ -165,29 +168,6 @@ inline constexpr std::string_view DepositUiTarget{"PanelManager"};
 inline constexpr std::string_view DepositUiCommand{"OpenPanel"};
 inline constexpr std::string_view DepositUiText{
     "RuffnecKkBulkCurrencyDeposit"};
-inline constexpr std::uint32_t ButtonTooltipStringId = 65101;
-inline constexpr std::string_view ButtonTooltipKey{
-    "RuffnecKkBulkCurrencyDepositTooltip"};
-inline constexpr std::string_view ButtonLocalizationJson{R"json([
-  {
-    "id": 65101,
-    "Key": "RuffnecKkBulkCurrencyDepositTooltip",
-    "enUS": "Deposit Currency",
-    "zhTW": "存放貨幣",
-    "deDE": "Währung einlagern",
-    "esES": "Depositar monedas",
-    "frFR": "Déposer les monnaies",
-    "itIT": "Deposita valuta",
-    "koKR": "화폐 보관",
-    "plPL": "Zdeponuj walutę",
-    "esMX": "Depositar monedas",
-    "jaJP": "通貨を預ける",
-    "ptBR": "Depositar moedas",
-    "ruRU": "Положить валюту",
-    "zhCN": "存放货币"
-  }
-]
-)json"};
 
 inline bool IsDepositUiMessage(
         std::string_view target,
@@ -196,6 +176,33 @@ inline bool IsDepositUiMessage(
     return target == DepositUiTarget
         && command == DepositUiCommand
         && text == DepositUiText;
+}
+
+inline std::string EscapeJsonString(std::string_view text) {
+    static constexpr char HexDigits[]{"0123456789ABCDEF"};
+    std::string escaped;
+    escaped.reserve(text.size());
+    for (const unsigned char byte : text) {
+        switch (byte) {
+        case '"': escaped += "\\\""; break;
+        case '\\': escaped += "\\\\"; break;
+        case '\b': escaped += "\\b"; break;
+        case '\f': escaped += "\\f"; break;
+        case '\n': escaped += "\\n"; break;
+        case '\r': escaped += "\\r"; break;
+        case '\t': escaped += "\\t"; break;
+        default:
+            if (byte < 0x20) {
+                escaped += "\\u00";
+                escaped.push_back(HexDigits[(byte >> 4) & 0x0F]);
+                escaped.push_back(HexDigits[byte & 0x0F]);
+            } else {
+                escaped.push_back(static_cast<char>(byte));
+            }
+            break;
+        }
+    }
+    return escaped;
 }
 
 inline std::string BuildButtonLayoutJson(const ButtonConfig& config) {
@@ -217,8 +224,8 @@ inline std::string BuildButtonLayoutJson(const ButtonConfig& config) {
     json += "        \"hoveredFrame\": 3,\n";
     json += "        \"onClickMessage\": \"PanelManager:OpenPanel:RuffnecKkBulkCurrencyDeposit\",\n";
     json += "        \"pressLabelOffset\": { \"x\": 0, \"y\": 2 },\n";
-    json += "        \"tooltipString\": \"@";
-    json += ButtonTooltipKey;
+    json += "        \"tooltipString\": \"";
+    json += EscapeJsonString(config.tooltip);
     json += "\"\n";
     json += "      }\n    }\n  ]\n}\n";
     return json;
@@ -410,7 +417,8 @@ inline bool ParseToml(
                 error = "button must be a TOML table";
                 return false;
             }
-            constexpr std::string_view allowedButtonKeys[]{"x", "y"};
+            constexpr std::string_view allowedButtonKeys[]{
+                "x", "y", "tooltip"};
             for (const auto& [key, value] : *button) {
                 (void)value;
                 const auto known = std::find(
@@ -441,6 +449,17 @@ inline bool ParseToml(
             if (!readCoordinate("x", parsed.button.x)
                     || !readCoordinate("y", parsed.button.y)) {
                 return false;
+            }
+            if (const auto* node = button->get("tooltip")) {
+                const auto value = node->value<std::string>();
+                if (!value
+                        || value->empty()
+                        || value->size() > MaximumButtonTooltipBytes
+                        || value->find('\0') != std::string::npos) {
+                    error = "button.tooltip must be a non-empty UTF-8 string of at most 256 bytes";
+                    return false;
+                }
+                parsed.button.tooltip = *value;
             }
         }
         result = std::move(parsed);

@@ -60,7 +60,7 @@ d2rlplugin_embed_config(
 )
 
 if(MSVC)
-    target_compile_options(BulkCurrencyDeposit PRIVATE /utf-8 /W4 /permissive-)
+    target_compile_options(BulkCurrencyDeposit PRIVATE /utf-8 /W4 /WX /permissive-)
     target_link_options(BulkCurrencyDeposit PRIVATE /INCREMENTAL:NO /Brepro)
 endif()
 
@@ -72,13 +72,14 @@ if(BUILD_TESTING)
     )
     target_compile_definitions(BulkCurrencyDepositTests PRIVATE
         BULK_CURRENCY_DEPOSIT_SOURCE_FILE="${CMAKE_CURRENT_SOURCE_DIR}/plugin.cpp"
+        BULK_CURRENCY_DEPOSIT_CONFIG_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../ruffneckk-bulk-currency-deposit.toml"
         BULK_CURRENCY_DEPOSIT_BUTTON_MOLD_FILE="${BULK_CURRENCY_DEPOSIT_BUTTON_MOLD}"
         BULK_CURRENCY_DEPOSIT_BUTTON_MOLD_LOWEND_FILE="${BULK_CURRENCY_DEPOSIT_BUTTON_MOLD_LOWEND}"
         BULK_CURRENCY_DEPOSIT_BUTTON_FILE="${BULK_CURRENCY_DEPOSIT_BUTTON}"
         BULK_CURRENCY_DEPOSIT_BUTTON_LOWEND_FILE="${BULK_CURRENCY_DEPOSIT_BUTTON_LOWEND}"
     )
     if(MSVC)
-        target_compile_options(BulkCurrencyDepositTests PRIVATE /utf-8 /W4 /permissive-)
+        target_compile_options(BulkCurrencyDepositTests PRIVATE /utf-8 /W4 /WX /permissive-)
     endif()
     add_test(NAME bulk-currency-deposit-policy COMMAND BulkCurrencyDepositTests)
 endif()

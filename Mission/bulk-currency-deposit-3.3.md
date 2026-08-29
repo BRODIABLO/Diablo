@@ -1,8 +1,85 @@
 # Bulk Currency Deposit — D2R 3.3
 
-Dernière mise à jour : 28 août 2026
+Dernière mise à jour : 29 août 2026
 
 ## Décision et état
+
+Vincent autorise explicitement le 29 août 2026 le hotfix autonome `1.1.1`
+après un A/B utilisateur concluant : avec la DLL `1.1.0`, la ligne native
+`Hold CTRL to show ranges` de D2RLoader devient `MISSING STRING`; sans la DLL,
+elle revient immédiatement. Les captures et l'audit source isolent la table de
+chaînes virtuelle introduite en `1.1.0` : Bulk Currency Deposit assigne en dur
+l'identifiant numérique `65101` à
+`RuffnecKkBulkCurrencyDepositTooltip`, puis enregistre cette ressource avant de
+tester `inventory_button_enabled`. La collision peut donc toucher tout
+utilisateur dont le plugin est actif, même lorsque l'injection automatique du
+bouton Inventory est désactivée.
+
+Après validation en jeu, Vincent retient explicitement `1.1.1` pour inclusion
+dans la prochaine release de la RuffnecKk D2RLoader Suite. Cette décision
+autorise le checkpoint du dépôt principal; elle ne publie encore aucun asset,
+tag ni GitHub Release du dépôt autonome Suite.
+
+Le correctif retenu supprime entièrement l'identifiant `65101`, la table de
+localisation virtuelle et son handle de ressource. Le layout du bouton utilise
+à la place un tooltip UTF-8 littéral, configurable dans le TOML indépendant
+du plugin et correctement échappé lors de la génération JSON. Ce choix
+abandonne la traduction automatique des treize locales plutôt que de déplacer
+la collision vers un autre identifiant fixe impossible à garantir libre dans
+les mods publics. Il ne change aucun RVA, hook, ABI, fingerprint natif,
+comportement de dépôt, contrat global/mod-local ni propriétaire de surface
+partagée. Le produit reste une DLL autonome `RuffnecKk` de la RuffnecKk
+D2RLoader Suite; MapSense reprend sa priorité dès que cette maintenance bornée
+est qualifiée.
+
+La candidate `1.1.1` est construite deux fois proprement en Release x64 avec
+`/W4 /WX`; les deux DLL sont byte-identiques (325 632 octets, SHA-256
+`44C3CECA8624DCE8BAFAE68CFACB48382AE027EB63D38A76ADD5341A545EB5B4`) et les
+deux exécutions de CTest passent. Le PE porte les versions fichier et produit
+`1.1.1`, l'auteur `RuffnecKk`, la machine x64 et exactement les trois exports
+D2RLoader API v3 attendus. Les tests parsent aussi le TOML public réel,
+valident les bornes du tooltip et son échappement JSON, puis interdisent les
+anciens chemins, handles et clés de localisation.
+
+Le premier cold start frais sous le runtime officiel `3.3.93847` (Build Key
+`623f7a1f73eabb08ccb2b2046e3f9164`, D2R.exe SHA-256
+`E1F5436E3D9687F644EF16938B1B183D1FDEF434F18CF66D852CF68F48CC8936`)
+charge la DLL mod-locale byte-identique et son TOML BKVince personnalisé. Le
+plugin accepte les seize témoins de son empreinte native, annonce
+`buttonResources=ready`, injecte le bouton à `3,813` et résout la configuration
+mod-locale. La pile complète charge 36 plugins, les cinq DLL eezstreet et 18
+memory patches, puis franchit les 24 étapes jusqu'à `D2R startup complete`.
+L'unique échec Revive Overhaul est l'incident préexistant et hors de ce lot.
+Le contrôle visuel automatisé a atteint la sélection des personnages, puis
+s'est arrêté dès qu'une saisie utilisateur a été détectée. Vincent a repris la
+main et confirme ensuite directement en jeu que le bug est corrigé : la ligne
+native de ranges n'affiche plus `MISSING STRING` avec `1.1.1`. Cette validation
+ferme le défaut A/B signalé; le contrôle de portée globale reste distinct.
+
+L'archive candidate locale
+`RuffnecKk-Bulk-Currency-Deposit-1.1.1.zip` contient uniquement la DLL et le
+TOML public, sans README, source, symbole ni log. Elle mesure 144 843 octets et
+vaut SHA-256
+`F5CC5C6A86E6A2C294D8F6E02E660A50D1F5F2FB240E399152CF9F0659C045D0`.
+Le README actualisé reste volontairement à côté de l'archive pour relecture
+humaine avant toute publication. Le TOML public de 1 550 octets vaut SHA-256
+`5363EC40E27D49FFFFB4C2059E5ABBD7EC6D5FDA9DEE469A74BE460F034143D4`.
+
+Le même hash DLL est ensuite qualifié en portée globale seule, sans copie ni
+configuration mod-locale de Bulk Currency Deposit. Le plugin résout le TOML
+public byte-identique, conserve l'injection automatique désactivée en mode
+`external-ready`, accepte l'empreinte native et charge avec la même pile
+complète : 36 plugins, les cinq DLL eezstreet, 18 memory patches et startup
+24/24 terminé. Les copies globales de test sont déplacées dans le backup local
+récupérable, puis la DLL et le TOML BKVince mod-locaux sont restaurés avec leurs
+hashes exacts respectifs
+`44C3CECA8624DCE8BAFAE68CFACB48382AE027EB63D38A76ADD5341A545EB5B4` et
+`36E964916EA79F2A91A6D4E0BAF4A488DB26D6699FEC43A25694F6BA3D2542E2`.
+Une relance supplémentaire de restitution est restée dans l'interface
+D2RLoader avant la synchronisation de configuration et a été arrêtée proprement;
+elle n'est pas comptée comme un cold start. Le cold start mod-local réussi juste
+avant la bascule et l'égalité byte-exacte après restauration restent les preuves
+de cette portée.
 
 Vincent approuve le 25 août 2026 une évolution légère de l'intégration UI,
 prévue pour `1.1.0`. Le plugin ne livre aucun MPQ compagnon. Quand il est actif,
@@ -257,6 +334,10 @@ La configuration et tous ses commentaires sont en anglais.
 - `deposit.exclude_item_codes` : deny-list appliquée ensuite.
 - `button.x` / `button.y` : coordonnées Inventory, défaut `3,813`, directement
   sous le bouton Charm Inventory standard de Dimentio à `3,672`.
+- `button.tooltip` : texte UTF-8 littéral du bouton facultatif, défaut
+  `Deposit Currency`, limité à 256 octets et échappé lors de la génération du
+  layout JSON; aucune table globale ni aucun identifiant numérique de chaîne
+  n'est enregistré.
 
 Il n'existe ni option `consume`, ni option TOML de hotkey. Le binding appartient
 à D2RLoader et persiste uniquement dans son fichier `input-bindings.toml`, que
@@ -313,6 +394,7 @@ plugins optionnels ou tous les rôles multijoueur.
 - `addons/BulkCurrencyDeposit/d2rl-ruffneckk-bulk-currency-deposit.dll`
 - `addons/BulkCurrencyDeposit/RuffnecKk-Bulk-Currency-Deposit-1.0.0.zip`
 - `addons/BulkCurrencyDeposit/RuffnecKk-Bulk-Currency-Deposit-1.1.0-test.zip`
+- `addons/BulkCurrencyDeposit/RuffnecKk-Bulk-Currency-Deposit-1.1.1.zip`
 - témoins runtime mod-locaux du même nom sous `data-BKVince/d2rloader/`.
 
 Le README minimal reste uniquement dans le dépôt pour les crédits et n'est pas
@@ -387,7 +469,9 @@ ils ne doivent pas cohabiter au runtime avec le binaire renommé.
 
 ## Prochain gate
 
-Bulk Currency Deposit `1.0.0` est publié comme 17e plugin du catalogue et des
-bundles publics de la Suite `1.2.0`. Aucun gate requis ne reste ouvert. Les
-rôles TCP/IP host/joiner demeurent un suivi post-release facultatif non
-revendiqué; MapSense redevient la priorité.
+Le hotfix `1.1.1` est retenu pour la prochaine release : builds reproductibles, tests, archive,
+portées mod-locale et globale, restauration et correction visuelle utilisateur
+sont fermés. Le checkpoint du dépôt principal est autorisé séparément; la
+publication GitHub, le tag et les assets Suite restent à préparer avec la
+prochaine release. Les rôles TCP/IP host/joiner demeurent un suivi facultatif
+non revendiqué; MapSense reprend immédiatement la priorité.
