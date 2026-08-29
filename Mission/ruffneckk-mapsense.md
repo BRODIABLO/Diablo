@@ -1397,16 +1397,16 @@ terminée. Le candidat 0.12.5 restaure l'attente stricte par back buffer avant l
 réutilisation de son command allocator, sans modifier les correctifs
 `sFillLocation` ni la navigation verte/rouge de 0.12.4.
 
-État : **SOURCE, BUILD, CTEST, SELF-TEST NATIF, PE, EXPORTS, DÉPLOIEMENT,
-COLD START ET LOGS PASS; CONFIRMATION VISUELLE HUMAINE À FAIRE**. La DLL Release x64 mesure
+État : **PASS — SOURCE, BUILD, CTEST, SELF-TEST NATIF, PE, EXPORTS,
+DÉPLOIEMENT, COLD START, LOGS ET CONFIRMATION VISUELLE HUMAINE**. La DLL Release x64 mesure
 2 113 024 octets, porte PE 0.12.5, expose les quatre exports attendus et vaut
 SHA-256 `67AA43A32657EBB3AC9AFA2D1D719C80C2B2E2EEEE512DEE4C9531EFC1301CD9`.
 Sa copie mod-locale est byte-identique. Le cold start officiel 3.3.93847 atteint
 36 plugins, 18 patches et l'unique échec Revive Overhaul déjà connu. MapSense
 initialise son renderer D3D12 sur la queue exacte sans timeout de fence, erreur
 DXGI, erreur MapSense ni nouvelle rafale `sFillLocation`. Une frame du menu est
-visuellement propre; le caractère intermittent du problème exige toutefois la
-confirmation directe de Vincent avant de fermer le gate.
+visuellement propre et Vincent confirme ensuite que le glitch intermittent a
+disparu avec la 0.12.5.
 
 ### Tâche planifiée 0.13.0 — noms des levels et des shrines
 
