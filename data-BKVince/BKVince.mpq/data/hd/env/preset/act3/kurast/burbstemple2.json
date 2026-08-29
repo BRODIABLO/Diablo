@@ -25598,26 +25598,6 @@
           "prefab": "data/hd/env/foliage/act3/model/prefab/pf_act3_tree_cypress04_pivotFix.json"
         }
       ]
-    },
-    {
-      "type": "Entity",
-      "name": "pf_beacon_quest",
-      "id": 586091854,
-      "components": [
-        {
-          "type": "TransformDefinitionComponent",
-          "name": "prefab_TransformDefinitionComponent",
-          "position": { "x": 78.0, "y": -10.0, "z": 55.0 },
-          "orientation": { "x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0 },
-          "scale": { "x": 1.0, "y": 52.0, "z": 1.0 },
-          "inheritOnlyPosition": false
-        },
-        {
-          "type": "PrefabPlacementDefinitionComponent",
-          "name": "prefab_PrefabPlacementDefinitionComponent",
-          "prefab": "data/hd/env/porory/beacon/pf_beacon_quest.json"
-        }
-      ]
     }
   ],
   "terrain": {

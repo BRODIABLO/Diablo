@@ -201,39 +201,6 @@
     },
     {
       "type": "Entity",
-      "name": "pf_beacon_waypoint",
-      "id": 586091854,
-      "components": [
-        {
-          "type": "TransformDefinitionComponent",
-          "name": "prefab_TransformDefinitionComponent",
-          "position": {
-            "x": 0,
-            "y": -10,
-            "z": 0
-          },
-          "orientation": {
-            "x": 0,
-            "y": 0,
-            "z": 0,
-            "w": 1
-          },
-          "scale": {
-            "x": 1,
-            "y": 25,
-            "z": 1
-          },
-          "inheritOnlyPosition": false
-        },
-        {
-          "type": "PrefabPlacementDefinitionComponent",
-          "name": "prefab_PrefabPlacementDefinitionComponent",
-          "prefab": "data/hd/env/porory/beacon/pf_beacon_waypoint.json"
-        }
-      ]
-    },
-    {
-      "type": "Entity",
       "name": "WaypointHoradricLight",
       "id": 3999000000,
       "components": [
