@@ -939,6 +939,10 @@ noms des levels et des shrines. Il reste planifié et ne commence pas sans un
 nouveau `GO`; les lignes rouges supplémentaires au-delà du Canyon demeurent un
 lot futur distinct.
 
+Vincent a depuis autorisé ce lot futur par `GO` : le gate actif est maintenant
+**MapSense 0.12.4 — navigation rouge statique des quêtes normales**. Les labels
+0.13.0 restent planifiés immédiatement après sa qualification.
+
 Le gate ciblé du filtre ennemi est **PASS** :
 Vincent a confirmé sous Tab que les PNJ/figurants n'ont plus de marqueur et que
 les vrais monstres hostiles restent visibles. Les témoins Navigation Direct
@@ -1343,13 +1347,53 @@ D2R 3.3.93847. Le corpus commun gouverné couvre également 3.2.92777 par
 `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` ne possède ni ce symbole ni cette
 plage.
 
+### Candidat autorisé 0.12.4 — routes rouges statiques des quêtes normales
+
+Le 29 août 2026, Vincent approuve le modèle simple inspiré du comportement de
+PrimeMH sans copier sa liste telle quelle : la progression principale reste
+verte, tandis qu'une whitelist indépendante du journal de quêtes publie en
+rouge les embranchements associés aux quêtes normales. Pit, Crypt, Mausoleum,
+Ancient Tunnels, Arachnid Lair, Swampy Pit, autres temples de Kurast, caves de
+farming glacées, red portals, Cow et Pandemonium restent exclus. Les routes de
+campagne partagées — Andariel, Claw Viper, Durance, Chaos Sanctuary, Ancients
+et Baal — restent vertes. L'exception Canyon demeure inchangée : tombe correcte
+rouge avant récompense, verte après.
+
+La whitelist de sorties couvre Den of Evil, Burial Grounds, Forgotten Tower et
+ses cinq cellars; Lut Gholein Sewers, Halls of the Dead et Maggot Lair; Spider
+Cavern, Flayer Dungeon, Kurast Sewers depuis Bazaar ou Upper Kurast et Ruined
+Temple; Frozen River et la chaîne de Nihlathak. Une continuation à l'intérieur
+d'un donjon de quête devient rouge au lieu de superposer une ancienne verte.
+Le même scan passif de `PresetUnit` publie seulement des objets de quête prouvés
+dans les données 3.3 actives. Frigid Highlands conserve toutes les cages
+générées comme points immuables, mais le rendu choisit dynamiquement la plus proche du joueur,
+sans nouvelle lecture du DRLG ni rescan périodique.
+
+Séquence retenue : moteur commun et priorité de couleur; matrice cinq actes et
+POI terminaux sûrs; fixtures exhaustives et exclusions; build/self-test/PE;
+déploiement byte-identique et cold start pile complète; enfin témoins gameplay
+ciblés et logs propres. État au 29 août 2026 : **SOURCE, BUILD, TESTS, PE,
+DEPLOYMENT, COLD START et LOGS PASS; GAMEPLAY PARTIAL PASS**. Vincent a confirmé
+en jeu la coexistence de la ligne verte de progression et de la ligne rouge
+Dry Hills vers Halls of the Dead, ainsi que la continuation rouge Sewers 1 vers
+Sewers 2 pour la quête de Radament. La matrice complète des cinq actes reste le
+prochain gate fonctionnel. La DLL Release et sa
+copie mod-locale sont byte-identiques, 2 113 024 octets, SHA-256
+`132A1A3D977E4BA046EE6392E90E41B04B3A5FC7487A93B573DED5C3F6C02270`.
+Le runtime officiel 3.3.93847 charge MapSense 0.12.4, accepte l'empreinte native,
+installe les deux suppressions suivies `sFillLocation`, initialise le renderer
+et atteint `D2R startup complete` avec 36 plugins chargés et 18 patches. L'unique
+échec Revive Overhaul est préexistant et hors MapSense; aucune rafale
+`sFillLocation()` fraîche ni erreur MapSense n'apparaît dans les logs du test.
+
 ### Tâche planifiée 0.13.0 — noms des levels et des shrines
 
 Le 29 août 2026, Vincent confirme l'ajout à la ROADMAP des noms de levels et de
 shrines, mais impose le correctif du spam `sFillLocation` comme gate préalable.
-Le séquencement retenu est donc strict : qualifier la 0.12.3 anti-spam, puis
-ouvrir la 0.13.0 des labels. Les deux changements ne doivent pas être mélangés
-dans un même candidat afin de conserver une attribution claire des régressions.
+Le gate 0.12.3 est fermé; Vincent a ensuite intercalé et autorisé la 0.12.4 des
+routes rouges. Le séquencement devient donc strict : qualifier la 0.12.4, puis
+ouvrir la 0.13.0 des labels. Les changements ne doivent pas être mélangés dans
+un même candidat afin de conserver une attribution claire des régressions.
 
 PrimeMH à la révision épinglée
 `92b6a97d8e56346f8b63a88bb647c1af044d2c8b` est retenu comme référence
@@ -1362,7 +1406,7 @@ résoudre chaque shrine depuis son `InteractType` et les tables/locales actives
 de D2R. Un well ordinaire reste hors périmètre et un shrine consommé ne doit
 plus afficher un effet disponible.
 
-État : **PLANNED; 0.12.3 GATE PASSED; aucune source de label, configuration,
+État : **PLANNED; 0.12.4 QUEST-ROUTE GATE ACTIVE; aucune source de label, configuration,
 build, déploiement ou validation gameplay n'est commencé**.
 
 ## Validation future

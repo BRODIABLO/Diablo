@@ -31,6 +31,8 @@ struct NavigationPointCandidate final {
     std::int32_t exactClientX{};
     std::int32_t exactClientY{};
     bool useExactClientCoordinates{};
+    NavigationDestinationSelection selection{
+        NavigationDestinationSelection::All};
 };
 
 struct NavigationPolicyInput final {
@@ -47,6 +49,12 @@ struct NavigationPolicyInput final {
 // layouts whose campaign route changes with the generated map, such as the
 // Act III jungle bypass.
 inline constexpr std::size_t MaximumMainProgressionTargets = 2U;
+
+// Normal quest navigation is a static, opt-in POI policy. It deliberately
+// ignores the quest log: several quests can be active at once, while these
+// exact side routes remain useful and deterministic in every game. Two is the
+// real route maximum (Kurast Bazaar).
+inline constexpr std::size_t MaximumStaticQuestRouteTargets = 2U;
 
 // Main progression is intentionally explicit. Raw Levels.txt Vis links mix
 // optional dungeons with the campaign route (for example Cold Plains -> Cave),
@@ -65,6 +73,32 @@ inline constexpr std::size_t MaximumMainProgressionTargets = 2U;
     std::int32_t currentLevelId,
     std::span<const NavigationExitCandidate> exits) noexcept
     -> std::optional<std::int32_t>;
+
+// Returns only normal-quest side routes. Farming, secret and Pandemonium
+// destinations are excluded. When one of these edges is also present in the
+// green graph (for example Halls of the Dead 1 -> 2), red owns that exact
+// destination so two coincident lines are never published.
+[[nodiscard]] auto StaticQuestRouteTargetsFor(
+    std::int32_t currentLevelId,
+    std::span<std::int32_t> output) noexcept -> std::size_t;
+
+[[nodiscard]] auto IsStaticQuestRouteTarget(
+    std::int32_t currentLevelId,
+    std::int32_t targetLevelId) noexcept -> bool;
+
+struct NavigationQuestPresetTarget final {
+    NavigationDestinationSelection selection{
+        NavigationDestinationSelection::All};
+};
+
+// Exact generated presets are the terminal POIs for ordinary quests. The
+// policy is data-only and consumes no quest state. Repeated barbarian cages
+// use NearestToPlayer so exactly one generated cage is rendered.
+[[nodiscard]] auto StaticQuestPresetTargetFor(
+    std::int32_t currentLevelId,
+    std::uint32_t presetType,
+    std::int32_t presetClassId) noexcept
+    -> std::optional<NavigationQuestPresetTarget>;
 
 // Dynamic progression portals are discovered from exact active object Units.
 // The policy maps only proven level/class pairs so ordinary player portals can
@@ -97,9 +131,9 @@ struct NavigationPresetProgressionTarget final {
     -> std::optional<NavigationPresetProgressionTarget>;
 
 // Builds the bounded set of levels that the resolver should initialize before
-// inspecting RoomTile links. Static campaign destinations are first, followed
-// by unique configured destinations; dynamic portals need no target-Level
-// initialization. Invalid ids and the current level are ignored.
+// inspecting RoomTile links. Static campaign and quest destinations are
+// first, followed by unique configured destinations; dynamic portals need no
+// target-Level initialization. Invalid ids and the current level are ignored.
 [[nodiscard]] auto BuildNavigationPreparationTargets(
     std::int32_t currentLevelId,
     std::span<const std::int32_t> customTargetLevelIds,

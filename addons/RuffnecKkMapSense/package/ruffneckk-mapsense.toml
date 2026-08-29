@@ -79,7 +79,7 @@ enabled = true
 color = "#57E03DFF"
 
 [navigation.quests]
-# Marks exact active quest targets, including the correct Tal Rasha tomb.
+# Marks static normal-quest routes and exact quest POIs, including the tomb.
 enabled = true
 color = "#FF3B30FF"
 

@@ -22,6 +22,19 @@ struct PresetProgressionWitness final {
         NavigationPresetProgressionKind::QuestObject};
 };
 
+struct QuestRouteEdge final {
+    std::int32_t from{};
+    std::int32_t to{};
+};
+
+struct QuestPresetWitness final {
+    std::int32_t levelId{};
+    std::uint32_t presetType{};
+    std::int32_t presetClassId{};
+    NavigationDestinationSelection selection{
+        NavigationDestinationSelection::All};
+};
+
 constexpr std::uint32_t PresetMonster = 1U;
 constexpr std::uint32_t PresetObject = 2U;
 
@@ -45,6 +58,83 @@ constexpr std::array PresetProgressionWitnesses{
     },
 };
 
+// Static side routes for quests in the normal act quest log. Shared campaign
+// routes (Andariel, Claw Viper Temple, Arcane, Travincal, Diablo, Ancients and
+// Baal) stay green because a coincident red line adds no direction. Farming,
+// secret and Pandemonium areas are intentionally absent.
+constexpr std::array QuestRouteGraph{
+    QuestRouteEdge{2, 8},    // Blood Moor -> Den of Evil
+    QuestRouteEdge{3, 17},   // Cold Plains -> Burial Grounds
+    QuestRouteEdge{6, 20},   // Black Marsh -> Forgotten Tower
+    QuestRouteEdge{20, 21},  // Forgotten Tower -> Tower Cellar 1
+    QuestRouteEdge{21, 22},  // Tower Cellar 1 -> 2
+    QuestRouteEdge{22, 23},  // Tower Cellar 2 -> 3
+    QuestRouteEdge{23, 24},  // Tower Cellar 3 -> 4
+    QuestRouteEdge{24, 25},  // Tower Cellar 4 -> 5
+
+    QuestRouteEdge{47, 48},  // Sewers 1 -> 2 (Radament)
+    QuestRouteEdge{48, 49},  // Sewers 2 -> 3
+    QuestRouteEdge{42, 56},  // Dry Hills -> Halls of the Dead 1
+    QuestRouteEdge{56, 57},  // Halls of the Dead 1 -> 2
+    QuestRouteEdge{57, 60},  // Halls of the Dead 2 -> 3
+    QuestRouteEdge{43, 62},  // Far Oasis -> Maggot Lair 1
+    QuestRouteEdge{62, 63},  // Maggot Lair 1 -> 2
+    QuestRouteEdge{63, 64},  // Maggot Lair 2 -> 3
+
+    QuestRouteEdge{76, 85},  // Spider Forest -> Spider Cavern
+    QuestRouteEdge{78, 88},  // Flayer Jungle -> Flayer Dungeon 1
+    QuestRouteEdge{88, 89},  // Flayer Dungeon 1 -> 2
+    QuestRouteEdge{89, 91},  // Flayer Dungeon 2 -> 3
+    QuestRouteEdge{80, 92},  // Kurast Bazaar -> Sewers 1
+    QuestRouteEdge{81, 92},  // Upper Kurast -> Sewers 1
+    QuestRouteEdge{92, 93},  // Sewers 1 -> 2 (Khalim's Heart)
+    QuestRouteEdge{80, 94},  // Kurast Bazaar -> Ruined Temple
+
+    QuestRouteEdge{113, 114}, // Crystalline Passage -> Frozen River
+    QuestRouteEdge{121, 122}, // Nihlathak's Temple -> Halls of Anguish
+    QuestRouteEdge{122, 123}, // Halls of Anguish -> Halls of Pain
+    QuestRouteEdge{123, 124}, // Halls of Pain -> Halls of Vaught
+};
+
+// Class ids are exact D2R 3.3 Objects.txt records consumed by generated
+// PresetUnit records. Monster, SuperUnique and MonPlace presets deliberately
+// remain excluded because their encoded ids depend on active table counts and
+// no governed runtime decoder exists. Diablo seals are also excluded to avoid
+// five simultaneous lines.
+constexpr std::array QuestPresetWitnesses{
+    QuestPresetWitness{4, PresetObject, 21},   // Cairn Stone Lambda
+    QuestPresetWitness{5, PresetObject, 30},   // Tree of Inifuss
+    QuestPresetWitness{38, PresetObject, 26},  // Cain's Gibbet
+    QuestPresetWitness{28, PresetObject, 108}, // Horadric Malus
+
+    QuestPresetWitness{60, PresetObject, 354}, // Horadric Cube chest
+    QuestPresetWitness{61, PresetObject, 149}, // Tainted Sun altar
+    QuestPresetWitness{64, PresetObject, 356}, // Staff of Kings chest
+    QuestPresetWitness{66, PresetObject, 152}, // Horadric Staff orifice
+    QuestPresetWitness{67, PresetObject, 152},
+    QuestPresetWitness{68, PresetObject, 152},
+    QuestPresetWitness{69, PresetObject, 152},
+    QuestPresetWitness{70, PresetObject, 152},
+    QuestPresetWitness{71, PresetObject, 152},
+    QuestPresetWitness{72, PresetObject, 152},
+
+    QuestPresetWitness{85, PresetObject, 407}, // Khalim's Eye chest
+    QuestPresetWitness{91, PresetObject, 406}, // Khalim's Brain chest
+    QuestPresetWitness{93, PresetObject, 405}, // Khalim's Heart chest
+    QuestPresetWitness{94, PresetObject, 193}, // Lam Esen's Tome
+    QuestPresetWitness{83, PresetObject, 404}, // Compelling Orb
+
+    QuestPresetWitness{107, PresetObject, 376}, // Hellforge
+
+    QuestPresetWitness{
+        111,
+        PresetObject,
+        473,
+        NavigationDestinationSelection::NearestToPlayer}, // captive cage
+    QuestPresetWitness{114, PresetObject, 558}, // frozen Anya
+    QuestPresetWitness{120, PresetObject, 546}, // Ancients' altar
+};
+
 // Explicit forward-progression graph for all five acts. In outdoor hubs the
 // green line follows the campaign route and deliberately ignores optional
 // entrances. Once the player enters a multi-floor dungeon, its next floor is
@@ -64,11 +154,6 @@ constexpr std::array ProgressionGraph{
     ProgressionEdge{10, 5},  // Underground Passage Level 1 -> Dark Wood
     ProgressionEdge{11, 15}, // Hole Level 1 -> Hole Level 2
     ProgressionEdge{12, 16}, // Pit Level 1 -> Pit Level 2
-    ProgressionEdge{20, 21}, // Forgotten Tower -> Tower Cellar Level 1
-    ProgressionEdge{21, 22}, // Tower Cellar Level 1 -> Level 2
-    ProgressionEdge{22, 23}, // Tower Cellar Level 2 -> Level 3
-    ProgressionEdge{23, 24}, // Tower Cellar Level 3 -> Level 4
-    ProgressionEdge{24, 25}, // Tower Cellar Level 4 -> Level 5
     ProgressionEdge{26, 27}, // Monastery Gate -> Outer Cloister
     ProgressionEdge{27, 28}, // Outer Cloister -> Barracks
     ProgressionEdge{28, 29}, // Barracks -> Jail Level 1
@@ -87,19 +172,13 @@ constexpr std::array ProgressionGraph{
     ProgressionEdge{43, 44}, // Far Oasis -> Lost City
     ProgressionEdge{44, 45}, // Lost City -> Valley of Snakes
     ProgressionEdge{45, 58}, // Valley of Snakes -> Claw Viper Temple 1
-    ProgressionEdge{47, 48}, // Sewers Level 1 -> Level 2
-    ProgressionEdge{48, 49}, // Sewers Level 2 -> Level 3
     ProgressionEdge{50, 51}, // Harem Level 1 -> Level 2
     ProgressionEdge{51, 52}, // Harem Level 2 -> Palace Cellar Level 1
     ProgressionEdge{52, 53}, // Palace Cellar Level 1 -> Level 2
     ProgressionEdge{53, 54}, // Palace Cellar Level 2 -> Level 3
     ProgressionEdge{54, 74, 298}, // Palace Cellar Level 3 -> Arcane portal
     ProgressionEdge{55, 59}, // Stony Tomb Level 1 -> Level 2
-    ProgressionEdge{56, 57}, // Halls of the Dead Level 1 -> Level 2
-    ProgressionEdge{57, 60}, // Halls of the Dead Level 2 -> Level 3
     ProgressionEdge{58, 61}, // Claw Viper Temple Level 1 -> Level 2
-    ProgressionEdge{62, 63}, // Maggot Lair Level 1 -> Level 2
-    ProgressionEdge{63, 64}, // Maggot Lair Level 2 -> Level 3
     ProgressionEdge{66, 73, 100}, // True tomb -> Duriel's Lair portal
     ProgressionEdge{67, 73, 100},
     ProgressionEdge{68, 73, 100},
@@ -121,9 +200,6 @@ constexpr std::array ProgressionGraph{
     ProgressionEdge{83, 100}, // Travincal -> Durance of Hate Level 1
     ProgressionEdge{86, 87},  // Swampy Pit Level 1 -> Level 2
     ProgressionEdge{87, 90},  // Swampy Pit Level 2 -> Level 3
-    ProgressionEdge{88, 89},  // Flayer Dungeon Level 1 -> Level 2
-    ProgressionEdge{89, 91},  // Flayer Dungeon Level 2 -> Level 3
-    ProgressionEdge{92, 93},  // Kurast Sewers Level 1 -> Level 2
     ProgressionEdge{100, 101}, // Durance of Hate Level 1 -> Level 2
     ProgressionEdge{101, 102}, // Durance of Hate Level 2 -> Level 3
     ProgressionEdge{102, 103, 342}, // Hell Gate -> Pandemonium Fortress
@@ -144,9 +220,6 @@ constexpr std::array ProgressionGraph{
     ProgressionEdge{117, 118}, // Frozen Tundra -> Ancients' Way
     ProgressionEdge{118, 120}, // Ancients' Way -> Arreat Summit
     ProgressionEdge{120, 128}, // Arreat Summit -> Worldstone Keep Level 1
-    ProgressionEdge{121, 122}, // Nihlathak's Temple -> Halls of Anguish
-    ProgressionEdge{122, 123}, // Halls of Anguish -> Halls of Pain
-    ProgressionEdge{123, 124}, // Halls of Pain -> Halls of Vaught
     ProgressionEdge{128, 129}, // Worldstone Keep Level 1 -> Level 2
     ProgressionEdge{129, 130}, // Worldstone Keep Level 2 -> Level 3
     ProgressionEdge{130, 131}, // Worldstone Keep Level 3 -> Throne
@@ -168,6 +241,7 @@ constexpr std::array ProgressionGraph{
         && left.subtileY == right.subtileY
         && left.useExactClientCoordinates
             == right.useExactClientCoordinates
+        && left.selection == right.selection
         && (!left.useExactClientCoordinates
             || (left.exactClientX == right.exactClientX
                 && left.exactClientY == right.exactClientY));
@@ -227,6 +301,50 @@ auto SelectMainProgressionTargetFor(
         }
     }
     return std::nullopt;
+}
+
+auto StaticQuestRouteTargetsFor(
+        std::int32_t currentLevelId,
+        std::span<std::int32_t> output) noexcept -> std::size_t {
+    if (currentLevelId <= 0 || output.empty()) return 0U;
+    std::size_t count{};
+    for (const auto& edge : QuestRouteGraph) {
+        if (edge.from != currentLevelId || count >= output.size()) continue;
+        output[count++] = edge.to;
+    }
+    return count;
+}
+
+auto IsStaticQuestRouteTarget(
+        std::int32_t currentLevelId,
+        std::int32_t targetLevelId) noexcept -> bool {
+    if (currentLevelId <= 0 || targetLevelId <= 0) return false;
+    return std::find_if(
+        QuestRouteGraph.begin(),
+        QuestRouteGraph.end(),
+        [currentLevelId, targetLevelId](
+                const QuestRouteEdge& edge) noexcept {
+            return edge.from == currentLevelId && edge.to == targetLevelId;
+        }) != QuestRouteGraph.end();
+}
+
+auto StaticQuestPresetTargetFor(
+        std::int32_t currentLevelId,
+        std::uint32_t presetType,
+        std::int32_t presetClassId) noexcept
+        -> std::optional<NavigationQuestPresetTarget> {
+    if (currentLevelId <= 0 || presetClassId < 0) return std::nullopt;
+    const auto match = std::find_if(
+        QuestPresetWitnesses.begin(),
+        QuestPresetWitnesses.end(),
+        [currentLevelId, presetType, presetClassId](
+                const QuestPresetWitness& witness) noexcept {
+            return witness.levelId == currentLevelId
+                && witness.presetType == presetType
+                && witness.presetClassId == presetClassId;
+        });
+    if (match == QuestPresetWitnesses.end()) return std::nullopt;
+    return NavigationQuestPresetTarget{.selection = match->selection};
 }
 
 auto DynamicMainProgressionTargetFor(
@@ -305,6 +423,9 @@ auto BuildNavigationPreparationTargets(
             append(edge.to);
         }
     }
+    for (const auto& edge : QuestRouteGraph) {
+        if (edge.from == currentLevelId) append(edge.to);
+    }
     for (const auto targetLevelId : customTargetLevelIds) {
         append(targetLevelId);
     }
@@ -340,7 +461,19 @@ auto EvaluateNavigationResolutionCompleteness(
         });
     const auto foundProgression = requiredProgression == ProgressionGraph.end()
         || SelectMainProgressionTargetFor(currentLevelId, exits).has_value();
-    return foundProgression
+    const auto foundQuestRoutes = std::all_of(
+        QuestRouteGraph.begin(),
+        QuestRouteGraph.end(),
+        [currentLevelId, exits](const QuestRouteEdge& edge) noexcept {
+            if (edge.from != currentLevelId) return true;
+            return std::find_if(
+                exits.begin(),
+                exits.end(),
+                [&edge](const NavigationExitCandidate& exit) noexcept {
+                    return exit.targetLevelId == edge.to;
+                }) != exits.end();
+        });
+    return foundProgression && foundQuestRoutes
         ? NavigationResolutionCompleteness::Complete
         : NavigationResolutionCompleteness::PartialRetryable;
 }
@@ -374,8 +507,15 @@ auto BuildNavigationDestinations(
     const auto progressionTarget = input.progressionTargetOverride.has_value()
         ? input.progressionTargetOverride
         : SelectMainProgressionTargetFor(input.currentLevelId, input.exits);
+    const auto durielPortalReplacesOrifice = input.currentLevelId >= 66
+        && input.currentLevelId <= 72
+        && progressionTarget.value_or(UnknownNavigationLevelId) == 73;
     for (const auto& exit : input.exits) {
-        if (progressionTarget && exit.targetLevelId == *progressionTarget) {
+        const auto staticQuestRoute = IsStaticQuestRouteTarget(
+            input.currentLevelId,
+            exit.targetLevelId);
+        if (progressionTarget && exit.targetLevelId == *progressionTarget
+            && !staticQuestRoute) {
             AppendUnique(
                 output,
                 count,
@@ -407,9 +547,28 @@ auto BuildNavigationDestinations(
                         exit.useExactClientCoordinates,
                 });
         }
+        if (staticQuestRoute) {
+            AppendUnique(
+                output,
+                count,
+                NavigationSubtileDestination{
+                    .destinationId = exit.destinationId,
+                    .subtileX = exit.subtileX,
+                    .subtileY = exit.subtileY,
+                    .kind = NavigationLineKind::Quest,
+                    .exactClientX = exit.exactClientX,
+                    .exactClientY = exit.exactClientY,
+                    .useExactClientCoordinates =
+                        exit.useExactClientCoordinates,
+                });
+        }
     }
 
     for (const auto& quest : input.questTargets) {
+        // In the true tomb, object 152 is the pre-portal staff orifice. Once
+        // the exact class-100 portal to Duriel's Lair exists, green owns that
+        // progression and the now-stale red orifice must disappear.
+        if (durielPortalReplacesOrifice) continue;
         AppendUnique(
             output,
             count,
@@ -422,6 +581,7 @@ auto BuildNavigationDestinations(
                 .exactClientY = quest.exactClientY,
                 .useExactClientCoordinates =
                     quest.useExactClientCoordinates,
+                .selection = quest.selection,
             });
     }
     return count;

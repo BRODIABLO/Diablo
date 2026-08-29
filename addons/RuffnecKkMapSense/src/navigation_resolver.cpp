@@ -188,6 +188,10 @@ struct CandidateBatch final {
     std::int32_t waypointExactClientX{};
     std::int32_t waypointExactClientY{};
     bool pendingWaypoint{};
+    std::array<
+        NavigationPointCandidate,
+        MaximumNavigationDestinations> questTargets{};
+    std::size_t questTargetCount{};
     NavigationPointCandidate correctTomb{};
     std::int32_t correctTombLevelId{UnknownNavigationLevelId};
     bool hasCorrectTomb{};
@@ -733,6 +737,29 @@ void UpsertExitCandidate(
         batch.traversalLimited = batch.exitSelectionCount
             >= batch.exitSelections.size();
     }
+}
+
+void AppendQuestTarget(
+        CandidateBatch& batch,
+        NavigationPointCandidate candidate) noexcept {
+    if (candidate.subtileX < 0 || candidate.subtileY < 0) {
+        return;
+    }
+    for (std::size_t index = 0U;
+            index < batch.questTargetCount;
+            ++index) {
+        const auto& existing = batch.questTargets[index];
+        if (existing.destinationId == candidate.destinationId
+            && existing.subtileX == candidate.subtileX
+            && existing.subtileY == candidate.subtileY) {
+            return;
+        }
+    }
+    if (batch.questTargetCount >= batch.questTargets.size()) {
+        batch.traversalLimited = true;
+        return;
+    }
+    batch.questTargets[batch.questTargetCount++] = candidate;
 }
 
 [[nodiscard]] auto ResolveNativeMonasteryAnchorUnchecked(
@@ -1539,6 +1566,37 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
                     });
                 if (batch.traversalLimited) return false;
             }
+            const auto questPreset = StaticQuestPresetTargetFor(
+                currentLevelId,
+                presetType,
+                presetId);
+            if (questPreset.has_value()) {
+                std::int32_t subtileX{};
+                std::int32_t subtileY{};
+                if (!CheckedNavigationSubtileCoordinate(
+                        sourceRectangle.tileX,
+                        relativeX,
+                        subtileX)
+                    || !CheckedNavigationSubtileCoordinate(
+                        sourceRectangle.tileY,
+                        relativeY,
+                        subtileY)) {
+                    return false;
+                }
+                AppendQuestTarget(
+                    batch,
+                    NavigationPointCandidate{
+                        .destinationId = MakeDestinationId(
+                            presetType,
+                            presetId,
+                            subtileX,
+                            subtileY),
+                        .subtileX = subtileX,
+                        .subtileY = subtileY,
+                        .selection = questPreset->selection,
+                    });
+                if (batch.traversalLimited) return false;
+            }
         }
         if (presetType == PresetLevelExit && isWithinRoom) {
             const auto targetLevelId = Detail::SelectRoomTileTargetLevel(
@@ -1715,7 +1773,8 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
 
     std::array<
         std::int32_t,
-        MaximumCustomLevelTargets + MaximumMainProgressionTargets> targetIds{};
+        MaximumCustomLevelTargets + MaximumMainProgressionTargets
+            + MaximumStaticQuestRouteTargets> targetIds{};
     const auto targetCount = BuildNavigationPreparationTargets(
         current.levelId,
         customTargetLevelIds,
@@ -2690,10 +2749,19 @@ auto RefreshNavigationDestinations(
 
     std::array<NavigationSubtileDestination, MaximumNavigationDestinations>
         destinations{};
-    const auto correctTombQuestTargets = batch.hasCorrectTomb
-            && !batch.durielRewardGranted
-        ? std::span<const NavigationPointCandidate>(&batch.correctTomb, 1U)
-        : std::span<const NavigationPointCandidate>{};
+    std::array<NavigationPointCandidate, MaximumNavigationDestinations>
+        questTargets{};
+    auto questTargetCount = batch.questTargetCount;
+    if (questTargetCount != 0U) {
+        std::copy_n(
+            batch.questTargets.begin(),
+            questTargetCount,
+            questTargets.begin());
+    }
+    if (batch.hasCorrectTomb && !batch.durielRewardGranted
+        && questTargetCount < questTargets.size()) {
+        questTargets[questTargetCount++] = batch.correctTomb;
+    }
     const auto correctTombProgressionOverride = batch.hasCorrectTomb
             && batch.durielRewardGranted
         ? std::optional<std::int32_t>(batch.correctTombLevelId)
@@ -2704,7 +2772,9 @@ auto RefreshNavigationDestinations(
             .inTown = batch.inTown,
             .exits = std::span(batch.exits.data(), batch.exitCount),
             .waypoint = batch.hasWaypoint ? &batch.waypoint : nullptr,
-            .questTargets = correctTombQuestTargets,
+            .questTargets = std::span(
+                questTargets.data(),
+                questTargetCount),
             .customTargetLevelIds = std::span(
                 customIds.data(),
                 customIdCount),

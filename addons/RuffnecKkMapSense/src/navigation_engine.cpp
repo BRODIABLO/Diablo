@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <thread>
 #include <type_traits>
 
@@ -90,6 +91,80 @@ private:
             return true;
     }
     return false;
+}
+
+[[nodiscard]] constexpr auto IsValidSelection(
+        NavigationDestinationSelection selection) noexcept -> bool {
+    switch (selection) {
+        case NavigationDestinationSelection::All:
+        case NavigationDestinationSelection::NearestToPlayer:
+            return true;
+    }
+    return false;
+}
+
+[[nodiscard]] constexpr auto UnsignedDifference(
+        std::int64_t left,
+        std::int64_t right) noexcept -> std::uint64_t {
+    return left >= right
+        ? static_cast<std::uint64_t>(left - right)
+        : static_cast<std::uint64_t>(right - left);
+}
+
+// Generated quest presets stay immutable after discovery. For a repeated POI
+// group (the generated captive cages), choose one endpoint from the current
+// player coordinates during every automap pass instead of rescanning the DRLG.
+[[nodiscard]] auto SelectNearestDestinationIndex(
+        std::int32_t playerClientX,
+        std::int32_t playerClientY) noexcept -> std::optional<std::size_t> {
+    const auto playerSubtileXNumerator =
+        static_cast<std::int64_t>(playerClientX)
+        + std::int64_t{2} * playerClientY;
+    const auto playerSubtileYNumerator =
+        std::int64_t{2} * playerClientY
+        - static_cast<std::int64_t>(playerClientX);
+    constexpr std::int64_t ClientToSubtileDivisor = 32;
+
+    std::optional<std::size_t> selected{};
+    std::uint64_t selectedDistance{};
+    for (std::size_t index = 0U; index < DestinationCount; ++index) {
+        const auto& destination = Destinations[index];
+        if (destination.selection
+                != NavigationDestinationSelection::NearestToPlayer
+            || destination.subtileX < 0 || destination.subtileY < 0) {
+            continue;
+        }
+        const auto candidateXNumerator =
+            static_cast<std::int64_t>(destination.subtileX)
+            * ClientToSubtileDivisor;
+        const auto candidateYNumerator =
+            static_cast<std::int64_t>(destination.subtileY)
+            * ClientToSubtileDivisor;
+        const auto deltaX = UnsignedDifference(
+                candidateXNumerator,
+                playerSubtileXNumerator);
+        const auto deltaY = UnsignedDifference(
+            candidateYNumerator,
+            playerSubtileYNumerator);
+        // This bound makes the squared Euclidean metric overflow-proof. It is
+        // over ninety million world subtiles after removing the x32 scale,
+        // far beyond any valid generated D2R level.
+        constexpr std::uint64_t MaximumSquaredComponent = 3'037'000'499U;
+        if (deltaX > MaximumSquaredComponent
+            || deltaY > MaximumSquaredComponent) {
+            continue;
+        }
+        const auto distance = deltaX * deltaX + deltaY * deltaY;
+        if (!selected.has_value()
+            || distance < selectedDistance
+            || (distance == selectedDistance
+                && destination.destinationId
+                    < Destinations[*selected].destinationId)) {
+            selected = index;
+            selectedDistance = distance;
+        }
+    }
+    return selected;
 }
 
 void ClearProjectedLinesLocked() noexcept {
@@ -285,7 +360,10 @@ auto PublishNavigationDestinations(
         return false;
     }
     for (std::size_t index = 0U; index < destinationCount; ++index) {
-        if (!IsValidKind(destinations[index].kind)) return false;
+        if (!IsValidKind(destinations[index].kind)
+            || !IsValidSelection(destinations[index].selection)) {
+            return false;
+        }
     }
 
     StateLockGuard lock(true);
@@ -365,11 +443,20 @@ auto ObserveNavigationAutomapPass(
         return NavigationAutomapObservationResult::Ignored;
     }
 
+    const auto nearestDestination = SelectNearestDestinationIndex(
+        pass.playerClientX,
+        pass.playerClientY);
     std::size_t lineCount{};
     for (std::size_t index = 0U;
             index < DestinationCount;
             ++index) {
         const auto& destination = Destinations[index];
+        if (destination.selection
+                == NavigationDestinationSelection::NearestToPlayer
+            && (!nearestDestination.has_value()
+                || index != *nearestDestination)) {
+            continue;
+        }
         NavigationProjectionDiagnostic diagnostic{
             .currentLevelId = pass.currentLevelId,
             .playerClientX = pass.playerClientX,

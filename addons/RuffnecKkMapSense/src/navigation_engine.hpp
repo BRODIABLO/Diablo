@@ -16,6 +16,11 @@ enum class NavigationLineKind : std::uint8_t {
     Quest,
 };
 
+enum class NavigationDestinationSelection : std::uint8_t {
+    All,
+    NearestToPlayer,
+};
+
 // Immutable destination description produced by a resolver on D2R's game/UI
 // thread. It deliberately contains no D2R pointer or renderer state.
 struct NavigationSubtileDestination final {
@@ -26,6 +31,8 @@ struct NavigationSubtileDestination final {
     std::int32_t exactClientX{};
     std::int32_t exactClientY{};
     bool useExactClientCoordinates{};
+    NavigationDestinationSelection selection{
+        NavigationDestinationSelection::All};
 };
 
 struct NavigationNativePoint final {

@@ -1,12 +1,12 @@
 # RuffnecKk MapSense
 
 RuffnecKk MapSense is an experimental D2RLoader client plugin for Diablo II:
-Resurrected targeting builds 3.2.92777 and 3.3.93847. Version 0.12.3 is the
+Resurrected targeting builds 3.2.92777 and 3.3.93847. Version 0.12.4 is the
 current source candidate and combines the native
 map-reveal foundation, a compact in-game settings panel, simultaneous
 hostile-monster markers, configurable immunity indicators, and Direct
-navigation with one exact quest adapter. Broader quest, object, label, GPS,
-and projectile collectors remain planned.
+navigation with static normal-quest routes and exact quest-object endpoints.
+Labels, GPS, and projectile collectors remain planned.
 
 ## Live monster markers
 
@@ -27,7 +27,7 @@ appending duplicate IDs while `Present` is late. No `Unit`,
 or pixel pointer survives either pass, and a missing ID is discarded.
 
 Every living, Evil-aligned hostile present in D2R's complete client monster
-table is keyed by native unit ID and considered simultaneously. Version 0.12.3
+table is keyed by native unit ID and considered simultaneously. Version 0.12.4
 has no configurable scan radius and no spatial rejection: MapSense publishes
 every qualifying client-known monster that D2R's native projection accepts
 inside the active automap clip. Closing the automap lets observations expire
@@ -110,7 +110,8 @@ TOML. Runtime visual approval of both styles remains open.
 
 MapSense 0.10.0 introduced straight-line navigation to D2R's native automap,
 0.11.0 extended its progression policy across all five acts, and 0.12.0 adds
-the exact correct-tomb adapter for the Canyon of the Magi. It does not
+the exact correct-tomb adapter for the Canyon of the Magi. Version 0.12.4 adds
+the static normal-quest route policy. It does not
 redraw the map and does not claim that a line is walkable: Direct mode is a
 direction indicator and may cross walls. The runtime candidate exposes three
 real destination families:
@@ -118,11 +119,12 @@ real destination families:
 - a blue line to the exact generated waypoint `PresetUnit` position in the
   current level, when one exists;
 - a green line to the explicit main-progression exit throughout Acts I-V;
-  outdoor hubs ignore optional entrances, while an entered multi-floor side
-  dungeon continues to its next floor; after Duriel's quest is rewarded, the
-  correct Tal Rasha tomb remains a green farming destination;
-- a red line to the same exact correct-tomb RoomTile while Act II quest 6 is
-  not yet rewarded;
+  outdoor hubs ignore optional entrances, and shared campaign quest routes
+  stay green; after Duriel's quest is rewarded, the correct Tal Rasha tomb
+  remains a green farming destination;
+- red lines to whitelisted normal-quest side routes and proven quest-object
+  presets, independent of quest-log state; the Canyon keeps its exact
+  red-before-reward and green-after-reward exception;
 - purple lines to directly connected levels selected by the player.
 
 Activation, color, and common line thickness for all four families are edited
@@ -188,7 +190,7 @@ projection. Dynamic-only levels are polled at most once per second while the
 automap is rendering, stop polling as soon as their green destination exists,
 and never retry forever when a quest has not spawned the portal yet.
 
-Version 0.12.3 passively scans each room's generated presets before requesting
+Version 0.12.4 passively scans each room's generated presets before requesting
 native room activation. Ordinary rooms without a type-5 exit are no longer
 materialized for RoomTile discovery; dynamic portal levels retain their
 all-room scan, and type-5 exits plus exact outdoor collision pairs retain the
@@ -203,6 +205,27 @@ for both states: the quest-target line is red until Act II Quest 6 reports
 `RewardGranted`, and the main-progression line is green afterward for Duriel
 farming. If the current-difficulty quest record, generated tomb, or exact exit
 is unavailable, the resolver remains retryable and publishes no approximation.
+
+Version 0.12.4 gives the existing `navigation.quests` option a static,
+quest-log-independent policy. Green remains the main campaign route. Red marks
+only side destinations associated with ordinary act quests: Den of Evil,
+Burial Grounds, Forgotten Tower and its cellar chain; Lut Gholein Sewers,
+Halls of the Dead and Maggot Lair; Spider Cavern, Flayer Dungeon, Kurast
+Sewers and Ruined Temple; Frozen River and the Nihlathak dungeon chain. Upper
+Kurast and Kurast Bazaar both recognize their generated Kurast Sewers exits.
+Pit, Crypt, Mausoleum, Ancient Tunnels, Arachnid Lair, Swampy Pit, optional
+Kurast temples, icy farming caves, red portals, Cow and Pandemonium areas are
+deliberately absent. Shared campaign routes such as Andariel, Claw Viper
+Temple, Durance, Chaos Sanctuary, Ancients and Baal remain green.
+
+The same passive preset scan publishes proven quest objects in their own
+levels, including the Cairn Stone, Tree of Inifuss, Cain's Gibbet, Horadric
+Malus, Cube and Staff chests, Tainted Sun altar, Horadric Staff orifice,
+Khalim organ chests, Lam Esen's Tome, Compelling Orb, Hellforge, frozen Anya
+and the Ancients' altar. Repeated captive-cage presets are tagged as one
+dynamic group: all immutable endpoints are discovered once, and every automap pass
+renders only the cage nearest to the current player without another DRLG scan.
+Diablo's five seals are intentionally excluded.
 
 No `PresetUnit` pointer survives a native resolver call: source identifiers and
 coordinates are copied before D2R may initialize a room. Version 0.10.0 first
@@ -233,8 +256,8 @@ authoritative native client coordinates; the waypoint remains the exact
 generated preset world position selected by D2R's native waypoint resolver.
 Projection occurs synchronously during D2R's existing local-player automap
 pass; Present consumes short-lived immutable line snapshots and reads no DRLG
-pointer. The exact Canyon quest-target adapter is configurable in the panel;
-broader quest routing remains a later collector lot. GPS routing is a later
+pointer. Static quest routing and the Canyon adapter use the existing Quest
+Targets control in the panel. GPS routing is a later
 collision/room-graph lot and never silently replaces Direct mode.
 
 ## In-frame settings panel
@@ -341,7 +364,7 @@ panel; the target list is the sole intentional manual TOML exception.
 
 Schema 7 historically changed monster-radius semantics from client/dimetric
 units to world subtiles; that setting is now retired. Schema 8 activates the
-first real red quest adapter and
+red quest family and
 exposes its switch and color in the in-game menu. Because schema 7 kept the
 reserved quest switch hidden and disabled, its exact old false value migrates
 once to enabled; schema 8 then preserves the player's explicit choice. Saving

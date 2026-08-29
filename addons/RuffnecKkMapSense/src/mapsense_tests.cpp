@@ -13,6 +13,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cctype>
 #include <cmath>
@@ -304,6 +305,73 @@ void CheckNavigationEngineContract() {
         == NavigationAutomapObservationResult::Projected);
     CHECK(AcquireNavigationLineSnapshots(lines) == 2U);
 
+    const std::array captiveCages{
+        NavigationSubtileDestination{
+            .destinationId = 3001U,
+            .subtileX = 10,
+            .subtileY = 3,
+            .kind = NavigationLineKind::Quest,
+            .exactClientX = 112,
+            .exactClientY = 104,
+            .useExactClientCoordinates = true,
+            .selection = NavigationDestinationSelection::NearestToPlayer,
+        },
+        NavigationSubtileDestination{
+            .destinationId = 3002U,
+            .subtileX = 20,
+            .subtileY = 3,
+            .kind = NavigationLineKind::Quest,
+            .exactClientX = 272,
+            .exactClientY = 184,
+            .useExactClientCoordinates = true,
+            .selection = NavigationDestinationSelection::NearestToPlayer,
+        },
+        NavigationSubtileDestination{
+            .destinationId = 3003U,
+            .subtileX = 30,
+            .subtileY = 3,
+            .kind = NavigationLineKind::Quest,
+            .exactClientX = 432,
+            .exactClientY = 264,
+            .useExactClientCoordinates = true,
+            .selection = NavigationDestinationSelection::NearestToPlayer,
+        },
+    };
+    CHECK(PublishNavigationDestinations(
+        41U,
+        3,
+        captiveCages.data(),
+        captiveCages.size()));
+    pass.playerClientX = 100;
+    pass.playerClientY = 100;
+    CHECK(ObserveNavigationAutomapPass(pass)
+        == NavigationAutomapObservationResult::Projected);
+    CHECK(AcquireNavigationLineSnapshots(lines) == 1U);
+    CHECK(lines[0].destinationId == 3001U);
+    CHECK(lines[0].kind == NavigationLineKind::Quest);
+    CHECK(lines[0].endX == 112);
+    CHECK(lines[0].endY == 104);
+
+    pass.playerClientX = 400;
+    pass.playerClientY = 240;
+    CHECK(ObserveNavigationAutomapPass(pass)
+        == NavigationAutomapObservationResult::Projected);
+    CHECK(AcquireNavigationLineSnapshots(lines) == 1U);
+    CHECK(lines[0].destinationId == 3003U);
+    CHECK(lines[0].endX == 432);
+    CHECK(lines[0].endY == 264);
+
+    CHECK(PublishNavigationDestinations(
+        41U,
+        3,
+        destinations.data(),
+        destinations.size()));
+    pass.playerClientX = 100;
+    pass.playerClientY = 100;
+    CHECK(ObserveNavigationAutomapPass(pass)
+        == NavigationAutomapObservationResult::Projected);
+    CHECK(AcquireNavigationLineSnapshots(lines) == 2U);
+
     pass.currentLevelId = UnknownNavigationLevelId;
     CHECK(ObserveNavigationAutomapPass(pass)
         == NavigationAutomapObservationResult::Ignored);
@@ -410,11 +478,6 @@ void CheckNavigationPolicyContract() {
         ProgressionRegression{10, {5, -1}, 1U},
         ProgressionRegression{11, {15, -1}, 1U},
         ProgressionRegression{12, {16, -1}, 1U},
-        ProgressionRegression{20, {21, -1}, 1U},
-        ProgressionRegression{21, {22, -1}, 1U},
-        ProgressionRegression{22, {23, -1}, 1U},
-        ProgressionRegression{23, {24, -1}, 1U},
-        ProgressionRegression{24, {25, -1}, 1U},
         ProgressionRegression{26, {27, -1}, 1U},
         ProgressionRegression{27, {28, -1}, 1U},
         ProgressionRegression{28, {29, -1}, 1U},
@@ -433,19 +496,13 @@ void CheckNavigationPolicyContract() {
         ProgressionRegression{43, {44, -1}, 1U},
         ProgressionRegression{44, {45, -1}, 1U},
         ProgressionRegression{45, {58, -1}, 1U},
-        ProgressionRegression{47, {48, -1}, 1U},
-        ProgressionRegression{48, {49, -1}, 1U},
         ProgressionRegression{50, {51, -1}, 1U},
         ProgressionRegression{51, {52, -1}, 1U},
         ProgressionRegression{52, {53, -1}, 1U},
         ProgressionRegression{53, {54, -1}, 1U},
         ProgressionRegression{54, {74, -1}, 1U, false, 298},
         ProgressionRegression{55, {59, -1}, 1U},
-        ProgressionRegression{56, {57, -1}, 1U},
-        ProgressionRegression{57, {60, -1}, 1U},
         ProgressionRegression{58, {61, -1}, 1U},
-        ProgressionRegression{62, {63, -1}, 1U},
-        ProgressionRegression{63, {64, -1}, 1U},
         ProgressionRegression{66, {73, -1}, 1U, false, 100},
         ProgressionRegression{67, {73, -1}, 1U, false, 100},
         ProgressionRegression{68, {73, -1}, 1U, false, 100},
@@ -466,9 +523,6 @@ void CheckNavigationPolicyContract() {
         ProgressionRegression{83, {100, -1}, 1U},
         ProgressionRegression{86, {87, -1}, 1U},
         ProgressionRegression{87, {90, -1}, 1U},
-        ProgressionRegression{88, {89, -1}, 1U},
-        ProgressionRegression{89, {91, -1}, 1U},
-        ProgressionRegression{92, {93, -1}, 1U},
         ProgressionRegression{100, {101, -1}, 1U},
         ProgressionRegression{101, {102, -1}, 1U},
         ProgressionRegression{102, {103, -1}, 1U, false, 342},
@@ -489,15 +543,12 @@ void CheckNavigationPolicyContract() {
         ProgressionRegression{117, {118, -1}, 1U},
         ProgressionRegression{118, {120, -1}, 1U},
         ProgressionRegression{120, {128, -1}, 1U},
-        ProgressionRegression{121, {122, -1}, 1U},
-        ProgressionRegression{122, {123, -1}, 1U},
-        ProgressionRegression{123, {124, -1}, 1U},
         ProgressionRegression{128, {129, -1}, 1U},
         ProgressionRegression{129, {130, -1}, 1U},
         ProgressionRegression{130, {131, -1}, 1U},
         ProgressionRegression{131, {132, -1}, 1U, false, 563},
     };
-    std::array<NavigationSubtileDestination, 2U> interiorDestinations{};
+    std::array<NavigationSubtileDestination, 4U> interiorDestinations{};
     for (const auto& regression : progressionMatrix) {
         CHECK(MainProgressionTargetFor(regression.from).value_or(-1)
             == regression.targets[0]);
@@ -510,13 +561,20 @@ void CheckNavigationPolicyContract() {
                 ++index) {
             CHECK(actualTargets[index] == regression.targets[index]);
         }
+        std::array<std::int32_t, MaximumStaticQuestRouteTargets>
+            questRouteTargets{};
+        const auto questRouteCount = StaticQuestRouteTargetsFor(
+            regression.from,
+            questRouteTargets);
         const auto preparationCount = BuildNavigationPreparationTargets(
             regression.from,
             std::span<const std::int32_t>{},
             preparationTargets);
         const auto isDynamic = regression.dynamicObjectClassId >= 0;
+        const auto preparedProgressionCount = isDynamic
+            ? 0U : regression.targetCount;
         CHECK(preparationCount
-            == (isDynamic ? 0U : regression.targetCount));
+            == preparedProgressionCount + questRouteCount);
         CHECK(HasDynamicMainProgressionTargetFor(regression.from)
             == isDynamic);
         if (isDynamic) {
@@ -528,7 +586,9 @@ void CheckNavigationPolicyContract() {
                 regression.from,
                 regression.dynamicObjectClassId + 1).has_value());
         }
-        std::array<NavigationExitCandidate, MaximumMainProgressionTargets>
+        std::array<
+            NavigationExitCandidate,
+            MaximumMainProgressionTargets + MaximumStaticQuestRouteTargets>
             exactExits{};
         for (std::size_t index = 0U;
                 index < regression.targetCount;
@@ -549,9 +609,24 @@ void CheckNavigationPolicyContract() {
                 .useExactClientCoordinates = isDynamic,
             };
         }
+        for (std::size_t index = 0U;
+                index < questRouteCount;
+                ++index) {
+            CHECK(preparationTargets[preparedProgressionCount + index]
+                == questRouteTargets[index]);
+            exactExits[regression.targetCount + index] =
+                NavigationExitCandidate{
+                    .destinationId = static_cast<std::uint64_t>(
+                        questRouteTargets[index]),
+                    .targetLevelId = questRouteTargets[index],
+                    .subtileX = 3'000 + regression.from
+                        + static_cast<std::int32_t>(index),
+                    .subtileY = 4'000 + questRouteTargets[index],
+                };
+        }
         const auto exactExitSpan = std::span(
             exactExits.data(),
-            regression.targetCount);
+            regression.targetCount + questRouteCount);
         CHECK(SelectMainProgressionTargetFor(
             regression.from,
             exactExitSpan).value_or(-1) == regression.targets[0]);
@@ -561,7 +636,7 @@ void CheckNavigationPolicyContract() {
         CHECK(EvaluateNavigationResolutionCompleteness(
             regression.from,
             std::span<const NavigationExitCandidate>{})
-            == (isDynamic
+            == (isDynamic && questRouteCount == 0U
                 ? NavigationResolutionCompleteness::Complete
                 : NavigationResolutionCompleteness::PartialRetryable));
         const auto progressionDestinationCount = BuildNavigationDestinations(
@@ -575,7 +650,7 @@ void CheckNavigationPolicyContract() {
             CHECK(progressionDestinationCount == 0U);
             continue;
         }
-        CHECK(progressionDestinationCount == 1U);
+        CHECK(progressionDestinationCount == 1U + questRouteCount);
         CHECK(interiorDestinations[0].kind
             == NavigationLineKind::Progression);
         CHECK(interiorDestinations[0].subtileX
@@ -588,10 +663,250 @@ void CheckNavigationPolicyContract() {
             CHECK(interiorDestinations[0].exactClientX == -3'200);
             CHECK(interiorDestinations[0].exactClientY == 4'800);
         }
+        for (std::size_t index = 0U;
+                index < questRouteCount;
+                ++index) {
+            CHECK(interiorDestinations[1U + index].kind
+                == NavigationLineKind::Quest);
+            CHECK(interiorDestinations[1U + index].destinationId
+                == static_cast<std::uint64_t>(questRouteTargets[index]));
+        }
     }
+
+    struct QuestRouteRegression final {
+        std::int32_t from{};
+        std::array<std::int32_t, MaximumStaticQuestRouteTargets> targets{};
+        std::size_t targetCount{};
+    };
+    constexpr std::array questRouteMatrix{
+        QuestRouteRegression{2, {8, -1}, 1U},
+        QuestRouteRegression{3, {17, -1}, 1U},
+        QuestRouteRegression{6, {20, -1}, 1U},
+        QuestRouteRegression{20, {21, -1}, 1U},
+        QuestRouteRegression{21, {22, -1}, 1U},
+        QuestRouteRegression{22, {23, -1}, 1U},
+        QuestRouteRegression{23, {24, -1}, 1U},
+        QuestRouteRegression{24, {25, -1}, 1U},
+
+        QuestRouteRegression{47, {48, -1}, 1U},
+        QuestRouteRegression{48, {49, -1}, 1U},
+        QuestRouteRegression{42, {56, -1}, 1U},
+        QuestRouteRegression{56, {57, -1}, 1U},
+        QuestRouteRegression{57, {60, -1}, 1U},
+        QuestRouteRegression{43, {62, -1}, 1U},
+        QuestRouteRegression{62, {63, -1}, 1U},
+        QuestRouteRegression{63, {64, -1}, 1U},
+
+        QuestRouteRegression{76, {85, -1}, 1U},
+        QuestRouteRegression{78, {88, -1}, 1U},
+        QuestRouteRegression{88, {89, -1}, 1U},
+        QuestRouteRegression{89, {91, -1}, 1U},
+        QuestRouteRegression{80, {92, 94}, 2U},
+        QuestRouteRegression{81, {92, -1}, 1U},
+        QuestRouteRegression{92, {93, -1}, 1U},
+
+        QuestRouteRegression{113, {114, -1}, 1U},
+        QuestRouteRegression{121, {122, -1}, 1U},
+        QuestRouteRegression{122, {123, -1}, 1U},
+        QuestRouteRegression{123, {124, -1}, 1U},
+    };
+    for (const auto& regression : questRouteMatrix) {
+        std::array<std::int32_t, MaximumStaticQuestRouteTargets>
+            actualQuestTargets{};
+        const auto questTargetCount = StaticQuestRouteTargetsFor(
+            regression.from,
+            actualQuestTargets);
+        CHECK(questTargetCount == regression.targetCount);
+        for (std::size_t index = 0U;
+                index < regression.targetCount;
+                ++index) {
+            CHECK(actualQuestTargets[index] == regression.targets[index]);
+            CHECK(IsStaticQuestRouteTarget(
+                regression.from,
+                regression.targets[index]));
+        }
+
+        std::array<std::int32_t, MaximumMainProgressionTargets>
+            mainTargets{};
+        const auto mainTargetCount = MainProgressionTargetsFor(
+            regression.from,
+            mainTargets);
+        std::array<
+            NavigationExitCandidate,
+            MaximumMainProgressionTargets + MaximumStaticQuestRouteTargets>
+            routeExits{};
+        for (std::size_t index = 0U; index < mainTargetCount; ++index) {
+            routeExits[index] = NavigationExitCandidate{
+                .destinationId = static_cast<std::uint64_t>(
+                    10'000 + mainTargets[index]),
+                .targetLevelId = mainTargets[index],
+                .subtileX = 100 + static_cast<std::int32_t>(index),
+                .subtileY = 200 + mainTargets[index],
+            };
+        }
+        for (std::size_t index = 0U; index < questTargetCount; ++index) {
+            routeExits[mainTargetCount + index] = NavigationExitCandidate{
+                .destinationId = static_cast<std::uint64_t>(
+                    20'000 + actualQuestTargets[index]),
+                .targetLevelId = actualQuestTargets[index],
+                .subtileX = 300 + static_cast<std::int32_t>(index),
+                .subtileY = 400 + actualQuestTargets[index],
+            };
+        }
+        const auto routeExitCount = mainTargetCount + questTargetCount;
+        const auto routeExitSpan = std::span(
+            routeExits.data(),
+            routeExitCount);
+        CHECK(EvaluateNavigationResolutionCompleteness(
+            regression.from,
+            routeExitSpan) == NavigationResolutionCompleteness::Complete);
+        if (mainTargetCount > 0U) {
+            CHECK(EvaluateNavigationResolutionCompleteness(
+                regression.from,
+                std::span(
+                    routeExits.data() + mainTargetCount,
+                    questTargetCount))
+                == NavigationResolutionCompleteness::PartialRetryable);
+        }
+        CHECK(BuildNavigationDestinations(
+            NavigationPolicyInput{
+                .currentLevelId = regression.from,
+                .exits = routeExitSpan,
+            },
+            interiorDestinations)
+            == (mainTargetCount > 0U ? 1U : 0U) + questTargetCount);
+
+        const auto firstQuestDestination = mainTargetCount > 0U ? 1U : 0U;
+        for (std::size_t index = 0U; index < questTargetCount; ++index) {
+            const auto& destination =
+                interiorDestinations[firstQuestDestination + index];
+            CHECK(destination.kind == NavigationLineKind::Quest);
+            CHECK(destination.destinationId == static_cast<std::uint64_t>(
+                20'000 + actualQuestTargets[index]));
+        }
+        for (std::size_t omittedQuest = 0U;
+                omittedQuest < questTargetCount;
+                ++omittedQuest) {
+            std::array<
+                NavigationExitCandidate,
+                MaximumMainProgressionTargets
+                    + MaximumStaticQuestRouteTargets>
+                incompleteRouteExits{};
+            std::size_t incompleteRouteExitCount{};
+            for (std::size_t index = 0U; index < routeExitCount; ++index) {
+                if (index == mainTargetCount + omittedQuest) continue;
+                incompleteRouteExits[incompleteRouteExitCount++] =
+                    routeExits[index];
+            }
+            CHECK(EvaluateNavigationResolutionCompleteness(
+                regression.from,
+                std::span(
+                    incompleteRouteExits.data(),
+                    incompleteRouteExitCount))
+                == NavigationResolutionCompleteness::PartialRetryable);
+        }
+
+        const auto preparationCount = BuildNavigationPreparationTargets(
+            regression.from,
+            std::span<const std::int32_t>{},
+            preparationTargets);
+        CHECK(preparationCount == mainTargetCount + questTargetCount);
+        for (std::size_t index = 0U; index < mainTargetCount; ++index) {
+            CHECK(preparationTargets[index] == mainTargets[index]);
+        }
+        for (std::size_t index = 0U; index < questTargetCount; ++index) {
+            CHECK(preparationTargets[mainTargetCount + index]
+                == actualQuestTargets[index]);
+        }
+    }
+
+    struct QuestRouteExclusion final {
+        std::int32_t from{};
+        std::int32_t to{};
+    };
+    constexpr std::array questRouteExclusions{
+        // Farming-only side areas.
+        QuestRouteExclusion{3, 9},
+        QuestRouteExclusion{6, 11},
+        QuestRouteExclusion{7, 12},
+        QuestRouteExclusion{17, 18},
+        QuestRouteExclusion{17, 19},
+        QuestRouteExclusion{41, 55},
+        QuestRouteExclusion{44, 65},
+        QuestRouteExclusion{76, 84},
+        QuestRouteExclusion{78, 86},
+        QuestRouteExclusion{80, 95},
+        QuestRouteExclusion{81, 96},
+        QuestRouteExclusion{81, 97},
+        QuestRouteExclusion{82, 98},
+        QuestRouteExclusion{82, 99},
+        QuestRouteExclusion{115, 116},
+        QuestRouteExclusion{118, 119},
+        QuestRouteExclusion{111, 125},
+        QuestRouteExclusion{112, 126},
+        QuestRouteExclusion{117, 127},
+
+        // Quest paths already owned by main progression stay green.
+        QuestRouteExclusion{3, 4},
+        QuestRouteExclusion{4, 10},
+        QuestRouteExclusion{44, 45},
+        QuestRouteExclusion{45, 58},
+        QuestRouteExclusion{58, 61},
+        QuestRouteExclusion{54, 74},
+        QuestRouteExclusion{74, 46},
+        QuestRouteExclusion{83, 100},
+        QuestRouteExclusion{107, 108},
+        QuestRouteExclusion{118, 120},
+        QuestRouteExclusion{120, 128},
+
+        // Secret, Pandemonium and separately quest-selected destinations.
+        QuestRouteExclusion{1, 39},
+        QuestRouteExclusion{46, 66},
+        QuestRouteExclusion{46, 67},
+        QuestRouteExclusion{46, 68},
+        QuestRouteExclusion{46, 69},
+        QuestRouteExclusion{46, 70},
+        QuestRouteExclusion{46, 71},
+        QuestRouteExclusion{46, 72},
+        QuestRouteExclusion{109, 133},
+        QuestRouteExclusion{109, 134},
+        QuestRouteExclusion{109, 135},
+        QuestRouteExclusion{109, 136},
+    };
+    for (const auto& exclusion : questRouteExclusions) {
+        CHECK(!IsStaticQuestRouteTarget(exclusion.from, exclusion.to));
+        std::array<std::int32_t, MaximumStaticQuestRouteTargets>
+            actualQuestTargets{};
+        const auto targetCount = StaticQuestRouteTargetsFor(
+            exclusion.from,
+            actualQuestTargets);
+        CHECK(std::find(
+            actualQuestTargets.begin(),
+            actualQuestTargets.begin() + targetCount,
+            exclusion.to) == actualQuestTargets.begin() + targetCount);
+    }
+    CHECK(!IsStaticQuestRouteTarget(-1, 8));
+    CHECK(!IsStaticQuestRouteTarget(2, -1));
+    CHECK(StaticQuestRouteTargetsFor(
+        -1,
+        preparationTargets) == 0U);
+
+    const std::array tamoeProgressionAndPitExits{
+        NavigationExitCandidate{26U, 26, 1'700, 2'600},
+        NavigationExitCandidate{12U, 12, 1'701, 2'601},
+    };
+    CHECK(BuildNavigationDestinations(
+        NavigationPolicyInput{
+            .currentLevelId = 7,
+            .exits = tamoeProgressionAndPitExits,
+        },
+        interiorDestinations) == 1U);
+    CHECK(interiorDestinations[0].destinationId == 26U);
+    CHECK(interiorDestinations[0].kind == NavigationLineKind::Progression);
 
     const std::array spiderMarshOnlyExit{
         NavigationExitCandidate{77U, 77, 1'760, 2'770},
+        NavigationExitCandidate{85U, 85, 1'785, 2'850},
     };
     CHECK(SelectMainProgressionTargetFor(
         76,
@@ -601,12 +916,19 @@ void CheckNavigationPolicyContract() {
             .currentLevelId = 76,
             .exits = spiderMarshOnlyExit,
         },
-        interiorDestinations) == 1U);
+        interiorDestinations) == 2U);
     CHECK(interiorDestinations[0].destinationId == 77U);
+    CHECK(interiorDestinations[0].kind == NavigationLineKind::Progression);
+    CHECK(interiorDestinations[1].destinationId == 85U);
+    CHECK(interiorDestinations[1].kind == NavigationLineKind::Quest);
+    CHECK(EvaluateNavigationResolutionCompleteness(
+        76,
+        spiderMarshOnlyExit) == NavigationResolutionCompleteness::Complete);
 
     const std::array spiderBothExits{
         NavigationExitCandidate{77U, 77, 1'760, 2'770},
         NavigationExitCandidate{78U, 78, 1'761, 2'780},
+        NavigationExitCandidate{85U, 85, 1'785, 2'850},
     };
     CHECK(SelectMainProgressionTargetFor(
         76,
@@ -616,8 +938,14 @@ void CheckNavigationPolicyContract() {
             .currentLevelId = 76,
             .exits = spiderBothExits,
         },
-        interiorDestinations) == 1U);
+        interiorDestinations) == 2U);
     CHECK(interiorDestinations[0].destinationId == 78U);
+    CHECK(interiorDestinations[0].kind == NavigationLineKind::Progression);
+    CHECK(interiorDestinations[1].destinationId == 85U);
+    CHECK(interiorDestinations[1].kind == NavigationLineKind::Quest);
+    CHECK(EvaluateNavigationResolutionCompleteness(
+        76,
+        spiderBothExits) == NavigationResolutionCompleteness::Complete);
     CHECK(EvaluateNavigationResolutionCompleteness(
         76,
         std::span<const NavigationExitCandidate>{})
@@ -636,6 +964,58 @@ void CheckNavigationPolicyContract() {
         == NavigationPresetProgressionKind::QuestObject);
     CHECK(!PresetMainProgressionTargetFor(74, 2U, 60).has_value());
     CHECK(!PresetMainProgressionTargetFor(73, 1U, 250).has_value());
+
+    struct QuestPresetRegression final {
+        std::int32_t levelId{};
+        std::uint32_t presetType{};
+        std::int32_t presetClassId{};
+        NavigationDestinationSelection selection{
+            NavigationDestinationSelection::All};
+    };
+    constexpr std::array questPresetMatrix{
+        QuestPresetRegression{4, 2U, 21},
+        QuestPresetRegression{5, 2U, 30},
+        QuestPresetRegression{38, 2U, 26},
+        QuestPresetRegression{28, 2U, 108},
+        QuestPresetRegression{60, 2U, 354},
+        QuestPresetRegression{61, 2U, 149},
+        QuestPresetRegression{64, 2U, 356},
+        QuestPresetRegression{66, 2U, 152},
+        QuestPresetRegression{67, 2U, 152},
+        QuestPresetRegression{68, 2U, 152},
+        QuestPresetRegression{69, 2U, 152},
+        QuestPresetRegression{70, 2U, 152},
+        QuestPresetRegression{71, 2U, 152},
+        QuestPresetRegression{72, 2U, 152},
+        QuestPresetRegression{85, 2U, 407},
+        QuestPresetRegression{91, 2U, 406},
+        QuestPresetRegression{93, 2U, 405},
+        QuestPresetRegression{94, 2U, 193},
+        QuestPresetRegression{83, 2U, 404},
+        QuestPresetRegression{107, 2U, 376},
+        QuestPresetRegression{
+            111,
+            2U,
+            473,
+            NavigationDestinationSelection::NearestToPlayer},
+        QuestPresetRegression{114, 2U, 558},
+        QuestPresetRegression{120, 2U, 546},
+    };
+    for (const auto& regression : questPresetMatrix) {
+        const auto target = StaticQuestPresetTargetFor(
+            regression.levelId,
+            regression.presetType,
+            regression.presetClassId);
+        CHECK(target.has_value());
+        CHECK(target->selection == regression.selection);
+        CHECK(!StaticQuestPresetTargetFor(
+            regression.levelId,
+            regression.presetType == 2U ? 1U : 2U,
+            regression.presetClassId).has_value());
+    }
+    CHECK(!StaticQuestPresetTargetFor(4, 2U, 30).has_value());
+    CHECK(!StaticQuestPresetTargetFor(78, 2U, 407).has_value());
+    CHECK(!StaticQuestPresetTargetFor(111, 2U, -1).has_value());
 
     std::int32_t converted{};
     CHECK(CheckedNavigationSubtileCoordinate(1085, 0, converted));
@@ -720,7 +1100,16 @@ void CheckNavigationPolicyContract() {
         destinations) == 0U);
     CHECK(EvaluateNavigationResolutionCompleteness(
         3,
-        exits) == NavigationResolutionCompleteness::Complete);
+        exits) == NavigationResolutionCompleteness::PartialRetryable);
+    const std::array coldPlainsCompleteExits{
+        exits[0],
+        exits[1],
+        NavigationExitCandidate{102U, 17, 800, 900},
+    };
+    CHECK(EvaluateNavigationResolutionCompleteness(
+        3,
+        coldPlainsCompleteExits)
+        == NavigationResolutionCompleteness::Complete);
     CHECK(EvaluateNavigationResolutionCompleteness(
         3,
         std::span<const NavigationExitCandidate>{})
@@ -784,6 +1173,40 @@ void CheckNavigationPolicyContract() {
     CHECK(destinations[0].useExactClientCoordinates);
     CHECK(destinations[0].exactClientX == -8'800);
     CHECK(destinations[0].exactClientY == 9'600);
+
+    const std::array staffOrificeQuestTarget{
+        NavigationPointCandidate{
+            .destinationId = 800U,
+            .subtileX = 5'100,
+            .subtileY = 5'200,
+        },
+    };
+    CHECK(BuildNavigationDestinations(
+        NavigationPolicyInput{
+            .currentLevelId = 66,
+            .questTargets = staffOrificeQuestTarget,
+        },
+        destinations) == 1U);
+    CHECK(destinations[0].kind == NavigationLineKind::Quest);
+    CHECK(destinations[0].destinationId == 800U);
+
+    const std::array durielPortalExit{
+        NavigationExitCandidate{
+            .destinationId = 801U,
+            .targetLevelId = 73,
+            .subtileX = 5'300,
+            .subtileY = 5'400,
+        },
+    };
+    CHECK(BuildNavigationDestinations(
+        NavigationPolicyInput{
+            .currentLevelId = 66,
+            .exits = durielPortalExit,
+            .questTargets = staffOrificeQuestTarget,
+        },
+        destinations) == 1U);
+    CHECK(destinations[0].kind == NavigationLineKind::Progression);
+    CHECK(destinations[0].destinationId == 801U);
 
     std::array<NavigationSubtileDestination, 1U> bounded{};
     CHECK(BuildNavigationDestinations(
