@@ -1184,7 +1184,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-standalone-d2rloader-addon",
-                                                                        "summary":  "Plugin expÃ©rimental RuffnecKk ISC12 Ã©tendant le namespace sÃ©rialisÃ© ItemStatCost Ã  12 bits pour des Ã©cosystÃ¨mes de sauvegarde clean-sheet, avec loader bornÃ© dÃ©sactivÃ© par dÃ©faut.",
+                                                                        "summary":  "Plugin expérimental RuffnecKk ISC12 étendant le namespace sérialisé ItemStatCost à 12 bits pour des écosystèmes de sauvegarde clean-sheet, avec loader borné désactivé par défaut.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -1200,6 +1200,26 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "isc12_atomic_file.cpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_atomic_file.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_atomic_file.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_atomic_file.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_codec_patch.cpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_codec_patch.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_codec_patch.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_codec_patch.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "isc12_config.hpp",
                                                                                                      "path":  "addons/ISC12/src/isc12_config.hpp",
                                                                                                      "kind":  "file"
@@ -1207,6 +1227,16 @@
                                                                                                  {
                                                                                                      "name":  "isc12_contract.hpp",
                                                                                                      "path":  "addons/ISC12/src/isc12_contract.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_envelope.cpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_envelope.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_envelope.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_envelope.hpp",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -1225,8 +1255,78 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "isc12_native_persistence_adapter.cpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_native_persistence_adapter.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_native_persistence_adapter.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_native_persistence_adapter.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_native_schema_adapter.cpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_native_schema_adapter.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_native_schema_adapter.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_native_schema_adapter.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "isc12_native_sites.hpp",
                                                                                                      "path":  "addons/ISC12/src/isc12_native_sites.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_persistence_policy.cpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_persistence_policy.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_persistence_policy.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_persistence_policy.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_persistence_relay.asm",
+                                                                                                     "path":  "addons/ISC12/src/isc12_persistence_relay.asm",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_player_stat_preflight.cpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_player_stat_preflight.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_player_stat_preflight.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_player_stat_preflight.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_schema.cpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_schema.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_schema.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_schema.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_store_kind.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_store_kind.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "native_persistence_adapter_tests.cpp",
+                                                                                                     "path":  "addons/ISC12/src/native_persistence_adapter_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "native_schema_adapter_tests.cpp",
+                                                                                                     "path":  "addons/ISC12/src/native_schema_adapter_tests.cpp",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

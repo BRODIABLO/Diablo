@@ -32,8 +32,17 @@ endif()
 
 add_library(ISC12 SHARED
     plugin.cpp
+    isc12_atomic_file.cpp
+    isc12_codec_patch.cpp
+    isc12_envelope.cpp
+    isc12_native_persistence_adapter.cpp
+    isc12_native_schema_adapter.cpp
+    isc12_persistence_policy.cpp
+    isc12_player_stat_preflight.cpp
+    isc12_schema.cpp
     isc12_loader.cpp
     isc12_loader_tail.asm
+    isc12_persistence_relay.asm
     plugin.rc
 )
 target_compile_features(ISC12 PRIVATE cxx_std_20)
@@ -45,6 +54,7 @@ target_compile_definitions(ISC12 PRIVATE
 )
 target_link_libraries(ISC12 PRIVATE
     D2RLPlugin::D2RLPlugin
+    bcrypt
     tomlplusplus::tomlplusplus
 )
 set_target_properties(ISC12 PROPERTIES
@@ -69,21 +79,72 @@ if(MSVC)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(ISC12Tests policy_tests.cpp)
+    add_executable(ISC12Tests
+        policy_tests.cpp
+        isc12_atomic_file.cpp
+        isc12_codec_patch.cpp
+        isc12_envelope.cpp
+        isc12_persistence_policy.cpp
+        isc12_player_stat_preflight.cpp
+        isc12_schema.cpp
+    )
     target_compile_features(ISC12Tests PRIVATE cxx_std_20)
     target_compile_definitions(ISC12Tests PRIVATE
+        ISC12_CODEC_PATCH_TESTING=1
         ISC12_CONFIG_PATH="${CMAKE_CURRENT_SOURCE_DIR}/../ruffneckk-isc12.toml"
         ISC12_PLUGIN_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/plugin.cpp"
         ISC12_RESOURCE_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/plugin.rc"
         ISC12_LOADER_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/isc12_loader.cpp"
         ISC12_LOADER_ASM_PATH="${CMAKE_CURRENT_SOURCE_DIR}/isc12_loader_tail.asm"
+        ISC12_PERSISTENCE_ASM_PATH="${CMAKE_CURRENT_SOURCE_DIR}/isc12_persistence_relay.asm"
         ISC12_CMAKE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
     )
-    target_link_libraries(ISC12Tests PRIVATE tomlplusplus::tomlplusplus)
+    target_link_libraries(ISC12Tests PRIVATE
+        bcrypt
+        tomlplusplus::tomlplusplus
+    )
     if(MSVC)
         target_compile_options(ISC12Tests PRIVATE
             /W4 /WX /permissive- /EHsc /utf-8
         )
     endif()
     add_test(NAME isc12-policy COMMAND ISC12Tests)
+
+    add_executable(ISC12NativeSchemaAdapterTests
+        native_schema_adapter_tests.cpp
+        isc12_envelope.cpp
+        isc12_native_schema_adapter.cpp
+        isc12_schema.cpp
+    )
+    target_compile_features(ISC12NativeSchemaAdapterTests PRIVATE cxx_std_20)
+    target_link_libraries(ISC12NativeSchemaAdapterTests PRIVATE bcrypt)
+    if(MSVC)
+        target_compile_options(ISC12NativeSchemaAdapterTests PRIVATE
+            /W4 /WX /permissive- /EHsc /utf-8
+        )
+    endif()
+    add_test(
+        NAME isc12-native-schema-adapter
+        COMMAND ISC12NativeSchemaAdapterTests
+    )
+
+    add_executable(ISC12NativePersistenceAdapterTests
+        native_persistence_adapter_tests.cpp
+        isc12_envelope.cpp
+        isc12_native_persistence_adapter.cpp
+        isc12_persistence_policy.cpp
+    )
+    target_compile_features(ISC12NativePersistenceAdapterTests PRIVATE
+        cxx_std_20
+    )
+    target_link_libraries(ISC12NativePersistenceAdapterTests PRIVATE bcrypt)
+    if(MSVC)
+        target_compile_options(ISC12NativePersistenceAdapterTests PRIVATE
+            /W4 /WX /permissive- /EHsc /utf-8
+        )
+    endif()
+    add_test(
+        NAME isc12-native-persistence-adapter
+        COMMAND ISC12NativePersistenceAdapterTests
+    )
 endif()

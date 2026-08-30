@@ -1,5 +1,7 @@
 #pragma once
 
+#include "isc12_envelope.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -43,9 +45,12 @@ auto CommitLoaderMutation(
 
 struct LoaderRuntimeStatus {
     bool prepared{};
+    bool persistencePrepared{};
     bool tailPatchInstalled{};
     bool capPatchInstalled{};
     bool operational{};
+    bool schemaReady{};
+    bool persistenceCodecReady{};
     bool coldRestartRequired{};
     std::uint64_t buildCalls{};
     std::uint64_t lastRowCount{};
@@ -84,5 +89,6 @@ auto InstallLoaderExtension(std::string& error) noexcept
 
 auto ShutdownLoaderExtension() noexcept -> void;
 auto GetLoaderRuntimeStatus() noexcept -> LoaderRuntimeStatus;
+auto TryGetPublishedSchemaHash(Sha256Digest& output) noexcept -> bool;
 
 } // namespace ruffneckk::isc12

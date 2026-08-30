@@ -67,3 +67,89 @@ The G1 item codec owns nine one-byte semantic mutations, including preservation
 of the first-reader `previousStatId = -1` invariant. These internal sites do
 not overlap the entry hooks owned by `plugin-items`, but G1 remains unpublished
 until the clean-sheet marker and full-item packet budget gates are closed.
+
+## Prepared persistence boundary
+
+G10-B P3b prepares, but does not publish, exact reader `0x9FC654` and writer
+`0x9F95A2` mid-hooks. Both target objects are classified by their exact terminal
+name. A target reader must report the current native success value and an
+announced length equal to the actual DWORD byte count before ISC12 snapshots
+the buffer. It then validates and unwraps the complete versioned envelope,
+schema fingerprint and D2S/D2I inner payload before replacing native storage.
+Every target rejection clears the native buffer and state before reusing the
+governed close/unlock/status-6 continuation; uncertain cleanup fast-fails.
+
+The target writer converts the already-canonical native UTF-8 path exactly,
+builds the envelope, and reaches the final destination only through the
+ISC12-owned sibling-temp, full-write, flush, atomic replace and rollback
+transaction. Its native handle slot is initialized to `INVALID_HANDLE_VALUE`
+before ISC12 selects the existing committed or rejected continuation. A failed
+rollback that cannot prove preservation of the destination is terminal.
+
+The persistence relay is process-lifetime RX with separate RW state and bounded
+rundown, but remains inactive: `InstalledHookCount == 0`, `codecReady == false`
+and neither save seam is patched. The PE unwind records describe only each MASM
+stub's local `0x20`/`0x30` allocation. Because entry is a tail-jump from the
+middle of a native frame and copied relays are not registered/chained, ISC12
+does not claim generic recoverable unwind across these boundaries. Callbacks are
+`noexcept`, contain the expected access/in-page/guard failures and fast-fail on
+every unexpected exception. Any future recoverable cross-boundary unwind would
+require a separately governed registered/chained unwind design.
+
+## Prepared player/save/preview codec groups
+
+G2 auxiliary player stats, G3 regular modern player stats and G4 frontend
+preview are represented as three unpublished atomic groups. Fourteen exact
+unique mutation-site patterns plus 39 unchanged owner, buffer, cardinality,
+field-layout and overrun-path witnesses prove four auxiliary
+reader/writer/terminator sites, six regular sites and the exhaustive four
+preview ID reads. The two other
+preview bit-reader calls are driven by the compiled record `SaveBits` value and
+deliberately remain untouched.
+
+The plan governs 28 byte slots: ID width immediates `9→12`, sentinel immediates
+`0x1FF→0xFFF`, four dynamic rel32 bytes for the G3 finalize relay and two final
+status bytes. The rel32 target is opaque outside the loader authority and is
+bound to the copied RX leaf prepared from the governed MASM template. Dynamic
+bytes already equal to their expected value are confirmed as no-op slots rather
+than passed to the writer, while the complete instruction range is still
+flushed. The plan validates every mutation and witness signature before the
+first write and refuses publication without an external quiescence proof. The
+caller's boolean is an assertion of quiescence, not an implementation of thread
+suspension or transactionality.
+Because the patch API cannot prove that a false result left a byte unchanged,
+any attempted failure is a partial/uncertain commit requiring a cold restart;
+there is no speculative hot rollback. `PublishedCodecMutationCount == 0`, and
+no current loader path invokes the prepared commit function.
+
+G2 owns a fixed `0x4000` buffer and an unchanged 512-entry cap. ISC12 rejects
+the native schema before publication when `CsvBits > 32` or
+`CsvParamBits > 16`, matching the native value/parameter representations. The
+worst complete G2 section is therefore 3,844 bytes including its marker, well
+inside the buffer. G3 instead receives only the space remaining after a
+variable prefix. Its two total callers (`0x4000` stack and `0x8000` allocated)
+are exhaustively fingerprinted. The prepared position-independent leaf
+reproduces the native used-end result in RAX, loads the sticky
+`bitstream+0x20` overrun flag into EDX, and returns without touching RSP or a
+nonvolatile register. The redirected CALL is written and flushed first; the
+non-overlapping `mov eax, edx` status site is written and flushed strictly last,
+so the existing sole caller's nonzero failure edge observes late overflow.
+The abandoned bytes at `0x5353F0` are not a code cave: they belong to the next
+function's PDATA/unwind range and are never mutated.
+
+Future publication must reserve the copied relay for process lifetime before
+the first codec byte, keep all G2–G4 writers quiescent until both final flushes
+complete, and fast-fail immediately on an uncertain write or flush before
+quiescence is released. These are still activation gates, not claims of current
+runtime behavior.
+
+A no-allocation pure preflight now parses one supplied G2/G3 section in native
+LSB-first order: marker `0x6667`, 12-bit IDs, schema-driven param/value widths,
+512-entry cap and terminator `0xFFF`. It leaves output unchanged on invalid ID,
+unsafe schema, truncation or missing terminator. It deliberately permits bytes
+after the terminator because these sections are embedded; the future native
+caller must therefore supply an exact governed structural window at reader
+entries `0x530A00`/`0x533760`. No production caller or reader hook exists yet.
+G4's fixed `0x4000` input and unobserved reader-overrun flag similarly require
+strict whole-inner bounds through every value/param field and terminator, or a
+governed native error exit.

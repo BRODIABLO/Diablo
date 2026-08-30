@@ -1334,3 +1334,198 @@ confiance explicite.
   quête rouge. Après RewardGranted, elle devient la progression verte pour le
   farm de Duriel. Un record, un id ou une sortie encore indisponible reste
   `PartialRetryable`; aucune tombe approximative n'est publiée.
+
+## MapSense 0.13.0 — contrat natif générique des objets et noms de boss
+
+- `UNITS_GetObjectInteractType 0x34AD40` possède un corps complet unique de
+  72 octets dans le corpus commun 92777/93847. Il exige un `Unit` type 2, lit
+  `ObjectData*` à `Unit+0x10`, puis retourne l'octet
+  `ObjectData.InteractType` à **`+0x08`**. Cette preuve x64 remplace toute
+  transposition du layout D2MOO 32 bits. MapSense couvre l'entrée et le chemin
+  de layout complet avant d'appeler l'accessor.
+- `OBJECTS_IsShrine 0x34C470` fournit le classifieur runtime générique : type 2,
+  `Unit+0x10`, record `ObjectsTxt` compilé à `ObjectData+0`, puis test du bit
+  `0x01` de `SubClass` à `ObjectsTxt+0x127`. Son corps strict de 30 octets est
+  unique. Une ligne custom qui conserve ce contrat moteur est donc reconnue
+  sans identifiant BKVince ou vanilla.
+- La sélection native confirme que `InteractType` est **l'index de ligne
+  `ShrinesTxt` sans décalage**. `DATATBLS_GetShrinesTxtRecordCount 0x38FE00`
+  lit le compte actif à `DataTables+0x19B8`; le témoin intérieur unique
+  `0x50E510` soustrait un, effectue le tirage borné, puis ajoute un. Le domaine
+  aléatoire est donc exactement `1..count-1` et la ligne 0 n'est pas choisie.
+  `DATATBLS_GetShrinesTxtRecord 0x38FE40` borne ce même index, lit la base à
+  `DataTables+0x19B0` et applique un stride compilé de `0x1C`.
+- L'entrée véritable de `OBJECTS_InitFunction01_Shrine` est **`0x50E450`**;
+  `0x50E510` n'est que sa boucle de sélection, et ne doit pas être publiée
+  comme une fonction. Après les remaps natifs `4->2`, `5->3` et `16->18`,
+  l'initialiseur passe le même index à `UNITS_SetObjectInteractType 0x34E9D0`
+  (`ObjectData+0x08`) et à `DATATBLS_GetShrinesTxtRecord`, puis tail-jump vers
+  `UNITS_SetShrineTxtRecordInObjectData 0x34EE70` (`ObjectData+0x10`). Les
+  corps D2R uniques recoupent la sémantique de
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`,
+  `source/D2Game/src/OBJECTS/Objects.cpp:487-546` et
+  `source/D2Common/src/Units/Units.cpp:1972-1982`, sans transposer d'adresse ni
+  de layout 32 bits.
+- Le prédicat générique fail-closed recommandé pour publier un **texte de
+  shrine** est **`InitFn == 1 && (SubClass & 0x01) != 0`**. `InitFn == 1` seul
+  est trop large : dans le `objects.txt` BKVince actif, `Obelisk2` porte
+  `InitFn=1`, mais `SubClass=2` et `OperateFn=17`; ce serait un faux positif.
+  L'intersection exige à la fois le classifieur shrine du moteur et
+  l'initialiseur qui assigne réellement une ligne `ShrinesTxt`. Une ligne de mod
+  custom demeure donc reconnue si elle conserve ces deux contrats, sans
+  allowlist d'ID ou de nom.
+- Audit gouverné byte-exact/CRLF du `objects.txt` BKVince actif : 93 lignes ont
+  `InitFn=1`, 92 ont aussi le bit `SubClass 0x01`, et l'unique exception est
+  `Obelisk2`. Les classes `HealingWell`, `ManaWell1..5`, `JungleHealWell`,
+  `HellWell` et `HellManaWell1` portent volontairement `InitFn=1`,
+  `SubClass=1`, `OperateFn=2` : malgré leur nom de classe, ce sont des objets à
+  sémantique shrine qui reçoivent un vrai record `ShrinesTxt` et leur buff doit
+  pouvoir être nommé. Les 14 puits ordinaires `Fountain1..8`, `TombWell`,
+  `WellExp`, `WellSnowy`, `WellBaal`, `WellTemple` et `WellIceCave` utilisent
+  `InitFn=16`, `OperateFn=22` et `SubClass=0` ou `32`; ils restent donc exclus.
+  `OBJECTS_InitFunction16_Well 0x50E600` prouve cette séparation : son corps
+  complet unique de 22 octets calcule seulement
+  `InteractType = 2 * low8(ObjectsTxt.Parm2)` depuis `ObjectsTxt+0x13C` et
+  n'assigne jamais de record `ShrinesTxt`.
+- La table compilée active est bornée par
+  `DATATBLS_GetObjectsTxtRecordCount 0x38FC70` (`DataTables+0x1530`) et résolue
+  par `DATATBLS_GetObjectsTxtRecord 0x38FD00` (base `+0x1528`, stride
+  `0x168`, retour nul hors borne). Les dispatchers natifs lisent `InitFn` à
+  `+0x15C` et `OperateFn` à `+0x15E`; la corrélation byte-exact entre
+  `objects.bin` officiel 3.3 et `objects.txt` établit aussi `SubClass +0x127`
+  et `Lockable +0x12F`.
+- Le contrat chest fail-closed accepte `InitFn=3` (`ObjectInitChest`) ou
+  `InitFn=57` (`ObjectInitBetterChest`). `OperateFn=4` seul est insuffisant :
+  la ligne vanilla `MephistoBridge` le porte avec `InitFn=45`, donc serait un
+  faux coffre. Inversement, `IceCaveEvilUrn` emploie `InitFn=3` avec
+  `OperateFn=68`; le `InitFn` est le meilleur invariant générique démontré.
+  Un nouveau callback custom dont la sémantique n'est pas connue reste caché
+  ou exige un override sémantique mod-local par clé stable, jamais une liste
+  numérique extraite de BKVince.
+- Seulement après cette classification coffre, le bit `0x80` de
+  `InteractType` signifie locked et les sept bits bas portent le type de trap.
+  Le producteur natif de chest lit `Lockable +0x12F` puis pose/efface le bit
+  haut à `0x50EA3C`; les consommateurs `0x58E461` et `0x58E837` séparent
+  respectivement `>>7` et `&0x7F`. Le dispatcher `0x594630` n'accepte que les
+  valeurs `<10`; `0` signifie aucune trap, `1..9` trapped et toute valeur
+  supérieure reste invalide/fail-closed.
+- `UNITS_GetObjectRuntimeFlagsC8 0x4903D0` retourne l'octet `Unit+0xC8`. Le
+  chemin chest `0x58E48D` teste explicitement son bit `0x01`, et la réplication
+  cliente copie ce même octet dans `Unit+0xC8`. Après classification coffre,
+  ce seul bit autorise l'étoile sparkly/super-chest; les autres bits et objets
+  demeurent opaques.
+- Les racks se classent sans allowlist par le callback actif :
+  `OperateFn=19` pour armor rack et `OperateFn=20` pour weapon rack. Cette voie
+  reconnaît aussi les lignes custom qui réutilisent les callbacks moteur; les
+  callbacks inconnus restent cachés.
+- `UNITS_GetSuperUniqueIndex 0x38E3D0` est couvert par son corps strict complet
+  de 92 octets, unique dans le corpus commun. Il vérifie deux fois le type 1,
+  lit `MonsterData*` à `Unit+0x10`, retourne le `uint16` à
+  `MonsterData+0x2A`, et retourne `-1` sur null, mauvais type ou données
+  absentes. Une valeur positive n'est jamais un nom : elle doit être bornée
+  par la `SuperUniques.txt` du mod actif, puis résolue par sa localisation
+  active. Les boss fixes non-SU ne peuvent être nommés qu'à partir de la ligne
+  `MonStats.txt` active et de ses flags `boss`/`primeevil`; les enums statiques
+  PrimeMH et le profil test BKVince ne font pas autorité.
+- Le filtre de niveau courant partagé par les monstres et POI est maintenant
+  entièrement fingerprinté : entrée unique de 32 octets de
+  `UNITS_GetRoom 0x34B440`, témoin branches/layout de 36 octets à `0x34B461`,
+  accessor complet `ACTIVEROOM_GetDrlgRoom 0x192B20` prouvant
+  `ActiveRoom+0x18`, puis corps complet de 14 octets de
+  `DRLGROOM_GetLevelId 0x360FC0`. Les deux producteurs refusent donc de se
+  charger si une fonction ou un layout de cette chaîne diverge.
+- Après durcissement de ces empreintes, la DLL Release se compile sans warning
+  traité en erreur et le test `ruffneckk-mapsense-policy` passe. Il s'agit
+  d'une validation hors jeu; l'approbation visuelle et la qualification runtime
+  complète 0.13.0 restent distinctes.
+
+## 2026-08-30 — ISC12 G2–G4 player/save/preview
+
+- G2 auxiliaire est fermé statiquement par quatre séquences exactes uniques :
+  readers premier/suivant `0x530A99`/`0x530BA3`, writer ID `0x5340C0` et
+  terminator `0x534139`. Le témoin unique `0x530A6B` gouverne le marker
+  `0x6667` et sa branche de rejet; les champs valeur/param pilotés par
+  `ItemStatCost` et le contrôle du count compilé restent inchangés. Seuls les
+  immédiats ID width `9→12` et terminator `0x1FF→0xFFF` mutent.
+- G3 régulier possède les readers `0x53395E`/`0x533A93`, writer `0x5352F6`,
+  terminator `0x5353A8`, CALL finalize `0x5353BD` et publication de statut
+  `0x5353C7`. Le témoin unique `0x533924` gouverne le marker/bounds moderne.
+  Les six sites constituent un groupe atomique distinct de G2.
+- Les consumers de champs sont également gouvernés : `0x530B69` lit en G2
+  `CsvParamBits` vers un paramètre 16 bits puis une valeur fixe de 32 bits;
+  `0x533A38` et `0x533A52` lisent en G3 le paramètre 16 bits puis dispatchent
+  `CsvBits<32` signed/unsigned et `CsvBits==32` unsigned. Le préflight refuse
+  aussi tout ID référençant une ligne `CsvBits==0`, comme les readers natifs.
+- G4 preview/frontend consomme ce même format sans writer propre. Les branches
+  A `0x61D247`/`0x61D290` et B `0x61D647`/`0x61D690` sont quatre séquences
+  exactes uniques; chaque paire conserve son back-edge et ne modifie que width
+  et sentinelle.
+- Les quatorze signatures de mutation ont chacune exactement un match dans
+  `.text`. Le plan hors runtime contient 28 slots gouvernés et 39 témoins
+  inchangés, préflight le set G2–G4 complet avant la première écriture, exige
+  une preuve de quiescence et classe toute écriture ou flush incertain comme
+  commit exigeant un cold restart. Aucune de ces mutations n'est publiée.
+- G2 alloue exactement `0x4000` octets à `0x534006`; son cap source
+  `0x533EAD` et son consommateur `0x53405C` conservent au plus `0x200`
+  entrées. Les témoins `0x5340D2`/`0x5340FD` prouvent par entrée la formule
+  `12 + CsvParamBits + 32` et son back-edge lié au snapshot. Le snapshot
+  clean-sheet impose maintenant `CsvBits <= 32` et `CsvParamBits <= 16`, selon
+  les représentations natives 32/16 bits. Le témoin unique `0x5351DD` prouve
+  le cas spécial G3 : `CsvBits == 32` saute le clamp `1<<CL` réservé aux
+  largeurs 1..31 et rejoint directement l'écriture 32 bits. Le témoin
+  `0x535308` charge `CsvParamBits`, réduit le paramètre à 16 bits puis applique
+  son guard avant l'écriture, ce qui ferme l'autre moitié du contrat 32/16.
+  Le témoin des écritures `0x535352` inclut leur back-edge contre R15 et relie
+  ainsi le cap `0x200` au nombre réel d'entrées sérialisées.
+  Le pire G2 complet vaut donc
+  30 732 bits, soit 3 842 octets plus le marker de deux octets, dans `0x4000`.
+  Le coût exact du seul passage 9→12 pour 512 IDs et leur sentinelle reste
+  1 539 bits, soit au plus 193 octets selon l'alignement.
+- G3 reçoit sa fenêtre de sortie du caller (`0x52F0C3`/`0x52F0E7`), borne son
+  snapshot à `0x200` entrées au témoin unique `0x535162`, et son unique caller
+  teste le retour à `0x52F522`. Le writer refuse une fenêtre trop petite pour
+  son marker à `0x535115`; l'initializer `0xA1B650` met le flag +0x20 à zéro,
+  le core `0xA1B7A0` avance les cursors et `0xA1B72C` pose le flag sticky sur
+  overflow. Le leaf natif `0xA1B610` calcule le used-end dans RAX.
+- Le guard préparé copie dans la page RX persistante un leaf sans stack ni
+  registre non volatil : il reproduit exactement le RAX de `0xA1B610` puis
+  charge `[bitstream+0x20]` dans EDX. Le CALL `0x5353C2` reçoit un rel32 lié
+  uniquement à cette entry par l'autorité loader; ses quatre bytes sont écrits
+  et flushés avant le site non chevauchant `0x5353C7`, où `33 C0→8B C2` publie
+  EDX strictement en dernier. L'état intermédiaire reste sémantiquement vanilla.
+  Les bytes résolus déjà identiques sont des no-op confirmés, mais le range CALL
+  complet est flushé. Les bytes `0x5353F0+` appartiennent au PDATA/unwind de la
+  fonction suivante et ne sont jamais utilisés comme cave.
+- Les deux callers de l'owner player-save sont exhaustifs : `0x41360B` passe
+  un buffer stack neuf de `0x4000`; la chaîne
+  `0x41E138`/`0x41E186`/`0x41E1E9` alloue et passe `0x8000`. G3 reçoit toutefois
+  seulement l'espace restant après un préfixe variable, donc ces capacités
+  totales ne remplacent pas le guard du flag d'overflow. Avant publication, la
+  façade devra réserver le relais pour la vie du processus avant le premier
+  write codec, conserver la quiescence jusqu'aux deux flushes finaux et
+  fast-fail immédiatement sur toute incertitude.
+- Le préflight pur G2/G3 parcourt sans allocation le marker `0x6667`, chaque ID
+  12 bits, les champs param/value gouvernés, le cap 512 et la sentinelle
+  `0xFFF`; il refuse schéma dangereux, ID hors table, troncation et sentinelle
+  absente sans modifier sa sortie. Les entrées uniques `0x530A00` et `0x533760`
+  sont retenues pour une connexion future, mais aucun hook reader ni caller de
+  production n'est encore implanté; celui-ci devra fournir la fenêtre
+  structurelle exacte de la section.
+- La preview alloue puis lit au plus `0x4000` octets (`0x61CF41` et
+  `0x61CF81`); son seul gate immédiat exige seulement huit octets. Le thunk
+  exact unique `0xA1B6C0` relie les quatre appels ID au cœur du bitreader; le
+  core succès unique `0xA1BAD0` avance les cursors, tandis que `0xA1BA92` charge
+  la longueur totale, détecte l'overrun et pose `[stream+0x20]=1`. Les boucles
+  preview ne lisent pas ce drapeau. G4 reste donc
+  volontairement non publié tant qu'un préflight strict ne prouve pas chaque
+  champ et la sentinelle `0xFFF` dans la fenêtre réellement lue, ou qu'une
+  sortie d'erreur native gouvernée n'est pas ajoutée.
+- Le bloc unique `0x61CF95` exige le magic vanilla `0xAA55AA55` après l'appel
+  `0xA1E110`. La trace complète corrige une première lecture trop large :
+  `0xA1E110` ne relit pas le filesystem, mais copie sous verrou depuis le buffer
+  `SaveObject+0x08`, borné par `SaveObject+0x10`. Le seam G10 `0x9FC654`
+  remplace ce même buffer par le payload intérieur accepté avant publication de
+  l'état 3; ses callers transmettent ensuite le même SaveObject à la preview.
+  G10 domine donc G4 et aucun second unwrap frontend n'est requis. Ce témoin
+  verrouille plutôt l'ordre attendu : enveloppe validée/retirée, puis magic
+  vanilla du payload intérieur.

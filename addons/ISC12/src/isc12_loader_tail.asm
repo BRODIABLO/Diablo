@@ -59,11 +59,17 @@ ISC12LoaderRelayTemplateStatePointer QWORD 0
 ISC12LoaderRelayTemplateEnd LABEL BYTE
 
 ALIGN 16
-ISC12LoaderTailMidHook PROC
+ISC12LoaderTailMidHook PROC FRAME
     ; The governed seam enters with RSP 16-byte aligned. Reserve only the
     ; Win64 shadow space plus one local slot. Preserve the original RAX because
     ; the vanilla continuation tests it when the helper permits a safe fallback.
+    ; FRAME metadata describes this stub's own allocation only. Entry is a
+    ; tail-jump from the middle of a native frame, so recoverable exceptions
+    ; must never unwind across this boundary: the C++ callback is noexcept,
+    ; contains expected faults and fast-fails on every unexpected exception.
     sub rsp, 30h
+    .allocstack 30h
+    .endprolog
     mov qword ptr [rsp+20h], rax
     mov rcx, qword ptr [rsp+78h]
     call ISC12BuildDescriptionIndex

@@ -7,27 +7,42 @@ Dernière mise à jour : 30 août 2026
 [ISC12 — ItemStatCost 12-bit clean-sheet format](isc12-3.3.md)
 
 État : **ISC12 0.2.0 : loader G0 implanté et validé statiquement, désactivé par
-défaut; runtime NOT RUN**. Le ledger gouverné est `VALID` avec 63 sites répartis
-dans 14 groupes. Le jalon remplace la tail `DescFunc` fixe par un helper borné à
+défaut; G10-B P3b et plan G2–G4 fermés hors-jeu; runtime NOT RUN**. Le ledger
+gouverné est `VALID` avec 158 sites répartis dans 14 groupes. Le jalon remplace la tail
+`DescFunc` fixe par un helper borné à
 4 095 entrées derrière un relais RX persistant et un état RW séparé, puis tente
 le cap `0xFFF` seulement après publication de la tail sûre et d'un guard
 conservateur. Un retour incertain du patch tail réserve maintenant les pages
 RX/RW avant l'appel, journalise les huit octets observés et termine fail-closed
-sans jamais libérer une cible possible. Deux builds Release `/W4 /WX` sont
-byte-identiques à 179 200 octets et SHA-256 `C2B461CF…0D1A4D93`; CTest `1/1`,
-PE x64, version 0.2.0, auteur,
-manifeste API v3 et trois exports passent. Les codecs item, sauvegarde et réseau
-restent 9 bits; aucune sauvegarde réelle ni aucun runtime n'a été touché.
+sans jamais libérer une cible possible. Le build Release `/W4 /WX` courant et
+CTest `3/3` passent. Les codecs item, sauvegarde et réseau
+restent 9 bits en runtime. La primitive atomique, l'enveloppe v1, le préflight whole-store,
+le descripteur canonique et sa politique wrap/unwrap déconnectée passent aussi
+les tests. Le snapshot natif copie maintenant les noms `Stat` exacts depuis le
+linker gouverné, exclut les champs legacy inatteignables sous v105 et publie le
+hash avant toute mutation `DescFunc`; aucun sidecar ou manifeste n'est requis.
+Les seams reader `0x9FC654` et writer `0x9F95A2` sont maintenant connectés en
+source à leurs adaptateurs clean-sheet, à la transaction atomique et à des
+relais persistants avec rundown, mais restent matériellement impossibles à
+publier : `InstalledHookCount == 0` et `codecReady == false`. Aucune sauvegarde
+réelle ni aucun runtime n'a été touché. G2–G4 disposent maintenant de 14
+signatures de mutation exactes, 39 témoins de sécurité/layout exacts et 28
+slots de mutation testés comme set préflighté mais non publié. Un leaf RX lié
+par le loader reproduit le used-end natif G3 et renvoie le flag sticky d'overflow;
+son CALL est flushé avant la publication finale `mov eax, edx`. Le snapshot
+refuse `CsvBits > 32` ou `CsvParamBits > 16`; un préflight pur G2/G3 valide
+marker, IDs, champs, cap 512 et sentinelle sans encore être appelé en production.
 
 ## Prochain gate
 
-Fermer G10-A en prouvant les quatre seams file-level : D2S lecture externe,
-D2S écriture finale/checksum, D2I lecture de tout le fichier avant le premier
-item et D2I écriture finale, avec nettoyage et commit atomique. Figer ensuite
-l'enveloppe, le fingerprint de schéma et les golden vectors. G1 reste non publié
-jusqu'à la fermeture de G10 et G9. La pose non alignée du saut G0 exige encore
-une preuve de quiescence ou de transaction avant activation. Aucun lancement
-D2R ni aucune sauvegarde réelle ne sont autorisés.
+Connecter le préflight aux entrées reader G2 `0x530A00` et G3 `0x533760` avec
+une fenêtre structurelle exacte et le retour natif `0x12`, puis fermer les
+bornes internes G4 dans sa fenêtre `0x4000`. Composer enfin G1–G4 comme un seul
+set préflighté à publication quiescente, en réservant le relais G3 pour la vie
+du processus avant le premier write et en fast-fail immédiat sur tout résultat
+incertain; les hooks G10 restent non installés et G1 reste non publié jusqu'à
+G9. Aucun
+lancement D2R ni aucune sauvegarde réelle ne sont autorisés.
 
 ## Frontière Git active
 
