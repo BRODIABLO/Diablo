@@ -1,13 +1,13 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-26T21:44:43.8161975+00:00",
+    "generatedAt":  "2026-08-30T04:59:50.1443654+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
                  "kind":  "directory",
                  "meta":  {
                               "role":  "modding-workspace",
-                              "summary":  "Laboratoire de plugins et de patches D2R 3.3 au service de la communauté Discord D2RLoader, et quartier général de BKVince, construit sur le squelette de BKDiablo puis enrichi d\u0027apports Nexus Mods et de créations propres.",
+                              "summary":  "Laboratoire de plugins et de patches D2R 3.3 au service de la communautÃ© Discord D2RLoader, et quartier gÃ©nÃ©ral de BKVince, construit sur le squelette de BKDiablo puis enrichi d\u0027apports Nexus Mods et de crÃ©ations propres.",
                               "agentAccess":  "read-write"
                           },
                  "children":  [
@@ -17,7 +17,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "x-agent-workflows",
-                                                   "summary":  "Procédures spécialisées et réutilisables destinées aux agents travaillant sur le dépôt Diablo.",
+                                                   "summary":  "ProcÃ©dures spÃ©cialisÃ©es et rÃ©utilisables destinÃ©es aux agents travaillant sur le dÃ©pÃ´t Diablo.",
                                                    "agentAccess":  "read-write"
                                                },
                                       "children":  [
@@ -145,7 +145,7 @@
                                                                                 "kind":  "directory",
                                                                                 "meta":  {
                                                                                              "role":  "x-agent-git-workflow",
-                                                                                             "summary":  "Workflow gouverné pour isoler, valider, committer et pousser des checkpoints Git Diablo cohérents.",
+                                                                                             "summary":  "Workflow gouvernÃ© pour isoler, valider, committer et pousser des checkpoints Git Diablo cohÃ©rents.",
                                                                                              "agentAccess":  "read-write"
                                                                                          },
                                                                                 "children":  [
@@ -270,7 +270,7 @@
                                                                                 "kind":  "directory",
                                                                                 "meta":  {
                                                                                              "role":  "x-game-test-skill",
-                                                                                             "summary":  "Skill repo-scoped à invocation explicite pour exécuter des tests D2R hors ligne rapides avec GameTestRunner et analyser leurs preuves.",
+                                                                                             "summary":  "Skill repo-scoped Ã  invocation explicite pour exÃ©cuter des tests D2R hors ligne rapides avec GameTestRunner et analyser leurs preuves.",
                                                                                              "agentAccess":  "read-write",
                                                                                              "status":  "active"
                                                                                          },
@@ -345,7 +345,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "x-codex-guardrails",
-                                                   "summary":  "Hooks de projet imposant le cadastre, les autorisations Git dédiées et le gate de validation final.",
+                                                   "summary":  "Hooks de projet imposant le cadastre, les autorisations Git dÃ©diÃ©es et le gate de validation final.",
                                                    "agentAccess":  "read-write"
                                                },
                                       "children":  [
@@ -379,7 +379,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "x-ci-automation",
-                                                   "summary":  "Automatisation GitHub Actions des validations du dépôt sur runner Windows, sans dépendance au runtime D2R.",
+                                                   "summary":  "Automatisation GitHub Actions des validations du dÃ©pÃ´t sur runner Windows, sans dÃ©pendance au runtime D2R.",
                                                    "agentAccess":  "read-write"
                                                },
                                       "children":  [
@@ -408,7 +408,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "x-external-addons",
-                                                   "summary":  "Plugins, patches et add-ons D2R 3.3 autonomes destinés à une publication au service de la communauté Discord D2RLoader, séparément de BKVince.",
+                                                   "summary":  "Plugins, patches et add-ons D2R 3.3 autonomes destinÃ©s Ã  une publication au service de la communautÃ© Discord D2RLoader, sÃ©parÃ©ment de BKVince.",
                                                    "agentAccess":  "read-write"
                                                },
                                       "children":  [
@@ -418,7 +418,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-standalone-d2rloader-addon",
-                                                                        "summary":  "Release publique autonome 3.0.0 d\u0027Advanced Item Tooltips avec plages intrinsèques ou combinées, tables du mod actif et repli vanilla embarqué.",
+                                                                        "summary":  "Release publique autonome 3.0.0 d\u0027Advanced Item Tooltips avec plages intrinsÃ¨ques ou combinÃ©es, tables du mod actif et repli vanilla embarquÃ©.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "active"
                                                                     },
@@ -535,7 +535,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-public-intermod-d2rloader-addon",
-                                                                        "summary":  "DLL autonome RuffnecKk qui corrige le lancement chance-to-cast d’Armageddon et Hurricane par des noeuds de skill synthétiques strictement transitoires, sans dépendance BKVince.",
+                                                                        "summary":  "DLL autonome RuffnecKk qui corrige le lancement chance-to-cast dâ€™Armageddon et Hurricane par des noeuds de skill synthÃ©tiques strictement transitoires, sans dÃ©pendance BKVince.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -701,7 +701,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-standalone-d2rloader-addon",
-                                                                        "summary":  "Plugin hybride Burn Damage Fix 2.0.0 de la RuffnecKk Suite : restaure la production Burn générique, applique la Fire Resistance native et observe passivement le state burning.",
+                                                                        "summary":  "Plugin hybride Burn Damage Fix 2.0.0 de la RuffnecKk Suite : restaure la production Burn gÃ©nÃ©rique, applique la Fire Resistance native et observe passivement le state burning.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -778,7 +778,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-public-intermod-d2rloader-addon",
-                                                                        "summary":  "DLL autonome RuffnecKk qui déclenche des propriétés CTC natives lors des sorts manuels non répétés, avec niveaux cible fixe ou hérité du sort source, sans dépendance BKVince.",
+                                                                        "summary":  "DLL autonome RuffnecKk qui dÃ©clenche des propriÃ©tÃ©s CTC natives lors des sorts manuels non rÃ©pÃ©tÃ©s, avec niveaux cible fixe ou hÃ©ritÃ© du sort source, sans dÃ©pendance BKVince.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -872,7 +872,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-standalone-d2rloader-addon",
-                                                                        "summary":  "Plugin hybride RuffnecKk pour D2RLoader 3.2.92777 qui désactive les effets des charms placés hors de la zone BKVince et les signale visuellement.",
+                                                                        "summary":  "Plugin hybride RuffnecKk pour D2RLoader 3.2.92777 qui dÃ©sactive les effets des charms placÃ©s hors de la zone BKVince et les signale visuellement.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -907,7 +907,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-standalone-d2rloader-addon",
-                                                                        "summary":  "Extension globale D2RLoader 3.2.92777 qui ajoute des récompenses Imbue natives de Charsi à la mort d’un superunique configurable, sans objet intermédiaire et sans intégration à BKVince.",
+                                                                        "summary":  "Extension globale D2RLoader 3.2.92777 qui ajoute des rÃ©compenses Imbue natives de Charsi Ã  la mort dâ€™un superunique configurable, sans objet intermÃ©diaire et sans intÃ©gration Ã  BKVince.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "active"
                                                                     },
@@ -979,7 +979,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-d2rloader-package-candidate",
-                                                                        "summary":  "Archive technique candidate DLL + JSON du plugin hybride EquippedItemToCube 0.1.0, avec README d’accompagnement hors ZIP; publication finale conditionnée par la matrice gameplay.",
+                                                                        "summary":  "Archive technique candidate DLL + JSON du plugin hybride EquippedItemToCube 0.1.0, avec README dâ€™accompagnement hors ZIP; publication finale conditionnÃ©e par la matrice gameplay.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -1014,7 +1014,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-standalone-d2rloader-addon",
-                                                                        "summary":  "Archive publique du plugin hybride FloatingDamage, hôte graphique partagé par les overlays RuffnecKk dont CharmZone.",
+                                                                        "summary":  "Archive publique du plugin hybride FloatingDamage, hÃ´te graphique partagÃ© par les overlays RuffnecKk dont CharmZone.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "active"
                                                                     },
@@ -1032,7 +1032,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-standalone-d2rloader-addon",
-                                                                        "summary":  "Memory patch D2RLoader généraliste qui restaure les assets HD pour les codes d’items à quatre caractères, sans DLL ni configuration, avec ZIP public limité au JSON.",
+                                                                        "summary":  "Memory patch D2RLoader gÃ©nÃ©raliste qui restaure les assets HD pour les codes dâ€™items Ã  quatre caractÃ¨res, sans DLL ni configuration, avec ZIP public limitÃ© au JSON.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "active"
                                                                     },
@@ -1136,7 +1136,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-ground-item-label-memory-patch-presets",
-                                                                        "summary":  "Bundle expérimental hors runtime contenant les presets memory patch mutuellement exclusifs 64 et 128 pour D2R 3.2.92777.",
+                                                                        "summary":  "Bundle expÃ©rimental hors runtime contenant les presets memory patch mutuellement exclusifs 64 et 128 pour D2R 3.2.92777.",
                                                                         "agentAccess":  "read-write"
                                                                     },
                                                            "children":  [
@@ -1179,12 +1179,102 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "ISC12",
+                                                           "path":  "addons/ISC12",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-standalone-d2rloader-addon",
+                                                                        "summary":  "Plugin expÃ©rimental RuffnecKk ISC12 Ã©tendant le namespace sÃ©rialisÃ© ItemStatCost Ã  12 bits pour des Ã©cosystÃ¨mes de sauvegarde clean-sheet, avec loader bornÃ© dÃ©sactivÃ© par dÃ©faut.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "experimental"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/ISC12/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/ISC12/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_config.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_config.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_contract.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_contract.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_loader.cpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_loader.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_loader.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_loader.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_loader_tail.asm",
+                                                                                                     "path":  "addons/ISC12/src/isc12_loader_tail.asm",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_native_sites.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_native_sites.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/ISC12/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/ISC12/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "policy_tests.cpp",
+                                                                                                     "path":  "addons/ISC12/src/policy_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "NATIVE-CONTRACT.md",
+                                                                                "path":  "addons/ISC12/NATIVE-CONTRACT.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/ISC12/README.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "ruffneckk-isc12.toml",
+                                                                                "path":  "addons/ISC12/ruffneckk-isc12.toml",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "VALIDATION.md",
+                                                                                "path":  "addons/ISC12/VALIDATION.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "MassID",
                                                            "path":  "addons/MassID",
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-d2rloader-public-plugin-candidate",
-                                                                        "summary":  "Sources, documentation et archive publique globale DLL + JSON de MassID 0.2.9; la coexistence avec le PluginPack et le cold start global sont validés, tandis que la matrice fonctionnelle complète reste ouverte.",
+                                                                        "summary":  "Sources, documentation et archive publique globale DLL + JSON de MassID 0.2.9; la coexistence avec le PluginPack et le cold start global sont validÃ©s, tandis que la matrice fonctionnelle complÃ¨te reste ouverte.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -1369,7 +1459,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-public-intermod-d2rloader-addon",
-                                                                        "summary":  "DLL autonome RuffnecKk qui charge deux tables TXT de séquences joueur, les compile dans une arène immuable et remplace uniquement les 25 pointeurs de groupes sous D2R 3.3.93847.",
+                                                                        "summary":  "DLL autonome RuffnecKk qui charge deux tables TXT de sÃ©quences joueur, les compile dans une arÃ¨ne immuable et remplace uniquement les 25 pointeurs de groupes sous D2R 3.3.93847.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -1700,7 +1790,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-d2rloader-plugin-incubation",
-                                                                        "summary":  "Sources et package du plugin hybride RepeatableServices, destiné au futur merge dans plugin-quests et configuré par JSON standard global ou mod-local.",
+                                                                        "summary":  "Sources et package du plugin hybride RepeatableServices, destinÃ© au futur merge dans plugin-quests et configurÃ© par JSON standard global ou mod-local.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -1767,7 +1857,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-standalone-d2rloader-addon",
-                                                                        "summary":  "Plugin autonome Resistance Floor 0.2.0 de la RuffnecKk Suite : configure jusqu\u0027à -1000 le minimum des six résistances pour joueurs, compagnons et monstres optionnels, avec affichage joueur synchronisé.",
+                                                                        "summary":  "Plugin autonome Resistance Floor 0.2.0 de la RuffnecKk Suite : configure jusqu\u0027Ã  -1000 le minimum des six rÃ©sistances pour joueurs, compagnons et monstres optionnels, avec affichage joueur synchronisÃ©.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -1842,7 +1932,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-standalone-d2rloader-addon",
-                                                                        "summary":  "Plugin hybride RuffnecKk pour D2RLoader 3.2.92777 qui ajoute au Static Field BKVince un debuff temporaire de résistance à la foudre via les fonctions serveur natives.",
+                                                                        "summary":  "Plugin hybride RuffnecKk pour D2RLoader 3.2.92777 qui ajoute au Static Field BKVince un debuff temporaire de rÃ©sistance Ã  la foudre via les fonctions serveur natives.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -1909,7 +1999,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-standalone-d2rloader-addon",
-                                                                        "summary":  "Plugin hybride expérimental RuffnecKk MapSense pour révéler la carte native, configurer ses ajouts in-frame et afficher un premier marqueur de monstre normal borné sans dépendance LoD classique.",
+                                                                        "summary":  "Plugin hybride expÃ©rimental RuffnecKk MapSense pour rÃ©vÃ©ler la carte native, configurer ses ajouts in-frame et afficher un premier marqueur de monstre normal bornÃ© sans dÃ©pendance LoD classique.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -2190,7 +2280,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-bkvince-hero-editor",
-                                                                        "summary":  "Éditeur web local de sauvegardes D2S BKVince, fondé sur les tables gouvernées et une validation checksum/reparse.",
+                                                                        "summary":  "Ã‰diteur web local de sauvegardes D2S BKVince, fondÃ© sur les tables gouvernÃ©es et une validation checksum/reparse.",
                                                                         "agentAccess":  "read-write"
                                                                     },
                                                            "children":  [
@@ -2200,7 +2290,7 @@
                                                                                 "kind":  "directory",
                                                                                 "meta":  {
                                                                                              "role":  "x-bkvince-hero-editor-ui-assets",
-                                                                                             "summary":  "Assets UI générés et versionnés utilisés par l\u0027éditeur de sauvegardes BKVince.",
+                                                                                             "summary":  "Assets UI gÃ©nÃ©rÃ©s et versionnÃ©s utilisÃ©s par l\u0027Ã©diteur de sauvegardes BKVince.",
                                                                                              "agentAccess":  "read-write"
                                                                                          },
                                                                                 "children":  [
@@ -5889,7 +5979,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "mod-reference",
-                                                   "summary":  "Référence read-only de BKDiablo, créé par Baron et Kex et constituant le squelette historique de BKVince.",
+                                                   "summary":  "RÃ©fÃ©rence read-only de BKDiablo, crÃ©Ã© par Baron et Kex et constituant le squelette historique de BKVince.",
                                                    "agentAccess":  "read-only"
                                                },
                                       "children":  [
@@ -6410,7 +6500,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "presentation-assets",
-                                                                        "summary":  "Assets HD de référence BK importés byte-exact et versionnés, avec les formats binaires stockés via Git LFS."
+                                                                        "summary":  "Assets HD de rÃ©fÃ©rence BK importÃ©s byte-exact et versionnÃ©s, avec les formats binaires stockÃ©s via Git LFS."
                                                                     },
                                                            "children":  [
                                                                             {
@@ -9033,7 +9123,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "localization",
-                                                                        "summary":  "Chaînes localisées de référence BK versionnées dans Git."
+                                                                        "summary":  "ChaÃ®nes localisÃ©es de rÃ©fÃ©rence BK versionnÃ©es dans Git."
                                                                     },
                                                            "children":  [
                                                                             {
@@ -9105,11 +9195,11 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "mod-development",
-                                                   "summary":  "Quartier général et source gouvernée de BKVince pour D2R 3.3 sous D2RLoader, construit sur le squelette de BKDiablo puis enrichi d\u0027apports sélectionnés de plusieurs mods Nexus Mods et de créations propres à Vincent.",
+                                                   "summary":  "Quartier gÃ©nÃ©ral et source gouvernÃ©e de BKVince pour D2R 3.3 sous D2RLoader, construit sur le squelette de BKDiablo puis enrichi d\u0027apports sÃ©lectionnÃ©s de plusieurs mods Nexus Mods et de crÃ©ations propres Ã  Vincent.",
                                                    "agentAccess":  "read-write",
                                                    "status":  "active",
                                                    "provenance":  {
-                                                                      "source":  "Squelette BKDiablo converti par D2RLoader, apports sélectionnés de mods Nexus Mods et créations propres à Vincent",
+                                                                      "source":  "Squelette BKDiablo converti par D2RLoader, apports sÃ©lectionnÃ©s de mods Nexus Mods et crÃ©ations propres Ã  Vincent",
                                                                       "version":  "D2R 3.3.93847"
                                                                   },
                                                    "policy":  {
@@ -10583,7 +10673,8 @@
                                                                                                                                                "path":  "data-BKVince/BKVince.mpq/data/hd/env/porory",
                                                                                                                                                "kind":  "directory",
                                                                                                                                                "children":  [
-                                                                                                                                                                ]
+
+                                                                                                                                                            ]
                                                                                                                                            },
                                                                                                                                            {
                                                                                                                                                "name":  "preset",
@@ -16626,7 +16717,7 @@
                                                                                                                                                "kind":  "directory",
                                                                                                                                                "meta":  {
                                                                                                                                                             "role":  "x-third-party-bearded-helmet-data",
-                                                                                                                                                            "summary":  "Overrides JSON de Paladin Veteran and Bearded Barbarian 1.0 qui masquent les helmets tout en préservant les barbes Barbarian et Paladin.",
+                                                                                                                                                            "summary":  "Overrides JSON de Paladin Veteran and Bearded Barbarian 1.0 qui masquent les helmets tout en prÃ©servant les barbes Barbarian et Paladin.",
                                                                                                                                                             "agentAccess":  "read-write",
                                                                                                                                                             "status":  "active",
                                                                                                                                                             "provenance":  {
@@ -18009,7 +18100,7 @@
                                                                                                                                                "kind":  "directory",
                                                                                                                                                "meta":  {
                                                                                                                                                             "role":  "presentation-assets",
-                                                                                                                                                            "summary":  "Remplacement cosmétique HD de l’apparence des projectiles arrow dans BKVince.",
+                                                                                                                                                            "summary":  "Remplacement cosmÃ©tique HD de lâ€™apparence des projectiles arrow dans BKVince.",
                                                                                                                                                             "agentAccess":  "read-write",
                                                                                                                                                             "provenance":  {
                                                                                                                                                                                "source":  "arrow.zip fourni par Vincent",
@@ -20063,7 +20154,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-runtime-integration",
-                                                                        "summary":  "Intégration D2RLoader 1.0.1-beta générée pour BKVince par d2rl convert; configuration, métadonnées, gabarit de patch et points d\u0027extension versionnés.",
+                                                                        "summary":  "IntÃ©gration D2RLoader 1.0.1-beta gÃ©nÃ©rÃ©e pour BKVince par d2rl convert; configuration, mÃ©tadonnÃ©es, gabarit de patch et points d\u0027extension versionnÃ©s.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "active"
                                                                     },
@@ -20325,12 +20416,12 @@
                                                                                                      "kind":  "directory",
                                                                                                      "meta":  {
                                                                                                                   "role":  "x-plugin-incubation-source",
-                                                                                                                  "summary":  "Sources du plugin autonome Book of Lore, avec configuration TOML stricte, politique testable et témoin client natif 92777.",
+                                                                                                                  "summary":  "Sources du plugin autonome Book of Lore, avec configuration TOML stricte, politique testable et tÃ©moin client natif 92777.",
                                                                                                                   "agentAccess":  "read-write",
                                                                                                                   "status":  "experimental",
                                                                                                                   "notes":  [
-                                                                                                                                "Plugin autonome permanent RuffnecKk, sans propriétaire ni merge PluginPack.",
-                                                                                                                                "Le jalon 0.2.0 implante un témoin client Tower Tome fail-closed; la sélection serveur autoritaire et la validation runtime restent à prouver."
+                                                                                                                                "Plugin autonome permanent RuffnecKk, sans propriÃ©taire ni merge PluginPack.",
+                                                                                                                                "Le jalon 0.2.0 implante un tÃ©moin client Tower Tome fail-closed; la sÃ©lection serveur autoritaire et la validation runtime restent Ã  prouver."
                                                                                                                             ]
                                                                                                               },
                                                                                                      "children":  [
@@ -20869,7 +20960,7 @@
                                                                                                      "kind":  "directory",
                                                                                                      "meta":  {
                                                                                                                   "role":  "x-plugin-incubation-source",
-                                                                                                                  "summary":  "Source autonome du prototype D2RLoader configurant la récompense de sockets de Larzuk par difficulté et qualité.",
+                                                                                                                  "summary":  "Source autonome du prototype D2RLoader configurant la rÃ©compense de sockets de Larzuk par difficultÃ© et qualitÃ©.",
                                                                                                                   "agentAccess":  "read-write",
                                                                                                                   "status":  "active",
                                                                                                                   "policy":  {
@@ -21143,8 +21234,8 @@
                                                                                                                                  "generated":  false
                                                                                                                              },
                                                                                                                   "notes":  [
-                                                                                                                                "Plugin autonome sans propriétaire PluginPack ni merge planifié.",
-                                                                                                                                "Témoin mod-local 0.2.1 délégué à Transmogrify et ExtendedItemStats; reveal ralenti, scrollbar cliquable/glissable et bouton Close ajoutés au lecteur supérieur, fallback autonome et release publique encore interdits."
+                                                                                                                                "Plugin autonome sans propriÃ©taire PluginPack ni merge planifiÃ©.",
+                                                                                                                                "TÃ©moin mod-local 0.2.1 dÃ©lÃ©guÃ© Ã  Transmogrify et ExtendedItemStats; reveal ralenti, scrollbar cliquable/glissable et bouton Close ajoutÃ©s au lecteur supÃ©rieur, fallback autonome et release publique encore interdits."
                                                                                                                             ]
                                                                                                               },
                                                                                                      "children":  [
@@ -21196,7 +21287,7 @@
                                                                                                      "kind":  "directory",
                                                                                                      "meta":  {
                                                                                                                   "role":  "x-plugin-incubation-source",
-                                                                                                                  "summary":  "Prototype autonome RemoteStash et tests du placement dynamique de son contrôle dans les layouts d\u0027inventaire.",
+                                                                                                                  "summary":  "Prototype autonome RemoteStash et tests du placement dynamique de son contrÃ´le dans les layouts d\u0027inventaire.",
                                                                                                                   "agentAccess":  "read-write",
                                                                                                                   "status":  "active",
                                                                                                                   "policy":  {
@@ -21206,9 +21297,9 @@
                                                                                                                              },
                                                                                                                   "notes":  [
                                                                                                                                 "Runtime cible : D2R 3.2.92777.",
-                                                                                                                                "Propriétaire futur : plugin-misc.dll / misc.remoteStash.",
-                                                                                                                                "Le prototype hybride 0.1.5 ouvre le panneau stash client depuis le bouton d\u0027inventaire validé en jeu.",
-                                                                                                                                "Les layouts BKVince et les sprites à quatre états portent actuellement le contrôle; la compatibilité native sans déclaration de layout reste ouverte.",
+                                                                                                                                "PropriÃ©taire futur : plugin-misc.dll / misc.remoteStash.",
+                                                                                                                                "Le prototype hybride 0.1.5 ouvre le panneau stash client depuis le bouton d\u0027inventaire validÃ© en jeu.",
+                                                                                                                                "Les layouts BKVince et les sprites Ã  quatre Ã©tats portent actuellement le contrÃ´le; la compatibilitÃ© native sans dÃ©claration de layout reste ouverte.",
                                                                                                                                 "La session banque serveur autoritaire et le hotkey configurable restent des gates distincts."
                                                                                                                             ]
                                                                                                               },
@@ -21263,7 +21354,7 @@
                                                                                                      "kind":  "directory",
                                                                                                      "meta":  {
                                                                                                                   "role":  "x-plugin-incubation-source",
-                                                                                                                  "summary":  "Source autonome du prototype D2RLoader plafonnant avec une seule valeur les réparations individuelles et Repair All, avec usure permanente configurable.",
+                                                                                                                  "summary":  "Source autonome du prototype D2RLoader plafonnant avec une seule valeur les rÃ©parations individuelles et Repair All, avec usure permanente configurable.",
                                                                                                                   "agentAccess":  "read-write",
                                                                                                                   "status":  "active",
                                                                                                                   "policy":  {
@@ -21273,7 +21364,7 @@
                                                                                                                              },
                                                                                                                   "notes":  [
                                                                                                                                 "Runtime cible : D2R 3.2.92777.",
-                                                                                                                                "Propriétaire futur : plugin-items.dll / items.repairCostsCap."
+                                                                                                                                "PropriÃ©taire futur : plugin-items.dll / items.repairCostsCap."
                                                                                                                             ]
                                                                                                               },
                                                                                                      "children":  [
@@ -21654,7 +21745,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "mod-reference",
-                                                   "summary":  "Mod externe créé par BT à partir d\u0027une version 2.x encore à préciser et utilisé comme source d\u0027inspiration.",
+                                                   "summary":  "Mod externe crÃ©Ã© par BT Ã  partir d\u0027une version 2.x encore Ã  prÃ©ciser et utilisÃ© comme source d\u0027inspiration.",
                                                    "agentAccess":  "read-only"
                                                },
                                       "children":  [
@@ -22415,7 +22506,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "x-mod-historical",
-                                                   "summary":  "Mod historique D2R 2.4, distinct de BKVince et conservé comme source modifiable de référence."
+                                                   "summary":  "Mod historique D2R 2.4, distinct de BKVince et conservÃ© comme source modifiable de rÃ©fÃ©rence."
                                                },
                                       "children":  [
                                                        {
@@ -22424,7 +22515,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "mod-development",
-                                                                        "summary":  "Profil local D2RLAN et zone d\u0027intégration runtime du mod TCP, modifiable mais non versionnée.",
+                                                                        "summary":  "Profil local D2RLAN et zone d\u0027intÃ©gration runtime du mod TCP, modifiable mais non versionnÃ©e.",
                                                                         "agentAccess":  "read-write"
                                                                     },
                                                            "children":  [
@@ -22444,7 +22535,7 @@
                                                                                                      "kind":  "directory",
                                                                                                      "meta":  {
                                                                                                                   "role":  "x-mercenary-command-runtime",
-                                                                                                                  "summary":  "Chargeur et module conservés localement pour implémenter srvdofunc 155 sur D2R.exe 1.2.69270 sans remplacer D2RHUD.",
+                                                                                                                  "summary":  "Chargeur et module conservÃ©s localement pour implÃ©menter srvdofunc 155 sur D2R.exe 1.2.69270 sans remplacer D2RHUD.",
                                                                                                                   "agentAccess":  "read-write"
                                                                                                               },
                                                                                                      "children":  [
@@ -22471,7 +22562,7 @@
                                                                                                      "kind":  "directory",
                                                                                                      "meta":  {
                                                                                                                   "role":  "x-rejuvenation-autopickup-runtime",
-                                                                                                                  "summary":  "Module runtime TCP configurable qui ramasse automatiquement les potions rvs/rvl dans les colonnes de ceinture autorisées, puis éventuellement dans l\u0027inventaire, sous D2R.exe 1.2.69270.",
+                                                                                                                  "summary":  "Module runtime TCP configurable qui ramasse automatiquement les potions rvs/rvl dans les colonnes de ceinture autorisÃ©es, puis Ã©ventuellement dans l\u0027inventaire, sous D2R.exe 1.2.69270.",
                                                                                                                   "agentAccess":  "read-write"
                                                                                                               },
                                                                                                      "children":  [
@@ -23279,7 +23370,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "presentation-assets",
-                                                                        "summary":  "Visuels, sons et fichiers associés modifiés par TCP, versionnés avec les formats binaires stockés via Git LFS."
+                                                                        "summary":  "Visuels, sons et fichiers associÃ©s modifiÃ©s par TCP, versionnÃ©s avec les formats binaires stockÃ©s via Git LFS."
                                                                     },
                                                            "children":  [
                                                                             {
@@ -28854,7 +28945,7 @@
                                                                                                                                                                     "kind":  "directory",
                                                                                                                                                                     "meta":  {
                                                                                                                                                                                  "role":  "x-starting-charm-hd-assets",
-                                                                                                                                                                                 "summary":  "Sprites HD et low-end BK attribués aux charms de départ TCP mfd (Blank), mfc (Modifiers) et mff (Level Reward)."
+                                                                                                                                                                                 "summary":  "Sprites HD et low-end BK attribuÃ©s aux charms de dÃ©part TCP mfd (Blank), mfc (Modifiers) et mff (Level Reward)."
                                                                                                                                                                              },
                                                                                                                                                                     "children":  [
                                                                                                                                                                                      {
@@ -32225,7 +32316,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "localization",
-                                                                        "summary":  "Chaînes localisées modifiées par TCP dans local/lng/strings et versionnées dans Git."
+                                                                        "summary":  "ChaÃ®nes localisÃ©es modifiÃ©es par TCP dans local/lng/strings et versionnÃ©es dans Git."
                                                                     },
                                                            "children":  [
                                                                             {
@@ -32292,11 +32383,11 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "vanilla-reference",
-                                                   "summary":  "Extraction locale CASCView de Diablo II Resurrected 3.2.92777; seule la branche data/data/global/excel est versionnée.",
+                                                   "summary":  "Extraction locale CASCView de Diablo II Resurrected 3.2.92777; seule la branche data/data/global/excel est versionnÃ©e.",
                                                    "agentAccess":  "read-only",
                                                    "status":  "reference",
                                                    "provenance":  {
-                                                                      "source":  "CASCView — installation officielle Diablo II Resurrected",
+                                                                      "source":  "CASCView â€” installation officielle Diablo II Resurrected",
                                                                       "version":  "3.2.92777"
                                                                   },
                                                    "policy":  {
@@ -32327,7 +32418,7 @@
                                                                                                                           "kind":  "directory",
                                                                                                                           "meta":  {
                                                                                                                                        "role":  "gameplay-data",
-                                                                                                                                       "summary":  "Tables Excel vanilla de D2R 3.2 extraites de CASC et versionnées comme référence byte-exacte en lecture seule.",
+                                                                                                                                       "summary":  "Tables Excel vanilla de D2R 3.2 extraites de CASC et versionnÃ©es comme rÃ©fÃ©rence byte-exacte en lecture seule.",
                                                                                                                                        "agentAccess":  "read-only",
                                                                                                                                        "policy":  {
                                                                                                                                                       "editable":  false,
@@ -34184,11 +34275,11 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "vanilla-reference",
-                                                   "summary":  "Extraction directe du CASC officiel de Diablo II Resurrected 3.3.93847; seule la branche data/data/global/excel est versionnée.",
+                                                   "summary":  "Extraction directe du CASC officiel de Diablo II Resurrected 3.3.93847; seule la branche data/data/global/excel est versionnÃ©e.",
                                                    "agentAccess":  "read-only",
                                                    "status":  "reference",
                                                    "provenance":  {
-                                                                      "source":  "CASC officiel — énumération et lecture strictes avec CascLib 1.50.0.206",
+                                                                      "source":  "CASC officiel â€” Ã©numÃ©ration et lecture strictes avec CascLib 1.50.0.206",
                                                                       "version":  "3.3.93847",
                                                                       "reference":  "Mission/bkvince-d2r33-vanilla-manifest.json"
                                                                   },
@@ -34220,7 +34311,7 @@
                                                                                                                           "kind":  "directory",
                                                                                                                           "meta":  {
                                                                                                                                        "role":  "gameplay-data",
-                                                                                                                                       "summary":  "Tables Excel vanilla de D2R 3.3.93847 extraites directement du CASC et versionnées comme référence byte-exacte en lecture seule.",
+                                                                                                                                       "summary":  "Tables Excel vanilla de D2R 3.3.93847 extraites directement du CASC et versionnÃ©es comme rÃ©fÃ©rence byte-exacte en lecture seule.",
                                                                                                                                        "agentAccess":  "read-only",
                                                                                                                                        "policy":  {
                                                                                                                                                       "editable":  false,
@@ -38322,7 +38413,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "vanilla-reference",
-                                                   "summary":  "Fichiers TXT de référence du jeu de base Diablo II en version 2.4.",
+                                                   "summary":  "Fichiers TXT de rÃ©fÃ©rence du jeu de base Diablo II en version 2.4.",
                                                    "agentAccess":  "read-only"
                                                },
                                       "children":  [
@@ -39194,7 +39285,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "x-game-test-cases",
-                                                   "summary":  "Scénarios et manifestes de fixtures versionnés pour les tests D2R hors ligne; les artefacts d’exécution locaux restent ignorés.",
+                                                   "summary":  "ScÃ©narios et manifestes de fixtures versionnÃ©s pour les tests D2R hors ligne; les artefacts dâ€™exÃ©cution locaux restent ignorÃ©s.",
                                                    "agentAccess":  "read-write",
                                                    "status":  "active"
                                                },
@@ -39253,7 +39344,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "requirements",
-                                                   "summary":  "Dossier artisanal conservant une trace humaine des besoins, idées et intentions du mod."
+                                                   "summary":  "Dossier artisanal conservant une trace humaine des besoins, idÃ©es et intentions du mod."
                                                },
                                       "children":  [
                                                        {
@@ -39277,7 +39368,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-public-intermod-plugin-mission",
-                                                                        "summary":  "Mission, preuves natives et qualification D2R 3.3 du plugin public Armageddon CtC Fix, avec couverture 3.2 par équivalence native gouvernée.",
+                                                                        "summary":  "Mission, preuves natives et qualification D2R 3.3 du plugin public Armageddon CtC Fix, avec couverture 3.2 par Ã©quivalence native gouvernÃ©e.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "active"
                                                                     }
@@ -39288,7 +39379,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-native-plugin",
-                                                                        "summary":  "Décisions produit, preuves 92777 et gates de Charm Zone, des services répétables, du démarrage Players et des audits BaseMod 3.2.",
+                                                                        "summary":  "DÃ©cisions produit, preuves 92777 et gates de Charm Zone, des services rÃ©pÃ©tables, du dÃ©marrage Players et des audits BaseMod 3.2.",
                                                                         "agentAccess":  "read-write"
                                                                     }
                                                        },
@@ -39313,7 +39404,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-bkvince-web-tool",
-                                                                        "summary":  "Décision Option A, matrice de parité RuneWizard et gates fonctionnels, visuels et D2S du BKVince Hero Editor.",
+                                                                        "summary":  "DÃ©cision Option A, matrice de paritÃ© RuneWizard et gates fonctionnels, visuels et D2S du BKVince Hero Editor.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "active"
                                                                     }
@@ -39329,7 +39420,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-native-plugin",
-                                                                        "summary":  "Décision autonome, spécification historique, preuves 92777 et gates du plugin Book of Lore.",
+                                                                        "summary":  "DÃ©cision autonome, spÃ©cification historique, preuves 92777 et gates du plugin Book of Lore.",
                                                                         "agentAccess":  "read-write"
                                                                     }
                                                        },
@@ -39339,7 +39430,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-native-plugin",
-                                                                        "summary":  "Décisions, preuves reverse engineering et gates du plugin d’attribution groupée des skills.",
+                                                                        "summary":  "DÃ©cisions, preuves reverse engineering et gates du plugin dâ€™attribution groupÃ©e des skills.",
                                                                         "agentAccess":  "read-write"
                                                                     }
                                                        },
@@ -39349,7 +39440,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-native-plugin",
-                                                                        "summary":  "Décisions, preuves dual-build, contrat d’overlay witness et gates de livraison du plugin Burn Damage Fix.",
+                                                                        "summary":  "DÃ©cisions, preuves dual-build, contrat dâ€™overlay witness et gates de livraison du plugin Burn Damage Fix.",
                                                                         "agentAccess":  "read-write"
                                                                     }
                                                        },
@@ -39364,7 +39455,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-native-plugin",
-                                                                        "summary":  "Décisions produit, séquencement différé, preuves préliminaires et gates du plugin autonome CharStart.",
+                                                                        "summary":  "DÃ©cisions produit, sÃ©quencement diffÃ©rÃ©, preuves prÃ©liminaires et gates du plugin autonome CharStart.",
                                                                         "agentAccess":  "read-write"
                                                                     }
                                                        },
@@ -39374,7 +39465,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-native-plugin",
-                                                                        "summary":  "Décisions produit, périmètre configurable et gates du plugin de récompense Larzuk par difficulté et qualité.",
+                                                                        "summary":  "DÃ©cisions produit, pÃ©rimÃ¨tre configurable et gates du plugin de rÃ©compense Larzuk par difficultÃ© et qualitÃ©.",
                                                                         "agentAccess":  "read-write"
                                                                     }
                                                        },
@@ -39424,7 +39515,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-native-plugin",
-                                                                        "summary":  "Décisions d’incubation, preuves initiales et gates de l’extension des Level IDs aux cinq actes D2R 3.2.",
+                                                                        "summary":  "DÃ©cisions dâ€™incubation, preuves initiales et gates de lâ€™extension des Level IDs aux cinq actes D2R 3.2.",
                                                                         "agentAccess":  "read-write"
                                                                     }
                                                        },
@@ -39434,7 +39525,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-native-plugin",
-                                                                        "summary":  "Décisions, preuves initiales et gates du plugin d’objets à très grand nombre de statistiques.",
+                                                                        "summary":  "DÃ©cisions, preuves initiales et gates du plugin dâ€™objets Ã  trÃ¨s grand nombre de statistiques.",
                                                                         "agentAccess":  "read-write"
                                                                     }
                                                        },
@@ -39444,7 +39535,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-native-plugin",
-                                                                        "summary":  "Décisions, preuves initiales et gates du plugin autonome ExtendedMerc pour l’équipement configurable des mercenaires.",
+                                                                        "summary":  "DÃ©cisions, preuves initiales et gates du plugin autonome ExtendedMerc pour lâ€™Ã©quipement configurable des mercenaires.",
                                                                         "agentAccess":  "read-write"
                                                                     }
                                                        },
@@ -39459,7 +39550,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-memory-patch",
-                                                                        "summary":  "Décision, preuves natives et validation runtime du memory patch D2RLoader généraliste pour les codes d’items à quatre caractères.",
+                                                                        "summary":  "DÃ©cision, preuves natives et validation runtime du memory patch D2RLoader gÃ©nÃ©raliste pour les codes dâ€™items Ã  quatre caractÃ¨res.",
                                                                         "agentAccess":  "read-write"
                                                                     }
                                                        },
@@ -39476,6 +39567,11 @@
                                                        {
                                                            "name":  "ground-item-label-limit-3.2.md",
                                                            "path":  "Mission/ground-item-label-limit-3.2.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "isc12-3.3.md",
+                                                           "path":  "Mission/isc12-3.3.md",
                                                            "kind":  "file"
                                                        },
                                                        {
@@ -39518,7 +39614,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-native-plugin-quarantine",
-                                                                        "summary":  "Mission historique du prototype MeleeSplash, gelé byte-exactement comme hypothèse non probante sous MEC-00/MEC-01.",
+                                                                        "summary":  "Mission historique du prototype MeleeSplash, gelÃ© byte-exactement comme hypothÃ¨se non probante sous MEC-00/MEC-01.",
                                                                         "agentAccess":  "read-write"
                                                                     }
                                                        },
@@ -39698,7 +39794,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-native-plugin",
-                                                                        "summary":  "Décisions produit, architecture du registre partagé, preuves initiales et gates du plugin autonome PSpell Framework / UseSkill.",
+                                                                        "summary":  "DÃ©cisions produit, architecture du registre partagÃ©, preuves initiales et gates du plugin autonome PSpell Framework / UseSkill.",
                                                                         "agentAccess":  "read-write"
                                                                     }
                                                        },
@@ -39728,7 +39824,7 @@
                                                            "kind":  "file",
                                                            "meta":  {
                                                                         "role":  "x-mission-native-plugin",
-                                                                        "summary":  "Décisions produit, audit initial et gates du plugin configurable de plafonnement des coûts de réparation chez les PNJ.",
+                                                                        "summary":  "DÃ©cisions produit, audit initial et gates du plugin configurable de plafonnement des coÃ»ts de rÃ©paration chez les PNJ.",
                                                                         "agentAccess":  "read-write"
                                                                     }
                                                        },
@@ -39877,7 +39973,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "x-dependency-patches",
-                                                   "summary":  "Correctifs reproductibles appliqués aux dépendances npm du workspace.",
+                                                   "summary":  "Correctifs reproductibles appliquÃ©s aux dÃ©pendances npm du workspace.",
                                                    "agentAccess":  "read-write"
                                                },
                                       "children":  [
@@ -39894,7 +39990,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "x-reverse-engineering",
-                                                   "summary":  "Ateliers persistants, manifestes et connaissances prouvées pour accélérer l’analyse des binaires D2R sans versionner les images ni les caches locaux.",
+                                                   "summary":  "Ateliers persistants, manifestes et connaissances prouvÃ©es pour accÃ©lÃ©rer lâ€™analyse des binaires D2R sans versionner les images ni les caches locaux.",
                                                    "agentAccess":  "read-write",
                                                    "status":  "active"
                                                },
@@ -39905,7 +40001,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-d2r-build-workbench",
-                                                                        "summary":  "Workbench gouverné du build D2R 3.2.92777 : hashes, RVA validés, findings et bootstrap d’un index/Ghidra local persistant.",
+                                                                        "summary":  "Workbench gouvernÃ© du build D2R 3.2.92777 : hashes, RVA validÃ©s, findings et bootstrap dâ€™un index/Ghidra local persistant.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "active",
                                                                         "provenance":  {
@@ -39914,6 +40010,29 @@
                                                                                        }
                                                                     },
                                                            "children":  [
+                                                                            {
+                                                                                "name":  "isc12",
+                                                                                "path":  "reverse-engineering/d2r-3.2.92777/isc12",
+                                                                                "kind":  "directory",
+                                                                                "meta":  {
+                                                                                             "role":  "x-isc12-native-evidence",
+                                                                                             "summary":  "Ledger gouvernÃ© et preuves natives ISC12 pour le loader ItemStatCost, les codecs 12 bits, les transports et le gate clean-sheet D2S/D2I.",
+                                                                                             "agentAccess":  "read-write",
+                                                                                             "status":  "active"
+                                                                                         },
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "g10-clean-sheet-audit.md",
+                                                                                                     "path":  "reverse-engineering/d2r-3.2.92777/isc12/g10-clean-sheet-audit.md",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "native-sites.json",
+                                                                                                     "path":  "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
                                                                             {
                                                                                 "name":  "player-sequences",
                                                                                 "path":  "reverse-engineering/d2r-3.2.92777/player-sequences",
@@ -40315,7 +40434,7 @@
                                                                                 "kind":  "file",
                                                                                 "meta":  {
                                                                                              "role":  "x-itemstatcost-migration-validator",
-                                                                                             "summary":  "Migre sélectivement Save Bits/Save Add via le writer TSV et vérifie les 13 statistiques historiquement hors plage."
+                                                                                             "summary":  "Migre sÃ©lectivement Save Bits/Save Add via le writer TSV et vÃ©rifie les 13 statistiques historiquement hors plage."
                                                                                          }
                                                                             },
                                                                             {
@@ -40324,7 +40443,7 @@
                                                                                 "kind":  "file",
                                                                                 "meta":  {
                                                                                              "role":  "x-cube-guide-generator",
-                                                                                             "summary":  "Génère et valide les quatre onglets du guide in-game depuis cubemain.txt, avec exclusions et déduplication sémantique."
+                                                                                             "summary":  "GÃ©nÃ¨re et valide les quatre onglets du guide in-game depuis cubemain.txt, avec exclusions et dÃ©duplication sÃ©mantique."
                                                                                          }
                                                                             },
                                                                             {
@@ -40372,7 +40491,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-d2r-model-asset-tooling",
-                                                                        "summary":  "Outillage reproductible pour inspecter, transformer et valider les modèles D2R sans versionner les binaires tiers locaux.",
+                                                                        "summary":  "Outillage reproductible pour inspecter, transformer et valider les modÃ¨les D2R sans versionner les binaires tiers locaux.",
                                                                         "agentAccess":  "read-write"
                                                                     },
                                                            "children":  [
@@ -40823,6 +40942,11 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
+                                                                                "name":  "isc12-validate-ledger.mjs",
+                                                                                "path":  "scripts/reverse-engineering/isc12-validate-ledger.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
                                                                                 "name":  "player-sequences.mjs",
                                                                                 "path":  "scripts/reverse-engineering/player-sequences.mjs",
                                                                                 "kind":  "file"
@@ -40970,7 +41094,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-repository-verification",
-                                                                        "summary":  "Contrôles agrégés du build, des tests, du cadastre, des TSV, des archives et de Git LFS.",
+                                                                        "summary":  "ContrÃ´les agrÃ©gÃ©s du build, des tests, du cadastre, des TSV, des archives et de Git LFS.",
                                                                         "agentAccess":  "read-write"
                                                                     },
                                                            "children":  [
@@ -41046,7 +41170,7 @@
                                       "kind":  "directory",
                                       "meta":  {
                                                    "role":  "x-local-modding-tools",
-                                                   "summary":  "Utilitaires tiers locaux qui complètent l’outillage du workspace; la documentation et la provenance sont versionnées, tandis que les binaires fournisseurs restent ignorés.",
+                                                   "summary":  "Utilitaires tiers locaux qui complÃ¨tent lâ€™outillage du workspace; la documentation et la provenance sont versionnÃ©es, tandis que les binaires fournisseurs restent ignorÃ©s.",
                                                    "agentAccess":  "read-write"
                                                },
                                       "children":  [
@@ -41056,11 +41180,11 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-third-party-sprite-editor",
-                                                                        "summary":  "Installation locale documentée de D2R Sprite ED2R 1.5 pour convertir et éditer les assets .sprite en anglais.",
+                                                                        "summary":  "Installation locale documentÃ©e de D2R Sprite ED2R 1.5 pour convertir et Ã©diter les assets .sprite en anglais.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "active",
                                                                         "provenance":  {
-                                                                                           "source":  "TEAM ED2R — publication Inven 7942",
+                                                                                           "source":  "TEAM ED2R â€” publication Inven 7942",
                                                                                            "version":  "1.5"
                                                                                        }
                                                                     },
@@ -41078,7 +41202,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-game-test-runner",
-                                                                        "summary":  "Orchestrateur PowerShell et exécuteur AutoHotkey v2 génériques pour des séquences D2R hors ligne rapides, sûres et traçables.",
+                                                                        "summary":  "Orchestrateur PowerShell et exÃ©cuteur AutoHotkey v2 gÃ©nÃ©riques pour des sÃ©quences D2R hors ligne rapides, sÃ»res et traÃ§ables.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "active"
                                                                     },

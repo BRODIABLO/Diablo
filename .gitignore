@@ -8,6 +8,9 @@ dist/
 *.lib
 *.exp
 /data-BKVince/d2rloader/plugins/*-src/build/
+/addons/*/src/build/
+/addons/*/build/
+/addons/*/build-*/
 
 # Archives de release locales : publier les ZIP dans les GitHub Releases,
 # jamais dans l'historique du dépôt principal.

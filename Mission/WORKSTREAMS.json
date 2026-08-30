@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-29",
+  "updatedAt": "2026-08-30",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -727,6 +727,20 @@
         "Mission/ruffneckk-mapsense.md",
         "addons/RuffnecKkMapSense/**"
       ]
+    },
+    {
+      "id": "isc12",
+      "name": "ISC12 — 12-bit ItemStatCost IDs",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/isc12-3.3.md",
+      "nextGate": "ISC12 0.2.0 implements the guarded G0 loader relay with bounded 4,095-entry scratch storage and remains disabled by default; runtime has not run. Close G10-A by proving D2S outer-load and final-write/checksum seams plus D2I whole-file load-before-decode and final-write seams, then freeze the envelope and golden vectors. Keep G1 unpublished until G10 and G9 are closed, and prove G0 patch-publication quiescence before runtime activation.",
+      "include": [
+        "Mission/isc12-3.3.md",
+        "addons/ISC12/**",
+        "reverse-engineering/d2r-3.2.92777/isc12/**",
+        "scripts/reverse-engineering/isc12*"
+      ]
     }
   ],
   "sharedPaths": [
@@ -880,7 +894,8 @@
         "require-item-display-for-pickup",
         "base-mod-features",
         "pd2-inspiration-bkvince",
-        "player-sequence-tables"
+        "player-sequence-tables",
+        "isc12"
       ],
       "reason": "Governed native evidence registry shared by native plugin missions."
     },
@@ -909,7 +924,8 @@
         "require-item-display-for-pickup",
         "base-mod-features",
         "pd2-inspiration-bkvince",
-        "player-sequence-tables"
+        "player-sequence-tables",
+        "isc12"
       ],
       "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."
     },

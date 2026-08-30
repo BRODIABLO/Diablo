@@ -1,0 +1,163 @@
+#pragma once
+
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <span>
+
+namespace ruffneckk::isc12 {
+
+struct NativePattern {
+    const char* id;
+    std::uintptr_t rva;
+    std::span<const std::uint8_t> bytes;
+    std::span<const std::uint8_t> mask;
+};
+
+inline constexpr auto LoaderEntryBytes = std::to_array<std::uint8_t>({
+    0x4C,0x8B,0xDC,0x55,0x49,0x8D,0xAB,0x98,0xF1,
+    0xFF,0xFF,0x48,0x81,0xEC,0x60,0x0F,0x00,0x00,
+});
+inline constexpr auto LoaderCountBytes = std::to_array<std::uint8_t>({
+    0x48,0x81,0xBE,0x60,0x12,0x00,0x00,0xFF,
+    0x01,0x00,0x00,0x76,0x0F,
+});
+inline constexpr auto LoaderCompileCallBytes = std::to_array<std::uint8_t>({
+    0x48,0xC7,0x44,0x24,0x28,0x44,0x01,0x00,0x00,0x48,
+    0x89,0x44,0x24,0x20,0xE8,0xE2,0x0C,0xFE,0xFF,
+});
+inline constexpr auto DescriptionTailBytes = std::to_array<std::uint8_t>({
+    0x4C,0x8B,0xBC,0x24,0x40,0x0F,0x00,0x00,0x49,0x8B,
+    0xDD,0x4C,0x8B,0xB4,0x24,0x48,0x0F,0x00,0x00,
+});
+inline constexpr auto DescriptionRecordLayoutBytes =
+        std::to_array<std::uint8_t>({
+    0x48,0x69,0x44,0x24,0x58,0x44,0x01,0x00,0x00,0x48,
+    0x03,0x07,0x80,0x78,0x32,0x00,0x74,0x19,0x66,0x42,
+    0x89,0x9C,0xAD,0x30,0x06,0x00,0x00,0x0F,0xB7,0x40,
+    0x30,0x66,0x42,0x89,0x84,0xAD,0x32,0x06,0x00,0x00,
+});
+inline constexpr auto DescriptionQsortCallBytes =
+        std::to_array<std::uint8_t>({
+    0x4C,0x8D,0x0D,0x51,0x17,0x00,0x00,0x41,0xB8,0x04,
+    0x00,0x00,0x00,0x49,0x8B,0xD5,0x48,0x8D,0x8D,0x30,
+    0x06,0x00,0x00,0xE8,0x1C,0x7E,0xFC,0x00,
+});
+inline constexpr auto DescriptionResizeResumeBytes =
+        std::to_array<std::uint8_t>({
+    0x48,0x8B,0x74,0x24,0x48,0x49,0x8B,0xD5,0x48,0x8D,
+    0x8E,0x78,0x12,0x00,0x00,0xE8,0xB8,0x46,0x00,0x00,
+    0x48,0x8B,0x96,0x78,0x12,0x00,0x00,0x4C,0x8D,0x85,
+    0x30,0x06,0x00,0x00,
+});
+inline constexpr auto DescriptionRestoreBytes =
+        std::to_array<std::uint8_t>({
+    0x48,0x8B,0xBC,0x24,0x88,0x0F,0x00,0x00,0x4F,0x8D,
+    0x04,0xA8,0x4C,0x8B,0xAC,0x24,0x50,0x0F,0x00,0x00,
+    0x48,0x8D,0x85,0x30,0x06,0x00,0x00,0x48,0x8B,0xB4,
+    0x24,0x80,0x0F,0x00,0x00,0x48,0x8D,0x8D,0x30,0x06,
+    0x00,0x00,0x48,0x8B,0x9C,0x24,0x78,0x0F,0x00,0x00,
+    0x49,0x3B,0xC0,
+});
+inline constexpr auto DescriptionCopyBytes = std::to_array<std::uint8_t>({
+    0x0F,0xB7,0x01,0x48,0x83,0xC1,0x04,0x66,0x89,
+    0x02,0x48,0x8D,0x52,0x02,0x49,0x3B,0xC8,0x75,0xED,
+});
+inline constexpr auto DescriptionEpilogueBytes =
+        std::to_array<std::uint8_t>({
+    0x48,0x8B,0x8D,0x30,0x0E,0x00,0x00,0x48,0x33,0xCC,
+    0xE8,0x8E,0x1F,0xFB,0x00,0x48,0x81,0xC4,0x60,0x0F,
+    0x00,0x00,0x5D,0xC3,
+});
+inline constexpr auto DescriptionResizeBytes = std::to_array<std::uint8_t>({
+    0x48,0x89,0x54,0x24,0x10,0x56,0x57,0x48,0x83,0xEC,
+    0x38,0x48,0xBE,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0x3F,
+});
+inline constexpr auto DescriptionCompareBytes = std::to_array<std::uint8_t>({
+    0x44,0x0F,0xB7,0x41,0x02,0x0F,0xB7,0x4A,0x02,
+    0x66,0x44,0x3B,0xC1,0x7D,0x06,0xB8,0xFF,0xFF,0xFF,0xFF,
+    0xC3,0x33,0xC0,0x66,0x44,0x3B,0xC1,0x0F,0x95,0xC0,0xC3,
+});
+inline constexpr auto NativeQsortBytes = std::to_array<std::uint8_t>({
+    0x41,0x54,0x41,0x55,0x41,0x56,
+    0x48,0x81,0xEC,0x50,0x04,0x00,0x00,
+});
+inline constexpr auto FirstItemReaderPrefixBytes = std::to_array<std::uint8_t>({
+    0xBA,0x09,0x00,0x00,0x00,0x48,0x8B,0xCE,
+    0x44,0x8D,0x72,0xF6,
+});
+inline constexpr auto FirstItemReaderSentinelBytes =
+        std::to_array<std::uint8_t>({
+    0x3D,0xFF,0x01,0x00,0x00,
+});
+inline constexpr auto NextItemReaderPrefixBytes = std::to_array<std::uint8_t>({
+    0xBA,0x09,0x00,0x00,0x00,0x48,0x8B,0xCE,
+});
+inline constexpr auto NextItemReaderSentinelBytes =
+        std::to_array<std::uint8_t>({
+    0x3D,0xFF,0x01,0x00,0x00,
+});
+
+template <std::size_t Size>
+inline constexpr auto ExactMask() -> std::array<std::uint8_t, Size> {
+    std::array<std::uint8_t, Size> result{};
+    result.fill(0xFF);
+    return result;
+}
+
+inline constexpr auto LoaderEntryMask = ExactMask<LoaderEntryBytes.size()>();
+inline constexpr auto LoaderCountMask = ExactMask<LoaderCountBytes.size()>();
+inline constexpr auto LoaderCompileCallMask =
+    ExactMask<LoaderCompileCallBytes.size()>();
+inline constexpr auto DescriptionTailMask =
+    ExactMask<DescriptionTailBytes.size()>();
+inline constexpr auto DescriptionRecordLayoutMask =
+    ExactMask<DescriptionRecordLayoutBytes.size()>();
+inline constexpr auto DescriptionQsortCallMask =
+    ExactMask<DescriptionQsortCallBytes.size()>();
+inline constexpr auto DescriptionResizeResumeMask =
+    ExactMask<DescriptionResizeResumeBytes.size()>();
+inline constexpr auto DescriptionRestoreMask =
+    ExactMask<DescriptionRestoreBytes.size()>();
+inline constexpr auto DescriptionCopyMask =
+    ExactMask<DescriptionCopyBytes.size()>();
+inline constexpr auto DescriptionEpilogueMask =
+    ExactMask<DescriptionEpilogueBytes.size()>();
+inline constexpr auto DescriptionResizeMask =
+    ExactMask<DescriptionResizeBytes.size()>();
+inline constexpr auto DescriptionCompareMask =
+    ExactMask<DescriptionCompareBytes.size()>();
+inline constexpr auto NativeQsortMask = ExactMask<NativeQsortBytes.size()>();
+inline constexpr auto FirstItemReaderPrefixMask =
+    ExactMask<FirstItemReaderPrefixBytes.size()>();
+inline constexpr auto FirstItemReaderSentinelMask =
+    ExactMask<FirstItemReaderSentinelBytes.size()>();
+inline constexpr auto NextItemReaderPrefixMask =
+    ExactMask<NextItemReaderPrefixBytes.size()>();
+inline constexpr auto NextItemReaderSentinelMask =
+    ExactMask<NextItemReaderSentinelBytes.size()>();
+
+inline constexpr std::array FoundationPatterns{
+    NativePattern{"loader.entry", 0x31E310, LoaderEntryBytes, LoaderEntryMask},
+    NativePattern{"loader.compile-call", 0x31EC7B, LoaderCompileCallBytes, LoaderCompileCallMask},
+    NativePattern{"loader.count-cap", 0x31ED31, LoaderCountBytes, LoaderCountMask},
+    NativePattern{"loader.desc-tail", 0x31F0AB, DescriptionTailBytes, DescriptionTailMask},
+    NativePattern{"loader.desc-record-layout", 0x31F0F1, DescriptionRecordLayoutBytes, DescriptionRecordLayoutMask},
+    NativePattern{"loader.desc-qsort-call", 0x31F128, DescriptionQsortCallBytes, DescriptionQsortCallMask},
+    NativePattern{"loader.desc-resize-resume", 0x31F144, DescriptionResizeResumeBytes, DescriptionResizeResumeMask},
+    NativePattern{"loader.desc-restores", 0x31F166, DescriptionRestoreBytes, DescriptionRestoreMask},
+    NativePattern{"loader.desc-copy", 0x31F1A0, DescriptionCopyBytes, DescriptionCopyMask},
+    NativePattern{"loader.desc-epilogue", 0x31F1B3, DescriptionEpilogueBytes, DescriptionEpilogueMask},
+    NativePattern{"loader.desc-resize", 0x323810, DescriptionResizeBytes, DescriptionResizeMask},
+    NativePattern{"loader.desc-compare", 0x320880, DescriptionCompareBytes, DescriptionCompareMask},
+    NativePattern{"loader.desc-qsort", 0x12E6F60, NativeQsortBytes, NativeQsortMask},
+    NativePattern{"item.first-stat-width", 0x37AB2B, FirstItemReaderPrefixBytes, FirstItemReaderPrefixMask},
+    NativePattern{"item.first-stat-sentinel", 0x37AB3E, FirstItemReaderSentinelBytes, FirstItemReaderSentinelMask},
+    NativePattern{"item.next-stat-width", 0x37B7D4, NextItemReaderPrefixBytes, NextItemReaderPrefixMask},
+    NativePattern{"item.next-stat-sentinel", 0x37B7E3, NextItemReaderSentinelBytes, NextItemReaderSentinelMask},
+};
+
+inline constexpr std::size_t InstalledHookCount = 0;
+inline constexpr std::size_t InstalledPatchCount = 2;
+
+} // namespace ruffneckk::isc12

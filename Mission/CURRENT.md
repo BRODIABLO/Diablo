@@ -1,34 +1,41 @@
 # Mission courante
 
-Dernière mise à jour : 29 août 2026
+Dernière mise à jour : 30 août 2026
 
 ## Priorité active
 
-[RuffnecKk MapSense — D2R 3.3.93847](ruffneckk-mapsense.md)
+[ISC12 — ItemStatCost 12-bit clean-sheet format](isc12-3.3.md)
 
-État : **correctif autonome 0.12.3 anti-spam `sFillLocation` prioritaire;
-source, build et runtime NOT RUN pour ce lot**. La trace native identifie le
-seul CALL de diagnostic de la branche d'index négatif à `0x3E1F2B`; cette
-branche saute déjà le remplissage invalide. La correction doit appartenir à
-`RuffnecKkMapSense.dll`, vérifier l'empreinte exacte du CALL et ne dépendre
-d'aucun patch JSON BKVince. Les labels de levels et de shrines sont planifiés
-pour la 0.13.0 et restent bloqués derrière la qualification de la 0.12.3.
+État : **ISC12 0.2.0 : loader G0 implanté et validé statiquement, désactivé par
+défaut; runtime NOT RUN**. Le ledger gouverné est `VALID` avec 63 sites répartis
+dans 14 groupes. Le jalon remplace la tail `DescFunc` fixe par un helper borné à
+4 095 entrées derrière un relais RX persistant et un état RW séparé, puis tente
+le cap `0xFFF` seulement après publication de la tail sûre et d'un guard
+conservateur. Un retour incertain du patch tail réserve maintenant les pages
+RX/RW avant l'appel, journalise les huit octets observés et termine fail-closed
+sans jamais libérer une cible possible. Deux builds Release `/W4 /WX` sont
+byte-identiques à 179 200 octets et SHA-256 `C2B461CF…0D1A4D93`; CTest `1/1`,
+PE x64, version 0.2.0, auteur,
+manifeste API v3 et trois exports passent. Les codecs item, sauvegarde et réseau
+restent 9 bits; aucune sauvegarde réelle ni aucun runtime n'a été touché.
 
 ## Prochain gate
 
-Sur un `GO` d'implantation distinct, intégrer le patch suivi fail-closed du
-CALL `E8 60 FC 63 00`, réduire et dédupliquer les matérialisations de rooms
-non nécessaires, puis exécuter build Release, CTest, audit PE/exports, cold
-start pile complète et témoin gameplay démontrant l'absence de spam sans
-régression Reveal, waypoint, Tamoe→Monastery, FPS ou fluidité. Les labels
-0.13.0 ne commencent qu'après ce verdict.
+Fermer G10-A en prouvant les quatre seams file-level : D2S lecture externe,
+D2S écriture finale/checksum, D2I lecture de tout le fichier avant le premier
+item et D2I écriture finale, avec nettoyage et commit atomique. Figer ensuite
+l'enveloppe, le fingerprint de schéma et les golden vectors. G1 reste non publié
+jusqu'à la fermeture de G10 et G9. La pose non alignée du saut G0 exige encore
+une preuve de quiescence ou de transaction avant activation. Aucun lancement
+D2R ni aucune sauvegarde réelle ne sont autorisés.
 
 ## Frontière Git active
 
-Le lot couvre `Mission/ruffneckk-mapsense.md`, `addons/RuffnecKkMapSense/**`,
-les promotions natives strictement nécessaires, la ROADMAP, le pointeur courant
-et le workstream partagés. Aucun commit, push, tag ou asset GitHub ultérieur
-n'est autorisé sans nouvelle demande explicite de Vincent.
+Le lot couvre `Mission/isc12-3.3.md`, `addons/ISC12/**`, les preuves et scripts
+ISC12 et les registres partagés strictement nécessaires. Les changements
+MapSense existants restent hors propriété ISC12 et doivent être préservés. Le
+GO autorise l'implantation et ses validations; il n'autorise aucun commit, push,
+tag, asset GitHub ni outil externe de migration.
 
 ## Priorité précédente conservée — Softcoded Player Sequence Tables
 
