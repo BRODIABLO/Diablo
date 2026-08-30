@@ -24,7 +24,7 @@
   "signaturePolicy": {
     "notation": "Space-separated hexadecimal bytes; ?? denotes a masked byte.",
     "scope": "Signatures are checked at the listed RVA and inside the named owner function; uniqueness is recorded only where queried.",
-    "readyRule": "A ready mutation must have signature.unique=true and be installed and rolled back with every other ready mutation in its atomic group.",
+    "readyRule": "A ready mutation must have signature.unique=true and be preflighted and published with every other ready mutation in the canonical full-set transaction while a live quiescence authority is held. After the first attempted native write, any uncertain write or flush forbids hot rollback and requires a cold restart.",
     "identifiedRule": "Identified means the role/RVA is established, but at least one eligibility condition for runtime mutation remains open even when the listed signature is exact and unique."
   },
   "sites": [
@@ -213,13 +213,13 @@
       "id": "item-reader-next-id",
       "atomicGroup": "G1-generic-item-codec",
       "rva": "0x37B7D4",
-      "signature": { "kind": "masked", "pattern": "BA 09 00 00 00 48 8B CE E8 ?? ?? ?? ?? 8B D8 3D FF 01 00 00", "unique": true },
+      "signature": { "kind": "exact", "pattern": "BA 09 00 00 00 48 8B CE E8 DF FE 69 00 8B D8 3D FF 01 00 00", "unique": true },
       "currentValue": "read 9 bits at call 0x37B7DC; compare 0x1FF at 0x37B7E3",
       "targetValue": "read 12 bits; compare 0xFFF",
       "role": "Reads subsequent ItemStatCost IDs in an item stat list",
       "owner": "ISC12 generic item codec",
       "status": "ready",
-      "reason": "Closed loop width/sentinel pair in the shared full-item decoder."
+      "reason": "Closed loop width/sentinel pair in the shared full-item decoder. The exact interior CALL resolves to the governed BITSTREAM_ReadBitsThunk at 0xA1B6C0; arbitrary retargeting is rejected before publication."
     },
     {
       "id": "item-writer-id",
@@ -255,7 +255,7 @@
       "role": "Owns item load and item-packet decoding paths",
       "owner": "D2R item codec",
       "status": "ready",
-      "reason": "Verification-only owner fingerprint."
+      "reason": "Static identity and ownership evidence only; this entry may be owned by plugin-items and is never required as a canonical ISC12 runtime witness or claimed as an ISC12 mutation range."
     },
     {
       "id": "item-serializer-owner",
@@ -267,7 +267,7 @@
       "role": "Owns item save and item-packet encoding paths",
       "owner": "D2R item codec",
       "status": "ready",
-      "reason": "Verification-only identity witness; this entry may be owned by plugin-items and is never claimed as an ISC12 mutation range."
+      "reason": "Static identity and ownership evidence only; this entry may be owned by plugin-items and is never required as a canonical ISC12 runtime witness or claimed as an ISC12 mutation range."
     },
 
     {
@@ -283,16 +283,40 @@
       "reason": "Exact width/read/sentinel/exit-branch sequence; section marker 0x6667 is preserved."
     },
     {
+      "id": "aux-player-reader-call",
+      "atomicGroup": "G2-aux-player-codec",
+      "rva": "0x531A54",
+      "signature": { "kind": "exact", "pattern": "4C 8B 4F 68 89 44 24 28 4C 03 C9 8B 45 93 48 89 4D AF 49 8B CE 89 44 24 20 E8 8E EF FF FF 85 C0 75 24", "unique": true },
+      "currentValue": "CALL 0x530A00, then reject its nonzero status",
+      "targetValue": "CALL the copied process-lifetime RX G2 relay before any 12-bit reader mutation",
+      "role": "Routes the exhaustive auxiliary reader call through strict marker/ID/width/bounds preflight before invoking the untouched native owner",
+      "owner": "ISC12 auxiliary player codec",
+      "status": "ready",
+      "reason": "Exact unique call-through-status window. The rel32 is prepared but unpublished; its wrapper accepts only v105, returns the native malformed status 0x12 on preflight rejection, holds the immutable schema snapshot across native decode, and fast-fails if a successful native cursor diverges from the preflight used-end."
+    },
+    {
       "id": "aux-player-reader-owner",
       "atomicGroup": "G2-aux-player-codec",
       "rva": "0x530A00",
       "signature": { "kind": "exact", "pattern": "40 55 41 54 41 57 48 81 EC 80 00 00 00", "unique": true },
       "currentValue": "auxiliary player-stat reader owner",
-      "targetValue": "future unpublished strict preflight entry",
-      "role": "Provides the smallest governed entry for validating the full G2 marker/ID/value/terminator stream before native decode",
+      "targetValue": "unchanged native owner called by the prepared strict wrapper",
+      "role": "Preserves the original G2 ABI and decode semantics after the exhaustive caller is retargeted",
       "owner": "D2R auxiliary player codec",
       "status": "ready",
-      "reason": "Exact unique function entry. The prepared pure preflight rejects invalid IDs, unsafe widths, truncation, more than 512 entries and a missing 0xFFF sentinel; no hook is installed at this stage."
+      "reason": "Exact unique function entry. It is not inline-hooked; the wrapper calls it exactly once only after strict v105 preflight. No hook is installed at this stage."
+    },
+    {
+      "id": "aux-player-reader-malformed-return",
+      "atomicGroup": "G2-aux-player-codec",
+      "rva": "0x530BCF",
+      "signature": { "kind": "exact", "pattern": "33 C0 EB 05 B8 12 00 00 00 4C 8B 6C 24 78 48 8B BC 24 B0 00 00 00 48 8B B4 24 A8 00 00 00 48 8B 9C 24 A0 00 00 00 4C 8B 74 24 70 48 81 C4 80 00 00 00 41 5F 41 5C 5D C3", "unique": true },
+      "currentValue": "return 0 on success or 0x12 on malformed input",
+      "targetValue": "unchanged native return contract reproduced by the prepared wrapper",
+      "role": "Defines the exact non-mutating G2 preflight rejection status",
+      "owner": "D2R auxiliary player codec",
+      "status": "ready",
+      "reason": "Exact unique success/error epilogue. Returning 0x12 before native decode follows the original caller cleanup path without publishing partial decoded state."
     },
     {
       "id": "aux-player-reader-marker",
@@ -428,16 +452,76 @@
       "reason": "The full first width/read/sentinel/exit-branch sequence is exact and unique at 0x53395E; mutations are offsets +1 and +19."
     },
     {
+      "id": "player-reader-primary-call",
+      "atomicGroup": "G3-player-save-codec",
+      "rva": "0x52EC28",
+      "signature": { "kind": "exact", "pattern": "0F B6 45 91 4C 8D 45 97 4C 89 6D 97 4D 8B CC 44 8B 6D 93 49 8B D6 89 44 24 28 49 8B CF 44 89 6C 24 20 E8 11 4B 00 00 8B D8 85 C0 0F 85 94 03 00 00", "unique": true },
+      "currentValue": "CALL 0x533760, capture EAX, then reject nonzero",
+      "targetValue": "CALL the copied process-lifetime RX G3 relay before any 12-bit reader mutation",
+      "role": "Routes the primary regular player-stat reader through strict v105 preflight before invoking the untouched native dispatcher",
+      "owner": "ISC12 player save codec",
+      "status": "ready",
+      "reason": "Exact unique call-through-status window. The rel32 is prepared but unpublished and shares one wrapper with the legacy internal caller."
+    },
+    {
+      "id": "player-reader-legacy-call",
+      "atomicGroup": "G3-player-save-codec",
+      "rva": "0x530A24",
+      "signature": { "kind": "exact", "pattern": "8B 84 24 C8 00 00 00 89 44 24 28 44 89 54 24 20 E8 27 2D 00 00 48 81 C4 80 00 00 00 41 5F 41 5C 5D C3", "unique": true },
+      "currentValue": "G2 legacy path CALL 0x533760",
+      "targetValue": "CALL the same copied RX G3 relay and reject every non-v105 stream",
+      "role": "Closes the second and final governed caller of the regular reader while preserving clean-sheet version exclusivity",
+      "owner": "ISC12 player save codec",
+      "status": "ready",
+      "reason": "Exact unique call/epilogue window. G2 invokes this path only for legacy versions; the strict wrapper returns 0x12 without entering the native reader, preventing mixed-width recursive decode."
+    },
+    {
       "id": "player-reader-owner",
       "atomicGroup": "G3-player-save-codec",
       "rva": "0x533760",
       "signature": { "kind": "exact", "pattern": "4C 89 44 24 18 48 89 4C 24 08 53 41 54 41 57 48 83 EC 60 8B 84 24 A0 00 00 00", "unique": true },
       "currentValue": "regular player-stat reader dispatcher",
-      "targetValue": "future unpublished strict preflight entry",
-      "role": "Provides the governed entry for validating the full G3 marker/ID/param/value/terminator stream before native decode",
+      "targetValue": "unchanged native dispatcher called by the prepared strict wrapper",
+      "role": "Preserves the original six-argument G3 ABI and version dispatch after both callers are retargeted",
       "owner": "D2R regular player-stat codec",
       "status": "ready",
-      "reason": "Exact unique dispatcher entry. The prepared pure preflight shares the canonical schema and 512-entry cap; no hook is installed at this stage."
+      "reason": "Exact unique dispatcher entry. It remains untouched; the wrapper holds the published immutable schema snapshot across preflight, native decode and successful cursor postcheck. No hook is installed at this stage."
+    },
+    {
+      "id": "player-reader-modern-tail",
+      "atomicGroup": "G3-player-save-codec",
+      "rva": "0x533910",
+      "signature": { "kind": "exact", "pattern": "48 89 5C 24 08 55 56 57 41 54 41 55 41 56 41 57 48 83 EC 60 49 8B 00", "unique": true },
+      "currentValue": "modern regular player-stat reader body selected by the dispatcher",
+      "targetValue": "unchanged v105 native reader body",
+      "role": "Anchors the strict wrapper to the modern marker/12-bit stream path rather than either legacy bitmap path",
+      "owner": "D2R regular player-stat codec",
+      "status": "ready",
+      "reason": "Exact unique modern-body entry immediately preceding the governed 0x6667 marker window."
+    },
+    {
+      "id": "player-reader-legacy-malformed-return",
+      "atomicGroup": "G3-player-save-codec",
+      "rva": "0x5338ED",
+      "signature": { "kind": "exact", "pattern": "33 C0 EB 05 B8 12 00 00 00 48 8B 74 24 58 4C 8B 6C 24 48 48 83 C4 60 41 5F 41 5C 5B C3", "unique": true },
+      "currentValue": "legacy dispatcher returns 0 or 0x12",
+      "targetValue": "unchanged return contract; legacy formats are rejected by ISC12 before native entry",
+      "role": "Proves the shared native malformed-input status across the G3 dispatcher",
+      "owner": "D2R regular player-stat codec",
+      "status": "ready",
+      "reason": "Exact unique legacy epilogue; 0x12 is safe for the existing callers and is reused by the clean-sheet wrapper."
+    },
+    {
+      "id": "player-reader-modern-malformed-return",
+      "atomicGroup": "G3-player-save-codec",
+      "rva": "0x533ABF",
+      "signature": { "kind": "exact", "pattern": "33 C0 EB 05 B8 12 00 00 00 48 8B 9C 24 A0 00 00 00 48 83 C4 60 41 5F 41 5E 41 5D 41 5C 5F 5E 5D C3", "unique": true },
+      "currentValue": "modern reader returns 0 or 0x12",
+      "targetValue": "unchanged native return contract reproduced by the prepared wrapper",
+      "role": "Defines the exact non-mutating G3 preflight rejection status",
+      "owner": "D2R regular player-stat codec",
+      "status": "ready",
+      "reason": "Exact unique modern epilogue. A successful native return is additionally required to advance the byte cursor to the preflight-predicted used-end."
     },
     {
       "id": "player-reader-marker",
@@ -665,7 +749,7 @@
       "role": "Publishes late bit-writer overflow through the existing native G3 failure edge",
       "owner": "ISC12 player save codec",
       "status": "ready",
-      "reason": "Exact unique non-overlapping tail. Its two status bytes are the final write and final instruction-cache flush of the canonical G2-G4 set; any uncertain write requires an immediate cold restart before quiescence ends."
+      "reason": "Exact unique non-overlapping tail. Its two status bytes are the final write and final instruction-cache flush of the canonical G1-G4 set; any uncertain write requires an immediate cold restart before quiescence ends."
     },
     {
       "id": "player-save-csvbits-32-bypass",
@@ -770,11 +854,11 @@
       "rva": "0x61D247",
       "signature": { "kind": "exact", "pattern": "BA 09 00 00 00 48 8D 4C 24 60 E8 6A E4 3F 00 3D FF 01 00 00 7D 49", "unique": true },
       "currentValue": "read 9 bits; stop at 0x1FF",
-      "targetValue": "read 12 bits; stop at 0xFFF",
-      "role": "Preview/inspection player-stat reader, branch A first ID",
-      "owner": "ISC12 player preview codec",
+      "targetValue": "unchanged 9-bit/0x1FF legacy branch witness",
+      "role": "Preview branch A first ID, unreachable from the exact v105 ISC12 inner format",
+      "owner": "D2R player preview codec",
       "status": "ready",
-      "reason": "Exact width/sentinel sequence."
+      "reason": "Exact unique legacy width/sentinel sequence. The v105 dispatcher selects branch B, so mutating A would expand the compatibility surface without serving the clean-sheet format."
     },
     {
       "id": "preview-reader-a-next",
@@ -782,11 +866,11 @@
       "rva": "0x61D290",
       "signature": { "kind": "exact", "pattern": "BA 09 00 00 00 48 8D 4C 24 60 E8 21 E4 3F 00 3D FF 01 00 00 7C BA", "unique": true },
       "currentValue": "read 9 bits; stop at 0x1FF at 0x61D29F",
-      "targetValue": "read 12 bits; stop at 0xFFF",
-      "role": "Preview/inspection player-stat reader, branch A next ID",
-      "owner": "ISC12 player preview codec",
+      "targetValue": "unchanged 9-bit/0x1FF legacy branch witness",
+      "role": "Preview branch A next ID, unreachable from the exact v105 ISC12 inner format",
+      "owner": "D2R player preview codec",
       "status": "ready",
-      "reason": "The full branch-A loop width/read/sentinel/back-edge sequence is exact and unique at 0x61D290; mutations are offsets +1 and +17."
+      "reason": "The full branch-A loop is exact and unique. It remains a preflight witness only; the canonical patch set mutates branch B exclusively."
     },
     {
       "id": "preview-reader-b-first",
@@ -834,7 +918,7 @@
       "role": "Proves the A/B control-flow split before the four governed ItemStatCost ID reads",
       "owner": "D2R player preview codec",
       "status": "ready",
-      "reason": "Exact unique dispatcher inside 0x61CEF0; the decoder has exactly two governed callers at 0x5FD79F and 0x5FED95."
+      "reason": "Exact unique dispatcher inside 0x61CEF0; the exact v105 ISC12 inner format necessarily reaches branch B. The decoder has exactly two governed callers at 0x5FD79F and 0x5FED95."
     },
     {
       "id": "preview-fixed-buffer-allocation",
@@ -846,19 +930,103 @@
       "role": "Bounds the complete player projection available to the four preview ItemStatCost ID loops",
       "owner": "D2R player preview codec",
       "status": "ready",
-      "reason": "Exact unique allocation witness. Runtime publication remains blocked until strict inner preflight proves every 12-bit stat list and value field terminates within this window or a governed native error exit is added."
+      "reason": "Exact unique allocation witness. The prepared copy wrapper now proves the complete v105 D2S and its branch-B 12-bit stat stream within this window before returning the native byte count; publication remains blocked on G0/G9 composition."
     },
     {
       "id": "preview-fixed-buffer-read",
       "atomicGroup": "G4-player-preview-codec",
       "rva": "0x61CF81",
       "signature": { "kind": "exact", "pattern": "41 B8 00 40 00 00 45 33 C9 48 8B D7 48 8B CB E8 7B 11 40 00 89 44 24 3C 8B D0 83 F8 08", "unique": true },
-      "currentValue": "read at most 0x4000 bytes into the frontend preview buffer",
-      "targetValue": "unchanged fingerprint prerequisite",
-      "role": "Proves the parser's physical input window and captured actual byte count",
+      "currentValue": "CALL shared copy owner 0xA1E110 for at most 0x4000 bytes, capture EAX, reject below 8",
+      "targetValue": "CALL the copied process-lifetime RX preview relay, which calls 0xA1E110 once and returns N only after strict whole-D2S preflight",
+      "role": "Guards the exhaustive frontend projection before either branch-B 12-bit ID loop can run",
+      "owner": "ISC12 player preview codec",
+      "status": "ready",
+      "reason": "Exact unique call-through-count window. The rel32 is prepared but unpublished; the wrapper returns zero on invalid capacity, container, context, marker, ID, payload bound or sentinel so the native below-8 path frees the temporary buffer and returns false."
+    },
+    {
+      "id": "preview-buffer-copy-owner",
+      "atomicGroup": "G4-player-preview-codec",
+      "rva": "0xA1E110",
+      "signature": { "kind": "exact", "pattern": "48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 57 48 83 EC 30 49 8B F1 41 8B D8 48 8B EA 48 8B F9", "unique": true },
+      "currentValue": "shared SaveObject copy owner with ABI (object, destination, capacity, offset) -> copied bytes",
+      "targetValue": "unchanged native owner called exactly once by the prepared preview wrapper",
+      "role": "Preserves locking and copy semantics without detouring the 22 unrelated callers",
+      "owner": "D2R SaveObject",
+      "status": "ready",
+      "reason": "Exact unique function entry. Only CALL 0x61CF90 is retargeted; the shared owner remains byte-exact."
+    },
+    {
+      "id": "preview-buffer-copy-layout",
+      "atomicGroup": "G4-player-preview-codec",
+      "rva": "0xA1E194",
+      "signature": { "kind": "exact", "pattern": "48 8B 57 10 48 85 D2 74 27 48 3B F2 73 22 8B C2 48 8D 0C 1E 2B C6 48 3B CA 48 8B 57 08 48 8B CD 0F 47 D8 48 03 D6 44 8B C3 E8 9E 54 8B 00 EB 02 33 DB", "unique": true },
+      "currentValue": "read source at object+0x08 and length at +0x10; copy min(capacity,length-offset)",
+      "targetValue": "unchanged copy/layout fingerprint prerequisite",
+      "role": "Proves that EAX is the exact completed byte count and the wrapper may validate only [destination,destination+EAX)",
+      "owner": "D2R SaveObject",
+      "status": "ready",
+      "reason": "Exact unique source/length/capacity sequence paired with the unlock/return witness."
+    },
+    {
+      "id": "preview-buffer-copy-return",
+      "atomicGroup": "G4-player-preview-codec",
+      "rva": "0xA1E1C6",
+      "signature": { "kind": "exact", "pattern": "48 8B CF E8 42 5F 81 00 48 8B 6C 24 50 8B C3 48 8B 5C 24 48 48 8B 74 24 58 48 83 C4 30 5F C3", "unique": true },
+      "currentValue": "unlock SaveObject and return copied count in EAX",
+      "targetValue": "unchanged unlock/return ABI",
+      "role": "Ensures the prepared wrapper never validates while the native SaveObject lock is held",
+      "owner": "D2R SaveObject",
+      "status": "ready",
+      "reason": "Exact unique unlock-through-return epilogue; the wrapper invokes the full owner rather than copying its internals."
+    },
+    {
+      "id": "preview-branch-b-context-source",
+      "atomicGroup": "G4-player-preview-codec",
+      "rva": "0x61D43F",
+      "signature": { "kind": "exact", "pattern": "0F B6 5F 18 48 8D 47 78 0F B6 4F 1B 44 0F B6 AF F8 00 00 00 48 89 44 24 48 0F B7 47 14 66 89 44 24 34 0F B6 87 F7 00 00 00 88 44 24 32 88 5C 24 30 88 4C 24 31 44 89 6C 24 38", "unique": true },
+      "currentValue": "load branch-B data context from inner D2S+0xF8",
+      "targetValue": "unchanged; wrapper requires the byte to be below 4",
+      "role": "Links the whole-D2S preflight context check to the value consumed by every branch-B ItemStatCost lookup",
       "owner": "D2R player preview codec",
       "status": "ready",
-      "reason": "Exact unique read-bound witness paired with allocation 0x61CF41; the only immediate post-read gate compares the captured byte count with 8, while the four ID loops do not consult the bit-reader error flag."
+      "reason": "Exact unique source window. A context outside 0..3 would index the native data-table array out of domain."
+    },
+    {
+      "id": "preview-branch-b-layout",
+      "atomicGroup": "G4-player-preview-codec",
+      "rva": "0x61D5E4",
+      "signature": { "kind": "exact", "pattern": "48 8B 44 24 50 48 8D 55 BA 0F B6 00 48 8D 0C 40 48 C1 E1 05 48 03 D1 49 8D 8F A8 0C 00 00 E8 99 F5 FF FF 44 8B 64 24 3C 48 8D 83 AE 01 00 00 48 2B C7 4C 3B E0 0F 8E 64 01 00 00 48 81 C3 B0 01 00 00 83 7C 24 40 5E 0F 86 87 00 00 00 45 8B C4 48 8D 4C 24 60 4C 2B C3 48 8B D3 4C 03 C7 E8 D9 DF 3F 00", "unique": true },
+      "currentValue": "derive the branch-B embedded player-stat bitstream and its exclusive end from the copied D2S/count",
+      "targetValue": "unchanged layout fingerprint prerequisite",
+      "role": "Anchors wrapper preflight at D2S+0x341 with first ID after the two-byte marker and end at D2S+N",
+      "owner": "D2R player preview codec",
+      "status": "ready",
+      "reason": "Exact unique layout/bounds sequence. The native path skips the two marker bytes but never compares 0x6667; the wrapper therefore requires and validates the existing 0x6667 marker."
+    },
+    {
+      "id": "preview-reject-free-exit",
+      "atomicGroup": "G4-player-preview-codec",
+      "rva": "0x61D87D",
+      "signature": { "kind": "exact", "pattern": "E8 3E 8B BE 00 48 8B D7 48 8B C8 4C 8B 00 41 FF 50 20 41 0F B6 C5 48 8B 8D E0 00 00 00 48 33 CC E8 AE 38 CB 00 48 81 C4 F8 01 00 00 41 5F 41 5E 41 5D 41 5C 5F 5E 5B 5D C3", "unique": true },
+      "currentValue": "free the temporary preview buffer and return R13B (zero until success)",
+      "targetValue": "unchanged native rejection exit reached when the prepared wrapper returns zero",
+      "role": "Provides a governed non-mutating G4 rejection path for unsafe inner payloads",
+      "owner": "D2R player preview codec",
+      "status": "ready",
+      "reason": "Exact unique cleanup/epilogue. Returning zero from the wrapper reaches this path through the existing `cmp eax,8 / jb` gate."
+    },
+    {
+      "id": "preview-data-context-owner",
+      "atomicGroup": "G4-player-preview-codec",
+      "rva": "0x300A90",
+      "signature": { "kind": "exact", "pattern": "48 83 EC 28 0F B6 C1 48 89 44 24 38 48 83 F8 04 72 19 48 8D 44 24 38 48 8D 4C 24 40 48 89 44 24 40 E8 7A D3 FF FF 84 C0 74 01 CC 48 8B 44 24 38 48 8D 0D B9 9A 79 02 48 03 C0 48 8B 04 C1 48 83 C4 28 C3", "unique": true },
+      "currentValue": "assert context<4, then index the global data-table array by context*16",
+      "targetValue": "unchanged helper; wrapper proves context<4 before branch-B lookups",
+      "role": "Closes the native domain requirement behind the G4 data-context preflight",
+      "owner": "D2R data tables",
+      "status": "ready",
+      "reason": "Exact unique complete helper. The downstream ItemStatCost lookup returns null for an out-of-range ID and branch B dereferences it without a null check, so the wrapper also proves every ID is below the immutable schema row count."
     },
     {
       "id": "bitreader-thunk-to-core",
@@ -1937,12 +2105,11 @@
   ],
   "openGates": [
     "G0: runtime-qualify the bounded RX-relay/RW-state loader transaction, non-aligned patch-publication quiescence, register restoration, vector-resize failure paths and 4095-row behavior before declaring the cap qualified.",
-    "G1: the nine-site generic item codec group has unique exact-or-masked signatures, but remains unpublished until G10 and G9 are closed.",
-    "G2-G4: 14 exact unique mutation sites, 39 unchanged safety/layout witnesses and a 28-slot unpublished patch plan are closed off-runtime. The clean-sheet schema rejects CsvBits>32 or CsvParamBits>16 and a pure G2/G3 parser validates one supplied section, but it has no production caller or hook. The G3 overrun guard is prepared through a loader-bound RX leaf, separately flushed relay CALL and final mov-eax-edx status publication; PublishedCodecMutationCount remains zero. Activation still requires exact structural windows at the G2/G3 reader entries, strict proof that every G4 list terminates inside the fixed 0x4000 preview window, and a process-lifetime, fast-fail, whole-codec quiescent transaction with G1/G10.",
+    "G1-G4: the canonical four-group plan contains 20 exact mutable windows, 49 governed byte slots and 51 unchanged runtime witnesses. G1 contributes nine one-byte mutations across four unique windows and requires its interior reader CALL to resolve exactly to BITSTREAM_ReadBitsThunk 0xA1B6C0; G2/G3/G4 guards, exhaustive callers and whole-input preflights are prepared. A move-only RAII quiescence lease now guards full-set fingerprinting, writes and flushes, but the pinned loader SDK exposes no production issuer. No commit caller exists, PublishedCodecMutationCount remains zero, and publication stays blocked until a loader-owned documented quiescence transaction plus G9, G10 and G0 qualification are closed.",
     "G5-G7: replace every remaining instruction-scoped non-unique signature with a longer unique fingerprint before runtime mutation.",
     "G8: close packet 0xAC cardinality, estimator and 0xF4-byte headroom.",
     "G9: prove worst-case 0x9C/0x9D full-item payload sizes and resolve exclusive hook ownership.",
-    "G10-B activation: the P3b envelope, native adapters, exact relays and atomic transaction are code-complete off-runtime; reader/writer hooks remain unpublished (InstalledHookCount=0) until shared codecs, G9, G0 quiescence and runtime validation close.",
+    "G10-B activation: the P3b envelope, native adapters, exact relays and atomic save transaction are code-complete off-runtime; reader/writer hooks remain unpublished (InstalledHookCount=0) until shared codecs, G9, G0 quiescence and runtime validation close.",
     "Runtime: no cold-start, save round-trip, stash, reconnect, multiplayer or packet-fuzz validation has been performed."
   ]
 }

@@ -200,8 +200,8 @@
       "name": "GetDataTablesForContext",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/no-ethereal-item-types-3.2.md; Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
-      "notes": "Returns the active compiled data-table container with observed ABI DataTables* (uint8 dataContext). Its strict entry guards the context to 0..3. Burn Damage Fix 2.2 borrows it after GetItemDataContext, reads the StatesTxt record base at DataTables+0x290 and count at +0x298, and fingerprints the independent compiler and state-toggle witnesses for both offsets before any access."
+      "source": "Mission/no-ethereal-item-types-3.2.md; Mission/burn-damage-fix.md; addons/BurnDamageFix/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Returns the active compiled data-table container with observed ABI DataTables* (uint8 dataContext). Its exact complete body asserts context<4 and then indexes the global table by context*16. Burn Damage Fix 2.2 uses the same contract for StatesTxt; ISC12 G4 now fingerprints it and rejects a preview D2S whose context byte at +0xF8 is outside 0..3 before any branch-B ItemStatCost lookup."
     },
     {
       "rva": "0x314070",
@@ -3854,18 +3854,18 @@
     {
       "rva": "0x61D247",
       "name": "PLAYERPREVIEW_BranchAFirstStatIdCodec",
-      "kind": "patch-site",
+      "kind": "layout-witness",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Exact unique frontend/preview branch-A first reader sequence: 9-bit ItemStatCost ID and signed 0x1FF stop. This path consumes the regular player-stat format and has no independent writer."
+      "notes": "Exact unique legacy branch-A first reader sequence. Exact inner version 105 selects branch B, so ISC12 keeps this 9-bit/0x1FF path unchanged as a verification-only witness."
     },
     {
       "rva": "0x61D290",
       "name": "PLAYERPREVIEW_BranchANextStatIdCodec",
-      "kind": "patch-site",
+      "kind": "layout-witness",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Exact unique branch-A loop reader, including the back-edge to 0x61D260; paired with first reader 0x61D247 in G4."
+      "notes": "Exact unique legacy branch-A loop reader, including the back-edge to 0x61D260. It remains byte-exact because v105 reaches branch B exclusively."
     },
     {
       "rva": "0x61D647",
@@ -3905,15 +3905,15 @@
       "kind": "layout-witness",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Exact unique sequence allocates the frontend projection's fixed 0x4000-byte buffer. A 12-bit preview stream must be proven to terminate inside this window before G4 publication."
+      "notes": "Exact unique sequence allocates the frontend projection's fixed 0x4000-byte buffer. The prepared whole-D2S G4 preflight proves that every 12-bit list terminates inside this window; native publication remains pending."
     },
     {
       "rva": "0x61CF81",
       "name": "PLAYERPREVIEW_FixedBufferRead",
-      "kind": "call-site",
+      "kind": "patch-site",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Exact unique sequence passes the same 0x4000 bound to the frontend physical read, captures the actual byte count and immediately checks only that at least eight bytes were read."
+      "notes": "Exact unique CALL seam passes capacity 0x4000 and offset zero to 0xA1E110, captures EAX and rejects below eight. ISC12 prepares its rel32 to a process-lifetime RX wrapper that invokes the original once and returns N only after whole-v105-D2S preflight; the mutation remains unpublished."
     },
     {
       "rva": "0xA1B6C0",
@@ -4057,7 +4057,7 @@
       "kind": "patch-site",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Exact unique post-CALL tail. Prepared bytes 0x5353D2..D3 change xor-eax-eax to mov-eax-edx and are the final write/flush of the unpublished canonical G2-G4 transaction."
+      "notes": "Exact unique post-CALL tail. Prepared bytes 0x5353D2..D3 change xor-eax-eax to mov-eax-edx and are the final write/flush of the unpublished canonical G1-G4 transaction."
     },
     {
       "rva": "0x535162",
@@ -4105,7 +4105,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Exact unique G2 reader entry selected for a future strict marker/ID/value/terminator preflight; no hook is installed."
+      "notes": "Exact unique G2 reader entry remains untouched. The prepared exhaustive caller relay preflights strict v105 bytes, invokes this owner once under the immutable schema snapshot and verifies its successful used-end cursor; no hook is installed."
     },
     {
       "rva": "0x533760",
@@ -4113,7 +4113,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Exact unique G3 reader dispatcher selected for a future strict marker/ID/param/value/terminator preflight; no hook is installed."
+      "notes": "Exact unique G3 reader dispatcher remains untouched. Both exhaustive callers are prepared to route through one strict v105 preflight wrapper before invoking it; no hook is installed."
     },
     {
       "rva": "0x533A38",
@@ -4194,6 +4194,110 @@
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
       "notes": "Exact unique second caller passes the RBP buffer and unchanged R13D capacity to the player-save owner."
+    },
+    {
+      "rva": "0x531A54",
+      "name": "PLAYERSTATS_AuxReaderRelayCall",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique G2 call-through-status window. The CALL at 0x531A6D is prepared to target a process-lifetime RX strict-v105 preflight relay before any 12-bit reader byte; it remains unpublished."
+    },
+    {
+      "rva": "0x530BCF",
+      "name": "PLAYERSTATS_AuxMalformedReturn",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique G2 success/error epilogue returns zero or malformed status 0x12. The strict wrapper reuses 0x12 for rejection before native mutation."
+    },
+    {
+      "rva": "0x52EC28",
+      "name": "PLAYERSTATS_RegularPrimaryRelayCall",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique primary G3 call-through-status window. The CALL at 0x52EC4A is prepared to target the copied strict-v105 relay and remains unpublished."
+    },
+    {
+      "rva": "0x530A24",
+      "name": "PLAYERSTATS_RegularLegacyRelayCall",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique second G3 caller inside the G2 legacy path. Its prepared relay rejects every non-v105 stream with 0x12, preventing mixed-width recursive decode."
+    },
+    {
+      "rva": "0x533910",
+      "name": "PLAYERSTATS_ReadRegularModernBody",
+      "kind": "function",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique modern regular player-stat reader body immediately preceding the governed 0x6667 marker window used by v105."
+    },
+    {
+      "rva": "0x5338ED",
+      "name": "PLAYERSTATS_RegularLegacyMalformedReturn",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique legacy dispatcher epilogue establishes the shared 0x12 malformed-input status."
+    },
+    {
+      "rva": "0x533ABF",
+      "name": "PLAYERSTATS_RegularModernMalformedReturn",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique modern reader epilogue returns zero or 0x12; the prepared wrapper additionally fast-fails if a zero-status native decode ends at a cursor different from strict preflight."
+    },
+    {
+      "rva": "0xA1E110",
+      "name": "SAVEOBJECT_CopyBufferRange",
+      "kind": "function",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique owner with ABI (SaveObject*, destination, uint32 capacity, uint64 offset)->uint32 copied. It locks, copies and unlocks; ISC12 retargets only preview caller 0x61CF90 and leaves the other 22 callers untouched."
+    },
+    {
+      "rva": "0xA1E194",
+      "name": "SAVEOBJECT_CopyBufferRangeLayout",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique block reads source at SaveObject+0x08 and length at +0x10, then copies min(capacity,length-offset)."
+    },
+    {
+      "rva": "0xA1E1C6",
+      "name": "SAVEOBJECT_CopyBufferRangeUnlockReturn",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique epilogue unlocks the SaveObject and returns the copied count in EAX before the preview wrapper validates the completed destination bytes."
+    },
+    {
+      "rva": "0x61D43F",
+      "name": "PLAYERPREVIEW_BranchBDataContextSource",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique branch-B window loads data context from inner D2S+0xF8. ISC12 preflight requires context<4 before native ItemStatCost lookup."
+    },
+    {
+      "rva": "0x61D5E4",
+      "name": "PLAYERPREVIEW_BranchBStatStreamLayout",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique branch-B layout derives the embedded stat stream at D2S+0x341, first ID after two skipped bytes and end at D2S+copied-count. Native code does not compare marker 0x6667, so the wrapper adds that check."
+    },
+    {
+      "rva": "0x61D87D",
+      "name": "PLAYERPREVIEW_RejectFreeReturnFalse",
+      "kind": "continuation",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique cleanup epilogue frees the temporary preview buffer and returns false while R13B is still zero. The wrapper reaches it by returning zero through the existing below-eight gate."
     }
   ]
 }

@@ -7,8 +7,8 @@ Dernière mise à jour : 30 août 2026
 [ISC12 — ItemStatCost 12-bit clean-sheet format](isc12-3.3.md)
 
 État : **ISC12 0.2.0 : loader G0 implanté et validé statiquement, désactivé par
-défaut; G10-B P3b et plan G2–G4 fermés hors-jeu; runtime NOT RUN**. Le ledger
-gouverné est `VALID` avec 158 sites répartis dans 14 groupes. Le jalon remplace la tail
+défaut; G10-B P3b et plan canonique G1–G4 fermés hors-jeu; runtime NOT RUN**. Le ledger
+gouverné est `VALID` avec 172 sites répartis dans 14 groupes. Le jalon remplace la tail
 `DescFunc` fixe par un helper borné à
 4 095 entrées derrière un relais RX persistant et un état RW séparé, puis tente
 le cap `0xFFF` seulement après publication de la tail sûre et d'un guard
@@ -25,24 +25,36 @@ Les seams reader `0x9FC654` et writer `0x9F95A2` sont maintenant connectés en
 source à leurs adaptateurs clean-sheet, à la transaction atomique et à des
 relais persistants avec rundown, mais restent matériellement impossibles à
 publier : `InstalledHookCount == 0` et `codecReady == false`. Aucune sauvegarde
-réelle ni aucun runtime n'a été touché. G2–G4 disposent maintenant de 14
-signatures de mutation exactes, 39 témoins de sécurité/layout exacts et 28
-slots de mutation testés comme set préflighté mais non publié. Un leaf RX lié
+réelle ni aucun runtime n'a été touché. Le plan canonique G1–G4 possède quatre
+groupes, 20 fenêtres mutables exactes, 49 slots gouvernés et 51
+témoins runtime, testés comme set préflighté mais non publié. G1 apporte neuf
+mutations d'un octet dans quatre fenêtres uniques et conserve le seed
+`previousStatId = -1`; son CALL intérieur suivant doit résoudre le thunk
+gouverné `0xA1B6C0`. Un leaf RX lié
 par le loader reproduit le used-end natif G3 et renvoie le flag sticky d'overflow;
 son CALL est flushé avant la publication finale `mov eax, edx`. Le snapshot
-refuse `CsvBits > 32` ou `CsvParamBits > 16`; un préflight pur G2/G3 valide
-marker, IDs, champs, cap 512 et sentinelle sans encore être appelé en production.
+refuse `CsvBits > 32` ou `CsvParamBits > 16`. Les trois CALLs exhaustifs G2/G3
+sont préparés vers des relais RX et wrappers FRAME qui imposent v105, préflight
+sous snapshot immuable, retour `0x12` et postcheck du cursor après l'appel des
+owners natifs intacts. G4 prépare le CALL de copie, valide tout le D2S, contexte,
+marker, IDs, champs, cap et sentinelle, puis rejoint le cleanup natif sur rejet;
+sa branche A legacy reste 9 bits. Le booléen forgeable de quiescence est
+remplacé par un lease RAII opaque, move-only, revalidé avant chaque
+fingerprint/write/flush. Le SDK épinglé n'expose aucun issuer production :
+aucun caller de commit codec n'existe, `PublishedCodecMutationCount == 0` et
+`operational`/`codecReady` restent faux.
 
 ## Prochain gate
 
-Connecter le préflight aux entrées reader G2 `0x530A00` et G3 `0x533760` avec
-une fenêtre structurelle exacte et le retour natif `0x12`, puis fermer les
-bornes internes G4 dans sa fenêtre `0x4000`. Composer enfin G1–G4 comme un seul
-set préflighté à publication quiescente, en réservant le relais G3 pour la vie
-du processus avant le premier write et en fast-fail immédiat sur tout résultat
-incertain; les hooks G10 restent non installés et G1 reste non publié jusqu'à
-G9. Aucun
-lancement D2R ni aucune sauvegarde réelle ne sont autorisés.
+Fermer statiquement G9 sur l'ownership exclusif et les budgets worst-case des
+payloads item complets `0x9C/0x9D`, tout en obtenant côté loader une transaction
+de publication quiescente documentée capable d'émettre le lease opaque. Cette
+transaction devra réserver tous les relais pour la vie du processus avant le
+premier write; toute incertitude après la première tentative impose un cold
+restart sans hot rollback. Les hooks G10 et G1–G4 restent non publiés jusqu'à
+G9, l'activation G10, G0 et cette autorité loader. Aucun lancement D2R ni aucune
+sauvegarde réelle
+ne sont autorisés; aucune validation humaine n'est requise à ce sous-gate.
 
 ## Frontière Git active
 

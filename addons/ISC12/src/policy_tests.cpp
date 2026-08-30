@@ -147,6 +147,35 @@ struct CodecPatchFixture {
     std::array<std::size_t, 32> flushSizes{};
 };
 
+struct CodecQuiescenceFixture {
+    bool held{};
+    std::size_t validationCalls{};
+    std::size_t revokeOnValidation{
+        (std::numeric_limits<std::size_t>::max)()};
+    const CodecPatchFixture* observedCodec{};
+    std::size_t revokeAfterWriteCalls{
+        (std::numeric_limits<std::size_t>::max)()};
+    std::size_t releaseCalls{};
+};
+
+auto ValidateCodecQuiescence(void* context) noexcept -> bool {
+    auto& fixture = *static_cast<CodecQuiescenceFixture*>(context);
+    const auto call = fixture.validationCalls++;
+    if (call == fixture.revokeOnValidation) fixture.held = false;
+    if (fixture.observedCodec
+            && fixture.observedCodec->writeCalls
+                >= fixture.revokeAfterWriteCalls) {
+        fixture.held = false;
+    }
+    return fixture.held;
+}
+
+void ReleaseCodecQuiescence(void* context) noexcept {
+    auto& fixture = *static_cast<CodecQuiescenceFixture*>(context);
+    fixture.held = false;
+    ++fixture.releaseCalls;
+}
+
 auto MakeCodecPatchSetFixture(
         std::span<const ruffneckk::isc12::CodecPatchGroup> groups)
         -> CodecPatchFixture {
@@ -182,6 +211,47 @@ auto FindCodecFixtureSite(
         if (site.rva == rva) return &site;
     }
     return nullptr;
+}
+
+auto CodecFixtureHasRel32(
+        CodecPatchFixture& fixture,
+        std::uintptr_t patternRva,
+        std::size_t displacementOffset,
+        std::uintptr_t targetRva) noexcept -> bool {
+    auto* const site = FindCodecFixtureSite(fixture, patternRva);
+    if (!site || displacementOffset > site->bytes.size()
+            || site->bytes.size() - displacementOffset < 4U
+            || patternRva > (std::numeric_limits<std::uintptr_t>::max)()
+                - displacementOffset - 4U) {
+        return false;
+    }
+    const auto nextRva = patternRva + displacementOffset + 4U;
+    std::int64_t displacement{};
+    if (targetRva >= nextRva) {
+        const auto distance = targetRva - nextRva;
+        if (distance > static_cast<std::uintptr_t>(
+                (std::numeric_limits<std::int32_t>::max)())) {
+            return false;
+        }
+        displacement = static_cast<std::int64_t>(distance);
+    } else {
+        const auto distance = nextRva - targetRva;
+        constexpr auto MaximumNegativeDistance =
+            static_cast<std::uint64_t>(
+                (std::numeric_limits<std::int32_t>::max)()) + 1ULL;
+        if (distance > MaximumNegativeDistance) return false;
+        displacement = -static_cast<std::int64_t>(distance);
+    }
+    const auto encoded = std::bit_cast<std::uint32_t>(
+        static_cast<std::int32_t>(displacement));
+    for (std::size_t index{}; index < 4U; ++index) {
+        if (site->bytes[displacementOffset + index]
+                != static_cast<std::uint8_t>(
+                    encoded >> (index * 8U))) {
+            return false;
+        }
+    }
+    return true;
 }
 
 auto VerifyCodecFixturePattern(
@@ -352,18 +422,21 @@ int main() {
     static_assert(MaximumSerializedCsvParamBits == 16);
     static_assert(InstalledHookCount == 0);
     static_assert(InstalledPatchCount == 2);
-    static_assert(PreparedCodecMutableSiteCount == 14);
-    static_assert(PreparedCodecMutationCount == 28);
-    static_assert(PreparedCodecWitnessCount == 39);
+    static_assert(PreparedCodecMutableSiteCount == 20);
+    static_assert(PreparedCodecMutationCount == 49);
+    static_assert(PreparedCodecWitnessCount == 51);
     static_assert(PublishedCodecMutationCount == 0);
+    static_assert(MaximumPlayerStatSectionBytes == 3844);
 
     const auto codecGroups = PreparedCodecPatchGroups();
-    CHECK(codecGroups.size() == 3);
+    CHECK(codecGroups.size() == 4);
     std::size_t observedCodecMutationCount{};
     std::size_t observedCodecSiteCount{};
     for (const auto& group : codecGroups) {
         CHECK(ValidateCodecPatchGroup(group) == CodecPatchPlanError::None);
-        CHECK(!group.witnesses.empty());
+        if (group.id != CodecPatchGroupId::GenericItem) {
+            CHECK(!group.witnesses.empty());
+        }
         observedCodecSiteCount += group.sites.size();
         for (const auto& site : group.sites) {
             observedCodecMutationCount += site.mutations.size();
@@ -371,10 +444,49 @@ int main() {
     }
     CHECK(observedCodecMutationCount == PreparedCodecMutationCount);
     CHECK(observedCodecSiteCount == PreparedCodecMutableSiteCount);
+    CHECK(codecGroups[2].id == CodecPatchGroupId::GenericItem);
+    CHECK(codecGroups[2].sites.size() == 4);
+    std::size_t observedG1Mutations{};
+    for (const auto& site : codecGroups[2].sites) {
+        observedG1Mutations += site.mutations.size();
+    }
+    CHECK(observedG1Mutations == 9);
+    CHECK(codecGroups[2].sites[0].pattern.rva == 0x37AB2B);
+    CHECK(codecGroups[2].sites[1].pattern.rva == 0x37B7D4);
+    CHECK(codecGroups[2].sites[2].pattern.rva == 0x37F186);
+    CHECK(codecGroups[2].sites[3].pattern.rva == 0x37F983);
     CHECK(codecGroups.back().id == CodecPatchGroupId::PlayerSave);
 
+    constexpr std::uintptr_t AuxiliaryReaderRelayRva = 0x01F00000;
+    constexpr std::uintptr_t PlayerReaderRelayRva = 0x01F01000;
+    constexpr std::uintptr_t PlayerPreviewRelayRva = 0x01F02000;
+    constexpr std::uintptr_t PlayerSaveFinalizeRelayRva = 0x01F03000;
     constexpr auto codecActivationTargets =
-        CodecPatchActivationTargets::ForTesting(0x01F00000);
+        CodecPatchActivationTargets::ForTesting(
+            AuxiliaryReaderRelayRva,
+            PlayerReaderRelayRva,
+            PlayerPreviewRelayRva,
+            PlayerSaveFinalizeRelayRva);
+
+    CodecPublicationQuiescenceLease noCodecLease;
+    CodecQuiescenceFixture heldCodecQuiescence{.held = true};
+    auto heldCodecLease = CodecPublicationQuiescenceLease::ForTesting(
+        &heldCodecQuiescence,
+        &ValidateCodecQuiescence,
+        &ReleaseCodecQuiescence);
+    {
+        CodecQuiescenceFixture releasedLeaseFixture{.held = true};
+        {
+            auto releasedLease =
+                CodecPublicationQuiescenceLease::ForTesting(
+                    &releasedLeaseFixture,
+                    &ValidateCodecQuiescence,
+                    &ReleaseCodecQuiescence);
+            CHECK(releasedLease.IsHeld());
+        }
+        CHECK(!releasedLeaseFixture.held);
+        CHECK(releasedLeaseFixture.releaseCalls == 1);
+    }
 
     auto inactiveCodecSetFixture = MakeCodecPatchSetFixture(codecGroups);
     auto codecSetCallbacks = CodecPatchCallbacks{
@@ -384,29 +496,76 @@ int main() {
         .flushInstructionCache = &FlushCodecFixtureInstructionCache,
     };
     auto codecSetResult = CommitPreparedCodecPatchSet(
-        false, codecActivationTargets, codecSetCallbacks);
+        noCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::QuiescenceRequired);
     CHECK(codecSetResult.attemptedMutations == 0);
     CHECK(inactiveCodecSetFixture.verifyCalls == 0);
     CHECK(inactiveCodecSetFixture.writeCalls == 0);
     CHECK(inactiveCodecSetFixture.flushCalls == 0);
 
+    auto revokedBeforePreflightFixture =
+        MakeCodecPatchSetFixture(codecGroups);
+    codecSetCallbacks.context = &revokedBeforePreflightFixture;
+    CodecQuiescenceFixture revokedBeforePreflight{
+        .held = true,
+        .revokeOnValidation = 1,
+    };
+    {
+        auto revokedLease = CodecPublicationQuiescenceLease::ForTesting(
+            &revokedBeforePreflight,
+            &ValidateCodecQuiescence,
+            &ReleaseCodecQuiescence);
+        codecSetResult = CommitPreparedCodecPatchSet(
+            revokedLease, codecActivationTargets, codecSetCallbacks);
+    }
+    CHECK(codecSetResult.status
+        == CodecPatchCommitStatus::QuiescenceRequired);
+    CHECK(revokedBeforePreflightFixture.verifyCalls == 0);
+    CHECK(revokedBeforePreflightFixture.writeCalls == 0);
+    CHECK(revokedBeforePreflightFixture.flushCalls == 0);
+    CHECK(revokedBeforePreflight.releaseCalls == 1);
+
+    auto revokedAfterWriteFixture = MakeCodecPatchSetFixture(codecGroups);
+    codecSetCallbacks.context = &revokedAfterWriteFixture;
+    CodecQuiescenceFixture revokedAfterWrite{
+        .held = true,
+        .observedCodec = &revokedAfterWriteFixture,
+        .revokeAfterWriteCalls = 1,
+    };
+    {
+        auto revokedLease = CodecPublicationQuiescenceLease::ForTesting(
+            &revokedAfterWrite,
+            &ValidateCodecQuiescence,
+            &ReleaseCodecQuiescence);
+        codecSetResult = CommitPreparedCodecPatchSet(
+            revokedLease, codecActivationTargets, codecSetCallbacks);
+    }
+    CHECK(codecSetResult.status == CodecPatchCommitStatus::
+        PartialCommitColdRestartRequired);
+    CHECK(codecSetResult.attemptedMutations
+        == codecSetResult.confirmedMutations);
+    CHECK(codecSetResult.confirmedMutations >= 1);
+    CHECK(revokedAfterWriteFixture.writeCalls == 1);
+    CHECK(revokedAfterWriteFixture.flushCalls == 0);
+    CHECK(revokedAfterWrite.releaseCalls == 1);
+
     auto callbacksWithoutFlush = codecSetCallbacks;
     callbacksWithoutFlush.flushInstructionCache = nullptr;
     CHECK(CommitPreparedCodecPatchSet(
-        true, codecActivationTargets, callbacksWithoutFlush).status
+        heldCodecLease, codecActivationTargets, callbacksWithoutFlush).status
         == CodecPatchCommitStatus::InvalidPlan);
     CHECK(inactiveCodecSetFixture.verifyCalls == 0);
 
     auto codecSetFixture = MakeCodecPatchSetFixture(codecGroups);
     codecSetCallbacks.context = &codecSetFixture;
     codecSetResult = CommitPreparedCodecPatchSet(
-        true, codecActivationTargets, codecSetCallbacks);
+        heldCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::Active);
     CHECK(codecSetResult.attemptedMutations == PreparedCodecMutationCount);
     CHECK(codecSetResult.confirmedMutations == PreparedCodecMutationCount);
     CHECK(codecSetResult.confirmedFlushes == PreparedCodecMutableSiteCount);
     CHECK(codecSetFixture.flushCalls == PreparedCodecMutableSiteCount);
+    const auto activeCodecSetResult = codecSetResult;
     for (const auto& group : codecGroups) {
         for (const auto& site : group.sites) {
             const auto fixtureSite = FindCodecFixtureSite(
@@ -422,12 +581,70 @@ int main() {
             }
         }
     }
+    const auto activeG1First = FindCodecFixtureSite(
+        codecSetFixture, 0x37AB2B);
+    const auto activeG1Next = FindCodecFixtureSite(
+        codecSetFixture, 0x37B7D4);
+    const auto activeG1Writer = FindCodecFixtureSite(
+        codecSetFixture, 0x37F186);
+    const auto activeG1Terminator = FindCodecFixtureSite(
+        codecSetFixture, 0x37F983);
+    CHECK(activeG1First != nullptr);
+    CHECK(activeG1Next != nullptr);
+    CHECK(activeG1Writer != nullptr);
+    CHECK(activeG1Terminator != nullptr);
+    if (activeG1First) {
+        CHECK(activeG1First->bytes[1] == 0x0C);
+        CHECK(activeG1First->bytes[11] == 0xF3);
+        CHECK(activeG1First->bytes[21] == 0x0F);
+    }
+    if (activeG1Next) {
+        CHECK(activeG1Next->bytes[1] == 0x0C);
+        CHECK(activeG1Next->bytes[17] == 0x0F);
+    }
+    if (activeG1Writer) {
+        CHECK(activeG1Writer->bytes[2] == 0x0F);
+        CHECK(activeG1Writer->bytes[12] == 0x0C);
+    }
+    if (activeG1Terminator) {
+        CHECK(activeG1Terminator->bytes[2] == 0x0F);
+        CHECK(activeG1Terminator->bytes[7] == 0x0C);
+    }
+
+    const auto& g1NextPattern = codecGroups[2].sites[1].pattern;
+    for (std::size_t index{}; index < g1NextPattern.mask.size(); ++index) {
+        CHECK(g1NextPattern.mask[index] == 0xFF);
+    }
+    CHECK(CodecFixtureHasRel32(
+        codecSetFixture, 0x37B7D4, 9, 0xA1B6C0));
+    auto retargetedG1CallFixture = MakeCodecPatchSetFixture(codecGroups);
+    auto retargetedG1Call = FindCodecFixtureSite(
+        retargetedG1CallFixture, 0x37B7D4);
+    CHECK(retargetedG1Call != nullptr);
+    if (retargetedG1Call) retargetedG1Call->bytes[9] ^= 0x5A;
+    codecSetCallbacks.context = &retargetedG1CallFixture;
+    codecSetResult = CommitPreparedCodecPatchSet(
+        heldCodecLease, codecActivationTargets, codecSetCallbacks);
+    CHECK(codecSetResult.status == CodecPatchCommitStatus::PreflightFailed);
+    CHECK(retargetedG1CallFixture.writeCalls == 0);
+    CHECK(retargetedG1CallFixture.flushCalls == 0);
+
+    auto corruptG1Fixture = MakeCodecPatchSetFixture(codecGroups);
+    auto corruptG1Site = FindCodecFixtureSite(corruptG1Fixture, 0x37B7D4);
+    CHECK(corruptG1Site != nullptr);
+    if (corruptG1Site) corruptG1Site->bytes[8] ^= 0xFF;
+    codecSetCallbacks.context = &corruptG1Fixture;
+    codecSetResult = CommitPreparedCodecPatchSet(
+        heldCodecLease, codecActivationTargets, codecSetCallbacks);
+    CHECK(codecSetResult.status == CodecPatchCommitStatus::PreflightFailed);
+    CHECK(corruptG1Fixture.writeCalls == 0);
+    CHECK(corruptG1Fixture.flushCalls == 0);
 
     auto corruptCodecSetFixture = MakeCodecPatchSetFixture(codecGroups);
     corruptCodecSetFixture.sites.front().bytes.front() ^= 0xFF;
     codecSetCallbacks.context = &corruptCodecSetFixture;
     codecSetResult = CommitPreparedCodecPatchSet(
-        true, codecActivationTargets, codecSetCallbacks);
+        heldCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::PreflightFailed);
     CHECK(codecSetResult.attemptedMutations == 0);
     CHECK(corruptCodecSetFixture.writeCalls == 0);
@@ -441,7 +658,7 @@ int main() {
     if (corruptWitness) corruptWitness->bytes.front() ^= 0xFF;
     codecSetCallbacks.context = &corruptWitnessFixture;
     codecSetResult = CommitPreparedCodecPatchSet(
-        true, codecActivationTargets, codecSetCallbacks);
+        heldCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::PreflightFailed);
     CHECK(corruptWitnessFixture.writeCalls == 0);
     CHECK(corruptWitnessFixture.flushCalls == 0);
@@ -450,11 +667,12 @@ int main() {
     partialCodecSetFixture.failWriteAttempt = 10;
     codecSetCallbacks.context = &partialCodecSetFixture;
     codecSetResult = CommitPreparedCodecPatchSet(
-        true, codecActivationTargets, codecSetCallbacks);
+        heldCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status
         == CodecPatchCommitStatus::PartialCommitColdRestartRequired);
-    CHECK(codecSetResult.attemptedMutations == 11);
-    CHECK(codecSetResult.confirmedMutations == 10);
+    CHECK(partialCodecSetFixture.writeCalls == 11);
+    CHECK(codecSetResult.attemptedMutations
+        == codecSetResult.confirmedMutations + 1U);
 
     const auto& playerSaveGroup = codecGroups.back();
     CHECK(playerSaveGroup.sites.size() >= 2);
@@ -463,7 +681,7 @@ int main() {
     CHECK(playerSaveGroup.sites.back().pattern.rva == 0x5353C7);
     constexpr std::uintptr_t playerSaveCallNextRva = 0x5353C7;
     constexpr auto expectedRelayDisplacement = static_cast<std::uint32_t>(
-        codecActivationTargets.PlayerSaveFinalizeRelayRva()
+        PlayerSaveFinalizeRelayRva
         - playerSaveCallNextRva);
     const auto activeRelayCall = FindCodecFixtureSite(
         codecSetFixture, 0x5353BD);
@@ -482,20 +700,33 @@ int main() {
         CHECK(activeStatus->bytes[11] == 0x8B);
         CHECK(activeStatus->bytes[12] == 0xC2);
     }
-    CHECK(codecSetResult.confirmedNoOpMutations == 0);
+    CHECK(CodecFixtureHasRel32(
+        codecSetFixture, 0x531A54, 26, AuxiliaryReaderRelayRva));
+    CHECK(CodecFixtureHasRel32(
+        codecSetFixture, 0x52EC28, 35, PlayerReaderRelayRva));
+    CHECK(CodecFixtureHasRel32(
+        codecSetFixture, 0x530A24, 17, PlayerReaderRelayRva));
+    CHECK(CodecFixtureHasRel32(
+        codecSetFixture, 0x61CF81, 16, PlayerPreviewRelayRva));
+    CHECK(CodecFixtureHasRel32(
+        codecSetFixture, 0x5353BD, 6, PlayerSaveFinalizeRelayRva));
+    CHECK(activeCodecSetResult.confirmedNoOpMutations == 1);
+    CHECK(codecSetFixture.writeCalls
+        == PreparedCodecMutationCount
+            - activeCodecSetResult.confirmedNoOpMutations);
 
     constexpr auto mutationsBeforeRelayCall =
         PreparedCodecMutationCount - 6U;
     constexpr auto sitesBeforeRelayCall =
         PreparedCodecMutableSiteCount - 2U;
     CHECK(codecSetFixture.writesAtFlush[sitesBeforeRelayCall]
-        == mutationsBeforeRelayCall + 4U);
+        == codecSetFixture.writeCalls - 2U);
     CHECK(codecSetFixture.flushFirstRvas[sitesBeforeRelayCall]
         == 0x5353C3);
     CHECK(codecSetFixture.flushSizes[sitesBeforeRelayCall] == 4);
     const auto statusFlush = codecSetFixture.flushCalls - 1U;
     CHECK(codecSetFixture.writesAtFlush[statusFlush]
-        == PreparedCodecMutationCount);
+        == codecSetFixture.writeCalls);
     CHECK(codecSetFixture.flushFirstRvas[statusFlush] == 0x5353D2);
     CHECK(codecSetFixture.flushSizes[statusFlush] == 2);
 
@@ -506,7 +737,7 @@ int main() {
     if (corruptCallSite) corruptCallSite->bytes[6] ^= 0xFF;
     codecSetCallbacks.context = &corruptRelayCall;
     codecSetResult = CommitPreparedCodecPatchSet(
-        true, codecActivationTargets, codecSetCallbacks);
+        heldCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::PreflightFailed);
     CHECK(corruptRelayCall.writeCalls == 0);
 
@@ -517,36 +748,61 @@ int main() {
     if (corruptStatusSite) corruptStatusSite->bytes[11] ^= 0xFF;
     codecSetCallbacks.context = &corruptGuardStatus;
     codecSetResult = CommitPreparedCodecPatchSet(
-        true, codecActivationTargets, codecSetCallbacks);
+        heldCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::PreflightFailed);
     CHECK(corruptGuardStatus.writeCalls == 0);
 
     auto invalidTargetFixture = MakeCodecPatchSetFixture(codecGroups);
     codecSetCallbacks.context = &invalidTargetFixture;
     codecSetResult = CommitPreparedCodecPatchSet(
-        true, CodecPatchActivationTargets{}, codecSetCallbacks);
+        heldCodecLease, CodecPatchActivationTargets{}, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::InvalidPlan);
     CHECK(codecSetResult.planError
         == CodecPatchPlanError::InvalidActivationTarget);
     CHECK(invalidTargetFixture.verifyCalls == 0);
     CHECK(invalidTargetFixture.writeCalls == 0);
 
-    constexpr auto nativeUsedEndTarget =
-        CodecPatchActivationTargets::ForTesting(0xA1B610);
-    codecSetResult = CommitPreparedCodecPatchSet(
-        true, nativeUsedEndTarget, codecSetCallbacks);
-    CHECK(codecSetResult.planError
-        == CodecPatchPlanError::InvalidActivationTarget);
-    CHECK(invalidTargetFixture.verifyCalls == 0);
+    constexpr std::array nativeNoOpTargets{
+        CodecPatchActivationTargets::ForTesting(
+            0x530A00,
+            PlayerReaderRelayRva,
+            PlayerPreviewRelayRva,
+            PlayerSaveFinalizeRelayRva),
+        CodecPatchActivationTargets::ForTesting(
+            AuxiliaryReaderRelayRva,
+            0x533760,
+            PlayerPreviewRelayRva,
+            PlayerSaveFinalizeRelayRva),
+        CodecPatchActivationTargets::ForTesting(
+            AuxiliaryReaderRelayRva,
+            PlayerReaderRelayRva,
+            0xA1E110,
+            PlayerSaveFinalizeRelayRva),
+        CodecPatchActivationTargets::ForTesting(
+            AuxiliaryReaderRelayRva,
+            PlayerReaderRelayRva,
+            PlayerPreviewRelayRva,
+            0xA1B610),
+    };
+    for (const auto& nativeNoOpTarget : nativeNoOpTargets) {
+        codecSetResult = CommitPreparedCodecPatchSet(
+            heldCodecLease, nativeNoOpTarget, codecSetCallbacks);
+        CHECK(codecSetResult.planError
+            == CodecPatchPlanError::InvalidActivationTarget);
+        CHECK(invalidTargetFixture.verifyCalls == 0);
+    }
 
     constexpr auto forwardRel32Overflow =
         CodecPatchActivationTargets::ForTesting(
+            AuxiliaryReaderRelayRva,
+            PlayerReaderRelayRva,
+            PlayerPreviewRelayRva,
             playerSaveCallNextRva
             + static_cast<std::uintptr_t>(
                 (std::numeric_limits<std::int32_t>::max)())
             + 1U);
     codecSetResult = CommitPreparedCodecPatchSet(
-        true, forwardRel32Overflow, codecSetCallbacks);
+        heldCodecLease, forwardRel32Overflow, codecSetCallbacks);
     CHECK(codecSetResult.planError
         == CodecPatchPlanError::InvalidActivationTarget);
     CHECK(invalidTargetFixture.verifyCalls == 0);
@@ -554,21 +810,27 @@ int main() {
     auto noOpRelayByteFixture = MakeCodecPatchSetFixture(codecGroups);
     codecSetCallbacks.context = &noOpRelayByteFixture;
     constexpr auto noOpRelayByteTarget =
-        CodecPatchActivationTargets::ForTesting(0x00600000);
+        CodecPatchActivationTargets::ForTesting(
+            AuxiliaryReaderRelayRva,
+            PlayerReaderRelayRva,
+            PlayerPreviewRelayRva,
+            0x00600000);
     codecSetResult = CommitPreparedCodecPatchSet(
-        true, noOpRelayByteTarget, codecSetCallbacks);
+        heldCodecLease, noOpRelayByteTarget, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::Active);
     CHECK(codecSetResult.confirmedMutations == PreparedCodecMutationCount);
-    CHECK(codecSetResult.confirmedNoOpMutations == 1);
+    CHECK(codecSetResult.confirmedNoOpMutations == 2);
     CHECK(noOpRelayByteFixture.writeCalls
-        == PreparedCodecMutationCount - 1U);
+        == PreparedCodecMutationCount - 2U);
     CHECK(noOpRelayByteFixture.flushCalls == PreparedCodecMutableSiteCount);
 
     auto failedCallWrite = MakeCodecPatchSetFixture(codecGroups);
-    failedCallWrite.failWriteAttempt = mutationsBeforeRelayCall;
+    const auto writesBeforeRelayCall =
+        codecSetFixture.writesAtFlush[sitesBeforeRelayCall - 1U];
+    failedCallWrite.failWriteAttempt = writesBeforeRelayCall;
     codecSetCallbacks.context = &failedCallWrite;
     codecSetResult = CommitPreparedCodecPatchSet(
-        true, codecActivationTargets, codecSetCallbacks);
+        heldCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::
         PartialCommitColdRestartRequired);
     CHECK(codecSetResult.confirmedMutations == mutationsBeforeRelayCall);
@@ -584,7 +846,7 @@ int main() {
     failedCallFlush.failFlushAttempt = sitesBeforeRelayCall;
     codecSetCallbacks.context = &failedCallFlush;
     codecSetResult = CommitPreparedCodecPatchSet(
-        true, codecActivationTargets, codecSetCallbacks);
+        heldCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::
         PartialCommitColdRestartRequired);
     CHECK(codecSetResult.confirmedMutations
@@ -599,11 +861,12 @@ int main() {
     }
 
     auto failedFirstStatusByte = MakeCodecPatchSetFixture(codecGroups);
-    failedFirstStatusByte.failWriteAttempt =
-        PreparedCodecMutationCount - 2U;
+    const auto writesBeforeStatus =
+        codecSetFixture.writesAtFlush[sitesBeforeRelayCall];
+    failedFirstStatusByte.failWriteAttempt = writesBeforeStatus;
     codecSetCallbacks.context = &failedFirstStatusByte;
     codecSetResult = CommitPreparedCodecPatchSet(
-        true, codecActivationTargets, codecSetCallbacks);
+        heldCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::
         PartialCommitColdRestartRequired);
     const auto failedFirstStatus = FindCodecFixtureSite(
@@ -615,11 +878,10 @@ int main() {
     }
 
     auto failedSecondStatusByte = MakeCodecPatchSetFixture(codecGroups);
-    failedSecondStatusByte.failWriteAttempt =
-        PreparedCodecMutationCount - 1U;
+    failedSecondStatusByte.failWriteAttempt = writesBeforeStatus + 1U;
     codecSetCallbacks.context = &failedSecondStatusByte;
     codecSetResult = CommitPreparedCodecPatchSet(
-        true, codecActivationTargets, codecSetCallbacks);
+        heldCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::
         PartialCommitColdRestartRequired);
     const auto failedSecondStatus = FindCodecFixtureSite(
@@ -635,7 +897,7 @@ int main() {
         PreparedCodecMutableSiteCount - 1U;
     codecSetCallbacks.context = &failedStatusFlush;
     codecSetResult = CommitPreparedCodecPatchSet(
-        true, codecActivationTargets, codecSetCallbacks);
+        heldCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::
         PartialCommitColdRestartRequired);
     CHECK(codecSetResult.confirmedMutations == PreparedCodecMutationCount);
@@ -644,7 +906,7 @@ int main() {
 
     const auto invalidCodecCallbacks = CodecPatchCallbacks{};
     CHECK(CommitPreparedCodecPatchSet(
-        true, codecActivationTargets, invalidCodecCallbacks).status
+        heldCodecLease, codecActivationTargets, invalidCodecCallbacks).status
         == CodecPatchCommitStatus::InvalidPlan);
 
     constexpr std::array<std::uint16_t, 8> BoundaryStatIds{
@@ -806,6 +1068,136 @@ int main() {
         unsafePreflightSchema,
         PlayerStatStreamKind::Auxiliary,
         preflightResult) == PlayerStatPreflightError::UnsafeSchema);
+
+    const auto finalizePreviewD2S = [](std::vector<std::uint8_t>& bytes) {
+        WriteU32ForTest(bytes, 0, 0xAA55AA55);
+        WriteU32ForTest(bytes, 4, InnerFormatVersion);
+        WriteU32ForTest(
+            bytes, 8, static_cast<std::uint32_t>(bytes.size()));
+        WriteU32ForTest(bytes, 12, 0);
+        WriteU32ForTest(bytes, 12, CalculateD2SChecksum(bytes));
+    };
+    const auto refreshPreviewChecksum = [](
+            std::vector<std::uint8_t>& bytes) {
+        WriteU32ForTest(bytes, 12, 0);
+        WriteU32ForTest(bytes, 12, CalculateD2SChecksum(bytes));
+    };
+    std::vector<std::uint8_t> previewD2S(
+        PlayerPreviewRegularStatOffset + regularStream.size(), 0);
+    std::copy(
+        regularStream.begin(),
+        regularStream.end(),
+        previewD2S.begin() + PlayerPreviewRegularStatOffset);
+    previewD2S[PlayerPreviewDataContextOffset] = 3;
+    finalizePreviewD2S(previewD2S);
+    CHECK(ValidateInnerStore(StoreKind::D2S, previewD2S));
+    PlayerPreviewPreflightResult previewResult{
+        .playerStats = {0xAAAA, 0xBBBB},
+        .dataContext = 0xCC,
+    };
+    CHECK(PreflightPlayerPreviewD2S(
+        previewD2S,
+        preflightSchema,
+        previewResult) == PlayerPreviewPreflightError::None);
+    CHECK(previewResult.dataContext == 3);
+    CHECK(previewResult.playerStats.entryCount == PreflightIds.size());
+    CHECK(previewResult.playerStats.consumedBits
+        == 16U + 12U + 5U + 17U + 12U + 16U + 32U + 12U);
+
+    const PlayerPreviewPreflightResult unchangedPreviewResult{
+        .playerStats = {0x1234, 0x5678},
+        .dataContext = 0xAB,
+    };
+    const auto expectPreviewFailure = [&preflightSchema,
+            &unchangedPreviewResult](
+            std::span<const std::uint8_t> bytes,
+            PlayerPreviewPreflightError expected) {
+        auto observed = unchangedPreviewResult;
+        CHECK(PreflightPlayerPreviewD2S(
+            bytes, preflightSchema, observed) == expected);
+        CHECK(observed.playerStats.consumedBits
+            == unchangedPreviewResult.playerStats.consumedBits);
+        CHECK(observed.playerStats.entryCount
+            == unchangedPreviewResult.playerStats.entryCount);
+        CHECK(observed.dataContext == unchangedPreviewResult.dataContext);
+    };
+
+    std::vector<std::uint8_t> underflowPreview(342, 0);
+    finalizePreviewD2S(underflowPreview);
+    expectPreviewFailure(
+        underflowPreview, PlayerPreviewPreflightError::InvalidArgument);
+    std::vector<std::uint8_t> oversizedPreview(
+        PlayerPreviewBufferCapacity + 1U, 0);
+    expectPreviewFailure(
+        oversizedPreview, PlayerPreviewPreflightError::InvalidArgument);
+
+    auto rejectedPreview = previewD2S;
+    rejectedPreview[0] ^= 0xFF;
+    refreshPreviewChecksum(rejectedPreview);
+    expectPreviewFailure(
+        rejectedPreview, PlayerPreviewPreflightError::InvalidContainer);
+    rejectedPreview = previewD2S;
+    WriteU32ForTest(rejectedPreview, 4, InnerFormatVersion - 1U);
+    refreshPreviewChecksum(rejectedPreview);
+    expectPreviewFailure(
+        rejectedPreview, PlayerPreviewPreflightError::InvalidContainer);
+    rejectedPreview = previewD2S;
+    WriteU32ForTest(
+        rejectedPreview,
+        8,
+        static_cast<std::uint32_t>(rejectedPreview.size() - 1U));
+    refreshPreviewChecksum(rejectedPreview);
+    expectPreviewFailure(
+        rejectedPreview, PlayerPreviewPreflightError::InvalidContainer);
+    rejectedPreview = previewD2S;
+    rejectedPreview.back() ^= 0x80;
+    expectPreviewFailure(
+        rejectedPreview, PlayerPreviewPreflightError::InvalidContainer);
+    rejectedPreview = previewD2S;
+    rejectedPreview[PlayerPreviewDataContextOffset] =
+        PlayerPreviewDataContextCount;
+    refreshPreviewChecksum(rejectedPreview);
+    expectPreviewFailure(
+        rejectedPreview, PlayerPreviewPreflightError::InvalidDataContext);
+    rejectedPreview = previewD2S;
+    rejectedPreview[PlayerPreviewRegularStatOffset] ^= 0xFF;
+    refreshPreviewChecksum(rejectedPreview);
+    expectPreviewFailure(
+        rejectedPreview,
+        PlayerPreviewPreflightError::InvalidPlayerStatStream);
+
+    const auto missingPreviewSentinel = EncodePlayerStatPreflightFixture(
+        PreflightIds,
+        preflightSchema,
+        PlayerStatStreamKind::Regular,
+        false);
+    rejectedPreview.assign(
+        PlayerPreviewRegularStatOffset + missingPreviewSentinel.size(), 0);
+    std::copy(
+        missingPreviewSentinel.begin(),
+        missingPreviewSentinel.end(),
+        rejectedPreview.begin() + PlayerPreviewRegularStatOffset);
+    finalizePreviewD2S(rejectedPreview);
+    expectPreviewFailure(
+        rejectedPreview,
+        PlayerPreviewPreflightError::InvalidPlayerStatStream);
+
+    constexpr std::array<std::uint16_t, 1> PreviewInvalidId{2};
+    const auto invalidPreviewStream = EncodePlayerStatPreflightFixture(
+        PreviewInvalidId,
+        preflightSchema,
+        PlayerStatStreamKind::Regular,
+        true);
+    rejectedPreview.assign(
+        PlayerPreviewRegularStatOffset + invalidPreviewStream.size(), 0);
+    std::copy(
+        invalidPreviewStream.begin(),
+        invalidPreviewStream.end(),
+        rejectedPreview.begin() + PlayerPreviewRegularStatOffset);
+    finalizePreviewD2S(rejectedPreview);
+    expectPreviewFailure(
+        rejectedPreview,
+        PlayerPreviewPreflightError::InvalidPlayerStatStream);
 
     CHECK(ClassifyStoreName("Hero.d2s") == StoreKind::D2S);
     CHECK(ClassifyStoreName("Hero.With.Dots.d2s") == StoreKind::D2S);
@@ -1526,6 +1918,8 @@ enabled = false
         CHECK(pattern.bytes.size() == pattern.mask.size());
         CHECK(std::string_view{pattern.id} != "item.decode-entry");
         CHECK(std::string_view{pattern.id} != "item.serialize-entry");
+        CHECK(pattern.rva != 0x374BF0);
+        CHECK(pattern.rva != 0x375EE0);
         for (const auto mask : pattern.mask) CHECK(mask == 0xFF);
     }
 
@@ -1612,10 +2006,49 @@ enabled = false
         == std::string::npos);
     CHECK(loaderText.find("PersistenceState->codecReady, 1")
         == std::string::npos);
+    CHECK(loaderText.find("CommitPreparedCodecPatchSet(")
+        == std::string::npos);
     CHECK(loaderText.find(
         "ISC12PersistenceRelayTemplatePlayerSaveFinalizeEntry")
         != std::string::npos);
+    CHECK(loaderText.find(
+        "ISC12PersistenceRelayTemplateAuxiliaryReaderEntry")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "ISC12PersistenceRelayTemplatePlayerReaderEntry")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "ISC12PersistenceRelayTemplatePlayerPreviewEntry")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "ISC12PersistenceRelayTemplateCodecReturnExit")
+        != std::string::npos);
+    CHECK(loaderText.find("AuxiliaryReaderCallRva = 0x531A6D")
+        != std::string::npos);
+    CHECK(loaderText.find("PlayerReaderPrimaryCallRva = 0x52EC4A")
+        != std::string::npos);
+    CHECK(loaderText.find("PlayerReaderLegacyCallRva = 0x530A34")
+        != std::string::npos);
+    CHECK(loaderText.find("PlayerPreviewCallRva = 0x61CF90")
+        != std::string::npos);
     CHECK(loaderText.find("PlayerSaveFinalizeCallRva = 0x5353C2")
+        != std::string::npos);
+    CHECK(loaderText.find("ReadPlayerStatsWithPreflight")
+        != std::string::npos);
+    CHECK(loaderText.find("CopyPlayerPreviewWithPreflight")
+        != std::string::npos);
+    CHECK(loaderText.find("version != InnerFormatVersion")
+        != std::string::npos);
+    CHECK(loaderText.find("AcquireSRWLockShared(&SchemaSnapshotLock)")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "offsetof(PersistenceRelayState, auxiliaryReaderHandler) == 0x48")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "offsetof(PersistenceRelayState, playerReaderHandler) == 0x50")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "offsetof(PersistenceRelayState, playerPreviewHandler) == 0x58")
         != std::string::npos);
     CHECK(loaderText.find(
         "LoaderCodecPatchAuthority::BindPreparedRelay")
@@ -1692,6 +2125,37 @@ enabled = false
         != std::string::npos);
     CHECK(persistenceAsmText.find(
         "ISC12PersistenceRelayTemplatePlayerSaveFinalizeEntry")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "ISC12PersistenceRelayTemplateAuxiliaryReaderEntry")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "ISC12PersistenceRelayTemplatePlayerReaderEntry")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "ISC12PersistenceRelayTemplatePlayerPreviewEntry")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "ISC12PersistenceRelayTemplateCodecReturnExit")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("ISC12AuxiliaryReaderCallHook PROC FRAME")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("ISC12PlayerReaderCallHook PROC FRAME")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("ISC12PlayerPreviewCallHook PROC FRAME")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(".allocstack 38h")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(".allocstack 28h")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "call ISC12ReadAuxiliaryWithPreflight")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("call ISC12ReadRegularWithPreflight")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("call ISC12CopyPreviewWithPreflight")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("jmp qword ptr [gISC12CodecReturnExit]")
         != std::string::npos);
     CHECK(persistenceAsmText.find("cmp qword ptr [rcx+18h], 0")
         != std::string::npos);

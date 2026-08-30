@@ -1439,31 +1439,45 @@ confiance explicite.
   d'une validation hors jeu; l'approbation visuelle et la qualification runtime
   complète 0.13.0 restent distinctes.
 
-## 2026-08-30 — ISC12 G2–G4 player/save/preview
+## 2026-08-30 — ISC12 canonical G1–G4 codec planner
 
-- G2 auxiliaire est fermé statiquement par quatre séquences exactes uniques :
-  readers premier/suivant `0x530A99`/`0x530BA3`, writer ID `0x5340C0` et
-  terminator `0x534139`. Le témoin unique `0x530A6B` gouverne le marker
+- G1 ajoute neuf mutations sémantiques d'un octet réparties sur quatre
+  fenêtres intérieures uniques : `0x37AB2B`, `0x37B7D4`, `0x37F186` et
+  `0x37F983`. Elles passent les widths `9→12`, les sentinelles
+  `0x1FF→0xFFF` et conservent le seed `previousStatId = -1`. Les entrées
+  decoder/serializer restent une preuve statique d'identité et d'ownership au
+  ledger, jamais des témoins runtime du groupe, car `plugin-items` peut déjà
+  les hooker. Le CALL intérieur du lecteur suivant reste toutefois exact :
+  `0x37B7DC` résout le thunk gouverné `0xA1B6C0`; toute redirection est rejetée
+  par le préflight avant la première écriture.
+
+- G2 auxiliaire est fermé statiquement par cinq sites mutables exacts uniques :
+  CALL exhaustif `0x531A6D` dans la fenêtre `0x531A54`, readers
+  premier/suivant `0x530A99`/`0x530BA3`, writer ID `0x5340C0` et terminator
+  `0x534139`. Le témoin unique `0x530A6B` gouverne le marker
   `0x6667` et sa branche de rejet; les champs valeur/param pilotés par
   `ItemStatCost` et le contrôle du count compilé restent inchangés. Seuls les
   immédiats ID width `9→12` et terminator `0x1FF→0xFFF` mutent.
-- G3 régulier possède les readers `0x53395E`/`0x533A93`, writer `0x5352F6`,
-  terminator `0x5353A8`, CALL finalize `0x5353BD` et publication de statut
-  `0x5353C7`. Le témoin unique `0x533924` gouverne le marker/bounds moderne.
-  Les six sites constituent un groupe atomique distinct de G2.
+- G3 régulier possède les deux CALLs exhaustifs `0x52EC4A`/`0x530A34`, les
+  readers `0x53395E`/`0x533A93`, writer `0x5352F6`, terminator `0x5353A8`,
+  CALL finalize `0x5353BD` et publication de statut `0x5353C7`. Le témoin
+  unique `0x533924` gouverne le marker/bounds moderne. Les huit sites
+  constituent un groupe atomique distinct de G2.
 - Les consumers de champs sont également gouvernés : `0x530B69` lit en G2
   `CsvParamBits` vers un paramètre 16 bits puis une valeur fixe de 32 bits;
   `0x533A38` et `0x533A52` lisent en G3 le paramètre 16 bits puis dispatchent
   `CsvBits<32` signed/unsigned et `CsvBits==32` unsigned. Le préflight refuse
   aussi tout ID référençant une ligne `CsvBits==0`, comme les readers natifs.
-- G4 preview/frontend consomme ce même format sans writer propre. Les branches
-  A `0x61D247`/`0x61D290` et B `0x61D647`/`0x61D690` sont quatre séquences
-  exactes uniques; chaque paire conserve son back-edge et ne modifie que width
-  et sentinelle.
-- Les quatorze signatures de mutation ont chacune exactement un match dans
-  `.text`. Le plan hors runtime contient 28 slots gouvernés et 39 témoins
-  inchangés, préflight le set G2–G4 complet avant la première écriture, exige
-  une preuve de quiescence et classe toute écriture ou flush incertain comme
+- G4 preview/frontend consomme ce même format sans writer propre. La version
+  exacte 105 atteint exclusivement la branche B `0x61D647`/`0x61D690`, dont
+  width/sentinelle passent à 12 bits/`0xFFF`. La branche A legacy
+  `0x61D247`/`0x61D290` demeure volontairement 9 bits/`0x1FF` comme témoin.
+  Le troisième site mutable est le CALL de copie `0x61CF90`, gardé avant B.
+- Les seize signatures de mutation G2–G4 ont chacune exactement un match dans
+  `.text`. Avec les quatre fenêtres G1, le plan canonique hors runtime contient
+  quatre groupes, 20 fenêtres mutables exactes, 49 slots gouvernés et 51 témoins
+  runtime inchangés. Il préflight le set G1–G4 complet avant la première
+  écriture et classe toute écriture ou flush incertain après ce point comme un
   commit exigeant un cold restart. Aucune de ces mutations n'est publiée.
 - G2 alloue exactement `0x4000` octets à `0x534006`; son cap source
   `0x533EAD` et son consommateur `0x53405C` conservent au plus `0x200`
@@ -1502,24 +1516,37 @@ confiance explicite.
   seulement l'espace restant après un préfixe variable, donc ces capacités
   totales ne remplacent pas le guard du flag d'overflow. Avant publication, la
   façade devra réserver le relais pour la vie du processus avant le premier
-  write codec, conserver la quiescence jusqu'aux deux flushes finaux et
-  fast-fail immédiatement sur toute incertitude.
+  write codec. `CommitPreparedCodecPatchSet` exige maintenant un
+  `CodecPublicationQuiescenceLease` RAII opaque et vivant pendant chaque
+  fingerprint, write et flush. Le SDK loader épinglé ne fournit aucun issuer
+  de production et aucun caller loader n'existe. Une perte du lease avant toute
+  écriture refuse sans mutation; après la première tentative, elle impose un
+  cold restart sans hot rollback.
 - Le préflight pur G2/G3 parcourt sans allocation le marker `0x6667`, chaque ID
   12 bits, les champs param/value gouvernés, le cap 512 et la sentinelle
   `0xFFF`; il refuse schéma dangereux, ID hors table, troncation et sentinelle
-  absente sans modifier sa sortie. Les entrées uniques `0x530A00` et `0x533760`
-  sont retenues pour une connexion future, mais aucun hook reader ni caller de
-  production n'est encore implanté; celui-ci devra fournir la fenêtre
-  structurelle exacte de la section.
+  absente sans modifier sa sortie. Les fonctions uniques `0x530A00` et
+  `0x533760` restent intactes; leurs trois callers exhaustifs sont maintenant
+  préparés vers des entries RX process-lifetime. Chaque FRAME ASM transmet
+  l'ABI six arguments à un helper `noexcept`, qui accepte seulement v105,
+  copie au plus 3 844 octets, tient le lock partagé du snapshot immuable durant
+  préflight + appel natif + postcheck et renvoie le statut natif malformé
+  `0x12` en cas de rejet. Les trois épilogues exacts uniques
+  `0x530BCF`/`0x5338ED`/`0x533ABF` prouvent ce contrat. Un succès natif dont le
+  cursor diffère du used-end prédit provoque un fail-fast. Ces rel32 restent
+  non publiés.
 - La preview alloue puis lit au plus `0x4000` octets (`0x61CF41` et
   `0x61CF81`); son seul gate immédiat exige seulement huit octets. Le thunk
   exact unique `0xA1B6C0` relie les quatre appels ID au cœur du bitreader; le
   core succès unique `0xA1BAD0` avance les cursors, tandis que `0xA1BA92` charge
   la longueur totale, détecte l'overrun et pose `[stream+0x20]=1`. Les boucles
-  preview ne lisent pas ce drapeau. G4 reste donc
-  volontairement non publié tant qu'un préflight strict ne prouve pas chaque
-  champ et la sentinelle `0xFFF` dans la fenêtre réellement lue, ou qu'une
-  sortie d'erreur native gouvernée n'est pas ajoutée.
+  preview ne lisent pas ce drapeau. Le wrapper G4 préparé appelle l'owner
+  partagé `0xA1E110` exactement une fois, après quoi il valide uniquement la
+  copie terminée `[temp,temp+N)`: magic, version exacte 105, taille déclarée,
+  checksum, contexte `<4`, marker `0x6667` exigé et validé par le wrapper, IDs sous le snapshot,
+  champs bornés, cap 512 et sentinelle. Un rejet retourne zéro au gate natif,
+  qui rejoint l'exit exact `0x61D87D`, libère `temp` et retourne false.
+  G4 reste non publié, mais son contrat de bornes est maintenant fermé.
 - Le bloc unique `0x61CF95` exige le magic vanilla `0xAA55AA55` après l'appel
   `0xA1E110`. La trace complète corrige une première lecture trop large :
   `0xA1E110` ne relit pas le filesystem, mais copie sous verrou depuis le buffer
@@ -1528,4 +1555,9 @@ confiance explicite.
   l'état 3; ses callers transmettent ensuite le même SaveObject à la preview.
   G10 domine donc G4 et aucun second unwrap frontend n'est requis. Ce témoin
   verrouille plutôt l'ordre attendu : enveloppe validée/retirée, puis magic
-  vanilla du payload intérieur.
+  vanilla du payload intérieur. Les témoins supplémentaires `0xA1E194` et
+  `0xA1E1C6` prouvent source/longueur/capacité puis unlock/retour de la copie;
+  `0x61D43F`, `0x61D5E4`, `0x61D87D` et le corps complet unique
+  `GetDataTablesForContext 0x300A90` ferment respectivement contexte, layout B,
+  cleanup et domaine 0..3. Le lookup ItemStatCost peut retourner null et B le
+  déréférence sans contrôle, d'où l'obligation du préflight ID<rowCount.

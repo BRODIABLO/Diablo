@@ -6,6 +6,7 @@
 #include "isc12_loader.hpp"
 #include "isc12_native_persistence_adapter.hpp"
 #include "isc12_native_schema_adapter.hpp"
+#include "isc12_player_stat_preflight.hpp"
 
 #include <Windows.h>
 
@@ -31,6 +32,7 @@ void* gISC12PersistenceReaderRejectedExit{};
 void* gISC12PersistenceWriterVanillaExit{};
 void* gISC12PersistenceWriterCommittedExit{};
 void* gISC12PersistenceWriterRejectedExit{};
+void* gISC12CodecReturnExit{};
 
 void ISC12LoaderTailMidHook() noexcept;
 extern std::uint8_t ISC12LoaderRelayTemplateBegin;
@@ -41,6 +43,9 @@ extern std::uint8_t ISC12LoaderRelayTemplateEnd;
 
 void ISC12PersistenceReaderMidHook() noexcept;
 void ISC12PersistenceWriterMidHook() noexcept;
+void ISC12AuxiliaryReaderCallHook() noexcept;
+void ISC12PlayerReaderCallHook() noexcept;
+void ISC12PlayerPreviewCallHook() noexcept;
 extern std::uint8_t ISC12PersistenceRelayTemplateBegin;
 extern std::uint8_t ISC12PersistenceRelayTemplateWriterEntry;
 extern std::uint8_t ISC12PersistenceRelayTemplateReaderContinueExit;
@@ -49,6 +54,10 @@ extern std::uint8_t ISC12PersistenceRelayTemplateWriterVanillaExit;
 extern std::uint8_t ISC12PersistenceRelayTemplateWriterCommittedExit;
 extern std::uint8_t ISC12PersistenceRelayTemplateWriterRejectedExit;
 extern std::uint8_t ISC12PersistenceRelayTemplatePlayerSaveFinalizeEntry;
+extern std::uint8_t ISC12PersistenceRelayTemplateAuxiliaryReaderEntry;
+extern std::uint8_t ISC12PersistenceRelayTemplatePlayerReaderEntry;
+extern std::uint8_t ISC12PersistenceRelayTemplatePlayerPreviewEntry;
+extern std::uint8_t ISC12PersistenceRelayTemplateCodecReturnExit;
 extern std::uint8_t ISC12PersistenceRelayTemplateStatePointer;
 extern std::uint8_t ISC12PersistenceRelayTemplateEnd;
 
@@ -59,9 +68,16 @@ namespace ruffneckk::isc12 {
 class LoaderCodecPatchAuthority {
 public:
     [[nodiscard]] static constexpr auto BindPreparedRelay(
+            std::uintptr_t auxiliaryReaderRelayRva,
+            std::uintptr_t playerReaderRelayRva,
+            std::uintptr_t playerPreviewRelayRva,
             std::uintptr_t playerSaveFinalizeRelayRva) noexcept
             -> CodecPatchActivationTargets {
-        return CodecPatchActivationTargets{playerSaveFinalizeRelayRva};
+        return CodecPatchActivationTargets{
+            auxiliaryReaderRelayRva,
+            playerReaderRelayRva,
+            playerPreviewRelayRva,
+            playerSaveFinalizeRelayRva};
     }
 };
 
@@ -81,7 +97,14 @@ constexpr std::uintptr_t PersistenceWriterPatchRva = 0x9F95A2;
 constexpr std::uintptr_t PersistenceWriterVanillaRva = 0x9F95A7;
 constexpr std::uintptr_t PersistenceWriterCommittedRva = 0x9F95E9;
 constexpr std::uintptr_t PersistenceWriterRejectedRva = 0x9F9627;
+constexpr std::uintptr_t AuxiliaryReaderCallRva = 0x531A6D;
+constexpr std::uintptr_t PlayerReaderPrimaryCallRva = 0x52EC4A;
+constexpr std::uintptr_t PlayerReaderLegacyCallRva = 0x530A34;
+constexpr std::uintptr_t PlayerPreviewCallRva = 0x61CF90;
 constexpr std::uintptr_t PlayerSaveFinalizeCallRva = 0x5353C2;
+constexpr std::uintptr_t NativeAuxiliaryReaderRva = 0x530A00;
+constexpr std::uintptr_t NativePlayerReaderRva = 0x533760;
+constexpr std::uintptr_t NativePlayerPreviewCopyRva = 0xA1E110;
 constexpr std::uintptr_t NativeByteBufferResizeRva = 0xA1E1F0;
 constexpr std::uintptr_t NativeSetObjectStateRva = 0xA1E200;
 constexpr std::uintptr_t NativeSetObjectAuxRva = 0xA1E210;
@@ -97,6 +120,7 @@ constexpr std::size_t SaveObjectBufferPointerOffset = 0x08;
 constexpr std::size_t SaveObjectBufferSizeOffset = 0x10;
 constexpr std::size_t SaveObjectNamePointerOffset = 0x20;
 constexpr std::size_t MaximumNativeStoreNameLength = 255;
+constexpr std::int32_t NativeMalformedPlayerStatStatus = 0x12;
 
 constexpr auto TailExpected = std::to_array<std::uint8_t>({
     0x4C, 0x8B, 0xBC, 0x24, 0x40, 0x0F, 0x00, 0x00,
@@ -136,6 +160,9 @@ struct PersistenceRelayState {
     void* writerVanilla{};
     void* writerCommitted{};
     void* writerRejected{};
+    void* auxiliaryReaderHandler{};
+    void* playerReaderHandler{};
+    void* playerPreviewHandler{};
 };
 
 struct NativeVectorU16 {
@@ -154,6 +181,15 @@ using NativeGetLinkNameFn = const char*(__fastcall*)(
 using NativeByteBufferResizeFn = void(__fastcall*)(void*, std::size_t);
 using NativeSetObjectStateFn = void(__fastcall*)(void*, std::uint32_t);
 using NativeSetObjectAuxFn = void(__fastcall*)(void*, std::uint64_t);
+using NativePlayerStatReaderFn = std::int32_t(__fastcall*)(
+    void*,
+    void*,
+    std::uint8_t**,
+    std::uint8_t*,
+    std::uint32_t,
+    std::int32_t);
+using NativePlayerPreviewCopyFn = std::uint32_t(__fastcall*)(
+    void*, void*, std::uint32_t, std::uint64_t);
 
 static_assert(sizeof(DescriptionEntry) == 4);
 static_assert(offsetof(DescriptionEntry, statId) == 0);
@@ -171,6 +207,10 @@ static_assert(offsetof(PersistenceRelayState, readerRejected) == 0x28);
 static_assert(offsetof(PersistenceRelayState, writerVanilla) == 0x30);
 static_assert(offsetof(PersistenceRelayState, writerCommitted) == 0x38);
 static_assert(offsetof(PersistenceRelayState, writerRejected) == 0x40);
+static_assert(
+    offsetof(PersistenceRelayState, auxiliaryReaderHandler) == 0x48);
+static_assert(offsetof(PersistenceRelayState, playerReaderHandler) == 0x50);
+static_assert(offsetof(PersistenceRelayState, playerPreviewHandler) == 0x58);
 static_assert(sizeof(NativeVectorU16) == 24);
 static_assert(offsetof(NativeVectorU16, begin) == 0);
 static_assert(offsetof(NativeVectorU16, size) == 8);
@@ -193,6 +233,9 @@ std::size_t PersistenceStatePageSize{};
 void* PersistenceReaderRelayEntry{};
 void* PersistenceWriterRelayEntry{};
 void* PersistencePlayerSaveFinalizeRelayEntry{};
+void* PersistenceAuxiliaryReaderRelayEntry{};
+void* PersistencePlayerReaderRelayEntry{};
+void* PersistencePlayerPreviewRelayEntry{};
 CodecPatchActivationTargets PreparedCodecActivationTargets{};
 NativeQsortFn NativeQsort{};
 NativeComparatorFn NativeComparator{};
@@ -202,6 +245,9 @@ NativeGetLinkNameFn NativeGetLinkName{};
 NativeByteBufferResizeFn NativeByteBufferResize{};
 NativeSetObjectStateFn NativeSetObjectState{};
 NativeSetObjectAuxFn NativeSetObjectAux{};
+NativePlayerStatReaderFn NativeAuxiliaryReader{};
+NativePlayerStatReaderFn NativePlayerReader{};
+NativePlayerPreviewCopyFn NativePlayerPreviewCopy{};
 bool Prepared{};
 bool PersistencePrepared{};
 bool AnyMutationInstalled{};
@@ -222,6 +268,10 @@ thread_local std::uint64_t CurrentRowCount{};
 thread_local bool NativeSchemaCallbackFailed{};
 thread_local std::array<char, MaximumNativeStatNameLength + 1>
     NativeSchemaNameBuffer{};
+thread_local std::array<std::uint8_t, MaximumPlayerStatSectionBytes>
+    PlayerStatPreflightBuffer{};
+thread_local std::array<std::uint8_t, PlayerPreviewBufferCapacity>
+    PlayerPreviewPreflightBuffer{};
 
 auto SetError(std::string& error, std::string_view message) noexcept -> bool {
     try {
@@ -294,6 +344,12 @@ auto NativeExceptionFilter(DWORD code) noexcept -> int {
         : EXCEPTION_CONTINUE_SEARCH;
 }
 
+auto GuardedCodecExceptionFilter(DWORD) noexcept -> int {
+    // No exception may cross the DLL FRAME wrapper back into a native caller.
+    // The guarded helper releases any held schema lock and fast-fails instead.
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
 template <typename Value>
 auto SafeRead(const void* source, Value& destination) noexcept -> bool {
     static_assert(std::is_trivially_copyable_v<Value>);
@@ -316,6 +372,40 @@ auto SafeCopyReadable(
         std::memcpy(destination, source, size);
         return true;
     } __except (NativeExceptionFilter(GetExceptionCode())) {
+        return false;
+    }
+}
+
+auto InvokeNativePlayerStatReader(
+        NativePlayerStatReaderFn reader,
+        void* context,
+        void* unit,
+        std::uint8_t** cursor,
+        std::uint8_t* end,
+        std::uint32_t version,
+        std::int32_t count,
+        std::int32_t& status) noexcept -> bool {
+    if (!reader) return false;
+    __try {
+        status = reader(context, unit, cursor, end, version, count);
+        return true;
+    } __except (GuardedCodecExceptionFilter(GetExceptionCode())) {
+        return false;
+    }
+}
+
+auto InvokeNativePlayerPreviewCopy(
+        void* object,
+        void* destination,
+        std::uint32_t capacity,
+        std::uint64_t offset,
+        std::uint32_t& copied) noexcept -> bool {
+    if (!NativePlayerPreviewCopy) return false;
+    __try {
+        copied = NativePlayerPreviewCopy(
+            object, destination, capacity, offset);
+        return true;
+    } __except (GuardedCodecExceptionFilter(GetExceptionCode())) {
         return false;
     }
 }
@@ -750,6 +840,143 @@ auto CommitNativeStoreAtomically(
     __assume(false);
 }
 
+auto ReadPlayerStatsWithPreflight(
+        NativePlayerStatReaderFn nativeReader,
+        PlayerStatStreamKind kind,
+        void* context,
+        void* unit,
+        std::uint8_t** cursor,
+        std::uint8_t* end,
+        std::uint32_t version,
+        std::int32_t count) noexcept -> std::int32_t {
+    // ISC12 is a strict clean-sheet format. A legacy-version pass-through at
+    // these retargeted exhaustive callers would reintroduce mixed-width state.
+    if (version != InnerFormatVersion || !nativeReader || !cursor || !end) {
+        return NativeMalformedPlayerStatStatus;
+    }
+
+    std::uint8_t* begin{};
+    if (!SafeRead(cursor, begin) || !begin) {
+        return NativeMalformedPlayerStatStatus;
+    }
+    const auto beginAddress = reinterpret_cast<std::uintptr_t>(begin);
+    const auto endAddress = reinterpret_cast<std::uintptr_t>(end);
+    if (endAddress < beginAddress) {
+        return NativeMalformedPlayerStatStatus;
+    }
+    const auto available = static_cast<std::size_t>(
+        endAddress - beginAddress);
+    const auto copied = (std::min)(
+        available, PlayerStatPreflightBuffer.size());
+    if (copied < sizeof(PlayerStatSectionMarker)
+            || !SafeCopyReadable(
+                begin, PlayerStatPreflightBuffer.data(), copied)) {
+        return NativeMalformedPlayerStatStatus;
+    }
+
+    AcquireSRWLockShared(&SchemaSnapshotLock);
+    if (!SchemaReady.load(std::memory_order_acquire)
+            || !HasPublishedSchemaSnapshot
+            || SchemaUpdateInProgress) {
+        ReleaseSRWLockShared(&SchemaSnapshotLock);
+        return NativeMalformedPlayerStatStatus;
+    }
+
+    PlayerStatPreflightResult preflight;
+    const auto preflightStatus = PreflightPlayerStatStream(
+        std::span<const std::uint8_t>{
+            PlayerStatPreflightBuffer.data(), copied},
+        std::span<const ItemStatSemanticRow>{
+            PublishedSchemaSnapshot.rows.data(),
+            PublishedSchemaSnapshot.rows.size()},
+        kind,
+        preflight);
+    if (preflightStatus != PlayerStatPreflightError::None) {
+        ReleaseSRWLockShared(&SchemaSnapshotLock);
+        return NativeMalformedPlayerStatStatus;
+    }
+
+    const auto expectedBytes = (preflight.consumedBits + 7U) / 8U;
+    std::uint8_t* observedBegin{};
+    if (expectedBytes > available
+            || beginAddress > (std::numeric_limits<std::uintptr_t>::max)()
+                - expectedBytes
+            || !SafeRead(cursor, observedBegin)
+            || observedBegin != begin) {
+        ReleaseSRWLockShared(&SchemaSnapshotLock);
+        return NativeMalformedPlayerStatStatus;
+    }
+    auto* const expectedCursor = reinterpret_cast<std::uint8_t*>(
+        beginAddress + expectedBytes);
+    const auto schemaRowCount = PublishedSchemaSnapshot.rows.size();
+
+    std::int32_t nativeStatus{};
+    const bool invoked = InvokeNativePlayerStatReader(
+        nativeReader,
+        context,
+        unit,
+        cursor,
+        end,
+        version,
+        count,
+        nativeStatus);
+    std::uint8_t* nativeCursor{};
+    const bool cursorMatches = nativeStatus != 0
+        || (SafeRead(cursor, nativeCursor) && nativeCursor == expectedCursor);
+    ReleaseSRWLockShared(&SchemaSnapshotLock);
+
+    if (!invoked) {
+        FailClosed("guarded player-stat reader raised a native fault", 0);
+    }
+    if (!cursorMatches) {
+        FailClosed(
+            "guarded player-stat reader diverged from its preflight cursor",
+            schemaRowCount);
+    }
+    return nativeStatus;
+}
+
+auto CopyPlayerPreviewWithPreflight(
+        void* object,
+        void* destination,
+        std::uint32_t capacity,
+        std::uint64_t offset) noexcept -> std::uint32_t {
+    // The original copy owns its lock/unlock and buffer projection contract;
+    // call it exactly once, then validate only the completed local D2S bytes.
+    std::uint32_t copied{};
+    if (!InvokeNativePlayerPreviewCopy(
+            object, destination, capacity, offset, copied)) {
+        FailClosed("guarded player-preview copy raised a native fault", 0);
+    }
+    if (capacity != PlayerPreviewBufferCapacity
+            || offset != 0
+            || copied == 0
+            || copied > PlayerPreviewBufferCapacity
+            || !destination
+            || !SafeCopyReadable(
+                destination, PlayerPreviewPreflightBuffer.data(), copied)) {
+        return 0;
+    }
+
+    AcquireSRWLockShared(&SchemaSnapshotLock);
+    if (!SchemaReady.load(std::memory_order_acquire)
+            || !HasPublishedSchemaSnapshot
+            || SchemaUpdateInProgress) {
+        ReleaseSRWLockShared(&SchemaSnapshotLock);
+        return 0;
+    }
+    PlayerPreviewPreflightResult preflight;
+    const auto status = PreflightPlayerPreviewD2S(
+        std::span<const std::uint8_t>{
+            PlayerPreviewPreflightBuffer.data(), copied},
+        std::span<const ItemStatSemanticRow>{
+            PublishedSchemaSnapshot.rows.data(),
+            PublishedSchemaSnapshot.rows.size()},
+        preflight);
+    ReleaseSRWLockShared(&SchemaSnapshotLock);
+    return status == PlayerPreviewPreflightError::None ? copied : 0;
+}
+
 [[noreturn]] auto RejectSchemaSnapshotUpdate(
         SchemaError captureResult,
         const char* reason,
@@ -794,12 +1021,19 @@ auto ReleaseUnpatchedResources() noexcept -> void {
     PersistenceReaderRelayEntry = nullptr;
     PersistenceWriterRelayEntry = nullptr;
     PersistencePlayerSaveFinalizeRelayEntry = nullptr;
+    PersistenceAuxiliaryReaderRelayEntry = nullptr;
+    PersistencePlayerReaderRelayEntry = nullptr;
+    PersistencePlayerPreviewRelayEntry = nullptr;
     PreparedCodecActivationTargets = {};
     gISC12PersistenceReaderContinueExit = nullptr;
     gISC12PersistenceReaderRejectedExit = nullptr;
     gISC12PersistenceWriterVanillaExit = nullptr;
     gISC12PersistenceWriterCommittedExit = nullptr;
     gISC12PersistenceWriterRejectedExit = nullptr;
+    gISC12CodecReturnExit = nullptr;
+    NativeAuxiliaryReader = nullptr;
+    NativePlayerReader = nullptr;
+    NativePlayerPreviewCopy = nullptr;
     if (RelayPage) {
         VirtualFree(RelayPage, 0, MEM_RELEASE);
         RelayPage = nullptr;
@@ -831,6 +1065,14 @@ auto AllocatePersistenceRelayPageNear(std::uint8_t* base) noexcept -> void* {
         base + PersistenceWriterPatchRva);
     const auto playerSaveFinalizeSite = reinterpret_cast<std::uintptr_t>(
         base + PlayerSaveFinalizeCallRva);
+    const auto auxiliaryReaderSite = reinterpret_cast<std::uintptr_t>(
+        base + AuxiliaryReaderCallRva);
+    const auto playerReaderPrimarySite = reinterpret_cast<std::uintptr_t>(
+        base + PlayerReaderPrimaryCallRva);
+    const auto playerReaderLegacySite = reinterpret_cast<std::uintptr_t>(
+        base + PlayerReaderLegacyCallRva);
+    const auto playerPreviewSite = reinterpret_cast<std::uintptr_t>(
+        base + PlayerPreviewCallRva);
     const auto aligned = readerSite & ~(granularity - 1U);
     for (std::uintptr_t delta = granularity;
             delta < UINT64_C(0x70000000);
@@ -841,7 +1083,11 @@ auto AllocatePersistenceRelayPageNear(std::uint8_t* base) noexcept -> void* {
         const auto candidate = aligned + delta;
         if (!CanEncodeRel32(readerSite, candidate)
                 || !CanEncodeRel32(writerSite, candidate)
-                || !CanEncodeRel32(playerSaveFinalizeSite, candidate)) {
+                || !CanEncodeRel32(playerSaveFinalizeSite, candidate)
+                || !CanEncodeRel32(auxiliaryReaderSite, candidate)
+                || !CanEncodeRel32(playerReaderPrimarySite, candidate)
+                || !CanEncodeRel32(playerReaderLegacySite, candidate)
+                || !CanEncodeRel32(playerPreviewSite, candidate)) {
             break;
         }
         if (auto* allocation = VirtualAlloc(
@@ -1027,6 +1273,14 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
         &ISC12PersistenceRelayTemplateWriterRejectedExit);
     const auto playerSaveFinalize = reinterpret_cast<std::uintptr_t>(
         &ISC12PersistenceRelayTemplatePlayerSaveFinalizeEntry);
+    const auto auxiliaryReader = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplateAuxiliaryReaderEntry);
+    const auto playerReader = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplatePlayerReaderEntry);
+    const auto playerPreview = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplatePlayerPreviewEntry);
+    const auto codecReturn = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplateCodecReturnExit);
     const auto statePointer = reinterpret_cast<std::uintptr_t>(
         &ISC12PersistenceRelayTemplateStatePointer);
     const auto end = reinterpret_cast<std::uintptr_t>(
@@ -1042,6 +1296,10 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
             || !labelInside(writerCommitted)
             || !labelInside(writerRejected)
             || !labelInside(playerSaveFinalize)
+            || !labelInside(auxiliaryReader)
+            || !labelInside(playerReader)
+            || !labelInside(playerPreview)
+            || !labelInside(codecReturn)
             || statePointer < begin
             || statePointer > end - sizeof(void*)
             || !(begin < readerContinue
@@ -1051,7 +1309,11 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
                 && writerVanilla < writerCommitted
                 && writerCommitted < writerRejected
                 && writerRejected < playerSaveFinalize
-                && playerSaveFinalize < statePointer)) {
+                && playerSaveFinalize < auxiliaryReader
+                && auxiliaryReader < playerReader
+                && playerReader < playerPreview
+                && playerPreview < codecReturn
+                && codecReturn < statePointer)) {
         ReleaseUnpatchedResources();
         return SetError(
             error, "persistence relay template layout is invalid");
@@ -1087,6 +1349,14 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
         copied + static_cast<std::size_t>(writerRejected - begin);
     PersistencePlayerSaveFinalizeRelayEntry =
         copied + static_cast<std::size_t>(playerSaveFinalize - begin);
+    PersistenceAuxiliaryReaderRelayEntry =
+        copied + static_cast<std::size_t>(auxiliaryReader - begin);
+    PersistencePlayerReaderRelayEntry =
+        copied + static_cast<std::size_t>(playerReader - begin);
+    PersistencePlayerPreviewRelayEntry =
+        copied + static_cast<std::size_t>(playerPreview - begin);
+    gISC12CodecReturnExit =
+        copied + static_cast<std::size_t>(codecReturn - begin);
 
     PersistenceState->readerHandler =
         reinterpret_cast<void*>(&ISC12PersistenceReaderMidHook);
@@ -1102,18 +1372,39 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
         LoaderBase + PersistenceWriterCommittedRva;
     PersistenceState->writerRejected =
         LoaderBase + PersistenceWriterRejectedRva;
+    PersistenceState->auxiliaryReaderHandler =
+        reinterpret_cast<void*>(&ISC12AuxiliaryReaderCallHook);
+    PersistenceState->playerReaderHandler =
+        reinterpret_cast<void*>(&ISC12PlayerReaderCallHook);
+    PersistenceState->playerPreviewHandler =
+        reinterpret_cast<void*>(&ISC12PlayerPreviewCallHook);
 
     const auto baseAddress = reinterpret_cast<std::uintptr_t>(LoaderBase);
     const auto playerSaveFinalizeRelayAddress =
         reinterpret_cast<std::uintptr_t>(
             PersistencePlayerSaveFinalizeRelayEntry);
-    if (playerSaveFinalizeRelayAddress < baseAddress) {
+    const auto auxiliaryReaderRelayAddress =
+        reinterpret_cast<std::uintptr_t>(
+            PersistenceAuxiliaryReaderRelayEntry);
+    const auto playerReaderRelayAddress =
+        reinterpret_cast<std::uintptr_t>(
+            PersistencePlayerReaderRelayEntry);
+    const auto playerPreviewRelayAddress =
+        reinterpret_cast<std::uintptr_t>(
+            PersistencePlayerPreviewRelayEntry);
+    if (playerSaveFinalizeRelayAddress < baseAddress
+            || auxiliaryReaderRelayAddress < baseAddress
+            || playerReaderRelayAddress < baseAddress
+            || playerPreviewRelayAddress < baseAddress) {
         ReleaseUnpatchedResources();
         return SetError(
-            error, "persistence finalize relay precedes the D2R image");
+            error, "persistence codec relay precedes the D2R image");
     }
     PreparedCodecActivationTargets =
         LoaderCodecPatchAuthority::BindPreparedRelay(
+            auxiliaryReaderRelayAddress - baseAddress,
+            playerReaderRelayAddress - baseAddress,
+            playerPreviewRelayAddress - baseAddress,
             playerSaveFinalizeRelayAddress - baseAddress);
     if (!CanEncodeRel32(
             baseAddress + PersistenceReaderPatchRva,
@@ -1126,7 +1417,19 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
             || !CanEncodeRel32(
                 baseAddress + PlayerSaveFinalizeCallRva,
                 reinterpret_cast<std::uintptr_t>(
-                    PersistencePlayerSaveFinalizeRelayEntry))) {
+                    PersistencePlayerSaveFinalizeRelayEntry))
+            || !CanEncodeRel32(
+                baseAddress + AuxiliaryReaderCallRva,
+                auxiliaryReaderRelayAddress)
+            || !CanEncodeRel32(
+                baseAddress + PlayerReaderPrimaryCallRva,
+                playerReaderRelayAddress)
+            || !CanEncodeRel32(
+                baseAddress + PlayerReaderLegacyCallRva,
+                playerReaderRelayAddress)
+            || !CanEncodeRel32(
+                baseAddress + PlayerPreviewCallRva,
+                playerPreviewRelayAddress)) {
         ReleaseUnpatchedResources();
         return SetError(error, "persistence relay lies outside rel32 reach");
     }
@@ -1322,6 +1625,51 @@ auto BuildDescriptionIndexNative(void* dataTables) -> std::uint32_t {
 }
 
 } // namespace
+
+extern "C" auto ISC12ReadAuxiliaryWithPreflight(
+        void* context,
+        void* unit,
+        std::uint8_t** cursor,
+        std::uint8_t* end,
+        std::uint32_t version,
+        std::int32_t count) noexcept -> std::int32_t {
+    return ReadPlayerStatsWithPreflight(
+        NativeAuxiliaryReader,
+        PlayerStatStreamKind::Auxiliary,
+        context,
+        unit,
+        cursor,
+        end,
+        version,
+        count);
+}
+
+extern "C" auto ISC12ReadRegularWithPreflight(
+        void* context,
+        void* unit,
+        std::uint8_t** cursor,
+        std::uint8_t* end,
+        std::uint32_t version,
+        std::int32_t count) noexcept -> std::int32_t {
+    return ReadPlayerStatsWithPreflight(
+        NativePlayerReader,
+        PlayerStatStreamKind::Regular,
+        context,
+        unit,
+        cursor,
+        end,
+        version,
+        count);
+}
+
+extern "C" auto ISC12CopyPreviewWithPreflight(
+        void* object,
+        void* destination,
+        std::uint32_t capacity,
+        std::uint64_t offset) noexcept -> std::uint32_t {
+    return CopyPlayerPreviewWithPreflight(
+        object, destination, capacity, offset);
+}
 
 extern "C" auto ISC12BuildDescriptionIndex(void* dataTables) noexcept
         -> std::uint32_t {
@@ -1544,7 +1892,21 @@ auto PrepareLoaderExtension(
             || !ValidateImageTarget(
                 PersistenceWriterRejectedRva, 1, true)
             || !ValidateImageTarget(
+                AuxiliaryReaderCallRva, 5, true)
+            || !ValidateImageTarget(
+                PlayerReaderPrimaryCallRva, 5, true)
+            || !ValidateImageTarget(
+                PlayerReaderLegacyCallRva, 5, true)
+            || !ValidateImageTarget(
+                PlayerPreviewCallRva, 5, true)
+            || !ValidateImageTarget(
                 PlayerSaveFinalizeCallRva, 5, true)
+            || !ValidateImageTarget(
+                NativeAuxiliaryReaderRva, 1, true)
+            || !ValidateImageTarget(
+                NativePlayerReaderRva, 1, true)
+            || !ValidateImageTarget(
+                NativePlayerPreviewCopyRva, 1, true)
             || !ValidateImageTarget(
                 NativeByteBufferResizeRva, 1, true)
             || !ValidateImageTarget(
@@ -1575,6 +1937,12 @@ auto PrepareLoaderExtension(
         LoaderBase + NativeSetObjectStateRva);
     NativeSetObjectAux = reinterpret_cast<NativeSetObjectAuxFn>(
         LoaderBase + NativeSetObjectAuxRva);
+    NativeAuxiliaryReader = reinterpret_cast<NativePlayerStatReaderFn>(
+        LoaderBase + NativeAuxiliaryReaderRva);
+    NativePlayerReader = reinterpret_cast<NativePlayerStatReaderFn>(
+        LoaderBase + NativePlayerReaderRva);
+    NativePlayerPreviewCopy = reinterpret_cast<NativePlayerPreviewCopyFn>(
+        LoaderBase + NativePlayerPreviewCopyRva);
     if (!PrepareRelay(error)) return false;
     if (!PreparePersistenceRelay(error)) return false;
 
@@ -1591,6 +1959,19 @@ auto InstallLoaderExtension(std::string& error) noexcept
             || !PersistenceReaderRelayEntry
             || !PersistenceWriterRelayEntry
             || !PersistencePlayerSaveFinalizeRelayEntry
+            || !PersistenceAuxiliaryReaderRelayEntry
+            || !PersistencePlayerReaderRelayEntry
+            || !PersistencePlayerPreviewRelayEntry
+            || !gISC12CodecReturnExit
+            || !NativeAuxiliaryReader
+            || !NativePlayerReader
+            || !NativePlayerPreviewCopy
+            || PreparedCodecActivationTargets.AuxiliaryReaderRelayRva()
+                == 0
+            || PreparedCodecActivationTargets.PlayerReaderRelayRva()
+                == 0
+            || PreparedCodecActivationTargets.PlayerPreviewRelayRva()
+                == 0
             || PreparedCodecActivationTargets.PlayerSaveFinalizeRelayRva()
                 == 0) {
         SetError(error, "loader extension was not prepared");
@@ -1722,6 +2103,9 @@ auto ShutdownLoaderExtension() noexcept -> void {
         }
         PersistenceState->readerHandler = nullptr;
         PersistenceState->writerHandler = nullptr;
+        PersistenceState->auxiliaryReaderHandler = nullptr;
+        PersistenceState->playerReaderHandler = nullptr;
+        PersistenceState->playerPreviewHandler = nullptr;
     }
     if (State) {
         InterlockedExchange(&State->operational, 0);
@@ -1754,6 +2138,9 @@ auto ShutdownLoaderExtension() noexcept -> void {
         NativeByteBufferResize = nullptr;
         NativeSetObjectState = nullptr;
         NativeSetObjectAux = nullptr;
+        NativeAuxiliaryReader = nullptr;
+        NativePlayerReader = nullptr;
+        NativePlayerPreviewCopy = nullptr;
         gISC12LoaderSuccessExit = nullptr;
         gISC12LoaderVanillaExit = nullptr;
     }

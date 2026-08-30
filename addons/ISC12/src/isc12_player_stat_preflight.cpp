@@ -1,6 +1,7 @@
 #include "isc12_player_stat_preflight.hpp"
 
 #include "isc12_contract.hpp"
+#include "isc12_envelope.hpp"
 
 #include <limits>
 
@@ -113,6 +114,39 @@ auto PreflightPlayerStatStream(
         }
         ++entryCount;
     }
+}
+
+auto PreflightPlayerPreviewD2S(
+        std::span<const std::uint8_t> d2s,
+        std::span<const ItemStatSemanticRow> schema,
+        PlayerPreviewPreflightResult& output) noexcept
+        -> PlayerPreviewPreflightError {
+    if (d2s.size() > PlayerPreviewBufferCapacity
+            || d2s.size() <= PlayerPreviewDataContextOffset
+            || d2s.size() <= PlayerPreviewRegularStatOffset) {
+        return PlayerPreviewPreflightError::InvalidArgument;
+    }
+    if (!ValidateInnerStore(StoreKind::D2S, d2s)) {
+        return PlayerPreviewPreflightError::InvalidContainer;
+    }
+    const auto dataContext = d2s[PlayerPreviewDataContextOffset];
+    if (dataContext >= PlayerPreviewDataContextCount) {
+        return PlayerPreviewPreflightError::InvalidDataContext;
+    }
+
+    PlayerStatPreflightResult playerStats;
+    if (PreflightPlayerStatStream(
+            d2s.subspan(PlayerPreviewRegularStatOffset),
+            schema,
+            PlayerStatStreamKind::Regular,
+            playerStats) != PlayerStatPreflightError::None) {
+        return PlayerPreviewPreflightError::InvalidPlayerStatStream;
+    }
+    output = {
+        .playerStats = playerStats,
+        .dataContext = dataContext,
+    };
+    return PlayerPreviewPreflightError::None;
 }
 
 } // namespace ruffneckk::isc12

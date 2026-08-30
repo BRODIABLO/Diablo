@@ -20,9 +20,11 @@ stays resident in a `partial-commit-cold-restart-required` state. The persistent
 RX relay and separate RW state page also prevent shutdown from leaving an
 executing thread inside an unloaded DLL.
 
-The generic item, player-save and packet codecs are still 9-bit. Consequently,
-this stage must not be used to create, load, save or transmit ISC12 data. The
-shipped TOML and embedded fallback both keep the experiment disabled.
+The live process remains entirely 9-bit because the prepared generic-item and
+player-save codec transaction is unpublished; packet codecs are not implanted.
+Consequently, this stage must not be used to create, load, save or transmit
+ISC12 data. The shipped TOML and embedded fallback both keep the experiment
+disabled.
 
 The current off-runtime source also prepares the G10-B persistence boundary:
 exact D2S/D2I objects can be unwrapped only after the 96-byte envelope, schema
@@ -32,23 +34,42 @@ native cleanup continuations and rundown state are prepared but deliberately
 unpublished. `InstalledHookCount` remains zero and `codecReady` is never set, so
 neither save seam can execute until the 12-bit item/player codecs are complete.
 
-G2–G4 are now prepared off-runtime as three atomic player/save/preview groups.
-Four auxiliary sites, six regular player-stat sites and four exhaustive
-preview ID readers yield 28 governed byte slots: the width 9 / terminator
-`0x1FF` changes, a loader-bound rel32 to a copied RX finalize leaf, and final
-overflow-status publication. Every exact owner/site fingerprint is
-preflighted with 39 unchanged owner, buffer, capacity, layout and overrun
-witnesses before a group can write. The clean-sheet schema rejects
-`CsvBits > 32` and `CsvParamBits > 16`, and a pure G2/G3 parser now refuses bad
-markers, IDs, widths, truncation, more than 512 entries and missing terminators.
-It is not connected to native reader entries yet. The G3 finalize leaf preserves
-the native used-end result in RAX, returns the sticky overrun flag in EDX, and
-is prepared without using D2R padding or unwind-owned bytes. Its CALL is flushed
-before `mov eax, edx` is published as the final site. Publication still requires
-a process-lifetime relay reservation, a separately proven quiescent boundary,
-G4 whole-inner terminator bounds and immediate fail-fast handling of any
-uncertain write or flush. These mutations are still source-only:
-`PublishedCodecMutationCount` is zero.
+G1–G4 are now prepared off-runtime as one canonical four-group transaction,
+ordered G2, G4, G1, G3 so overflow-status publication remains final. Twenty
+exact mutable windows yield 49 governed byte slots: G1's nine
+one-byte width/sentinel/seed changes across four unique interior windows, four
+reader/copy CALL rel32 redirects, the remaining width 9 / terminator `0x1FF`
+changes, a loader-bound rel32 to a copied RX finalize leaf, and final
+overflow-status publication. Every mutation fingerprint is preflighted with
+51 unchanged runtime owner, return, buffer, capacity, layout, cleanup and
+overrun witnesses before any group can write. The G1 subsequent-reader window
+also requires its interior CALL to resolve exactly to the governed native
+`BITSTREAM_ReadBitsThunk`; arbitrary retargeting fails before any write.
+
+The clean-sheet schema rejects `CsvBits > 32` and `CsvParamBits > 16`. The G2
+and G3 exhaustive callers are prepared to enter process-lifetime RX relays,
+then no-throw FRAME wrappers that accept only v105, validate marker, IDs,
+widths, truncation, the 512-entry cap and terminator, and invoke the untouched
+native readers under the immutable schema snapshot. Rejection returns the
+native malformed status `0x12`; a successful native cursor that differs from
+the preflight used-end fast-fails. G4 leaves its legacy branch A in 9-bit form,
+changes only the v105 branch B, and prepares the exact copy CALL so the original
+SaveObject copy runs once before whole-D2S validation. Invalid magic, version,
+size, checksum, data context, marker, ID, payload bound or sentinel returns zero
+through the native buffer-free/false exit.
+
+The G3 finalize leaf preserves the native used-end result in RAX, returns the
+sticky overrun flag in EDX, and is prepared without using D2R padding or
+unwind-owned bytes. Its CALL is flushed before `mov eax, edx` is published as
+the final site. A move-only opaque RAII lease now gates every full-set
+fingerprint, write and flush, including loss-of-authority handling before and
+after the first attempted mutation. The pinned D2RLoader SDK provides no
+production issuer for that lease, so publication still requires a documented
+loader-owned quiescent boundary, G9 network ownership/budgets, G10 activation
+and immediate fail-fast handling of any uncertain write or flush. The process-lifetime relay
+page is prepared, but no codec commit caller exists: `InstalledHookCount` and
+`PublishedCodecMutationCount` are zero, `codecReady` stays false, and D2R has
+not been run.
 
 ## Planned release installation contract
 

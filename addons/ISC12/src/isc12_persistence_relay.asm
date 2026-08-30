@@ -2,15 +2,22 @@ OPTION CASEMAP:NONE
 
 EXTERN ISC12PrepareNativeStoreRead:PROC
 EXTERN ISC12PrepareNativeStoreWrite:PROC
+EXTERN ISC12ReadAuxiliaryWithPreflight:PROC
+EXTERN ISC12ReadRegularWithPreflight:PROC
+EXTERN ISC12CopyPreviewWithPreflight:PROC
 
 EXTERN gISC12PersistenceReaderContinueExit:QWORD
 EXTERN gISC12PersistenceReaderRejectedExit:QWORD
 EXTERN gISC12PersistenceWriterVanillaExit:QWORD
 EXTERN gISC12PersistenceWriterCommittedExit:QWORD
 EXTERN gISC12PersistenceWriterRejectedExit:QWORD
+EXTERN gISC12CodecReturnExit:QWORD
 
 PUBLIC ISC12PersistenceReaderMidHook
 PUBLIC ISC12PersistenceWriterMidHook
+PUBLIC ISC12AuxiliaryReaderCallHook
+PUBLIC ISC12PlayerReaderCallHook
+PUBLIC ISC12PlayerPreviewCallHook
 PUBLIC ISC12PersistenceRelayTemplateBegin
 PUBLIC ISC12PersistenceRelayTemplateWriterEntry
 PUBLIC ISC12PersistenceRelayTemplateReaderContinueExit
@@ -19,6 +26,10 @@ PUBLIC ISC12PersistenceRelayTemplateWriterVanillaExit
 PUBLIC ISC12PersistenceRelayTemplateWriterCommittedExit
 PUBLIC ISC12PersistenceRelayTemplateWriterRejectedExit
 PUBLIC ISC12PersistenceRelayTemplatePlayerSaveFinalizeEntry
+PUBLIC ISC12PersistenceRelayTemplateAuxiliaryReaderEntry
+PUBLIC ISC12PersistenceRelayTemplatePlayerReaderEntry
+PUBLIC ISC12PersistenceRelayTemplatePlayerPreviewEntry
+PUBLIC ISC12PersistenceRelayTemplateCodecReturnExit
 PUBLIC ISC12PersistenceRelayTemplateStatePointer
 PUBLIC ISC12PersistenceRelayTemplateEnd
 
@@ -92,6 +103,45 @@ PlayerSaveFinalizeNoIncrement:
     mov edx, dword ptr [rcx+20h]
     ret
 
+; These three entries are CALL targets, not inline prologue detours. Their
+; native return address therefore remains on the original stack. The DLL FRAME
+; wrappers call the untouched native owners, then leave the DLL through the
+; shared copied exit so rundown reaches zero only after all DLL code is gone.
+ALIGN 16
+ISC12PersistenceRelayTemplateAuxiliaryReaderEntry:
+    mov r11, qword ptr [ISC12PersistenceRelayTemplateStatePointer]
+    lock inc dword ptr [r11]
+    cmp dword ptr [r11+4], 0
+    je PersistenceRelayFailClosed
+    cmp dword ptr [r11+8], 0
+    je PersistenceRelayFailClosed
+    jmp qword ptr [r11+48h]
+
+ALIGN 16
+ISC12PersistenceRelayTemplatePlayerReaderEntry:
+    mov r11, qword ptr [ISC12PersistenceRelayTemplateStatePointer]
+    lock inc dword ptr [r11]
+    cmp dword ptr [r11+4], 0
+    je PersistenceRelayFailClosed
+    cmp dword ptr [r11+8], 0
+    je PersistenceRelayFailClosed
+    jmp qword ptr [r11+50h]
+
+ALIGN 16
+ISC12PersistenceRelayTemplatePlayerPreviewEntry:
+    mov r11, qword ptr [ISC12PersistenceRelayTemplateStatePointer]
+    lock inc dword ptr [r11]
+    cmp dword ptr [r11+4], 0
+    je PersistenceRelayFailClosed
+    cmp dword ptr [r11+8], 0
+    je PersistenceRelayFailClosed
+    jmp qword ptr [r11+58h]
+
+ISC12PersistenceRelayTemplateCodecReturnExit:
+    mov r11, qword ptr [ISC12PersistenceRelayTemplateStatePointer]
+    lock dec dword ptr [r11]
+    ret
+
 ALIGN 8
 ISC12PersistenceRelayTemplateStatePointer QWORD 0
 ISC12PersistenceRelayTemplateEnd LABEL BYTE
@@ -162,5 +212,47 @@ WriterCommitted:
 WriterRejected:
     jmp qword ptr [gISC12PersistenceWriterRejectedExit]
 ISC12PersistenceWriterMidHook ENDP
+
+ALIGN 16
+ISC12AuxiliaryReaderCallHook PROC FRAME
+    ; Preserve the native six-argument ABI when nesting the noexcept helper.
+    ; At entry arg5/arg6 are [RSP+28h]/[RSP+30h]. After 38h bytes of shadow,
+    ; outgoing arg5/arg6 live at [RSP+20h]/[RSP+28h].
+    sub rsp, 38h
+    .allocstack 38h
+    .endprolog
+    mov eax, dword ptr [rsp+60h]
+    mov dword ptr [rsp+20h], eax
+    mov eax, dword ptr [rsp+68h]
+    mov dword ptr [rsp+28h], eax
+    call ISC12ReadAuxiliaryWithPreflight
+    add rsp, 38h
+    jmp qword ptr [gISC12CodecReturnExit]
+ISC12AuxiliaryReaderCallHook ENDP
+
+ALIGN 16
+ISC12PlayerReaderCallHook PROC FRAME
+    sub rsp, 38h
+    .allocstack 38h
+    .endprolog
+    mov eax, dword ptr [rsp+60h]
+    mov dword ptr [rsp+20h], eax
+    mov eax, dword ptr [rsp+68h]
+    mov dword ptr [rsp+28h], eax
+    call ISC12ReadRegularWithPreflight
+    add rsp, 38h
+    jmp qword ptr [gISC12CodecReturnExit]
+ISC12PlayerReaderCallHook ENDP
+
+ALIGN 16
+ISC12PlayerPreviewCallHook PROC FRAME
+    ; Four-argument native copy ABI; 28h supplies shadow and call alignment.
+    sub rsp, 28h
+    .allocstack 28h
+    .endprolog
+    call ISC12CopyPreviewWithPreflight
+    add rsp, 28h
+    jmp qword ptr [gISC12CodecReturnExit]
+ISC12PlayerPreviewCallHook ENDP
 
 END
