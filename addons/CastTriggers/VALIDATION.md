@@ -1,92 +1,163 @@
-# Cast Triggers validation
+# Cast Triggers 0.1.0 validation
 
-Status as of **24 August 2026**: **release candidate, not publishable yet**.
-Static, build, data-compilation and both installation-scope gates are proven.
-Gameplay is blocked by an independent D2Prism presentation failure, and the
-current complete Suite gate is blocked by a newly deployed Resistance Floor
-failure that occurs before Cast Triggers loads.
+Status as of **30 August 2026**: **0.1.0 release package prepared locally; not
+yet published**.
+The channeling, combat-trigger and persistent authoritative input-routing
+implementation is built and documented. Vincent authorized deployment to the
+full BKVince/QtyTester stack. The fresh full-stack cold start passed; gameplay
+for targeting, channeling, Attack Attempt, Crushing Blow and Open Wounds passed.
+The Critical marker-loss cause is proven, fixed and passed in focused gameplay.
+The Deadly Strike negative gate exposed stale Critical provenance on reused
+`D2Damage` storage; the lifecycle reset is implemented and passed its focused
+gameplay retest. Combat-family filtering and proc-chain exclusion also passed
+their focused gameplay gate. The split runtime counter export is now fully
+visible and passed with zero Critical-marker overflow.
 
-## Static gates
+## Current candidate
 
-| Gate | Status | Current proof |
+| Gate | Status | Evidence |
 |---|---|---|
-| Policy and strict TOML tests | passed | Release CTest `cast-triggers-policy`, 1/1 passed |
-| Release x64 build | passed | MSVC Release against PluginSDK `4933e2c42cb2592958cd0df3b6dc5003102252d1` |
-| Metadata and scope | passed | `0.1.0`, `RuffnecKk`, `Server + NativeHooks`, no `ModScopedOnly` |
-| D2R 3.3.93847 signatures | passed | Three owned hook entries and four direct helpers matched before hook installation |
-| Native source filtering | passed | Unit tests cover manual-player, cast animation, sequence-to-cast and repeat exclusions |
-| Intermod table integrity | passed | Vanilla 3.3 source round-trips byte-exact; generated fixture remains CRLF-only |
-| Exact hook-range scan | passed | No other governed addon source owns `0x43ACB0`, `0x5896E0` or `0x589820`; EventFunc20 remains owned by Melee Splash |
+| Version and author | passed | `0.1.0`, author `RuffnecKk` |
+| Scope | passed statically | Global or mod-local; no `ModScopedOnly` |
+| Version allowlist | passed | Build name/version are diagnostic only; no allowlist exists |
+| TOML parser | passed | Strict top-level, channel interval and distinct combat-stat ID validation |
+| Public TOML collision safety | passed | Combat IDs default to `0/0/0/0`; a consuming mod must opt in with its own IDs |
+| Tooltip localization | passed statically, at cold start and through focused item inspection | The fixture idempotently merges all six canonical entries into the loaded `item-modifiers.json`, rejects key/ID/content collisions and verifies one complete entry per trigger; the README gives modders the exact recognized path, six JSON entries, collision rules and same-level formatter requirements |
+| Channel cadence | passed in gameplay | Inferno dispatches immediately and then every 50 authoritative server frames while held |
+| Cast-on-cast attack exclusion | passed statically; historical gameplay pass | Weapon animations are not eligible source casts |
+| Custom Cast on Attack Attempt | passed in gameplay | Accepted attack-family inputs dispatch before hit resolution; direct targets, misses and Shift-ground attempts work without a skill-ID allowlist |
+| Critical provenance | passed in gameplay, including Deadly exclusion | Weapon-mastery/passive Critical RNG is predicted without mutating the seed and confirmed by the native result. A new logical hit retires any marker on reused `D2Damage` storage before prediction, while copies made during that hit still preserve provenance. A 100% Deadly Strike ring produced no Critical Fire Ball after a positive Critical proc in the same session |
+| Diagnostic performance | synchronous cause proven and removed; buffered export runtime-confirmed | The earlier synchronous trace produced 122 log lines in 11 seconds around 9 Critical Fire Ball procs and caused visible frame drops. The current candidate replaces hot-path writes with a bounded 64-entry in-memory trace; the runtime command reported `retained=64/64`, `total=702` and `combat-hook logging=deferred`. The public TOML still defaults diagnostics to false |
+| Crushing Blow observation | passed in gameplay | EventFunc16 original return is authoritative |
+| Open Wounds observation | passed in gameplay | EventFunc15 original return is authoritative |
+| Combat stat filtering | passed by policy tests and gameplay | With the Mana Potion ring and no Crushing Blow source, Critical launched Fire Ball while the unmatched Crushing Blow Nova remained inactive |
+| Proc-chain guard | passed statically and in gameplay | With the Mana Potion and Antidote rings equipped together, the Critical Fire Ball did not feed the cast-on-cast family or launch a second Fire Ball |
+| Target routing | passed in gameplay | War Cry and Taunt preserve direct-unit and Shift-click ground targets across direction changes; Inferno channel ticks retain current input |
+| Console diagnostics | passed at runtime | The three status lines remain fully visible. The final capture reported Critical `created=1`, `propagated=3`, `consumed=1`, `removed=1`, `event flags without marker=0` and `critical marker overflows=0` |
+| Debug build/test | passed | CTest 1/1 |
+| Release build/test | passed | CTest 1/1 |
+| Reproducible DLL | passed | Two independent Debug/Release build trees passed CTest 1/1 and produced byte-identical Release DLLs, SHA-256 `495C8AFE...3C5ED` |
+| Full BKVince 3.3 lab | final packaged DLL cold start passed | The packaged/runtime DLL hash matched the independent rebuild, its fingerprint passed, all 24 startup stages completed, 36 plugins loaded and all five eezstreet plugins remained active. Its config-only embedded comment delta does not alter gameplay hooks. The known Revive Overhaul failure remains unrelated |
+| Public ZIP | prepared locally; human README insertion and publication pending | `CastTriggers-0.1.0.zip` contains exactly the DLL and TOML at its root. Both extracted entries hash-match the validated package. README is beside the ZIP for Vincent's required review |
 
-## Disposable intermod fixture
+## Native fingerprint
 
-The separate `CastTriggersTest` fixture does not read or modify BKVince data.
-It generated free stat IDs `368/369`, free property IDs `284/285`, two cube
-recipes and independent localization. D2R compiled **188 tables** from TXT:
-185 game tables and the three fixture overlays.
-The pre-existing Blizzard ItemStatCost duplicate ID `213` is preserved
-unchanged; neither custom ID collides with it or any other row.
+All 27 exact witnesses are validated before the first hook is installed. A
+mismatch refuses loading cleanly. The governed common corpus proves the same
+RVA, bytes and ABI for D2R 3.2.92777 and 3.3.93847; only 3.3.93847 receives the
+current runtime matrix unless a surface or environment differs.
 
-| Case | Status | Current proof or blocker |
-|---|---|---|
-| Fixed and source-level properties compile | passed | ItemStatCost, Properties and CubeMain compile without table error |
-| Mod-local diagnostics override global config | passed | Plugin log resolves `mods/CastTriggersTest/d2rloader/config/ruffneckk-cast-triggers.toml` |
-| 25% fixed level 12 Fire Ball | blocked | No visible gameplay frame because D2Prism reports `Present failed` |
-| 100% one proc per eligible cast | blocked | Same presentation blocker |
-| Source effective level, including bonuses | blocked | Same presentation blocker; diagnostic requested/effective-level proof not produced |
-| Frost Nova triggers Nova | blocked | Same presentation blocker |
-| Attack exclusion | not run | Requires gameplay input |
-| Inferno and Arctic Blast exclusion | not run | Requires gameplay input |
-| Lightning and Chain Lightning single dispatch | not run | Requires gameplay input |
-| Triggered-skill chain exclusion | not run | Requires gameplay input |
-| Include/exclude runtime behavior | not run | Parsing and policy pass; gameplay behavior remains open |
+| Surface | RVA | Use |
+|---|---:|---|
+| Central server skill handler | `0x43ACB0` | Hook manual cast completion |
+| Skill-handler context witness | `0x43ACEC` | Prove `Game+0x106` access |
+| Server-frame witness | `0x42E615` | Prove `Game+0x170` frame |
+| Unit-stat event wrapper | `0x44D570` | Hook damage events; dispatch synthetic `doactive` |
+| Player position-input executor | `0x4FDB40` | Persist exact ground/Shift input before player-mode finalization |
+| Player unit-input executor | `0x4F8DE0` | Persist exact target type/GUID before player-mode finalization |
+| Active-skill layout witness | `0x33DBA0` | Prove `D2Skill+0x00 -> SkillsTxt` and the compiled skill ID association |
+| Server unit resolver | `0x48FE80` | Resolve persisted type/GUID to a fresh native unit at handler consumption |
+| Target resolver | `0x48FE20` | Observe native unit targets |
+| Unit type helper | `0x34B9D0` | Restrict source actors to players |
+| Dynamic path helper | `0x34AE80` | Filter ground-target observations |
+| First-point X/Y | `0x341CC0`, `0x341CD0` | Observe native ground target |
+| SkillsTxt lookup | `0x097790` | Classify cast/repeat animation |
+| SkillsTxt stride witness | `0x09780B` | Prove compiled stride `0x2EC` |
+| Item-skill casters | `0x5896E0`, `0x589820` | Same-level substitution, target routing and chain guard |
+| Damage builder | `0x44C030` | Capture strict Critical provenance |
+| Damage copy/move/destructor | `0x4494B0`, `0x449760`, `0x4496E0` | Propagate, transfer and retire Critical markers |
+| Open Wounds callback | `0x584170` | Observe successful native Open Wounds |
+| Crushing Blow callback | `0x583150` | Observe successful native Crushing Blow |
+| EventFunc20 | `0x583B30` | Filter synthetic stat families only |
+| Active weapon resolver | `0x4242B0` | Mirror mastery-Critical prerequisites |
+| Mastery Critical helper | `0x33D4F0` | Read native Critical chance |
+| Unit stat getter | `0x2F5020` | Read passive Critical stat 337 |
+| Unit seed accessor | `0x34A1E0` | Predict the native roll without advancing it |
 
-The same-level `max=64` encoding is supported by D2MOO semantics and accepted
-by the current D2R TXT compiler. It must not be declared runtime-proven until a
-fresh diagnostic line shows `requested-level=0` and the source effective level
-as `effective-level`.
+The five pinned eezstreet plugins do not own EventFunc15, EventFunc16,
+EventFunc20, the damage builder/copy/move/destructor or the Critical helper surfaces.
+Their item-skill patches remain inside the caster bodies, after Cast Triggers'
+entry hooks. The current candidate passed a fresh full-stack cold start; another
+is required only if a remaining gate changes the DLL before release. The public
+plugin has no BKVince, BKVCombat or Melee Splash dependency.
 
-## Runtime matrix
+## BKVince laboratory
 
-| Gate | Status | Current proof |
-|---|---|---|
-| Build identity | passed | D2R `3.3.93847`, Build Key `623f7a1f73eabb08ccb2b2046e3f9164` |
-| Global scope and hooks | passed | 17:30 cold start loaded final DLL hash `0C9B…695C9` as `[global]`; startup completed |
-| Mod-local scope and hooks | passed | 17:32 cold start loaded final DLL hash `0C9B…695C9` as `[mod]`; 25 plugins, five eezstreet plugins, startup completed |
-| No duplicate scope | passed | Global DLL was absent during the mod-local run |
-| Current complete Suite coexistence | blocked | At 17:30, the refreshed `Resistance Floor [mod]` still failed before Cast Triggers loaded: safety-check size did not match its jmp-rel32 patch at `0x4524C4` |
-| Earlier complete-stack observation | passed, superseded | At 17:11, before Resistance Floor appeared in the runtime, 31 plugins and 18 patches loaded with Cast Triggers `[global]` and startup completed |
-| Five eezstreet plugins | passed | Items, Levels, Misc, Quests and Skills loaded in global and mod-local-scope cold starts |
-| Gameplay counters | blocked | No source-cast or proc counters can be collected through the transparent frontend |
-| Multiplayer host/client | not run | Gameplay gate must pass first |
+Gameplay qualification is performed in the full active BKVince stack with
+QtyTester, not in an isolated mod. The deterministic fixture provides nine
+recipes:
 
-The Resistance Floor failure is not attributed to Cast Triggers: it occurs
-earlier in load order, and Cast Triggers subsequently loads successfully. It
-still blocks the mandatory *current* all-components-active Suite claim.
+1. fixed cast-on-cast Fire Ball;
+2. same-level Nova from a Stamina Potion;
+3. Inferno/Chain Lightning channel and cast-chain gate;
+4. custom Cast on Attack Attempt;
+5. positive Critical Strike;
+6. Deadly Strike exclusion;
+7. Crushing Blow;
+8. Open Wounds;
+9. combat-family filtering plus proc-chain exclusion.
 
-## Packaging and rollback
+No custom recipe consumes a Town Portal Scroll, and no separate 25% gameplay
+case exists. All gameplay gates use 100% for deterministic observation. The
+generated ItemStatCost, Properties, CubeMain and CharStats tables passed
+byte-exact parser round-trip, CRLF and row-width checks before deployment. The
+source tables and recipes are already present in BKVince. The current DLL
+deployment is authorized and its installed hash must match the reproducible
+artifact before launch.
 
-| Gate | Status | Requirement |
-|---|---|---|
-| ZIP payload | passed | `CastTriggers-0.1.0-rc.zip`, exactly the DLL and TOML |
-| Human-review documents | passed | README, intermod guide and this validation file remain outside the ZIP |
-| Reproducible DLL | passed | Two consecutive Release builds produced the same SHA-256 |
-| Rollback | passed by design | Remove DLL/TOML; no proprietary save payload or migration exists |
+The full BKVince laboratory completed a fresh 3.3.93847 cold start. Fingerprint
+acceptance, hook installation, TXT compilation and startup passed. Vincent also
+passed War Cry/Taunt direct and Shift-click routing plus Inferno immediate and
+50-frame channel cadence. Diagnostics show Inferno position dispatches at frames
+3695, 3745, 3795, 3845 and 3895. The focused Critical retest proved each native
+outcome traversed marker creation, deep copy, move into the combat record, final
+deep copy, event consumption and `critical-strike` dispatch. The Deadly Strike
+negative gate then proved that D2R can reuse the original damage-builder address:
+four created markers yielded 48 Critical dispatches from a recurring address.
+The new lifecycle reset removes that stale marker before each new player damage
+build. Vincent then confirmed in the same runtime that the 100% Deadly Strike
+ring no longer launches Fire Ball. Combat-family filtering and proc-chain
+exclusion subsequently passed. The final status-only candidate completed a full
+cold start and displayed every counter without clipping; the capture ended with
+`event flags without marker=0` and `critical marker overflows=0`. No gameplay
+gate remains open for this DLL candidate.
 
-Final release-candidate artifacts:
+## Artifacts
 
 | File | Bytes | SHA-256 |
 |---|---:|---|
-| `d2rl-ruffneckk-cast-triggers.dll` | 174592 | `0C9B3FA38B8AABC330A66B67AA39B8F47E9B3D852A619F54EB7F3E1C112695C9` |
-| `ruffneckk-cast-triggers.toml` | 621 | `CB0C4EE88346EE08CC9366A6130C8D1B5BE7CDEBC656163584CD1722C6FC05F5` |
-| `CastTriggers-0.1.0-rc.zip` | 82833 | `3D10C3F2076D58299951A87145E362C01F3DCA7884884869007FA664390EEF80` |
+| `d2rl-ruffneckk-cast-triggers.dll` | 227328 | `495C8AFED5F2A613F080A9B8ECF5009819FF556CC4090D7832114C532203C5ED` |
+| `ruffneckk-cast-triggers.toml` | 1462 | `18AE9459DA72730CB43B1A4154351D6296D2D118EC770217B169EBFF12888531` |
+| `CastTriggers-0.1.0.zip` | 102560 | `C91D58DB4A1BB55D9FDCFFE23827ED0EFCE4C691107AA4B6901B631F4EE34140` |
+| adjacent `README.md` | 19571 | `03F05C897301DD075B9DA00D182DA70616B2624CBE812807AEC575D35744FE4D` |
+| previous `CastTriggers-0.1.0-rc.zip` (superseded) | 96317 | `95B012496F74C8EE7C516AFC1E19B1A5C6A9F01A2360BFA99F8A7500D32AF00C` |
 
-## Gates required before publication
+The superseded ZIP contains exactly:
 
-1. Repair and requalify the independently developed Resistance Floor plugin,
-   then rerun the complete active Suite matrix without disabling anything.
-2. Resolve the D2Prism presentation failure and execute every gameplay case.
-3. Capture diagnostics proving fixed level, source effective level and proc
-   chain exclusion.
-4. Run solo host and client coverage because the hook is server-authoritative.
-5. Review the README beside the release-candidate ZIP before publication.
+```text
+d2rl-ruffneckk-cast-triggers.dll
+ruffneckk-cast-triggers.toml
+```
+
+README, intermod guide, lab guide and validation stay beside the archive for
+human review.
+
+## Runtime gate before publication
+
+1. Explicitly authorize deployment and launch in BKVince with QtyTester.
+2. Confirm all 27 fingerprints, 16 hooks, TXT compilation and startup from
+   fresh logs.
+3. Execute the deterministic matrix in `LAB-GUIDE.md`.
+4. Inspect `cast-triggers` counters for channel cadence, all combat outcomes,
+   family filtering, chain suppression and zero Critical-marker overflow.
+5. Run the public full-stack coexistence cold start with all five eezstreet
+   plugins active.
+6. Run the relevant multiplayer host/client coverage because the hooks are
+   server-authoritative.
+7. Review the README beside the release-candidate ZIP before publication.
+
+## Rollback
+
+Remove the DLL and TOML or restore the previous candidate. Items retain their
+native encoded stats but custom `doactive` triggers become inert. The plugin
+adds no proprietary character or stash payload and requires no save migration.
