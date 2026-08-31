@@ -748,7 +748,7 @@
       "status": "paused",
       "owner": "Vincent + Codex",
       "mission": "Mission/d2r33-datatables-atlas.md",
-      "nextGate": "A0+A1+A2 are delivered: seven proven records/count/stride triplets, fail-closed validation, deterministic partial C++ and Ghidra views, byte-identical double generation, and 45 compiled static_asserts. After a separate GO, execute A3 only: statically inventory compile descriptors and callsites as candidates until independently proven; runtime hooks, A4 and an active-priority claim remain excluded, and ISC12 remains the current mission.",
+      "nextGate": "A0+A1+A2+A3 are delivered. The candidate-only static inventory covers 88 direct DATATBLS_CompileTxt callsites in 78 functions, recovers 81 literal strides and 55 unanimous source RVAs, and associates 340 descriptor shapes / 312 unique native entries through four byte-exact stores each; governed string regions yield zero invented names. A3 passes 8/8 tests and two independent outputs are byte-identical. The atlas remains paused and ISC12 stays current. Open A4 only after a separate GO tied to a concrete consumer, then independently prove table identity, records/count ownership, consumers, post-processing and lifecycle before promotion; runtime remains outside this gate.",
       "include": [
         "Mission/d2r33-datatables-atlas.md",
         "reverse-engineering/d2r-3.2.92777/datatables-atlas/**",

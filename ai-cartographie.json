@@ -40178,6 +40178,11 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "candidates.json",
+                                                                                                     "path":  "reverse-engineering/d2r-3.2.92777/datatables-atlas/candidates.json",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "catalog.json",
                                                                                                      "path":  "reverse-engineering/d2r-3.2.92777/datatables-atlas/catalog.json",
                                                                                                      "kind":  "file"
@@ -41093,6 +41098,21 @@
                                                                             {
                                                                                 "name":  "d2r33-datatables-compile.ps1",
                                                                                 "path":  "scripts/reverse-engineering/d2r33-datatables-compile.ps1",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "d2r33-datatables-extract.ps1",
+                                                                                "path":  "scripts/reverse-engineering/d2r33-datatables-extract.ps1",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "d2r33-datatables-extract.py",
+                                                                                "path":  "scripts/reverse-engineering/d2r33-datatables-extract.py",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "d2r33-datatables-extract.test.mjs",
+                                                                                "path":  "scripts/reverse-engineering/d2r33-datatables-extract.test.mjs",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

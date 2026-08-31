@@ -56,6 +56,26 @@ Les octets non établis restent des tableaux `unknownXXXX`. Le type
 décrire la fin réelle du conteneur. Les commentaires `candidate` de
 `Objects.Parm0` et `Shrines.LevelMin` sont conservés dans les deux formats.
 
+## Inventaire candidat A3
+
+- `candidates.json` recense les 88 appels directs vers
+  `DATATBLS_CompileTxt`, leurs fonctions, leurs fenêtres byte-exactes, les
+  arguments récupérables et les formes locales de descriptors;
+- `scripts/reverse-engineering/d2r33-datatables-extract.py` effectue l’analyse
+  déterministe à partir des images et de l’index vérifiés du workbench;
+- `scripts/reverse-engineering/d2r33-datatables-extract.ps1` sélectionne
+  l’environnement Python gouverné;
+- `scripts/reverse-engineering/d2r33-datatables-extract.test.mjs` ferme le mode
+  candidat seulement, les témoins States/ItemStatCost et la reproductibilité.
+
+A3 récupère 81 strides littéraux, 55 identités de source par RVA et 312 formes
+de descriptors uniques. Les zones de chaînes visées sont nulles dans l’image
+gouvernée : les noms restent donc `null`, avec le statut
+`unavailable-in-governed-image`. Une forme n’est admise que si ses quatre stores
+de 8 octets sont byte-exacts dans l’image canonique; elle demeure néanmoins un
+candidat, car ni l’identité de table, ni l’ownership records/count, ni les
+consommateurs et le cycle de vie ne sont démontrés par cette seule géométrie.
+
 ## Validation
 
 Depuis la racine du dépôt :
@@ -66,6 +86,8 @@ node --test scripts/reverse-engineering/d2r33-datatables-atlas.test.mjs
 node scripts/reverse-engineering/d2r33-datatables-generate.mjs --check
 node --test scripts/reverse-engineering/d2r33-datatables-generate.test.mjs
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/reverse-engineering/d2r33-datatables-compile.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/reverse-engineering/d2r33-datatables-extract.ps1 --check
+node --test scripts/reverse-engineering/d2r33-datatables-extract.test.mjs
 ```
 
 Le validateur refuse notamment :
@@ -81,8 +103,8 @@ Le validateur refuse notamment :
 
 ## Limites de la gate
 
-A2 génère les deux formats documentaires, mais aucun extracteur statique, hook,
-DLL, patch mémoire ou test runtime. Les headers ne deviennent pas une ABI SDK
-complète : ils consomment seulement les facts admis par le catalogue et
-conservent le reste inconnu. L'inventaire statique de nouveaux descriptors
-appartient à A3 et exige un gate séparé.
+A3 ajoute un extracteur statique, mais aucun hook, DLL, patch mémoire ou test
+runtime. `candidates.json` ne devient ni une ABI SDK, ni une extension implicite
+de `catalog.json` : il conserve les noms et associations non démontrés comme
+inconnus. Toute promotion appartient à A4 et exige un besoin concret, un nouveau
+`GO` et des preuves indépendantes sur l’ownership et la durée de vie.

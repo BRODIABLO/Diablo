@@ -2,10 +2,10 @@
 
 ## Statut
 
-Gates **A0+A1+A2 livrés** le 31 août 2026 après les `GO` de Vincent. L’atlas
-reste un workstream en pause et ne remplace pas la priorité active ISC12. Aucune
-analyse A3, hook runtime, DLL, mutation du jeu ni matrice runtime n’a été
-produit.
+Gates **A0+A1+A2+A3 livrés** le 31 août 2026 après les `GO` de Vincent. L’atlas
+reste un workstream en pause et ne remplace pas la priorité active ISC12. A3
+est un inventaire statique strictement candidat : aucun hook runtime, DLL,
+mutation du jeu, test de sauvegarde ni matrice runtime n’a été produit.
 
 ## Résultat A0+A1
 
@@ -39,6 +39,31 @@ produit.
   `59934CF1…AD885F`.
 - Le témoin compile avec MSVC 14.44 en C++20, `/W4 /WX`; la suite A2 passe
   `8/8`. Aucun nouveau reverse engineering ni accès runtime n’a été nécessaire.
+
+## Résultat A3
+
+- L’extracteur statique inventorie les `88` appels directs rel32 vers
+  `DATATBLS_CompileTxt` (`RVA 0x2FF970`) dans `78` fonctions du corpus gouverné.
+  Les `88` instructions d’appel et leurs fenêtres bornées sont byte-exactes
+  dans l’image canonique.
+- Il récupère `81/88` strides littéraux et `55` identités de source unanimes par
+  RVA. Les chaînes ciblées sont nulles dans l’image gouvernée : A3 conserve donc
+  leurs RVA et annonce honnêtement `0` nom de table récupéré.
+- La forme candidate `D2TxtFieldDesc` de 32 octets produit `340` associations
+  dans `37` clusters rattachés à `34` appels, soit `312` entrées natives uniques.
+  Chaque entrée exige quatre stores de 8 octets byte-exacts pour le pointeur de
+  nom, le type/count, l’offset de record et le linker/padding. Les noms restent
+  non résolus et aucune association n’est promue en field gouverné.
+- `ItemStatCost` fournit notamment le stride candidat `0x144` et six formes
+  locales fermées, dont les offsets de record `0x13C` et `0x140`; `States`
+  fournit le stride candidat `0x44` sans descriptor local récupérable dans sa
+  fonction. Ces observations ne prouvent ni le slot records, ni le compteur,
+  ni le consommateur ou la durée de vie.
+- `candidates.json` mesure `688 852` octets et porte le SHA-256
+  `822D1151978917B6B466C2F97158869D11B9DADCDFB33AC83493BA6623F064E0`.
+  La suite A3 passe `8/8`, son contrôle `--check` est byte-exact et deux sorties
+  indépendantes sont identiques. A3 ne modifie ni `catalog.json` ni
+  `known-rvas.json` : aucune preuve stable nouvelle n’a été promue.
 
 ## Objectif
 
@@ -85,7 +110,10 @@ dossier décrit sa provenance et non une baseline runtime distincte.
 - La couverture exacte des champs remplis après compilation.
 - Les post-traitements, caches et durées de vie qui ne sont pas exprimés par les
   descriptors TXT.
-- Le rendement réel d’un extracteur général au-delà du premier lot déjà prouvé.
+- L’identité textuelle des `55` sources repérées uniquement par RVA dans les
+  zones nulles de l’image gouvernée.
+- L’association des `312` formes uniques à des tables et fields nommés, ainsi
+  que leur consommation réelle après compilation.
 
 ## Architecture retenue — Option A
 
@@ -171,7 +199,7 @@ dans l’atlas.
   `{records, count, stride}`, le nombre de champs à haute confiance et la
   réduction des offsets dupliqués dans les futurs travaux.
 
-## Validation A0+A1+A2
+## Validation A0+A1+A2+A3
 
 1. `npm.cmd run re:d2r33 -- status` : workbench, image, index et Ghidra prêts.
 2. `node scripts/reverse-engineering/d2r33-datatables-atlas.mjs` : `VALID`,
@@ -186,7 +214,11 @@ dans l’atlas.
    quatre paires SHA-256 identiques.
 7. `scripts/reverse-engineering/d2r33-datatables-compile.ps1` : témoin C++20
    compilé avec Visual Studio Build Tools 17.14 / MSVC 14.44 et `/W4 /WX`.
-8. Validation du cadastre, `git diff --check` et examen du diff dédié avant le
+8. `scripts/reverse-engineering/d2r33-datatables-extract.ps1 --check` : les 88
+   appels et l’inventaire candidat versionné sont reproductibles byte-exactement.
+9. `node --test scripts/reverse-engineering/d2r33-datatables-extract.test.mjs` :
+   `8/8` tests réussis, y compris deux générations indépendantes identiques.
+10. Validation du cadastre, `git diff --check` et examen du diff dédié avant le
    handoff.
 
 Aucune matrice runtime n’est requise pour le catalogue documentaire seul. Une
@@ -196,9 +228,9 @@ gate séparé avec `d2r-runtime-validation`.
 ## Rollback
 
 Le chantier est additif. Avant toute consommation par un plugin, le rollback
-consiste à retirer le catalogue, ses sorties et ses scripts, puis à restaurer
-les seules entrées ROADMAP/workstream associées. Aucun état runtime ni format de
-sauvegarde n’est affecté.
+consiste à retirer le catalogue, l’inventaire candidat, leurs sorties et leurs
+scripts, puis à restaurer les seules entrées ROADMAP/workstream associées. Aucun
+état runtime ni format de sauvegarde n’est affecté.
 
 ## Frontière Git et prochain gate
 
@@ -208,7 +240,8 @@ Le futur lot possède `Mission/d2r33-datatables-atlas.md`, le répertoire dédi�
 `Mission/WORKSTREAMS.json` et le cadastre restent des registres partagés à
 modifier chirurgicalement. `Mission/CURRENT.md` demeure sur ISC12.
 
-**Prochain gate : A3.** Après un nouveau `GO`, inventorier statiquement les
-descriptors et callsites de compilation dans l’image canonique, sans hook
-runtime, et ne produire que des candidats tant que les preuves indépendantes ne
-ferment pas leurs contrats. Le runtime et A4 restent exclus.
+**Prochain gate : A4 à la demande seulement.** Après un nouveau `GO` lié à un
+besoin concret de plugin, patch ou diagnostic, fermer indépendamment l’identité
+de table, les records/count, les consommateurs, le post-traitement et la durée
+de vie avant toute promotion vers `known-rvas.json` et `catalog.json`. Aucun
+hook ou test runtime n’est autorisé par A3; ISC12 demeure la mission courante.
