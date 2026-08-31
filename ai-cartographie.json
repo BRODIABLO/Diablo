@@ -590,6 +590,60 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "AutoSort",
+                                                           "path":  "addons/AutoSort",
+                                                           "kind":  "directory",
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/AutoSort/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "autosort_config.hpp",
+                                                                                                     "path":  "addons/AutoSort/src/autosort_config.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "autosort_planner.hpp",
+                                                                                                     "path":  "addons/AutoSort/src/autosort_planner.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/AutoSort/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/AutoSort/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/AutoSort/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "policy_tests.cpp",
+                                                                                                     "path":  "addons/AutoSort/src/policy_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/AutoSort/README.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "ruffneckk-autosort.toml",
+                                                                                "path":  "addons/AutoSort/ruffneckk-autosort.toml",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "BKVCombat",
                                                            "path":  "addons/BKVCombat",
                                                            "kind":  "directory",
@@ -39472,6 +39526,11 @@
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "active"
                                                                     }
+                                                       },
+                                                       {
+                                                           "name":  "autosort-3.3.md",
+                                                           "path":  "Mission/autosort-3.3.md",
+                                                           "kind":  "file"
                                                        },
                                                        {
                                                            "name":  "base-mod-features-3.2.md",

@@ -1,0 +1,171 @@
+# RuffnecKk AutoSort
+# Sorts only the visible player inventory or the currently open stash tab.
+
+enabled = true
+
+[sorting]
+# Evaluates deterministic compact layouts only after category, subgroup, and
+# item-code blocks pass strict spatial cohesion checks. A category-local
+# dimension-first retry may place multi-cell items first, but a layout that
+# fragments or interleaves hierarchy blocks is always refused.
+# Configured destinations and category order remain authoritative; free space
+# is maximized among equally faithful anchored layouts.
+# false keeps the first valid layout in each attempted phase.
+optimize_free_space = true
+
+# Categories sharing an anchor are packed in this order. Every built-in
+# category must appear exactly once.
+category_order = [
+  "armor",
+  "weapons",
+  "jewelry",
+  "runes",
+  "gems",
+  "jewels",
+  "potions",
+  "keys",
+  "scrolls",
+  "books",
+  "quest_items",
+  "misc",
+  "charms",
+  "unknown",
+]
+
+[fixed_regions.inventory]
+# BKVince reserves its rightmost inventory column for frozen potions. AutoSort
+# keeps every item in that column fixed and never uses its empty cells. Use 0
+# for mods whose entire inventory grid is movable.
+right_columns = 1
+
+[anchors]
+# Accepted values: top_left, top_middle, top_right, middle_left, middle,
+# middle_right, bottom_left, bottom_middle, bottom_right, or ignore.
+armor = "top_left"
+weapons = "top_left"
+jewelry = "bottom_left"
+charms = "bottom_right"
+potions = "top_right"
+keys = "middle"
+scrolls = "middle"
+books = "middle"
+runes = "top_middle"
+gems = "top_middle"
+jewels = "top_middle"
+quest_items = "middle"
+misc = "middle"
+unknown = "middle"
+
+[subgroup_order]
+# Subgroups remain contiguous inside their parent category and are packed in
+# this order. Each configured category must list every built-in subgroup once.
+armor = [
+  "body_armor",
+  "helms",
+  "shields",
+  "gloves",
+  "belts",
+  "boots",
+  "other_armor",
+]
+weapons = [
+  "swords",
+  "axes",
+  "maces",
+  "daggers",
+  "scepters",
+  "wands",
+  "staves",
+  "spears",
+  "polearms",
+  "bows",
+  "crossbows",
+  "javelins",
+  "throwing_weapons",
+  "assassin_claws",
+  "orbs",
+  "other_weapons",
+]
+jewelry = ["rings", "amulets", "other_jewelry"]
+charms = ["small_charms", "large_charms", "grand_charms", "other_charms"]
+potions = [
+  "healing",
+  "mana",
+  "rejuvenation",
+  "utility",
+  "throwing",
+  "other_potions",
+]
+
+# Optional subgroup destinations override the parent category anchor. Omitted
+# subgroups inherit their category destination from [anchors]. The packaged
+# defaults deliberately keep every subgroup with its parent category so other
+# categories cannot appear between healing, mana, and rejuvenation potions.
+# Uncomment only the overrides you intentionally want to separate.
+#
+# [subgroup_anchors.armor]
+# boots = "bottom_left"
+#
+# [subgroup_anchors.jewelry]
+# rings = "bottom_right"
+# amulets = "bottom_left"
+#
+# [subgroup_anchors.potions]
+# healing = "top_right"
+# mana = "middle_right"
+
+[input]
+# Applies the custom planner to D2R's existing controller AutoSort action only
+# after the complete native fingerprint is accepted. A rejected plugin leaves
+# the vanilla planner untouched.
+controller_action_enabled = true
+
+# Registers one configurable action under RuffnecKk Suite > AutoSort.
+controls_action_enabled = true
+
+[button]
+# Reserved for the optional Inventory button after its dedicated UI gate.
+# Version 0.1 requires this to remain false; controller and Controls work now.
+enabled = false
+x = 3
+y = 813
+
+[diagnostics]
+# Live sorting logs only one compact plan summary. Set both dry_run and
+# log_items to true for an inspect-only classification audit with no movement.
+enabled = true
+dry_run = false
+# Per-item logging is intended for dry-run classification audits only.
+log_items = false
+
+# Exclusions are evaluated before custom groups and built-in categories. A
+# matching item stays exactly where it is and becomes a fixed packing obstacle.
+#
+# The Horadric Cube is technically a quest item, but it usually lives in the
+# player inventory. Keep this explicit rule active so its destination can be
+# changed independently from every other quest item.
+[[custom_groups]]
+name = "Horadric Cube"
+anchor = "middle_left"
+item_codes = ["box"]
+#
+# [[exclusions]]
+# name = "All books"
+# item_type_codes = ["book"]
+
+# Custom groups are evaluated in declaration order before built-in categories.
+# Every selector list is optional, but each rule must provide at least one.
+# Selectors inside one list use OR; different selector lists use AND.
+#
+# [[custom_groups]]
+# name = "Rare and unique jewels"
+# anchor = "middle_right"
+# item_type_codes = ["jewl"]
+# qualities = ["rare", "unique"]
+#
+# [[custom_groups]]
+# name = "A custom mod item"
+# anchor = "bottom_middle"
+# item_codes = ["abcd"]
+#
+# Use the same form for a mod-specific currency that remains in the grid.

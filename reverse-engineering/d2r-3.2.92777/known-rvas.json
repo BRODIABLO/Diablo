@@ -4,6 +4,54 @@
   "imageBase": "0x140000000",
   "entries": [
     {
+      "rva": "0x15E790",
+      "name": "INVENTORY_AutoSortPlanner",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/autosort-3.3.md",
+      "notes": "Native client AutoSort planner with observed Windows x64 ABI (targetPositions, currentPositions, itemGuids, itemCount, player, inventoryPage) -> bool. Both position arrays contain one uint32 per item with uint16 x at +0 and uint16 y at +2. It validates the complete source layout before returning a target layout. AutoSort owns this entry through one fail-closed inline hook, calls the original first, and overwrites only the complete target array after its pure planner succeeds. The entry and semantics are shared by the governed common corpus for D2R 3.2.92777 and 3.3.93847."
+    },
+    {
+      "rva": "0x160B00",
+      "name": "INVENTORY_AutoSort",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/autosort-3.3.md",
+      "notes": "Native client AutoSort wrapper with observed ABI (playerUnitId, inventoryPage) -> void. It resolves the local player, enumerates at most 256 items from exactly the requested inventory page, calls INVENTORY_AutoSortPlanner at 0x15E790, compares current and target coordinates, executes the native client-side update path, then sends the authoritative packet through 0xECC70. AutoSort calls this unchanged wrapper for its Controls action so controller and keyboard input retain one native execution route."
+    },
+    {
+      "rva": "0x160C5D",
+      "name": "INVENTORY_AutoSort_PlannerCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/autosort-3.3.md",
+      "notes": "Unique direct CALL from INVENTORY_AutoSort to INVENTORY_AutoSortPlanner. The surrounding argument setup proves RCX target positions, RDX current positions, R8 item GUIDs, R9 item count, stack argument 5 player and stack argument 6 page. AutoSort fingerprints the full surrounding witness but does not patch this callsite."
+    },
+    {
+      "rva": "0xECC70",
+      "name": "CLIENT_SendAutoSortPacket",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/autosort-3.3.md",
+      "notes": "Native AutoSort packet sender. It emits opcode 0x4E, page, player GUID, itemCount-1 and one five-byte record per item: packed nibble coordinate (y << 4) | x followed by uint32 item GUID. Packet length is 7 + 5*N and is queued through CLIENT_QueueOutgoingPacket. AutoSort fingerprints but never hooks or calls this function directly."
+    },
+    {
+      "rva": "0x4AE440",
+      "name": "SERVER_AutoSortCallback",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/autosort-3.3.md",
+      "notes": "Authoritative server callback for packet opcode 0x4E. It validates packet bounds, player identity, exact item count for the target inventory page, dimensions, coordinates, occupancy and every conflict before mutating the inventory and sending updates. This proves AutoSort is an all-or-nothing same-container transaction rather than a sequence of client coordinate writes. AutoSort fingerprints but never hooks this entry."
+    },
+    {
+      "rva": "0x8D3B0",
+      "name": "CLIENT_IsOnlineState",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/autosort-3.3.md",
+      "notes": "Returns whether the current client state byte at context+0x5C equals 1. INVENTORY_AutoSortPlanner negates this result as the third argument to UNITS_GetInventoryGrid. AutoSort reproduces that exact grid selection call and fingerprints this entry before installing its planner hook."
+    },
+    {
       "rva": "0x8B2D0",
       "name": "CLIENT_GetLocalDataContext",
       "kind": "function",

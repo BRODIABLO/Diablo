@@ -754,6 +754,18 @@
         "reverse-engineering/d2r-3.2.92777/datatables-atlas/**",
         "scripts/reverse-engineering/d2r33-datatables*"
       ]
+    },
+    {
+      "id": "autosort",
+      "name": "AutoSort",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/autosort-3.3.md",
+      "nextGate": "AutoSort 0.1.1 now builds on the D2RLoader 1.2 and PluginSDK API v4 baseline at commit 6eb8f8b6192868214706bd6d528c5294f2f551b7 without adopting a second transaction path. Two independent Release builds pass CTest 1/1 and produce the same 325120-byte DLL, SHA-256 BAB688B90347ADF8CACA5D2F3BE11BEBDCB7810A7151CD69425F2E5387F7BD17, with manifest API 4, PE 0.1.1 and exactly three D2RLoader exports. The SDK v4 candidate is not deployed. Next: authorize mod-local deployment, press Shift+H once, and verify the Cube destination, contiguous healing/mana/rejuvenation tiers, contiguous ordered runes, no cross-category interleaving and imperceptible latency.",
+      "include": [
+        "Mission/autosort-3.3.md",
+        "addons/AutoSort/**"
+      ]
     }
   ],
   "sharedPaths": [
