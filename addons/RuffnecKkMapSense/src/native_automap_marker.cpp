@@ -1,6 +1,7 @@
 #include "native_automap_marker.hpp"
 
 #include "navigation_engine.hpp"
+#include "native_automap_missile.hpp"
 #include "native_automap_poi.hpp"
 
 #include <D2RLPlugin/api.h>
@@ -1269,6 +1270,19 @@ __declspec(noinline) void __fastcall HookRenderAutomapUnit(
         return;
     }
 
+    ObserveNativeAutomapMissilePlayerPass({
+        .automapContext = automapContext,
+        .playerSubtileX = scan.playerSubtileX,
+        .playerSubtileY = scan.playerSubtileY,
+        .nativeWidth = scan.nativeWidth,
+        .nativeHeight = scan.nativeHeight,
+        .clipLeft = scan.clipLeft,
+        .clipTop = scan.clipTop,
+        .clipWidth = scan.clipWidth,
+        .clipHeight = scan.clipHeight,
+        .observedTick = scan.currentTick,
+    });
+
     if (TrackedMonsterLock.test_and_set(std::memory_order_acquire)) {
         ContentionWaits.fetch_add(1U, std::memory_order_relaxed);
         return;
@@ -1571,6 +1585,12 @@ auto InitializeNativeAutomapMarker(
         ClientUnitHashTableWitnessRva);
     ProjectClientToAutomap = At<ProjectClientToAutomapFn>(
         ProjectClientToAutomapRva);
+    const auto missileCollectorAvailable = InitializeNativeAutomapMissile(
+        context);
+    if (!missileCollectorAvailable) {
+        context->LogWarn(
+            "MapSense: the native missile source is unavailable; existing marker and navigation features remain active.");
+    }
     CollectionEnabled.store(false, std::memory_order_release);
     ImmunityCollectionEnabled.store(false, std::memory_order_release);
     ResetPublishedMarkers(true);
@@ -1586,6 +1606,7 @@ auto InitializeNativeAutomapMarker(
             static_cast<std::uint32_t>(renderUnitExpected.size()),
             HookRenderAutomapUnit,
             &OriginalRenderAutomapUnit)) {
+        ShutdownNativeAutomapMissile();
         Base = nullptr;
         GetLocalDataContext = nullptr;
         GetLocalPlayer = nullptr;
@@ -1623,6 +1644,7 @@ void ShutdownNativeAutomapMarker() noexcept {
     CollectionEnabled.store(false, std::memory_order_release);
     ImmunityCollectionEnabled.store(false, std::memory_order_release);
     Active.store(false, std::memory_order_release);
+    ShutdownNativeAutomapMissile();
     LevelObservedCallback.store(nullptr, std::memory_order_release);
     LevelObservedUserData.store(nullptr, std::memory_order_release);
     ResetPublishedMarkers(false);
@@ -1633,16 +1655,19 @@ void ShutdownNativeAutomapMarker() noexcept {
 
 void ResetNativeAutomapMarker() noexcept {
     ResetPublishedMarkers(true);
+    ResetNativeAutomapMissile();
 }
 
 void InvalidateNativeAutomapMarkerFrame() noexcept {
     ResetPublishedMarkers(false);
+    InvalidateNativeAutomapMissileFrame();
 }
 
 void SetNativeAutomapMarkerEnabled(bool enabled) noexcept {
     const auto previous = CollectionEnabled.exchange(
         enabled,
         std::memory_order_acq_rel);
+    SetNativeAutomapMissileEnabled(enabled);
     if (previous != enabled) ResetPublishedMarkers(false);
 }
 

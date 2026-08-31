@@ -10,6 +10,7 @@
 #include "navigation_engine.hpp"
 #include "navigation_resolver.hpp"
 #include "native_automap_marker.hpp"
+#include "native_automap_missile.hpp"
 #include "native_automap_poi.hpp"
 #include "native_ui_state.hpp"
 #include "native_settings_policy.hpp"
@@ -1947,6 +1948,38 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
             marker.clipRejectedFrom141Through220),
         static_cast<unsigned long long>(marker.clipRejectedBeyond220));
     context->WriteConsoleMessage(markerMessage);
+    const auto missile = GetNativeAutomapMissileCounters();
+    const auto averageMissileScanMicroseconds =
+        missile.scanTimingSamples != 0U
+        ? missile.totalScanMicroseconds / missile.scanTimingSamples
+        : 0U;
+    char missileMessage[768]{};
+    std::snprintf(
+        missileMessage,
+        sizeof(missileMessage),
+        "MapSense native missile source: client-only=true; automap-pulses=%llu; table-scans=%llu; buckets=%llu; observed=%llu; current=%llu; published-frames/missiles=%llu/%llu; traversal-limits=%llu; cycles=%llu; rejects=type/id/class/path/projection/clip:%llu/%llu/%llu/%llu/%llu/%llu; contention=writer/reader:%llu/%llu; access-faults=%llu; timing avg/max=%llu/%llu us (%llu samples); renderer-consumer=not-connected.",
+        static_cast<unsigned long long>(missile.automapPulses),
+        static_cast<unsigned long long>(missile.clientTableScans),
+        static_cast<unsigned long long>(missile.bucketsVisited),
+        static_cast<unsigned long long>(missile.unitsObserved),
+        static_cast<unsigned long long>(missile.currentPublished),
+        static_cast<unsigned long long>(missile.framesPublished),
+        static_cast<unsigned long long>(missile.missilesPublished),
+        static_cast<unsigned long long>(missile.traversalLimits),
+        static_cast<unsigned long long>(missile.cyclesRejected),
+        static_cast<unsigned long long>(missile.unitTypeRejected),
+        static_cast<unsigned long long>(missile.invalidUnitIds),
+        static_cast<unsigned long long>(missile.invalidClassIds),
+        static_cast<unsigned long long>(missile.pathRejected),
+        static_cast<unsigned long long>(missile.projectionRejected),
+        static_cast<unsigned long long>(missile.nativeClipRejected),
+        static_cast<unsigned long long>(missile.writerContentionDrops),
+        static_cast<unsigned long long>(missile.readerContentionDrops),
+        static_cast<unsigned long long>(missile.accessFaults),
+        static_cast<unsigned long long>(averageMissileScanMicroseconds),
+        static_cast<unsigned long long>(missile.maximumScanMicroseconds),
+        static_cast<unsigned long long>(missile.scanTimingSamples));
+    context->WriteConsoleMessage(missileMessage);
     const auto poi = GetNativeAutomapPoiCounters();
     const auto dataCatalog = DataCatalog.load(std::memory_order_acquire);
     const auto* const poiPipeline = PoiAvailable.load(

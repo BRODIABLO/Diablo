@@ -3433,7 +3433,15 @@
       "kind": "data",
       "confidence": "high",
       "source": "Mission/ruffneckk-mapsense.md; CLIENT_GetUnitByIdAndType@0x9A5D0; CLIENT_FindUnitInTypeBucket@0x9F270",
-      "notes": "Base of the client Unit hash table. Each unit type owns 128 pointer buckets (0x400 bytes), so monster type 1 begins at +0x400. MapSense 0.12.0 reads only those 128 monster bucket heads while the local-player automap pass is active, follows the separately witnessed Unit+0x158 link, and enforces per-bucket and total traversal caps."
+      "notes": "Base of the client Unit hash table. Each unit type owns 128 pointer buckets (0x400 bytes), so monster type 1 begins at +0x400 and missile type 3 begins at +0xC00. MapSense 0.12.0 reads the monster buckets while the local-player automap pass is active; the missile-source foundation added on 2026-08-31 reads only the client type-3 buckets from the same rendezvous. Both paths follow the separately witnessed Unit+0x158 link, enforce per-bucket and total traversal caps and retain no native Unit pointer."
+    },
+    {
+      "rva": "0x3F21E0",
+      "name": "UNITS_MissileTypeAndDataWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-mapsense.md; D2R.exe governed common corpus 3.2.92777/3.3.93847",
+      "notes": "Unique strict 32-byte witness 40 53 83 39 03 4D 8B D0 48 8B D9 0F 85 59 01 00 00 4C 8B 49 18 48 8D 05 30 EC 91 01 48 89 7C 24. It requires Unit+0x00 to equal 3 before entering its missile-data path and reading the type-specific pointer at Unit+0x18. Combined with CLIENT_GetUnitByIdAndType and CLIENT_FindUnitInTypeBucket, it proves that client hash-table unit type 3 is the missile family used by MapSense's read-only collector; broader semantics of the function remain unnamed."
     },
     {
       "rva": "0x326A70",

@@ -6,6 +6,7 @@
 #include "navigation_policy.hpp"
 #include "navigation_resolver.hpp"
 #include "native_automap_marker.hpp"
+#include "native_automap_missile.hpp"
 #include "native_automap_poi.hpp"
 #include "native_ui_state.hpp"
 #include "native_settings_layout.hpp"
@@ -3628,6 +3629,41 @@ int main(int argc, char** argv) {
         NativeAutomapLabelGap) == 24.0F);
     static_assert(Detail::SquaredWorldSubtileDistance(0U, 0U, 3U, 4U)
         == 25U);
+    static_assert(NativeMissileUnitType == 3U);
+    static_assert(NativeClientUnitHashTypeStride == 0x400U);
+    static_assert(
+        Detail::NativeClientUnitHashTableOffsetForType(
+            NativeMissileUnitType) == 0xC00U);
+    static_assert(Detail::MayVisitNativeMissileUnit(0U, 0U));
+    static_assert(Detail::MayVisitNativeMissileUnit(
+        MaximumNativeAutomapMissiles - 1U,
+        MaximumNativeMissilesPerBucket - 1U));
+    static_assert(!Detail::MayVisitNativeMissileUnit(
+        MaximumNativeAutomapMissiles,
+        0U));
+    static_assert(!Detail::MayVisitNativeMissileUnit(
+        0U,
+        MaximumNativeMissilesPerBucket));
+    static_assert(Detail::IsNativeAutomapMissileSnapshotFresh(
+        100U,
+        350U,
+        7U,
+        7U));
+    static_assert(!Detail::IsNativeAutomapMissileSnapshotFresh(
+        100U,
+        351U,
+        7U,
+        7U));
+    static_assert(!Detail::IsNativeAutomapMissileSnapshotFresh(
+        100U,
+        99U,
+        7U,
+        7U));
+    static_assert(!Detail::IsNativeAutomapMissileSnapshotFresh(
+        100U,
+        100U,
+        7U,
+        8U));
     static_assert(Detail::ClassifyWorldSubtileDistanceSquared(79U * 79U)
         == Detail::WorldSubtileDistanceBand::Through80);
     static_assert(Detail::ClassifyWorldSubtileDistanceSquared(80U * 80U)

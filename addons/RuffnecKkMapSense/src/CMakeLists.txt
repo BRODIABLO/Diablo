@@ -76,6 +76,7 @@ add_library(RuffnecKkMapSense SHARED
     navigation_policy.cpp
     navigation_resolver.cpp
     native_automap_marker.cpp
+    native_automap_missile.cpp
     native_automap_poi.cpp
     native_ui_state.cpp
     overlay_scene.cpp

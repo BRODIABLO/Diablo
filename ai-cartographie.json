@@ -2231,6 +2231,16 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "native_automap_missile.cpp",
+                                                                                                     "path":  "addons/RuffnecKkMapSense/src/native_automap_missile.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "native_automap_missile.hpp",
+                                                                                                     "path":  "addons/RuffnecKkMapSense/src/native_automap_missile.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "native_settings_layout.hpp",
                                                                                                      "path":  "addons/RuffnecKkMapSense/src/native_settings_layout.hpp",
                                                                                                      "kind":  "file"

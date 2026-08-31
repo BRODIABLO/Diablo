@@ -1844,6 +1844,62 @@ Conformément à la demande de Vincent, l'agent n'a ni arrêté/lancé D2R, ni
 déployé la DLL, ni transformé ces preuves en validation visuelle ou en mesure
 de latence gameplay.
 
+### Fondation missiles native read-only — lot source du 31 août 2026
+
+Vincent autorise explicitement le premier lot d'implantation de la fonction
+missiles inspirée de PrimeMH, avec une cible indépendante de BKVince et de tout
+autre mod particulier. Ce lot reste volontairement limité à la source native :
+aucune classification `Missiles.txt`, option TOML, règle `incoming` ou primitive
+de rendu live n'est encore branchée. L'ordre actif des classes demeure une
+donnée brute du mod courant et aucun enum ordinal PrimeMH n'est compilé dans le
+collecteur.
+
+Le gate obligatoire `npm run re:d2r33 -- status` passe contre le runtime cible
+D2R 3.3.93847 et le corpus commun gouverné de provenance 3.2.92777 : images
+canonique et d'analyse ainsi que l'index sont vérifiés. Le contrat déjà promu de
+`CLIENT_GetUnitByIdAndType 0x9A5D0` adresse 128 buckets par type avec un stride
+`0x400`; `CLIENT_FindUnitInTypeBucket 0x9F270` prouve l'identité à `Unit+0x08`,
+le type à `Unit+0x00` et le lien suivant à `Unit+0x158`. Le nouveau témoin unique
+`UNITS_MissileTypeAndDataWitness 0x3F21E0` exige exactement le type 3 avant son
+chemin missile. Son empreinte stricte de 32 octets est maintenant gouvernée dans
+`known-rvas.json`; la table cliente des missiles commence donc à
+`CLIENT_UnitHashTable 0x2A23910 + 0xC00`.
+
+`native_automap_missile.cpp/.hpp` constitue un observateur séparé sous le
+propriétaire existant de `AUTOMAP_RenderUnit 0xD76E0`; aucun second hook n'est
+créé. Le passage local déjà prouvé lui prête synchroniquement le contexte
+automap, son clip, les dimensions natives, la position monde du joueur et le
+tick. Le collecteur parcourt uniquement les buckets clients de type 3, refuse
+les pointeurs non alignés et les types inattendus, détecte les cycles par Floyd,
+borne chaque bucket à 8 192 unités et la table à 32 768 unités, puis copie ID,
+classe active, position monde et projection automap. Une table tronquée ou
+cyclique ne publie aucun frame partiel.
+
+Trois slots à états atomiques séparent l'écriture native et la future lecture
+renderer. Ils ne contiennent que des valeurs, ne conservent aucun `Unit*` ni
+`AutomapContext*`, expirent après 250 ms et sont invalidés avec les resets de
+session, de niveau, d'acte, de master switch et de fermeture automap déjà
+possédés par MapSense. Des compteurs bornés exposent scans, buckets, limites,
+cycles, rejets, faults, publications et temps CPU. La source est activée avec
+le master overlay pour rendre le prochain témoin runtime mesurable, mais aucun
+pixel missile n'est encore consommé.
+
+Les prochaines gates restent séparées : construire le catalogue mod-actif et
+la taxonomie visuelle PrimeMH par nom/données, connecter la configuration et le
+rendu d'ellipse, puis décider si une accentuation `incoming` temporelle mérite
+une phase distincte. La compatibilité des mods binaires sans TXT exige toujours
+une preuve gouvernée de la table `MissilesTxt` compilée avant d'être revendiquée.
+Ce lot ne vaut pas validation runtime : build, tests statiques et cadastre sont
+les seuls verdicts autorisés avant une qualification en jeu séparée.
+
+Le contrôle statique du lot passe : build Release x64 `/W4 /WX`, CTest `1/1`,
+`npm run re:d2r33 -- self-test`, validation JSON du registre RVA,
+`git diff --check` et cadastre `VALID`. La DLL de travail mesure 3 170 816
+octets et vaut SHA-256
+`3938FB3A97003EE5EC89A9EFA867D17D746A7F9B7C62EAC135CBCEDF50DB98EB`.
+Elle n'a été ni déployée ni chargée dans D2R; les compteurs live, le coût réel
+en scène dense et la stabilité de la pile complète restent donc `not run`.
+
 ## Validation future
 
 - configurations absente, valide et invalide;
