@@ -1,4 +1,8 @@
 {
   "enabled": true,
-  "freeIdentification": false
+  "freeIdentification": false,
+  "rightClickMassIdentify": false,
+  "includeCube": true,
+  "includePersonalStash": true,
+  "includeSharedStash": true
 }

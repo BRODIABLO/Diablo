@@ -1,27 +1,31 @@
 # MassID — D2R 3.2
 
-Dernière mise à jour : 18 août 2026
+Dernière mise à jour : 31 août 2026
 
 ## Décision produit
 
 Vincent confirme le 18 août 2026 **MassID** comme plugin autonome permanent de
 la RuffnecKk D2RLoader Suite. L’ancien projet de merge dans `plugin-items.dll`
 sous `items.massIdentify` est annulé; il reste seulement une décision
-historique. MassID conserve sa DLL, sa version, son archive et son JSON
+historique. MassID conserve sa DLL, sa version, son archive et son TOML
 indépendants, sans modifier, lier ni redistribuer une DLL d’eezstreet.
 
-Le geste retenu est `Shift + clic droit` sur un Tome of Identify. L’autorité
-serveur identifie les objets non identifiés de l’inventaire principal, puis ceux
-du Horadric Cube, puis ceux du coffre personnel et partagé, dans cet ordre
-déterministe.
+Le geste par défaut reste `Shift + clic droit` sur un Tome of Identify. À partir
+de MassID 2.1.0, l’option `rightClickMassIdentify=true` remplace ce geste par un
+simple clic droit et masque la ligne grise propre à MassID, puisque le Tome
+affiche déjà l’instruction vanilla blanche. L’autorité serveur identifie les
+objets non identifiés de l’inventaire principal, puis ceux du Horadric Cube,
+puis ceux du coffre personnel et partagé, dans cet ordre déterministe.
 
-Le JSON autonome porte le contrat propre de MassID :
+Le TOML autonome porte le contrat propre de MassID :
 
-```json
-{
-  "enabled": true,
-  "freeIdentification": false
-}
+```toml
+enabled = true
+freeIdentification = false
+rightClickMassIdentify = false
+includeCube = true
+includePersonalStash = true
+includeSharedStash = true
 ```
 
 - `freeIdentification=true` identifie tous les objets admissibles même avec un
@@ -30,6 +34,12 @@ Le JSON autonome porte le contrat propre de MassID :
   contient de charges et consomme exactement une charge par objet nouvellement
   identifié;
 - un objet déjà identifié ne coûte aucune charge.
+- `rightClickMassIdentify=false` conserve `Shift + clic droit` et le rappel gris;
+  `true` consomme le clic droit simple comme action Mass ID et retire seulement
+  ce rappel ajouté par le plugin;
+- l’inventaire principal est toujours ciblé; les trois options `include...`
+  permettent de conserver ou d’exclure indépendamment le Cube, le coffre
+  personnel et le coffre partagé.
 
 ## Preuves natives gouvernées — build 92777
 
@@ -110,8 +120,8 @@ Le JSON autonome porte le contrat propre de MassID :
 
 - [x] Destination permanente confirmée : `MassID.dll`, plugin autonome
   RuffnecKk Suite sans catégorie, propriétaire ni clé de merge PluginPack.
-- [x] Configuration autonome confirmée : `MassID.json` avec `enabled` et
-  `freeIdentification`.
+- [x] Configuration autonome confirmée : `MassID.json` avec `enabled`,
+  `freeIdentification` et les options de conteneurs.
 - [x] Handler du geste, protocole Cain 3.2, helper d’identification et ABI de
   quantité prouvés pour 92777.
 - [x] Audit de coexistence ciblé : aucun hook autoritaire partagé avec les cinq
@@ -125,9 +135,9 @@ Le JSON autonome porte le contrat propre de MassID :
 - [x] Témoin gameplay essentiel : geste capturé sans curseur Identify, paquet
   `0x34` reçu côté serveur, deux objets identifiés et deux charges consommées
   sur un tome de quantité trois.
-- [x] Compatibilité technique : portées globale et mod-locale, repli global,
-  priorité mod-locale, doublon neutralisé et coexistence avec les cinq DLL
-  eezstreet sans rejet ni échec.
+- [x] Compatibilité technique ciblée : portées globale et mod-locale, repli
+  global, priorité mod-locale, doublon neutralisé et coexistence avec les cinq
+  DLL eezstreet sans rejet ni échec.
 - [ ] Qualification complète RuffnecKk Suite avec tous les composants actifs,
   toutes les fonctionnalités PluginPack activées et les ordres de chargement
   pertinents, sans retrait ni neutralisation.
@@ -595,3 +605,142 @@ les ressources Windows exposent `FileVersion=1.0.0`, `ProductVersion=1.0.0` et
 `243737E62541CA19A1F6439B5620F3907ACF6782FAB752279C9420AC435E38F8`.
 La DLL globale est synchronisée et le jeu demeure fermé, conformément à la
 consigne de ne pas relancer sans autorisation explicite.
+
+## Extension 1.1.0 — portée configurable et écrans vendor/trade
+
+- L’inventaire principal demeure toujours inclus. Les options booléennes
+  `includeCube`, `includePersonalStash` et `includeSharedStash`, toutes actives
+  par défaut, sélectionnent les autres conteneurs sans casser les anciens JSON.
+  Les trois valeurs à `false` donnent Inventory seulement; seul `includeCube`
+  à `true` donne Inventory + Cube. L’ordre et le budget restent inventaire,
+  Cube, coffre personnel, puis coffre partagé parmi les cibles activées.
+- La génération moderne du tooltip charge l’item survolé dans `r12` à
+  `0x2C55DE`, puis interroge l’état trade `0x16` par l’appel `0x2C55F2` vers
+  `UI_IsStateOpen 0xCE500`. Le même chemin est atteint après la branche vendor
+  `0x0B`. Les états vendor/trade suppriment les appenders Drop/Move utilisés
+  auparavant, ce qui expliquait l’absence de GUID et de requête différée.
+- MassID redirige seulement cet appel de cinq octets vers un relais proche qui
+  transmet `r12` au probe, reproduit l’appel original et réutilise la capture
+  différée existante. Aucun callsite `ITEMS_BuildItemTooltip 0x2BD480` possédé
+  par AdvancedItemTooltips n’est modifié.
+- L’audit du PluginPack épinglé ne trouve aucun propriétaire de `0x2C55F2`.
+  Les hooks serveur, la validation du Tome, la consommation et le routage du
+  shared stash restent inchangés.
+- Le cold start a révélé que RemoteStash possède légitimement l’entrée
+  `UI_IsStateOpen 0xCE500`. MassID appelle la chaîne exécutable courante sans
+  hooker cette entrée et sans exiger son prologue vanilla; le callsite propre
+  `0x2C55F2` demeure le seul nouveau patch MassID.
+- Release x64 et CTest : `1/1` test vert. La DLL 1.1.0 porte le SHA-256
+  `CC9910113FE6D5E489CA194DB3760DD0B4C3DB9F9BBEA435095C1368B85EB7E6`.
+  Le ZIP strict contient seulement `MassID.dll` et `MassID.json`; SHA-256
+  `F22029E2CAAFA2EB926E9B497B384F856FEA258C26D18D4A3DC5DC155904F434`.
+  Le README crédite D2MOO et demeure hors de l’archive.
+- La DLL et le JSON globaux sont synchronisés byte-exactement. Le cold start
+  BKVince du 5 août à 18:01 charge MassID 1.1.0, accepte ses hooks, puis charge
+  le hook RemoteStash sur `0xCE500` sans rejet MassID. Les patches terminent à
+  `17/17`; les plugins à `scanned=13 active=12 rejected=0 failed=1`, l’unique
+  échec étant RepeatableServices déjà distinct de MassID. Le démarrage atteint
+  `24/24` et laisse une seule instance responsive pour Vincent. Les gates
+  gameplay Inventory-only, Inventory + Cube, vendor et player trade restent à
+  confirmer par son observation.
+
+- Premier témoin gameplay 1.1.0 à `18:05:57` : le WndProc observe le Tome GUID
+  `38`, le nouveau chemin `deferred vendor/trade input` capture le geste, le
+  serveur reçoit et accepte le paquet privé `0x34`, puis identifie deux objets
+  d’inventaire et consomme exactement deux charges sous
+  `freeIdentification=false`. Vincent confirme finalement le résultat visible.
+  Cette preuve valide le probe commun en jeu, sans toutefois distinguer dans la
+  trace si l’écran ouvert était vendor ou player trade; l’autre écran demeure à
+  confirmer séparément.
+
+- Le témoin visuel vendor montre que l’action fonctionne mais que la ligne grise
+  manque sous `Ctrl + Left Click to Sell`. La branche vendor locale appelle
+  `InventoryItemTooltipAppenderSell` à `0x2C51A9`; la branche player trade
+  appelle `InventoryItemTooltipAppenderGive` à `0x2C5455`. Les deux callsites
+  portent des `CALL rel32` vérifiés vers `LANG_GetStringByKey`, avec le Tome
+  déjà chargé dans `r12`. MassID les redirige vers le même wrapper localisé que
+  Drop/Move : la ligne hérite du gris natif et se place après Sell ou Give.
+- La DLL corrigée est synchronisée globalement au hash ci-dessus. Le cold start
+  BKVince de `18:10` accepte tous les callsites MassID, applique `17/17` patches,
+  atteint `24/24` et garde l’unique échec RepeatableServices distinct. Une seule
+  instance responsive reste ouverte pour le témoin visuel Sell/Give.
+
+## Correction de coexistence PluginPack — 5 août 2026
+
+- Une trace externe prouve que `plugin-skills.dll`, avec
+  `skills.bulkSkillPointAllocation` actif, installe légitimement son hook inline
+  à `LANG_GetStringByKey 0x5F4B90` avant MassID. MassID 1.1.0 exigeait encore le
+  prologue vanilla de cette entrée qu'il appelle sans la hooker; il refusait donc
+  le runtime selon l'ordre de chargement.
+- Le précédent cold start avec les cinq DLL était un faux positif : Bulk Skill
+  Point Allocation était désactivé, donc `plugin-skills` ne possédait pas
+  `0x5F4B90` durant cette matrice. La procédure d'incubation exige désormais
+  l'activation explicite de toute fonctionnalité du pack partageant une RVA et
+  les deux ordres de chargement pertinents.
+- MassID 1.1.1 conserve les signatures strictes de ses callsites possédés, mais
+  valide seulement que l'entrée externe `0x5F4B90` demeure exécutable. Il appelle
+  ainsi la chaîne live appartenant à `plugin-skills` sans réclamer son prologue.
+  Le build Release et le test de politique passent; le cold start avec Bulk actif
+  est maintenant autorisé et validé ci-dessous.
+- Cold start complet du 5 août à `18:50` : aucun plugin n'est retiré ou
+  neutralisé; `skills.bulkSkillPointAllocation.enabled=true` et
+  `confirmShiftAllocation=true` forcent `plugin-skills` à posséder successivement
+  `0x5F4B90`, `0x843D90` et `0x0EC700`. MassID 1.1.1 charge ensuite sans rejet.
+  À `18:51:34`, le geste observé en jeu envoie la requête privée, le serveur
+  l'accepte, identifie deux objets d'inventaire et consomme exactement deux
+  charges. Le processus demeure responsive. La coexistence MassID × Bulk Skill
+  Point Allocation est donc validée avec le hook de localisation réellement
+  actif.
+- La même matrice complète révèle séparément qu'AdvancedItemTooltips 3.2.0 exige
+  encore les octets vanilla de `0x5F4B90` et refuse lorsque Bulk en est
+  propriétaire. RepeatableServices demeure aussi en échec connu. Ces deux
+  échecs interdisent de qualifier la pile complète, sans invalider le scénario
+  MassID × Bulk désormais prouvé.
+- L'archive publique autonome Bulk Skill Point Allocation disponible dans le
+  workspace installe elle aussi systématiquement son hook inline à `0x5F4B90`.
+  MassID 1.1.1 ne modifie jamais cette entrée : Bulk peut donc charger avant et
+  fournir la chaîne live, ou charger après et retrouver le prologue vanilla.
+  La correction couvre ainsi la version publique autonome actuellement diffusée
+  autant que sa version intégrée à `plugin-skills`.
+- Le ZIP public MassID 1.1.1 est reconstruit avec l'allowlist explicitement
+  demandée par Vincent : `MassID.dll`, `MassID.json` et `README.md`. La DLL
+  distribuée et celle validée dans le runtime portent le SHA-256
+  `E6F33F0448628641B99C2FD7C577F7277E4B97F7CFDC6EA13C76EC1DEA7B7D86`;
+  `MassID.zip` porte
+  `AA79EDE08FEBF3FA89CF3592C1F0E2EF62EF5C9926F49FFBF782DCF3820B1E33`.
+
+## Extension Suite 2.1.0 — clic droit direct et PluginSDK v4
+
+- Vincent autorise le 31 août 2026 un même lot pour l’option de clic droit
+  direct et la migration au PluginSDK v4 épinglé au commit
+  `6eb8f8b6192868214706bd6d528c5294f2f551b7`.
+- `ItemInteractionServiceV1` devient l’entrée cliente prioritaire pour les
+  activations clavier/souris de l’inventaire, du Cube, du coffre personnel et
+  des pages custom. `ItemServiceV1::getItemInfo` fournit le code et le GUID
+  runtime sans pointeur natif échappé; le callback consomme l’action uniquement
+  après validation du Tome, du geste configuré et du curseur vide.
+- Le contrat v4 exclut explicitement vendor, trade et shared-stash de ses
+  événements V1. La couture WndProc différée est donc conservée uniquement pour
+  vendor/trade, alimentée par les callsites Sell/Give et le probe UI déjà
+  gouvernés. Le hook générique du targeting worker est retiré.
+- Le transport client revient au builder natif exact de 21 octets
+  `CLIENT_SendTwentyOneByteCommandPacket 0xEC820`, fingerprinté sur 32 octets;
+  le callback serveur `0x4C6C90`, ses validations d’ownership, l’ordre des
+  conteneurs et la consommation autoritaire restent inchangés.
+- La sélection par nom ou numéro de build est supprimée. Le nom fourni par le
+  loader reste diagnostique; le chargement dépend de l’empreinte native
+  complète. Le seul prologue composable admis est `UI_IsStateOpen`, soit
+  vanilla byte-exact, soit hook inline unique attribué par
+  `DiagnosticsServiceV1` à `ruffneckk-remote-stash`.
+- Validation technique obtenue : build standalone strict, build complet des
+  18 DLL, `26/26` CTest, validateurs Suite et ownership natif verts; manifeste
+  embarqué API v4, PE/PluginInfo `2.1.0`, anciens TOML compatibles avec défaut
+  `false` et artefact SHA-256
+  `21A65C8F840464ECD87630714D01C720EE8879B66847843226B6032ED6E79AE3`.
+- Gate runtime encore ouvert : le cold start avec le D2RLoader installé
+  `1.1.0-beta` s’arrête avant le chargement des plugins et ne prouve donc pas
+  l’API v4. La DLL live `2.0.1` et son TOML ont été restaurés byte-exact; aucune
+  DLL `2.1.0` n’est laissée déployée. Il faut reprendre avec un build loader
+  exposant l’API v4, puis tester les deux gestes/tooltips, vendor/trade, la pile
+  RuffnecKk Suite et les cinq DLL eezstreet sans composant désactivé avant ZIP
+  ou publication.

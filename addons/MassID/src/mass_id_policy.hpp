@@ -25,6 +25,35 @@ inline constexpr std::uint8_t StashPage = 4;
 inline constexpr std::uint8_t InvalidInventoryPage = 0xFF;
 inline constexpr std::size_t ItemDataInventoryPageOffset = 0x55;
 
+enum class TargetContainer : std::uint8_t {
+    Inventory,
+    Cube,
+    PersonalStash,
+    SharedStash,
+};
+
+struct TargetSelection {
+    bool includeCube{true};
+    bool includePersonalStash{true};
+    bool includeSharedStash{true};
+};
+
+constexpr bool IncludesTarget(
+        const TargetSelection& selection,
+        TargetContainer container) noexcept {
+    switch (container) {
+    case TargetContainer::Inventory:
+        return true;
+    case TargetContainer::Cube:
+        return selection.includeCube;
+    case TargetContainer::PersonalStash:
+        return selection.includePersonalStash;
+    case TargetContainer::SharedStash:
+        return selection.includeSharedStash;
+    }
+    return false;
+}
+
 using RequestPacket = std::array<std::uint8_t, RequestPacketSize>;
 
 inline std::vector<std::filesystem::path> BuildConfigCandidates(
@@ -99,17 +128,23 @@ inline std::uint8_t ReadInventoryPageFromItemData(
 
 constexpr bool ShouldCaptureGesture(
         bool enabled,
+        bool rightClickMassIdentify,
         bool shiftDown,
         bool rightClick,
         bool cursorEmpty,
         std::int32_t unitType,
         std::uint32_t itemCode) noexcept {
     return enabled
-        && shiftDown
+        && (rightClickMassIdentify || shiftDown)
         && rightClick
         && cursorEmpty
         && unitType == 4
         && itemCode == IdentifyTomeCode;
+}
+
+constexpr bool ShouldShowMassIdTooltip(
+        bool enabled, bool rightClickMassIdentify) noexcept {
+    return enabled && !rightClickMassIdentify;
 }
 
 inline std::string AddMassIdTooltipLine(

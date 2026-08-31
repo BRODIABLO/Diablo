@@ -45,21 +45,52 @@ int main() {
     assert(IsMassIdentifyTargetPage(StashPage));
     assert(!IsMassIdentifyTargetPage(2));
 
+    constexpr TargetSelection allTargets{};
+    static_assert(IncludesTarget(allTargets, TargetContainer::Inventory));
+    static_assert(IncludesTarget(allTargets, TargetContainer::Cube));
+    static_assert(IncludesTarget(allTargets, TargetContainer::PersonalStash));
+    static_assert(IncludesTarget(allTargets, TargetContainer::SharedStash));
+
+    constexpr TargetSelection inventoryOnly{false, false, false};
+    static_assert(IncludesTarget(inventoryOnly, TargetContainer::Inventory));
+    static_assert(!IncludesTarget(inventoryOnly, TargetContainer::Cube));
+    static_assert(!IncludesTarget(
+        inventoryOnly, TargetContainer::PersonalStash));
+    static_assert(!IncludesTarget(
+        inventoryOnly, TargetContainer::SharedStash));
+
+    constexpr TargetSelection inventoryAndCube{true, false, false};
+    static_assert(IncludesTarget(
+        inventoryAndCube, TargetContainer::Inventory));
+    static_assert(IncludesTarget(inventoryAndCube, TargetContainer::Cube));
+    static_assert(!IncludesTarget(
+        inventoryAndCube, TargetContainer::PersonalStash));
+    static_assert(!IncludesTarget(
+        inventoryAndCube, TargetContainer::SharedStash));
+
     std::array<std::uint8_t, ItemDataInventoryPageOffset + 1> itemData{};
     itemData[ItemDataInventoryPageOffset] = StashPage;
     assert(ReadInventoryPageFromItemData(itemData.data()) == StashPage);
     assert(ReadInventoryPageFromItemData(nullptr) == InvalidInventoryPage);
 
     assert(ShouldCaptureGesture(
-        true, true, true, true, 4, IdentifyTomeCode));
+        true, false, true, true, true, 4, IdentifyTomeCode));
     assert(!ShouldCaptureGesture(
-        true, false, true, true, 4, IdentifyTomeCode));
+        true, false, false, true, true, 4, IdentifyTomeCode));
+    assert(ShouldCaptureGesture(
+        true, true, false, true, true, 4, IdentifyTomeCode));
+    assert(ShouldCaptureGesture(
+        true, true, true, true, true, 4, IdentifyTomeCode));
     assert(!ShouldCaptureGesture(
-        true, true, false, true, 4, IdentifyTomeCode));
+        true, true, true, false, true, 4, IdentifyTomeCode));
     assert(!ShouldCaptureGesture(
-        true, true, true, false, 4, IdentifyTomeCode));
+        true, true, true, true, false, 4, IdentifyTomeCode));
     assert(!ShouldCaptureGesture(
-        true, true, true, true, 4, 0x206B6274u));
+        true, true, true, true, true, 4, 0x206B6274u));
+
+    static_assert(ShouldShowMassIdTooltip(true, false));
+    static_assert(!ShouldShowMassIdTooltip(true, true));
+    static_assert(!ShouldShowMassIdTooltip(false, false));
 
     constexpr std::string_view text = "Shift + Right Click to Mass ID";
     const auto tooltip = AddMassIdTooltipLine("Ctrl + Left Click to Drop", text);

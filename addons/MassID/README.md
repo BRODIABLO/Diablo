@@ -1,8 +1,20 @@
-# MassID 1.0.0
+# MassID 1.2.0
 
-MassID identifies every eligible item by Shift-right-clicking a Tome of
-Identify. It keeps the normal cursor, plays Diablo II: Resurrected's vanilla
-identify sound, and adds a localized Mass ID reminder to the Tome tooltip.
+MassID identifies every eligible item from a Tome of Identify. By default, use
+Shift + right click and MassID adds a localized gray reminder to the Tome
+tooltip. Enable `rightClickMassIdentify` to use a plain right click instead;
+the custom gray reminder is then hidden because D2R already shows its white
+right-click instruction.
+
+Both gestures suppress the vanilla Identify cursor after MassID accepts them,
+play Diablo II: Resurrected's vanilla identify sound, and also work while a
+vendor or player-trade screen is open.
+MassID coexists with both the public standalone Bulk Skill Point Allocation
+plugin and its D2RLoader PluginPack version. It calls the active localization
+chain without replacing it, regardless of load order.
+
+MassID 1.2.0 requires a D2RLoader release that implements PluginSDK API v4 and
+its Item Interaction service.
 
 ## Installation
 
@@ -32,8 +44,9 @@ Restart D2RLoader after replacing the DLL or changing the configuration.
 
 ## Usage and identification priority
 
-Hold Shift and right-click a Tome of Identify. MassID identifies unidentified
-items in this fixed order:
+With the default configuration, hold Shift and right-click a Tome of Identify.
+With `rightClickMassIdentify: true`, simply right-click it. MassID identifies
+unidentified items in this fixed order:
 
 1. Character inventory.
 2. Horadric Cube.
@@ -49,11 +62,23 @@ containers.
 ```json
 {
   "enabled": true,
-  "freeIdentification": false
+  "freeIdentification": false,
+  "rightClickMassIdentify": false,
+  "includeCube": true,
+  "includePersonalStash": true,
+  "includeSharedStash": true
 }
 ```
 
 - `enabled`: enables or disables MassID.
+- `rightClickMassIdentify: false`: requires Shift + right click and shows the
+  localized gray MassID reminder.
+- `rightClickMassIdentify: true`: uses plain right click and hides only the
+  custom gray reminder. Shift + right click still triggers one Mass ID action.
+- Character inventory is always included.
+- `includeCube`: includes or excludes the Horadric Cube.
+- `includePersonalStash`: includes or excludes the personal stash.
+- `includeSharedStash`: includes or excludes every shared-stash page.
 - `freeIdentification: false`: the Tome quantity is the identification budget.
   One scroll is consumed for each newly identified item, and processing stops
   when no scroll remains. The priority above determines which items are handled
@@ -64,5 +89,17 @@ containers.
 
 Unknown settings or values that are not booleans cause the plugin to refuse its
 configuration instead of silently applying an unintended value.
+
+For inventory only, set all three `include...` options to `false`. To include
+the Cube but exclude both stashes, keep `includeCube` set to `true` and set both
+stash options to `false`.
+
+When rolling back to MassID 1.1.1, restore its previous JSON as well. The older
+strict parser does not recognize `rightClickMassIdentify`.
+
+## Credits
+
+Native game semantics were informed by the D2MOO project. MassID's D2R 3.2
+integration and implementation are maintained by RuffnecKk.
 
 Author: `RuffnecKk`
