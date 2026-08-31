@@ -734,11 +734,12 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/isc12-3.3.md",
-      "nextGate": "G10-B P3b and the canonical G1-G4 codec planner are closed off-runtime; the governed ledger is VALID at 172 sites across 14 groups. Four groups, 20 exact mutable windows, 49 governed byte slots and 51 unchanged runtime witnesses preflight as one unpublished set. G1 contributes nine one-byte mutations across four unique interior windows and requires its interior reader CALL to resolve to BITSTREAM_ReadBitsThunk 0xA1B6C0; the G2/G3 exhaustive relays, G4 whole-D2S preflight and final G3 sticky-overflow propagation remain prepared. A move-only opaque RAII lease now gates every fingerprint, write and flush, but the pinned D2RLoader SDK exposes no production issuer. PublishedCodecMutationCount and InstalledHookCount remain zero, codecReady/operational remain false and no codec commit caller exists. Next, close G9 statically for exclusive 0x9C/0x9D ownership and worst-case full-item payload budgets while obtaining a documented loader-owned quiescence transaction capable of issuing the lease. Keep G1-G4 and G10 unpublished until G9, G10 activation, G0 and that loader authority close; runtime and real saves remain NOT RUN.",
+      "nextGate": "Exécuter les cas fonctionnels jetables 0x9C/0x9D, overflow, réentrance, backpressure, coexistence et save/reload sur le candidat exact EFCA4EBA…25F3DB, puis qualifier la portée globale. Le census réseau G5–G8 et des éventuels champs uint8 statId doit fermer avant une revendication réseau complète. Le kit NativePublication V1 reste un durcissement loader général optionnel et ne bloque pas ces gates.",
       "include": [
         "Mission/isc12-3.3.md",
         "addons/ISC12/**",
         "reverse-engineering/d2r-3.2.92777/isc12/**",
+        "reverse-engineering/d2r-3.2.92777/sdk-contribution/Services-requests.md",
         "scripts/reverse-engineering/isc12*"
       ]
     },

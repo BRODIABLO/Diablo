@@ -776,16 +776,16 @@
       "name": "D2GAME_SendItemAction9C",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/extended-item-stats-3.2.md",
-      "notes": "Builds server item-action packet 0x9C, serializes the item through 0x375EE0 with capacity 0xF4, adds the 8-byte packet header, enforces a total no greater than 0xFC and stores the length in one byte. Eleven direct call sites and a unique 24-byte entry signature prove the producer used for item actions without a parent-unit header."
+      "source": "Mission/extended-item-stats-3.2.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Builds server item-action packet 0x9C with ABI (client RCX, item RDX, action R8B, temporary item-flags mask R9D, gamble uint32 stack arg5) -> void; all 11 direct callers ignore RAX. It serializes exactly one node through 0x375EE0 with recursion disabled and capacity 0xF4, adds the 8-byte header and stores the total in one byte. Payload 244 is the last native-safe size. The producer temporarily changes ItemData+0x18 before serialization, restores it before the queue CALL, then walks socketed children through 0x481B50. G9-A source-prepares a five-byte rel32 entry detour over the complete pushes 40 53 55 56 57, a process-lifetime trampoline that replays them and continues at 0x479CD5, and an entry wrapper that opens or joins the TLS transaction. It remains unpublished pending live unwind, SEH, reentry, delayed-queue and quiescence gates."
     },
     {
       "rva": "0x479EA0",
       "name": "D2GAME_SendItemAction9D",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/extended-item-stats-3.2.md",
-      "notes": "Builds server item-action packet 0x9D, serializes the item through 0x375EE0 with capacity 0xF4, adds the 13-byte parent-unit header, enforces a total no greater than 0xFC and stores the length in one byte. Twelve direct call sites and the unique entry signature beginning 40 53 55 56 57 41 57 48 81 EC 70 01 00 00 prove this producer."
+      "source": "Mission/extended-item-stats-3.2.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Builds server item-action packet 0x9D with ABI (client RCX, parent unit RDX, item R8, action R9B, temporary item-flags uint32 stack arg5, gamble uint32 stack arg6) -> void; all 12 direct callers ignore RAX. It serializes exactly one node through 0x375EE0 with recursion disabled and capacity 0xF4, adds the 13-byte parent-unit header and stores the total in one byte. Payload 239 is the last native-safe size; 240..242 produce totals 253..255, 243..244 wrap the byte length, and serializer overflow returns zero for a header-only send. The producer temporarily changes ItemData+0x18 and conditionally ItemData+0x54, restores them before the queue CALL, then invokes 0x481B50. G9-A source-prepares the same five-byte entry detour and a trampoline continuing at 0x479EA5; nested walker calls are (same client, active item as parent, child item, action 0x12, propagated flags, gamble zero). It remains unpublished."
     },
     {
       "rva": "0x4817F0",
@@ -3897,7 +3897,7 @@
       "kind": "patch-site",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Exact unique regular player-stat writer passes ItemStatCost ID in EDX and width 9 in R8D to the native bit writer; prepared offset +2 changes only the width immediate."
+      "notes": "Exact unique regular player-stat writer passes ItemStatCost ID in EDX and width 9 in R8D; prepared offset +2 changes only the width immediate. The CALL is never rewritten: runtime may use the native target directly or an exactly attested D2RCore WritePlayerSaveStatId provider whose 1.1/1.2 body, PDATA, unwind and live slot all forward to D2R+0xA1B710."
     },
     {
       "rva": "0x5353A8",
@@ -4233,7 +4233,7 @@
       "kind": "layout-witness",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Exact unique second-caller capacity source sets R13D to 0x8000."
+      "notes": "Canonical form sets R13D to 0x8000. D2RLoader 1.2 changes only that immediate to 0xFFFF; R13 remains the single authority through allocation, zeroing and arg5. ISC12 accepts the alternate only with the exactly attested D2RCore environment-save provider."
     },
     {
       "rva": "0x41E186",
@@ -4241,7 +4241,7 @@
       "kind": "call-site",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Exact unique dynamic allocation chain passes R13=0x8000 and retains the returned buffer in RBP."
+      "notes": "Exact unique dynamic allocation chain, byte-identical under D2RLoader 1.2, passes the governed R13 capacity and retains the returned buffer in RBP."
     },
     {
       "rva": "0x41E1E9",
@@ -4249,7 +4249,7 @@
       "kind": "call-site",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Exact unique second caller passes the RBP buffer and unchanged R13D capacity to the player-save owner."
+      "notes": "Exact unique second caller passes RBP and unchanged R13D either directly to native serializer 0x52F090 or through a bounded relay to the exactly attested D2RCore!WritePlayerSaveWithEnvironmentCapture provider. ISC12 preserves the live owner call."
     },
     {
       "rva": "0x531A54",
@@ -4354,6 +4354,342 @@
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
       "notes": "Exact unique cleanup epilogue frees the temporary preview buffer and returns false while R13B is still zero. The wrapper reaches it by returning zero through the existing below-eight gate."
+    },
+    {
+      "rva": "0x2F64E0",
+      "name": "STATLIST_CopyBaseStatsBounded",
+      "kind": "function",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Observed ABI int32 (statList, destination, capacity). The exact unique 96-byte body witness at 0x2F6527 clamps statList+0x38 to capacity, copies that many records from statList+0x30 as two DWORDs per eight-byte record and returns the copied count. The complete-item serializer calls it at 0x37F0B3 with capacity 511 and destination RBP+0x860. The native body and callsite are byte-identical in the governed corpus covering 92777 and 93847."
+    },
+    {
+      "rva": "0x37D140",
+      "name": "ITEMS_SerializeItemComplete",
+      "kind": "function",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/Items/Items.cpp:6478-7381",
+      "notes": "Complete-item serializer body called once from the outer serializer at 0x3800F0. Its exact unique 37-byte prologue through SUB RSP,RAX sets RBP to final RSP+0x100 and probes then allocates a 0x1970-byte frame containing the low-ID compound suppression table and the per-list stat snapshot. D2MOO supplies semantic naming only; entry, call graph, x64 frame and ABI evidence are native and byte-identical for governed targets 92777 and 93847."
+    },
+    {
+      "rva": "0x37D60B",
+      "name": "ITEMS_SerializeItemComplete_OccupiedChildCount",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique 114-byte native window enumerates every immediate item-inventory child, clamps the encoded count to seven and writes exactly three bits at 0x37D66F..0x37D678. This field remains distinct from the later STAT_ITEM_NUMSOCKETS capacity and supplies no global tree depth or node bound. The window is byte-identical in the governed 92777/93847 corpus."
+    },
+    {
+      "rva": "0x37F08A",
+      "name": "ITEMS_SerializeItemComplete_SuppressionTableInit",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique 17-byte memset window zeros exactly 0x7FC bytes at RBP+0x60: 511 DWORD suppression slots for direct stat IDs 0..510. Under ISC12, valid ID 511 would read the uninitialized gap at RBP+0x85C and ID 512 would alias the snapshot beginning at RBP+0x860 unless the bounded writer relay bypasses the table."
+    },
+    {
+      "rva": "0x37F09B",
+      "name": "ITEMS_SerializeItemComplete_StatSnapshotCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique 29-byte setup/call passes capacity 0x1FF and destination RBP+0x860 to STATLIST_CopyBaseStatsBounded 0x2F64E0. Together with the helper body it proves a maximum of 511 eight-byte records per serialized stat list and exact adjacency to the 511-DWORD suppression table."
+    },
+    {
+      "rva": "0x37F0D0",
+      "name": "ITEMS_SerializeItemComplete_DirectStatIdExtraction",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique 45-byte window loads one snapshot record at RBP+index*8+0x860, extracts its high uint16 through SAR 16 and MOVZX directly into EDI, resolves the context DataTables and performs the first statId<rowCount guard. No ordinal adjustment exists before the suppression-table index at 0x37F17C."
+    },
+    {
+      "rva": "0x37F174",
+      "name": "ITEMS_SerializeItemComplete_BoundedStatIdWrite",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique 50-byte governed site [0x37F174,0x37F1A6) covers the prerequisite nonzero rejection, unsafe 511-DWORD indexed comparison, 0x1FF clamp/default, 9-bit setup and writer CALL. ISC12 may mutate only [0x37F17C,0x37F1A1): retain native table comparison for IDs below 511, bypass it for 511..4094, then use 0xFFF and 12 bits. The CALL is never rewritten: runtime may use the native target directly or an exactly attested D2RCore WriteItemSaveStatId provider whose 1.1/1.2 body, PDATA, unwind and live slot all forward to D2R+0xA1B710. Publication requires every promoted owner, table, snapshot, direct-ID and low compound witness to match."
+    },
+    {
+      "rva": "0x37F295",
+      "name": "ITEMS_SerializeItemComplete_CompoundPartner51Write",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/Items/Items.cpp:7297-7305",
+      "notes": "Exact unique window fetches stat 51 and stores it in suppression slot 51 after primary stat 50, preserving lightmindam/lightmaxdam single-token compound encoding. D2MOO supplies only semantic names."
+    },
+    {
+      "rva": "0x37F36D",
+      "name": "ITEMS_SerializeItemComplete_CompoundPartner49Write",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/Items/Items.cpp:7286-7294",
+      "notes": "Exact unique window fetches stat 49 and stores it in suppression slot 49 after primary stat 48, preserving firemindam/firemaxdam single-token compound encoding. D2MOO supplies only semantic names."
+    },
+    {
+      "rva": "0x37F445",
+      "name": "ITEMS_SerializeItemComplete_CompoundPartner18Write",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/Items/Items.cpp:7278-7285",
+      "notes": "Exact unique window fetches stat 18 and stores it in suppression slot 18 after primary stat 17, preserving item maximum/minimum damage-percent single-token compound encoding. D2MOO supplies only semantic names."
+    },
+    {
+      "rva": "0x37F51D",
+      "name": "ITEMS_SerializeItemComplete_CompoundPartner53Write",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/Items/Items.cpp:7268-7277",
+      "notes": "Exact unique window fetches stat 53 and stores it in suppression slot 53 after primary stat 52, preserving magicmindam/magicmaxdam single-token compound encoding. D2MOO supplies only semantic names."
+    },
+    {
+      "rva": "0x37F685",
+      "name": "ITEMS_SerializeItemComplete_CompoundPartner58Write",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/Items/Items.cpp:7327-7337",
+      "notes": "Exact unique window fetches stat 58 and stores it in suppression slot 58 after poison primary stat 57. It is the poison maximum-damage partner; D2MOO supplies only semantic names."
+    },
+    {
+      "rva": "0x37F754",
+      "name": "ITEMS_SerializeItemComplete_CompoundPartner59Write",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/Items/Items.cpp:7327-7337",
+      "notes": "Exact unique window fetches stat 59 and stores it in suppression slot 59 after poison primary stat 57. It is the poison-length partner; D2MOO supplies only semantic names."
+    },
+    {
+      "rva": "0x37F832",
+      "name": "ITEMS_SerializeItemComplete_CompoundPartner55Write",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/Items/Items.cpp:7315-7326",
+      "notes": "Exact unique window fetches stat 55 and stores it in suppression slot 55 after cold primary stat 54. It is the cold maximum-damage partner; D2MOO supplies only semantic names."
+    },
+    {
+      "rva": "0x37F901",
+      "name": "ITEMS_SerializeItemComplete_CompoundPartner56Write",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/Items/Items.cpp:7315-7326",
+      "notes": "Exact unique window fetches stat 56 and stores it in suppression slot 56 after cold primary stat 54. It is the cold-length partner; D2MOO supplies only semantic names."
+    },
+    {
+      "rva": "0x3800F0",
+      "name": "ITEMS_SerializeItemComplete_Call",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Sole direct CALL from outer item serializer 0x37FFD0 into complete-item body 0x37D140. The exact unique 20-byte call-through-return witness begins at 0x3800E8 and binds the shared save/packet call graph in the governed 92777/93847 corpus."
+    },
+    {
+      "rva": "0x479E10",
+      "name": "D2GAME_ItemAction9CQueueCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Exact unique five-byte CALL E8 DB 79 00 00 from the 0x9C producer to D2GAME_QueueServerPacket 0x4817F0, with continuation 0x479E15 and ABI (client RCX, stack packet RDX, zero-extended byte length R8) -> void. G9-A source-prepares a rel32 capture relay that copies the span synchronously and suppresses the real queue during collection or rejection. The mutation remains unpublished."
+    },
+    {
+      "rva": "0x47A001",
+      "name": "D2GAME_ItemAction9DQueueCall",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Exact unique five-byte CALL E8 EA 77 00 00 from the 0x9D producer to D2GAME_QueueServerPacket 0x4817F0, with continuation 0x47A006 and ABI (client RCX, stack packet RDX, zero-extended byte length R8) -> void. G9-A source-prepares a rel32 capture relay that copies the span synchronously and suppresses the real queue during collection or rejection. The mutation remains unpublished."
+    },
+    {
+      "rva": "0x479D4D",
+      "name": "D2GAME_ItemAction9CPreparationWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Exact unique 31-byte sequence saves the current ItemData+0x18 flags and applies the 0x9C caller mask before the real serializer. Together with the restore calls after serialization, it proves that a scratch serialization at function entry is not byte-equivalent by construction."
+    },
+    {
+      "rva": "0x479F23",
+      "name": "D2GAME_ItemAction9DPreparationWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Exact unique 64-byte sequence saves and applies ItemData+0x18 flags, inspects ItemData+0x54 and conditionally prepares that byte before the real 0x9D serializer. It proves that the staging design must preserve the native producer's preparation path rather than double-serialize at entry."
+    },
+    {
+      "rva": "0x479D85",
+      "name": "D2GAME_ItemAction9CBeforeQueueWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique 139-byte prefix proves recursion R9D=0, serializer capacity 0xF4, header increment 8, diagnostic comparison 0xFC, item-state restoration and queue arguments for one 0x9C root node. It ends immediately before the mutable range [0x479E10,0x479E15); the safe native payload ceiling is 244 bytes."
+    },
+    {
+      "rva": "0x479E15",
+      "name": "D2GAME_ItemAction9CAfterQueueWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique 14-byte continuation reloads temporary flags, item and client from nonvolatile state and calls the socketed-item walker 0x481B50. It is disjoint from the mutable 0x9C queue CALL."
+    },
+    {
+      "rva": "0x479E23",
+      "name": "D2GAME_ItemAction9CEpilogueCodeWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique 30-byte code witness [0x479E23,0x479E41) loads/xors/checks the stack cookie, deallocates 0x160 bytes, restores nonvolatile registers and includes RET. It proves code bytes only: static .pdata is non-authoritative for the future entry wrapper, whose unwind contract still requires live RtlLookupFunctionEntry validation."
+    },
+    {
+      "rva": "0x479F76",
+      "name": "D2GAME_ItemAction9DBeforeQueueWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique 139-byte prefix proves recursion R9D=0, serializer capacity 0xF4, header increment 13, diagnostic comparison 0xFC, item-state restoration and queue arguments for one 0x9D node. It ends immediately before the mutable range [0x47A001,0x47A006); the safe native payload ceiling is 239 bytes."
+    },
+    {
+      "rva": "0x47A006",
+      "name": "D2GAME_ItemAction9DAfterQueueWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique 19-byte continuation reloads propagated temporary flags, item and client and calls the socketed-item walker 0x481B50. It is disjoint from the mutable 0x9D queue CALL."
+    },
+    {
+      "rva": "0x47A019",
+      "name": "D2GAME_ItemAction9DEpilogueCodeWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique 30-byte code witness [0x47A019,0x47A037) loads/xors/checks the stack cookie, deallocates 0x170 bytes, restores nonvolatile registers and includes RET. It proves code bytes only: static .pdata is non-authoritative for the future entry wrapper, whose unwind contract still requires live RtlLookupFunctionEntry validation."
+    },
+    {
+      "rva": "0x375F25",
+      "name": "ITEMS_SerializeItemOverflowZeroWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique interior epilogue returns zero when the bit-writer overflow flag is set. Item-action producers still queue their 8/13-byte header after this return, so G9-A must reject the complete item tree before the first queue rather than relying on this late signal."
+    },
+    {
+      "rva": "0x12E2F0",
+      "name": "CLIENT_ItemAction9CPayloadBoundWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique interior window reads the one-byte 0x9C packet length, subtracts the 8-byte header and rejects payload above 0xF4. It is an interior native witness and requires no claim on the dispatcher entry."
+    },
+    {
+      "rva": "0x12E4B0",
+      "name": "CLIENT_ItemAction9DBufferHeaderWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique interior window proves a 0x101-byte local buffer and minimum packet length 13, but does not prove a client-side 0xFC maximum or require a claim on the dispatcher entry."
+    },
+    {
+      "rva": "0x4818B6",
+      "name": "D2GAME_QueueServerPacketSpanDispatchWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Exact unique 39-byte interior sequence builds packet+length and synchronously dispatches the [packet, packet+length] span through the client sink. This proves each source-prepared G9-A relay must copy producer stack packets before returning. A later flush through the untouched queue entry preserves packet order but delays queue-side effects and therefore still requires semantic, reentry and backpressure qualification."
+    },
+    {
+      "rva": "0x481BAD",
+      "name": "D2GAME_SocketedItemSeparate9DWalkerWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique 102-byte inventory-walk window calls INVENTORY_GetFirstItem, checks the result, sends it through D2GAME_SendItemAction9D at 0x481BFE, calls INVENTORY_GetNextItem and branches back to the same send path while one remains. Because each 0x9D producer captures its node then recursively invokes this walker before returning to the parent's GetNextItem, the native sequence is depth-first preorder. The G9-A source transaction now models this order, parent/item nesting and same-thread recursion, but runtime all-or-none proof remains blocked."
+    },
+    {
+      "rva": "0x3B5307",
+      "name": "DATATBLS_BBEConditionCalcCompilerWiring",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique compiler setup passes resolver 0x3B54E0, parameter-count callback 0x3B57A0 and keyword mapper 0x3B58A0 to generic expression compiler 0xA24290, then appends the bytecode to the shared condition-calc pool at DataTables+0xD90. It is one representative of an exhaustive seven-callsite native census and is verification-only."
+    },
+    {
+      "rva": "0x1CFA68C",
+      "name": "DATATBLS_BBEStatKeywordLiteral",
+      "kind": "data",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Protected static RDATA recovered by a governed read-only D2R 3.3.93847 runtime capture on 2026-08-31. The exact mapper anchor at 0x3B59CA resolved here and the captured NUL-terminated ASCII value is 'stat'. The captured 16-byte window 73746174000000000000000073657466 has SHA-256 83626D991B1A0AD789DDB50D993623989AB1C1257879530005CEE0CA411F0E4F."
+    },
+    {
+      "rva": "0x1D09C50",
+      "name": "DATATBLS_BBEEvaluatorCallbackTable",
+      "kind": "data-table",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Protected static RDATA recovered by a governed read-only D2R 3.3.93847 runtime capture on 2026-08-31. The table contains nine 16-byte records {callback VA qword, arity dword, zero padding dword}; callback RVAs are 0x3B3200, 0x3B3210, 0x3B3220, 0x3B32F0, 0x3B33A0, 0x3B33F0, 0x3B3500, 0x3B3590 and 0x3B3640. Record 5 at 0x1D09CA0 is the stat callback 0x3B33F0 with arity 2. The ASLR-normalized 144-byte table SHA-256 is E8B9B76F9D7320BDFA8129F8D22B0CB19B450AC4D655F53A8D2E56E47CF224ED."
+    },
+    {
+      "rva": "0x3B5B58",
+      "name": "DATATBLS_BBEResolverKeywordDispatchWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique selector accepts numeric keyword slots 3..8, subtracts three and dispatches through the six-entry table at 0x3B61B0. Slot 5 therefore selects table index 2."
+    },
+    {
+      "rva": "0x3B61B0",
+      "name": "DATATBLS_BBEResolverKeywordJumpTable",
+      "kind": "data",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique six-DWORD code-adjacent jump table for BBE keyword slots 3..8. The third target is the sole ItemStatCost ordinal branch at 0x3B5D80."
+    },
+    {
+      "rva": "0x3B5D80",
+      "name": "DATATBLS_BBEItemStatCostOrdinalResolverWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique branch loads the authoritative ItemStatCost linker at DataTables+0x1270, resolves the named operand through 0xA121F0 and stores EAX as a full DWORD. No 0x1FF mask or narrow store occurs."
+    },
+    {
+      "rva": "0xA245FC",
+      "name": "DATATBLS_BBECallbackConstantSmallWidthWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique generic-compiler branch limits callback-constant token 4 to signed values -128..127 and routes wider values to the 16-bit test."
+    },
+    {
+      "rva": "0xA24661",
+      "name": "DATATBLS_BBECallbackConstantInt16EncoderWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique generic-compiler branch emits token 5 plus the complete WORD for signed values -32768..32767. Every valid ISC12 stat ordinal 0..4094 is therefore represented without nine-bit truncation."
+    },
+    {
+      "rva": "0xA235D5",
+      "name": "DATATBLS_BBECallbackInt16EvaluatorWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique token-5 evaluator bounds-checks two bytes, sign-extends the WORD into EDX, calls the parameter callback and advances two bytes. ISC12 IDs 0..4094 remain positive and exact."
+    },
+    {
+      "rva": "0x3B33F0",
+      "name": "DATATBLS_BBEWideStatAccessorCallback",
+      "kind": "function",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique function body copies EDX to full-width EDI, checks DataTables+0x1260 and forwards the same DWORD ordinal to the base, item-value or total-stat accessor. A governed read-only D2R 3.3.93847 capture proves callback-table record 5 at 0x1D09CA0 points here with arity 2, closing native stat-slot membership."
+    },
+    {
+      "rva": "0x3B54A3",
+      "name": "SKILLS_BBEEvaluatorCallbackTableWiringWitness",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique callsite passes callback table 0x1D09C50 with count 9 to generic evaluator 0xA234B0. Seven D2R table-wired evaluator xrefs use the same table/count; an eighth generic call passes no callback table. A governed read-only D2R 3.3.93847 capture proves the table is nine 16-byte records and that record 5 contains callback RVA 0x3B33F0 with arity 2."
     }
   ]
 }

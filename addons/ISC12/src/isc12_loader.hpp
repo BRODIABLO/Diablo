@@ -2,6 +2,8 @@
 
 #include "isc12_codec_patch.hpp"
 #include "isc12_envelope.hpp"
+#include "isc12_native_schema_adapter.hpp"
+#include "isc12_publication_coordinator.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -14,6 +16,7 @@ struct PluginContext;
 
 namespace ruffneckk::isc12 {
 
+#if defined(ISC12_CODEC_PATCH_TESTING)
 enum class LoaderInstallResult : std::uint8_t {
     Active,
     FailedBeforeMutation,
@@ -24,7 +27,7 @@ enum class LoaderInstallResult : std::uint8_t {
 template <typename ReserveTailAttempt, typename PatchTail, typename ActivateTail,
           typename PatchCap, typename PublishCap>
 auto CommitLoaderMutation(
-        const NativePublicationQuiescenceLease& quiescence,
+        const NativePublicationLeaseView& quiescence,
         ReserveTailAttempt&& reserveTailAttempt,
         PatchTail&& patchTail,
         ActivateTail&& activateTail,
@@ -60,19 +63,82 @@ auto CommitLoaderMutation(
     publishCap();
     return LoaderInstallResult::Active;
 }
+#endif
 
 struct LoaderRuntimeStatus {
     bool prepared{};
     bool persistencePrepared{};
     bool tailPatchInstalled{};
     bool capPatchInstalled{};
+    bool persistenceReaderPatchInstalled{};
+    bool persistenceWriterPatchInstalled{};
+    bool publicationAdaptersBound{};
     bool operational{};
     bool schemaReady{};
     bool persistenceCodecReady{};
+    bool itemTransportReady{};
     bool coldRestartRequired{};
     std::uint64_t buildCalls{};
     std::uint64_t lastRowCount{};
     std::uint64_t lastDescriptionCount{};
+};
+
+inline constexpr std::uintptr_t LoaderCompileCallRva = 0x31EC7B;
+inline constexpr std::size_t LoaderCompileCallInstructionOffset = 14U;
+inline constexpr std::uintptr_t NativeGenericCompileRva = 0x2FF970;
+inline constexpr std::uintptr_t PlayerSaveStatWriterCallRva = 0x5352F6;
+inline constexpr std::size_t PlayerSaveStatWriterCallInstructionOffset = 13U;
+inline constexpr std::uintptr_t ItemSaveStatWriterCallRva = 0x37F174;
+inline constexpr std::size_t ItemSaveStatWriterCallInstructionOffset = 45U;
+inline constexpr std::uintptr_t NativeBitWriterRva = 0xA1B710;
+inline constexpr std::uintptr_t PlayerSaveDynamicCapacityRva = 0x41E138;
+inline constexpr std::uintptr_t PlayerSaveDynamicCallRva = 0x41E1E9;
+inline constexpr std::size_t PlayerSaveDynamicCallInstructionOffset = 30U;
+inline constexpr std::uintptr_t NativePlayerSaveRva = 0x52F090;
+inline constexpr std::uintptr_t D2SContainerVersionForwardRva = 0x52EDFA;
+inline constexpr std::size_t D2SContainerVersionForwardCallOffset = 29U;
+inline constexpr std::uintptr_t NativeReadItemsByVersionRva = 0x41F0B0;
+inline constexpr std::uintptr_t D2SSaveWriterProviderCallRva = 0x9F95C6;
+inline constexpr std::size_t D2SSaveWriterProviderCallOffset = 30U;
+inline constexpr std::uintptr_t NativeD2SSaveWriterRva = 0x122BFF0;
+inline constexpr std::uintptr_t D2SSaveCloseProviderCallRva = 0x9F95E9;
+inline constexpr std::size_t D2SSaveCloseProviderCallOffset = 21U;
+inline constexpr std::uintptr_t NativeD2SSaveCloseRva = 0x11C7E30;
+
+enum class LoaderCompileProviderKind : std::uint8_t {
+    Invalid,
+    NativeGenericCompiler,
+    D2RCoreLoadExcelTable,
+};
+
+enum class PlayerSaveStatWriterProviderKind : std::uint8_t {
+    Invalid,
+    NativeBitWriter,
+    D2RCoreWritePlayerSaveStatId,
+};
+
+enum class ItemSaveStatWriterProviderKind : std::uint8_t {
+    Invalid,
+    NativeBitWriter,
+    D2RCoreWriteItemSaveStatId,
+};
+
+enum class PlayerSaveProviderKind : std::uint8_t {
+    Invalid,
+    NativePlayerSave,
+    D2RCoreWritePlayerSaveWithEnvironmentCapture,
+};
+
+enum class D2SItemReadProviderKind : std::uint8_t {
+    Invalid,
+    NativeReadItemsByVersion,
+    D2RCoreReadItemsByVersion,
+};
+
+enum class D2SSaveIoProviderKind : std::uint8_t {
+    Invalid,
+    NativeWriteAndClose,
+    D2RCoreWriteAndCloseWithEnvironment,
 };
 
 inline auto CanEncodeRel32(
@@ -102,13 +168,41 @@ auto PrepareLoaderExtension(
     bool diagnostics,
     std::string& error) noexcept -> bool;
 
-auto InstallLoaderExtension(
-    const NativePublicationQuiescenceLease& quiescence,
-    std::string& error) noexcept
-    -> LoaderInstallResult;
+auto InspectLoaderCompileProviderContract(
+    const std::uint8_t* base,
+    std::size_t imageSize) noexcept -> LoaderCompileProviderKind;
+
+auto InspectPlayerSaveStatWriterProviderContract(
+    const std::uint8_t* base,
+    std::size_t imageSize) noexcept -> PlayerSaveStatWriterProviderKind;
+
+auto InspectItemSaveStatWriterProviderContract(
+    const std::uint8_t* base,
+    std::size_t imageSize) noexcept -> ItemSaveStatWriterProviderKind;
+
+auto InspectPlayerSaveProviderContract(
+    const std::uint8_t* base,
+    std::size_t imageSize) noexcept -> PlayerSaveProviderKind;
+
+auto InspectD2SItemReadProviderContract(
+    const std::uint8_t* base,
+    std::size_t imageSize) noexcept -> D2SItemReadProviderKind;
+
+auto InspectD2SSaveIoProviderContract(
+    const std::uint8_t* base,
+    std::size_t imageSize) noexcept -> D2SSaveIoProviderKind;
 
 auto ShutdownLoaderExtension() noexcept -> void;
+[[noreturn]] auto FailClosedNativePublication(
+    const char* reason) noexcept -> void;
 auto GetLoaderRuntimeStatus() noexcept -> LoaderRuntimeStatus;
-auto TryGetPublishedSchemaHash(Sha256Digest& output) noexcept -> bool;
+auto TryGetPreparedPublicationCallbacks(
+    PublicationCoordinatorCallbacks& output) noexcept -> bool;
+auto FinalizePublishedSchemaSnapshot(
+    const void* activeRecords,
+    std::size_t activeRowCount,
+    std::size_t activeRowSize,
+    std::uint64_t revision,
+    std::string& error) noexcept -> NativeSchemaFinalizeResult;
 
 } // namespace ruffneckk::isc12

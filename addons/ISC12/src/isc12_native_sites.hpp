@@ -1555,11 +1555,8 @@ inline constexpr std::array FoundationPatterns{
     NativePattern{"save.writer-status-publish", 0x9F963E, SaveObjectWriterStatusPublishBytes, SaveObjectWriterStatusPublishMask},
 };
 
-inline constexpr std::size_t InstalledHookCount = 0;
-inline constexpr std::size_t InstalledPatchCount = 2;
 inline constexpr std::size_t PreparedCodecMutableSiteCount = 24;
 inline constexpr std::size_t PreparedCodecMutationCount = 102;
 inline constexpr std::size_t PreparedCodecWitnessCount = 77;
-inline constexpr std::size_t PublishedCodecMutationCount = 0;
 
 } // namespace ruffneckk::isc12

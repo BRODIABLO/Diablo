@@ -7,9 +7,13 @@
 - [x] The ledger validator rejects every `ready` site without a concrete,
   unique expected byte pattern.
 - [ ] Quantity and State-ID exclusions are fingerprinted.
-- [ ] Installed Suite and five eezstreet DLLs have no competing owner.
+- [x] The isolated mod-local cold start admitted the complete active Suite and
+  all five eezstreet DLLs without a competing owner on any ISC12 surface.
 - [x] API v3, manifest resource, three exports and hybrid flags are scaffolded.
 - [x] No build-name/version allowlist exists.
+- [x] Admit D2RLoader 1.1/1.2 composition only through exact D2RCore
+  providers: bounded relay, export/body, live PDATA/unwind, forward slot and
+  exact native destination; retain every provider CALL.
 - [x] The 0.2.0 TOML and embedded fallback are disabled by default.
 - [x] The 0.2.0 target is not eligible for a public archive.
 - [x] Duplicate-scope mutex is PID-qualified: one owner per D2R process without
@@ -17,10 +21,11 @@
 
 ## G0 — loader and DescFunc
 
-- [x] Pure commit tests prove lifetime reservation → tail → conservative cap
-  guard → operational gate → count cap; a false tail result performs no later
-  write and enters the uncertain-commit path, while cap failure enters the
-  guarded cold-restart state.
+- [x] Pure commit tests prove process-lifetime reservation → tail → conservative
+  `capMayBeExtended` guard → count cap. Global readiness/operational is
+  published only after G0, G10 and codec all commit; a false tail result
+  performs no later write and enters the uncertain-commit path, while cap
+  failure enters the guarded cold-restart state.
 - [x] A false tail patch result keeps RX/RW resources process-lifetime, logs the
   observed eight-byte seam and immediately terminates fail-closed.
 - [x] A failed cap API call is treated as potentially mutating; inactive relay
@@ -36,13 +41,15 @@
   exits, after the thread has left all DLL code.
 - [x] Unsafe inactive-relay state and rundown timeout use Windows fast-fail,
   never a resumable `UD2` or an unsafe unload.
-- [x] Require a live `NativePublicationQuiescenceLease` before G0 resource
-  reservation or mutation; current `enabled=true` refuses with zero writes
-  because the pinned SDK has no issuer. Lease loss before the first write and
-  after an attempted write are unit-tested as distinct outcomes.
+- [x] Require a live borrowed `NativePublicationLeaseView` before G0 resource
+  reservation or mutation; it owns no authority and has no release operation.
+  The production view is same-thread and bounded to the initial
+  `D2RLoaderLoadPlugin` callback. Loss before the first write and after an
+  attempted write are tested as distinct outcomes.
 - [ ] Prove quiescent or transactional publication of the non-aligned
   eight-byte `PatchJmpRel32` seam.
-- [ ] Native relay preserves the same order and stack safety at runtime.
+- [x] Native G0 relay executed twice during the qualified TXT load and reached
+  `DataTablesLoaded` plus complete frontend startup without stack/order fault.
 
 ### G0-BBE — separate native expression path
 
@@ -81,8 +88,13 @@
   the exact in-place 42-byte body `[0x37F17C,0x37F1A6)`, without double
   ownership. Preserve the table compare/suppression for IDs `0..510`; bypass
   the lookup for larger IDs;
-  emit `min(ID,0xFFF)` at width 12; keep the native CALL at `0x37F1A1`
-  unchanged and continue rejecting a real stat ID `0xFFF` in the schema.
+  emit `min(ID,0xFFF)` at width 12; preserve either the direct native CALL or
+  the exactly attested `WriteItemSaveStatId` provider at `0x37F1A1`, and
+  continue rejecting a real stat ID `0xFFF` in the schema.
+- [x] Read-only live proof confirms the D2RLoader 1.2 G1 provider forwards
+  every ID unchanged to `D2R+0xA1B710`; its `<0x200` private census limit is a
+  metadata gap, not an ISC12 writer truncation. The qualified cold start now
+  publishes G1 as part of the canonical set.
 - [x] The reader width/sentinel/seed mutations have exact signatures; the
   subsequent-reader interior CALL resolves exactly to governed
   `BITSTREAM_ReadBitsThunk 0xA1B6C0`, and retargeting is rejected before any
@@ -91,10 +103,10 @@
   invariant.
 - [x] The canonical G1–G4 full-set preflight, bounded replacement semantics and
   corrupt-fingerprint tests pass with the 42-byte writer body integrated.
-- [x] Require a valid production-issued quiescence lease before G1 can commit
-  or publish with the canonical set.
-- [x] Keep G1 unpublished: no production lease issuer or commit caller exists,
-  and G9 plus the remaining activation gates are not published.
+- [x] Require the active initial-load publication view before G1 can commit
+  with the canonical set.
+- [x] Route G1 only through the full G0/G10/codec startup coordinator; no
+  independent or legacy G1 publication path exists.
 
 ## G2–G4 — player, save and preview codecs
 
@@ -119,12 +131,19 @@
   owner/return/capacity/layout/cleanup/overrun witnesses
   preflight before the first write, publication requires the canonical live
   quiescence lease and any false write or flush result requires a cold restart.
-- [x] Keep all 40 G2–G4 slots unpublished.
-- [x] Confirm all 84 recomputed canonical G1–G4 slots remain unpublished with
-  `PublishedCodecMutationCount == 0` after source integration.
-- [x] Confirm all 102 slots in the G9 plus G1–G4 transaction remain unpublished;
-  `itemTransportReady == 0`, `codecReady == 0`, and no production Commit caller
-  exists.
+- [x] Keep all 40 G2–G4 slots inside the single canonical transaction.
+- [x] Confirm all 84 recomputed canonical G1–G4 slots remain owned by that
+  transaction after source integration.
+- [x] Confirm all 102 slots in the G9 plus G1–G4 plan are reached only through
+  the one production startup caller; runtime publication remains NOT RUN.
+- [x] A full-stack D2RLoader 1.2 cold start attests the exact
+  `WritePlayerSaveStatId` G3 provider and its live forward slot to
+  `D2R+0xA1B710` before the source transaction can publish.
+- [x] Attest the dynamic caller as one indivisible pair: canonical
+  `0x8000 + direct D2R+0x52F090`, or D2RLoader
+  `0xFFFF + WritePlayerSaveWithEnvironmentCapture`. Validate the provider's
+  complete 1.1/1.2 body hash, PDATA/unwind, bounded relay and native forward
+  slot; preserve both the capacity and CALL.
 - [x] Reject the native schema fail-closed when `CsvBits > 32` or
   `CsvParamBits > 16`, matching the native 32-bit value and 16-bit parameter
   widths. Under the unchanged 512-entry cap, a complete worst-case section is
@@ -141,30 +160,36 @@
   postcheck.
 - [x] Prepare governed propagation of the G3 bit-writer overrun flag: a copied
   RX leaf preserves the native used-end result, returns the DWORD at
-  `[bitstream+0x20]` in EDX, redirects the exact CALL at `0x5353C2`, flushes
-  it, then publishes and flushes `mov eax, edx` at `0x5353D2` as the final
-  canonical G1–G4 site.
+  `[bitstream+0x20]` in EDX, and is ordered to commit the exact CALL at
+  `0x5353C2` before `mov eax, edx` at `0x5353D2` as the final canonical G1–G4
+  site in a future authorized transaction, flushing both ranges.
   Signed rel32 limits, opaque loader provenance, no-op displacement bytes,
   corrupt fingerprints, partial writes and both final flush failures are unit
   tested. No code cave or unwind-owned byte is used.
-- [x] Replace the forgeable quiescence boolean with a move-only opaque RAII
-  lease, validate it before every fingerprint/write/flush and unit-test absent
-  or revoked authority plus partial-mutation cold-restart handling.
-- [x] Add a production-neutral one-shot full-set coordinator with no production
-  caller: preflight G0, G10 and codec before reservation/write; reserve process
-  lifetime once; commit G0, G10 and codec; publish readiness strictly last;
-  make `Poisoned` terminal and invoke the infallible poison-state callback
-  exactly once without rollback. Unit-test absent/revoked leases, every
-  preflight rejection, reentry, mutate-then-uncertain outcomes, monotone
-  terminal states, lease move/release and loss of authority during final
-  readiness publication; the post-readiness lease check poisons and clears the
-  publication before any possible resume.
-- [ ] Obtain a documented synchronous loader-owned production transaction for
-  the lease; it must serialize publishers, exclude every native consumer and
-  prevent runtime resumption on a poisoned result. Split G0, G10 and codec into
-  immutable preflight/commit adapters, bind them to the tested coordinator,
-  reserve the real relays/state before the first write and fast-fail on any
-  uncertain write/flush before quiescence ends.
+- [x] Replace the forgeable quiescence boolean with a borrowed, validate-only
+  `NativePublicationLeaseView`; validate it before every
+  fingerprint/write/flush and unit-test absent or revoked authority plus
+  partial-mutation handling. Production constructs it only inside the
+  same-thread initial-load window.
+- [x] Add the one-shot full-set coordinator and its production startup caller:
+  preflight G0, G10 and codec before reservation/write; reserve process lifetime
+  once; commit G0, G10 and codec; stop at `CommittedPendingReadiness` with all
+  readiness flags false; publish readiness exactly once before the initial
+  callback returns; make `Poisoned` terminate the process without rollback.
+  Unit-test absent/revoked views, every preflight rejection, reentry,
+  mutate-then-uncertain outcomes, monotone terminal states and both startup
+  readiness paths.
+- [x] Split G0, G10 and codec into immutable preflight/commit adapters and bind
+  the real loader callbacks and relay targets to the tested coordinator. Prove
+  all three preflights before reservation/write, G0 tail→guard→cap, G10
+  reader→writer, codec G9/G2/G4/G1/G3, one process-lifetime reservation,
+  native-commit-before-readiness, actual patch/write/flush failure poison, both
+  startup outcomes, exactly one production `PublicationCoordinator::Publish`
+  caller and no production G0-only fallback.
+- [ ] Optional upstream hardening: obtain a documented loader-owned transaction
+  if D2RLoader wants reusable cross-publisher serialization and explicit
+  owner/thread/epoch semantics. This is no longer a prerequisite for the
+  isolated ISC12 runtime spike.
 - [x] Retarget only preview CALL `0x61CF90` in the prepared set, call shared
   native copy owner `0xA1E110` exactly once, then validate whole v105 D2S,
   context `<4`, wrapper-required marker `0x6667`, every schema-bound ID/payload,
@@ -178,6 +203,9 @@
 
 - [ ] `0x3E`, `0xA8` and `0xAA` pairs pass boundary tests.
 - [ ] `0xAC` headroom and fallback are resolved.
+- [ ] Census any additional fixed-byte `uint8 statId` packets mentioned by
+  Necrolis; either widen both producer and consumer or prove that ISC12 IDs
+  above the vanilla range cannot reach them.
 - [x] Govern twelve exact G9 witnesses proving that 0x9C/0x9D serialize one node
   with recursion disabled, the root cap is 244 bytes for 0x9C, every 0x9D cap
   is 239 bytes, socketed descendants are separate 0x9D packets, and the
@@ -273,8 +301,8 @@
 - [x] Connect both seams off-runtime to process-lifetime RX relays and separate
   RW rundown state; the reader unwraps only a complete accepted envelope and
   the writer reaches the final path only through the atomic transaction.
-- [x] Keep persistence publication impossible in this stage:
-  `InstalledHookCount == 0`, `codecReady == false`, and neither seam is patched.
+- [x] Include both persistence seams only in the canonical startup transaction;
+  source/build validation is green and first runtime publication is NOT RUN.
 - [x] Preserve the tail-entered ABI contract without claiming general unwind:
   MASM metadata covers each stub's local allocation only; all callbacks are
   `noexcept`, expected faults are contained and unexpected failures fast-fail.
@@ -294,8 +322,18 @@
   rejects failed/short target reads and prepares valid target unwrap/wrap only
   after the complete envelope contract passes.
 - [x] Recover the exact runtime `Stat` sequence from `DataTables+0x1270` through
-  governed count/name functions, copy every linker-owned name immediately and
-  publish the canonical snapshot/hash before any `DescFunc` mutation.
+  governed count/name functions and copy every linker-owned name immediately.
+  Stage the Classic/base and expansion captures with `SchemaReady=false`, then
+  publish only the exact candidate named by the RotW `DataTableServiceV1`
+  TableView at the synchronous `DataTablesLoaded` boundary. Re-decode the
+  authoritative bytes after loader post-processing; pointer/count equality
+  alone is not sufficient.
+- [x] Treat a non-zero changed lifecycle revision as an opaque token rather
+  than assuming numeric monotonicity, and make listener unregister race-safe
+  with an atomic `Stopping` state plus a stable callback token.
+- [x] Hold a non-blocking shared schema lease from the targeted native buffer
+  snapshot through read replacement or atomic write commit; if reload owns the
+  exclusive lock, reject without waiting or committing.
 - [x] Reject a divergent schema reload fail-closed; an identical reload reuses
   the immutable published snapshot without a sidecar or generated manifest.
 - [x] Pure policy and native-adapter fixtures reject vanilla, malformed and
@@ -306,7 +344,8 @@
 
 - [x] Foundation 0.1.0: two byte-identical Release builds with `/W4 /WX`,
   CTest `1/1`, PE x64, version 0.1.0 and three exports.
-- [x] Loader stage 0.2.0: two byte-identical 179,200-byte Release builds,
+- [x] Historical initial loader-only 0.2.0 artifact, superseded and not current:
+  two byte-identical 179,200-byte Release builds,
   SHA-256 `C2B461CF8373CD3FD49D125A1DA9B195E6D917A62EE24CFEBFABD1FA0D1A4D93`,
   `/W4 /WX`, CTest `1/1`, PE x64 and three exports.
 - [x] Last verified pre-discovery baseline: G10-B P3b plus the former canonical
@@ -317,21 +356,28 @@
   governed ledger `VALID` at 193 sites / 14 groups and every added signature
   unique, with 20 mutable sites, 84 differing slots, 71 witnesses and zero
   native publication.
-- [x] Current G9-A plus production-neutral coordinator source/static gate: the
-  full Release `/W4 /WX` build and CTest `4/4` pass; the governed DLL SHA-256 is
-  `FF8D16AF4A6DBCB9BD3AD86A6A6DFCBB4553D26A200DF161B1065C6A5DFE5286`; the
-  ledger is `VALID` at 211 sites / 15 groups, the canonical transaction has
-  24 mutable sites, 102 mutations, 77 witnesses and zero publication.
-- [ ] Complete-stack global and mod-local cold starts.
+- [x] Current G9-A plus startup-publication source/static gate: two full Release
+  `/W4 /WX` builds and CTest `5/5` pass; the byte-identical 445,952-byte
+  governed DLL SHA-256 is
+  `EFCA4EBAECDC7E0EF7BE70D2BE741FD7D73DED0ACA85873507CCA2D2B625F3DB`; the
+  ledger is `VALID` at 211 sites / 15 groups and the canonical codec transaction
+  has 24 mutable sites, 102 mutations and 77 witnesses.
+- [x] Isolated full-stack mod-local cold start on D2R 3.3.93847 and D2RLoader
+  1.2 admitted every D2RCore provider and live unwind contract; published
+  G0/G10/G9/G1-G4; compiled 190 TXT tables; selected RotW ItemStatCost revision
+  1 with `rows=400`, `G0-builds=2` and `SchemaReady=true`; and reached
+  `D2R startup complete`. The stack reported 36 loaded plugins, all five
+  eezstreet DLLs, 17 patches and only two known unrelated mod-local failures.
+- [x] Complete-stack mod-local cold start.
+- [ ] Complete-stack global cold start.
 - [ ] Live 0x9C/0x9D root/descendant, overflow, reentry, backpressure and
   coexistence cases.
 - [ ] Disposable new-save gameplay and save/reload matrix.
 - [ ] Matching host/joiner passes; mismatches fail closed.
 
-No ISC12 publication runtime, real save or multiplayer validation has run for
-the current G9-A source-prepared state. The external read-only G0-BBE capture
-closes native membership only. The coordinator is source-prepared/tested but
-has no production adapters or caller. A real loader-owned
-publication-quiescence authority, the domain split/binding and the remaining
-activation gates are still required before publication. Only after those gates
-close may cold-start and the live matrix begin.
+Mod-local ISC12 publication and schema lifecycle validation have run. No
+persistence execution, real save, functional 0x9C/0x9D item case, gameplay,
+global-scope or multiplayer validation has run. The next gate is the disposable
+0x9C/0x9D/overflow/reentry/backpressure matrix followed by clean-sheet
+save/reload; G5–G8 and the fixed-byte packet census remain required before any
+complete-network claim.

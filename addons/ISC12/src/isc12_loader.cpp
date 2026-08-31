@@ -8,6 +8,7 @@
 #include "isc12_native_persistence_adapter.hpp"
 #include "isc12_native_schema_adapter.hpp"
 #include "isc12_player_stat_preflight.hpp"
+#include "isc12_publication_adapters.hpp"
 
 #include <Windows.h>
 
@@ -325,15 +326,69 @@ bool PersistencePrepared{};
 bool AnyMutationInstalled{};
 bool TailPatchInstalled{};
 bool CapPatchInstalled{};
+bool PersistenceReaderPatchInstalled{};
+bool PersistenceWriterPatchInstalled{};
 bool ColdRestartRequired{};
+PublicationAdapterSet PreparedPublicationAdapters{};
 std::atomic_uint64_t BuildCalls{};
 std::atomic_uint64_t LastRowCount{};
 std::atomic_uint64_t LastDescriptionCount{};
 std::atomic_bool SchemaReady{};
 SRWLOCK SchemaSnapshotLock = SRWLOCK_INIT;
 NativeItemStatCostSchemaSnapshot PublishedSchemaSnapshot;
+NativeSchemaCandidateSet PendingSchemaCandidates;
 bool HasPublishedSchemaSnapshot{};
 bool SchemaUpdateInProgress{};
+
+// Persistence hooks may run while DataTablesLoaded is attempting to replace
+// the authoritative schema. They already execute under native SaveObject
+// synchronization, so waiting for our exclusive reload lock could create a
+// lock-order cycle. Acquire shared ownership only when immediately available,
+// then retain it through the complete buffer replacement or atomic commit.
+class PublishedSchemaReadLease final {
+public:
+    PublishedSchemaReadLease() noexcept = default;
+    PublishedSchemaReadLease(const PublishedSchemaReadLease&) = delete;
+    PublishedSchemaReadLease(PublishedSchemaReadLease&&) = delete;
+    auto operator=(const PublishedSchemaReadLease&)
+        -> PublishedSchemaReadLease& = delete;
+    auto operator=(PublishedSchemaReadLease&&)
+        -> PublishedSchemaReadLease& = delete;
+
+    ~PublishedSchemaReadLease() noexcept {
+        Release();
+    }
+
+    [[nodiscard]] auto TryAcquire(Sha256Digest& output) noexcept -> bool {
+        if (held_ || !TryAcquireSRWLockShared(&SchemaSnapshotLock)) {
+            return false;
+        }
+        held_ = true;
+        if (!SchemaReady.load(std::memory_order_acquire)
+                || !HasPublishedSchemaSnapshot
+                || SchemaUpdateInProgress) {
+            Release();
+            return false;
+        }
+        output = PublishedSchemaSnapshot.schemaHash;
+        return true;
+    }
+
+private:
+    auto Release() noexcept -> void {
+        if (!held_) return;
+        held_ = false;
+        ReleaseSRWLockShared(&SchemaSnapshotLock);
+    }
+
+    bool held_{};
+};
+
+static_assert(!std::is_copy_constructible_v<PublishedSchemaReadLease>);
+static_assert(!std::is_copy_assignable_v<PublishedSchemaReadLease>);
+static_assert(!std::is_move_constructible_v<PublishedSchemaReadLease>);
+static_assert(!std::is_move_assignable_v<PublishedSchemaReadLease>);
+
 thread_local bool NativeVectorMutationStarted{};
 thread_local bool CurrentRowCountKnown{};
 thread_local std::uint64_t CurrentRowCount{};
@@ -449,6 +504,1108 @@ auto SafeCopyReadable(
     }
 }
 
+auto ApplySignedDisplacement(
+        std::uintptr_t next,
+        std::int32_t displacement,
+        std::uintptr_t& target) noexcept -> bool {
+    const auto signedDisplacement = static_cast<std::int64_t>(displacement);
+    if (signedDisplacement >= 0) {
+        const auto distance = static_cast<std::uintptr_t>(
+            signedDisplacement);
+        if (next > (std::numeric_limits<std::uintptr_t>::max)() - distance) {
+            return false;
+        }
+        target = next + distance;
+        return true;
+    }
+    const auto distance = static_cast<std::uintptr_t>(
+        -signedDisplacement);
+    if (next < distance) return false;
+    target = next - distance;
+    return true;
+}
+
+auto ReadUnconditionalJumpTarget(
+        std::uintptr_t instruction,
+        std::uintptr_t& target) noexcept -> bool {
+    std::array<std::uint8_t, 2> opcode{};
+    if (!SafeCopyReadable(
+            reinterpret_cast<const void*>(instruction),
+            opcode.data(),
+            opcode.size())) {
+        return false;
+    }
+
+    std::int32_t displacement{};
+    std::uintptr_t next{};
+    if (opcode[0] == 0xE9U) {
+        if (instruction
+                > (std::numeric_limits<std::uintptr_t>::max)() - 5U
+                || !SafeRead(
+                    reinterpret_cast<const void*>(instruction + 1U),
+                    displacement)) {
+            return false;
+        }
+        next = instruction + 5U;
+        if (!ApplySignedDisplacement(next, displacement, target)) {
+            return false;
+        }
+    } else if (opcode[0] == 0xFFU && opcode[1] == 0x25U) {
+        if (instruction
+                > (std::numeric_limits<std::uintptr_t>::max)() - 6U
+                || !SafeRead(
+                    reinterpret_cast<const void*>(instruction + 2U),
+                    displacement)) {
+            return false;
+        }
+        next = instruction + 6U;
+        std::uintptr_t slot{};
+        if (!ApplySignedDisplacement(next, displacement, slot)
+                || !SafeRead(
+                    reinterpret_cast<const void*>(slot), target)) {
+            return false;
+        }
+    } else {
+        return false;
+    }
+    return target != 0U
+        && IsAccessibleRange(
+            reinterpret_cast<const void*>(target), 1U, false, true);
+}
+
+template <std::size_t Size>
+auto ValidateD2RCoreNativeCompilerForwarder(
+        const std::uint8_t* d2rBase,
+        std::uintptr_t implementation,
+        std::uintptr_t forwarderOffset,
+        const std::array<std::uint8_t, Size>& expected) noexcept -> bool {
+    if (!d2rBase || Size < 7U
+            || implementation
+                > (std::numeric_limits<std::uintptr_t>::max)()
+                    - forwarderOffset) {
+        return false;
+    }
+    const auto forwarder = implementation + forwarderOffset;
+    std::array<std::uint8_t, Size> live{};
+    if (!IsAccessibleRange(
+            reinterpret_cast<const void*>(forwarder),
+            live.size(),
+            false,
+            true)
+            || !SafeCopyReadable(
+                reinterpret_cast<const void*>(forwarder),
+                live.data(),
+                live.size())
+            || std::memcmp(live.data(), expected.data(), 3U) != 0
+            || std::memcmp(
+                live.data() + 7U,
+                expected.data() + 7U,
+                Size - 7U) != 0) {
+        return false;
+    }
+
+    std::int32_t slotDisplacement{};
+    std::memcpy(
+        &slotDisplacement, live.data() + 3U, sizeof(slotDisplacement));
+    std::uintptr_t originalSlot{};
+    if (!ApplySignedDisplacement(
+            forwarder + 7U, slotDisplacement, originalSlot)) {
+        return false;
+    }
+    std::uintptr_t originalCompiler{};
+    return SafeRead(
+            reinterpret_cast<const void*>(originalSlot), originalCompiler)
+        && originalCompiler
+            == reinterpret_cast<std::uintptr_t>(d2rBase)
+                + NativeGenericCompileRva;
+}
+
+auto ValidateD2RCoreLoadExcelProviderAbi(
+        const std::uint8_t* d2rBase,
+        HMODULE core,
+        std::uintptr_t loadExcelExport) noexcept -> bool {
+    constexpr auto ExportBytes = std::to_array<std::uint8_t>({
+        0x48,0x83,0xEC,0x48,0x0F,0x28,0x44,0x24,0x70,0x48,
+        0x8B,0x84,0x24,0x80,0x00,0x00,0x00,0x48,0x89,0x44,
+        0x24,0x30,0x0F,0x11,0x44,0x24,0x20,0xC6,0x44,0x24,
+        0x38,0x00,0xE8,0x00,0x00,0x00,0x00,0x90,0x48,0x83,
+        0xC4,0x48,0xC3,
+    });
+    constexpr auto NativeForwarder12 = std::to_array<std::uint8_t>({
+        0x48,0x8B,0x05,0x00,0x00,0x00,0x00,0x48,0x8B,0x8D,
+        0x70,0x13,0x00,0x00,0x48,0x89,0x4C,0x24,0x30,0x48,
+        0x8B,0x8D,0x68,0x13,0x00,0x00,0x48,0x89,0x4C,0x24,
+        0x28,0x48,0x8B,0x8D,0x60,0x13,0x00,0x00,0x48,0x89,
+        0x4C,0x24,0x20,0x0F,0xB6,0x8D,0xC7,0x12,0x00,0x00,
+        0x48,0x8B,0x95,0xB0,0x12,0x00,0x00,0x4C,0x8B,0x85,
+        0xB8,0x12,0x00,0x00,0x4C,0x8B,0x8D,0xA8,0x12,0x00,
+        0x00,0xFF,0xD0,
+    });
+    constexpr std::uintptr_t NativeForwarder12Offset = 0x935U;
+    constexpr auto NativeForwarder11 = std::to_array<std::uint8_t>({
+        0x48,0x8B,0x05,0x00,0x00,0x00,0x00,0x48,0x8B,0x8D,
+        0xC0,0x12,0x00,0x00,0x48,0x89,0x4C,0x24,0x30,0x48,
+        0x8B,0x8D,0xB8,0x12,0x00,0x00,0x48,0x89,0x4C,0x24,
+        0x28,0x48,0x8B,0x8D,0xB0,0x12,0x00,0x00,0x48,0x89,
+        0x4C,0x24,0x20,0x0F,0xB6,0x8D,0x17,0x12,0x00,0x00,
+        0x48,0x8B,0x95,0x00,0x12,0x00,0x00,0x4C,0x8B,0x85,
+        0x08,0x12,0x00,0x00,0x4C,0x8B,0x8D,0xF8,0x11,0x00,
+        0x00,0xFF,0xD0,
+    });
+    constexpr std::uintptr_t NativeForwarder11Offset = 0x901U;
+    constexpr std::size_t CallOpcodeOffset = 32U;
+    static_assert(ExportBytes[CallOpcodeOffset] == 0xE8U);
+    if (!core || loadExcelExport == 0U
+            || !IsAccessibleRange(
+                reinterpret_cast<const void*>(loadExcelExport),
+                ExportBytes.size(),
+                false,
+                true)) {
+        return false;
+    }
+    std::array<std::uint8_t, ExportBytes.size()> live{};
+    if (!SafeCopyReadable(
+            reinterpret_cast<const void*>(loadExcelExport),
+            live.data(),
+            live.size())
+            || std::memcmp(
+                live.data(), ExportBytes.data(), CallOpcodeOffset + 1U) != 0
+            || std::memcmp(
+                live.data() + CallOpcodeOffset + 5U,
+                ExportBytes.data() + CallOpcodeOffset + 5U,
+                ExportBytes.size() - CallOpcodeOffset - 5U) != 0) {
+        return false;
+    }
+
+    std::int32_t displacement{};
+    std::memcpy(
+        &displacement,
+        live.data() + CallOpcodeOffset + 1U,
+        sizeof(displacement));
+    std::uintptr_t implementation{};
+    if (!ApplySignedDisplacement(
+            loadExcelExport + CallOpcodeOffset + 5U,
+            displacement,
+            implementation)
+            || !IsAccessibleRange(
+                reinterpret_cast<const void*>(implementation),
+                1U,
+                false,
+                true)) {
+        return false;
+    }
+
+    DWORD64 functionImageBase{};
+    const auto* liveFunction = RtlLookupFunctionEntry(
+        static_cast<DWORD64>(implementation), &functionImageBase, nullptr);
+    RUNTIME_FUNCTION function{};
+    const auto coreBase = reinterpret_cast<std::uintptr_t>(core);
+    if (!liveFunction
+            || functionImageBase != static_cast<DWORD64>(coreBase)
+            || implementation < coreBase
+            || implementation - coreBase
+                > (std::numeric_limits<DWORD>::max)()
+            || !SafeRead(liveFunction, function)
+            || function.BeginAddress != implementation - coreBase
+            || function.EndAddress <= implementation - coreBase) {
+        return false;
+    }
+    const auto functionSize = static_cast<std::uintptr_t>(
+        function.EndAddress - function.BeginAddress);
+    const auto validates = [&]<std::size_t Size>(
+            std::uintptr_t offset,
+            const std::array<std::uint8_t, Size>& expected) noexcept {
+        return offset <= functionSize
+            && Size <= functionSize - offset
+            && ValidateD2RCoreNativeCompilerForwarder(
+                d2rBase, implementation, offset, expected);
+    };
+    return validates(NativeForwarder12Offset, NativeForwarder12)
+        || validates(NativeForwarder11Offset, NativeForwarder11);
+}
+
+template <std::size_t ProviderSize>
+auto ValidateD2RCoreSaveStatWriterAbi(
+        const std::uint8_t* d2rBase,
+        std::size_t d2rImageSize,
+        HMODULE core,
+        std::uintptr_t writerExport,
+        const std::array<std::uint8_t, ProviderSize>& providerBytes12,
+        const std::array<std::uint8_t, ProviderSize>& providerBytes11,
+        std::uintptr_t providerRva12,
+        std::uintptr_t providerRva11,
+        DWORD unwindRva12,
+        DWORD unwindRva11,
+        std::size_t forwardCallOffset) noexcept -> bool {
+    constexpr auto UnwindBytes12 = std::to_array<std::uint8_t>({
+        0x19,0x0A,0x03,0x35,0x0A,0x03,0x05,0x52,
+        0x01,0x50,0x00,0x00,0xB0,0x43,0x3C,0x00,
+    });
+    constexpr auto UnwindBytes11 = std::to_array<std::uint8_t>({
+        0x19,0x0A,0x03,0x35,0x0A,0x03,0x05,0x52,
+        0x01,0x50,0x00,0x00,0x80,0x97,0x32,0x00,
+    });
+    constexpr auto NativeWriterEntryBytes = std::to_array<std::uint8_t>({
+        0x48,0x89,0x5C,0x24,0x10,0x57,0x48,0x83,0xEC,0x20,
+        0x4C,0x8B,0x49,0x18,0x48,0x8B,0xD9,0x48,0x8B,0x41,
+        0x10,0x44,0x8B,0xD2,0x48,0x8B,0x51,0x08,0x49,0x8D,
+        0x0C,0xC1,
+    });
+    if (!d2rBase || !core || writerExport == 0U
+            || forwardCallOffset > ProviderSize
+            || ProviderSize - forwardCallOffset < 6U
+            || providerBytes12[forwardCallOffset] != 0xFFU
+            || providerBytes12[forwardCallOffset + 1U] != 0x15U
+            || providerBytes11[forwardCallOffset] != 0xFFU
+            || providerBytes11[forwardCallOffset + 1U] != 0x15U
+            || NativeBitWriterRva > d2rImageSize
+            || NativeWriterEntryBytes.size()
+                > d2rImageSize - NativeBitWriterRva
+            || !IsAccessibleRange(
+                reinterpret_cast<const void*>(writerExport),
+                ProviderSize,
+                false,
+                true)) {
+        return false;
+    }
+
+    std::array<std::uint8_t, ProviderSize> liveProvider{};
+    if (!SafeCopyReadable(
+            reinterpret_cast<const void*>(writerExport),
+            liveProvider.data(),
+            liveProvider.size())) {
+        return false;
+    }
+    const bool provider12 = liveProvider == providerBytes12;
+    const bool provider11 = liveProvider == providerBytes11;
+    if (!provider12 && !provider11) return false;
+
+    const auto coreBase = reinterpret_cast<std::uintptr_t>(core);
+    const auto providerRva = provider12 ? providerRva12 : providerRva11;
+    const auto unwindRva = provider12 ? unwindRva12 : unwindRva11;
+    DWORD64 functionImageBase{};
+    const auto* liveFunction = RtlLookupFunctionEntry(
+        static_cast<DWORD64>(writerExport), &functionImageBase, nullptr);
+    RUNTIME_FUNCTION function{};
+    if (!liveFunction
+            || functionImageBase != static_cast<DWORD64>(coreBase)
+            || writerExport < coreBase
+            || writerExport - coreBase
+                > (std::numeric_limits<DWORD>::max)()
+            || !SafeRead(liveFunction, function)
+            || writerExport - coreBase != providerRva
+            || function.BeginAddress != providerRva
+            || function.EndAddress - function.BeginAddress
+                != ProviderSize
+            || function.UnwindData != unwindRva) {
+        return false;
+    }
+    if (coreBase > (std::numeric_limits<std::uintptr_t>::max)()
+            - function.UnwindData) {
+        return false;
+    }
+    std::array<std::uint8_t, UnwindBytes12.size()> liveUnwind{};
+    if (!SafeCopyReadable(
+            reinterpret_cast<const void*>(coreBase + function.UnwindData),
+            liveUnwind.data(),
+            liveUnwind.size())
+            || liveUnwind != (provider12 ? UnwindBytes12 : UnwindBytes11)) {
+        return false;
+    }
+
+    std::int32_t slotDisplacement{};
+    std::memcpy(
+        &slotDisplacement,
+        liveProvider.data() + forwardCallOffset + 2U,
+        sizeof(slotDisplacement));
+    std::uintptr_t nativeWriterSlot{};
+    if (!ApplySignedDisplacement(
+            writerExport + forwardCallOffset + 6U,
+            slotDisplacement,
+            nativeWriterSlot)) {
+        return false;
+    }
+    std::uintptr_t nativeWriter{};
+    const auto expectedNativeWriter =
+        reinterpret_cast<std::uintptr_t>(d2rBase) + NativeBitWriterRva;
+    if (!SafeRead(
+            reinterpret_cast<const void*>(nativeWriterSlot), nativeWriter)
+            || nativeWriter != expectedNativeWriter
+            || !IsAccessibleRange(
+                reinterpret_cast<const void*>(nativeWriter),
+                NativeWriterEntryBytes.size(),
+                false,
+                true)) {
+        return false;
+    }
+    std::array<std::uint8_t, NativeWriterEntryBytes.size()> liveWriter{};
+    return SafeCopyReadable(
+            reinterpret_cast<const void*>(nativeWriter),
+            liveWriter.data(),
+            liveWriter.size())
+        && liveWriter == NativeWriterEntryBytes;
+}
+
+auto ValidateD2RCorePlayerSaveStatWriterAbi(
+        const std::uint8_t* d2rBase,
+        std::size_t d2rImageSize,
+        HMODULE core,
+        std::uintptr_t writerExport) noexcept -> bool {
+    constexpr auto ProviderBytes12 = std::to_array<std::uint8_t>({
+        0x55,0x48,0x83,0xEC,0x30,0x48,0x8D,0x6C,0x24,0x30,
+        0x48,0xC7,0x45,0xF8,0xFE,0xFF,0xFF,0xFF,0x8B,0x05,
+        0xF8,0x24,0xF1,0xFF,0x65,0x4C,0x8B,0x0C,0x25,0x58,
+        0x00,0x00,0x00,0x49,0x8B,0x04,0xC1,0x48,0x8B,0x80,
+        0x68,0x04,0x00,0x00,0x48,0x85,0xC0,0x41,0x0F,0x94,
+        0xC1,0x81,0xFA,0x00,0x02,0x00,0x00,0x41,0x0F,0x93,
+        0xC2,0x45,0x08,0xCA,0x75,0x1D,0x41,0x89,0xD2,0x41,
+        0xBB,0x01,0x00,0x00,0x00,0x49,0x89,0xC9,0x89,0xD1,
+        0x49,0xD3,0xE3,0x4C,0x89,0xC9,0x41,0xC1,0xEA,0x06,
+        0x4E,0x09,0x5C,0xD0,0x40,0xFF,0x15,0x23,0x0D,0xF0,
+        0xFF,0x90,0x48,0x83,0xC4,0x30,0x5D,0xC3,
+    });
+    constexpr auto ProviderBytes11 = std::to_array<std::uint8_t>({
+        0x55,0x48,0x83,0xEC,0x30,0x48,0x8D,0x6C,0x24,0x30,
+        0x48,0xC7,0x45,0xF8,0xFE,0xFF,0xFF,0xFF,0x8B,0x05,
+        0x38,0xE8,0xF1,0xFF,0x65,0x4C,0x8B,0x0C,0x25,0x58,
+        0x00,0x00,0x00,0x49,0x8B,0x04,0xC1,0x48,0x8B,0x80,
+        0x18,0x04,0x00,0x00,0x48,0x85,0xC0,0x41,0x0F,0x94,
+        0xC1,0x81,0xFA,0x00,0x02,0x00,0x00,0x41,0x0F,0x93,
+        0xC2,0x45,0x08,0xCA,0x75,0x1D,0x41,0x89,0xD2,0x41,
+        0xBB,0x01,0x00,0x00,0x00,0x49,0x89,0xC9,0x89,0xD1,
+        0x49,0xD3,0xE3,0x4C,0x89,0xC9,0x41,0xC1,0xEA,0x06,
+        0x4E,0x09,0x5C,0xD0,0x40,0xFF,0x15,0xEB,0xB7,0xF1,
+        0xFF,0x90,0x48,0x83,0xC4,0x30,0x5D,0xC3,
+    });
+    constexpr std::size_t ForwardCallOffset = 0x5FU;
+    static_assert(ProviderBytes12.size() == 0x6CU);
+    static_assert(ProviderBytes11.size() == ProviderBytes12.size());
+    return ValidateD2RCoreSaveStatWriterAbi(
+        d2rBase,
+        d2rImageSize,
+        core,
+        writerExport,
+        ProviderBytes12,
+        ProviderBytes11,
+        0x636550U,
+        0x5655B0U,
+        0x50F470U,
+        0x4528BCU,
+        ForwardCallOffset);
+}
+
+auto ValidateD2RCoreItemSaveStatWriterAbi(
+        const std::uint8_t* d2rBase,
+        std::size_t d2rImageSize,
+        HMODULE core,
+        std::uintptr_t writerExport) noexcept -> bool {
+    constexpr auto ProviderBytes12 = std::to_array<std::uint8_t>({
+        0x55,0x48,0x83,0xEC,0x30,0x48,0x8D,0x6C,0x24,0x30,
+        0x48,0xC7,0x45,0xF8,0xFE,0xFF,0xFF,0xFF,0x8B,0x05,
+        0x88,0x25,0xF1,0xFF,0x65,0x4C,0x8B,0x0C,0x25,0x58,
+        0x00,0x00,0x00,0x49,0x8B,0x04,0xC1,0x48,0x8B,0x80,
+        0x68,0x04,0x00,0x00,0x48,0x85,0xC0,0x41,0x0F,0x94,
+        0xC1,0x81,0xFA,0x00,0x02,0x00,0x00,0x41,0x0F,0x93,
+        0xC2,0x45,0x08,0xCA,0x75,0x1C,0x41,0x89,0xD2,0x41,
+        0xBB,0x01,0x00,0x00,0x00,0x49,0x89,0xC9,0x89,0xD1,
+        0x49,0xD3,0xE3,0x4C,0x89,0xC9,0x41,0xC1,0xEA,0x06,
+        0x4E,0x09,0x1C,0xD0,0xFF,0x15,0xB4,0x0D,0xF0,0xFF,
+        0x90,0x48,0x83,0xC4,0x30,0x5D,0xC3,
+    });
+    constexpr auto ProviderBytes11 = std::to_array<std::uint8_t>({
+        0x55,0x48,0x83,0xEC,0x30,0x48,0x8D,0x6C,0x24,0x30,
+        0x48,0xC7,0x45,0xF8,0xFE,0xFF,0xFF,0xFF,0x8B,0x05,
+        0xC8,0xE8,0xF1,0xFF,0x65,0x4C,0x8B,0x0C,0x25,0x58,
+        0x00,0x00,0x00,0x49,0x8B,0x04,0xC1,0x48,0x8B,0x80,
+        0x18,0x04,0x00,0x00,0x48,0x85,0xC0,0x41,0x0F,0x94,
+        0xC1,0x81,0xFA,0x00,0x02,0x00,0x00,0x41,0x0F,0x93,
+        0xC2,0x45,0x08,0xCA,0x75,0x1C,0x41,0x89,0xD2,0x41,
+        0xBB,0x01,0x00,0x00,0x00,0x49,0x89,0xC9,0x89,0xD1,
+        0x49,0xD3,0xE3,0x4C,0x89,0xC9,0x41,0xC1,0xEA,0x06,
+        0x4E,0x09,0x1C,0xD0,0xFF,0x15,0x7C,0xB8,0xF1,0xFF,
+        0x90,0x48,0x83,0xC4,0x30,0x5D,0xC3,
+    });
+    constexpr std::size_t ForwardCallOffset = 0x5EU;
+    static_assert(ProviderBytes12.size() == 0x6BU);
+    static_assert(ProviderBytes11.size() == ProviderBytes12.size());
+    return ValidateD2RCoreSaveStatWriterAbi(
+        d2rBase,
+        d2rImageSize,
+        core,
+        writerExport,
+        ProviderBytes12,
+        ProviderBytes11,
+        0x6364C0U,
+        0x565520U,
+        0x50F40CU,
+        0x452858U,
+        ForwardCallOffset);
+}
+
+auto ValidateD2RCorePlayerSaveProviderAbi(
+        const std::uint8_t* d2rBase,
+        std::size_t d2rImageSize,
+        HMODULE core,
+        std::uintptr_t providerExport) noexcept -> bool {
+    constexpr std::uintptr_t ProviderRva12 = 0x634650U;
+    constexpr std::size_t ProviderSize12 = 0x1A18U;
+    constexpr DWORD ProviderUnwindRva12 = 0x50EFD0U;
+    constexpr std::uintptr_t ProviderFuncInfoRva12 = 0x50F1B4U;
+    constexpr std::uintptr_t NativeForwardSlotRva12 = 0x5372C0U;
+    constexpr Sha256Digest ProviderHash12{
+        0xA4,0xA0,0xE2,0xA5,0xE7,0x0A,0xEF,0xB6,
+        0x13,0x01,0x67,0x39,0xE9,0x14,0x22,0x5C,
+        0xEE,0x2A,0x20,0xBB,0x06,0xF1,0x31,0x97,
+        0xCE,0xAC,0x18,0x2E,0x11,0x64,0x86,0x67,
+    };
+    constexpr auto UnwindBytes12 = std::to_array<std::uint8_t>({
+        0x19,0x22,0x0D,0x85,0x22,0x68,0xB0,0x00,
+        0x1B,0x03,0x13,0x01,0x63,0x01,0x0C,0x30,
+        0x0B,0x70,0x0A,0x60,0x09,0xC0,0x07,0xD0,
+        0x05,0xE0,0x03,0xF0,0x01,0x50,0x00,0x00,
+        0xB0,0x43,0x3C,0x00,
+        0xB4,0xF1,0x50,0x00,
+    });
+    constexpr auto FuncInfoBytes12 = std::to_array<std::uint8_t>({
+        0x22,0x05,0x93,0x19,0x12,0x00,0x00,0x00,
+        0xDC,0xF1,0x50,0x00,0x03,0x00,0x00,0x00,
+        0x6C,0xF2,0x50,0x00,0x25,0x00,0x00,0x00,
+        0xE4,0xF2,0x50,0x00,0xF8,0x0A,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,
+    });
+    constexpr std::uintptr_t ProviderRva11 = 0x563D80U;
+    constexpr std::size_t ProviderSize11 = 0x1383U;
+    constexpr DWORD ProviderUnwindRva11 = 0x452480U;
+    constexpr std::uintptr_t ProviderFuncInfoRva11 = 0x452648U;
+    constexpr std::uintptr_t NativeForwardSlotRva11 = 0x480DE8U;
+    constexpr Sha256Digest ProviderHash11{
+        0x66,0xC6,0x1B,0xC1,0x67,0x83,0x75,0xC9,
+        0xE3,0x73,0xFD,0x21,0x41,0xF4,0x09,0x24,
+        0x4B,0x45,0x0D,0x14,0x11,0x90,0x6B,0x7F,
+        0xF8,0xC2,0x7C,0x12,0x41,0xE6,0x9F,0x6A,
+    };
+    constexpr auto UnwindBytes11 = std::to_array<std::uint8_t>({
+        0x19,0x22,0x0D,0x85,0x22,0x68,0x84,0x00,
+        0x1B,0x03,0x13,0x01,0x0B,0x01,0x0C,0x30,
+        0x0B,0x70,0x0A,0x60,0x09,0xC0,0x07,0xD0,
+        0x05,0xE0,0x03,0xF0,0x01,0x50,0x00,0x00,
+        0x80,0x97,0x32,0x00,
+        0x48,0x26,0x45,0x00,
+    });
+    constexpr auto FuncInfoBytes11 = std::to_array<std::uint8_t>({
+        0x22,0x05,0x93,0x19,0x11,0x00,0x00,0x00,
+        0x70,0x26,0x45,0x00,0x03,0x00,0x00,0x00,
+        0xF8,0x26,0x45,0x00,0x1D,0x00,0x00,0x00,
+        0x70,0x27,0x45,0x00,0x38,0x08,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,
+    });
+    constexpr auto NativePlayerSaveEntryBytes =
+            std::to_array<std::uint8_t>({
+        0x40,0x55,0x53,0x56,0x57,0x41,0x54,0x41,0x55,
+        0x41,0x56,0x41,0x57,0x48,0x8D,0xAC,0x24,0xC8,
+        0x7E,0xFF,0xFF,0xB8,0x38,0x82,0x00,0x00,
+    });
+    constexpr std::size_t MaximumProviderSize = ProviderSize12;
+    static_assert(ProviderSize11 <= MaximumProviderSize);
+    static_assert(UnwindBytes11.size() == UnwindBytes12.size());
+    static_assert(UnwindBytes12.size() == 40U);
+    static_assert(FuncInfoBytes11.size() == FuncInfoBytes12.size());
+
+    if (!d2rBase || !core || providerExport == 0U
+            || NativePlayerSaveRva > d2rImageSize
+            || NativePlayerSaveEntryBytes.size()
+                > d2rImageSize - NativePlayerSaveRva) {
+        return false;
+    }
+
+    const auto coreBase = reinterpret_cast<std::uintptr_t>(core);
+    if (providerExport < coreBase) return false;
+    const auto liveProviderRva = providerExport - coreBase;
+    const bool provider12 = liveProviderRva == ProviderRva12;
+    const bool provider11 = liveProviderRva == ProviderRva11;
+    if (!provider12 && !provider11) return false;
+
+    const auto providerSize = provider12
+        ? ProviderSize12 : ProviderSize11;
+    const auto providerUnwindRva = provider12
+        ? ProviderUnwindRva12 : ProviderUnwindRva11;
+    const auto providerFuncInfoRva = provider12
+        ? ProviderFuncInfoRva12 : ProviderFuncInfoRva11;
+    const auto nativeForwardSlotRva = provider12
+        ? NativeForwardSlotRva12 : NativeForwardSlotRva11;
+    const auto& expectedProviderHash = provider12
+        ? ProviderHash12 : ProviderHash11;
+    const auto& expectedUnwind = provider12
+        ? UnwindBytes12 : UnwindBytes11;
+    const auto& expectedFuncInfo = provider12
+        ? FuncInfoBytes12 : FuncInfoBytes11;
+    if (!IsAccessibleRange(
+            reinterpret_cast<const void*>(providerExport),
+            providerSize,
+            false,
+            true)) {
+        return false;
+    }
+    std::array<std::uint8_t, MaximumProviderSize> liveProvider{};
+    if (!SafeCopyReadable(
+            reinterpret_cast<const void*>(providerExport),
+            liveProvider.data(),
+            providerSize)) {
+        return false;
+    }
+    Sha256Digest liveProviderHash{};
+    if (!CalculateSha256(
+            std::span<const std::uint8_t>{
+                liveProvider.data(), providerSize},
+            liveProviderHash)
+            || liveProviderHash != expectedProviderHash) {
+        return false;
+    }
+
+    DWORD64 functionImageBase{};
+    const auto* liveFunction = RtlLookupFunctionEntry(
+        static_cast<DWORD64>(providerExport), &functionImageBase, nullptr);
+    RUNTIME_FUNCTION function{};
+    if (!liveFunction
+            || functionImageBase != static_cast<DWORD64>(coreBase)
+            || !SafeRead(liveFunction, function)
+            || function.BeginAddress != liveProviderRva
+            || function.EndAddress - function.BeginAddress != providerSize
+            || function.UnwindData != providerUnwindRva
+            || coreBase
+                > (std::numeric_limits<std::uintptr_t>::max)()
+                    - providerUnwindRva
+            || coreBase
+                > (std::numeric_limits<std::uintptr_t>::max)()
+                    - providerFuncInfoRva) {
+        return false;
+    }
+    std::array<std::uint8_t, UnwindBytes12.size()> liveUnwind{};
+    if (!SafeCopyReadable(
+            reinterpret_cast<const void*>(coreBase + providerUnwindRva),
+            liveUnwind.data(),
+            liveUnwind.size())
+            || liveUnwind != expectedUnwind) {
+        return false;
+    }
+    std::array<std::uint8_t, FuncInfoBytes12.size()> liveFuncInfo{};
+    if (!SafeCopyReadable(
+            reinterpret_cast<const void*>(coreBase + providerFuncInfoRva),
+            liveFuncInfo.data(),
+            liveFuncInfo.size())
+            || liveFuncInfo != expectedFuncInfo) {
+        return false;
+    }
+
+    if (coreBase > (std::numeric_limits<std::uintptr_t>::max)()
+            - nativeForwardSlotRva) {
+        return false;
+    }
+    std::uintptr_t nativeForward{};
+    const auto expectedNativeForward =
+        reinterpret_cast<std::uintptr_t>(d2rBase) + NativePlayerSaveRva;
+    if (!SafeRead(
+            reinterpret_cast<const void*>(
+                coreBase + nativeForwardSlotRva),
+            nativeForward)
+            || nativeForward != expectedNativeForward
+            || !IsAccessibleRange(
+                reinterpret_cast<const void*>(nativeForward),
+                NativePlayerSaveEntryBytes.size(),
+                false,
+                true)) {
+        return false;
+    }
+    std::array<std::uint8_t, NativePlayerSaveEntryBytes.size()> liveNative{};
+    return SafeCopyReadable(
+            reinterpret_cast<const void*>(nativeForward),
+            liveNative.data(),
+            liveNative.size())
+        && liveNative == NativePlayerSaveEntryBytes;
+}
+
+auto ValidateD2RCoreReadItemsByVersionAbi(
+        const std::uint8_t* d2rBase,
+        std::size_t d2rImageSize,
+        HMODULE core,
+        std::uintptr_t providerExport) noexcept -> bool {
+    constexpr std::uintptr_t ProviderRva12 = 0x63BE60U;
+    constexpr std::size_t ProviderSize12 = 0x126U;
+    constexpr DWORD ProviderUnwindRva12 = 0x5115C4U;
+    constexpr std::uintptr_t ProviderFuncInfoRva12 = 0x511600U;
+    constexpr std::uintptr_t NativeForwardSlotRva12 = 0x537338U;
+    constexpr Sha256Digest ProviderHash12{
+        0xD2,0x19,0xFE,0xC9,0xF7,0x3D,0x25,0x45,
+        0x7A,0xAB,0xF6,0xFF,0x6A,0xD8,0x68,0xF0,
+        0xB5,0x80,0x58,0xC9,0x4A,0xD7,0x15,0xD8,
+        0xF9,0x62,0x4E,0x05,0x2F,0x85,0xA9,0x1A,
+    };
+    constexpr auto UnwindBytes12 = std::to_array<std::uint8_t>({
+        0x19,0x1B,0x0B,0x85,0x1B,0x03,0x13,0x01,
+        0x19,0x00,0x0C,0x30,0x0B,0x70,0x0A,0x60,
+        0x09,0xC0,0x07,0xD0,0x05,0xE0,0x03,0xF0,
+        0x01,0x50,0x00,0x00,0xB0,0x43,0x3C,0x00,
+        0x00,0x16,0x51,0x00,
+    });
+    constexpr auto FuncInfoBytes12 = std::to_array<std::uint8_t>({
+        0x22,0x05,0x93,0x19,0x01,0x00,0x00,0x00,
+        0x28,0x16,0x51,0x00,0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x03,0x00,0x00,0x00,
+        0x30,0x16,0x51,0x00,0xC0,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,
+    });
+    constexpr std::uintptr_t ProviderRva11 = 0x56A710U;
+    constexpr std::size_t ProviderSize11 = 0x126U;
+    constexpr DWORD ProviderUnwindRva11 = 0x4548C8U;
+    constexpr std::uintptr_t ProviderFuncInfoRva11 = 0x454904U;
+    constexpr std::uintptr_t NativeForwardSlotRva11 = 0x480E60U;
+    constexpr Sha256Digest ProviderHash11{
+        0xD4,0x7D,0xD1,0xB6,0xC1,0x6D,0x3F,0xB3,
+        0xE5,0xBA,0x78,0x13,0xED,0xD6,0x42,0x1B,
+        0x17,0x4D,0x3D,0xDF,0xAB,0x77,0xE0,0x35,
+        0x2D,0xE2,0x0F,0xCA,0xEB,0x1E,0x18,0x88,
+    };
+    constexpr auto UnwindBytes11 = std::to_array<std::uint8_t>({
+        0x19,0x1B,0x0B,0x85,0x1B,0x03,0x13,0x01,
+        0x19,0x00,0x0C,0x30,0x0B,0x70,0x0A,0x60,
+        0x09,0xC0,0x07,0xD0,0x05,0xE0,0x03,0xF0,
+        0x01,0x50,0x00,0x00,0x80,0x97,0x32,0x00,
+        0x04,0x49,0x45,0x00,
+    });
+    constexpr auto FuncInfoBytes11 = std::to_array<std::uint8_t>({
+        0x22,0x05,0x93,0x19,0x01,0x00,0x00,0x00,
+        0x2C,0x49,0x45,0x00,0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x03,0x00,0x00,0x00,
+        0x34,0x49,0x45,0x00,0xC0,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,
+    });
+    constexpr auto NativeReaderEntryBytes =
+            std::to_array<std::uint8_t>({
+        0x48,0x83,0xEC,0x48,0x41,0x83,0xF9,0x47,
+        0x75,0x09,0x48,0x83,0xC4,0x48,0xE9,0xED,
+        0x26,0x00,0x00,0x41,0x8D,0x41,0xB8,0x83,
+        0xF8,0x21,0x77,0x09,0x48,0x83,0xC4,0x48,
+    });
+    constexpr std::size_t MaximumProviderSize = ProviderSize12;
+    static_assert(ProviderSize11 <= MaximumProviderSize);
+    static_assert(UnwindBytes11.size() == UnwindBytes12.size());
+    static_assert(UnwindBytes12.size() == 36U);
+    static_assert(FuncInfoBytes11.size() == FuncInfoBytes12.size());
+
+    if (!d2rBase || !core || providerExport == 0U
+            || NativeReadItemsByVersionRva > d2rImageSize
+            || NativeReaderEntryBytes.size()
+                > d2rImageSize - NativeReadItemsByVersionRva) {
+        return false;
+    }
+
+    const auto coreBase = reinterpret_cast<std::uintptr_t>(core);
+    if (providerExport < coreBase) return false;
+    const auto liveProviderRva = providerExport - coreBase;
+    const bool provider12 = liveProviderRva == ProviderRva12;
+    const bool provider11 = liveProviderRva == ProviderRva11;
+    if (!provider12 && !provider11) return false;
+
+    const auto providerSize = provider12
+        ? ProviderSize12 : ProviderSize11;
+    const auto providerUnwindRva = provider12
+        ? ProviderUnwindRva12 : ProviderUnwindRva11;
+    const auto providerFuncInfoRva = provider12
+        ? ProviderFuncInfoRva12 : ProviderFuncInfoRva11;
+    const auto nativeForwardSlotRva = provider12
+        ? NativeForwardSlotRva12 : NativeForwardSlotRva11;
+    const auto& expectedProviderHash = provider12
+        ? ProviderHash12 : ProviderHash11;
+    const auto& expectedUnwind = provider12
+        ? UnwindBytes12 : UnwindBytes11;
+    const auto& expectedFuncInfo = provider12
+        ? FuncInfoBytes12 : FuncInfoBytes11;
+    if (!IsAccessibleRange(
+            reinterpret_cast<const void*>(providerExport),
+            providerSize,
+            false,
+            true)) {
+        return false;
+    }
+    std::array<std::uint8_t, MaximumProviderSize> liveProvider{};
+    if (!SafeCopyReadable(
+            reinterpret_cast<const void*>(providerExport),
+            liveProvider.data(),
+            providerSize)) {
+        return false;
+    }
+    Sha256Digest liveProviderHash{};
+    if (!CalculateSha256(
+            std::span<const std::uint8_t>{
+                liveProvider.data(), providerSize},
+            liveProviderHash)
+            || liveProviderHash != expectedProviderHash) {
+        return false;
+    }
+
+    DWORD64 functionImageBase{};
+    const auto* liveFunction = RtlLookupFunctionEntry(
+        static_cast<DWORD64>(providerExport), &functionImageBase, nullptr);
+    RUNTIME_FUNCTION function{};
+    if (!liveFunction
+            || functionImageBase != static_cast<DWORD64>(coreBase)
+            || !SafeRead(liveFunction, function)
+            || function.BeginAddress != liveProviderRva
+            || function.EndAddress - function.BeginAddress != providerSize
+            || function.UnwindData != providerUnwindRva
+            || coreBase
+                > (std::numeric_limits<std::uintptr_t>::max)()
+                    - providerUnwindRva
+            || coreBase
+                > (std::numeric_limits<std::uintptr_t>::max)()
+                    - providerFuncInfoRva) {
+        return false;
+    }
+    std::array<std::uint8_t, UnwindBytes12.size()> liveUnwind{};
+    if (!SafeCopyReadable(
+            reinterpret_cast<const void*>(coreBase + providerUnwindRva),
+            liveUnwind.data(),
+            liveUnwind.size())
+            || liveUnwind != expectedUnwind) {
+        return false;
+    }
+    std::array<std::uint8_t, FuncInfoBytes12.size()> liveFuncInfo{};
+    if (!SafeCopyReadable(
+            reinterpret_cast<const void*>(coreBase + providerFuncInfoRva),
+            liveFuncInfo.data(),
+            liveFuncInfo.size())
+            || liveFuncInfo != expectedFuncInfo) {
+        return false;
+    }
+
+    if (coreBase > (std::numeric_limits<std::uintptr_t>::max)()
+            - nativeForwardSlotRva) {
+        return false;
+    }
+    std::uintptr_t nativeForward{};
+    const auto expectedNativeForward =
+        reinterpret_cast<std::uintptr_t>(d2rBase)
+            + NativeReadItemsByVersionRva;
+    if (!SafeRead(
+            reinterpret_cast<const void*>(
+                coreBase + nativeForwardSlotRva),
+            nativeForward)
+            || nativeForward != expectedNativeForward
+            || !IsAccessibleRange(
+                reinterpret_cast<const void*>(nativeForward),
+                NativeReaderEntryBytes.size(),
+                false,
+                true)) {
+        return false;
+    }
+    std::array<std::uint8_t, NativeReaderEntryBytes.size()> liveNative{};
+    return SafeCopyReadable(
+            reinterpret_cast<const void*>(nativeForward),
+            liveNative.data(),
+            liveNative.size())
+        && liveNative == NativeReaderEntryBytes;
+}
+
+template <
+    std::size_t ProviderSize,
+    std::size_t UnwindSize,
+    std::size_t FuncInfoSize,
+    std::size_t NativeEntrySize>
+auto ValidateD2RCoreExactForwardingProvider(
+        const std::uint8_t* d2rBase,
+        std::size_t d2rImageSize,
+        HMODULE core,
+        std::uintptr_t providerExport,
+        std::uintptr_t providerRva,
+        DWORD providerUnwindRva,
+        std::uintptr_t providerFuncInfoRva,
+        std::uintptr_t nativeForwardSlotRva,
+        const Sha256Digest& expectedProviderHash,
+        const std::array<std::uint8_t, UnwindSize>& expectedUnwind,
+        const std::array<std::uint8_t, FuncInfoSize>& expectedFuncInfo,
+        std::uintptr_t nativeForwardRva,
+        const std::array<std::uint8_t, NativeEntrySize>&
+            expectedNativeEntry) noexcept -> bool {
+    if (!d2rBase || !core || providerExport == 0U
+            || nativeForwardRva > d2rImageSize
+            || expectedNativeEntry.size()
+                > d2rImageSize - nativeForwardRva) {
+        return false;
+    }
+
+    const auto coreBase = reinterpret_cast<std::uintptr_t>(core);
+    if (coreBase > (std::numeric_limits<std::uintptr_t>::max)() - providerRva
+            || providerExport != coreBase + providerRva
+            || coreBase
+                > (std::numeric_limits<std::uintptr_t>::max)()
+                    - providerUnwindRva
+            || coreBase
+                > (std::numeric_limits<std::uintptr_t>::max)()
+                    - providerFuncInfoRva
+            || coreBase
+                > (std::numeric_limits<std::uintptr_t>::max)()
+                    - nativeForwardSlotRva) {
+        return false;
+    }
+    if (!IsAccessibleRange(
+            reinterpret_cast<const void*>(providerExport),
+            ProviderSize,
+            false,
+            true)) {
+        return false;
+    }
+
+    std::array<std::uint8_t, ProviderSize> liveProvider{};
+    if (!SafeCopyReadable(
+            reinterpret_cast<const void*>(providerExport),
+            liveProvider.data(),
+            liveProvider.size())) {
+        return false;
+    }
+    Sha256Digest liveProviderHash{};
+    if (!CalculateSha256(liveProvider, liveProviderHash)
+            || liveProviderHash != expectedProviderHash) {
+        return false;
+    }
+
+    DWORD64 functionImageBase{};
+    const auto* liveFunction = RtlLookupFunctionEntry(
+        static_cast<DWORD64>(providerExport), &functionImageBase, nullptr);
+    RUNTIME_FUNCTION function{};
+    if (!liveFunction
+            || functionImageBase != static_cast<DWORD64>(coreBase)
+            || !SafeRead(liveFunction, function)
+            || function.BeginAddress != providerRva
+            || function.EndAddress < function.BeginAddress
+            || function.EndAddress - function.BeginAddress != ProviderSize
+            || function.UnwindData != providerUnwindRva) {
+        return false;
+    }
+
+    std::array<std::uint8_t, UnwindSize> liveUnwind{};
+    std::array<std::uint8_t, FuncInfoSize> liveFuncInfo{};
+    if (!SafeCopyReadable(
+            reinterpret_cast<const void*>(coreBase + providerUnwindRva),
+            liveUnwind.data(),
+            liveUnwind.size())
+            || liveUnwind != expectedUnwind
+            || !SafeCopyReadable(
+                reinterpret_cast<const void*>(
+                    coreBase + providerFuncInfoRva),
+                liveFuncInfo.data(),
+                liveFuncInfo.size())
+            || liveFuncInfo != expectedFuncInfo) {
+        return false;
+    }
+
+    if (reinterpret_cast<std::uintptr_t>(d2rBase)
+            > (std::numeric_limits<std::uintptr_t>::max)()
+                - nativeForwardRva) {
+        return false;
+    }
+    std::uintptr_t nativeForward{};
+    const auto expectedNativeForward =
+        reinterpret_cast<std::uintptr_t>(d2rBase) + nativeForwardRva;
+    if (!SafeRead(
+            reinterpret_cast<const void*>(
+                coreBase + nativeForwardSlotRva),
+            nativeForward)
+            || nativeForward != expectedNativeForward
+            || !IsAccessibleRange(
+                reinterpret_cast<const void*>(nativeForward),
+                expectedNativeEntry.size(),
+                false,
+                true)) {
+        return false;
+    }
+    std::array<std::uint8_t, NativeEntrySize> liveNative{};
+    return SafeCopyReadable(
+            reinterpret_cast<const void*>(nativeForward),
+            liveNative.data(),
+            liveNative.size())
+        && liveNative == expectedNativeEntry;
+}
+
+auto ValidateD2RCoreWriteD2SSaveProviderAbi(
+        const std::uint8_t* d2rBase,
+        std::size_t d2rImageSize,
+        HMODULE core,
+        std::uintptr_t providerExport) noexcept -> bool {
+    constexpr auto NativeWriterEntryBytes =
+            std::to_array<std::uint8_t>({
+        0x40,0x53,0x48,0x83,0xEC,0x30,0x48,0x8B,
+        0x09,0x49,0x8B,0xD9,0x4C,0x8D,0x4C,0x24,
+        0x40,0x48,0xC7,0x44,0x24,0x20,0x00,0x00,
+        0x00,0x00,0xFF,0x15,0x60,0x46,0xA8,0x00,
+        0x85,0xC0,0x75,0x0E,0x89,0x03,0xFF,0x15,
+        0xCC,0x46,0xA8,0x00,0x48,0x83,0xC4,0x30,
+        0x5B,0xC3,0x8B,0x44,0x24,0x40,0x89,0x03,
+        0x8B,0x05,0xBA,0x00,0xC7,0x00,0x48,0x83,
+        0xC4,0x30,0x5B,0xC3,
+    });
+    static_assert(NativeWriterEntryBytes.size() == 0x44U);
+    constexpr Sha256Digest ProviderHash12{
+        0xCF,0x95,0x8F,0xC2,0x5B,0x4B,0x53,0xAD,
+        0x7C,0xE8,0xE5,0x4C,0x25,0x72,0x76,0x70,
+        0xAC,0xC0,0xCE,0xE1,0xDB,0xBE,0x48,0xDD,
+        0xC9,0xF5,0x2F,0xF6,0x92,0xFB,0x43,0x01,
+    };
+    constexpr auto UnwindBytes12 = std::to_array<std::uint8_t>({
+        0x19,0x22,0x0D,0x85,0x22,0x68,0xD6,0x00,
+        0x1B,0x03,0x13,0x01,0xAF,0x01,0x0C,0x30,
+        0x0B,0x70,0x0A,0x60,0x09,0xC0,0x07,0xD0,
+        0x05,0xE0,0x03,0xF0,0x01,0x50,0x00,0x00,
+        0xB0,0x43,0x3C,0x00,0x50,0xF7,0x50,0x00,
+    });
+    constexpr auto FuncInfoBytes12 = std::to_array<std::uint8_t>({
+        0x22,0x05,0x93,0x19,0x16,0x00,0x00,0x00,
+        0x78,0xF7,0x50,0x00,0x01,0x00,0x00,0x00,
+        0x28,0xF8,0x50,0x00,0x3C,0x00,0x00,0x00,
+        0x50,0xF8,0x50,0x00,0x58,0x0D,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,
+    });
+    constexpr Sha256Digest ProviderHash11{
+        0xCE,0x50,0xCB,0x93,0xC2,0x47,0x61,0x17,
+        0xB2,0xBC,0xAE,0x86,0xA0,0x46,0x0B,0xBE,
+        0x97,0x80,0x4C,0xE4,0x5E,0x2D,0xE8,0xA4,
+        0x8E,0x67,0xE0,0xC1,0x9F,0x2E,0x6D,0xA5,
+    };
+    constexpr auto UnwindBytes11 = std::to_array<std::uint8_t>({
+        0x19,0x22,0x0D,0x85,0x22,0x68,0x57,0x00,
+        0x1B,0x03,0x13,0x01,0xB1,0x00,0x0C,0x30,
+        0x0B,0x70,0x0A,0x60,0x09,0xC0,0x07,0xD0,
+        0x05,0xE0,0x03,0xF0,0x01,0x50,0x00,0x00,
+        0x80,0x97,0x32,0x00,0x9C,0x2B,0x45,0x00,
+    });
+    constexpr auto FuncInfoBytes11 = std::to_array<std::uint8_t>({
+        0x22,0x05,0x93,0x19,0x16,0x00,0x00,0x00,
+        0xC4,0x2B,0x45,0x00,0x01,0x00,0x00,0x00,
+        0x74,0x2C,0x45,0x00,0x3D,0x00,0x00,0x00,
+        0x9C,0x2C,0x45,0x00,0x68,0x05,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,
+    });
+
+    const auto coreBase = reinterpret_cast<std::uintptr_t>(core);
+    if (providerExport >= coreBase
+            && providerExport - coreBase == 0x6365E0U) {
+        return ValidateD2RCoreExactForwardingProvider<0x26C8U>(
+            d2rBase,
+            d2rImageSize,
+            core,
+            providerExport,
+            0x6365E0U,
+            0x50F4D4U,
+            0x50F750U,
+            0x539F78U,
+            ProviderHash12,
+            UnwindBytes12,
+            FuncInfoBytes12,
+            NativeD2SSaveWriterRva,
+            NativeWriterEntryBytes);
+    }
+    if (providerExport >= coreBase
+            && providerExport - coreBase == 0x565640U) {
+        return ValidateD2RCoreExactForwardingProvider<0x20E0U>(
+            d2rBase,
+            d2rImageSize,
+            core,
+            providerExport,
+            0x565640U,
+            0x452920U,
+            0x452B9CU,
+            0x4796A8U,
+            ProviderHash11,
+            UnwindBytes11,
+            FuncInfoBytes11,
+            NativeD2SSaveWriterRva,
+            NativeWriterEntryBytes);
+    }
+    return false;
+}
+
+auto ValidateD2RCoreCloseD2SSaveProviderAbi(
+        const std::uint8_t* d2rBase,
+        std::size_t d2rImageSize,
+        HMODULE core,
+        std::uintptr_t providerExport) noexcept -> bool {
+    constexpr Sha256Digest ProviderHash12{
+        0x03,0x70,0xAA,0x11,0xA9,0xCB,0x4A,0x0C,
+        0x13,0x72,0xF7,0x0A,0x08,0xA5,0x0F,0xF0,
+        0x29,0x6F,0x4F,0x37,0x37,0x29,0x37,0x39,
+        0x7E,0x07,0x51,0xE9,0x20,0x34,0xD4,0xFE,
+    };
+    constexpr auto UnwindBytes12 = std::to_array<std::uint8_t>({
+        0x19,0x20,0x0C,0x85,0x20,0x68,0x42,0x00,
+        0x19,0x03,0x11,0x01,0x86,0x00,0x0A,0x30,
+        0x09,0x70,0x08,0x60,0x07,0xC0,0x05,0xE0,
+        0x03,0xF0,0x01,0x50,0xB0,0x43,0x3C,0x00,
+        0xEC,0xFA,0x50,0x00,
+    });
+    constexpr auto FuncInfoBytes12 = std::to_array<std::uint8_t>({
+        0x22,0x05,0x93,0x19,0x07,0x00,0x00,0x00,
+        0x14,0xFB,0x50,0x00,0x01,0x00,0x00,0x00,
+        0x4C,0xFB,0x50,0x00,0x09,0x00,0x00,0x00,
+        0x74,0xFB,0x50,0x00,0x18,0x04,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,
+    });
+    constexpr Sha256Digest ProviderHash11{
+        0x17,0x3E,0x11,0xDE,0x2C,0xCF,0x71,0x50,
+        0x9C,0x34,0xA7,0x86,0x9C,0x24,0x55,0x4D,
+        0x6E,0x1F,0x37,0xD2,0x8E,0xD3,0x86,0x06,
+        0xAA,0xFE,0x37,0x65,0xAC,0x91,0x3E,0xDF,
+    };
+    constexpr auto UnwindBytes11 = std::to_array<std::uint8_t>({
+        0x19,0x19,0x0A,0x85,0x19,0x03,0x11,0x01,
+        0x30,0x00,0x0A,0x30,0x09,0x70,0x08,0x60,
+        0x07,0xC0,0x05,0xE0,0x03,0xF0,0x01,0x50,
+        0x80,0x97,0x32,0x00,0x24,0x2F,0x45,0x00,
+    });
+    constexpr auto FuncInfoBytes11 = std::to_array<std::uint8_t>({
+        0x22,0x05,0x93,0x19,0x07,0x00,0x00,0x00,
+        0x4C,0x2F,0x45,0x00,0x01,0x00,0x00,0x00,
+        0x84,0x2F,0x45,0x00,0x09,0x00,0x00,0x00,
+        0xAC,0x2F,0x45,0x00,0x78,0x01,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,
+    });
+
+    const auto coreBase = reinterpret_cast<std::uintptr_t>(core);
+    if (providerExport >= coreBase
+            && providerExport - coreBase == 0x6393B0U) {
+        return ValidateD2RCoreExactForwardingProvider<0x1786U>(
+            d2rBase,
+            d2rImageSize,
+            core,
+            providerExport,
+            0x6393B0U,
+            0x50FA30U,
+            0x50FAECU,
+            0x539F90U,
+            ProviderHash12,
+            UnwindBytes12,
+            FuncInfoBytes12,
+            NativeD2SSaveCloseRva,
+            NativeFileHandleCloserBytes);
+    }
+    if (providerExport >= coreBase
+            && providerExport - coreBase == 0x567E00U) {
+        return ValidateD2RCoreExactForwardingProvider<0x63AU>(
+            d2rBase,
+            d2rImageSize,
+            core,
+            providerExport,
+            0x567E00U,
+            0x452E84U,
+            0x452F24U,
+            0x4796C0U,
+            ProviderHash11,
+            UnwindBytes11,
+            FuncInfoBytes11,
+            NativeD2SSaveCloseRva,
+            NativeFileHandleCloserBytes);
+    }
+    return false;
+}
+
 struct NativeUnwindInfoHeader {
     std::uint8_t versionAndFlags{};
     std::uint8_t prologSize{};
@@ -467,18 +1624,39 @@ static_assert(sizeof(NativeUnwindCode) == 2);
 auto ValidateNativeProducerUnwind(
         std::uintptr_t entryRva,
         std::uintptr_t expectedEpilogueEndRva,
+        DWORD expectedUnwindRva,
         std::uint8_t finalNonvolatileRegister,
         std::uint32_t expectedAllocation) noexcept -> bool {
+    constexpr std::uintptr_t NativeExceptionHandlerRva = 0x12D104CU;
+    constexpr auto NativeExceptionHandlerBytes =
+            std::to_array<std::uint8_t>({
+        0x48,0x83,0xEC,0x28,0x4D,0x8B,0x41,0x38,
+        0x48,0x8B,0xCA,0x49,0x8B,0xD1,0xE8,0x0D,
+        0x00,0x00,0x00,0xB8,0x01,0x00,0x00,0x00,
+        0x48,0x83,0xC4,0x28,0xC3,
+    });
+    constexpr std::size_t NativeUnwindRecordSize = 28U;
     if (!LoaderBase || finalNonvolatileRegister >= 16
             || entryRva > LoaderImageSize
             || LoaderImageSize - entryRva <= 5U
             || expectedEpilogueEndRva <= entryRva + 5U
             || expectedEpilogueEndRva > LoaderImageSize
+            || expectedUnwindRva > LoaderImageSize
+            || LoaderImageSize - expectedUnwindRva
+                < NativeUnwindRecordSize
+            || NativeExceptionHandlerRva > LoaderImageSize
+            || NativeExceptionHandlerBytes.size()
+                > LoaderImageSize - NativeExceptionHandlerRva
             || !IsAccessibleRange(
                 LoaderBase + entryRva + 5U, 1, false, true)
             || !IsAccessibleRange(
                 LoaderBase + expectedEpilogueEndRva - 1U,
                 1,
+                false,
+                true)
+            || !IsAccessibleRange(
+                LoaderBase + NativeExceptionHandlerRva,
+                NativeExceptionHandlerBytes.size(),
                 false,
                 true)) {
         return false;
@@ -495,10 +1673,9 @@ auto ValidateNativeProducerUnwind(
     RUNTIME_FUNCTION function{};
     if (!SafeRead(liveFunction, function)
             || function.BeginAddress != entryRva
-            || function.EndAddress < expectedEpilogueEndRva
+            || function.EndAddress != expectedEpilogueEndRva
             || function.EndAddress > LoaderImageSize
-            || function.UnwindData > LoaderImageSize
-            || LoaderImageSize - function.UnwindData < 20U) {
+            || function.UnwindData != expectedUnwindRva) {
         return false;
     }
     DWORD64 epilogueImageBase{};
@@ -518,8 +1695,8 @@ auto ValidateNativeProducerUnwind(
     }
     NativeUnwindInfoHeader header{};
     if (!SafeRead(LoaderBase + function.UnwindData, header)
-            || header.versionAndFlags != 1U
-            || header.prologSize != 14U
+            || header.versionAndFlags != 0x19U
+            || header.prologSize != 0x20U
             || header.codeCount != 7U
             || header.frameRegisterAndOffset != 0U) {
         return false;
@@ -556,6 +1733,31 @@ auto ValidateNativeProducerUnwind(
     });
     if (std::memcmp(
             codes.data(), expectedCodes.data(), expectedCodes.size()) != 0) {
+        return false;
+    }
+
+    std::uint32_t exceptionHandlerRva{};
+    std::uint32_t exceptionHandlerData{};
+    const auto handlerOffset = sizeof(header) + sizeof(codes) + sizeof(padding);
+    if (!SafeRead(
+            LoaderBase + function.UnwindData + handlerOffset,
+            exceptionHandlerRva)
+            || !SafeRead(
+                LoaderBase + function.UnwindData + handlerOffset
+                    + sizeof(exceptionHandlerRva),
+                exceptionHandlerData)
+            || exceptionHandlerRva != NativeExceptionHandlerRva
+            || exceptionHandlerData
+                != (finalNonvolatileRegister == 14U ? 0x150U : 0x160U)) {
+        return false;
+    }
+    std::array<std::uint8_t, NativeExceptionHandlerBytes.size()>
+        liveExceptionHandler{};
+    if (!SafeCopyReadable(
+            LoaderBase + NativeExceptionHandlerRva,
+            liveExceptionHandler.data(),
+            liveExceptionHandler.size())
+            || liveExceptionHandler != NativeExceptionHandlerBytes) {
         return false;
     }
 
@@ -810,6 +2012,7 @@ auto GetLinkNameForSnapshot(
 auto ResetPublishedSchemaSnapshot() noexcept -> void {
     AcquireSRWLockExclusive(&SchemaSnapshotLock);
     PublishedSchemaSnapshot = {};
+    PendingSchemaCandidates.Reset();
     HasPublishedSchemaSnapshot = false;
     SchemaUpdateInProgress = false;
     SchemaReady.store(false, std::memory_order_release);
@@ -817,33 +2020,37 @@ auto ResetPublishedSchemaSnapshot() noexcept -> void {
 }
 
 // The exclusive lock remains held throughout record/name capture and hashing.
-// Future schema consumers take the shared side of this lock and recheck ready,
-// so no save can observe the previous snapshot during a table reload.
+// A persistence operation that already owns a shared lease may finish with the
+// previous schema before this reload acquires exclusivity; once exclusivity is
+// held, new persistence leases reject without waiting. This guards the
+// published snapshot, not the pre-hook provenance of an already-built native
+// state-1 buffer.
 auto BeginSchemaSnapshotUpdate() noexcept -> void {
     AcquireSRWLockExclusive(&SchemaSnapshotLock);
     SchemaUpdateInProgress = true;
     SchemaReady.store(false, std::memory_order_release);
 }
 
-auto CompleteSchemaSnapshotUpdate(
+auto StageSchemaSnapshotUpdate(
         SchemaError captureResult,
+        const void* sourceDataTables,
+        const void* sourceRecords,
+        std::size_t rowCount,
         NativeItemStatCostSchemaSnapshot&& candidate) noexcept
-        -> NativeSchemaGateDecision {
-    const auto decision = DecideNativeSchemaGate(
-        captureResult,
-        HasPublishedSchemaSnapshot,
-        PublishedSchemaSnapshot.schemaHash,
-        candidate.schemaHash);
-    if (decision == NativeSchemaGateDecision::Publish) {
-        PublishedSchemaSnapshot = std::move(candidate);
-        HasPublishedSchemaSnapshot = true;
+        -> NativeSchemaStageResult {
+    auto result = NativeSchemaStageResult::InvalidArgument;
+    if (captureResult == SchemaError::None) {
+        result = PendingSchemaCandidates.Stage(
+            sourceDataTables,
+            sourceRecords,
+            rowCount,
+            std::move(candidate));
     }
     SchemaUpdateInProgress = false;
-    if (decision != NativeSchemaGateDecision::FailClosed) {
-        SchemaReady.store(true, std::memory_order_release);
-    }
+    // Persistence remains closed until the authoritative RotW TableView is
+    // delivered by DataTablesLoaded and selects one exact staged capture.
     ReleaseSRWLockExclusive(&SchemaSnapshotLock);
-    return decision;
+    return result;
 }
 
 auto InvokeNativeQsort(
@@ -1221,9 +2428,13 @@ auto CopyPlayerPreviewWithPreflight(
         const char* reason,
         std::uint64_t rowCount) noexcept -> void {
     NativeItemStatCostSchemaSnapshot rejected;
-    const auto decision = CompleteSchemaSnapshotUpdate(
-        captureResult, std::move(rejected));
-    (void)decision;
+    const auto staged = StageSchemaSnapshotUpdate(
+        captureResult,
+        nullptr,
+        nullptr,
+        0,
+        std::move(rejected));
+    (void)staged;
     FailClosed(reason, rowCount);
 }
 
@@ -1311,6 +2522,9 @@ auto ReleaseUnpatchedResources() noexcept -> void {
     }
     gISC12LoaderSuccessExit = nullptr;
     gISC12LoaderVanillaExit = nullptr;
+    PersistenceReaderPatchInstalled = false;
+    PersistenceWriterPatchInstalled = false;
+    PreparedPublicationAdapters.Reset();
 }
 
 auto AllocatePersistenceRelayPageNear(std::uint8_t* base) noexcept -> void* {
@@ -1895,11 +3109,13 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
     if (!ValidateNativeProducerUnwind(
             Packet9CProducerEntryRva,
             Packet9CProducerEpilogueEndRva,
+            0x2129AFCU,
             14U,
             0x160U)
             || !ValidateNativeProducerUnwind(
                 Packet9DProducerEntryRva,
                 Packet9DProducerEpilogueEndRva,
+                0x2129B18U,
                 15U,
                 0x170U)) {
         ReleaseUnpatchedResources();
@@ -2061,16 +3277,21 @@ auto BuildDescriptionIndexNative(void* dataTables) -> std::uint32_t {
             &GetLinkNameForSnapshot,
         },
         schemaCandidate);
-    const auto schemaDecision = CompleteSchemaSnapshotUpdate(
-        schemaResult, std::move(schemaCandidate));
-    if (schemaDecision == NativeSchemaGateDecision::FailClosed) {
-        FailClosed(
-            schemaResult == SchemaError::None
-                ? "ItemStatCost schema diverged after publication"
-                : NativeSchemaCallbackFailed
-                    ? "ItemStatCost schema linker access failed"
-                    : "ItemStatCost schema snapshot is invalid",
-            rowCount);
+    const auto schemaStage = StageSchemaSnapshotUpdate(
+        schemaResult,
+        dataTables,
+        records,
+        static_cast<std::size_t>(rowCount),
+        std::move(schemaCandidate));
+    if (schemaStage != NativeSchemaStageResult::Staged) {
+        const auto* reason = schemaResult != SchemaError::None
+            ? NativeSchemaCallbackFailed
+                ? "ItemStatCost schema linker access failed"
+                : "ItemStatCost schema snapshot is invalid"
+            : schemaStage == NativeSchemaStageResult::CapacityExceeded
+                ? "ItemStatCost schema candidate capacity was exceeded"
+                : "ItemStatCost schema candidate staging failed";
+        FailClosed(reason, rowCount);
     }
 
     std::array<DescriptionEntry, MaximumRecordCount> staged;
@@ -2189,7 +3410,836 @@ auto CompleteFullItemProducer(
     }
 }
 
+auto VerifyPublicationPattern(
+        void*,
+        const NativePattern& pattern) noexcept -> bool {
+    if (!LoaderBase || pattern.rva == 0 || pattern.bytes.empty()
+            || pattern.bytes.size() != pattern.mask.size()
+            || !ValidateImageTarget(
+                pattern.rva, pattern.bytes.size(), true)) {
+        return false;
+    }
+    __try {
+        for (std::size_t index{}; index < pattern.bytes.size(); ++index) {
+            if (pattern.mask[index] != 0
+                    && LoaderBase[pattern.rva + index]
+                        != pattern.bytes[index]) {
+                if (pattern.rva == LoaderCompileCallRva) {
+                    return InspectLoaderCompileProviderContract(
+                            LoaderBase, LoaderImageSize)
+                        == LoaderCompileProviderKind::D2RCoreLoadExcelTable;
+                }
+                if (pattern.rva == PlayerSaveStatWriterCallRva) {
+                    return InspectPlayerSaveStatWriterProviderContract(
+                            LoaderBase, LoaderImageSize)
+                        == PlayerSaveStatWriterProviderKind::
+                            D2RCoreWritePlayerSaveStatId;
+                }
+                if (pattern.rva == PlayerSaveDynamicCapacityRva
+                        || pattern.rva == PlayerSaveDynamicCallRva) {
+                    return InspectPlayerSaveProviderContract(
+                            LoaderBase, LoaderImageSize)
+                        == PlayerSaveProviderKind::
+                            D2RCoreWritePlayerSaveWithEnvironmentCapture;
+                }
+                if (pattern.rva == D2SContainerVersionForwardRva) {
+                    return InspectD2SItemReadProviderContract(
+                            LoaderBase, LoaderImageSize)
+                        == D2SItemReadProviderKind::
+                            D2RCoreReadItemsByVersion;
+                }
+                if (pattern.rva == D2SSaveWriterProviderCallRva
+                        || pattern.rva == D2SSaveCloseProviderCallRva) {
+                    return InspectD2SSaveIoProviderContract(
+                            LoaderBase, LoaderImageSize)
+                        == D2SSaveIoProviderKind::
+                            D2RCoreWriteAndCloseWithEnvironment;
+                }
+                return pattern.rva == ItemSaveStatWriterCallRva
+                    && InspectItemSaveStatWriterProviderContract(
+                        LoaderBase, LoaderImageSize)
+                        == ItemSaveStatWriterProviderKind::
+                            D2RCoreWriteItemSaveStatId;
+            }
+        }
+        return true;
+    } __except (NativeExceptionFilter(GetExceptionCode())) {
+        return false;
+    }
+}
+
+auto PatchPublicationRel32(
+        void*,
+        std::uintptr_t rva,
+        std::span<const std::uint8_t> expected,
+        std::uintptr_t targetRva,
+        std::size_t overwriteSize) noexcept -> bool {
+    if (!LoaderContext || expected.empty()
+            || expected.size()
+                > (std::numeric_limits<std::uint32_t>::max)()
+            || overwriteSize
+                > (std::numeric_limits<std::uint32_t>::max)()) {
+        return false;
+    }
+    return LoaderContext->PatchJmpRel32(
+        rva,
+        expected.data(),
+        static_cast<std::uint32_t>(expected.size()),
+        targetRva,
+        static_cast<std::uint32_t>(overwriteSize));
+}
+
+auto PatchPublicationU32(
+        void*,
+        std::uintptr_t rva,
+        std::span<const std::uint8_t> expected,
+        std::uint32_t replacement) noexcept -> bool {
+    if (!LoaderContext || expected.empty()
+            || expected.size()
+                > (std::numeric_limits<std::uint32_t>::max)()) {
+        return false;
+    }
+    return LoaderContext->PatchWriteU32(
+        rva,
+        expected.data(),
+        static_cast<std::uint32_t>(expected.size()),
+        replacement);
+}
+
+auto PatchPublicationCodecByte(
+        void*,
+        std::uintptr_t rva,
+        std::uint8_t expected,
+        std::uint8_t replacement) noexcept -> bool {
+    return LoaderContext
+        && LoaderContext->PatchWriteU8(rva, &expected, 1U, replacement);
+}
+
+auto FlushPublicationInstructionCache(
+        void*,
+        std::uintptr_t firstRva,
+        std::size_t size) noexcept -> bool {
+    return LoaderBase && ValidateImageTarget(firstRva, size, true)
+        && FlushInstructionCache(
+            GetCurrentProcess(), LoaderBase + firstRva, size) != 0;
+}
+
+auto MarkG0TailCommitted(void*) noexcept -> void {
+    TailPatchInstalled = true;
+}
+
+auto ActivateG0Guard(void*) noexcept -> void {
+    if (!State) FailClosed("G0 guard state is unavailable", 0);
+    InterlockedExchange(&State->capMayBeExtended, 1);
+}
+
+auto MarkG0CapCommitted(void*) noexcept -> void {
+    CapPatchInstalled = true;
+}
+
+auto MarkG10ReaderCommitted(void*) noexcept -> void {
+    PersistenceReaderPatchInstalled = true;
+}
+
+auto MarkG10WriterCommitted(void*) noexcept -> void {
+    PersistenceWriterPatchInstalled = true;
+}
+
+auto ReservePublicationProcessLifetime(void*) noexcept -> void {
+    AnyMutationInstalled = true;
+}
+
+auto PublishPublicationReadiness(void*) noexcept -> void {
+    if (!State || !PersistenceState) {
+        FailClosed("publication readiness state is unavailable", 0);
+    }
+    InterlockedExchange(&PersistenceState->codecReady, 1);
+    InterlockedExchange(&PersistenceState->itemTransportReady, 1);
+    InterlockedExchange(&PersistenceState->operational, 1);
+    // G0/global operational is deliberately the final visible readiness bit.
+    InterlockedExchange(&State->operational, 1);
+}
+
+auto MarkPublicationPoisoned(void*) noexcept -> void {
+    if (PersistenceState) {
+        InterlockedExchange(&PersistenceState->itemTransportReady, 0);
+        InterlockedExchange(&PersistenceState->codecReady, 0);
+        InterlockedExchange(&PersistenceState->operational, 0);
+    }
+    if (State) InterlockedExchange(&State->operational, 0);
+    ColdRestartRequired = true;
+    FailClosed(
+        "canonical publication was poisoned after a native mutation attempt",
+        LastRowCount.load(std::memory_order_acquire));
+}
+
 } // namespace
+
+auto InspectLoaderCompileProviderContract(
+        const std::uint8_t* base,
+        std::size_t imageSize) noexcept -> LoaderCompileProviderKind {
+    constexpr auto PrefixSize = LoaderCompileCallInstructionOffset + 1U;
+    static_assert(PrefixSize <= LoaderCompileCallBytes.size());
+    if (!base
+            || LoaderCompileCallRva > imageSize
+            || LoaderCompileCallBytes.size()
+                > imageSize - LoaderCompileCallRva
+            || !IsAccessibleRange(
+                base + LoaderCompileCallRva,
+                LoaderCompileCallBytes.size(),
+                false,
+                true)) {
+        return LoaderCompileProviderKind::Invalid;
+    }
+
+    std::array<std::uint8_t, LoaderCompileCallBytes.size()> live{};
+    if (!SafeCopyReadable(
+            base + LoaderCompileCallRva,
+            live.data(),
+            live.size())
+            || std::memcmp(
+                live.data(), LoaderCompileCallBytes.data(), PrefixSize) != 0) {
+        return LoaderCompileProviderKind::Invalid;
+    }
+
+    std::int32_t displacement{};
+    std::memcpy(
+        &displacement,
+        live.data() + LoaderCompileCallInstructionOffset + 1U,
+        sizeof(displacement));
+    const auto instruction = reinterpret_cast<std::uintptr_t>(base)
+        + LoaderCompileCallRva + LoaderCompileCallInstructionOffset;
+    if (instruction
+            > (std::numeric_limits<std::uintptr_t>::max)() - 5U) {
+        return LoaderCompileProviderKind::Invalid;
+    }
+    std::uintptr_t callTarget{};
+    if (!ApplySignedDisplacement(
+            instruction + 5U, displacement, callTarget)) {
+        return LoaderCompileProviderKind::Invalid;
+    }
+    const auto baseAddress = reinterpret_cast<std::uintptr_t>(base);
+    if (NativeGenericCompileRva <= imageSize
+            && callTarget == baseAddress + NativeGenericCompileRva) {
+        return LoaderCompileProviderKind::NativeGenericCompiler;
+    }
+
+    const auto core = GetModuleHandleW(L"D2RCore.dll");
+    const auto loadExcelExport = core
+        ? GetProcAddress(core, "LoadExcelTable") : nullptr;
+    if (!loadExcelExport) {
+        return LoaderCompileProviderKind::Invalid;
+    }
+    const auto loadExcelExportAddress = reinterpret_cast<std::uintptr_t>(
+        loadExcelExport);
+    if (!ValidateD2RCoreLoadExcelProviderAbi(
+            base, core, loadExcelExportAddress)) {
+        return LoaderCompileProviderKind::Invalid;
+    }
+
+    std::array<std::uintptr_t, 5> visited{};
+    auto current = callTarget;
+    for (std::size_t depth{}; depth < visited.size(); ++depth) {
+        if (current == loadExcelExportAddress) {
+            return LoaderCompileProviderKind::D2RCoreLoadExcelTable;
+        }
+        for (std::size_t index{}; index < depth; ++index) {
+            if (visited[index] == current) {
+                return LoaderCompileProviderKind::Invalid;
+            }
+        }
+        visited[depth] = current;
+        std::uintptr_t next{};
+        if (!ReadUnconditionalJumpTarget(current, next)) {
+            return LoaderCompileProviderKind::Invalid;
+        }
+        current = next;
+    }
+    return LoaderCompileProviderKind::Invalid;
+}
+
+auto InspectPlayerSaveStatWriterProviderContract(
+        const std::uint8_t* base,
+        std::size_t imageSize) noexcept -> PlayerSaveStatWriterProviderKind {
+    constexpr auto PrefixSize =
+        PlayerSaveStatWriterCallInstructionOffset + 1U;
+    static_assert(PrefixSize <= PlayerWriterIdBytes.size());
+    if (!base
+            || PlayerSaveStatWriterCallRva > imageSize
+            || PlayerWriterIdBytes.size()
+                > imageSize - PlayerSaveStatWriterCallRva
+            || !IsAccessibleRange(
+                base + PlayerSaveStatWriterCallRva,
+                PlayerWriterIdBytes.size(),
+                false,
+                true)) {
+        return PlayerSaveStatWriterProviderKind::Invalid;
+    }
+
+    std::array<std::uint8_t, PlayerWriterIdBytes.size()> live{};
+    if (!SafeCopyReadable(
+            base + PlayerSaveStatWriterCallRva,
+            live.data(),
+            live.size())
+            || std::memcmp(
+                live.data(), PlayerWriterIdBytes.data(), PrefixSize) != 0) {
+        return PlayerSaveStatWriterProviderKind::Invalid;
+    }
+
+    std::int32_t displacement{};
+    std::memcpy(
+        &displacement,
+        live.data() + PlayerSaveStatWriterCallInstructionOffset + 1U,
+        sizeof(displacement));
+    const auto instruction = reinterpret_cast<std::uintptr_t>(base)
+        + PlayerSaveStatWriterCallRva
+        + PlayerSaveStatWriterCallInstructionOffset;
+    if (instruction
+            > (std::numeric_limits<std::uintptr_t>::max)() - 5U) {
+        return PlayerSaveStatWriterProviderKind::Invalid;
+    }
+    std::uintptr_t callTarget{};
+    if (!ApplySignedDisplacement(
+            instruction + 5U, displacement, callTarget)) {
+        return PlayerSaveStatWriterProviderKind::Invalid;
+    }
+    const auto baseAddress = reinterpret_cast<std::uintptr_t>(base);
+    if (NativeBitWriterRva <= imageSize
+            && callTarget == baseAddress + NativeBitWriterRva) {
+        return PlayerSaveStatWriterProviderKind::NativeBitWriter;
+    }
+
+    const auto core = GetModuleHandleW(L"D2RCore.dll");
+    const auto writerExport = core
+        ? GetProcAddress(core, "WritePlayerSaveStatId") : nullptr;
+    if (!writerExport) {
+        return PlayerSaveStatWriterProviderKind::Invalid;
+    }
+    const auto writerExportAddress = reinterpret_cast<std::uintptr_t>(
+        writerExport);
+    if (!ValidateD2RCorePlayerSaveStatWriterAbi(
+            base, imageSize, core, writerExportAddress)) {
+        return PlayerSaveStatWriterProviderKind::Invalid;
+    }
+
+    std::array<std::uintptr_t, 5> visited{};
+    auto current = callTarget;
+    for (std::size_t depth{}; depth < visited.size(); ++depth) {
+        if (current == writerExportAddress) {
+            return PlayerSaveStatWriterProviderKind::
+                D2RCoreWritePlayerSaveStatId;
+        }
+        for (std::size_t index{}; index < depth; ++index) {
+            if (visited[index] == current) {
+                return PlayerSaveStatWriterProviderKind::Invalid;
+            }
+        }
+        visited[depth] = current;
+        std::uintptr_t next{};
+        if (!ReadUnconditionalJumpTarget(current, next)) {
+            return PlayerSaveStatWriterProviderKind::Invalid;
+        }
+        current = next;
+    }
+    return PlayerSaveStatWriterProviderKind::Invalid;
+}
+
+auto InspectItemSaveStatWriterProviderContract(
+        const std::uint8_t* base,
+        std::size_t imageSize) noexcept -> ItemSaveStatWriterProviderKind {
+    constexpr auto PrefixSize =
+        ItemSaveStatWriterCallInstructionOffset + 1U;
+    static_assert(PrefixSize <= GenericItemBoundedWriterBytes.size());
+    if (!base
+            || ItemSaveStatWriterCallRva > imageSize
+            || GenericItemBoundedWriterBytes.size()
+                > imageSize - ItemSaveStatWriterCallRva
+            || !IsAccessibleRange(
+                base + ItemSaveStatWriterCallRva,
+                GenericItemBoundedWriterBytes.size(),
+                false,
+                true)) {
+        return ItemSaveStatWriterProviderKind::Invalid;
+    }
+
+    std::array<std::uint8_t, GenericItemBoundedWriterBytes.size()> live{};
+    if (!SafeCopyReadable(
+            base + ItemSaveStatWriterCallRva,
+            live.data(),
+            live.size())
+            || std::memcmp(
+                live.data(),
+                GenericItemBoundedWriterBytes.data(),
+                PrefixSize) != 0) {
+        return ItemSaveStatWriterProviderKind::Invalid;
+    }
+
+    std::int32_t displacement{};
+    std::memcpy(
+        &displacement,
+        live.data() + ItemSaveStatWriterCallInstructionOffset + 1U,
+        sizeof(displacement));
+    const auto instruction = reinterpret_cast<std::uintptr_t>(base)
+        + ItemSaveStatWriterCallRva + ItemSaveStatWriterCallInstructionOffset;
+    if (instruction
+            > (std::numeric_limits<std::uintptr_t>::max)() - 5U) {
+        return ItemSaveStatWriterProviderKind::Invalid;
+    }
+    std::uintptr_t callTarget{};
+    if (!ApplySignedDisplacement(
+            instruction + 5U, displacement, callTarget)) {
+        return ItemSaveStatWriterProviderKind::Invalid;
+    }
+    const auto baseAddress = reinterpret_cast<std::uintptr_t>(base);
+    if (NativeBitWriterRva <= imageSize
+            && callTarget == baseAddress + NativeBitWriterRva) {
+        return ItemSaveStatWriterProviderKind::NativeBitWriter;
+    }
+
+    const auto core = GetModuleHandleW(L"D2RCore.dll");
+    const auto writerExport = core
+        ? GetProcAddress(core, "WriteItemSaveStatId") : nullptr;
+    if (!writerExport) {
+        return ItemSaveStatWriterProviderKind::Invalid;
+    }
+    const auto writerExportAddress = reinterpret_cast<std::uintptr_t>(
+        writerExport);
+    if (!ValidateD2RCoreItemSaveStatWriterAbi(
+            base, imageSize, core, writerExportAddress)) {
+        return ItemSaveStatWriterProviderKind::Invalid;
+    }
+
+    std::array<std::uintptr_t, 5> visited{};
+    auto current = callTarget;
+    for (std::size_t depth{}; depth < visited.size(); ++depth) {
+        if (current == writerExportAddress) {
+            return ItemSaveStatWriterProviderKind::D2RCoreWriteItemSaveStatId;
+        }
+        for (std::size_t index{}; index < depth; ++index) {
+            if (visited[index] == current) {
+                return ItemSaveStatWriterProviderKind::Invalid;
+            }
+        }
+        visited[depth] = current;
+        std::uintptr_t next{};
+        if (!ReadUnconditionalJumpTarget(current, next)) {
+            return ItemSaveStatWriterProviderKind::Invalid;
+        }
+        current = next;
+    }
+    return ItemSaveStatWriterProviderKind::Invalid;
+}
+
+auto InspectPlayerSaveProviderContract(
+        const std::uint8_t* base,
+        std::size_t imageSize) noexcept -> PlayerSaveProviderKind {
+    constexpr auto D2RCoreDynamicCapacityBytes =
+            std::to_array<std::uint8_t>({
+        0x41,0xBD,0xFF,0xFF,0x00,0x00,0x66,0x90,0x33,
+        0xD2,0x49,0x8B,0xCE,0xE8,0x46,0x6B,0x06,0x00,
+    });
+    constexpr auto CallPrefixSize =
+        PlayerSaveDynamicCallInstructionOffset + 1U;
+    static_assert(
+        D2RCoreDynamicCapacityBytes.size()
+            == PlayerSaveDynamicCapacityBytes.size());
+    static_assert(CallPrefixSize <= PlayerSaveDynamicCallBytes.size());
+    if (!base
+            || PlayerSaveDynamicCapacityRva > imageSize
+            || PlayerSaveDynamicCapacityBytes.size()
+                > imageSize - PlayerSaveDynamicCapacityRva
+            || PlayerSaveDynamicCallRva > imageSize
+            || PlayerSaveDynamicCallBytes.size()
+                > imageSize - PlayerSaveDynamicCallRva
+            || !IsAccessibleRange(
+                base + PlayerSaveDynamicCapacityRva,
+                PlayerSaveDynamicCapacityBytes.size(),
+                false,
+                true)
+            || !IsAccessibleRange(
+                base + PlayerSaveDynamicCallRva,
+                PlayerSaveDynamicCallBytes.size(),
+                false,
+                true)) {
+        return PlayerSaveProviderKind::Invalid;
+    }
+
+    std::array<std::uint8_t, PlayerSaveDynamicCapacityBytes.size()>
+        liveCapacity{};
+    std::array<std::uint8_t, PlayerSaveDynamicCallBytes.size()> liveCall{};
+    if (!SafeCopyReadable(
+            base + PlayerSaveDynamicCapacityRva,
+            liveCapacity.data(),
+            liveCapacity.size())
+            || !SafeCopyReadable(
+                base + PlayerSaveDynamicCallRva,
+                liveCall.data(),
+                liveCall.size())
+            || std::memcmp(
+                liveCall.data(),
+                PlayerSaveDynamicCallBytes.data(),
+                CallPrefixSize) != 0) {
+        return PlayerSaveProviderKind::Invalid;
+    }
+
+    const bool nativeCapacity =
+        liveCapacity == PlayerSaveDynamicCapacityBytes;
+    const bool d2rCoreCapacity =
+        liveCapacity == D2RCoreDynamicCapacityBytes;
+    if (!nativeCapacity && !d2rCoreCapacity) {
+        return PlayerSaveProviderKind::Invalid;
+    }
+
+    std::int32_t displacement{};
+    std::memcpy(
+        &displacement,
+        liveCall.data() + PlayerSaveDynamicCallInstructionOffset + 1U,
+        sizeof(displacement));
+    const auto instruction = reinterpret_cast<std::uintptr_t>(base)
+        + PlayerSaveDynamicCallRva
+        + PlayerSaveDynamicCallInstructionOffset;
+    if (instruction
+            > (std::numeric_limits<std::uintptr_t>::max)() - 5U) {
+        return PlayerSaveProviderKind::Invalid;
+    }
+    std::uintptr_t callTarget{};
+    if (!ApplySignedDisplacement(
+            instruction + 5U, displacement, callTarget)) {
+        return PlayerSaveProviderKind::Invalid;
+    }
+
+    const auto baseAddress = reinterpret_cast<std::uintptr_t>(base);
+    if (nativeCapacity
+            && NativePlayerSaveRva <= imageSize
+            && callTarget == baseAddress + NativePlayerSaveRva) {
+        return PlayerSaveProviderKind::NativePlayerSave;
+    }
+    if (!d2rCoreCapacity) return PlayerSaveProviderKind::Invalid;
+
+    const auto core = GetModuleHandleW(L"D2RCore.dll");
+    const auto providerExport = core
+        ? GetProcAddress(
+            core, "WritePlayerSaveWithEnvironmentCapture")
+        : nullptr;
+    if (!providerExport) return PlayerSaveProviderKind::Invalid;
+    const auto providerExportAddress = reinterpret_cast<std::uintptr_t>(
+        providerExport);
+    if (!ValidateD2RCorePlayerSaveProviderAbi(
+            base,
+            imageSize,
+            core,
+            providerExportAddress)) {
+        return PlayerSaveProviderKind::Invalid;
+    }
+
+    std::array<std::uintptr_t, 5> visited{};
+    auto current = callTarget;
+    for (std::size_t depth{}; depth < visited.size(); ++depth) {
+        if (current == providerExportAddress) {
+            return PlayerSaveProviderKind::
+                D2RCoreWritePlayerSaveWithEnvironmentCapture;
+        }
+        for (std::size_t index{}; index < depth; ++index) {
+            if (visited[index] == current) {
+                return PlayerSaveProviderKind::Invalid;
+            }
+        }
+        visited[depth] = current;
+        std::uintptr_t next{};
+        if (!ReadUnconditionalJumpTarget(current, next)) {
+            return PlayerSaveProviderKind::Invalid;
+        }
+        current = next;
+    }
+    return PlayerSaveProviderKind::Invalid;
+}
+
+auto InspectD2SItemReadProviderContract(
+        const std::uint8_t* base,
+        std::size_t imageSize) noexcept -> D2SItemReadProviderKind {
+    constexpr auto CallPrefixSize =
+        D2SContainerVersionForwardCallOffset + 1U;
+    static_assert(
+        D2SContainerVersionForwardBytes[
+            D2SContainerVersionForwardCallOffset] == 0xE8U);
+    static_assert(CallPrefixSize <= D2SContainerVersionForwardBytes.size());
+    if (!base
+            || D2SContainerVersionForwardRva > imageSize
+            || D2SContainerVersionForwardBytes.size()
+                > imageSize - D2SContainerVersionForwardRva
+            || !IsAccessibleRange(
+                base + D2SContainerVersionForwardRva,
+                D2SContainerVersionForwardBytes.size(),
+                false,
+                true)) {
+        return D2SItemReadProviderKind::Invalid;
+    }
+
+    std::array<std::uint8_t, D2SContainerVersionForwardBytes.size()> live{};
+    if (!SafeCopyReadable(
+            base + D2SContainerVersionForwardRva,
+            live.data(),
+            live.size())
+            || std::memcmp(
+                live.data(),
+                D2SContainerVersionForwardBytes.data(),
+                CallPrefixSize) != 0
+            || std::memcmp(
+                live.data() + D2SContainerVersionForwardCallOffset + 5U,
+                D2SContainerVersionForwardBytes.data()
+                    + D2SContainerVersionForwardCallOffset + 5U,
+                D2SContainerVersionForwardBytes.size()
+                    - D2SContainerVersionForwardCallOffset - 5U) != 0) {
+        return D2SItemReadProviderKind::Invalid;
+    }
+
+    std::int32_t displacement{};
+    std::memcpy(
+        &displacement,
+        live.data() + D2SContainerVersionForwardCallOffset + 1U,
+        sizeof(displacement));
+    const auto instruction = reinterpret_cast<std::uintptr_t>(base)
+        + D2SContainerVersionForwardRva
+        + D2SContainerVersionForwardCallOffset;
+    if (instruction
+            > (std::numeric_limits<std::uintptr_t>::max)() - 5U) {
+        return D2SItemReadProviderKind::Invalid;
+    }
+    std::uintptr_t callTarget{};
+    if (!ApplySignedDisplacement(
+            instruction + 5U, displacement, callTarget)) {
+        return D2SItemReadProviderKind::Invalid;
+    }
+
+    const auto baseAddress = reinterpret_cast<std::uintptr_t>(base);
+    if (NativeReadItemsByVersionRva <= imageSize
+            && callTarget == baseAddress + NativeReadItemsByVersionRva) {
+        return D2SItemReadProviderKind::NativeReadItemsByVersion;
+    }
+
+    const auto core = GetModuleHandleW(L"D2RCore.dll");
+    const auto providerExport = core
+        ? GetProcAddress(core, "ReadItemsByVersion")
+        : nullptr;
+    if (!providerExport) return D2SItemReadProviderKind::Invalid;
+    const auto providerExportAddress = reinterpret_cast<std::uintptr_t>(
+        providerExport);
+    if (!ValidateD2RCoreReadItemsByVersionAbi(
+            base,
+            imageSize,
+            core,
+            providerExportAddress)) {
+        return D2SItemReadProviderKind::Invalid;
+    }
+
+    std::array<std::uintptr_t, 5> visited{};
+    auto current = callTarget;
+    for (std::size_t depth{}; depth < visited.size(); ++depth) {
+        if (current == providerExportAddress) {
+            return D2SItemReadProviderKind::D2RCoreReadItemsByVersion;
+        }
+        for (std::size_t index{}; index < depth; ++index) {
+            if (visited[index] == current) {
+                return D2SItemReadProviderKind::Invalid;
+            }
+        }
+        visited[depth] = current;
+        std::uintptr_t next{};
+        if (!ReadUnconditionalJumpTarget(current, next)) {
+            return D2SItemReadProviderKind::Invalid;
+        }
+        current = next;
+    }
+    return D2SItemReadProviderKind::Invalid;
+}
+
+auto InspectD2SSaveIoProviderContract(
+        const std::uint8_t* base,
+        std::size_t imageSize) noexcept -> D2SSaveIoProviderKind {
+    static_assert(
+        SaveObjectWriterBufferLayoutWitnessBytes[
+            D2SSaveWriterProviderCallOffset] == 0xE8U);
+    static_assert(
+        SaveObjectWriterCommittedContinuationBytes[
+            D2SSaveCloseProviderCallOffset] == 0xE8U);
+    if (!base
+            || D2SSaveWriterProviderCallRva > imageSize
+            || SaveObjectWriterBufferLayoutWitnessBytes.size()
+                > imageSize - D2SSaveWriterProviderCallRva
+            || D2SSaveCloseProviderCallRva > imageSize
+            || SaveObjectWriterCommittedContinuationBytes.size()
+                > imageSize - D2SSaveCloseProviderCallRva
+            || !IsAccessibleRange(
+                base + D2SSaveWriterProviderCallRva,
+                SaveObjectWriterBufferLayoutWitnessBytes.size(),
+                false,
+                true)
+            || !IsAccessibleRange(
+                base + D2SSaveCloseProviderCallRva,
+                SaveObjectWriterCommittedContinuationBytes.size(),
+                false,
+                true)) {
+        return D2SSaveIoProviderKind::Invalid;
+    }
+
+    std::array<
+        std::uint8_t,
+        SaveObjectWriterBufferLayoutWitnessBytes.size()> liveWriter{};
+    std::array<
+        std::uint8_t,
+        SaveObjectWriterCommittedContinuationBytes.size()> liveClose{};
+    if (!SafeCopyReadable(
+            base + D2SSaveWriterProviderCallRva,
+            liveWriter.data(),
+            liveWriter.size())
+            || !SafeCopyReadable(
+                base + D2SSaveCloseProviderCallRva,
+                liveClose.data(),
+                liveClose.size())) {
+        return D2SSaveIoProviderKind::Invalid;
+    }
+
+    const auto matchesRel32Variant = [](
+            const auto& live,
+            const auto& expected,
+            std::size_t callOffset) noexcept -> bool {
+        return callOffset <= live.size()
+            && 5U <= live.size() - callOffset
+            && live.size() == expected.size()
+            && live[callOffset] == 0xE8U
+            && expected[callOffset] == 0xE8U
+            && std::memcmp(
+                live.data(), expected.data(), callOffset + 1U) == 0
+            && std::memcmp(
+                live.data() + callOffset + 5U,
+                expected.data() + callOffset + 5U,
+                live.size() - callOffset - 5U) == 0;
+    };
+    if (!matchesRel32Variant(
+            liveWriter,
+            SaveObjectWriterBufferLayoutWitnessBytes,
+            D2SSaveWriterProviderCallOffset)
+            || !matchesRel32Variant(
+                liveClose,
+                SaveObjectWriterCommittedContinuationBytes,
+                D2SSaveCloseProviderCallOffset)) {
+        return D2SSaveIoProviderKind::Invalid;
+    }
+
+    const auto resolveCall = [base](
+            const auto& live,
+            std::uintptr_t siteRva,
+            std::size_t callOffset,
+            std::uintptr_t& target) noexcept -> bool {
+        std::int32_t displacement{};
+        std::memcpy(
+            &displacement,
+            live.data() + callOffset + 1U,
+            sizeof(displacement));
+        const auto baseAddress = reinterpret_cast<std::uintptr_t>(base);
+        if (baseAddress
+                > (std::numeric_limits<std::uintptr_t>::max)() - siteRva
+                || baseAddress + siteRva
+                    > (std::numeric_limits<std::uintptr_t>::max)()
+                        - callOffset
+                || baseAddress + siteRva + callOffset
+                    > (std::numeric_limits<std::uintptr_t>::max)() - 5U) {
+            return false;
+        }
+        return ApplySignedDisplacement(
+            baseAddress + siteRva + callOffset + 5U,
+            displacement,
+            target);
+    };
+    std::uintptr_t writerTarget{};
+    std::uintptr_t closeTarget{};
+    if (!resolveCall(
+            liveWriter,
+            D2SSaveWriterProviderCallRva,
+            D2SSaveWriterProviderCallOffset,
+            writerTarget)
+            || !resolveCall(
+                liveClose,
+                D2SSaveCloseProviderCallRva,
+                D2SSaveCloseProviderCallOffset,
+                closeTarget)) {
+        return D2SSaveIoProviderKind::Invalid;
+    }
+
+    const auto baseAddress = reinterpret_cast<std::uintptr_t>(base);
+    if (baseAddress
+                > (std::numeric_limits<std::uintptr_t>::max)()
+                    - NativeD2SSaveWriterRva
+            || baseAddress
+                > (std::numeric_limits<std::uintptr_t>::max)()
+                    - NativeD2SSaveCloseRva) {
+        return D2SSaveIoProviderKind::Invalid;
+    }
+    if (NativeD2SSaveWriterRva <= imageSize
+            && NativeD2SSaveCloseRva <= imageSize
+            && writerTarget == baseAddress + NativeD2SSaveWriterRva
+            && closeTarget == baseAddress + NativeD2SSaveCloseRva) {
+        return D2SSaveIoProviderKind::NativeWriteAndClose;
+    }
+
+    const auto core = GetModuleHandleW(L"D2RCore.dll");
+    const auto writerExport = core
+        ? GetProcAddress(core, "WriteD2sFileWithEnvironment") : nullptr;
+    const auto closeExport = core
+        ? GetProcAddress(core, "CloseD2sFileWithEnvironment") : nullptr;
+    if (!writerExport || !closeExport) {
+        return D2SSaveIoProviderKind::Invalid;
+    }
+    const auto writerExportAddress = reinterpret_cast<std::uintptr_t>(
+        writerExport);
+    const auto closeExportAddress = reinterpret_cast<std::uintptr_t>(
+        closeExport);
+    const auto coreBase = reinterpret_cast<std::uintptr_t>(core);
+    if (writerExportAddress < coreBase || closeExportAddress < coreBase) {
+        return D2SSaveIoProviderKind::Invalid;
+    }
+    const auto writerProviderRva = writerExportAddress - coreBase;
+    const auto closeProviderRva = closeExportAddress - coreBase;
+    const bool matchingProviderGeneration =
+        (writerProviderRva == 0x6365E0U
+            && closeProviderRva == 0x6393B0U)
+        || (writerProviderRva == 0x565640U
+            && closeProviderRva == 0x567E00U);
+    if (!matchingProviderGeneration
+            || !ValidateD2RCoreWriteD2SSaveProviderAbi(
+            base,
+            imageSize,
+            core,
+            writerExportAddress)
+            || !ValidateD2RCoreCloseD2SSaveProviderAbi(
+                base,
+                imageSize,
+                core,
+                closeExportAddress)) {
+        return D2SSaveIoProviderKind::Invalid;
+    }
+
+    const auto resolvesProvider = [](
+            std::uintptr_t current,
+            std::uintptr_t expected) noexcept -> bool {
+        std::array<std::uintptr_t, 5> visited{};
+        for (std::size_t depth{}; depth < visited.size(); ++depth) {
+            if (current == expected) return true;
+            for (std::size_t index{}; index < depth; ++index) {
+                if (visited[index] == current) return false;
+            }
+            visited[depth] = current;
+            std::uintptr_t next{};
+            if (!ReadUnconditionalJumpTarget(current, next)) return false;
+            current = next;
+        }
+        return false;
+    };
+    return resolvesProvider(writerTarget, writerExportAddress)
+            && resolvesProvider(closeTarget, closeExportAddress)
+        ? D2SSaveIoProviderKind::D2RCoreWriteAndCloseWithEnvironment
+        : D2SSaveIoProviderKind::Invalid;
+}
 
 extern "C" auto ISC12InvokeItemAction9CNative(
         void* client,
@@ -2415,7 +4465,8 @@ extern "C" auto ISC12PrepareNativeStoreRead(
         && InterlockedCompareExchange(
             &PersistenceState->codecReady, 0, 0) != 0;
     Sha256Digest schemaHash{};
-    const bool schemaReady = TryGetPublishedSchemaHash(schemaHash);
+    PublishedSchemaReadLease schemaLease;
+    const bool schemaReady = codecReady && schemaLease.TryAcquire(schemaHash);
     std::vector<std::uint8_t> physicalBytes;
     if (codecReady && schemaReady
             && !NativeReadMaySnapshot(
@@ -2482,8 +4533,17 @@ extern "C" auto ISC12PrepareNativeStoreWrite(
     const bool codecReady = PersistenceState
         && InterlockedCompareExchange(
             &PersistenceState->codecReady, 0, 0) != 0;
+    std::array<char, NativePersistencePathCapacity> pathStorage{};
+    if (!nativePath
+            || !SafeCopyReadable(
+                nativePath, pathStorage.data(), pathStorage.size())) {
+        return static_cast<std::uint32_t>(
+            NativePersistenceDisposition::Reject);
+    }
+
     Sha256Digest schemaHash{};
-    const bool schemaReady = TryGetPublishedSchemaHash(schemaHash);
+    PublishedSchemaReadLease schemaLease;
+    const bool schemaReady = codecReady && schemaLease.TryAcquire(schemaHash);
     std::vector<std::uint8_t> innerBytes;
     if (codecReady && schemaReady
             && !SnapshotNativeObjectBuffer(
@@ -2491,13 +4551,6 @@ extern "C" auto ISC12PrepareNativeStoreWrite(
                 nullptr,
                 MaximumNativeInnerStoreLength,
                 innerBytes)) {
-        return static_cast<std::uint32_t>(
-            NativePersistenceDisposition::Reject);
-    }
-    std::array<char, NativePersistencePathCapacity> pathStorage{};
-    if (!nativePath
-            || !SafeCopyReadable(
-                nativePath, pathStorage.data(), pathStorage.size())) {
         return static_cast<std::uint32_t>(
             NativePersistenceDisposition::Reject);
     }
@@ -2547,6 +4600,8 @@ auto PrepareLoaderExtension(
     PersistencePrepared = false;
     TailPatchInstalled = false;
     CapPatchInstalled = false;
+    PersistenceReaderPatchInstalled = false;
+    PersistenceWriterPatchInstalled = false;
     ColdRestartRequired = false;
     LoaderContext = context;
     LoaderBase = base;
@@ -2656,12 +4711,52 @@ auto PrepareLoaderExtension(
     if (!PrepareRelay(error)) return false;
     if (!PreparePersistenceRelay(error)) return false;
 
+    const auto baseAddress = reinterpret_cast<std::uintptr_t>(LoaderBase);
+    const auto g0RelayAddress = reinterpret_cast<std::uintptr_t>(RelayPage);
+    const auto readerRelayAddress = reinterpret_cast<std::uintptr_t>(
+        PersistenceReaderRelayEntry);
+    const auto writerRelayAddress = reinterpret_cast<std::uintptr_t>(
+        PersistenceWriterRelayEntry);
+    if (g0RelayAddress < baseAddress
+            || readerRelayAddress < baseAddress
+            || writerRelayAddress < baseAddress
+            || !PreparedPublicationAdapters.Bind(
+                PublicationAdapterTargets{
+                    .g0DescriptionRelayRva = g0RelayAddress - baseAddress,
+                    .g10ReaderRelayRva = readerRelayAddress - baseAddress,
+                    .g10WriterRelayRva = writerRelayAddress - baseAddress,
+                    .codec = PreparedCodecActivationTargets,
+                },
+                PublicationAdapterNativeCallbacks{
+                    .context = LoaderBase,
+                    .verifyPattern = &VerifyPublicationPattern,
+                    .patchRel32 = &PatchPublicationRel32,
+                    .patchU32 = &PatchPublicationU32,
+                    .writeCodecByte = &PatchPublicationCodecByte,
+                    .flushInstructionCache =
+                        &FlushPublicationInstructionCache,
+                    .markG0TailCommitted = &MarkG0TailCommitted,
+                    .activateG0Guard = &ActivateG0Guard,
+                    .markG0CapCommitted = &MarkG0CapCommitted,
+                    .markG10ReaderCommitted = &MarkG10ReaderCommitted,
+                    .markG10WriterCommitted = &MarkG10WriterCommitted,
+                    .reserveProcessLifetime =
+                        &ReservePublicationProcessLifetime,
+                    .publishReadiness = &PublishPublicationReadiness,
+                    .markPoisoned = &MarkPublicationPoisoned,
+                })) {
+        return SetError(
+            error,
+            "native publication adapters could not bind prepared resources");
+    }
+
     Prepared = true;
     return true;
 }
 
+#if defined(ISC12_CODEC_PATCH_TESTING)
 auto InstallLoaderExtension(
-        const NativePublicationQuiescenceLease& quiescence,
+        const NativePublicationLeaseView& quiescence,
         std::string& error) noexcept
         -> LoaderInstallResult {
     error.clear();
@@ -2815,6 +4910,7 @@ auto InstallLoaderExtension(
     }
     return result;
 }
+#endif
 
 auto ShutdownLoaderExtension() noexcept -> void {
     if (PersistenceState) {
@@ -2885,20 +4981,96 @@ auto ShutdownLoaderExtension() noexcept -> void {
     // unloaded DLL.
 }
 
-auto TryGetPublishedSchemaHash(Sha256Digest& output) noexcept -> bool {
-    Sha256Digest staged{};
-    bool available{};
-    AcquireSRWLockShared(&SchemaSnapshotLock);
-    if (SchemaReady.load(std::memory_order_acquire)
-            && HasPublishedSchemaSnapshot
-            && !SchemaUpdateInProgress) {
-        staged = PublishedSchemaSnapshot.schemaHash;
-        available = SchemaReady.load(std::memory_order_acquire)
-            && !SchemaUpdateInProgress;
+auto FinalizePublishedSchemaSnapshot(
+        const void* activeRecords,
+        std::size_t activeRowCount,
+        std::size_t activeRowSize,
+        std::uint64_t revision,
+        std::string& error) noexcept -> NativeSchemaFinalizeResult {
+    error.clear();
+    AcquireSRWLockExclusive(&SchemaSnapshotLock);
+    SchemaUpdateInProgress = true;
+    SchemaReady.store(false, std::memory_order_release);
+
+    auto result = NativeSchemaFinalizeResult::InvalidState;
+    if (Prepared && AnyMutationInstalled && State && PersistenceState
+            && InterlockedCompareExchange(&State->operational, 0, 0) != 0
+            && InterlockedCompareExchange(
+                &PersistenceState->operational, 0, 0) != 0
+            && InterlockedCompareExchange(
+                &PersistenceState->codecReady, 0, 0) != 0
+            && InterlockedCompareExchange(
+                &PersistenceState->itemTransportReady, 0, 0) != 0) {
+        result = PendingSchemaCandidates.Finalize(
+            activeRecords,
+            activeRowCount,
+            activeRowSize,
+            revision,
+            HasPublishedSchemaSnapshot,
+            PublishedSchemaSnapshot.schemaHash,
+            PublishedSchemaSnapshot);
     }
-    ReleaseSRWLockShared(&SchemaSnapshotLock);
-    if (!available) return false;
-    output = staged;
+
+    if (result == NativeSchemaFinalizeResult::Published) {
+        HasPublishedSchemaSnapshot = true;
+    }
+    const bool accepted =
+        result == NativeSchemaFinalizeResult::Published
+        || result == NativeSchemaFinalizeResult::AcceptedExisting;
+    if (accepted) {
+        LastRowCount.store(activeRowCount, std::memory_order_release);
+        SchemaReady.store(true, std::memory_order_release);
+    } else {
+        switch (result) {
+        case NativeSchemaFinalizeResult::InvalidState:
+            SetError(error,
+                "native publication is not active at the schema boundary");
+            break;
+        case NativeSchemaFinalizeResult::InvalidTableView:
+            SetError(error,
+                "authoritative RotW ItemStatCost view is invalid");
+            break;
+        case NativeSchemaFinalizeResult::InvalidAuthoritativeSnapshot:
+            SetError(error,
+                "authoritative RotW ItemStatCost bytes cannot produce a valid schema snapshot");
+            break;
+        case NativeSchemaFinalizeResult::MissingCandidate:
+            SetError(error,
+                "authoritative RotW ItemStatCost view has no exact staged capture");
+            break;
+        case NativeSchemaFinalizeResult::InvalidOrDuplicateRevision:
+            SetError(error,
+                "DataTablesLoaded revision is zero or duplicates the previous load");
+            break;
+        case NativeSchemaFinalizeResult::Diverged:
+            SetError(error,
+                "authoritative ItemStatCost schema diverged after publication");
+            break;
+        default:
+            SetError(error, "ItemStatCost schema finalization failed");
+            break;
+        }
+    }
+    SchemaUpdateInProgress = false;
+    ReleaseSRWLockExclusive(&SchemaSnapshotLock);
+    return result;
+}
+
+[[noreturn]] auto FailClosedNativePublication(
+        const char* reason) noexcept -> void {
+    FailClosed(
+        reason ? reason : "native publication became indeterminate",
+        LastRowCount.load(std::memory_order_acquire));
+}
+
+auto TryGetPreparedPublicationCallbacks(
+        PublicationCoordinatorCallbacks& output) noexcept -> bool {
+    if (!Prepared || !PersistencePrepared
+            || !PreparedPublicationAdapters.IsBound()
+            || AnyMutationInstalled) {
+        return false;
+    }
+    output = PreparedPublicationAdapters.CoordinatorCallbacks();
     return true;
 }
 
@@ -2908,12 +5080,21 @@ auto GetLoaderRuntimeStatus() noexcept -> LoaderRuntimeStatus {
         .persistencePrepared = PersistencePrepared,
         .tailPatchInstalled = TailPatchInstalled,
         .capPatchInstalled = CapPatchInstalled,
+        .persistenceReaderPatchInstalled =
+            PersistenceReaderPatchInstalled,
+        .persistenceWriterPatchInstalled =
+            PersistenceWriterPatchInstalled,
+        .publicationAdaptersBound =
+            PreparedPublicationAdapters.IsBound(),
         .operational = State
             && InterlockedCompareExchange(&State->operational, 0, 0) != 0,
         .schemaReady = SchemaReady.load(std::memory_order_acquire),
         .persistenceCodecReady = PersistenceState
             && InterlockedCompareExchange(
                 &PersistenceState->codecReady, 0, 0) != 0,
+        .itemTransportReady = PersistenceState
+            && InterlockedCompareExchange(
+                &PersistenceState->itemTransportReady, 0, 0) != 0,
         .coldRestartRequired = ColdRestartRequired,
         .buildCalls = BuildCalls.load(std::memory_order_acquire),
         .lastRowCount = LastRowCount.load(std::memory_order_acquire),

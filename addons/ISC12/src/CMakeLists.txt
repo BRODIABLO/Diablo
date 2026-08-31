@@ -40,6 +40,7 @@ add_library(ISC12 SHARED
     isc12_native_schema_adapter.cpp
     isc12_persistence_policy.cpp
     isc12_player_stat_preflight.cpp
+    isc12_publication_adapters.cpp
     isc12_publication_coordinator.cpp
     isc12_schema.cpp
     isc12_loader.cpp
@@ -174,5 +175,27 @@ if(BUILD_TESTING)
     add_test(
         NAME isc12-publication-coordinator
         COMMAND ISC12PublicationCoordinatorTests
+    )
+
+    add_executable(ISC12PublicationAdapterTests
+        publication_adapter_tests.cpp
+        isc12_codec_patch.cpp
+        isc12_publication_adapters.cpp
+        isc12_publication_coordinator.cpp
+    )
+    target_compile_features(ISC12PublicationAdapterTests PRIVATE
+        cxx_std_20
+    )
+    target_compile_definitions(ISC12PublicationAdapterTests PRIVATE
+        ISC12_CODEC_PATCH_TESTING=1
+    )
+    if(MSVC)
+        target_compile_options(ISC12PublicationAdapterTests PRIVATE
+            /W4 /WX /permissive- /EHsc /utf-8
+        )
+    endif()
+    add_test(
+        NAME isc12-publication-adapters
+        COMMAND ISC12PublicationAdapterTests
     )
 endif()

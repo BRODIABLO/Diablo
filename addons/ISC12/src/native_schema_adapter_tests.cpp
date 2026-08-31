@@ -8,6 +8,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -97,6 +98,90 @@ auto MakeSentinelSnapshot()
     return snapshot;
 }
 
+auto MakeCandidateSnapshot(
+        std::size_t rowCount,
+        std::uint8_t marker)
+        -> ruffneckk::isc12::NativeItemStatCostSchemaSnapshot {
+    using namespace ruffneckk::isc12;
+    NativeItemStatCostSchemaSnapshot snapshot;
+    snapshot.rows.resize(rowCount);
+    for (std::size_t ordinal{}; ordinal < rowCount; ++ordinal) {
+        snapshot.rows[ordinal].statName = "candidate-"
+            + std::to_string(static_cast<unsigned int>(marker))
+            + "-" + std::to_string(ordinal);
+    }
+    snapshot.effectiveStuff = marker;
+    snapshot.schemaHash.fill(marker);
+    return snapshot;
+}
+
+auto MakeCapturedSnapshot(
+        std::span<const std::uint8_t> records,
+        std::size_t rowCount,
+        std::uint8_t marker)
+        -> ruffneckk::isc12::NativeItemStatCostSchemaSnapshot {
+    using namespace ruffneckk::isc12;
+    auto snapshot = MakeCandidateSnapshot(rowCount, marker);
+    std::vector<std::string_view> nameViews;
+    nameViews.reserve(snapshot.rows.size());
+    for (const auto& row : snapshot.rows) {
+        nameViews.emplace_back(row.statName);
+    }
+    CHECK(DecodeCompiledItemStatRecords(
+        records,
+        rowCount,
+        nameViews,
+        snapshot.rows,
+        snapshot.effectiveStuff) == SchemaError::None);
+    CHECK(CalculateSchemaHash(
+        snapshot.rows,
+        snapshot.effectiveStuff,
+        snapshot.schemaHash) == SchemaError::None);
+    return snapshot;
+}
+
+auto HasAuthoritativeCandidate(
+        const ruffneckk::isc12::NativeItemStatCostSchemaSnapshot& snapshot,
+        std::span<const std::uint8_t> records,
+        std::size_t rowCount,
+        std::uint8_t marker) -> bool {
+    using namespace ruffneckk::isc12;
+    std::vector<std::string> copiedNames;
+    std::vector<std::string_view> nameViews;
+    copiedNames.reserve(rowCount);
+    nameViews.reserve(rowCount);
+    for (std::size_t ordinal{}; ordinal < rowCount; ++ordinal) {
+        copiedNames.emplace_back(
+            "candidate-"
+            + std::to_string(static_cast<unsigned int>(marker))
+            + "-" + std::to_string(ordinal));
+    }
+    for (const auto& name : copiedNames) nameViews.emplace_back(name);
+
+    std::vector<ItemStatSemanticRow> expectedRows;
+    std::uint8_t expectedStuff{};
+    Sha256Digest expectedHash{};
+    if (DecodeCompiledItemStatRecords(
+            records, rowCount, nameViews, expectedRows, expectedStuff)
+            != SchemaError::None
+            || CalculateSchemaHash(
+                expectedRows, expectedStuff, expectedHash)
+                != SchemaError::None) {
+        return false;
+    }
+    if (snapshot.rows.size() != rowCount
+            || snapshot.effectiveStuff != expectedStuff
+            || snapshot.schemaHash != expectedHash) {
+        return false;
+    }
+    for (std::size_t ordinal{}; ordinal < rowCount; ++ordinal) {
+        if (snapshot.rows[ordinal].statName != copiedNames[ordinal]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 auto IsSentinel(
         const ruffneckk::isc12::NativeItemStatCostSchemaSnapshot& snapshot)
         -> bool {
@@ -121,6 +206,7 @@ int main() {
     static_assert(MaximumSerializedCsvBits == 32);
     static_assert(MaximumSerializedCsvParamBits == 16);
     static_assert(MaximumNativeStatNameLength == 0xFFFF);
+    static_assert(NativeSchemaCandidateCapacity == 3);
 
     Sha256Digest publishedHash{};
     Sha256Digest candidateHash{};
@@ -328,6 +414,378 @@ int main() {
         &linker, {}, 0, missingName, snapshot)
         == SchemaError::InvalidArgument);
     CHECK(IsSentinel(snapshot));
+
+    {
+        int sourceDataTables{};
+        auto exactRecords = MakeRecords(2);
+        NativeSchemaCandidateSet candidates;
+        CHECK(candidates.Stage(
+            &sourceDataTables,
+            exactRecords.data(),
+            2,
+            MakeCandidateSnapshot(2, 0x11))
+            == NativeSchemaStageResult::Staged);
+        CHECK(candidates.PendingCount() == 1);
+
+        auto published = MakeSentinelSnapshot();
+        const Sha256Digest noPublishedHash{};
+        CHECK(candidates.Finalize(
+            exactRecords.data(),
+            2,
+            CompiledItemStatRecordStride,
+            1,
+            false,
+            noPublishedHash,
+            published) == NativeSchemaFinalizeResult::Published);
+        CHECK(HasAuthoritativeCandidate(
+            published, exactRecords, 2, 0x11));
+        CHECK(candidates.PendingCount() == 0);
+        CHECK(candidates.LastObservedRevision() == 1);
+    }
+
+    {
+        int sourceDataTables{};
+        auto sharedRecords = MakeRecords(2);
+        NativeSchemaCandidateSet candidates;
+        CHECK(candidates.Stage(
+            &sourceDataTables,
+            sharedRecords.data(),
+            2,
+            MakeCandidateSnapshot(2, 0x21))
+            == NativeSchemaStageResult::Staged);
+        auto replacement = MakeCandidateSnapshot(2, 0x22);
+        replacement.rows[0].statName = "replacement";
+        CHECK(candidates.Stage(
+            &sourceDataTables,
+            sharedRecords.data(),
+            2,
+            std::move(replacement))
+            == NativeSchemaStageResult::Staged);
+        CHECK(candidates.PendingCount() == 1);
+
+        NativeItemStatCostSchemaSnapshot published;
+        const Sha256Digest noPublishedHash{};
+        CHECK(candidates.Finalize(
+            sharedRecords.data(),
+            2,
+            CompiledItemStatRecordStride,
+            1,
+            false,
+            noPublishedHash,
+            published) == NativeSchemaFinalizeResult::Published);
+        CHECK(published.rows.size() == 2);
+        CHECK(published.effectiveStuff == 7);
+        CHECK(published.rows[0].statName == "replacement");
+    }
+
+    {
+        int sourceDataTables{};
+        auto postProcessedRecords = MakeRecords(1);
+        auto captured = MakeCapturedSnapshot(
+            postProcessedRecords, 1, 0x28);
+        CHECK(captured.rows[0].saveBits == 12);
+        NativeSchemaCandidateSet candidates;
+        CHECK(candidates.Stage(
+            &sourceDataTables,
+            postProcessedRecords.data(),
+            1,
+            std::move(captured)) == NativeSchemaStageResult::Staged);
+
+        // DataTablesLoaded runs after loader post-processing. The same
+        // allocation may therefore contain newer authoritative semantic bytes
+        // than the compiler-hook capture.
+        postProcessedRecords[0x15] = 13;
+        NativeItemStatCostSchemaSnapshot published;
+        const Sha256Digest noPublishedHash{};
+        CHECK(candidates.Finalize(
+            postProcessedRecords.data(),
+            1,
+            CompiledItemStatRecordStride,
+            1,
+            false,
+            noPublishedHash,
+            published) == NativeSchemaFinalizeResult::Published);
+        CHECK(published.rows.size() == 1);
+        CHECK(published.rows[0].saveBits == 13);
+        CHECK(HasAuthoritativeCandidate(
+            published, postProcessedRecords, 1, 0x28));
+    }
+
+    {
+        int sourceDataTables{};
+        auto invalidAuthoritativeRecords = MakeRecords(2);
+        NativeSchemaCandidateSet candidates;
+        CHECK(candidates.Stage(
+            &sourceDataTables,
+            invalidAuthoritativeRecords.data(),
+            2,
+            MakeCapturedSnapshot(
+                invalidAuthoritativeRecords, 2, 0x29))
+            == NativeSchemaStageResult::Staged);
+        WriteU16(
+            invalidAuthoritativeRecords,
+            CompiledItemStatRecordStride,
+            0);
+        auto published = MakeSentinelSnapshot();
+        const Sha256Digest noPublishedHash{};
+        CHECK(candidates.Finalize(
+            invalidAuthoritativeRecords.data(),
+            2,
+            CompiledItemStatRecordStride,
+            1,
+            false,
+            noPublishedHash,
+            published)
+            == NativeSchemaFinalizeResult::InvalidAuthoritativeSnapshot);
+        CHECK(IsSentinel(published));
+        CHECK(candidates.PendingCount() == 1);
+        CHECK(candidates.LastObservedRevision() == 0);
+    }
+
+    {
+        std::array<int, NativeSchemaCandidateCapacity + 1> sourceDataTables{};
+        std::array<std::vector<std::uint8_t>,
+            NativeSchemaCandidateCapacity + 1> bankRecords{
+                MakeRecords(1),
+                MakeRecords(1),
+                MakeRecords(1),
+                MakeRecords(1),
+            };
+        NativeSchemaCandidateSet candidates;
+        for (std::size_t index{};
+                index < NativeSchemaCandidateCapacity;
+                ++index) {
+            CHECK(candidates.Stage(
+                &sourceDataTables[index],
+                bankRecords[index].data(),
+                1,
+                MakeCandidateSnapshot(
+                    1,
+                    static_cast<std::uint8_t>(0x30U + index)))
+                == NativeSchemaStageResult::Staged);
+        }
+        CHECK(candidates.PendingCount() == NativeSchemaCandidateCapacity);
+        CHECK(candidates.Stage(
+            &sourceDataTables.back(),
+            bankRecords.back().data(),
+            1,
+            MakeCandidateSnapshot(1, 0x3F))
+            == NativeSchemaStageResult::CapacityExceeded);
+        CHECK(candidates.PendingCount() == NativeSchemaCandidateCapacity);
+
+        NativeItemStatCostSchemaSnapshot published;
+        const Sha256Digest noPublishedHash{};
+        CHECK(candidates.Finalize(
+            bankRecords[1].data(),
+            1,
+            CompiledItemStatRecordStride,
+            1,
+            false,
+            noPublishedHash,
+            published) == NativeSchemaFinalizeResult::Published);
+        CHECK(HasAuthoritativeCandidate(
+            published, bankRecords[1], 1, 0x31));
+    }
+
+    {
+        int sourceDataTables{};
+        auto validRecords = MakeRecords(1);
+        NativeSchemaCandidateSet candidates;
+        CHECK(candidates.Stage(
+            nullptr,
+            validRecords.data(),
+            1,
+            MakeCandidateSnapshot(1, 0x40))
+            == NativeSchemaStageResult::InvalidArgument);
+        CHECK(candidates.Stage(
+            &sourceDataTables,
+            nullptr,
+            1,
+            MakeCandidateSnapshot(1, 0x41))
+            == NativeSchemaStageResult::InvalidArgument);
+        CHECK(candidates.Stage(
+            &sourceDataTables,
+            validRecords.data(),
+            0,
+            MakeCandidateSnapshot(0, 0x42))
+            == NativeSchemaStageResult::InvalidArgument);
+        CHECK(candidates.Stage(
+            &sourceDataTables,
+            validRecords.data(),
+            MaximumRecordCount + 1,
+            MakeCandidateSnapshot(1, 0x43))
+            == NativeSchemaStageResult::InvalidArgument);
+        CHECK(candidates.Stage(
+            &sourceDataTables,
+            validRecords.data(),
+            2,
+            MakeCandidateSnapshot(1, 0x44))
+            == NativeSchemaStageResult::InvalidArgument);
+        CHECK(candidates.PendingCount() == 0);
+    }
+
+    {
+        int sourceDataTables{};
+        int unrelatedRecords{};
+        auto firstRecords = MakeRecords(1);
+        NativeSchemaCandidateSet candidates;
+        CHECK(candidates.Stage(
+            &sourceDataTables,
+            firstRecords.data(),
+            1,
+            MakeCandidateSnapshot(1, 0x71))
+            == NativeSchemaStageResult::Staged);
+
+        auto published = MakeSentinelSnapshot();
+        const Sha256Digest noPublishedHash{};
+        CHECK(candidates.Finalize(
+            nullptr,
+            1,
+            CompiledItemStatRecordStride,
+            1,
+            false,
+            noPublishedHash,
+            published) == NativeSchemaFinalizeResult::InvalidTableView);
+        CHECK(candidates.Finalize(
+            firstRecords.data(),
+            0,
+            CompiledItemStatRecordStride,
+            1,
+            false,
+            noPublishedHash,
+            published) == NativeSchemaFinalizeResult::InvalidTableView);
+        CHECK(candidates.Finalize(
+            firstRecords.data(),
+            MaximumRecordCount + 1,
+            CompiledItemStatRecordStride,
+            1,
+            false,
+            noPublishedHash,
+            published) == NativeSchemaFinalizeResult::InvalidTableView);
+        CHECK(candidates.Finalize(
+            firstRecords.data(),
+            1,
+            CompiledItemStatRecordStride - 1,
+            1,
+            false,
+            noPublishedHash,
+            published) == NativeSchemaFinalizeResult::InvalidTableView);
+        CHECK(candidates.Finalize(
+            &unrelatedRecords,
+            1,
+            CompiledItemStatRecordStride,
+            1,
+            false,
+            noPublishedHash,
+            published) == NativeSchemaFinalizeResult::MissingCandidate);
+        CHECK(candidates.Finalize(
+            firstRecords.data(),
+            1,
+            CompiledItemStatRecordStride,
+            0,
+            false,
+            noPublishedHash,
+            published)
+            == NativeSchemaFinalizeResult::InvalidOrDuplicateRevision);
+        CHECK(IsSentinel(published));
+        CHECK(candidates.PendingCount() == 1);
+        CHECK(candidates.LastObservedRevision() == 0);
+
+        CHECK(candidates.Finalize(
+            firstRecords.data(),
+            1,
+            CompiledItemStatRecordStride,
+            5,
+            false,
+            noPublishedHash,
+            published) == NativeSchemaFinalizeResult::Published);
+        CHECK(HasAuthoritativeCandidate(
+            published, firstRecords, 1, 0x71));
+        const auto publishedName = published.rows[0].statName;
+        const auto publishedHashAfterFirstRevision = published.schemaHash;
+
+        auto secondRecords = MakeRecords(1);
+        auto matching = MakeCandidateSnapshot(1, 0x71);
+        CHECK(candidates.Stage(
+            &sourceDataTables,
+            secondRecords.data(),
+            1,
+            std::move(matching)) == NativeSchemaStageResult::Staged);
+        CHECK(candidates.Finalize(
+            secondRecords.data(),
+            1,
+            CompiledItemStatRecordStride,
+            5,
+            true,
+            publishedHashAfterFirstRevision,
+            published)
+            == NativeSchemaFinalizeResult::InvalidOrDuplicateRevision);
+        CHECK(candidates.PendingCount() == 1);
+        CHECK(candidates.Finalize(
+            secondRecords.data(),
+            1,
+            CompiledItemStatRecordStride,
+            6,
+            true,
+            publishedHashAfterFirstRevision,
+            published) == NativeSchemaFinalizeResult::AcceptedExisting);
+        CHECK(published.rows[0].statName == publishedName);
+        CHECK(published.schemaHash == publishedHashAfterFirstRevision);
+        CHECK(candidates.PendingCount() == 0);
+        CHECK(candidates.LastObservedRevision() == 6);
+
+        auto wrappedRevisionRecords = MakeRecords(1);
+        CHECK(candidates.Stage(
+            &sourceDataTables,
+            wrappedRevisionRecords.data(),
+            1,
+            MakeCandidateSnapshot(1, 0x71))
+            == NativeSchemaStageResult::Staged);
+        CHECK(candidates.Finalize(
+            wrappedRevisionRecords.data(),
+            1,
+            CompiledItemStatRecordStride,
+            2,
+            true,
+            publishedHashAfterFirstRevision,
+            published) == NativeSchemaFinalizeResult::AcceptedExisting);
+        CHECK(candidates.LastObservedRevision() == 2);
+
+        auto divergentRecords = MakeRecords(1);
+        divergentRecords[0x15] = 13;
+        CHECK(candidates.Stage(
+            &sourceDataTables,
+            divergentRecords.data(),
+            1,
+            MakeCandidateSnapshot(1, 0x71))
+            == NativeSchemaStageResult::Staged);
+        CHECK(candidates.Finalize(
+            divergentRecords.data(),
+            1,
+            CompiledItemStatRecordStride,
+            7,
+            true,
+            publishedHashAfterFirstRevision,
+            published) == NativeSchemaFinalizeResult::Diverged);
+        CHECK(published.rows[0].statName == publishedName);
+        CHECK(published.schemaHash == publishedHashAfterFirstRevision);
+        CHECK(candidates.PendingCount() == 1);
+        CHECK(candidates.LastObservedRevision() == 2);
+
+        candidates.Reset();
+        CHECK(candidates.PendingCount() == 0);
+        CHECK(candidates.LastObservedRevision() == 0);
+        CHECK(candidates.Finalize(
+            divergentRecords.data(),
+            1,
+            CompiledItemStatRecordStride,
+            1,
+            true,
+            publishedHashAfterFirstRevision,
+            published) == NativeSchemaFinalizeResult::MissingCandidate);
+        CHECK(published.rows[0].statName == publishedName);
+        CHECK(published.schemaHash == publishedHashAfterFirstRevision);
+    }
 
     if (Failures != 0) {
         std::cerr << Failures << " native schema adapter test(s) failed\n";

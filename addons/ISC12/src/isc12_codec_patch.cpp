@@ -860,47 +860,69 @@ auto ValidateCodecPatchGroup(const CodecPatchGroup& group) noexcept
     return CodecPatchPlanError::None;
 }
 
-auto CommitPreparedCodecPatchSet(
-        const NativePublicationQuiescenceLease& quiescence,
+auto PreflightPreparedCodecPatchSet(
+        const NativePublicationLeaseView& quiescence,
         const CodecPatchActivationTargets& activationTargets,
-        const CodecPatchCallbacks& callbacks) noexcept
-        -> CodecPatchCommitResult {
+        const CodecPatchPreflightCallbacks& callbacks) noexcept
+        -> CodecPatchPreflightResult {
     const std::span<const CodecPatchGroup> groups{CodecGroups};
-    if (groups.empty() || !callbacks.verifyPattern || !callbacks.writeByte
-            || !callbacks.flushInstructionCache
-            || !callbacks.reserveMutationLifetime) {
+    if (groups.empty() || !callbacks.verifyPattern) {
         return {
-            .status = CodecPatchCommitStatus::InvalidPlan,
+            .status = CodecPatchPreflightStatus::InvalidPlan,
             .planError = groups.empty()
                 ? CodecPatchPlanError::EmptyGroup
                 : CodecPatchPlanError::None,
         };
     }
+    if (!quiescence.IsHeld()) {
+        return {.status = CodecPatchPreflightStatus::QuiescenceRequired};
+    }
     for (const auto& group : groups) {
+        if (!quiescence.IsHeld()) {
+            return {.status = CodecPatchPreflightStatus::QuiescenceRequired};
+        }
         const auto planError = ValidateCodecPatchGroup(group);
+        if (!quiescence.IsHeld()) {
+            return {.status = CodecPatchPreflightStatus::QuiescenceRequired};
+        }
         if (planError != CodecPatchPlanError::None) {
             return {
-                .status = CodecPatchCommitStatus::InvalidPlan,
+                .status = CodecPatchPreflightStatus::InvalidPlan,
                 .planError = planError,
             };
         }
     }
+    if (!quiescence.IsHeld()) {
+        return {.status = CodecPatchPreflightStatus::QuiescenceRequired};
+    }
     const auto witnessSeparationError =
         ValidateWitnessMutationSeparation(groups);
+    if (!quiescence.IsHeld()) {
+        return {.status = CodecPatchPreflightStatus::QuiescenceRequired};
+    }
     if (witnessSeparationError != CodecPatchPlanError::None) {
         return {
-            .status = CodecPatchCommitStatus::InvalidPlan,
+            .status = CodecPatchPreflightStatus::InvalidPlan,
             .planError = witnessSeparationError,
         };
+    }
+    if (!quiescence.IsHeld()) {
+        return {.status = CodecPatchPreflightStatus::QuiescenceRequired};
     }
     for (std::size_t groupIndex{}; groupIndex < groups.size(); ++groupIndex) {
         const auto& group = groups[groupIndex];
         for (const auto& site : group.sites) {
             for (const auto& mutation : site.mutations) {
+                if (!quiescence.IsHeld()) {
+                    return {
+                        .status =
+                            CodecPatchPreflightStatus::QuiescenceRequired,
+                    };
+                }
                 std::uintptr_t mutationRva{};
                 if (!AbsoluteMutationRva(site, mutation, mutationRva)) {
                     return {
-                        .status = CodecPatchCommitStatus::InvalidPlan,
+                        .status = CodecPatchPreflightStatus::InvalidPlan,
                         .planError = CodecPatchPlanError::InvalidMutation,
                     };
                 }
@@ -914,14 +936,16 @@ auto CommitPreparedCodecPatchSet(
                             if (!AbsoluteMutationRva(
                                     otherSite, otherMutation, otherRva)) {
                                 return {
-                                    .status = CodecPatchCommitStatus::InvalidPlan,
+                                    .status =
+                                        CodecPatchPreflightStatus::InvalidPlan,
                                     .planError =
                                         CodecPatchPlanError::InvalidMutation,
                                 };
                             }
                             if (otherRva == mutationRva) {
                                 return {
-                                    .status = CodecPatchCommitStatus::InvalidPlan,
+                                    .status =
+                                        CodecPatchPreflightStatus::InvalidPlan,
                                     .planError =
                                         CodecPatchPlanError::DuplicateMutation,
                                 };
@@ -929,146 +953,287 @@ auto CommitPreparedCodecPatchSet(
                         }
                     }
                 }
+                if (!quiescence.IsHeld()) {
+                    return {
+                        .status =
+                            CodecPatchPreflightStatus::QuiescenceRequired,
+                    };
+                }
             }
         }
     }
 
-    std::array<std::uint8_t, PreparedCodecMutationCount>
-        resolvedReplacements{};
+    std::array<std::uintptr_t, PreparedCodecMutationCount> mutationRvas{};
+    std::array<std::uint8_t, PreparedCodecMutationCount> expectedBytes{};
+    std::array<std::uint8_t, PreparedCodecMutationCount> resolvedBytes{};
+    std::array<PreparedCodecPatchPlan::FlushRange,
+        PreparedCodecMutableSiteCount> flushRanges{};
     std::size_t resolvedCount{};
+    std::size_t flushRangeCount{};
     for (const auto& group : groups) {
         for (const auto& site : group.sites) {
+            if (!quiescence.IsHeld()) {
+                return {
+                    .status = CodecPatchPreflightStatus::QuiescenceRequired,
+                };
+            }
+            if (flushRangeCount >= flushRanges.size()) {
+                return {
+                    .status = CodecPatchPreflightStatus::InvalidPlan,
+                    .planError = CodecPatchPlanError::InvalidMutation,
+                };
+            }
+            const auto firstMutationIndex = resolvedCount;
             for (const auto& mutation : site.mutations) {
-                if (resolvedCount >= resolvedReplacements.size()
+                if (!quiescence.IsHeld()) {
+                    return {
+                        .status =
+                            CodecPatchPreflightStatus::QuiescenceRequired,
+                    };
+                }
+                if (resolvedCount >= resolvedBytes.size()
+                        || !AbsoluteMutationRva(
+                            site,
+                            mutation,
+                            mutationRvas[resolvedCount])
                         || !ResolveCodecReplacement(
                             site,
                             mutation,
                             activationTargets,
-                            resolvedReplacements[resolvedCount])) {
+                            resolvedBytes[resolvedCount])) {
                     return {
-                        .status = CodecPatchCommitStatus::InvalidPlan,
+                        .status = CodecPatchPreflightStatus::InvalidPlan,
                         .planError = IsRel32Source(mutation.source)
                             ? CodecPatchPlanError::InvalidActivationTarget
                             : CodecPatchPlanError::InvalidMutation,
                     };
                 }
+                expectedBytes[resolvedCount] = mutation.expected;
                 ++resolvedCount;
-            }
-        }
-    }
-    if (resolvedCount != resolvedReplacements.size()) {
-        return {
-            .status = CodecPatchCommitStatus::InvalidPlan,
-            .planError = CodecPatchPlanError::InvalidMutation,
-        };
-    }
-    if (!quiescence.IsHeld()) {
-        return {.status = CodecPatchCommitStatus::QuiescenceRequired};
-    }
-    for (const auto& group : groups) {
-        for (const auto& site : group.sites) {
-            if (!quiescence.IsHeld()) {
-                return {.status = CodecPatchCommitStatus::QuiescenceRequired};
-            }
-            if (!callbacks.verifyPattern(callbacks.context, site.pattern)) {
-                return {.status = CodecPatchCommitStatus::PreflightFailed};
-            }
-        }
-        for (const auto& witness : group.witnesses) {
-            if (!quiescence.IsHeld()) {
-                return {.status = CodecPatchCommitStatus::QuiescenceRequired};
-            }
-            if (!callbacks.verifyPattern(callbacks.context, witness)) {
-                return {.status = CodecPatchCommitStatus::PreflightFailed};
-            }
-        }
-    }
-    if (!quiescence.IsHeld()) {
-        return {.status = CodecPatchCommitStatus::QuiescenceRequired};
-    }
-
-    // The patch service cannot prove that a failed byte-write made no native
-    // change. Reserve every copied relay/state/unwind allocation before the
-    // first write attempt, even though the canonical publisher is currently
-    // unreachable in production because no lease issuer exists.
-    callbacks.reserveMutationLifetime(callbacks.context);
-    if (!quiescence.IsHeld()) {
-        return {.status = CodecPatchCommitStatus::QuiescenceRequired};
-    }
-
-    CodecPatchCommitResult result{
-        .status = CodecPatchCommitStatus::Active,
-    };
-    std::size_t replacementIndex{};
-    bool nativeWriteAttempted{};
-    for (const auto& group : groups) {
-        for (const auto& site : group.sites) {
-            for (const auto& mutation : site.mutations) {
                 if (!quiescence.IsHeld()) {
-                    result.status = nativeWriteAttempted
-                        ? CodecPatchCommitStatus::
-                            PartialCommitColdRestartRequired
-                        : CodecPatchCommitStatus::QuiescenceRequired;
-                    return result;
+                    return {
+                        .status =
+                            CodecPatchPreflightStatus::QuiescenceRequired,
+                    };
                 }
-                std::uintptr_t rva{};
-                if (!AbsoluteMutationRva(site, mutation, rva)) {
-                    result.status = CodecPatchCommitStatus::InvalidPlan;
-                    result.planError = CodecPatchPlanError::InvalidMutation;
-                    return result;
-                }
-                ++result.attemptedMutations;
-                const auto replacement =
-                    resolvedReplacements[replacementIndex++];
-                if (replacement == mutation.expected) {
-                    ++result.confirmedMutations;
-                    ++result.confirmedNoOpMutations;
-                    continue;
-                }
-                nativeWriteAttempted = true;
-                if (!callbacks.writeByte(
-                        callbacks.context,
-                        rva,
-                        mutation.expected,
-                        replacement)) {
-                    result.status = CodecPatchCommitStatus::
-                        PartialCommitColdRestartRequired;
-                    return result;
-                }
-                ++result.confirmedMutations;
-            }
-            if (!quiescence.IsHeld()) {
-                result.status = nativeWriteAttempted
-                    ? CodecPatchCommitStatus::
-                        PartialCommitColdRestartRequired
-                    : CodecPatchCommitStatus::QuiescenceRequired;
-                return result;
             }
             std::uintptr_t firstRva{};
             std::size_t flushSize{};
             if (!MutationFlushRange(site, firstRva, flushSize)) {
-                result.status = CodecPatchCommitStatus::InvalidPlan;
-                result.planError = CodecPatchPlanError::InvalidMutation;
+                return {
+                    .status = CodecPatchPreflightStatus::InvalidPlan,
+                    .planError = CodecPatchPlanError::InvalidMutation,
+                };
+            }
+            if (!quiescence.IsHeld()) {
+                return {
+                    .status = CodecPatchPreflightStatus::QuiescenceRequired,
+                };
+            }
+            flushRanges[flushRangeCount++] = {
+                .firstMutationIndex = firstMutationIndex,
+                .mutationCount = resolvedCount - firstMutationIndex,
+                .firstRva = firstRva,
+                .size = flushSize,
+            };
+        }
+    }
+    if (resolvedCount != resolvedBytes.size()
+            || flushRangeCount != flushRanges.size()) {
+        return {
+            .status = CodecPatchPreflightStatus::InvalidPlan,
+            .planError = CodecPatchPlanError::InvalidMutation,
+        };
+    }
+    if (!quiescence.IsHeld()) {
+        return {.status = CodecPatchPreflightStatus::QuiescenceRequired};
+    }
+    for (const auto& group : groups) {
+        for (const auto& site : group.sites) {
+            if (!quiescence.IsHeld()) {
+                return {
+                    .status = CodecPatchPreflightStatus::QuiescenceRequired,
+                };
+            }
+            const auto matches =
+                callbacks.verifyPattern(callbacks.context, site.pattern);
+            if (!quiescence.IsHeld()) {
+                return {
+                    .status = CodecPatchPreflightStatus::QuiescenceRequired,
+                };
+            }
+            if (!matches) {
+                return {.status = CodecPatchPreflightStatus::PreflightFailed};
+            }
+        }
+        for (const auto& witness : group.witnesses) {
+            if (!quiescence.IsHeld()) {
+                return {
+                    .status = CodecPatchPreflightStatus::QuiescenceRequired,
+                };
+            }
+            const auto matches =
+                callbacks.verifyPattern(callbacks.context, witness);
+            if (!quiescence.IsHeld()) {
+                return {
+                    .status = CodecPatchPreflightStatus::QuiescenceRequired,
+                };
+            }
+            if (!matches) {
+                return {.status = CodecPatchPreflightStatus::PreflightFailed};
+            }
+        }
+    }
+    if (!quiescence.IsHeld()) {
+        return {.status = CodecPatchPreflightStatus::QuiescenceRequired};
+    }
+
+    CodecPatchPreflightResult result{
+        .status = CodecPatchPreflightStatus::Prepared,
+    };
+    result.plan.emplace(PreparedCodecPatchPlan{
+        mutationRvas,
+        expectedBytes,
+        resolvedBytes,
+        flushRanges,
+    });
+    return result;
+}
+
+auto CommitPreflightedCodecPatchSet(
+        const NativePublicationLeaseView& quiescence,
+        const PreparedCodecPatchPlan& plan,
+        const CodecPatchCommitCallbacks& callbacks) noexcept
+        -> CodecPatchCommitResult {
+    if (!callbacks.writeByte || !callbacks.flushInstructionCache) {
+        return {.status = CodecPatchCommitStatus::InvalidPlan};
+    }
+    if (!quiescence.IsHeld()) {
+        return {.status = CodecPatchCommitStatus::QuiescenceRequired};
+    }
+    CodecPatchCommitResult result{
+        .status = CodecPatchCommitStatus::Active,
+    };
+    for (const auto& flushRange : plan.flushRanges_) {
+        const auto mutationEnd =
+            flushRange.firstMutationIndex + flushRange.mutationCount;
+        for (auto mutationIndex = flushRange.firstMutationIndex;
+                mutationIndex < mutationEnd; ++mutationIndex) {
+            if (!quiescence.IsHeld()) {
+                result.status = result.mutationAttempted
+                    ? CodecPatchCommitStatus::
+                        PartialCommitColdRestartRequired
+                    : CodecPatchCommitStatus::QuiescenceRequired;
                 return result;
             }
-            if (!callbacks.flushInstructionCache(
-                    callbacks.context, firstRva, flushSize)) {
+            ++result.attemptedMutations;
+            const auto replacement = plan.resolvedBytes_[mutationIndex];
+            const auto expected = plan.expectedBytes_[mutationIndex];
+            if (replacement == expected) {
+                ++result.confirmedMutations;
+                ++result.confirmedNoOpMutations;
+                continue;
+            }
+            result.mutationAttempted = true;
+            if (!callbacks.writeByte(
+                    callbacks.context,
+                    plan.mutationRvas_[mutationIndex],
+                    expected,
+                    replacement)) {
                 result.status = CodecPatchCommitStatus::
                     PartialCommitColdRestartRequired;
                 return result;
             }
-            ++result.confirmedFlushes;
+            ++result.confirmedMutations;
             if (!quiescence.IsHeld()) {
-                result.status = nativeWriteAttempted
+                result.status = result.mutationAttempted
                     ? CodecPatchCommitStatus::
                         PartialCommitColdRestartRequired
                     : CodecPatchCommitStatus::QuiescenceRequired;
                 return result;
             }
         }
+        if (!quiescence.IsHeld()) {
+            result.status = result.mutationAttempted
+                ? CodecPatchCommitStatus::PartialCommitColdRestartRequired
+                : CodecPatchCommitStatus::QuiescenceRequired;
+            return result;
+        }
+        if (!callbacks.flushInstructionCache(
+                callbacks.context,
+                flushRange.firstRva,
+                flushRange.size)) {
+            result.status = CodecPatchCommitStatus::
+                PartialCommitColdRestartRequired;
+            return result;
+        }
+        ++result.confirmedFlushes;
+        if (!quiescence.IsHeld()) {
+            result.status = result.mutationAttempted
+                ? CodecPatchCommitStatus::PartialCommitColdRestartRequired
+                : CodecPatchCommitStatus::QuiescenceRequired;
+            return result;
+        }
     }
     return result;
 }
+
+#if defined(ISC12_CODEC_PATCH_TESTING)
+auto CommitPreparedCodecPatchSet(
+        const NativePublicationLeaseView& quiescence,
+        const CodecPatchActivationTargets& activationTargets,
+        const CodecPatchCallbacks& callbacks) noexcept
+        -> CodecPatchCommitResult {
+    if (!callbacks.verifyPattern || !callbacks.writeByte
+            || !callbacks.flushInstructionCache
+            || !callbacks.reserveMutationLifetime) {
+        return {.status = CodecPatchCommitStatus::InvalidPlan};
+    }
+
+    auto preflight = PreflightPreparedCodecPatchSet(
+        quiescence,
+        activationTargets,
+        CodecPatchPreflightCallbacks{
+            .context = callbacks.context,
+            .verifyPattern = callbacks.verifyPattern,
+        });
+    if (preflight.status != CodecPatchPreflightStatus::Prepared
+            || !preflight.plan) {
+        const auto status = [&preflight]() noexcept {
+            switch (preflight.status) {
+            case CodecPatchPreflightStatus::Prepared:
+            case CodecPatchPreflightStatus::InvalidPlan:
+                return CodecPatchCommitStatus::InvalidPlan;
+            case CodecPatchPreflightStatus::QuiescenceRequired:
+                return CodecPatchCommitStatus::QuiescenceRequired;
+            case CodecPatchPreflightStatus::PreflightFailed:
+                return CodecPatchCommitStatus::PreflightFailed;
+            }
+            return CodecPatchCommitStatus::InvalidPlan;
+        }();
+        return {
+            .status = status,
+            .planError = preflight.planError,
+        };
+    }
+
+    if (!quiescence.IsHeld()) {
+        return {.status = CodecPatchCommitStatus::QuiescenceRequired};
+    }
+    callbacks.reserveMutationLifetime(callbacks.context);
+    if (!quiescence.IsHeld()) {
+        return {.status = CodecPatchCommitStatus::QuiescenceRequired};
+    }
+    return CommitPreflightedCodecPatchSet(
+        quiescence,
+        *preflight.plan,
+        CodecPatchCommitCallbacks{
+            .context = callbacks.context,
+            .writeByte = callbacks.writeByte,
+            .flushInstructionCache = callbacks.flushInstructionCache,
+        });
+}
+#endif
 
 static_assert(
     GenericItemReaderFirstMutations.size()

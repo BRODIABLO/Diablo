@@ -21,7 +21,7 @@ namespace {
 } // namespace
 
 auto PublicationCoordinator::Publish(
-        const NativePublicationQuiescenceLease& quiescence,
+        const NativePublicationLeaseView& quiescence,
         const PublicationCoordinatorCallbacks& callbacks) noexcept
         -> PublicationCoordinatorStatus {
     if (attemptInProgress_) {
@@ -29,6 +29,10 @@ auto PublicationCoordinator::Publish(
     }
     if (state_ == PublicationCoordinatorState::Active) {
         return PublicationCoordinatorStatus::Active;
+    }
+    if (state_
+            == PublicationCoordinatorState::CommittedPendingReadiness) {
+        return PublicationCoordinatorStatus::CommittedPendingReadiness;
     }
     if (state_ == PublicationCoordinatorState::Reserved) {
         return PublicationCoordinatorStatus::ReservedWithoutMutation;
@@ -62,7 +66,7 @@ auto PublicationCoordinator::Publish(
             return finishFresh(
                 PublicationCoordinatorStatus::QuiescenceRequired);
         }
-        const bool accepted = preflight(callbacks.context);
+        const bool accepted = preflight(callbacks.context, quiescence);
         if (!quiescence.IsHeld()) {
             return finishFresh(
                 PublicationCoordinatorStatus::QuiescenceRequired);
@@ -114,7 +118,7 @@ auto PublicationCoordinator::Publish(
                 : poison();
         }
 
-        const auto outcome = commit(callbacks.context);
+        const auto outcome = commit(callbacks.context, quiescence);
         if (outcome == PublicationCommitOutcome::Uncertain) {
             return poison();
         }
@@ -138,17 +142,79 @@ auto PublicationCoordinator::Publish(
         return poison();
     }
 
-    // Readiness is the sole final publication step. The callback contract is
-    // intentionally infallible; introducing a fallible readiness write would
-    // make a zero-readiness failure guarantee impossible after native writes.
-    callbacks.publishReadiness(callbacks.context);
-    if (!quiescence.IsHeld()) {
-        return poison();
+    // Native publication is complete, but plugin-private readiness remains a
+    // separate final step. The caller performs that infallible, non-native
+    // step before leaving the initial D2RLoaderLoadPlugin publication window.
+    readinessContext_ = callbacks.context;
+    pendingReadiness_ = callbacks.publishReadiness;
+    pendingPoison_ = callbacks.markPoisoned;
+    state_ = PublicationCoordinatorState::CommittedPendingReadiness;
+    attemptInProgress_ = false;
+    return PublicationCoordinatorStatus::CommittedPendingReadiness;
+}
+
+auto PublicationCoordinator::PublishReadinessAfterStartupCommit() noexcept
+        -> PublicationCoordinatorStatus {
+    if (attemptInProgress_) {
+        return PublicationCoordinatorStatus::RejectedBeforeMutation;
     }
+    if (state_ == PublicationCoordinatorState::Active) {
+        return PublicationCoordinatorStatus::Active;
+    }
+    if (state_ == PublicationCoordinatorState::Poisoned) {
+        return PublicationCoordinatorStatus::Poisoned;
+    }
+    if (state_ == PublicationCoordinatorState::Reserved) {
+        return PublicationCoordinatorStatus::ReservedWithoutMutation;
+    }
+    if (state_
+            != PublicationCoordinatorState::CommittedPendingReadiness
+            || !pendingReadiness_) {
+        return PublicationCoordinatorStatus::RejectedBeforeMutation;
+    }
+
+    // Block callback reentry before invoking the infallible readiness step.
+    // The callback is cleared first so it remains exactly-once even if local
+    // code accidentally tries to activate the coordinator recursively.
+    attemptInProgress_ = true;
+    const auto publishReadiness = pendingReadiness_;
+    void* const context = readinessContext_;
+    pendingReadiness_ = nullptr;
+    pendingPoison_ = nullptr;
+    readinessContext_ = nullptr;
+    publishReadiness(context);
     readinessPublished_ = true;
     state_ = PublicationCoordinatorState::Active;
     attemptInProgress_ = false;
     return PublicationCoordinatorStatus::Active;
+}
+
+auto PublicationCoordinator::PoisonBeforeStartupReadiness() noexcept
+        -> PublicationCoordinatorStatus {
+    if (state_ == PublicationCoordinatorState::Poisoned) {
+        return PublicationCoordinatorStatus::Poisoned;
+    }
+    if (state_ == PublicationCoordinatorState::Active) {
+        return PublicationCoordinatorStatus::Active;
+    }
+    if (state_ == PublicationCoordinatorState::Reserved) {
+        return PublicationCoordinatorStatus::ReservedWithoutMutation;
+    }
+    if (state_
+            != PublicationCoordinatorState::CommittedPendingReadiness
+            || !pendingPoison_) {
+        return PublicationCoordinatorStatus::RejectedBeforeMutation;
+    }
+
+    state_ = PublicationCoordinatorState::Poisoned;
+    readinessPublished_ = false;
+    pendingReadiness_ = nullptr;
+    const auto poison = pendingPoison_;
+    pendingPoison_ = nullptr;
+    void* const context = readinessContext_;
+    readinessContext_ = nullptr;
+    poison(context);
+    return PublicationCoordinatorStatus::Poisoned;
 }
 
 } // namespace ruffneckk::isc12

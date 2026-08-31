@@ -1,65 +1,131 @@
 # Mission courante
 
-Dernière mise à jour : 30 août 2026
+Dernière mise à jour : 31 août 2026
 
 ## Priorité active
 
 [ISC12 — ItemStatCost 12-bit clean-sheet format](isc12-3.3.md)
 
-État : **ISC12 0.2.0 : loader G0 implanté et validé statiquement, désactivé par
-défaut; G10-B P3b et plan canonique G1–G4 fermés hors-jeu; runtime NOT RUN**. Le ledger
-gouverné est `VALID` avec 172 sites répartis dans 14 groupes. Le jalon remplace la tail
-`DescFunc` fixe par un helper borné à
-4 095 entrées derrière un relais RX persistant et un état RW séparé, puis tente
-le cap `0xFFF` seulement après publication de la tail sûre et d'un guard
-conservateur. Un retour incertain du patch tail réserve maintenant les pages
-RX/RW avant l'appel, journalise les huit octets observés et termine fail-closed
-sans jamais libérer une cible possible. Le build Release `/W4 /WX` courant et
-CTest `3/3` passent. Les codecs item, sauvegarde et réseau
-restent 9 bits en runtime. La primitive atomique, l'enveloppe v1, le préflight whole-store,
-le descripteur canonique et sa politique wrap/unwrap déconnectée passent aussi
-les tests. Le snapshot natif copie maintenant les noms `Stat` exacts depuis le
-linker gouverné, exclut les champs legacy inatteignables sous v105 et publie le
-hash avant toute mutation `DescFunc`; aucun sidecar ou manifeste n'est requis.
-Les seams reader `0x9FC654` et writer `0x9F95A2` sont maintenant connectés en
-source à leurs adaptateurs clean-sheet, à la transaction atomique et à des
-relais persistants avec rundown, mais restent matériellement impossibles à
-publier : `InstalledHookCount == 0` et `codecReady == false`. Aucune sauvegarde
-réelle ni aucun runtime n'a été touché. Le plan canonique G1–G4 possède quatre
-groupes, 20 fenêtres mutables exactes, 49 slots gouvernés et 51
-témoins runtime, testés comme set préflighté mais non publié. G1 apporte neuf
-mutations d'un octet dans quatre fenêtres uniques et conserve le seed
-`previousStatId = -1`; son CALL intérieur suivant doit résoudre le thunk
-gouverné `0xA1B6C0`. Un leaf RX lié
-par le loader reproduit le used-end natif G3 et renvoie le flag sticky d'overflow;
-son CALL est flushé avant la publication finale `mov eax, edx`. Le snapshot
-refuse `CsvBits > 32` ou `CsvParamBits > 16`. Les trois CALLs exhaustifs G2/G3
-sont préparés vers des relais RX et wrappers FRAME qui imposent v105, préflight
-sous snapshot immuable, retour `0x12` et postcheck du cursor après l'appel des
-owners natifs intacts. G4 prépare le CALL de copie, valide tout le D2S, contexte,
-marker, IDs, champs, cap et sentinelle, puis rejoint le cleanup natif sur rejet;
-sa branche A legacy reste 9 bits. Le booléen forgeable de quiescence est
-remplacé par un lease RAII opaque, move-only, revalidé avant chaque
-fingerprint/write/flush. Le SDK épinglé n'expose aucun issuer production :
-aucun caller de commit codec n'existe, `PublishedCodecMutationCount == 0` et
-`operational`/`codecReady` restent faux.
+État : **ISC12 0.2.0 : publication native mod-locale attestée sur D2R
+3.3.93847 / D2RLoader 1.2.0-beta**. Deux builds Release reproductibles passent
+`/W4 /WX` et CTest `5/5`; la DLL byte-identique de 445 952 octets vaut
+`EFCA4EBAECDC7E0EF7BE70D2BE741FD7D73DED0ACA85873507CCA2D2B625F3DB`.
+L'unicité des signatures et le ledger `VALID 211/15` passent aussi. Le cold
+start a publié G0, G10, G9 et G1–G4 avec 24 sites codec et 102 mutations, puis
+a atteint `D2R startup complete`. Le provider dynamique D2S, ses relais et son
+unwind vivant ont donc franchi le gate qui était auparavant seulement prouvé
+statiquement.
+
+Le cycle de schéma G0 suit maintenant deux phases. `LoadExcelTable` capture les
+candidats sans publier prématurément; le callback autoritaire
+`DataTablesLoaded` choisit ensuite la vue `Bank::Rotw / ItemStatCost` exacte.
+Le cold start a observé deux constructions ItemStatCost, 368 puis 400 lignes,
+et a publié la seconde à la révision 1 avec `G0-builds=2` et
+`SchemaReady=true`. Cela corrige le refus fail-closed causé par la coexistence
+des tables Classic et expansion sans introduire de nouveau service D2RLoader.
+La finalisation redécode maintenant les octets RotW après le post-processing;
+le pointeur seul ne peut plus valider un snapshot périmé. Le token de révision
+est traité selon le vrai contrat SDK, et l'unload concurrent passe par un état
+atomique `Stopping` bénin.
+
+Les hooks de persistance gardent aussi un lease schéma partagé non bloquant du
+snapshot natif jusqu'au remplacement reader ou au commit atomique writer. Le
+reload qui gagne le lock provoque donc un rejet sans commit. La provenance du
+buffer natif déjà sérialisé avant le hook physique reste toutefois à prouver ou
+à lier à une génération pendant le gate save/reload.
+
+La pile mod-locale complète est restée active : 36 plugins chargés, les cinq
+plugins eezstreet chargés, 17 memory patches et 190 tables compilées. Les deux
+échecs de chargement observés, Stash Search et Revive Overhaul, sont connus et
+sans rapport avec ISC12. Aucun `ERROR` ou `CRITICAL` ISC12 n'apparaît dans ce
+run.
+
+La vue empruntée `NativePublicationLeaseView` garde G0, G10 et le codec avant
+toute écriture et après chaque tentative, sans ownership ni release côté
+plugin. Sa seule instance production est liée au même thread et à la durée du
+callback initial `D2RLoaderLoadPlugin`. Le coordinateur préflighte les trois
+domaines, réserve les relais process-lifetime, commit G0 puis G10 puis codec,
+publie la readiness avant le retour et exige toutes les postconditions avant
+de rendre le lifecycle actif. Toute incertitude post-write vide la readiness puis arrête
+le processus; l'ancien installateur G0-only est exclu du build production.
+
+Le kit local de contribution `NativePublication V1` reste compilable
+sur une branche worktree PluginSDK v4 non commitée. Il conserve volontairement
+le draft hors de `api.h`, de l'installation et du registre, fixe l'ABI à
+32/24/16 octets et fournit un modèle d'autorité plus une matrice Core. Release
+`/W4 /WX`, CTest, 100 répétitions et le CTest racine v4 passent; l'install smoke
+reste à 36 fichiers sans le header draft. Le modèle couvre notamment la
+sérialisation cross-owner, le refus worker-thread, le pin pendant callback et le
+poison post-mutation. La relecture finale indépendante ne trouve plus de
+bloqueur ABI/conformance; les gates null service/execute et null lease/validate
+sont aussi explicites, et le second est testé. Il ne remplace pas le Core privé
+et aucun PR n'est encore publié. Il devient un durcissement upstream optionnel,
+pas un blocker du spike ISC12.
+
+D2RLoader `1.2.0-beta` est audité et installé à partir du ZIP officiel fourni
+par Vincent. Son SHA-256
+`2AABEF2E6838CA3611EA3CB74D318C3BB792549CC4FC6C7D53933245667417D9`,
+sa version et son certificat concordent; les 21 exports publics Core sont
+identiques à 1.1 et les 27 nouveaux exports sont internes. Les binaires installés
+concordent byte pour byte avec le ZIP. La release rend D2R 3.3 officiel et
+PluginSDK v4 maintient les plugins v2/v3; elle est maintenant la baseline de
+qualification ISC12. Elle ne fournit toujours aucun service
+`NativePublication`, qui reste un durcissement optionnel.
+
+V4 livre séparément `ItemInteractionServiceV1` et
+`ItemServiceV1::executeExistingItemTransaction`, soit les demandes SDK
+interaction typée et opérations atomiques sur items existants. L'audit cible
+MassID puis AutoSort, sans migration : shared stash et autorité client/hôte
+restent hors du contrat V1. Ces ajouts sont orthogonaux à ISC12; le registre de
+services fournis par les plugins demeure absent.
+
+Le coordinateur global one-shot et ses adapters réels G0/G10/codec sont liés,
+testés et appelés exactement une fois en production depuis le callback initial.
+Les trois preflights produisent des plans immuables avant la réservation; les
+commits suivent G0 puis G10 puis codec, avec l'ordre interne G9/G2/G4/G1/G3. Leur
+succès s'arrête à `CommittedPendingReadiness`, tous les flags privés encore faux;
+la même fenêtre startup publie alors la readiness sans autre write et vérifie
+G0/G10/codec/transport avant de rendre le plugin opérationnel. Le CTest dédié
+couvre les échecs Patch/write/flush, vue révoquée, réentrance,
+mutate-then-uncertain et les deux issues startup. Un byte déjà égal reste un
+no-op; toute écriture réellement tentée rend ensuite l'ambiguïté terminale.
+
+G9-A est le premier groupe et suit l'ordre fail-closed queue 9C, queue 9D, entry
+9C, entry 9D. Douze témoins exacts couvrent les producers, les séquences scindées,
+le walker, les consumers, la vraie queue `0x4817F0` et son dispatch. Une
+transaction thread-local sans allocation copie les vrais octets natifs dans un
+stockage fixe borné à 64 paquets et `0x4000` octets, avec profondeur 16 et au
+plus sept enfants immédiats par nœud. Ces limites ISC12 n'affirment aucune borne
+native globale. Après le
+retour du root seulement, le batch complet est validé avant toute vraie queue;
+un rejet abort/discard avec zéro envoi, une acceptation rejoue par `0x4817F0`.
+Les entries utilisent des trampolines enregistrés de 10 octets; l'unwind vivant
+est enregistré avec `RtlAddFunctionTable` et échoue fermé. Les témoins exacts
+`[0x479E23,0x479E41)` et `[0x47A019,0x47A037)` couvrent cookie check,
+désallocation, pops et `RET`. Le loader exige au corps et au `RET` des résultats
+`RtlLookupFunctionEntry` identiques (Begin/End/UnwindData), avec End dans l'image
+et couverture de l'épilogue. Ce check live, les relais et la publication
+canonique ont maintenant passé sur le runtime officiel. Les sorties anormales
+passent par un `finally` SEH qui abort/discard. Aucun payload fonctionnel D2S,
+D2I, preview, save/reload, gameplay ou multijoueur ISC12 n'a encore été
+exécuté. G5 `0x3E`, G6 `0xA8` et G7 `0xAA` restent ledger-only, G8 `0xAC`
+reste bloqué, et aucun census des éventuels paquets `uint8 statId` mentionnés
+par Necrolis n'est encore fermé.
 
 ## Prochain gate
 
-Fermer statiquement G9 sur l'ownership exclusif et les budgets worst-case des
-payloads item complets `0x9C/0x9D`, tout en obtenant côté loader une transaction
-de publication quiescente documentée capable d'émettre le lease opaque. Cette
-transaction devra réserver tous les relais pour la vie du processus avant le
-premier write; toute incertitude après la première tentative impose un cold
-restart sans hot rollback. Les hooks G10 et G1–G4 restent non publiés jusqu'à
-G9, l'activation G10, G0 et cette autorité loader. Aucun lancement D2R ni aucune
-sauvegarde réelle
-ne sont autorisés; aucune validation humaine n'est requise à ce sous-gate.
+Exécuter les cas fonctionnels jetables 0x9C/0x9D, overflow, réentrance,
+backpressure, coexistence et save/reload sur le candidat exact
+`EFCA4EBA…25F3DB`, puis qualifier la portée globale. Le census réseau G5–G8 et
+des éventuels champs `uint8 statId` doit fermer avant une revendication réseau
+complète. Le kit NativePublication V1 reste un durcissement loader général
+optionnel et ne bloque pas ces gates.
 
 ## Frontière Git active
 
 Le lot couvre `Mission/isc12-3.3.md`, `addons/ISC12/**`, les preuves et scripts
-ISC12 et les registres partagés strictement nécessaires. Les changements
+ISC12, la proposition `sdk-contribution/Services-requests.md` et les registres
+partagés strictement nécessaires. Les changements
 MapSense existants restent hors propriété ISC12 et doivent être préservés. Le
 GO autorise l'implantation et ses validations; il n'autorise aucun commit, push,
 tag, asset GitHub ni outil externe de migration.

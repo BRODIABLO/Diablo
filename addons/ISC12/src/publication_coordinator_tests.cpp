@@ -3,11 +3,10 @@
 #include <array>
 #include <cstdlib>
 #include <iostream>
-#include <utility>
 
 namespace {
 
-using ruffneckk::isc12::NativePublicationQuiescenceLease;
+using ruffneckk::isc12::NativePublicationLeaseView;
 using ruffneckk::isc12::PublicationCommitOutcome;
 using ruffneckk::isc12::PublicationCoordinator;
 using ruffneckk::isc12::PublicationCoordinatorCallbacks;
@@ -32,6 +31,7 @@ struct Fixture {
     Event revokeAt{Event::None};
     Event mutateAt{Event::None};
     Event reenterAt{Event::None};
+    bool reenterReadinessActivation{};
     bool preflightG0{true};
     bool preflightG10{true};
     bool preflightCodec{true};
@@ -40,7 +40,7 @@ struct Fixture {
     PublicationCommitOutcome commitCodec{
         PublicationCommitOutcome::Committed};
     PublicationCoordinator* coordinator{};
-    const NativePublicationQuiescenceLease* activeLease{};
+    const NativePublicationLeaseView* activeLease{};
     const PublicationCoordinatorCallbacks* activeCallbacks{};
     std::array<Event, 16> events{};
     std::size_t eventCount{};
@@ -48,10 +48,14 @@ struct Fixture {
     std::size_t poisonCount{};
     std::size_t nativeMutationCount{};
     std::size_t reentryCount{};
-    std::size_t releaseCount{};
+    std::size_t readinessReentryCount{};
+    std::size_t stageLeaseCount{};
+    bool everyStageReceivedActiveLease{true};
     bool readinessWasFalseAtPublish{};
     bool readinessWasFalseAtPoison{};
     PublicationCoordinatorStatus reentryStatus{
+        PublicationCoordinatorStatus::Active};
+    PublicationCoordinatorStatus readinessReentryStatus{
         PublicationCoordinatorStatus::Active};
 };
 
@@ -86,25 +90,38 @@ auto ValidateLease(void* context) noexcept -> bool {
     return static_cast<Fixture*>(context)->leaseHeld;
 }
 
-auto ReleaseLease(void* context) noexcept -> void {
-    ++static_cast<Fixture*>(context)->releaseCount;
+auto RecordStage(
+        Fixture& fixture,
+        Event event,
+        const NativePublicationLeaseView& lease) noexcept -> void {
+    ++fixture.stageLeaseCount;
+    fixture.everyStageReceivedActiveLease =
+        fixture.everyStageReceivedActiveLease
+        && fixture.activeLease == &lease;
+    Record(fixture, event);
 }
 
-auto PreflightG0(void* context) noexcept -> bool {
+auto PreflightG0(
+        void* context,
+        const NativePublicationLeaseView& lease) noexcept -> bool {
     auto& fixture = *static_cast<Fixture*>(context);
-    Record(fixture, Event::PreflightG0);
+    RecordStage(fixture, Event::PreflightG0, lease);
     return fixture.preflightG0;
 }
 
-auto PreflightG10(void* context) noexcept -> bool {
+auto PreflightG10(
+        void* context,
+        const NativePublicationLeaseView& lease) noexcept -> bool {
     auto& fixture = *static_cast<Fixture*>(context);
-    Record(fixture, Event::PreflightG10);
+    RecordStage(fixture, Event::PreflightG10, lease);
     return fixture.preflightG10;
 }
 
-auto PreflightCodec(void* context) noexcept -> bool {
+auto PreflightCodec(
+        void* context,
+        const NativePublicationLeaseView& lease) noexcept -> bool {
     auto& fixture = *static_cast<Fixture*>(context);
-    Record(fixture, Event::PreflightCodec);
+    RecordStage(fixture, Event::PreflightCodec, lease);
     return fixture.preflightCodec;
 }
 
@@ -113,21 +130,30 @@ auto Reserve(void* context) noexcept -> void {
     Record(fixture, Event::Reserve);
 }
 
-auto CommitG0(void* context) noexcept -> PublicationCommitOutcome {
+auto CommitG0(
+        void* context,
+        const NativePublicationLeaseView& lease) noexcept
+        -> PublicationCommitOutcome {
     auto& fixture = *static_cast<Fixture*>(context);
-    Record(fixture, Event::CommitG0);
+    RecordStage(fixture, Event::CommitG0, lease);
     return fixture.commitG0;
 }
 
-auto CommitG10(void* context) noexcept -> PublicationCommitOutcome {
+auto CommitG10(
+        void* context,
+        const NativePublicationLeaseView& lease) noexcept
+        -> PublicationCommitOutcome {
     auto& fixture = *static_cast<Fixture*>(context);
-    Record(fixture, Event::CommitG10);
+    RecordStage(fixture, Event::CommitG10, lease);
     return fixture.commitG10;
 }
 
-auto CommitCodec(void* context) noexcept -> PublicationCommitOutcome {
+auto CommitCodec(
+        void* context,
+        const NativePublicationLeaseView& lease) noexcept
+        -> PublicationCommitOutcome {
     auto& fixture = *static_cast<Fixture*>(context);
-    Record(fixture, Event::CommitCodec);
+    RecordStage(fixture, Event::CommitCodec, lease);
     return fixture.commitCodec;
 }
 
@@ -135,6 +161,11 @@ auto PublishReadiness(void* context) noexcept -> void {
     auto& fixture = *static_cast<Fixture*>(context);
     Record(fixture, Event::PublishReadiness);
     ++fixture.readinessPublishCount;
+    if (fixture.reenterReadinessActivation && fixture.coordinator) {
+        ++fixture.readinessReentryCount;
+        fixture.readinessReentryStatus =
+            fixture.coordinator->PublishReadinessAfterStartupCommit();
+    }
     fixture.readinessWasFalseAtPublish = fixture.coordinator
         && !fixture.coordinator->IsReadinessPublished();
 }
@@ -166,11 +197,24 @@ auto Callbacks(Fixture& fixture) noexcept
 }
 
 auto Lease(Fixture& fixture) noexcept
-        -> NativePublicationQuiescenceLease {
-    return NativePublicationQuiescenceLease::ForTesting(
+        -> NativePublicationLeaseView {
+    return NativePublicationLeaseView::ForTesting(
         &fixture,
-        &ValidateLease,
-        &ReleaseLease);
+        &ValidateLease);
+}
+
+auto Invoke(
+        PublicationCoordinator& coordinator,
+        Fixture& fixture,
+        const NativePublicationLeaseView& lease,
+        const PublicationCoordinatorCallbacks& callbacks) noexcept
+        -> PublicationCoordinatorStatus {
+    fixture.activeLease = &lease;
+    fixture.activeCallbacks = &callbacks;
+    const auto status = coordinator.Publish(lease, callbacks);
+    fixture.activeLease = nullptr;
+    fixture.activeCallbacks = nullptr;
+    return status;
 }
 
 template <std::size_t Size>
@@ -186,15 +230,24 @@ auto ExpectEvents(
 auto TestAbsentLeaseRequiresQuiescence() -> void {
     PublicationCoordinator coordinator;
     Fixture fixture{.coordinator = &coordinator};
-    NativePublicationQuiescenceLease absent;
+    NativePublicationLeaseView absent;
 
-    CHECK(coordinator.Publish(absent, Callbacks(fixture))
+    CHECK(Invoke(coordinator, fixture, absent, Callbacks(fixture))
         == PublicationCoordinatorStatus::QuiescenceRequired);
     CHECK(coordinator.State() == PublicationCoordinatorState::Fresh);
     CHECK(!coordinator.IsProcessLifetimeReserved());
     CHECK(!coordinator.IsReadinessPublished());
     CHECK(fixture.eventCount == 0U);
     CHECK(fixture.poisonCount == 0U);
+}
+
+auto TestInitialLoadLeaseFactoryTracksItsWindow() -> void {
+    Fixture fixture;
+    auto lease = NativePublicationLeaseView::ForInitialLoad(
+        &fixture, &ValidateLease);
+    CHECK(lease.IsHeld());
+    fixture.leaseHeld = false;
+    CHECK(!lease.IsHeld());
 }
 
 auto TestEveryPreflightFailureRejectsBeforeReservation() -> void {
@@ -207,7 +260,7 @@ auto TestEveryPreflightFailureRejectsBeforeReservation() -> void {
         if (rejectedIndex == 2U) fixture.preflightCodec = false;
         auto lease = Lease(fixture);
 
-        CHECK(coordinator.Publish(lease, Callbacks(fixture))
+        CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
             == PublicationCoordinatorStatus::RejectedBeforeMutation);
         CHECK(fixture.eventCount == rejectedIndex + 1U);
         CHECK(fixture.events[0] == Event::PreflightG0);
@@ -233,7 +286,7 @@ auto TestPreflightOrderAndRetry() -> void {
     };
     {
         auto lease = Lease(fixture);
-        CHECK(coordinator.Publish(lease, Callbacks(fixture))
+        CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
             == PublicationCoordinatorStatus::RejectedBeforeMutation);
     }
     ExpectEvents(fixture, std::array{
@@ -248,10 +301,11 @@ auto TestPreflightOrderAndRetry() -> void {
 
     fixture.preflightG10 = true;
     fixture.eventCount = 0U;
+    fixture.stageLeaseCount = 0U;
     {
         auto lease = Lease(fixture);
-        CHECK(coordinator.Publish(lease, Callbacks(fixture))
-            == PublicationCoordinatorStatus::Active);
+        CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
+            == PublicationCoordinatorStatus::CommittedPendingReadiness);
     }
     ExpectEvents(fixture, std::array{
         Event::PreflightG0,
@@ -261,18 +315,29 @@ auto TestPreflightOrderAndRetry() -> void {
         Event::CommitG0,
         Event::CommitG10,
         Event::CommitCodec,
-        Event::PublishReadiness,
     });
-    CHECK(coordinator.State() == PublicationCoordinatorState::Active);
+    CHECK(coordinator.State()
+        == PublicationCoordinatorState::CommittedPendingReadiness);
     CHECK(coordinator.IsProcessLifetimeReserved());
+    CHECK(!coordinator.IsReadinessPublished());
+    CHECK(fixture.readinessPublishCount == 0U);
+
+    CHECK(coordinator.PublishReadinessAfterStartupCommit()
+        == PublicationCoordinatorStatus::Active);
+    CHECK(fixture.events[fixture.eventCount - 1U]
+        == Event::PublishReadiness);
+    CHECK(coordinator.State() == PublicationCoordinatorState::Active);
     CHECK(coordinator.IsReadinessPublished());
     CHECK(fixture.readinessPublishCount == 1U);
     CHECK(fixture.readinessWasFalseAtPublish);
     CHECK(fixture.poisonCount == 0U);
+    CHECK(fixture.stageLeaseCount == 6U);
+    CHECK(fixture.everyStageReceivedActiveLease);
 
     const auto previousEventCount = fixture.eventCount;
     auto activeLease = Lease(fixture);
-    CHECK(coordinator.Publish(activeLease, Callbacks(fixture))
+    CHECK(Invoke(
+        coordinator, fixture, activeLease, Callbacks(fixture))
         == PublicationCoordinatorStatus::Active);
     CHECK(fixture.eventCount == previousEventCount);
     CHECK(fixture.readinessPublishCount == 1U);
@@ -286,7 +351,7 @@ auto TestInitiallyRevokedLeaseRequiresQuiescence() -> void {
     };
     auto lease = Lease(fixture);
 
-    CHECK(coordinator.Publish(lease, Callbacks(fixture))
+    CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
         == PublicationCoordinatorStatus::QuiescenceRequired);
     CHECK(coordinator.State() == PublicationCoordinatorState::Fresh);
     CHECK(!coordinator.IsProcessLifetimeReserved());
@@ -310,7 +375,7 @@ auto TestLeaseLossAtEveryPreflightBoundaryRequiresQuiescence() -> void {
         };
         auto lease = Lease(fixture);
 
-        CHECK(coordinator.Publish(lease, Callbacks(fixture))
+        CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
             == PublicationCoordinatorStatus::QuiescenceRequired);
         CHECK(fixture.eventCount == revokedIndex + 1U);
         CHECK(fixture.events[0] == Event::PreflightG0);
@@ -336,7 +401,7 @@ auto TestRevokedAfterReservationIsTerminalWithoutMutation() -> void {
     };
     {
         auto lease = Lease(fixture);
-        CHECK(coordinator.Publish(lease, Callbacks(fixture))
+        CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
             == PublicationCoordinatorStatus::ReservedWithoutMutation);
     }
     ExpectEvents(fixture, std::array{
@@ -354,7 +419,8 @@ auto TestRevokedAfterReservationIsTerminalWithoutMutation() -> void {
     fixture.revokeAt = Event::None;
     const auto previousEventCount = fixture.eventCount;
     auto secondLease = Lease(fixture);
-    CHECK(coordinator.Publish(secondLease, Callbacks(fixture))
+    CHECK(Invoke(
+        coordinator, fixture, secondLease, Callbacks(fixture))
         == PublicationCoordinatorStatus::ReservedWithoutMutation);
     CHECK(fixture.eventCount == previousEventCount);
     CHECK(fixture.poisonCount == 0U);
@@ -368,7 +434,7 @@ auto TestFirstCommitCanProveNoMutation() -> void {
     };
     auto lease = Lease(fixture);
 
-    CHECK(coordinator.Publish(lease, Callbacks(fixture))
+    CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
         == PublicationCoordinatorStatus::ReservedWithoutMutation);
     ExpectEvents(fixture, std::array{
         Event::PreflightG0,
@@ -392,7 +458,7 @@ auto TestUncertainOrPostCommitFailurePoisons() -> void {
             .coordinator = &coordinator,
         };
         auto lease = Lease(fixture);
-        CHECK(coordinator.Publish(lease, Callbacks(fixture))
+        CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
             == PublicationCoordinatorStatus::Poisoned);
         CHECK(coordinator.State() == PublicationCoordinatorState::Poisoned);
         CHECK(coordinator.IsProcessLifetimeReserved());
@@ -408,7 +474,7 @@ auto TestUncertainOrPostCommitFailurePoisons() -> void {
             .coordinator = &coordinator,
         };
         auto lease = Lease(fixture);
-        CHECK(coordinator.Publish(lease, Callbacks(fixture))
+        CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
             == PublicationCoordinatorStatus::Poisoned);
         ExpectEvents(fixture, std::array{
             Event::PreflightG0,
@@ -426,7 +492,7 @@ auto TestUncertainOrPostCommitFailurePoisons() -> void {
         CHECK(fixture.readinessWasFalseAtPoison);
 
         const auto previousEventCount = fixture.eventCount;
-        CHECK(coordinator.Publish(lease, Callbacks(fixture))
+        CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
             == PublicationCoordinatorStatus::Poisoned);
         CHECK(fixture.eventCount == previousEventCount);
         CHECK(fixture.poisonCount == 1U);
@@ -441,7 +507,7 @@ auto TestLeaseLossAfterNativeCommitPoisons() -> void {
     };
     auto lease = Lease(fixture);
 
-    CHECK(coordinator.Publish(lease, Callbacks(fixture))
+    CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
         == PublicationCoordinatorStatus::Poisoned);
     ExpectEvents(fixture, std::array{
         Event::PreflightG0,
@@ -475,7 +541,7 @@ auto TestLeaseLossAtEveryCommitBoundaryPoisonsOnce() -> void {
         };
         auto lease = Lease(fixture);
 
-        CHECK(coordinator.Publish(lease, Callbacks(fixture))
+        CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
             == PublicationCoordinatorStatus::Poisoned);
         CHECK(coordinator.State() == PublicationCoordinatorState::Poisoned);
         CHECK(coordinator.IsProcessLifetimeReserved());
@@ -488,23 +554,23 @@ auto TestLeaseLossAtEveryCommitBoundaryPoisonsOnce() -> void {
 
         fixture.leaseHeld = true;
         const auto previousEventCount = fixture.eventCount;
-        CHECK(coordinator.Publish(lease, Callbacks(fixture))
+        CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
             == PublicationCoordinatorStatus::Poisoned);
         CHECK(fixture.eventCount == previousEventCount);
         CHECK(fixture.poisonCount == 1U);
     }
 }
 
-auto TestLeaseLossDuringReadinessPoisonsAndClearsPublication() -> void {
+auto TestReadinessRequiresStartupCommitAndIsIdempotent() -> void {
     PublicationCoordinator coordinator;
     Fixture fixture{
-        .revokeAt = Event::PublishReadiness,
+        .reenterReadinessActivation = true,
         .coordinator = &coordinator,
     };
     auto lease = Lease(fixture);
 
-    CHECK(coordinator.Publish(lease, Callbacks(fixture))
-        == PublicationCoordinatorStatus::Poisoned);
+    CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
+        == PublicationCoordinatorStatus::CommittedPendingReadiness);
     ExpectEvents(fixture, std::array{
         Event::PreflightG0,
         Event::PreflightG10,
@@ -513,16 +579,50 @@ auto TestLeaseLossDuringReadinessPoisonsAndClearsPublication() -> void {
         Event::CommitG0,
         Event::CommitG10,
         Event::CommitCodec,
-        Event::PublishReadiness,
-        Event::MarkPoisoned,
     });
-    CHECK(coordinator.State() == PublicationCoordinatorState::Poisoned);
+    CHECK(coordinator.State()
+        == PublicationCoordinatorState::CommittedPendingReadiness);
     CHECK(coordinator.IsProcessLifetimeReserved());
     CHECK(!coordinator.IsReadinessPublished());
+    CHECK(fixture.readinessPublishCount == 0U);
+    CHECK(fixture.poisonCount == 0U);
+
+    CHECK(coordinator.PublishReadinessAfterStartupCommit()
+        == PublicationCoordinatorStatus::Active);
+    CHECK(coordinator.State() == PublicationCoordinatorState::Active);
+    CHECK(coordinator.IsReadinessPublished());
     CHECK(fixture.readinessPublishCount == 1U);
-    CHECK(fixture.poisonCount == 1U);
     CHECK(fixture.readinessWasFalseAtPublish);
-    CHECK(fixture.readinessWasFalseAtPoison);
+    CHECK(fixture.readinessReentryCount == 1U);
+    CHECK(fixture.readinessReentryStatus
+        == PublicationCoordinatorStatus::RejectedBeforeMutation);
+
+    const auto eventCount = fixture.eventCount;
+    CHECK(coordinator.PublishReadinessAfterStartupCommit()
+        == PublicationCoordinatorStatus::Active);
+    CHECK(fixture.eventCount == eventCount);
+    CHECK(fixture.readinessPublishCount == 1U);
+
+    PublicationCoordinator failedCoordinator;
+    Fixture failedFixture{.coordinator = &failedCoordinator};
+    auto failedLease = Lease(failedFixture);
+    CHECK(Invoke(
+        failedCoordinator,
+        failedFixture,
+        failedLease,
+        Callbacks(failedFixture))
+        == PublicationCoordinatorStatus::CommittedPendingReadiness);
+    CHECK(failedCoordinator.PoisonBeforeStartupReadiness()
+        == PublicationCoordinatorStatus::Poisoned);
+    CHECK(failedCoordinator.State()
+        == PublicationCoordinatorState::Poisoned);
+    CHECK(!failedCoordinator.IsReadinessPublished());
+    CHECK(failedFixture.readinessPublishCount == 0U);
+    CHECK(failedFixture.poisonCount == 1U);
+    CHECK(failedFixture.readinessWasFalseAtPoison);
+    CHECK(failedCoordinator.PoisonBeforeStartupReadiness()
+        == PublicationCoordinatorStatus::Poisoned);
+    CHECK(failedFixture.poisonCount == 1U);
 }
 
 auto TestMutateThenReturnUncertainPoisons() -> void {
@@ -534,7 +634,7 @@ auto TestMutateThenReturnUncertainPoisons() -> void {
     };
     auto lease = Lease(fixture);
 
-    CHECK(coordinator.Publish(lease, Callbacks(fixture))
+    CHECK(Invoke(coordinator, fixture, lease, Callbacks(fixture))
         == PublicationCoordinatorStatus::Poisoned);
     CHECK(fixture.nativeMutationCount == 1U);
     CHECK(fixture.poisonCount == 1U);
@@ -551,58 +651,55 @@ auto TestReentryAfterReservationIsRejected() -> void {
     };
     auto callbacks = Callbacks(fixture);
     auto lease = Lease(fixture);
-    fixture.activeLease = &lease;
-    fixture.activeCallbacks = &callbacks;
 
-    CHECK(coordinator.Publish(lease, callbacks)
-        == PublicationCoordinatorStatus::Active);
+    CHECK(Invoke(coordinator, fixture, lease, callbacks)
+        == PublicationCoordinatorStatus::CommittedPendingReadiness);
     CHECK(fixture.reentryCount == 1U);
     CHECK(fixture.reentryStatus
         == PublicationCoordinatorStatus::RejectedBeforeMutation);
+    CHECK(fixture.readinessPublishCount == 0U);
+    CHECK(fixture.poisonCount == 0U);
+    CHECK(coordinator.PublishReadinessAfterStartupCommit()
+        == PublicationCoordinatorStatus::Active);
     CHECK(fixture.readinessPublishCount == 1U);
-    CHECK(fixture.poisonCount == 0U);
 }
 
-auto TestLeaseMoveReleasesExactlyOnce() -> void {
-    PublicationCoordinator coordinator;
-    Fixture fixture{.coordinator = &coordinator};
-    {
-        auto source = Lease(fixture);
-        NativePublicationQuiescenceLease moved{std::move(source)};
-        CHECK(!source.IsHeld());
-        CHECK(moved.IsHeld());
+auto TestEveryMissingCallbackRejectsBeforeMutation() -> void {
+    for (std::size_t missingIndex = 0U; missingIndex < 9U;
+            ++missingIndex) {
+        PublicationCoordinator coordinator;
+        Fixture fixture{.coordinator = &coordinator};
+        auto callbacks = Callbacks(fixture);
+        if (missingIndex == 0U) callbacks.preflightG0 = nullptr;
+        if (missingIndex == 1U) callbacks.preflightG10 = nullptr;
+        if (missingIndex == 2U) callbacks.preflightCodec = nullptr;
+        if (missingIndex == 3U) {
+            callbacks.reserveProcessLifetime = nullptr;
+        }
+        if (missingIndex == 4U) callbacks.commitG0 = nullptr;
+        if (missingIndex == 5U) callbacks.commitG10 = nullptr;
+        if (missingIndex == 6U) callbacks.commitCodec = nullptr;
+        if (missingIndex == 7U) callbacks.publishReadiness = nullptr;
+        if (missingIndex == 8U) callbacks.markPoisoned = nullptr;
+        auto lease = Lease(fixture);
 
-        NativePublicationQuiescenceLease assigned;
-        assigned = std::move(moved);
-        CHECK(!moved.IsHeld());
-        CHECK(assigned.IsHeld());
-        CHECK(coordinator.Publish(assigned, Callbacks(fixture))
-            == PublicationCoordinatorStatus::Active);
-        CHECK(fixture.releaseCount == 0U);
+        CHECK(Invoke(coordinator, fixture, lease, callbacks)
+            == PublicationCoordinatorStatus::RejectedBeforeMutation);
+        CHECK(coordinator.State() == PublicationCoordinatorState::Fresh);
+        CHECK(!coordinator.IsProcessLifetimeReserved());
+        CHECK(!coordinator.IsReadinessPublished());
+        CHECK(fixture.eventCount == 0U);
+        CHECK(fixture.stageLeaseCount == 0U);
+        CHECK(fixture.readinessPublishCount == 0U);
+        CHECK(fixture.poisonCount == 0U);
     }
-    CHECK(fixture.releaseCount == 1U);
-}
-
-auto TestIncompleteCallbacksRejectBeforeMutation() -> void {
-    PublicationCoordinator coordinator;
-    Fixture fixture{.coordinator = &coordinator};
-    auto callbacks = Callbacks(fixture);
-    callbacks.commitCodec = nullptr;
-    auto lease = Lease(fixture);
-
-    CHECK(coordinator.Publish(lease, callbacks)
-        == PublicationCoordinatorStatus::RejectedBeforeMutation);
-    CHECK(coordinator.State() == PublicationCoordinatorState::Fresh);
-    CHECK(!coordinator.IsProcessLifetimeReserved());
-    CHECK(!coordinator.IsReadinessPublished());
-    CHECK(fixture.eventCount == 0U);
-    CHECK(fixture.poisonCount == 0U);
 }
 
 } // namespace
 
 int main() {
     TestAbsentLeaseRequiresQuiescence();
+    TestInitialLoadLeaseFactoryTracksItsWindow();
     TestEveryPreflightFailureRejectsBeforeReservation();
     TestPreflightOrderAndRetry();
     TestInitiallyRevokedLeaseRequiresQuiescence();
@@ -612,10 +709,9 @@ int main() {
     TestUncertainOrPostCommitFailurePoisons();
     TestLeaseLossAfterNativeCommitPoisons();
     TestLeaseLossAtEveryCommitBoundaryPoisonsOnce();
-    TestLeaseLossDuringReadinessPoisonsAndClearsPublication();
+    TestReadinessRequiresStartupCommitAndIsIdempotent();
     TestMutateThenReturnUncertainPoisons();
     TestReentryAfterReservationIsRejected();
-    TestLeaseMoveReleasesExactlyOnce();
-    TestIncompleteCallbacksRejectBeforeMutation();
+    TestEveryMissingCallbackRejectsBeforeMutation();
     return EXIT_SUCCESS;
 }

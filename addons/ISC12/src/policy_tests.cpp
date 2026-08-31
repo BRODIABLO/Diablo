@@ -23,6 +23,7 @@
 #include <limits>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -157,7 +158,6 @@ struct CodecQuiescenceFixture {
     const CodecPatchFixture* observedCodec{};
     std::size_t revokeAfterWriteCalls{
         (std::numeric_limits<std::size_t>::max)()};
-    std::size_t releaseCalls{};
 };
 
 auto ValidateCodecQuiescence(void* context) noexcept -> bool {
@@ -170,12 +170,6 @@ auto ValidateCodecQuiescence(void* context) noexcept -> bool {
         fixture.held = false;
     }
     return fixture.held;
-}
-
-void ReleaseCodecQuiescence(void* context) noexcept {
-    auto& fixture = *static_cast<CodecQuiescenceFixture*>(context);
-    fixture.held = false;
-    ++fixture.releaseCalls;
 }
 
 auto MakeCodecPatchSetFixture(
@@ -1704,12 +1698,9 @@ int main() {
     static_assert(CanonicalSchemaDescriptorVersion == 1);
     static_assert(MaximumSerializedCsvBits == 32);
     static_assert(MaximumSerializedCsvParamBits == 16);
-    static_assert(InstalledHookCount == 0);
-    static_assert(InstalledPatchCount == 2);
     static_assert(PreparedCodecMutableSiteCount == 24);
     static_assert(PreparedCodecMutationCount == 102);
     static_assert(PreparedCodecWitnessCount == 77);
-    static_assert(PublishedCodecMutationCount == 0);
     static_assert(MaximumPlayerStatSectionBytes == 3844);
 
     constexpr auto packet9CBudget =
@@ -2473,24 +2464,21 @@ int main() {
             Packet9CEntryRelayRva,
             Packet9DEntryRelayRva);
 
-    NativePublicationQuiescenceLease noCodecLease;
+    NativePublicationLeaseView noCodecLease;
     CodecQuiescenceFixture heldCodecQuiescence{.held = true};
-    auto heldCodecLease = NativePublicationQuiescenceLease::ForTesting(
+    auto heldCodecLease = NativePublicationLeaseView::ForTesting(
         &heldCodecQuiescence,
-        &ValidateCodecQuiescence,
-        &ReleaseCodecQuiescence);
+        &ValidateCodecQuiescence);
     {
         CodecQuiescenceFixture releasedLeaseFixture{.held = true};
         {
             auto releasedLease =
-                NativePublicationQuiescenceLease::ForTesting(
+                NativePublicationLeaseView::ForTesting(
                     &releasedLeaseFixture,
-                    &ValidateCodecQuiescence,
-                    &ReleaseCodecQuiescence);
+                    &ValidateCodecQuiescence);
             CHECK(releasedLease.IsHeld());
         }
-        CHECK(!releasedLeaseFixture.held);
-        CHECK(releasedLeaseFixture.releaseCalls == 1);
+        CHECK(releasedLeaseFixture.held);
     }
 
     auto inactiveCodecSetFixture = MakeCodecPatchSetFixture(codecGroups);
@@ -2501,9 +2489,59 @@ int main() {
         .flushInstructionCache = &FlushCodecFixtureInstructionCache,
         .reserveMutationLifetime = &ReserveCodecFixtureMutationLifetime,
     };
+
+    static_assert(std::is_trivially_copyable_v<NativePublicationLeaseView>);
+    static_assert(std::is_copy_constructible_v<PreparedCodecPatchPlan>);
+    static_assert(!std::is_copy_assignable_v<PreparedCodecPatchPlan>);
+    static_assert(std::is_nothrow_move_constructible_v<
+        PreparedCodecPatchPlan>);
+    static_assert(!std::is_move_assignable_v<
+        PreparedCodecPatchPlan>);
+    auto splitCodecFixture = MakeCodecPatchSetFixture(codecGroups);
+    auto splitPreflight = PreflightPreparedCodecPatchSet(
+        heldCodecLease,
+        codecActivationTargets,
+        CodecPatchPreflightCallbacks{
+            .context = &splitCodecFixture,
+            .verifyPattern = &VerifyCodecFixturePattern,
+        });
+    CHECK(splitPreflight.status == CodecPatchPreflightStatus::Prepared);
+    CHECK(splitPreflight.plan.has_value());
+    CHECK(splitCodecFixture.verifyCalls
+        == PreparedCodecMutableSiteCount + PreparedCodecWitnessCount);
+    CHECK(splitCodecFixture.reserveLifetimeCalls == 0);
+    CHECK(splitCodecFixture.writeCalls == 0);
+    CHECK(splitCodecFixture.flushCalls == 0);
+    if (splitPreflight.plan) {
+        const auto copiedPlan = *splitPreflight.plan;
+        CHECK(copiedPlan.ResolvedBytes().size()
+            == PreparedCodecMutationCount);
+        CHECK(copiedPlan.FlushRangeCount()
+            == PreparedCodecMutableSiteCount);
+        const auto preflightVerifyCalls = splitCodecFixture.verifyCalls;
+        const auto splitCommit = CommitPreflightedCodecPatchSet(
+            heldCodecLease,
+            copiedPlan,
+            CodecPatchCommitCallbacks{
+                .context = &splitCodecFixture,
+                .writeByte = &WriteCodecFixtureByte,
+                .flushInstructionCache =
+                    &FlushCodecFixtureInstructionCache,
+            });
+        CHECK(splitCommit.status == CodecPatchCommitStatus::Active);
+        CHECK(splitCommit.mutationAttempted);
+        CHECK(splitCommit.confirmedMutations
+            == PreparedCodecMutationCount);
+        CHECK(splitCommit.confirmedFlushes
+            == PreparedCodecMutableSiteCount);
+        CHECK(splitCodecFixture.verifyCalls == preflightVerifyCalls);
+        CHECK(splitCodecFixture.reserveLifetimeCalls == 0);
+    }
+
     auto codecSetResult = CommitPreparedCodecPatchSet(
         noCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::QuiescenceRequired);
+    CHECK(!codecSetResult.mutationAttempted);
     CHECK(codecSetResult.attemptedMutations == 0);
     CHECK(inactiveCodecSetFixture.verifyCalls == 0);
     CHECK(inactiveCodecSetFixture.reserveLifetimeCalls == 0);
@@ -2518,20 +2556,19 @@ int main() {
         .revokeOnValidation = 1,
     };
     {
-        auto revokedLease = NativePublicationQuiescenceLease::ForTesting(
+        auto revokedLease = NativePublicationLeaseView::ForTesting(
             &revokedBeforePreflight,
-            &ValidateCodecQuiescence,
-            &ReleaseCodecQuiescence);
+            &ValidateCodecQuiescence);
         codecSetResult = CommitPreparedCodecPatchSet(
             revokedLease, codecActivationTargets, codecSetCallbacks);
     }
     CHECK(codecSetResult.status
         == CodecPatchCommitStatus::QuiescenceRequired);
+    CHECK(!codecSetResult.mutationAttempted);
     CHECK(revokedBeforePreflightFixture.verifyCalls == 0);
     CHECK(revokedBeforePreflightFixture.reserveLifetimeCalls == 0);
     CHECK(revokedBeforePreflightFixture.writeCalls == 0);
     CHECK(revokedBeforePreflightFixture.flushCalls == 0);
-    CHECK(revokedBeforePreflight.releaseCalls == 1);
 
     auto revokedAfterWriteFixture = MakeCodecPatchSetFixture(codecGroups);
     codecSetCallbacks.context = &revokedAfterWriteFixture;
@@ -2541,22 +2578,21 @@ int main() {
         .revokeAfterWriteCalls = 1,
     };
     {
-        auto revokedLease = NativePublicationQuiescenceLease::ForTesting(
+        auto revokedLease = NativePublicationLeaseView::ForTesting(
             &revokedAfterWrite,
-            &ValidateCodecQuiescence,
-            &ReleaseCodecQuiescence);
+            &ValidateCodecQuiescence);
         codecSetResult = CommitPreparedCodecPatchSet(
             revokedLease, codecActivationTargets, codecSetCallbacks);
     }
     CHECK(codecSetResult.status == CodecPatchCommitStatus::
         PartialCommitColdRestartRequired);
+    CHECK(codecSetResult.mutationAttempted);
     CHECK(codecSetResult.attemptedMutations
         == codecSetResult.confirmedMutations);
     CHECK(codecSetResult.confirmedMutations >= 1);
     CHECK(revokedAfterWriteFixture.reserveLifetimeCalls == 1);
     CHECK(revokedAfterWriteFixture.writeCalls == 1);
     CHECK(revokedAfterWriteFixture.flushCalls == 0);
-    CHECK(revokedAfterWrite.releaseCalls == 1);
 
     auto callbacksWithoutFlush = codecSetCallbacks;
     callbacksWithoutFlush.flushInstructionCache = nullptr;
@@ -2577,6 +2613,7 @@ int main() {
     codecSetResult = CommitPreparedCodecPatchSet(
         heldCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::Active);
+    CHECK(codecSetResult.mutationAttempted);
     CHECK(codecSetResult.attemptedMutations == PreparedCodecMutationCount);
     CHECK(codecSetResult.confirmedMutations == PreparedCodecMutationCount);
     CHECK(codecSetResult.confirmedFlushes == PreparedCodecMutableSiteCount);
@@ -3908,6 +3945,27 @@ int main() {
     CHECK(CanEncodeRel32(0x1000, 0x1005));
     CHECK(CanEncodeRel32(0x80001000, 0x1005));
     CHECK(!CanEncodeRel32(0x1000, UINT64_C(0x80001005)));
+    static_assert(LoaderCompileCallRva == 0x31EC7B);
+    static_assert(LoaderCompileCallInstructionOffset == 14U);
+    static_assert(NativeGenericCompileRva == 0x2FF970);
+    static_assert(PlayerSaveStatWriterCallRva == 0x5352F6);
+    static_assert(PlayerSaveStatWriterCallInstructionOffset == 13U);
+    static_assert(ItemSaveStatWriterCallRva == 0x37F174);
+    static_assert(ItemSaveStatWriterCallInstructionOffset == 45U);
+    static_assert(NativeBitWriterRva == 0xA1B710);
+    static_assert(PlayerSaveDynamicCapacityRva == 0x41E138);
+    static_assert(PlayerSaveDynamicCallRva == 0x41E1E9);
+    static_assert(PlayerSaveDynamicCallInstructionOffset == 30U);
+    static_assert(NativePlayerSaveRva == 0x52F090);
+    static_assert(D2SContainerVersionForwardRva == 0x52EDFA);
+    static_assert(D2SContainerVersionForwardCallOffset == 29U);
+    static_assert(NativeReadItemsByVersionRva == 0x41F0B0);
+    static_assert(D2SSaveWriterProviderCallRva == 0x9F95C6);
+    static_assert(D2SSaveWriterProviderCallOffset == 30U);
+    static_assert(NativeD2SSaveWriterRva == 0x122BFF0);
+    static_assert(D2SSaveCloseProviderCallRva == 0x9F95E9);
+    static_assert(D2SSaveCloseProviderCallOffset == 21U);
+    static_assert(NativeD2SSaveCloseRva == 0x11C7E30);
 
     std::vector<std::string> commitEvents;
     auto commitResult = CommitLoaderMutation(
@@ -3931,10 +3989,9 @@ int main() {
         .revokeOnValidation = 1,
     };
     {
-        auto loaderLease = NativePublicationQuiescenceLease::ForTesting(
+        auto loaderLease = NativePublicationLeaseView::ForTesting(
             &loaderRevokedBeforeWrite,
-            &ValidateCodecQuiescence,
-            &ReleaseCodecQuiescence);
+            &ValidateCodecQuiescence);
         commitResult = CommitLoaderMutation(
             loaderLease,
             [&]() noexcept { commitEvents.emplace_back("reserve"); },
@@ -3951,7 +4008,6 @@ int main() {
     }
     CHECK(commitResult == LoaderInstallResult::QuiescenceRequired);
     CHECK((commitEvents == std::vector<std::string>{"reserve"}));
-    CHECK(loaderRevokedBeforeWrite.releaseCalls == 1);
 
     commitEvents.clear();
     CodecQuiescenceFixture loaderRevokedAfterTail{
@@ -3959,10 +4015,9 @@ int main() {
         .revokeOnValidation = 2,
     };
     {
-        auto loaderLease = NativePublicationQuiescenceLease::ForTesting(
+        auto loaderLease = NativePublicationLeaseView::ForTesting(
             &loaderRevokedAfterTail,
-            &ValidateCodecQuiescence,
-            &ReleaseCodecQuiescence);
+            &ValidateCodecQuiescence);
         commitResult = CommitLoaderMutation(
             loaderLease,
             [&]() noexcept { commitEvents.emplace_back("reserve"); },
@@ -3980,7 +4035,6 @@ int main() {
     CHECK(commitResult
         == LoaderInstallResult::PartialCommitColdRestartRequired);
     CHECK((commitEvents == std::vector<std::string>{"reserve", "tail"}));
-    CHECK(loaderRevokedAfterTail.releaseCalls == 1);
 
     commitEvents.clear();
     commitResult = CommitLoaderMutation(
@@ -4211,6 +4265,47 @@ enabled = false
     CHECK(pluginText.find("RuntimeBuild ==") == std::string::npos);
     CHECK(pluginText.find("RuntimeBuild !=") == std::string::npos);
     CHECK(pluginText.find("InstallInlineHook") == std::string::npos);
+    CHECK(pluginText.find("InspectLoaderCompileProviderContract(")
+        != std::string::npos);
+    CHECK(pluginText.find("D2RCore!LoadExcelTable")
+        != std::string::npos);
+    CHECK(pluginText.find("D2RL::ServiceId::Lifecycle")
+        != std::string::npos);
+    CHECK(pluginText.find("D2RL::ServiceId::DataTable")
+        != std::string::npos);
+    CHECK(pluginText.find("registerDataTablesLoadedListener")
+        != std::string::npos);
+    CHECK(pluginText.find("unregisterDataTablesLoadedListener")
+        != std::string::npos);
+    CHECK(pluginText.find("D2RL::DataTables::Bank::Rotw")
+        != std::string::npos);
+    CHECK(pluginText.find("D2RL::DataTables::TableId::ItemStatCost")
+        != std::string::npos);
+    CHECK(pluginText.find("FinalizePublishedSchemaSnapshot(")
+        != std::string::npos);
+    CHECK(pluginText.find("InspectPlayerSaveStatWriterProviderContract(")
+        != std::string::npos);
+    CHECK(pluginText.find("D2RCore!WritePlayerSaveStatId")
+        != std::string::npos);
+    CHECK(pluginText.find("InspectItemSaveStatWriterProviderContract(")
+        != std::string::npos);
+    CHECK(pluginText.find("D2RCore!WriteItemSaveStatId")
+        != std::string::npos);
+    CHECK(pluginText.find("InspectPlayerSaveProviderContract(")
+        != std::string::npos);
+    CHECK(pluginText.find(
+            "D2RCore!WritePlayerSaveWithEnvironmentCapture")
+        != std::string::npos);
+    CHECK(pluginText.find("InspectD2SItemReadProviderContract(")
+        != std::string::npos);
+    CHECK(pluginText.find("D2RCore!ReadItemsByVersion")
+        != std::string::npos);
+    CHECK(pluginText.find("InspectD2SSaveIoProviderContract(")
+        != std::string::npos);
+    CHECK(pluginText.find("WriteD2sFileWithEnvironment")
+        != std::string::npos);
+    CHECK(pluginText.find("CloseD2sFileWithEnvironment")
+        != std::string::npos);
     CHECK(pluginText.find("VirtualProtect") == std::string::npos);
     CHECK(pluginText.find("WriteProcessMemory") == std::string::npos);
     CHECK(pluginText.find("ProcessMutexNameFormat") != std::string::npos);
@@ -4233,21 +4328,306 @@ enabled = false
         std::istreambuf_iterator<char>{loaderFile},
         std::istreambuf_iterator<char>{}};
     CHECK(!loaderText.empty());
-    const auto reserveTailLifetime = loaderText.find(
-        "AnyMutationInstalled = true;");
-    const auto tailCommit = loaderText.find("PatchJmpRel32");
-    const auto conservativeCapGuard = loaderText.find(
-        "InterlockedExchange(&State->capMayBeExtended, 1)");
-    const auto capCommit = loaderText.find("LoaderContext->PatchWriteU32");
-    CHECK(reserveTailLifetime != std::string::npos);
-    CHECK(tailCommit != std::string::npos);
-    CHECK(conservativeCapGuard != std::string::npos);
-    CHECK(capCommit != std::string::npos);
-    CHECK(reserveTailLifetime < tailCommit);
-    CHECK(tailCommit < conservativeCapGuard);
-    CHECK(conservativeCapGuard < capCommit);
-    CHECK(tailCommit < capCommit);
+    CHECK(pluginText.find("NativePublicationQuiescenceLease")
+        == std::string::npos);
+    CHECK(loaderText.find("NativePublicationQuiescenceLease")
+        == std::string::npos);
+    CHECK(pluginText.find("InitialLoadPublicationWindow publicationWindow")
+        != std::string::npos);
+    CHECK(pluginText.find("NativePublicationLeaseView publicationLease")
+        == std::string::npos);
+    CHECK(loaderText.find("PublicationCoordinator::Publish(")
+        == std::string::npos);
+    CHECK(pluginText.find("publicationCoordinator.Publish(")
+        != std::string::npos);
+    CHECK(pluginText.find("PublishReadinessAfterStartupCommit()")
+        != std::string::npos);
+    CHECK(pluginText.find("FailClosedNativePublication(")
+        != std::string::npos);
+    CHECK(pluginText.find("InstallLoaderExtension(publicationLease")
+        == std::string::npos);
+    CHECK(pluginText.find(
+        "pinned D2RLoader SDK exposes no loader-owned")
+        == std::string::npos);
+    CHECK(pluginText.find("->Publish(") == std::string::npos);
+    CHECK(loaderText.find(".Publish(") == std::string::npos);
+    CHECK(loaderText.find("->Publish(") == std::string::npos);
+
+    const auto disabledBranch = pluginText.find("if (!Settings.enabled)");
+    const auto publicationWindow = pluginText.find(
+        "InitialLoadPublicationWindow publicationWindow");
+    const auto prepareLoader = pluginText.find("PrepareLoaderExtension(");
+    const auto registerSchemaLifecycle = pluginText.find(
+        "if (!RegisterSchemaLifecycleListener())");
+    const auto coordinatorPublish = pluginText.find(
+        "publicationCoordinator.Publish(");
+    const auto coordinatorPublishAgain = pluginText.find(
+        "publicationCoordinator.Publish(", coordinatorPublish + 1U);
+    const auto publishReadiness = pluginText.find(
+        "PublishReadinessAfterStartupCommit()");
+    const auto operationalPublish = pluginText.find(
+        "SchemaLifecycle.compare_exchange_strong(");
+    CHECK(disabledBranch != std::string::npos);
+    CHECK(publicationWindow != std::string::npos);
+    CHECK(prepareLoader != std::string::npos);
+    CHECK(registerSchemaLifecycle != std::string::npos);
+    CHECK(coordinatorPublish != std::string::npos);
+    CHECK(coordinatorPublishAgain == std::string::npos);
+    CHECK(publishReadiness != std::string::npos);
+    CHECK(operationalPublish != std::string::npos);
+    CHECK(disabledBranch < publicationWindow);
+    CHECK(publicationWindow < prepareLoader);
+    CHECK(prepareLoader < coordinatorPublish);
+    CHECK(prepareLoader < registerSchemaLifecycle);
+    CHECK(registerSchemaLifecycle < coordinatorPublish);
+    CHECK(coordinatorPublish < publishReadiness);
+    CHECK(publishReadiness < operationalPublish);
+
+    const auto atomicListenerHandle = pluginText.find(
+        "std::atomic<D2RL::Lifecycle::ListenerHandle>");
+    const auto stoppingState = pluginText.find(
+        "lifecycle == SchemaLifecycleState::Stopping");
+    const auto benignShutdownReturn = pluginText.find(
+        "return;", stoppingState);
+    const auto lifecycleFailure = pluginText.find(
+        "FailSchemaLifecycle(", benignShutdownReturn);
+    const auto stableListenerUserData = pluginText.find(
+        ".userData = &SchemaLifecycle");
+    CHECK(atomicListenerHandle != std::string::npos);
+    CHECK(stoppingState != std::string::npos);
+    CHECK(benignShutdownReturn != std::string::npos);
+    CHECK(lifecycleFailure != std::string::npos);
+    CHECK(stoppingState < benignShutdownReturn);
+    CHECK(benignShutdownReturn < lifecycleFailure);
+    CHECK(stableListenerUserData != std::string::npos);
+
+    const auto schemaLeaseClass = loaderText.find(
+        "class PublishedSchemaReadLease final");
+    const auto nonBlockingSchemaLease = loaderText.find(
+        "TryAcquireSRWLockShared(&SchemaSnapshotLock)", schemaLeaseClass);
+    const auto readPersistenceHook = loaderText.find(
+        "ISC12PrepareNativeStoreRead(");
+    const auto readSchemaLease = loaderText.find(
+        "PublishedSchemaReadLease schemaLease", readPersistenceHook);
+    const auto readPhysicalSnapshot = loaderText.find(
+        "SnapshotNativeObjectBuffer(", readSchemaLease);
+    const auto readAdapter = loaderText.find(
+        "AdaptNativeStoreRead(", readPhysicalSnapshot);
+    const auto writePersistenceHook = loaderText.find(
+        "ISC12PrepareNativeStoreWrite(");
+    const auto writePathCopy = loaderText.find(
+        "SafeCopyReadable(", writePersistenceHook);
+    const auto writeSchemaLease = loaderText.find(
+        "PublishedSchemaReadLease schemaLease", writePersistenceHook);
+    const auto writePhysicalSnapshot = loaderText.find(
+        "SnapshotNativeObjectBuffer(", writeSchemaLease);
+    const auto writeAdapter = loaderText.find(
+        "AdaptNativeStoreWrite(", writePhysicalSnapshot);
+    CHECK(schemaLeaseClass != std::string::npos);
+    CHECK(nonBlockingSchemaLease != std::string::npos);
+    CHECK(readPersistenceHook < readSchemaLease);
+    CHECK(readSchemaLease < readPhysicalSnapshot);
+    CHECK(readPhysicalSnapshot < readAdapter);
+    CHECK(writePersistenceHook < writePathCopy);
+    CHECK(writePathCopy < writeSchemaLease);
+    CHECK(writeSchemaLease < writePhysicalSnapshot);
+    CHECK(writePhysicalSnapshot < writeAdapter);
+
+    const auto legacyInstall = loaderText.find(
+        "auto InstallLoaderExtension(");
+    const auto legacyTestingGuard = loaderText.rfind(
+        "#if defined(ISC12_CODEC_PATCH_TESTING)", legacyInstall);
+    const auto legacyTestingEnd = loaderText.find("#endif", legacyInstall);
+    CHECK(legacyInstall != std::string::npos);
+    CHECK(legacyTestingGuard != std::string::npos);
+    CHECK(legacyTestingEnd != std::string::npos);
+    CHECK(legacyTestingGuard < legacyInstall);
+    CHECK(legacyInstall < legacyTestingEnd);
+
+    const auto reserveBegin = loaderText.find(
+        "auto ReservePublicationProcessLifetime");
+    const auto readinessBegin = loaderText.find(
+        "auto PublishPublicationReadiness");
+    CHECK(reserveBegin != std::string::npos);
+    CHECK(readinessBegin != std::string::npos);
+    if (reserveBegin != std::string::npos
+            && readinessBegin != std::string::npos
+            && reserveBegin < readinessBegin) {
+        const auto reserveBody = std::string_view{loaderText}.substr(
+            reserveBegin, readinessBegin - reserveBegin);
+        CHECK(reserveBody.find("AnyMutationInstalled = true;")
+            != std::string_view::npos);
+    }
+
+    const auto guardBegin = loaderText.find("auto ActivateG0Guard");
+    const auto guardEnd = loaderText.find("auto MarkG0CapCommitted");
+    CHECK(guardBegin != std::string::npos);
+    CHECK(guardEnd != std::string::npos);
+    if (guardBegin != std::string::npos
+            && guardEnd != std::string::npos
+            && guardBegin < guardEnd) {
+        const auto guardBody = std::string_view{loaderText}.substr(
+            guardBegin, guardEnd - guardBegin);
+        CHECK(guardBody.find(
+            "InterlockedExchange(&State->capMayBeExtended, 1)")
+            != std::string_view::npos);
+        CHECK(guardBody.find(
+            "InterlockedExchange(&State->operational, 1)")
+            == std::string_view::npos);
+    }
+
+    const auto poisonBegin = loaderText.find(
+        "auto MarkPublicationPoisoned");
+    CHECK(poisonBegin != std::string::npos);
+    if (readinessBegin != std::string::npos
+            && poisonBegin != std::string::npos
+            && readinessBegin < poisonBegin) {
+        const auto readinessBody = std::string_view{loaderText}.substr(
+            readinessBegin, poisonBegin - readinessBegin);
+        const auto codecReady = readinessBody.find(
+            "InterlockedExchange(&PersistenceState->codecReady, 1)");
+        const auto itemTransportReady = readinessBody.find(
+            "InterlockedExchange(&PersistenceState->itemTransportReady, 1)");
+        const auto persistenceOperational = readinessBody.find(
+            "InterlockedExchange(&PersistenceState->operational, 1)");
+        const auto globalOperational = readinessBody.find(
+            "InterlockedExchange(&State->operational, 1)");
+        CHECK(codecReady != std::string_view::npos);
+        CHECK(itemTransportReady != std::string_view::npos);
+        CHECK(persistenceOperational != std::string_view::npos);
+        CHECK(globalOperational != std::string_view::npos);
+        CHECK(codecReady < itemTransportReady);
+        CHECK(itemTransportReady < persistenceOperational);
+        CHECK(persistenceOperational < globalOperational);
+    }
+    const auto poisonEnd = loaderText.find(
+        "} // namespace", poisonBegin);
+    CHECK(poisonEnd != std::string::npos);
+    if (poisonBegin != std::string::npos
+            && poisonEnd != std::string::npos
+            && poisonBegin < poisonEnd) {
+        const auto poisonBody = std::string_view{loaderText}.substr(
+            poisonBegin, poisonEnd - poisonBegin);
+        CHECK(poisonBody.find(
+            "InterlockedExchange(&PersistenceState->itemTransportReady, 0)")
+            != std::string_view::npos);
+        CHECK(poisonBody.find(
+            "InterlockedExchange(&PersistenceState->codecReady, 0)")
+            != std::string_view::npos);
+        CHECK(poisonBody.find(
+            "InterlockedExchange(&PersistenceState->operational, 0)")
+            != std::string_view::npos);
+        CHECK(poisonBody.find(
+            "InterlockedExchange(&State->operational, 0)")
+            != std::string_view::npos);
+        CHECK(poisonBody.find("ColdRestartRequired = true;")
+            != std::string_view::npos);
+        CHECK(poisonBody.find("FailClosed(")
+            != std::string_view::npos);
+    }
     CHECK(loaderText.find("InstallInlineHook") == std::string::npos);
+    CHECK(loaderText.find("PendingSchemaCandidates.Stage(")
+        != std::string::npos);
+    CHECK(loaderText.find("PendingSchemaCandidates.Finalize(")
+        != std::string::npos);
+    CHECK(loaderText.find("CompleteSchemaSnapshotUpdate(")
+        == std::string::npos);
+    const auto stageSchemaBegin = loaderText.find(
+        "auto StageSchemaSnapshotUpdate(");
+    const auto stageSchemaEnd = loaderText.find(
+        "auto InvokeNativeQsort(", stageSchemaBegin);
+    CHECK(stageSchemaBegin != std::string::npos);
+    CHECK(stageSchemaEnd != std::string::npos);
+    if (stageSchemaBegin != std::string::npos
+            && stageSchemaEnd != std::string::npos
+            && stageSchemaBegin < stageSchemaEnd) {
+        const auto stageSchemaBody = std::string_view{loaderText}.substr(
+            stageSchemaBegin, stageSchemaEnd - stageSchemaBegin);
+        CHECK(stageSchemaBody.find("SchemaReady.store(true")
+            == std::string_view::npos);
+    }
+    CHECK(loaderText.find("GetModuleHandleW(L\"D2RCore.dll\")")
+        != std::string::npos);
+    CHECK(loaderText.find("GetProcAddress(core, \"LoadExcelTable\")")
+        != std::string::npos);
+    CHECK(loaderText.find(
+            "GetProcAddress(core, \"WritePlayerSaveStatId\")")
+        != std::string::npos);
+    CHECK(loaderText.find(
+            "GetProcAddress(core, \"WriteItemSaveStatId\")")
+        != std::string::npos);
+    CHECK(loaderText.find(
+            "\"WritePlayerSaveWithEnvironmentCapture\"")
+        != std::string::npos);
+    CHECK(loaderText.find("GetProcAddress(core, \"ReadItemsByVersion\")")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderBytes12.size() == 0x6CU")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderBytes12.size() == 0x6BU")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderBytes11.size() == ProviderBytes12.size()")
+        != std::string::npos);
+    CHECK(loaderText.find("function.UnwindData != unwindRva")
+        != std::string::npos);
+    CHECK(loaderText.find("liveUnwind != (provider12 ? UnwindBytes12")
+        != std::string::npos);
+    CHECK(loaderText.find("NativeForwarder12Offset = 0x935U")
+        != std::string::npos);
+    CHECK(loaderText.find("NativeForwarder11Offset = 0x901U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderRva12 = 0x634650U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderSize12 = 0x1A18U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderUnwindRva12 = 0x50EFD0U")
+        != std::string::npos);
+    CHECK(loaderText.find("NativeForwardSlotRva12 = 0x5372C0U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderRva11 = 0x563D80U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderSize11 = 0x1383U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderUnwindRva11 = 0x452480U")
+        != std::string::npos);
+    CHECK(loaderText.find("NativeForwardSlotRva11 = 0x480DE8U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderFuncInfoRva12 = 0x50F1B4U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderFuncInfoRva11 = 0x452648U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderRva12 = 0x63BE60U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderSize12 = 0x126U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderUnwindRva12 = 0x5115C4U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderFuncInfoRva12 = 0x511600U")
+        != std::string::npos);
+    CHECK(loaderText.find("NativeForwardSlotRva12 = 0x537338U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderRva11 = 0x56A710U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderUnwindRva11 = 0x4548C8U")
+        != std::string::npos);
+    CHECK(loaderText.find("ProviderFuncInfoRva11 = 0x454904U")
+        != std::string::npos);
+    CHECK(loaderText.find("NativeForwardSlotRva11 = 0x480E60U")
+        != std::string::npos);
+    CHECK(loaderText.find("liveFuncInfo != expectedFuncInfo")
+        != std::string::npos);
+    CHECK(loaderText.find("D2RCoreReadItemsByVersion")
+        != std::string::npos);
+    CHECK(loaderText.find("CalculateSha256(") != std::string::npos);
+    CHECK(loaderText.find("liveProviderHash != expectedProviderHash")
+        != std::string::npos);
+    CHECK(loaderText.find(
+            "liveCapacity == D2RCoreDynamicCapacityBytes")
+        != std::string::npos);
+    CHECK(loaderText.find(
+            "D2RCoreWritePlayerSaveWithEnvironmentCapture")
+        != std::string::npos);
+    CHECK(loaderText.find("ReadUnconditionalJumpTarget(")
+        != std::string::npos);
     CHECK(loaderText.find("MaximumRecordCount") != std::string::npos);
     CHECK(loaderText.find("FailClosed") != std::string::npos);
     CHECK(loaderText.find(
@@ -4265,12 +4645,6 @@ enabled = false
         == std::string::npos);
     CHECK(loaderText.find(
         "PatchJmpRel32(\n                PersistenceWriterPatchRva")
-        == std::string::npos);
-    CHECK(loaderText.find("PersistenceState->operational, 1")
-        == std::string::npos);
-    CHECK(loaderText.find("PersistenceState->codecReady, 1")
-        == std::string::npos);
-    CHECK(loaderText.find("PersistenceState->itemTransportReady, 1")
         == std::string::npos);
     CHECK(loaderText.find("CommitPreparedCodecPatchSet(")
         == std::string::npos);
@@ -4375,9 +4749,27 @@ enabled = false
     CHECK(loaderText.find(
         "epilogueFunction.UnwindData != function.UnwindData")
         != std::string::npos);
-    CHECK(loaderText.find("function.EndAddress < expectedEpilogueEndRva")
+    CHECK(loaderText.find("function.EndAddress != expectedEpilogueEndRva")
         != std::string::npos);
     CHECK(loaderText.find("function.EndAddress > LoaderImageSize")
+        != std::string::npos);
+    CHECK(loaderText.find("function.UnwindData != expectedUnwindRva")
+        != std::string::npos);
+    CHECK(loaderText.find("header.versionAndFlags != 0x19U")
+        != std::string::npos);
+    CHECK(loaderText.find("NativeExceptionHandlerRva = 0x12D104CU")
+        != std::string::npos);
+    CHECK(loaderText.find("0x2129AFCU") != std::string::npos);
+    CHECK(loaderText.find("0x2129B18U") != std::string::npos);
+    CHECK(loaderText.find("matchingProviderGeneration")
+        != std::string::npos);
+    CHECK(loaderText.find("writerProviderRva == 0x6365E0U")
+        != std::string::npos);
+    CHECK(loaderText.find("closeProviderRva == 0x6393B0U")
+        != std::string::npos);
+    CHECK(loaderText.find("writerProviderRva == 0x565640U")
+        != std::string::npos);
+    CHECK(loaderText.find("closeProviderRva == 0x567E00U")
         != std::string::npos);
     CHECK(loaderText.find("RtlAddFunctionTable") != std::string::npos);
     CHECK(loaderText.find("RtlDeleteFunctionTable") != std::string::npos);
@@ -4601,6 +4993,51 @@ enabled = false
         == std::string::npos);
     CHECK(codecPatchSourceText.find("GenericItemWriterIdMutations")
         == std::string::npos);
+    CHECK(codecPatchSourceText.find("auto PreflightPreparedCodecPatchSet(")
+        != std::string::npos);
+    CHECK(codecPatchSourceText.find("auto CommitPreflightedCodecPatchSet(")
+        != std::string::npos);
+    const auto combinedCodecCommit = codecPatchSourceText.find(
+        "auto CommitPreparedCodecPatchSet(");
+    const auto codecTestingGuard = codecPatchSourceText.rfind(
+        "#if defined(ISC12_CODEC_PATCH_TESTING)", combinedCodecCommit);
+    CHECK(combinedCodecCommit != std::string::npos);
+    CHECK(codecTestingGuard != std::string::npos);
+    CHECK(codecTestingGuard < combinedCodecCommit);
+
+    std::ifstream publicationAdapterSourceFile(
+        isc12SourceDirectory / "isc12_publication_adapters.cpp",
+        std::ios::binary);
+    const std::string publicationAdapterSourceText{
+        std::istreambuf_iterator<char>{publicationAdapterSourceFile},
+        std::istreambuf_iterator<char>{}};
+    CHECK(!publicationAdapterSourceText.empty());
+    CHECK(publicationAdapterSourceText.find(
+        "G10ReaderPatchRva = 0x9FC654") != std::string::npos);
+    CHECK(publicationAdapterSourceText.find(
+        "G10WriterPatchRva = 0x9F95A2") != std::string::npos);
+    const auto g10CommitBegin = publicationAdapterSourceText.find(
+        "auto PublicationAdapterSet::CommitG10(");
+    const auto codecCommitBegin = publicationAdapterSourceText.find(
+        "auto PublicationAdapterSet::CommitCodec(");
+    CHECK(g10CommitBegin != std::string::npos);
+    CHECK(codecCommitBegin != std::string::npos);
+    if (g10CommitBegin != std::string::npos
+            && codecCommitBegin != std::string::npos
+            && g10CommitBegin < codecCommitBegin) {
+        const auto g10CommitBody =
+            std::string_view{publicationAdapterSourceText}.substr(
+                g10CommitBegin, codecCommitBegin - g10CommitBegin);
+        const auto readerCommit = g10CommitBody.find(
+            "G10ReaderPatchRva");
+        const auto writerCommit = g10CommitBody.find(
+            "G10WriterPatchRva");
+        CHECK(readerCommit != std::string_view::npos);
+        CHECK(writerCommit != std::string_view::npos);
+        CHECK(readerCommit < writerCommit);
+        CHECK(g10CommitBody.find("publishReadiness")
+            == std::string_view::npos);
+    }
 
     std::ifstream nativeSitesSourceFile(
         isc12SourceDirectory / "isc12_native_sites.hpp", std::ios::binary);

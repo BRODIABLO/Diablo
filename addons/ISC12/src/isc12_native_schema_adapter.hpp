@@ -2,6 +2,7 @@
 
 #include "isc12_schema.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -55,6 +56,76 @@ enum class NativeSchemaGateDecision : std::uint8_t {
         ? NativeSchemaGateDecision::AcceptExisting
         : NativeSchemaGateDecision::FailClosed;
 }
+
+inline constexpr std::size_t NativeSchemaCandidateCapacity = 3;
+
+enum class NativeSchemaStageResult : std::uint8_t {
+    Staged,
+    InvalidArgument,
+    CapacityExceeded,
+};
+
+enum class NativeSchemaFinalizeResult : std::uint8_t {
+    Published,
+    AcceptedExisting,
+    InvalidState,
+    InvalidTableView,
+    InvalidAuthoritativeSnapshot,
+    MissingCandidate,
+    InvalidOrDuplicateRevision,
+    Diverged,
+};
+
+// ItemStatCost is compiled once per D2R data bank before D2RLoader announces
+// the authoritative DataTablesLoaded revision. Keep those bank-local captures
+// bounded and unpublished until the active RotW TableView identifies the one
+    // that may bind persistence and codec validation. Finalization decodes the
+    // authoritative bytes again with the copied linker names; pointer identity
+    // is selection evidence, never proof that post-processing left the records
+    // unchanged. Revisions must be non-zero and distinct from the last
+    // finalized load; the public SDK does not promise numeric monotonicity.
+class NativeSchemaCandidateSet final {
+public:
+    auto Reset() noexcept -> void;
+
+    [[nodiscard]] auto Stage(
+        const void* sourceDataTables,
+        const void* sourceRecords,
+        std::size_t rowCount,
+        NativeItemStatCostSchemaSnapshot&& snapshot) noexcept
+        -> NativeSchemaStageResult;
+
+    [[nodiscard]] auto Finalize(
+        const void* activeRecords,
+        std::size_t activeRowCount,
+        std::size_t activeRowSize,
+        std::uint64_t revision,
+        bool hasPublishedSnapshot,
+        const Sha256Digest& publishedHash,
+        NativeItemStatCostSchemaSnapshot& publishedSnapshot) noexcept
+        -> NativeSchemaFinalizeResult;
+
+    [[nodiscard]] auto PendingCount() const noexcept -> std::size_t {
+        return pendingCount_;
+    }
+
+    [[nodiscard]] auto LastObservedRevision() const noexcept
+            -> std::uint64_t {
+        return lastObservedRevision_;
+    }
+
+private:
+    struct Candidate {
+        const void* sourceDataTables{};
+        const void* sourceRecords{};
+        std::size_t rowCount{};
+        NativeItemStatCostSchemaSnapshot snapshot{};
+    };
+
+    std::array<Candidate, NativeSchemaCandidateCapacity> candidates_{};
+    std::size_t pendingCount_{};
+    std::uint64_t lastObservedRevision_{};
+};
 
 // The linker argument is the non-owning pointer stored at
 // DataTables+NativeItemStatCostLinkerOffset. The callback RVAs above document

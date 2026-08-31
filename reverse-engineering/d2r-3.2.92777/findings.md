@@ -1561,3 +1561,413 @@ confiance explicite.
   `GetDataTablesForContext 0x300A90` ferment respectivement contexte, layout B,
   cleanup et domaine 0..3. Le lookup ItemStatCost peut retourner null et B le
   déréférence sans contrôle, d'où l'obligation du préflight ID<rowCount.
+
+## 2026-08-30 — ISC12 G9 0x9C/0x9D static transport audit
+
+- `D2GAME_SendItemAction9C 0x479CD0` et
+  `D2GAME_SendItemAction9D 0x479EA0` passent tous deux `R9D=0` au serializer
+  `0x375EE0`. Ils sérialisent donc un seul nœud, jamais tout l'arbre socketé.
+  Les fenêtres uniques de 158/163 octets à `0x479D85` et `0x479F76` prouvent
+  simultanément ce flag, la capacité `0xF4`, les headers de 8/13 octets, la
+  comparaison diagnostique `0xFC`, la queue via `0x4817F0` puis l'appel du
+  walker `0x481B50`. Le root `0x9C` est natif jusqu'à 244 octets; chaque `0x9D`
+  est sûr jusqu'à 239 octets.
+- La comparaison `>0xFC` ne rejette pas le paquet : elle appelle un helper de
+  diagnostic puis rejoint le store de longueur et la queue. En `0x9D`, 240..242
+  octets donnent des totaux 253..255, 243..244 wrapent la longueur sur un octet,
+  et un overflow du serializer retourne zéro à `0x375F25`, produisant un paquet
+  header-only de 13 octets. Le même retour produit huit octets en `0x9C`.
+- La fenêtre unique de 102 octets `0x481BAD` prouve l'amorce `GetFirstItem`,
+  l'appel `0x479EA0` à `0x481BFE`, `GetNextItem` et la branche arrière tant
+  qu'un enfant demeure. Le budget est donc une séquence :
+  root 9C/9D, puis un 9D indépendant par descendant. Tout guard correct doit
+  préflight tout l'arbre avant le premier envoi; refuser seulement l'enfant
+  laisserait un état partiellement publié.
+- Pour la provenance historique seulement, les hooks d'entrée `0x12E2C0`,
+  `0x12E490`, `0x374BF0`, `0x374FF0`, `0x375EE0` et `0x4817F0` appartiennent au
+  prototype RuffnecKk ExtendedItemStats, ensuite exercé dans un build du fork
+  expérimental `RuffDood/D2RL-Plugins:codex/pluginpack-foundation`. Ils ne sont
+  pas présents dans l'upstream officiel eezstreet et ne constituent ni une
+  dépendance ni un gate produit ISC12. Les six témoins G9 restent des fenêtres
+  intérieures natives exactes ne revendiquant aucune de ces entrées. Le témoin
+  9D commence à `0x12E4B0`; il prouve un buffer `0x101` et la longueur minimale
+  13, pas un upper bound client `0xFC`.
+- Le planner pur ISC12 calcule `ceil((F + 12*T)/8)` par nœud, où `T` compte un
+  token par record et un token sentinelle `0xFFF` par liste, puis applique le cap
+  du root selon son type : 244 octets pour `0x9C`, 239 pour `0x9D`, puis 239 à
+  tous les descendants `0x9D`. Il valide maintenant un snapshot packed complet
+  avant son premier callback : counts, offsets, indices, enfants partagés,
+  cycles, nœuds inaccessibles et payload tardif hors budget produisent tous zéro
+  callback. Le preorder depth-first `{root, premier enfant, ses descendants,
+  sibling suivant}` reproduit le walker natif : le producer 9D queue à
+  `0x47A001`, récursive via `0x47A014`, puis le walker parent avance à
+  `0x481C06`.
+- Le nombre de sockets disponibles et le nombre d'enfants occupés sont deux
+  cardinalités distinctes. La référence sémantique épinglée
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`,
+  `source/D2Common/src/Items/Items.cpp:6668-6694`, compte et écrit les enfants
+  occupés, tandis que `:7211-7214` écrit séparément
+  `STAT_ITEM_NUMSOCKETS`; `:3270-3282` compare encore capacité et occupation.
+  Le planner impose donc `listed == occupied` et `occupied <= capacity`, jamais
+  leur égalité systématique. La borne D2MOO de 3 bits/7 enfants reste seulement
+  sémantique; la limite encodée exacte de D2R doit être promue avant de fixer la
+  capacité d'une transaction native.
+- Vincent retient le 30 août 2026 **G9-A native-only**. Le planner ferme le
+  contrat logique hors runtime, mais aucun transport de production ne l'appelle
+  encore et zéro callback ne prouve pas encore zéro queue D2R. Aucun transport
+  externe ne fait partie du produit. Aucun runtime ni save n'a été lancé pendant
+  cet audit.
+- Un preflight par seconde sérialisation au hook d'entrée est rejeté. `0x9C`
+  sauvegarde puis modifie temporairement les flags `ItemData+0x18` à
+  `0x479D54/0x479D67` avant la sérialisation, puis les restaure à
+  `0x479DEC/0x479DFD`. `0x9D` applique le même traitement à `0x479F23..0x479F3B`
+  et peut aussi modifier temporairement `ItemData+0x54` à `0x479F4A..0x479F5E`.
+  Une sérialisation scratch exécutée à l'entrée ne voit donc pas nécessairement
+  les mêmes octets que le producer réel. Le wrapper `0x375EE0` reçoit sept
+  arguments : item, destination, capacité, `bServer`, `bSaveItemInv`,
+  `bGamble`, callback/sink; le layout et l'idempotence d'un sink recréé ne sont
+  pas gouvernés non plus.
+- Au moment de l'audit statique initial, le seam natif étroit recommandé n'était
+  pas encore implanté. Il conservait une seule sérialisation native et devait
+  détourner seulement les deux CALL de queue :
+  `0x479E10 -> 0x4817F0` pour `0x9C` et `0x47A001 -> 0x4817F0` pour `0x9D`.
+  Des wrappers aux entrées `0x479CD0/0x479EA0` ouvriraient une transaction TLS;
+  les deux relays copieraient synchroniquement chaque paquet stack sans
+  l'envoyer, puis le wrapper root publierait la séquence via l'entrée queue
+  intacte seulement après validation globale. Les signatures d'entrée uniques,
+  les CALL rel32 exacts et les séquences prep/restore ont été relevés. Restent à
+  fermer avant implantation : bornes de profondeur/nœuds, réentrance TLS,
+  cardinalité sémantique StatLists/sentinelles/compound stats, stabilité de
+  l'arbre pendant la traversée, durée de vie des relays et publication
+  quiescente des quatre sites. Une panne de queue pendant le flush final ne peut
+  pas être rollbackée; la garantie visée demeure exactement zéro queue pour un
+  rejet de validation. `D2GAME_QueueServerPacket` reçoit une longueur `size_t`
+  dans `R8`; la fenêtre unique de 39 octets `0x4818B6` prouve qu'elle consomme
+  synchroniquement la plage `[packet, packet+length]`, donc le relay doit copier
+  le paquet stack avant son retour. Le flush tardif conserve l'ordre des appels,
+  mais décale les effets internes de queue après la sérialisation de tous les
+  descendants; cette différence de timing/backpressure reste à qualifier.
+
+## 2026-08-30 — ISC12 G9-A native wrapper/relay ABI promotion
+
+- Le workbench gouverné commun aux builds 92777 et 93847 est vérifié avant cette
+  promotion. `D2GAME_SendItemAction9C 0x479CD0` possède l'ABI exacte
+  `void(client RCX, item RDX, action R8B, temporaryFlags R9D,
+  gamble:uint32 stack arg5)`. Ses onze callers directs sont `0x4790DD`,
+  `0x47977D`, `0x479B3C`, `0x479BA0`, `0x47D5A1`, `0x47D60D`, `0x47E8FB`,
+  `0x47EEF5`, `0x480022`, `0x48007D` et `0x4802D2`; aucun ne consomme `RAX`.
+  `D2GAME_SendItemAction9D 0x479EA0` possède l'ABI
+  `void(client RCX, parent RDX, item R8, action R9B,
+  temporaryFlags:uint32 stack arg5, gamble:uint32 stack arg6)`. Ses douze
+  callers directs sont `0x477574`, `0x478804`, `0x4797C8`, `0x479814`,
+  `0x479848`, `0x47E934`, `0x47E99C`, `0x480300`, `0x480388`, `0x4808B4`,
+  `0x481514` et le walker `0x481BFE`; eux aussi ignorent tous `RAX`.
+- Les deux entrées commencent par les cinq octets complets
+  `40 53 55 56 57`, soit `push rbx/rbp/rsi/rdi`. Les continuations
+  `0x479CD5` et `0x479EA5` commencent respectivement par `push r14` et
+  `push r15`. Le producer 9C possède ensuite une allocation `0x160`, un delta
+  de frame total `0x188`, son cookie à `RSP+0x150` et son arg5 entrant à
+  `RSP+0x1B0`; 9D possède `0x170`, `0x198`, cookie `RSP+0x160` et args5/6 à
+  `RSP+0x1C0/0x1C8`. Un `JMP rel32` cinq octets est donc instruction-aligned :
+  le trampoline rejoue exactement les quatre pushes puis rejoint `entry+5`.
+  Les signatures complètes uniques de 32 octets restent les témoins de
+  préflight, car les cinq octets volés seuls sont identiques entre les entrées.
+- Le trampoline dix octets `40 53 55 56 57 E9 <rel32 entry+5>` exige une table
+  d'unwind process-lifetime. Son `UNWIND_INFO` minimal exact est
+  `01 05 04 00 05 70 04 60 03 50 02 30` : version 1, prologue cinq octets et
+  quatre `UWOP_PUSH_NONVOL` aux offsets 5/4/3/2 pour RDI/RSI/RBP/RBX. Les
+  `UnwindData` du PDATA réhydraté statique ne décodent pas de manière fiable;
+  ils ne prouvent donc pas l'unwind natif. Avant publication, le runtime doit
+  obtenir `RtlLookupFunctionEntry(entry+5)`, valider les pushes/allocations live,
+  enregistrer le trampoline par `RtlAddFunctionTable` et garder code, table et
+  unwind jusqu'à la fin du processus. Un wrapper C++ doit nettoyer le TLS sous
+  SEH `finally` ou équivalent; la seule RAII `/EHsc` ne ferme pas un SEH natif.
+- Les CALLs mutables sont exactement `0x479E10: E8 DB 79 00 00`, continuation
+  `0x479E15`, et `0x47A001: E8 EA 77 00 00`, continuation `0x47A006`. Ils
+  transmettent tous deux `void(client RCX, packetStack RDX,
+  zeroExtendedByteLength:size_t R8)`. Aucun xref ne cible les CALLs, leurs
+  continuations ou les intérieurs `0x479D85/0x479F76`; les 23 appels directs
+  recensés passent par les deux entrées wrappers. Un relay TLS-inactif après
+  publication est donc une invariant violation fail-closed : il supprime
+  l'envoi et arme l'état fatal au lieu de contourner le preflight.
+- Les anciens témoins contenant les CALLs sont désormais scindés et chacun est
+  unique : `0x479D85+139`, CALL `0x479E10+5`, continuation walker
+  `0x479E15+14`, puis témoin d'épilogue code `0x479E23+30` jusqu'au `RET`
+  inclus/end-exclusive `0x479E41`; ensuite `0x479F76+139`, CALL
+  `0x47A001+5`, continuation walker `0x47A006+19`, puis témoin d'épilogue code
+  `0x47A019+30` jusqu'au `RET` inclus/end-exclusive `0x47A037`. Les témoins
+  d'épilogue prouvent seulement les bytes de load/xor/check du stack cookie,
+  deallocation, pops et `RET`; le `.pdata` statique n'est pas autoritatif pour
+  les futurs wrappers d'entrée. Leur contrat unwind demeure un gate runtime
+  par `RtlLookupFunctionEntry`. Aucune fenêtre déclarée inchangée ne chevauche
+  donc une mutation. L'entrée queue intacte
+  `0x4817F0+22` fixe l'ABI `(client, bytes, size_t)->void`; le témoin unique
+  `0x4818B6+39` construit `[bytes,bytes+length]` avant l'appel du sink. Chaque
+  relay doit copier le paquet stack synchroniquement avant son retour, puis le
+  wrapper root détache une batch immuable et la flush directement via
+  `0x4817F0` seulement après validation complète. Le retour `void` ne permet
+  aucun rollback si une panne arrive après le début de ce flush.
+- La topologie imbriquée est synchrone et même-thread. Les deux producers
+  appellent `0x481B50` après leur relay; le walker appelle chaque enfant à
+  `0x481BFE` comme `9D(même client, item parent actif, enfant, action 0x12,
+  temporaryFlags propagés, gamble 0)`. Une frame TLS nested peut donc exiger
+  exactement ces invariants, un seul relay du bon opcode par producer et aucune
+  9C nested. Une 9D entrée depuis l'état Idle demeure une root légitime. Pendant
+  un rejet, le corps et le walker natifs terminent afin de restaurer leur état,
+  mais chaque relay reste supprimé; succès et réentrée de flush nécessitent des
+  banks distinctes afin qu'une batch en cours ne puisse pas être écrasée.
+- Les quatre hooks, relays, trampolines et témoins sont maintenant gouvernés
+  comme **source préparée**, jamais comme runtime qualifié ou publié. Restent
+  bloquants : autorité loader de quiescence, unwind live, nettoyage SEH,
+  reentrance pendant le flush, validation des octets capturés et des paquets
+  header-only 8/13, stabilité inter-thread de l'arbre, effets de queue différés,
+  backpressure et preuve zéro queue pour chaque rejet root/middle/sibling/deep.
+  Aucun runtime, paquet ou sauvegarde n'a été exécuté pendant cette promotion.
+
+## 2026-08-30 — ISC12 G1 bounded complete-item serializer and G9 cardinalities
+
+- Le corps natif complet de sérialisation d'un item commence à `0x37D140`.
+  Son prologue exact unique de 37 octets, jusqu'à `sub rsp,rax`, fixe `RBP` à
+  `final RSP+0x100`, sonde
+  puis alloue une frame de `0x1970` octets. L'outer serializer ne possède qu'un
+  CALL direct vers ce corps, à `0x3800F0`, couvert par la fenêtre unique
+  `0x3800E8`. Ces témoins appartiennent au corpus gouverné 92777 commun aux
+  builds ciblés 3.2.92777 et 3.3.93847 par équivalence native byte-exacte; aucun
+  RVA ni ABI D2MOO n'est transposé.
+- À `0x37F08A`, un `memset` exact unique initialise seulement `0x7FC` octets à
+  `[RBP+0x60]`: **511 DWORDs**, donc les indices directs `0..510`. Le snapshot
+  suivant commence à `[RBP+0x860]`; sa fenêtre unique `0x37F09B` passe une
+  capacité `0x1FF` au helper `0x2F64E0`. Le corps unique `0x2F6527` prouve
+  `min(listCount,capacity)` puis la copie de records de huit octets comme deux
+  DWORDs. Le DWORD `[RBP+0x85C]` entre les deux régions n'est pas initialisé.
+- La fenêtre unique `0x37F0D0` charge un record à
+  `[RBP+index*8+0x860]`, effectue `sar eax,16; movzx edi,ax`, puis vérifie
+  directement `EDI < DataTables.ItemStatCostRowCount`. L'index de la table de
+  suppression est donc le stat ID uint16 lui-même, sans translation ordinale.
+  Dès que la sentinelle ISC12 devient 4095, l'ID valide 511 lit le DWORD hors
+  table à `+0x85C`; l'ID 512 alias le premier DWORD du snapshot, et les IDs
+  suivants avancent dans la frame. Le plan G1 historique limité aux
+  width/sentinel ne peut donc pas être publié tel quel.
+- Un audit exhaustif des opérandes mémoire basés sur `RBP` dans le corps
+  `0x37D140` trouve exactement dix formations/accès à la région
+  `[RBP+0x60,RBP+0x860)`: le pointeur du `memset`, une lecture indexée dynamique
+  à `0x37F17C` et huit writes fixes de partenaires composés. Les couples natifs
+  sont `17→18`, `48→49`, `50→51`, `52→53`, `54→55,56` et `57→58,59`; leurs
+  fenêtres exactes uniques sont promues dans `isc12/native-sites.json`. Chaque
+  primaire écrit un token ID et plusieurs valeurs, puis la comparaison supprime
+  le ou les records partenaires. Remplacer globalement la comparaison par
+  `test esi,esi` casserait donc les composés vanilla.
+- Le site gouverné complet est la fenêtre exacte unique de **50 octets**
+  `[0x37F174,0x37F1A6)`. Ses 42 premiers octets finissent après
+  `cmp eax,edx` et constituent un témoin prerequisite/body, pas à eux seuls le
+  remplacement complet. Les mutations sont confinées à
+  `[0x37F17C,0x37F1A1)`; le `test esi,esi` et sa branche à `0x37F174`, ainsi que
+  le CALL natif du bit writer à `0x37F1A1`, restent inchangés. Le relay borné
+  doit conserver la comparaison originale pour `statId<511` et rejoindre le
+  writer directement pour `511..4094`, puisque la valeur a déjà été prouvée
+  non nulle et tous les partenaires composés hard-codés sont sous 511. Sa
+  publication doit fingerprint simultanément owner/frame, caller, table,
+  snapshot/helper, extraction directe et les huit writes composés.
+- Dans le même corps complet, la séquence commençant à `0x37D60B` énumère tous
+  les enfants immédiats de l'inventaire de l'item, encode
+  `min(occupiedChildren,7)` sur exactement trois bits à
+  `0x37D66F..0x37D678`, et écrit donc 7 pour toute occupation supérieure. Ce
+  champ demeure présent lorsque les producers `0x9C/0x9D` désactivent la
+  récursion inline. `STAT_ITEM_NUMSOCKETS` (`0xC2`) est écrit séparément plus
+  loin avec les `SaveBits` de sa ligne ItemStatCost; le natif n'impose pas leur
+  égalité. Le preflight doit exiger `occupied<=7` et `occupied<=capacity`.
+- La boucle des stat lists admet au maximum la base, cinq slots set et une
+  runeword, soit sept listes/sentinelles structurelles. Chaque liste copie au
+  plus 511 records; au plus 511 tokens ID peuvent survivre par liste, mais les
+  `SaveBits`, valeurs nulles, composés et le skip numérique 326 réduisent le
+  nombre réel. Le plafond structurel est donc 3577 tokens ID et sept
+  sentinelles, sans preuve qu'un item réel puisse atteindre ce maximum. G9 doit
+  valider les octets effectivement capturés plutôt que dériver la taille depuis
+  le nombre brut de records.
+- Le walker `0x481B50` énumère chaque enfant, appelle le producer 9D à
+  `0x481BFE`, puis le chemin 9D rappelle le walker à `0x47A014`. Aucun compteur
+  natif de profondeur, de nœuds totaux ou de cycle n'a été trouvé. La borne
+  trois bits est locale à un nœud et ne borne pas l'arbre; ISC12 doit définir
+  ses propres limites de profondeur/nœuds et refuser les cycles. Toutes ces
+  conclusions sont des preuves statiques; cold start, round-trip, paquets et
+  sauvegardes réelles restent **NOT RUN**.
+
+## 2026-08-31 — ISC12 G0-BBE width census and publication-authority audit
+
+- Le corpus commun gouverné est vérifié avant l'audit : image canonique
+  `CC59119D…A914715`, image d'analyse `673E8C0B…0E63AB`, index 105 850
+  fonctions / 1 057 329 références et self-test PASS. Les preuves `.text`
+  ci-dessous sont byte-identiques pour les builds couverts 92777/93847; aucun
+  RVA ou ABI D2MOO n'est transposé.
+- Le census exhaustif du compilateur générique `0xA24290` trouve sept CALLs
+  natifs : `0x3B46F9`, `0x3B483D`, `0x3B4A4D`, `0x3B4CCD`, `0x3B4EFD`,
+  `0x3B4FBD` et `0x3B533D`. Tous utilisent le mapper universel `0x3B58A0`.
+  Trois frontends seulement — `0x3B54E0`, `0x3B55A0`, `0x3B6220` — appellent
+  le même resolver core `0x3B5AA0`.
+- Le mapping de domaines natif distingue les pools fixes Skills (`+0x138`),
+  SkillDesc (`+0x150`), Missiles (`+0x188`), Items combinés (`+0x228`),
+  Properties val1..val7 (`+0x12C0`) et le pool condition-calc partagé
+  Items/SetItems/UniqueItems/TCEx (`+0xD90`), plus un bridge générique
+  dynamique. Le témoin `0x3B5307/0x3B533D` appartient à ce dernier pool
+  condition-calc; il ne doit donc jamais être étiqueté comme un scope Skill.
+- Le selector exact unique `0x3B5B58` accepte les slots 3..8 et consulte les
+  six DWORDs exacts à `0x3B61B0`. Le slot numérique 5 rejoint ainsi
+  `0x3B5D80`, seule branche du core qui charge
+  `DataTables.ItemStatCostLinker` à `+0x1270`. Cette branche appelle le lookup
+  `0xA121F0`, puis écrit l'ordinal retourné par EAX comme DWORD dans `[RBX]`.
+  Aucun masque `0x1FF`, shift neuf bits ou store étroit n'existe sur ce trajet.
+- Le compilateur générique teste d'abord la plage signée -128..127 à
+  `0xA245FC`; au-delà, `0xA24661` teste -32768..32767 et émet le token 5 suivi
+  de `word [RSI+1]=BX`. Chaque ID ISC12 valide `512..4094` est donc encodé
+  exactement sur 16 bits. Le decoder exact unique `0xA235D5` borne deux octets,
+  fait `movsx EDX,word [R12]`, appelle le callback et avance de deux octets.
+  Comme `4094 < 0x8000`, le signe ne change aucune valeur ISC12 valide.
+- Le census du generic evaluator `0xA234B0` trouve huit CALLs natifs. Sept
+  contextes D2R câblés à une table —
+  `0x3B460B`, `0x3B49AC`, `0x3B4C1F`, `0x3B4E51`, `0x3B5136`, `0x3B5296`
+  et `0x3B54BB` — passent la table `0x1D09C50` et le count 9; le huitième
+  appel générique `0xA24A1A` passe une table et un count nuls. Le callback
+  `0x3B33F0..0x3B34F9` copie l'ID EDX vers EDI, vérifie le row count
+  `DataTables+0x1260`, puis retransmet le DWORD complet à
+  `STATLIST_UnitGetStatValue`, `STATLIST_GetUnitBaseStat` ou
+  `STATLIST_GetUnitStat`, sans troncature.
+- Une attestation gouvernée ferme les deux arêtes protégées le 31 août 2026 à
+  `2026-08-31T12:44:45.5847343Z`. Elle lit le processus D2RLoader PID `39116`,
+  créé le 30 août à `17:12:21-04:00`, déjà ouvert par
+  `D2RLoader.exe -txt -mod BKVince -txt -offline` sur le runtime officiel D2R
+  `3.3.93847`, base `0x140000000`, avec seulement
+  `PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ` (`0x1010`). Les hashes
+  sur disque sont `.build.info`
+  `2EBCAD0521DBF038D5A7FE5395E96B4BEF6D4F0774F7B1F840E03C3DE9CB067A`,
+  `D2R.exe`
+  `E1F5436E3D9687F644EF16938B1B183D1FDEF434F18CF66D852CF68F48CC8936`,
+  `D2RLoader.exe`
+  `A926DAA85DE85EADCF98FDB5FB30143CC32D6B4913EB21A6416EBDAA78945128`
+  et `D2RCore.dll`
+  `013B047612BFF0EB564891037508FD43D03AFDFB20BFEB9B5BC683B36559FFC6`.
+  Aucune permission de mutation n'est demandée et aucune écriture n'est
+  tentée.
+- Avant de croire les RDATA, la capture confirme byte-exact les deux ancres
+  `.text`: `0x3B59CA = 488D15BB4C9401` et
+  `0x3B54A3 = 488D05A6479501`. Les 16 octets protégés à `0x1CFA68C` valent
+  `73746174000000000000000073657466`, soit la chaîne NUL-terminée `stat`; leur
+  SHA-256 est
+  `83626D991B1A0AD789DDB50D993623989AB1C1257879530005CEE0CA411F0E4F`.
+- La capture corrige le modèle statique : `0x1D09C50` n'est pas une suite de
+  neuf QWORDs, mais neuf records de 16 octets
+  `{callback VA:qword, arity:dword, padding:dword}`. Les callbacks/arity sont
+  `3B3200/2`, `3B3210/2`, `3B3220/2`, `3B32F0/2`, `3B33A0/2`,
+  `3B33F0/2`, `3B3500/3`, `3B3590/2`, `3B3640/FFFFFFFF`; tous les paddings
+  sont zéro. Le record 5 à `0x1D09CA0` pointe donc exactement vers le callback
+  full-width `0x3B33F0`. Les 144 octets bruts capturés sont
+  `00323B4001000000020000000000000010323B4001000000020000000000000020323B40010000000200000000000000F0323B40010000000200000000000000A0333B40010000000200000000000000F0333B4001000000020000000000000000353B4001000000030000000000000090353B4001000000020000000000000040363B4001000000FFFFFFFF00000000`,
+  SHA-256 session/base `B551BA77BCF256B537D3CDB750C0B0246C0C05DA45675AF74EBEFB98522A1D1A`.
+  Après remplacement des neuf VA par leurs RVA, le SHA-256 portable est
+  `E8B9B76F9D7320BDFA8129F8D22B0CB19B450AC4D655F53A8D2E56E47CF224ED`.
+  D2MOO demeure seulement une corroboration sémantique; la fermeture repose
+  maintenant sur les données natives D2R 3.3.
+- Le ledger promeut dix surfaces G0-BBE proof-only, toutes avec
+  `targetValue = unchanged`; son validateur interdit désormais toute mutation
+  dans ce groupe. Les signatures `.text` sont exactes et uniques et les deux
+  memberships protégés passent de `identified` à `ready`. G0-BBE est fermé
+  pour la largeur et l'appartenance natives. Ce lot ne crée aucun patch BBE,
+  ne publie aucun octet et n'exécute aucun cold start ISC12; seuls des reads
+  externes ont attesté l'instance déjà ouverte.
+- L'audit séparé du PluginSDK v3 épinglé
+  `4933e2c42cb2592958cd0df3b6dc5003102252d1` confirme que les services publics
+  s'arrêtent à l'ID 15 et n'exposent ni quiescence, ni transaction de patch, ni
+  exclusion de tous les consumers D2R. `D2RLoaderLoadPlugin` est une fenêtre
+  d'installation plausible, pas une garantie documentée. Émettre le lease
+  ISC12 depuis ce callback serait donc une hypothèse et demeure interdit.
+- Le minimum honnête est une transaction synchrone loader-owned, additive au
+  SDK, qui exécute un callback non évadable pendant une phase startup réellement
+  quiescente, sérialise les publishers, lie le token au thread/owner/epoch et
+  empêche toute reprise sur résultat `Poisoned`. ISC12 devra coordonner sous
+  cette seule transaction le preflight global G0 + G10 + codec, la réservation
+  process-lifetime, les commits dans cet ordre — codec conservant
+  G9/G2/G4/G1/G3 — puis publier readiness et `operational` en dernier. Un mutex
+  d'installateurs, une suspension de
+  threads implantée par le plugin ou un token sans garantie loader ne satisfait
+  pas ce contrat.
+- Le refus actuel `enabled=true` avant mutex, préparation et écriture reste
+  donc le seul comportement production démontré. Même avec un futur issuer,
+  les publishers locaux actuels ne doivent pas être appelés séquentiellement :
+  `InstallLoaderExtension` ne publie que G0, le commit codec n'a aucun caller et
+  G10 n'est pas installé. Le runtime de publication reste bloqué jusqu'à
+  l'autorité loader, aux adapters full-set et à l'attestation live unwind;
+  G0-BBE n'est plus un blocker de membership.
+- Le coordinateur full-set production-neutral est maintenant implanté et
+  compilé sans caller production. Sa machine one-shot preflight G0, G10 et
+  codec avant toute réservation/écriture, réserve la durée de vie processus une
+  fois, commit les trois domaines dans cet ordre, garde l'ordre interne codec
+  G9/G2/G4/G1/G3 et publie la readiness seulement à la fin. Un résultat
+  incertain ou post-write appelle exactement une fois l'état poison, devient
+  terminal et n'essaie aucun rollback. Les tests exécutables couvrent lease
+  absente/révoquée, chacun des trois rejets de preflight, réentrance,
+  mutate-then-uncertain, monotonie terminale et move/release unique.
+- Le build gouverné Release `/W4 /WX` passe CTest `4/4`; la DLL a le SHA-256
+  `FF8D16AF4A6DBCB9BD3AD86A6A6DFCBB4553D26A200DF161B1065C6A5DFE5286`.
+  Le coordinateur n'est encore qu'un contrat d'orchestration : G0, G10 et
+  codec doivent être séparés en adapters preflight/commit immuables, puis liés
+  sans caller production. La proposition SDK gouvernée remplace le faux modèle
+  de rollback atomique par un service `NativePublication` optionnel,
+  synchrone, loader-owned, owner/thread/epoch-bound et no-resume sur
+  `Poisoned`. Le véritable issuer et sa barrière consommateurs restent
+  impossibles à implanter sans source D2RLoader/Core upstream.
+
+## 2026-08-31 — ISC12 et les providers D2RCore 1.1/1.2
+
+- Le ZIP officiel `D2RLoader-1.2.0-beta.zip` vaut
+  `2AABEF2E6838CA3611EA3CB74D318C3BB792549CC4FC6C7D53933245667417D9`.
+  Le runtime installé est byte-identique au ZIP pour `D2RLoader.exe`
+  (`651FA9EB33083088349224B1624819F63ED79596F808950CF6468B5D82F7132E`)
+  et `D2RCore.dll`
+  (`876957AE7AEF627BAC3E56592CA15888A8AAF9B952ED79EDCC1CF6351B3F93CF`).
+- D2RLoader compose trois surfaces déjà gouvernées sans en changer l'ABI.
+  `D2R+0x31EC89` rejoint `D2RCore!LoadExcelTable`; G1 à
+  `D2R+0x37F1A1` rejoint `D2RCore!WriteItemSaveStatId`; G3 à
+  `D2R+0x535303` rejoint `D2RCore!WritePlayerSaveStatId`. Les relais proches
+  sont des `FF 25` vers des slots vivants et chaque provider retransmet les
+  arguments au propriétaire natif exact. ISC12 conserve ces CALLs et ne mute
+  que ses propres largeurs/corps gouvernés.
+- Les deux providers de stat ID 1.2 ont des corps exacts
+  `[0x6364C0,0x63652B)` et `[0x636550,0x6365BC)`, des tuples PDATA/unwind
+  exacts et retransmettent `RCX/EDX/R8` une fois à
+  `D2R+0xA1B710`. Leur bitmap TLS privé ne suit que `EDX < 0x200`; un ID
+  supérieur n'est ni tronqué ni rejeté, il manque seulement au census de
+  compatibilité D2RLoader. L'enveloppe et le hash de schéma ISC12 restent
+  l'autorité de persistance locale; la couverture metadata/handshake des IDs
+  élevés demeure un gate réseau distinct et ne justifie pas d'étendre ce
+  bitmap privé.
+- Le second caller player-save forme un autre contrat indivisible. Vanilla
+  charge `R13D=0x8000` à `0x41E138`, alloue/zéroise ce nombre d'octets et
+  appelle directement `D2R+0x52F090` à `0x41E207`. D2RLoader 1.2 change
+  seulement la capacité en `0xFFFF`, puis redirige le même CALL via
+  `D2R+0x3E2A4AC` et son slot `0x3E29D00` vers
+  `D2RCore!WritePlayerSaveWithEnvironmentCapture` à `0x634650`. Le provider
+  1.2 possède PDATA `[0x634650,0x636068)`, unwind `0x50EFD0`, corps SHA-256
+  `A4A0E2A5E70AEFB613016739E914225CEE2A20BB06F13197CEAC182E11648667`
+  et slot `D2RCore+0x5372C0` résolu exactement vers `D2R+0x52F090`. Le
+  provider 1.1 équivalent possède PDATA `[0x563D80,0x565103)`, unwind
+  `0x452480`, corps SHA-256
+  `66C61BC1678375C9E373FD2141F409244B450D1411906B7FF8C27C1241E69F6A`
+  et slot `D2RCore+0x480DE8`. Chaque corps réémet `RCX/RDX/R8/R9` et les deux
+  arguments stack avant un unique appel natif.
+- L'admission ISC12 reste fail-closed : seul le couple exact
+  `0x8000 + direct 0x52F090` ou le couple exact
+  `0xFFFF + provider D2RCore attesté` est accepté. Le second exige l'export
+  RVA exact, le hash du corps complet, PDATA, les 36 octets unwind, une chaîne
+  bornée de sauts inconditionnels, le slot vivant et l'entrée exacte du
+  serializer natif. Aucun masque générique ni réécriture du provider n'a été
+  ajouté.
+- Un cold start full-stack du candidat précédent de 422 912 octets
+  (`F87546F8D2A940D419464EDC444E08DD1AF1E45D1721C8FBBF2825214E09A0F5`)
+  a vérifié `LoadExcelTable` puis `WritePlayerSaveStatId`, avant de refuser
+  proprement le couple dynamique encore inconnu à `0x41E138`, sans mutation
+  ni readiness ISC12. Après l'attestation ci-dessus, deux builds Release
+  reproductibles `/W4 /WX` passent CTest `5/5`; le nouveau candidat de
+  425 472 octets vaut
+  `4B928E117B930BCA2B9B0F8E3D2CDE8FF10F1C1F4FE2923ECCA5B1BCF6BD69AD`.
+  Son prochain cold start attend seulement que la session BKVince humaine
+  active libère le runtime; aucune sauvegarde ni action gameplay ISC12 n'a
+  encore été exécutée.

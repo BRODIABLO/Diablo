@@ -7,33 +7,45 @@ ISC12 is a clean-sheet D2RLoader format for overhaul mods that need more than
 511 `ItemStatCost` rows. It reserves serialized IDs `0..4094` for stats and
 `0xFFF` as the list terminator.
 
-Version 0.2.0 implements the first guarded native stage in source, but the
-pinned D2RLoader SDK exposes no loader-owned publication-quiescence authority.
-Consequently, `enabled=true` is currently refused before mutex acquisition,
-preparation or any native write. A future loader-issued authority would permit
-the prepared transaction to replace the fixed 512-entry `DescFunc` sorting tail
-with bounded 4,095-entry storage, then raise the row cap from `0x1FF` to
-`0xFFF`. The tail must be attempted first. Relay/state lifetime becomes
-process-bound before that patch API call because a false result does not prove
-that the non-aligned target bytes remained untouched. Any uncertain tail or cap
-write requires a cold restart; hot rollback is forbidden.
+Version 0.2.0 now has a production-callable experimental publication path. It
+uses a same-thread authority bounded to the synchronous initial
+`D2RLoaderLoadPlugin` callback, preflights every G0, G10 and codec surface before
+the first write, reserves relay/state lifetime, then commits G0, G10 and codec
+in one startup window. This follows D2RLoader's official startup patching model;
+it does not claim that the current SDK documents a global quiescence service.
 
-The live process remains entirely 9-bit because the prepared generic-item,
-player-save and full-item transport transaction is unpublished. The packet
-transport now exists in source but is not reachable in production.
-Consequently, this stage must not be used to create, load, save or transmit
-ISC12 data. The shipped TOML and embedded fallback both keep the experiment
-disabled.
+The fixed 512-entry `DescFunc` sorting tail is replaced with bounded 4,095-entry
+storage before the row cap moves from `0x1FF` to `0xFFF`. G10 persistence and
+the G9/G2/G4/G1/G3 codec plan then commit before readiness is published. A false
+patch result may follow a real write, so every post-mutation ambiguity poisons
+readiness and terminates the process; hot rollback is forbidden. The shipped
+TOML and embedded fallback remain disabled because runtime qualification has not
+completed. Do not create, load, save or transmit ISC12 data outside an isolated
+test profile with disposable saves.
 
-The current off-runtime source also prepares the G10-B persistence boundary:
+The current source also includes the G10-B persistence boundary:
 exact D2S/D2I objects can be unwrapped only after the 96-byte envelope, schema
 hash and complete inner payload pass validation, while writes use an ISC12-owned
 sibling-temp/full-write/flush/atomic-replace transaction. Persistent RX relays,
-native cleanup continuations and rundown state are prepared but deliberately
-unpublished. `InstalledHookCount` remains zero and `codecReady` is never set, so
-neither save seam can execute until the 12-bit item/player codecs are complete.
+native cleanup continuations and rundown state now participate in the canonical
+startup publication. The isolated D2RLoader 1.2 cold start published G0, G10,
+G9 and G1-G4 together and reached complete frontend startup; their first
+persistence execution is still NOT RUN.
 
-G1–G4 remain one unpublished canonical four-group transaction, ordered G2, G4,
+G0 no longer treats the first compiled ItemStatCost table as globally
+authoritative. D2R compiles both the 368-row Classic/base table and the 400-row
+ISC12Lab expansion table in one load. ISC12 stages each exact compiled snapshot
+with `SchemaReady=false`; D2RLoader's existing `DataTablesLoaded` event and
+`DataTableServiceV1` RotW TableView then select the matching records pointer and
+row count. Finalization decodes the active bytes again, so in-place loader
+post-processing or pointer reuse cannot silently publish the earlier capture.
+Only that authoritative snapshot is published. A later non-zero revision token
+distinct from the previous load must match its semantic hash or the process
+stops fail-closed. Listener shutdown is an atomic `Stopping` state; a callback
+racing explicit unregister returns benignly while unregister waits for every
+already-running callback.
+
+G1–G4 remain one canonical four-group subplan, ordered G2, G4,
 G1, G3 so overflow-status publication remains final. A critical static audit
 invalidated G1's earlier narrow writer patch: the native serializer owner has a
 511-DWORD compound-suppression table, and an ID at or above 511 would index
@@ -41,20 +53,36 @@ past that table into adjacent frame storage before G9 could stage the packet.
 The source planner now rewrites the exact 42-byte body
 `[0x37F17C,0x37F1A6)` in place. IDs `0..510` preserve the original table
 comparison and compound suppression; IDs `511..4094` bypass the unsafe lookup;
-the writer emits `min(ID, 0xFFF)` at 12 bits and retains the unchanged native
-CALL at `0x37F1A1`. The schema continues to reserve `0xFFF` as the terminator.
+the writer emits `min(ID, 0xFFF)` at 12 bits and retains the live CALL at
+`0x37F1A1`. That CALL may target the canonical native bit writer directly or
+the exactly attested D2RCore `WriteItemSaveStatId` provider; ISC12 never
+rewrites the provider. The schema continues to reserve `0xFFF` as the
+terminator.
 The subsequent-reader window likewise must resolve its interior CALL exactly to
 the governed native `BITSTREAM_ReadBitsThunk`; arbitrary retargeting fails
 before any write. Fourteen new exact witnesses cover the owner frame, its sole
 caller, the 511-DWORD clear, adjacent snapshot layout and all eight low-ID
 compound writes.
+
+D2RLoader 1.2 also composes the governed compiler, G3 stat writer and dynamic
+player-save caller through D2RCore. ISC12 accepts either each canonical direct
+native target or the corresponding exactly attested provider. Admission binds
+the export/body, live PDATA and unwind contract, a bounded unconditional relay
+chain, the live forward slot and the exact native destination. The dynamic
+caller is accepted only as an indivisible pair: vanilla `0x8000` capacity plus
+direct serializer, or D2RLoader `0xFFFF` capacity plus
+`WritePlayerSaveWithEnvironmentCapture`. ISC12 preserves the pair and all
+provider CALLs. The save-stat providers still forward IDs above 511 unchanged;
+only D2RLoader's private 512-bit compatibility census omits those IDs, which is
+a separate metadata/network-hardening gap.
+
 The complete prepared source plan now contains 24 mutable sites, 102
 differing-byte mutations and 77 witnesses. G1–G4 retain 20 sites and 84 slots;
 G9 adds four transport sites and brings its governed surface to twelve
-witnesses. Release `/W4 /WX`, CTest `4/4`, unique signatures and the expanded
-`211/15` native ledger pass statically. The governed Release DLL SHA-256 is
-`FF8D16AF4A6DBCB9BD3AD86A6A6DFCBB4553D26A200DF161B1065C6A5DFE5286`.
-This is not a native publication or runtime claim.
+witnesses. Two Release `/W4 /WX` builds, CTest `5/5`, unique signatures and the
+expanded `211/15` native ledger pass. The byte-identical cold-started DLL is
+445,952 bytes with SHA-256
+`EFCA4EBAECDC7E0EF7BE70D2BE741FD7D73DED0ACA85873507CCA2D2B625F3DB`.
 
 Twelve exact native witnesses govern G9: the 0x9C/0x9D producers serialize one
 node with recursion disabled, a root 0x9C has exactly 244 native payload bytes,
@@ -81,10 +109,10 @@ The prepared G9 path therefore validates the bytes copied from the one real
 native serialization rather than authorizing a flush from record estimates.
 
 Scratch serialization at producer entry remains rejected because both producers
-temporarily alter item state before their real serialization. G9-A is now
-source-prepared as the first canonical patch group. It publishes in the exact
-fail-closed order queue 0x9C, queue 0x9D, entry 0x9C, entry 0x9D, so both native
-queue calls are redirected before either producer entry can begin staging. The
+temporarily alter item state before their real serialization. G9-A is the first
+canonical patch group. Its startup commit order is
+queue 0x9C, queue 0x9D, entry 0x9C, entry 0x9D, so both native queue calls are
+redirected before either producer entry can begin staging. The
 previous long witnesses are split around the mutable CALLs at `0x479E10` and
 `0x47A001`.
 
@@ -103,9 +131,16 @@ transaction on abnormal producer exit. The source loader also requires
 `RtlLookupFunctionEntry` to return matching live unwind metadata at both the
 producer body and its `RET`: identical Begin/End/UnwindData, an End within the
 image and a range covering the governed epilogue. The statically rehydrated
-`.pdata` is protected and non-authoritative, so these live checks are not yet
-attested and may reject the official runtime. These source/static contracts
-pass, but the four sites remain unpublished and have not run in D2R.
+`.pdata` is protected and non-authoritative. The isolated cold start attested
+the live PDATA/XDATA contract and published all four G9 sites; functional
+0x9C/0x9D item cases remain open.
+
+The specialized network groups are a separate open gate. Packet `0x3E` (G5),
+`0xA8` (G6) and `0xAA` (G7) are present only in the reverse-engineering ledger;
+`0xAC` (G8) is still blocked on cardinality, estimator and headroom proof. ISC12
+has not implemented any fixed-byte `uint8 statId` to `uint16` packet expansion.
+Therefore this build does not claim complete network coverage for IDs above the
+vanilla range even if the initial `0x9C`/`0x9D` tests pass.
 
 For provenance only, the earlier Extended Item Transport prototype belongs to
 RuffnecKk ExtendedItemStats and was exercised in an experimental RuffDood fork
@@ -142,27 +177,39 @@ through the native buffer-free/false exit.
 The G3 finalize leaf preserves the native used-end result in RAX, returns the
 sticky overrun flag in EDX, and is prepared without using D2R padding or
 unwind-owned bytes. Its CALL is flushed before `mov eax, edx` is published as
-the final site. A move-only opaque RAII lease now gates every full-set
-fingerprint, write and flush, including loss-of-authority handling before and
-after the first attempted mutation. The pinned D2RLoader SDK provides no
-production issuer for that lease. Its public service IDs stop at 15 and neither
-Lifecycle nor ThreadService excludes every D2R consumer; `D2RLoaderLoadPlugin`
-is not a proven lease. A production-neutral one-shot coordinator is now
-compiled and unit-tested without a production caller. It requires preflight in
-the fixed order G0, G10, codec; reserves process lifetime once; commits those
-three domains in the same order; publishes readiness only after all commits;
-and makes `Poisoned` terminal without rollback. Its codec domain retains the
-internal G9, G2, G4, G1, G3 order. Tests cover missing/revoked leases, every
-preflight rejection, reentry, mutate-then-uncertain results, monotone terminal
-states and move/release ownership. Publication still requires an upstream
-synchronous loader-owned transaction that serializes publishers and blocks
-resumption on poison, plus immutable adapters that split and bind the current
-G0, G10 and codec preflight/commit paths. The process-lifetime relay page and G9
-staging path are prepared, but no production Commit caller exists. All 102
-mutations remain unpublished, `PublishedCodecMutationCount` is zero, both
-`itemTransportReady` and `codecReady` stay false. ISC12 publication/cold start,
-save/reload and multiplayer are NOT RUN; the only D2R interaction was the
-external read-only G0-BBE capture described above.
+the final site. A borrowed, validate-only `NativePublicationLeaseView` now gates
+every full-set fingerprint, write and flush. Its production instance is
+constructed only by the initial-load window, owns no loader resource and has no
+release operation. The DLL
+still builds against the governed PluginSDK v3 commit
+`4933e2c42cb2592958cd0df3b6dc5003102252d1`; a separate audit of PluginSDK v4
+`6eb8f8b6192868214706bd6d528c5294f2f551b7` finds services through 17
+(`Http = 16`, `ItemInteraction = 17`) but no native-publication service.
+
+The one-shot coordinator is connected to real local G0, G10 and codec adapters
+and has exactly one production caller in `D2RLoaderLoadPlugin`. Their immutable
+plans are all preflighted under the same borrowed view before reservation or
+write. The coordinator then reserves process lifetime once, commits G0, G10
+and codec, and keeps codec order G9/G2/G4/G1/G3. It then stops in
+`CommittedPendingReadiness` with all private readiness flags false. While the
+same initial-load window remains active, a separate no-write step publishes
+readiness exactly once and a postcondition check requires every G0/G10/codec
+surface to be active. Tests cover every preflight domain, native
+patch/write/flush failure, revocation, reentry, mutate-then-uncertain outcomes
+and both startup-readiness paths.
+An already-equal byte is a confirmed no-op; an actual attempted write makes any
+ambiguity terminal. The optional upstream `NativePublication V1` proposal is
+retained as future hardening rather than a prerequisite for this experiment.
+An isolated full-stack cold start executed the exact DLL above on D2R
+3.3.93847 with D2RLoader 1.2, the active RuffnecKk Suite and all five eezstreet
+plugins. It accepted every D2RCore provider and live unwind contract, published
+G0/G10/G9/G1-G4, compiled 190 TXT tables, selected the RotW ItemStatCost table
+at revision 1 (`rows=400`, `G0-builds=2`, `SchemaReady=true`) and reached
+`D2R startup complete`. D2RLoader reported 36 plugins loaded, two known
+unrelated mod-local failures (Stash Search and Revive Overhaul) and 17 patches.
+This closes mod-local publication
+and cold-start only: persistence execution, functional 0x9C/0x9D cases,
+save/reload, gameplay and multiplayer remain NOT RUN.
 
 ## Planned release installation contract
 

@@ -1,9 +1,12 @@
 #pragma once
 
 #include "isc12_native_sites.hpp"
+#include "isc12_publication_lease.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <span>
 
 namespace ruffneckk::isc12 {
@@ -35,80 +38,6 @@ struct CodecByteMutation {
 };
 
 class LoaderCodecPatchAuthority;
-
-// A live lease is the only acceptable proof that no native consumer can
-// execute while the canonical codec transaction is preflighted and published.
-// The pinned PluginSDK exposes no such authority, so production code has no
-// issuer yet. This deliberately keeps every codec mutation unreachable until a
-// loader-owned, documented quiescence transaction is available.
-class NativePublicationQuiescenceLease final {
-public:
-    using ValidateFn = bool (*)(void* context) noexcept;
-    using ReleaseFn = void (*)(void* context) noexcept;
-
-    constexpr NativePublicationQuiescenceLease() noexcept = default;
-    NativePublicationQuiescenceLease(
-        const NativePublicationQuiescenceLease&) = delete;
-    auto operator=(const NativePublicationQuiescenceLease&)
-        -> NativePublicationQuiescenceLease& = delete;
-
-    NativePublicationQuiescenceLease(
-            NativePublicationQuiescenceLease&& other) noexcept
-        : context_{other.context_},
-          validate_{other.validate_},
-          release_{other.release_} {
-        other.context_ = nullptr;
-        other.validate_ = nullptr;
-        other.release_ = nullptr;
-    }
-
-    auto operator=(NativePublicationQuiescenceLease&& other) noexcept
-            -> NativePublicationQuiescenceLease& {
-        if (this == &other) return *this;
-        Reset();
-        context_ = other.context_;
-        validate_ = other.validate_;
-        release_ = other.release_;
-        other.context_ = nullptr;
-        other.validate_ = nullptr;
-        other.release_ = nullptr;
-        return *this;
-    }
-
-    ~NativePublicationQuiescenceLease() { Reset(); }
-
-    [[nodiscard]] auto IsHeld() const noexcept -> bool {
-        return validate_ && validate_(context_);
-    }
-
-#if defined(ISC12_CODEC_PATCH_TESTING)
-    [[nodiscard]] static auto ForTesting(
-            void* context,
-            ValidateFn validate,
-            ReleaseFn release = nullptr) noexcept
-            -> NativePublicationQuiescenceLease {
-        return NativePublicationQuiescenceLease{context, validate, release};
-    }
-#endif
-
-private:
-    constexpr NativePublicationQuiescenceLease(
-            void* context,
-            ValidateFn validate,
-            ReleaseFn release) noexcept
-        : context_{context}, validate_{validate}, release_{release} {}
-
-    void Reset() noexcept {
-        if (release_) release_(context_);
-        context_ = nullptr;
-        validate_ = nullptr;
-        release_ = nullptr;
-    }
-
-    void* context_{};
-    ValidateFn validate_{};
-    ReleaseFn release_{};
-};
 
 class CodecPatchActivationTargets {
 public:
@@ -238,10 +167,20 @@ enum class CodecPatchCommitStatus : std::uint8_t {
 struct CodecPatchCommitResult {
     CodecPatchCommitStatus status{CodecPatchCommitStatus::InvalidPlan};
     CodecPatchPlanError planError{CodecPatchPlanError::None};
+    // Becomes true immediately before the first native write callback. Merely
+    // processing an already-equal resolved byte does not count as mutation.
+    bool mutationAttempted{};
     std::size_t attemptedMutations{};
     std::size_t confirmedMutations{};
     std::size_t confirmedNoOpMutations{};
     std::size_t confirmedFlushes{};
+};
+
+enum class CodecPatchPreflightStatus : std::uint8_t {
+    Prepared,
+    InvalidPlan,
+    QuiescenceRequired,
+    PreflightFailed,
 };
 
 using VerifyCodecPatternFn = bool (*)(
@@ -256,33 +195,134 @@ using FlushCodecInstructionCacheFn = bool (*)(
     void* context,
     std::uintptr_t firstRva,
     std::size_t size) noexcept;
-using ReserveCodecMutationLifetimeFn = void (*)(void* context) noexcept;
 
-struct CodecPatchCallbacks {
+struct CodecPatchPreflightCallbacks {
     void* context{};
     VerifyCodecPatternFn verifyPattern{};
+};
+
+struct CodecPatchCommitCallbacks {
+    void* context{};
     WriteCodecByteFn writeByte{};
     FlushCodecInstructionCacheFn flushInstructionCache{};
-    // Called after the complete quiescent preflight and immediately before
-    // the first native write attempt. The prepared relay/state and registered
-    // unwind table must then remain valid for the lifetime of the process,
-    // even when the write callback reports failure.
-    ReserveCodecMutationLifetimeFn reserveMutationLifetime{};
+};
+
+struct CodecPatchPreflightResult;
+
+static_assert(PreparedCodecMutationCount == 102U);
+static_assert(PreparedCodecMutableSiteCount == 24U);
+static_assert(PreparedCodecWitnessCount == 77U);
+
+// Heap-free immutable publication input produced only by the complete codec
+// preflight. It owns all 102 resolved replacement bytes and every mutation/
+// flush coordinate needed by commit, so commit performs no plan validation,
+// target resolution, fingerprinting or lifetime reservation.
+class PreparedCodecPatchPlan final {
+public:
+    PreparedCodecPatchPlan(const PreparedCodecPatchPlan&) = default;
+    PreparedCodecPatchPlan(PreparedCodecPatchPlan&&) noexcept = default;
+    auto operator=(const PreparedCodecPatchPlan&)
+        -> PreparedCodecPatchPlan& = delete;
+    auto operator=(PreparedCodecPatchPlan&&) noexcept
+        -> PreparedCodecPatchPlan& = delete;
+
+    [[nodiscard]] auto ResolvedBytes() const noexcept
+            -> std::span<
+                const std::uint8_t,
+                PreparedCodecMutationCount> {
+        return resolvedBytes_;
+    }
+
+    [[nodiscard]] auto FlushRangeCount() const noexcept -> std::size_t {
+        return flushRanges_.size();
+    }
+
+private:
+    struct FlushRange {
+        std::size_t firstMutationIndex{};
+        std::size_t mutationCount{};
+        std::uintptr_t firstRva{};
+        std::size_t size{};
+    };
+
+    constexpr PreparedCodecPatchPlan(
+            std::array<std::uintptr_t, PreparedCodecMutationCount>
+                mutationRvas,
+            std::array<std::uint8_t, PreparedCodecMutationCount>
+                expectedBytes,
+            std::array<std::uint8_t, PreparedCodecMutationCount>
+                resolvedBytes,
+            std::array<FlushRange, PreparedCodecMutableSiteCount>
+                flushRanges) noexcept
+        : mutationRvas_{mutationRvas},
+          expectedBytes_{expectedBytes},
+          resolvedBytes_{resolvedBytes},
+          flushRanges_{flushRanges} {}
+
+    std::array<std::uintptr_t, PreparedCodecMutationCount> mutationRvas_{};
+    std::array<std::uint8_t, PreparedCodecMutationCount> expectedBytes_{};
+    std::array<std::uint8_t, PreparedCodecMutationCount> resolvedBytes_{};
+    std::array<FlushRange, PreparedCodecMutableSiteCount> flushRanges_{};
+
+    friend auto PreflightPreparedCodecPatchSet(
+        const NativePublicationLeaseView& quiescence,
+        const CodecPatchActivationTargets& activationTargets,
+        const CodecPatchPreflightCallbacks& callbacks) noexcept
+        -> CodecPatchPreflightResult;
+    friend auto CommitPreflightedCodecPatchSet(
+        const NativePublicationLeaseView& quiescence,
+        const PreparedCodecPatchPlan& plan,
+        const CodecPatchCommitCallbacks& callbacks) noexcept
+        -> CodecPatchCommitResult;
+};
+
+struct CodecPatchPreflightResult {
+    CodecPatchPreflightStatus status{CodecPatchPreflightStatus::InvalidPlan};
+    CodecPatchPlanError planError{CodecPatchPlanError::None};
+    std::optional<PreparedCodecPatchPlan> plan{};
 };
 
 auto PreparedCodecPatchGroups() noexcept -> std::span<const CodecPatchGroup>;
 auto ValidateCodecPatchGroup(const CodecPatchGroup& group) noexcept
     -> CodecPatchPlanError;
 
-// Only the complete canonical G9/G1-G4 set can be committed. A live,
-// non-forgeable
-// quiescence lease must span every fingerprint check, write and cache flush. A
-// false write/flush or a lease lost after the first attempted mutation is an
-// uncertain native mutation and must force a cold restart; rollback cannot
-// safely guess which bytes were published.
+// Validates the complete canonical G9/G2/G4/G1/G3 set, resolves every dynamic
+// rel32 byte and fingerprints all 24 mutable sites plus 77 witnesses while the
+// borrowed loader lease remains held. This function never reserves process
+// lifetime and never writes native memory.
+auto PreflightPreparedCodecPatchSet(
+    const NativePublicationLeaseView& quiescence,
+    const CodecPatchActivationTargets& activationTargets,
+    const CodecPatchPreflightCallbacks& callbacks) noexcept
+    -> CodecPatchPreflightResult;
+
+// Commits only a successful immutable preflight plan. The caller must reserve
+// all relay/state/unwind storage process-lifetime before calling this function.
+// A false write/flush or lease loss after the first attempted write is
+// uncertain and requires a cold restart; rollback is intentionally absent.
+auto CommitPreflightedCodecPatchSet(
+    const NativePublicationLeaseView& quiescence,
+    const PreparedCodecPatchPlan& plan,
+    const CodecPatchCommitCallbacks& callbacks) noexcept
+    -> CodecPatchCommitResult;
+
+#if defined(ISC12_CODEC_PATCH_TESTING)
+using ReserveCodecMutationLifetimeFn = void (*)(void* context) noexcept;
+
+// Test-only compatibility surface. Production cannot combine preflight,
+// reservation and commit and therefore cannot bypass the global coordinator.
+struct CodecPatchCallbacks {
+    void* context{};
+    VerifyCodecPatternFn verifyPattern{};
+    WriteCodecByteFn writeByte{};
+    FlushCodecInstructionCacheFn flushInstructionCache{};
+    ReserveCodecMutationLifetimeFn reserveMutationLifetime{};
+};
+
 auto CommitPreparedCodecPatchSet(
-    const NativePublicationQuiescenceLease& quiescence,
+    const NativePublicationLeaseView& quiescence,
     const CodecPatchActivationTargets& activationTargets,
     const CodecPatchCallbacks& callbacks) noexcept -> CodecPatchCommitResult;
+#endif
 
 } // namespace ruffneckk::isc12
