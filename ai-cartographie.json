@@ -2081,6 +2081,148 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "ReviveOverhaul",
+                                                           "path":  "addons/ReviveOverhaul",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-standalone-d2rloader-addon",
+                                                                        "summary":  "Plugin autonome Revive Overhaul 2.1.1 de la RuffnecKk Suite : corrige le suivi des Revives, ouvre prudemment le ciblage des cadavres Champion, Unique et SuperUnique éligibles et réactive leur aura native Aura Enchanted sans conflit de propriété avec Cast Triggers.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "active"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/ReviveOverhaul/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/ReviveOverhaul/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/ReviveOverhaul/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/ReviveOverhaul/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "policy_tests.cpp",
+                                                                                                     "path":  "addons/ReviveOverhaul/src/policy_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "revive_overhaul_policy.hpp",
+                                                                                                     "path":  "addons/ReviveOverhaul/src/revive_overhaul_policy.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "testing",
+                                                                                "path":  "addons/ReviveOverhaul/testing",
+                                                                                "kind":  "directory",
+                                                                                "meta":  {
+                                                                                             "role":  "x-runtime-validation-harness",
+                                                                                             "summary":  "Harnais reproductible déployé dans le profil BKVince existant pour préparer, lancer sur GO et documenter les essais Revive Overhaul sans créer de mod ni de savepath isolé.",
+                                                                                             "agentAccess":  "read-write",
+                                                                                             "status":  "active"
+                                                                                         },
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "config",
+                                                                                                     "path":  "addons/ReviveOverhaul/testing/config",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "lab.toml",
+                                                                                                                          "path":  "addons/ReviveOverhaul/testing/config/lab.toml",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "production.toml",
+                                                                                                                          "path":  "addons/ReviveOverhaul/testing/config/production.toml",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "tools",
+                                                                                                     "path":  "addons/ReviveOverhaul/testing/tools",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "Collect-BKVinceReviveEvidence.ps1",
+                                                                                                                          "path":  "addons/ReviveOverhaul/testing/tools/Collect-BKVinceReviveEvidence.ps1",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "Get-BKVinceReviveLabStatus.ps1",
+                                                                                                                          "path":  "addons/ReviveOverhaul/testing/tools/Get-BKVinceReviveLabStatus.ps1",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "Launch-BKVinceReviveLab.ps1",
+                                                                                                                          "path":  "addons/ReviveOverhaul/testing/tools/Launch-BKVinceReviveLab.ps1",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "Prepare-BKVinceReviveLab.ps1",
+                                                                                                                          "path":  "addons/ReviveOverhaul/testing/tools/Prepare-BKVinceReviveLab.ps1",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "Restore-BKVinceReviveConfig.ps1",
+                                                                                                                          "path":  "addons/ReviveOverhaul/testing/tools/Restore-BKVinceReviveConfig.ps1",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "README.md",
+                                                                                                     "path":  "addons/ReviveOverhaul/testing/README.md",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "TEST-MATRIX.md",
+                                                                                                     "path":  "addons/ReviveOverhaul/testing/TEST-MATRIX.md",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "d2rl-ruffneckk-revive-overhaul.dll",
+                                                                                "path":  "addons/ReviveOverhaul/d2rl-ruffneckk-revive-overhaul.dll",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "NATIVE-CONTRACT.md",
+                                                                                "path":  "addons/ReviveOverhaul/NATIVE-CONTRACT.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/ReviveOverhaul/README.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "ruffneckk-revive-overhaul.toml",
+                                                                                "path":  "addons/ReviveOverhaul/ruffneckk-revive-overhaul.toml",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "VALIDATION.md",
+                                                                                "path":  "addons/ReviveOverhaul/VALIDATION.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "StaticFieldRework",
                                                            "path":  "addons/StaticFieldRework",
                                                            "kind":  "directory",
@@ -40021,6 +40163,11 @@
                                                                         "summary":  "Workflow reproductible pour construire les plugins natifs, instrumenter le runtime courant D2R 3.3 et analyser les crashs ou gels.",
                                                                         "agentAccess":  "read-write"
                                                                     }
+                                                       },
+                                                       {
+                                                           "name":  "revive-overhaul-2.1.md",
+                                                           "path":  "Mission/revive-overhaul-2.1.md",
+                                                           "kind":  "file"
                                                        },
                                                        {
                                                            "name":  "rift-terror-zone-group-3.2.md",

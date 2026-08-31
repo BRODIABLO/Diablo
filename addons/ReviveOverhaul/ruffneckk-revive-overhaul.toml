@@ -1,0 +1,36 @@
+# Revive Overhaul
+# Improves Revive following and safely expands eligible high-rank corpses.
+
+# Master switch. false loads the plugin without installing native hooks.
+enabled = true
+
+[ai]
+# Enables the Revive-only owner-following improvements.
+enabled = true
+
+# Prevents Revives from scattering when they are already beside their owner.
+disable_owner_scatter = true
+
+# Forces native catch-up behavior beyond this owner distance.
+# Accepted range: 2 to 20.
+catch_up_distance = 12
+
+# Native follow distance used after catch-up. It must remain lower than
+# catch_up_distance. Accepted range: 1 to 19.
+follow_distance = 8
+
+# Native catch-up velocity bonus. Accepted range: 0 to 255.
+velocity_bonus = 40
+
+[revive]
+# Allows eligible Champions, Uniques and SuperUniques. Native boss, scripted,
+# SwitchAI, corpse-selection, Revive and corpse-consumption checks remain active.
+allow_high_rank_monsters = true
+
+# Reactivates the exact aura skill selected by Aura Enchanted after a successful
+# Revive through the complete native assignment path. No aura is rerolled.
+preserve_native_auras = true
+
+[diagnostics]
+# Adds detailed counters to the revive-overhaul console command.
+enabled = false
