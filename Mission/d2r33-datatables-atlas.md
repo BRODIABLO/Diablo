@@ -2,10 +2,27 @@
 
 ## Statut
 
-Chantier **planifié** le 31 août 2026. Vincent a retenu l’Option A,
-« consolidation d’abord ». Cette mission ne remplace pas la priorité active
-ISC12 et n’autorise encore aucune implantation de l’atlas, aucun hook runtime,
-aucune DLL ni aucune mutation du jeu.
+Gates **A0+A1 livrés** le 31 août 2026 après le `GO` de Vincent. L’atlas reste
+un workstream en pause et ne remplace pas la priorité active ISC12. Aucune
+sortie A2, analyse A3, hook runtime, DLL, mutation du jeu ni matrice runtime
+n’a été produit.
+
+## Résultat A0+A1
+
+- Le catalogue gouverné ferme `7/7` triplets `{records, count, stride}` pour
+  `States`, `Skills`, `ItemStatCost`, `ItemTypes`, `Objects`, `Items` et
+  `Shrines`.
+- Les 28 preuves résolubles portent des claims exacts; une valeur ne peut plus
+  être changée tout en conservant silencieusement la même citation.
+- Les layouts de record restent volontairement partiels. `Objects.Parm0` et
+  `Shrines.LevelMin` demeurent `candidate` parce que leurs offsets sont
+  gouvernés mais que leur largeur n’est pas encore promue par un descriptor de
+  compilation.
+- Le validateur contrôle le schéma, les sources de preuve, les claims, les
+  overlaps, les bounds de records, les statuts `proven/candidate/unknown` et la
+  justification byte-exact des builds couverts.
+- La suite négative passe `9/9`; aucun nouveau RE, RVA, type complet, hook,
+  plugin, runtime ou fichier TXT n’a été ajouté.
 
 ## Objectif
 
@@ -138,17 +155,18 @@ dans l’atlas.
   `{records, count, stride}`, le nombre de champs à haute confiance et la
   réduction des offsets dupliqués dans les futurs travaux.
 
-## Validation prévue
+## Validation A0+A1
 
-1. `npm.cmd run re:d2r33 -- status` avant toute nouvelle analyse native.
-2. Validation JSON du catalogue et tests négatifs du schéma.
-3. Génération déterministe exécutée deux fois.
-4. Compilation d’un petit témoin des headers générés avec tous les
-   `static_assert`.
-5. Relecture des preuves via `known`, `function`, `xrefs` et `bytes` selon le
-   skill `d2r33-reverse-engineering`.
-6. `npm.cmd run verify`, validation du cadastre, `git diff --check` et examen du
-   diff complet.
+1. `npm.cmd run re:d2r33 -- status` : workbench, image, index et Ghidra prêts.
+2. `node scripts/reverse-engineering/d2r33-datatables-atlas.mjs` : `VALID`,
+   `7/7` triplets, 28 preuves, builds 92777 et 93847 couverts.
+3. `node --test scripts/reverse-engineering/d2r33-datatables-atlas.test.mjs` :
+   `9/9` tests réussis.
+4. Validation du cadastre, `git diff --check` et examen du diff dédié avant le
+   handoff.
+
+La génération déterministe et la compilation des `static_assert` appartiennent
+à A2 et n’entrent pas dans le résultat A0+A1.
 
 Aucune matrice runtime n’est requise pour le catalogue documentaire seul. Une
 future action qui lirait ou modifierait réellement le processus devra ouvrir un
@@ -169,5 +187,7 @@ Le futur lot possède `Mission/d2r33-datatables-atlas.md`, le répertoire dédi�
 `Mission/WORKSTREAMS.json` et le cadastre restent des registres partagés à
 modifier chirurgicalement. `Mission/CURRENT.md` demeure sur ISC12.
 
-**Prochain gate :** obtenir un nouveau `GO` d’implantation, puis réaliser A0 et
-A1 uniquement à partir des preuves déjà gouvernées, sans nouveau RE ni runtime.
+**Prochain gate : A2.** Après un nouveau `GO`, générer depuis le catalogue les
+vues C++ partielles et le format Ghidra reproductible, exécuter deux générations
+byte-identiques et compiler un témoin couvrant tous les `static_assert`. A3 et
+le runtime restent exclus.

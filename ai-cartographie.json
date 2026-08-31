@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-31T13:25:13.7936423+00:00",
+    "generatedAt":  "2026-08-31T14:14:34.1273387+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -40121,6 +40121,38 @@
                                                                     },
                                                            "children":  [
                                                                             {
+                                                                                "name":  "datatables-atlas",
+                                                                                "path":  "reverse-engineering/d2r-3.2.92777/datatables-atlas",
+                                                                                "kind":  "directory",
+                                                                                "meta":  {
+                                                                                             "role":  "x-d2r33-datatables-atlas",
+                                                                                             "summary":  "Catalogue gouverné des slots, compteurs, strides, fragments de records et preuves des DataTables compilées du corpus natif commun D2R 3.2.92777/3.3.93847.",
+                                                                                             "agentAccess":  "read-write",
+                                                                                             "status":  "active",
+                                                                                             "policy":  {
+                                                                                                             "canonical":  true,
+                                                                                                             "generated":  false
+                                                                                                         }
+                                                                                         },
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "atlas.schema.json",
+                                                                                                     "path":  "reverse-engineering/d2r-3.2.92777/datatables-atlas/atlas.schema.json",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "catalog.json",
+                                                                                                     "path":  "reverse-engineering/d2r-3.2.92777/datatables-atlas/catalog.json",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "README.md",
+                                                                                                     "path":  "reverse-engineering/d2r-3.2.92777/datatables-atlas/README.md",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
                                                                                 "name":  "isc12",
                                                                                 "path":  "reverse-engineering/d2r-3.2.92777/isc12",
                                                                                 "kind":  "directory",
@@ -41009,6 +41041,16 @@
                                                                             {
                                                                                 "name":  "d2r32.py",
                                                                                 "path":  "scripts/reverse-engineering/d2r32.py",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "d2r33-datatables-atlas.mjs",
+                                                                                "path":  "scripts/reverse-engineering/d2r33-datatables-atlas.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "d2r33-datatables-atlas.test.mjs",
+                                                                                "path":  "scripts/reverse-engineering/d2r33-datatables-atlas.test.mjs",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
