@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-30",
+  "updatedAt": "2026-08-31",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -740,6 +740,19 @@
         "addons/ISC12/**",
         "reverse-engineering/d2r-3.2.92777/isc12/**",
         "scripts/reverse-engineering/isc12*"
+      ]
+    },
+    {
+      "id": "d2r33-datatables-atlas",
+      "name": "D2R 3.3 DataTables Atlas",
+      "status": "paused",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/d2r33-datatables-atlas.md",
+      "nextGate": "After a separate implementation GO, define the machine-readable evidence contract and consolidate the already governed States, Skills, ItemStatCost, ItemTypes, Objects, Items and Shrines layouts without new runtime hooks or a new active-priority claim; ISC12 remains the current mission.",
+      "include": [
+        "Mission/d2r33-datatables-atlas.md",
+        "reverse-engineering/d2r-3.2.92777/datatables-atlas/**",
+        "scripts/reverse-engineering/d2r33-datatables*"
       ]
     }
   ],

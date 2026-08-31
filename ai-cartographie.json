@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-30T04:59:50.1443654+00:00",
+    "generatedAt":  "2026-08-31T13:25:13.7936423+00:00",
     "root":  {
                  "name":  "Diablo",
                  "path":  ".",
@@ -39578,6 +39578,16 @@
                                                            "name":  "CURRENT.md",
                                                            "path":  "Mission/CURRENT.md",
                                                            "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "d2r33-datatables-atlas.md",
+                                                           "path":  "Mission/d2r33-datatables-atlas.md",
+                                                           "kind":  "file",
+                                                           "meta":  {
+                                                                        "role":  "x-mission-d2r33-datatables-atlas",
+                                                                        "summary":  "Décision Option A, architecture, séquencement et gates de l’atlas gouverné des DataTables compilées D2R 3.3.",
+                                                                        "agentAccess":  "read-write"
+                                                                    }
                                                        },
                                                        {
                                                            "name":  "d2r-character-model-remodeling.md",
