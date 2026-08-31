@@ -1,25 +1,43 @@
 # Further SDK Services requests
 
+## PluginSDK v4 audit — 2026-08-31
+
+PluginSDK v4 at commit `6eb8f8b6192868214706bd6d528c5294f2f551b7`
+adds `ServiceId::Http = 16`, `ServiceId::ItemInteraction = 17`, and
+`ItemServiceV1::executeExistingItemTransaction`. The four requests below now
+have these governed statuses:
+
+| Request | v4 status | Workspace consequence |
+|---|---|---|
+| Loader-owned native publication transaction | **Open** | ISC12 remains unable to publish any native mutation. The former provisional id 16 is invalid because v4 assigns it to `Http`; only D2RLoader may reserve a replacement id. |
+| Typed item interaction events | **Delivered for the proven V1 surfaces** | `ItemInteractionServiceV1` provides semantic `Activate` events for inventory, Cube, personal stash and the current custom page. Shared stash and authoritative gameplay remain outside V1. |
+| Atomic edits and moves for existing items | **Delivered for the supported V1 operations** | `executeExistingItemTransaction` atomically debits, edits or moves up to 64 identity-preserving items, with the container restrictions documented below. |
+| Plugin-provided service discovery | **Open** | Inter-DLL providers still require an independently versioned and unload-safe discovery contract. |
+
+`HttpServiceV1`, richer lifecycle events, Hardcore/Softcore character-creation
+metadata and duplicate-Unique creation are useful v4 additions but do not close
+either remaining request. No RuffnecKk plugin was migrated as part of this
+audit.
+
 
 
 ## 1. Loader-owned native publication transaction
 
 ### Verified gap
 
-The pinned header-only PluginSDK v3 at commit
-`4933e2c42cb2592958cd0df3b6dc5003102252d1` exposes additive services through
-`QueryService`, but its public `ServiceId` values stop at `Item = 15`. Patch and
-hook calls are independent; Lifecycle and ThreadService do not exclude every
-D2R consumer. A plugin can preflight bytes, but cannot prove that executable
-publication is quiescent, globally serialized with every other publisher, or
-contained if a native write reports an uncertain result.
+The current header-only PluginSDK v4 at commit
+`6eb8f8b6192868214706bd6d528c5294f2f551b7` exposes additive services through
+`QueryService`, but its public `ServiceId` values stop at
+`ItemInteraction = 17`. Patch and hook calls remain independent; Lifecycle,
+ThreadService and the new item transaction do not exclude every D2R consumer
+or serialize executable publishers. A plugin can preflight bytes, but cannot
+prove that executable publication is quiescent, globally serialized with every
+other publisher, or contained if a native write reports an uncertain result.
 
-The minimum viable addition is one optional synchronous service. The numeric
-ID below is provisional and must be officially reserved upstream:
-
-```cpp
-ServiceId::NativePublication = 16
-```
+The minimum viable addition remains one optional synchronous service. Its
+numeric ID must be officially reserved upstream. IDs 16 and 17 are already
+assigned to `Http` and `ItemInteraction`; no local consumer may assume a
+replacement value.
 
 ```cpp
 namespace D2RL::NativePublication {
@@ -118,11 +136,11 @@ service.
 
 ### Required upstream slice
 
-The SDK change is additive: reserve the service ID, add
+The SDK change remains additive: reserve a new service ID, add
 `native_publication.h`, include it from `api.h`, list it in the SDK CMake public
-headers, and add ABI tests and normative documentation. Existing API-v3 binaries
-remain compatible; an older loader returns `UnknownService`, and the requesting
-plugin must refuse before any write.
+headers, and add ABI tests and normative documentation. Existing API-v2,
+API-v3 and API-v4 binaries remain compatible; an older loader returns
+`UnknownService`, and the requesting plugin must refuse before any write.
 
 The D2RLoader/Core implementation must add the service registry entry, startup
 barrier, global publisher coordinator, owner/thread/epoch validation, TLS
@@ -139,6 +157,29 @@ operational flags last. Until a real Core implementation exists, ISC12 keeps
 its production lease unconstructible and refuses with zero native writes.
 
 ## 2. Typed item interaction events
+
+### Status in PluginSDK v4
+
+Delivered as `ServiceId::ItemInteraction = 17` and
+`ItemInteractionServiceV1`. The loader emits a semantic `Activate` event on the
+UI thread before normal handling and supplies generation-safe item/player
+handles, the actual container, page and cell, keyboard modifiers and the active
+keyboard/mouse or controller source. Priority ordering and `Consume` provide
+the requested ordered interception boundary.
+
+V1 deliberately covers normal inventory, Cube, personal stash and current
+custom-page grids only. It does not emit shared-stash, vendor, trade, corpse,
+ground, equipment, cursor or belt interactions, and it does not perform an
+authoritative server mutation.
+
+The read-only adoption audit identifies MassID as the strongest current
+consumer: the service can replace its native client gesture seam and expose a
+controller-aware activation, while the existing host request, server-side
+validation and shared-stash path must remain. Transmogrify, Readable Items and
+PSpell Framework can later share the same client boundary, subject to the same
+authority and surface limits. No implementation changed during this audit.
+
+### Original request retained for provenance
 
 Input actions describe bindings, while tooltip listeners describe text.
 Neither reports a semantic interaction with one specific item.
@@ -181,6 +222,32 @@ The event should run on a documented UI boundary, remain independent from
 tooltip generation, and unregister automatically on unload.
 
 ## 3. Atomic edits and moves for existing items
+
+### Status in PluginSDK v4
+
+Delivered as the appended
+`ItemServiceV1::executeExistingItemTransaction` function. A transaction accepts
+up to 64 tagged `Debit`, `Edit` and `Move` operations, validates the entire set
+before mutation, supports swap/chain placement through a temporary occupancy
+model, preserves handles and native identity, and restores moved items and
+edited values when a native placement or postcondition fails.
+
+V1 moves cover normal inventory, Cube, personal stash and the current custom
+page. Equipment, cursor, belt, shared stash, trade, corpse and ground moves are
+rejected. A debit must leave a positive quantity, while atomic edits are limited
+to durability, identified state and item level.
+
+The read-only adoption audit identifies AutoSort as the strongest current
+consumer for normal inventory, Cube, personal-stash and current custom-page
+plans. Its shared-stash proxy scope and authoritative client-to-host request
+still require a separate design, so the existing planner/packet path is not yet
+removable. MassID may use atomic identified-state edits plus a tome debit, but
+the last-charge case cannot be represented by a debit that must stay positive;
+its current authoritative path therefore cannot be replaced wholesale. Gear
+Swap Inventory remains outside V1 because equipment and experimental BodyLoc
+13–20 moves are unsupported. No implementation changed during this audit.
+
+### Original request retained for provenance
 
 `ItemServiceV1` can edit one existing item, while its transaction model
 consumes inputs and creates outputs. It cannot yet atomically edit several
@@ -226,6 +293,11 @@ or shared stash. Trade, vendors, corpses, ground items, and remote contexts
 could remain unsupported until their ownership rules are proven.
 
 ## 4. Plugin-provided service discovery
+
+### Status in PluginSDK v4
+
+Open. V4 adds loader-owned services only; it does not add publication, query or
+availability subscription for plugin-provided interfaces.
 
 Plugins can expose versioned C APIs, but consumers must currently know the
 provider module and export names and manually manage availability, load order,

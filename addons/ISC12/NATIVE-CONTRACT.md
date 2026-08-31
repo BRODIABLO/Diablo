@@ -196,10 +196,14 @@ any attempted failure is a partial/uncertain commit requiring a cold restart;
 there is no speculative hot rollback. `PublishedCodecMutationCount == 0`, and
 no current loader path invokes the prepared commit function.
 
-The SDK audit is conclusive for the pinned API v3 commit
-`4933e2c42cb2592958cd0df3b6dc5003102252d1`: public service IDs stop at 15;
-Lifecycle and ThreadService define callback timing, not exclusion of every D2R
-consumer. `D2RLoaderLoadPlugin` is therefore not itself a production lease.
+The SDK audit is conclusive for API v4 commit
+`6eb8f8b6192868214706bd6d528c5294f2f551b7`: public service IDs stop at 17,
+with `Http = 16` and `ItemInteraction = 17`. Lifecycle and ThreadService define
+callback timing, and the appended existing-item transaction governs item state;
+none excludes every D2R consumer or serializes executable publishers.
+`D2RLoaderLoadPlugin` is therefore not itself a production lease. The former
+provisional `NativePublication = 16` value is retired; only D2RLoader may assign
+a replacement service ID.
 The minimum acceptable upstream contract is a synchronous, loader-owned,
 non-escaping publication callback that is valid only in a proven quiescent
 startup phase, serializes native publishers, binds owner/thread/epoch, permits
