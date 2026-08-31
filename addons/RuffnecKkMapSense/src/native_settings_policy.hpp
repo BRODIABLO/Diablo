@@ -96,7 +96,7 @@ inline constexpr std::array<ToggleKey, 5> NativeSettingsToggleKeys{{
         ToggleKey key) noexcept -> bool {
     switch (key) {
         case ToggleKey::MapSenseEnabled:
-            return config.enabled;
+            return config.featuresEnabled;
         case ToggleKey::MapOverlayEnabled:
             return config.overlay.enabled;
         case ToggleKey::ImmunitiesEnabled:
@@ -112,7 +112,7 @@ inline constexpr std::array<ToggleKey, 5> NativeSettingsToggleKeys{{
 inline void WriteToggle(Config& config, ToggleKey key, bool value) noexcept {
     switch (key) {
         case ToggleKey::MapSenseEnabled:
-            config.enabled = value;
+            config.featuresEnabled = value;
             return;
         case ToggleKey::MapOverlayEnabled:
             config.overlay.enabled = value;
@@ -324,7 +324,61 @@ inline constexpr std::array<ImmunityPalette, 3> ImmunityPalettes{
         && left.size == right.size
         && (left.shape == MonsterMarkerShape::Dot
             || left.thickness == right.thickness)
-        && SameColor(left.color, right.color);
+        && SameColor(left.color, right.color)
+        && left.showNames == right.showNames
+        && SameColor(left.nameColor, right.nameColor)
+        && left.nameSize == right.nameSize;
+}
+
+[[nodiscard]] constexpr auto SameAutomapLabelOptions(
+        const AutomapLabelOptions& left,
+        const AutomapLabelOptions& right) noexcept -> bool {
+    return left.enabled == right.enabled
+        && SameColor(left.color, right.color)
+        && left.size == right.size;
+}
+
+[[nodiscard]] constexpr auto SameAutomapObjectOptions(
+        const AutomapObjectOptions& left,
+        const AutomapObjectOptions& right) noexcept -> bool {
+    return left.enabled == right.enabled
+        && SameColor(left.color, right.color)
+        && left.size == right.size;
+}
+
+[[nodiscard]] constexpr auto SameChestOptions(
+        const ChestOptions& left,
+        const ChestOptions& right) noexcept -> bool {
+    return left.enabled == right.enabled
+        && SameColor(left.outlineColor, right.outlineColor)
+        && SameColor(left.interiorColor, right.interiorColor)
+        && SameColor(left.lockedAccentColor, right.lockedAccentColor)
+        && SameColor(left.trappedAccentColor, right.trappedAccentColor)
+        && left.size == right.size;
+}
+
+[[nodiscard]] constexpr auto SameSuperChestOptions(
+        const SuperChestOptions& left,
+        const SuperChestOptions& right) noexcept -> bool {
+    return left.enabled == right.enabled
+        && left.starsEnabled == right.starsEnabled
+        && SameColor(left.starsColor, right.starsColor)
+        && left.starsSize == right.starsSize;
+}
+
+[[nodiscard]] constexpr auto SameObjectsOptions(
+        const ObjectsOptions& left,
+        const ObjectsOptions& right) noexcept -> bool {
+    return left.enabled == right.enabled
+        && SameAutomapLabelOptions(left.exitLabels, right.exitLabels)
+        && SameAutomapLabelOptions(
+            left.waypointLabels,
+            right.waypointLabels)
+        && SameAutomapLabelOptions(left.shrineLabels, right.shrineLabels)
+        && SameChestOptions(left.chests, right.chests)
+        && SameSuperChestOptions(left.superChests, right.superChests)
+        && SameAutomapObjectOptions(left.armorRacks, right.armorRacks)
+        && SameAutomapObjectOptions(left.weaponRacks, right.weaponRacks);
 }
 
 [[nodiscard]] constexpr auto ApproximatelySameComponent(
@@ -378,6 +432,7 @@ inline void CopyNativeSettings(
         const Config& source,
         Config& destination) noexcept {
     destination.enabled = source.enabled;
+    destination.featuresEnabled = source.featuresEnabled;
     destination.diagnostics = source.diagnostics;
     destination.overlay.enabled = source.overlay.enabled;
     destination.overlay.diagnosticPreview = source.overlay.diagnosticPreview;
@@ -385,12 +440,14 @@ inline void CopyNativeSettings(
     destination.overlay.scale = source.overlay.scale;
     destination.monsters = source.monsters;
     destination.immunities = source.immunities;
+    destination.objects = source.objects;
 }
 
 [[nodiscard]] inline auto NativeSettingsEquivalent(
         const Config& left,
         const Config& right) noexcept -> bool {
     return left.enabled == right.enabled
+        && left.featuresEnabled == right.featuresEnabled
         && left.diagnostics == right.diagnostics
         && left.overlay.enabled == right.overlay.enabled
         && left.overlay.diagnosticPreview == right.overlay.diagnosticPreview
@@ -420,7 +477,8 @@ inline void CopyNativeSettings(
         && SameColor(left.immunities.cold, right.immunities.cold)
         && SameColor(left.immunities.lightning, right.immunities.lightning)
         && SameColor(left.immunities.poison, right.immunities.poison)
-        && SameColor(left.immunities.magic, right.immunities.magic);
+        && SameColor(left.immunities.magic, right.immunities.magic)
+        && SameObjectsOptions(left.objects, right.objects);
 }
 
 class NativeSettingsDraft {

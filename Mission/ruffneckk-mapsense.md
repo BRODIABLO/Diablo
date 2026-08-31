@@ -1,6 +1,6 @@
 # RuffnecKk MapSense — D2R 3.2.92777 et 3.3.93847
 
-Dernière mise à jour : 29 août 2026
+Dernière mise à jour : 30 août 2026
 
 ## Décision et état
 
@@ -69,17 +69,58 @@ chaque rang dispose maintenant d'une forme indépendante parmi `x`,
 exprimaient la portée en unités client/dimétriques de 500 à 2 500; le schéma 7
 les remplace par 30 à 220 vrais subtiles monde, avec 60 par défaut.
 
-État actuel : **MapSense 0.12.3 ferme le gate anti-spam et navigation extérieure
-en source, build, déploiement, cold start et gameplay**. Le build Release passe
-`/W4 /WX`, CTest `1/1`, le self-test du corpus gouverné et l'audit des quatre
-exports. La DLL de 2 110 976 octets porte PE 0.12.3 et SHA-256
-`79041219364681CDE412BC5B9684BA43C98AC00D32B28F53D0919A04B219CB64`;
-le runtime BKVince mod-local déployé est byte-identique. Le cold start officiel
-D2R 3.3.93847 charge 36 plugins, conserve le seul échec Revive Overhaul
-préexistant, applique les 18 patches et atteint `24/24`; MapSense rapporte zéro
-erreur et installe ses deux suppressions suivies `sFillLocation`. Vincent
-confirme ensuite la disparition du spam et les lignes vertes exactes à Tamoe
-Highland→Monastery Gate, Spider Forest, Great Marsh et Flayer Jungle.
+État actuel : **MapSense 0.13.11 est implanté comme candidat source; trois
+builds Release reproductibles et CTest `1/1` passent, mais aucun déploiement ni
+verdict gameplay 0.13.11 n'est revendiqué**. Le runtime qualifié reste 0.13.9
+sur D2R 3.3.93847 : 36 plugins, 18 patches, 190 tables TXT et `24/24`, avec
+Revive Overhaul comme seul échec plugin déjà connu. Le verdict humain 0.13.8
+avait accepté l'orientation des jungles et les étoiles des special chests, puis
+rejeté la déduplication locale générique, la géométrie du coffre et la ligne de
+progression depuis Great Marsh. Le lot 0.13.9 répondait à ces trois échecs et
+ajoutait les noms configurables de waypoints; 0.13.11 remplace maintenant le
+coffre procédural par les images exactes PrimeMH autorisées et resserre la
+coordination Reveal/navigation.
+Le master dynamique `Disable MapSense` / `Enable MapSense` et les actions
+`Arm Reveal All` / `Disarm Reveal All` restent implantés; le TOML runtime avait
+déjà migré au schéma 12 et n'était donc pas resté byte-identique au schéma 11.
+Les témoins humains Inventory, Skill Tree et Quest panel demeurent des PASS
+historiques, pas une validation implicite du nouveau hash.
+
+Le catalogue de session immuable charge en priorité `levels.txt`, `shrines.txt`,
+`superuniques.txt`, `monstats.txt` et `objects.txt` depuis les racines du mod
+actif exposées par D2RLoader. Il copie les noms UTF-8 résolus par
+`LocalizationServiceV1` avant le rendu, refuse les overrides BIN-only ou TXT
+invalides et ne cherche jamais implicitement BKVince. Le catalogue actif exige
+désormais le lancement D2R avec `-txt`; sans cette preuve, labels et objets se
+désactivent plutôt que de risquer une divergence TXT/BIN. Les IDs runtime de
+`MonStats.txt` et `Objects.txt` suivent l'ordre des lignes hors séparateur
+`Expansion`, jamais les colonnes commentaire `*hcIdx`/`*ID`. Les lignes
+techniques sans clé d'affichage restent valides. Les tests intégrés prouvent la
+priorité du TXT actif sur un fallback explicite, ces lookups ordinaux, la
+localisation UTF-8, les lignes spéciales de `levels.txt`, le rejet des doublons
+et headers invalides ainsi que l'absence de fallback BKVince. Le prédicat shrine
+générique est `InitFn == 1 && (SubClass & 1) != 0`; il conserve les Healing/Mana
+Wells qui utilisent réellement le contrat shrine et exclut les Fountain/Well
+`InitFn 16`. Les correctifs
+`sFillLocation` et les lignes verte/rouge des versions 0.12.3–0.12.5 restent en
+place; le GPS suivant les corridors est différé et ne fait pas partie de 0.13.0.
+
+La 0.13.6 refuse maintenant tout succès de localisation qui renvoie simplement
+la clé technique (`ShrId9`, `Cellar of Pity`, etc.). Les champs humains des TXT
+servent uniquement de témoins pour détecter cet écho; ils ne remplacent jamais
+le texte du jeu. Le libellé affiché vient donc toujours du service de
+localisation D2R dans la langue locale du client. L'empreinte native des POI est
+validée tôt au chargement, avant que les autres plugins puissent accrocher le
+getter partagé, puis le catalogue localisé est lié tard après l'initialisation
+de la langue. Enfin, une intention Reveal rejouée après Save & Exit n'est plus
+considérée satisfaite avant une vraie observation native de l'automap de la
+nouvelle partie.
+
+Limite de packaging assumée pour ce candidat : la DLL 0.13.0 ne redistribue pas
+les cinq TXT vanilla de Blizzard. Un mod partiel doit livrer la table concernée,
+un sous-dossier `base` cohérent ou un compagnon explicite `vanilla-excel`; une
+famille absente se désactive proprement. BKVince fournit les cinq tables actives,
+donc ce point ne bloque pas sa qualification runtime actuelle.
 
 Le lot 0.12.1 traite ensemble les régressions observées : `Present` ne bloque
 plus sur la fence d'un back buffer encore en vol; la découverte complète des
@@ -217,7 +258,8 @@ Le plugin doit permettre de configurer :
   `boss`, avec couleurs, tailles et formes distinctes;
 - les immunités physical, fire, cold, lightning, poison et magic, affichées
   comme segments ou contours colorés autour du symbole du monstre;
-- les super chests, shrines, weapon racks et armor racks;
+- les chests, leurs états locked/trapped, les super chests étoilés, les shrines,
+  weapon racks et armor racks;
 - les missiles physical, fire, cold, lightning, poison, magic, mixed et
   unknown, avec couleur et taille par catégorie;
 - les noms de destination, lignes de direction et chemins calculés vers les
@@ -271,10 +313,11 @@ rouge 24. La portée technique par défaut devient 1 000 dans la plage 500–2 5
 Ces valeurs sont implantées et le classement Champion bleu contre Unique orange
 est validé. Les immunités proposent maintenant de petits `i` colorés ou un halo
 segmenté, de une à six résistances; leur rendu, leurs tailles et leurs couleurs
-restent `NOT RUN` et soumis à l'approbation de Vincent. Les lignes Direct sont
-maintenant un candidat Release 0.9.9 hors runtime, mais épaisseur, couleurs et alignement
-restent soumis au gate visuel runtime. Entrées de niveaux, GPS, objets, polices
-et priorités de labels restent soumis à leurs gates futurs.
+restent `NOT RUN` et soumis à l'approbation de Vincent. Les lignes Direct
+qualifiées restent soumises à leurs régressions visuelles. Les labels et objets
+sont maintenant implantés dans le candidat 0.13.0, mais leurs couleurs, tailles,
+polices, priorités d'empilement et comportement en jeu restent **NOT RUN**
+jusqu'au témoin humain. Le GPS reste un lot futur séparé.
 
 Avant toute valeur visuelle de production :
 
@@ -934,14 +977,13 @@ flood par frame corrigé. Le gate performance 0.11.1 est donc **PASS gameplay**.
 
 ## Prochain gate
 
-Le gate MapSense 0.12.3 est **FERMÉ**. Le prochain lot autorisable est 0.13.0 :
-noms des levels et des shrines. Il reste planifié et ne commence pas sans un
-nouveau `GO`; les lignes rouges supplémentaires au-delà du Canyon demeurent un
-lot futur distinct.
-
-Vincent a depuis autorisé ce lot futur par `GO` : le gate actif est maintenant
-**MapSense 0.12.4 — navigation rouge statique des quêtes normales**. Les labels
-0.13.0 restent planifiés immédiatement après sa qualification.
+Le candidat MapSense 0.13.0 est **IMPLANTÉ ET VERT EN SOURCE/BUILD/TESTS
+STATIQUES**. Son prochain gate est le déploiement byte-identique avec backup,
+le cold start pile complète, les logs frais, puis la validation runtime et
+visuelle humaine des labels localisés, noms SU/boss, chests, super chests,
+racks et contrôles du menu. Les lignes rouge/verte, les correctifs
+`sFillLocation`, les marqueurs et les immunités font partie de la régression.
+Le GPS suivant les corridors reste différé et n'est pas un gate de 0.13.0.
 
 Le gate ciblé du filtre ennemi est **PASS** :
 Vincent a confirmé sous Tab que les PNJ/figurants n'ont plus de marqueur et que
@@ -1408,28 +1450,399 @@ DXGI, erreur MapSense ni nouvelle rafale `sFillLocation`. Une frame du menu est
 visuellement propre et Vincent confirme ensuite que le glitch intermittent a
 disparu avec la 0.12.5.
 
-### Tâche planifiée 0.13.0 — noms des levels et des shrines
+### Candidat implanté 0.13.0 — labels localisés et Objects
 
-Le 29 août 2026, Vincent confirme l'ajout à la ROADMAP des noms de levels et de
-shrines, mais impose le correctif du spam `sFillLocation` comme gate préalable.
-Le gate 0.12.3 est fermé; Vincent a ensuite intercalé et autorisé la 0.12.4 des
-routes rouges. Le séquencement devient donc strict : qualifier la 0.12.4, puis
-ouvrir la 0.13.0 des labels. Les changements ne doivent pas être mélangés dans
-un même candidat afin de conserver une attribution claire des régressions.
+Le 29 août 2026, Vincent autorise l'implantation en bulk après fermeture du spam
+`sFillLocation` et stabilisation des lignes de navigation. La feature GPS qui
+suivrait les corridors est remise à plus tard : 0.13.0 ajoute de l'information
+à l'automap native sans calculer de chemin.
 
 PrimeMH à la révision épinglée
-`92b6a97d8e56346f8b63a88bb647c1af044d2c8b` est retenu comme référence
-comportementale : nom blanc ombré au-dessus des sorties, nom doré ombré au-dessus
-des shrines, lecture de l'effet dynamique et couverture des objets réellement
-observés. Son code, ses assets et ses tables statiques ne sont pas copiés. La
-future implantation MapSense doit publier des snapshots POD bornés, conserver
-le renderer D3D12 in-frame, nommer toutes les sorties adjacentes exactes et
-résoudre chaque shrine depuis son `InteractType` et les tables/locales actives
-de D2R. Un well ordinaire reste hors périmètre et un shrine consommé ne doit
-plus afficher un effet disponible.
+`92b6a97d8e56346f8b63a88bb647c1af044d2c8b` reste une référence visuelle
+seulement. Son code, ses assets et ses catalogues statiques ne sont pas copiés.
+MapSense réutilise le passage automap natif déjà possédé par son unique hook et
+publie des snapshots bornés sans pointeur D2R vivant. Les sorties générées sont
+conservées comme labels persistants et résolues par `levels.txt`. Une shrine
+active garde exclusivement l'icône fournie par D2R; MapSense ajoute au-dessus le
+texte du buff issu de `shrines.txt` et de son `InteractType`, sans seconde icône.
 
-État : **PLANNED; 0.12.4 QUEST-ROUTE GATE ACTIVE; aucune source de label, configuration,
-build, déploiement ou validation gameplay n'est commencé**.
+Les snapshots monstre transportent maintenant `classId` et index Super Unique.
+Le nom vient de `superuniques.txt` pour un Super Unique, ou de `monstats.txt`
+pour les boss marqués `boss`/`primeevil`; il s'empile au-dessus du marqueur et
+des immunités. Le panneau `Monsters > Super Unique / Boss` expose
+`show_names`, `name_color` et `name_size` sans retirer le marqueur lorsque le
+nom est désactivé.
+
+La nouvelle catégorie `Objects`, placée avant Navigation, possède un master et
+des contrôles indépendants pour chaque famille. Les chests ordinaires utilisent
+la couleur normale, la couleur locked verte ou la couleur trapped rouge, avec
+priorité au piège. Les super chests ont leur propre marqueur et des étoiles
+activables, colorables et redimensionnables. Armor racks et weapon racks ont
+chacun switch, couleur et taille. Les shrines exposent seulement switch,
+couleur du texte et taille du texte; aucun contrôle d'icône MapSense n'existe.
+
+Le catalogue immuable de session lit les cinq TXT physiques du mod actif à
+partir de `PluginContext.activeMod` et `modDirectory`, puis résout et copie les
+chaînes UTF-8 avec `LocalizationServiceV1` dans la langue locale du client avant
+tout `Present`. Un override BIN-only, un header invalide, un doublon ou une
+source ambiguë échoue fermé pour la famille concernée. Aucun chemin, nom ou
+fallback implicite BKVince n'existe. Les tests couvrent la priorité du TXT actif
+sur un repli vanilla explicitement fourni, les lignes spéciales Null/Expansion,
+les lookups de chaque famille, la localisation UTF-8 et les refus précédents.
+
+État : **SOURCE, CONFIG SCHÉMA 10, DEUX BUILDS RELEASE REPRODUCTIBLES `/W4
+/WX`, CTEST `1/1`, PREUVES STATIQUES, DÉPLOIEMENT BYTE-IDENTIQUE, COLD START
+PILE COMPLÈTE ET TÉMOIN VISUEL CIBLÉ PASS**. Le runtime affiche le nom persistant
+de la sortie Stony Field en jaune dans Cold Plains et expose tous les contrôles
+0.13.0 attendus. Les objets aléatoires réels, les noms SU/boss rencontrés, les
+autres locales, TCP/IP, la manette et la matrice de résolutions restent
+explicitement `NOT RUN`; aucun de ces suivis n'invalide le lot implanté.
+
+### Validation runtime 0.13.0 — 29 août 2026
+
+Les deux clean builds finaux
+`analysis-cache/mapsense-0130-final-a-20260829` et
+`analysis-cache/mapsense-0130-final-b-20260829` passent chacun CTest `1/1` et
+produisent la même DLL de 2 617 856 octets, PE/PluginInfo `0.13.0`, avec les
+quatre exports attendus et SHA-256
+`F70C93B3001730C082C48544F92F82540707213DCB704F3BECD56D6583D5C329`.
+Cette DLL est déployée byte-identique dans le profil BKVince mod-local. Le TOML
+personnel schéma 9 est accepté par la migration mémoire, n'est pas réécrit et
+reste byte-identique au SHA-256
+`F24BA394B59D431D0F66C25EA413DBBA5F114107F0F3092DD39B2DF936ABFDB0`.
+
+Le cold start frais utilise exactement
+`D2RLoader.exe -mod BKVince -txt -offline` sur D2R officiel `3.3.93847`, build
+key `623f7a1f73eabb08ccb2b2046e3f9164`, avec la pile complète inchangée. D2RLoader
+charge MapSense 0.13.0 mod-local, rapporte 36 plugins chargés, l'unique échec
+Revive Overhaul déjà connu et 18 memory patches, recompile 190 tables depuis
+TXT puis atteint `24/24` et `D2R startup complete`. L'assertion TACT récurrente
+est capturée et ignorée par `ignored_asserts.txt`; aucune nouvelle erreur
+MapSense, erreur DXGI ou occurrence `sFill` n'apparaît dans les logs frais.
+
+Le témoin gameplay entre avec `QtyTester`, voyage de Rogue Encampment vers Cold
+Plains, ouvre l'automap puis confirme le libellé jaune persistant `Stony Field`
+sur son ancre physique, avec les lignes verte/rouge et les marqueurs existants
+toujours actifs. Le panneau in-frame confirme `Monsters > Super Unique / Boss >
+Names`, puis la catégorie `Objects` et son master : labels de sortie, texte seul
+des shrines, chests normal/locked/trapped, super chests avec étoiles, armor
+racks et weapon racks possèdent tous leurs switches, couleurs et tailles. La
+partie est quittée par `Save and Exit`, puis D2R est fermé proprement; aucun
+processus D2R/D2RLoader ne subsiste.
+
+Le backup récupérable du runtime 0.12.5 et du TOML pré-déploiement se trouve
+sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.0-20260829T192433/`.
+
+### Correctifs 0.13.1–0.13.6 — panneaux, vrais noms et reprise Reveal
+
+Les retours gameplay suivant 0.13.0 ont mis en évidence trois régressions
+distinctes : le rendu MapSense traversait certains panneaux natifs; la
+localisation pouvait accepter comme nom joueur une clé technique renvoyée en
+écho; les intentions Reveal rejouées trop tôt au chargement pouvaient être
+marquées acceptées avant que l'automap de la nouvelle partie existe réellement.
+Les itérations 0.13.1–0.13.5 ont stabilisé l'occlusion native sans cacher le
+menu MapSense ni neutraliser ses hotkeys. Le 30 août, Vincent confirme les
+témoins Inventory, Skill Tree et Quest panel : **PASS gameplay**.
+
+La 0.13.6 sépare ensuite l'initialisation POI en deux phases. L'empreinte
+fail-closed des fonctions, signatures et ABI natives est validée au chargement
+du plugin, avant la prise de hook concurrente observée sur le getter de classe;
+le catalogue immuable est seulement lié après `LocalPlayerReady`, lorsque le
+service de langue D2R peut produire de vraies chaînes joueur. Un retour identique
+à la clé demandée, notamment `ShrId*` ou une clé technique de `Levels.txt`,
+reste non localisé et n'est jamais dessiné. Les colonnes humaines du TXT sont
+des témoins d'écho, pas un fallback d'affichage. Les tests couvrent notamment
+`Cellar of Pity`/`Frozen River`, `Crystalized Cavern Level 1`/`Crystalline
+Passage` et `ShrId9`/`Resist Cold Shrine` sans hardcoder leur traduction.
+
+La reprise Reveal conserve toujours uniquement des intentions process-locales
+par difficulté, sans sidecar ni mutation des sauvegardes. Après `GameLeft`, une
+nouvelle session réarme l'intention; une tentative précoce ne la consomme plus.
+Seul un passage automap natif réel de la nouvelle partie peut confirmer le
+niveau rejoué. Le test unitaire exécute explicitement session 101, `GameLeft`,
+session 102 et prouve la conservation de l'intention avec remise à zéro des
+acceptations propres à la session.
+
+Les clean builds finaux
+`analysis-cache/mapsense-0136-final-a-20260830` et
+`analysis-cache/mapsense-0136-final-b-20260830` passent chacun CTest `1/1` et
+produisent une DLL byte-identique de 2 632 192 octets, PE/PluginInfo `0.13.6`,
+avec les quatre exports attendus et SHA-256
+`B4F837E4AD85991DC43FBB43BDEAC43423975F62D3465A2DDD8B409BA422E14B`.
+La DLL mod-locale BKVince déployée possède le même hash. Le TOML personnel
+reste byte-identique au SHA-256
+`ADF1CDD796772EC34E53CCA1BFB8D2981CECB73FA2D26089E560CF73413023A6`.
+
+Le cold start frais 0.13.6 utilise la pile complète avec
+`D2RLoader.exe -mod BKVince -txt -offline` sur D2R officiel 3.3.93847. Il charge
+36 plugins et 18 patches, recompile 190 tables TXT, atteint `24/24` et
+`D2R startup complete`. MapSense installe ses deux suppressions `sFillLocation`,
+ses hooks DXGI/D3D12 fail-closed et son hôte in-frame sans reproduire l'échec
+POI `0x349860` au chargement. L'instance reste ouverte au frontend : le bind
+localisé après entrée en partie ainsi que les témoins vrais noms de shrine,
+vrais noms d'exits et Reveal → Save & Exit → retour restent **NOT RUN**.
+
+Le backup récupérable du runtime 0.13.5 et du TOML pré-déploiement se trouve
+sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.6-localization-reveal-20260830T000126/`.
+
+### Candidat 0.13.7 — lisibilité D2R et libellés de sorties distantes
+
+Le 30 août 2026, Vincent demande un lot visuel cohérent plutôt que plusieurs
+gates : texte des shrines réellement au-dessus de l'icône native, police D2R,
+jaune par défaut identique pour shrines et sorties, tailles largement
+configurables, et coffres translucides dont les lignes structurelles sont
+bleues, l'intérieur or, sans motifs décoratifs, avec lock conservé. Un coffre
+verrouillé utilise désormais l'ambre et non le vert; un coffre piégé conserve
+le rouge. Les labels sont soumis dans une passe finale afin qu'aucun coffre ou
+rack ne puisse les recouvrir. L'asset PrimeMH consulté reste une référence
+visuelle read-only : sa licence interdit la redistribution et aucun de ses
+pixels n'est repris dans le rendu clean-room MapSense.
+
+Le premier témoin 0.13.7 invalide le diagnostic initial de simple refresh : la
+projection fonctionnait, mais le resolver ne publiait que le Level courant.
+Reveal Level reconstruit donc uniquement ce Level; Reveal Act, Reveal All et le
+replay whole-act parcourent maintenant la chaîne bornée des `Level*` appartenant
+au DRLG actif et remplacent le catalogue par les sorties physiques de tous les
+Levels matérialisés. Le changement de Level conserve ce catalogue; seuls les
+changements d'acte ou de session le vident. Les lignes Direct-navigation restent
+volontairement courantes au Level. Le nom d'une shrine n'est plus déduit de sa
+seule Unit vivante : le hook observe aussi que le renderer automap natif vient
+réellement de soumettre cette shrine, afin de ne jamais laisser de texte sans
+l'icône D2R correspondante. La marge mesurée label/icône passe à 12 pixels.
+
+Le même témoin a montré Aanishu recouvert par son pack. La passe monstre est
+maintenant ordonnée `normal < minion < champion < unique < superunique/boss`;
+un boss `MonStats` est promu même si son rang runtime n'est pas superunique, et
+tous les noms de boss sont rendus après les icônes et indicateurs d'immunité.
+
+Le build Release x64 et CTest passent (`1/1`). La DLL corrigée mesure 2 656 768
+octets, porte PE/PluginInfo `0.13.7`, expose les quatre exports attendus et vaut
+SHA-256
+`EF57D9CA16705BE6F2934942CD412700CCDF2B456B94EEAC60C13739EB217643`.
+Le même hash est déployé dans le profil BKVince mod-local. Le TOML personnel
+schéma 10 n'a pas été écrasé et reste au hash
+`9BF683A053F0DAA71A0EFE02379DE0859304D100FD0A0977BA3AB09C60CFB9FC`;
+sa migration mémoire vers le schéma 11 ne remplace que les trois anciennes
+couleurs exactement égales aux defaults, et préserve toute couleur custom.
+Le premier candidat visuel 0.13.7 (`4EEEA69A…AAC`) et ce TOML sont conservés sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.7-act-labels-shrine-priority-20260830T081528/`;
+le rollback exact 0.13.6 reste sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.7-visual-exits-20260830T075047/`.
+
+Le cold start frais utilise la pile complète avec
+`D2RLoader.exe -mod BKVince -txt -offline` sur D2R officiel 3.3.93847, Build Key
+`623f7a1f73eabb08ccb2b2046e3f9164`; `.build.info` et `D2R.exe` conservent leurs
+hashes gouvernés. MapSense 0.13.7 accepte son empreinte fail-closed, trouve
+Exocet dans le package actif, installe ses hooks D3D12 et suppressions
+`sFillLocation`, puis lie le catalogue localisé après l'initialisation langue.
+D2RLoader charge 36 plugins et 18 patches, recompile 190 tables TXT, atteint
+`24/24` et `D2R startup complete`. L'échec Revive Overhaul et l'assertion TACT
+capturée restent les deux incidents préexistants documentés; aucune erreur
+MapSense fraîche n'apparaît. Le cold start exact du hash corrigé à 08:19 charge
+également 36 plugins, applique 18 patches, recompile 190 tables, atteint `24/24`
+et initialise Exocet ainsi que l'hôte D3D12 in-frame; seul l'échec Revive
+Overhaul déjà connu demeure.
+
+La validation gameplay visuelle demeure **EN COURS / NOT RUN** pour le hash
+exact : confirmer les ancres au-dessus des icônes, la police et les couleurs,
+le nouveau coffre translucide, les vrais noms localisés de shrine/exit, puis
+Reveal All avec déplacement de l'automap vers toutes les sorties distantes sans
+déplacer le personnage. Reveal → Save & Exit → nouvelle partie reste aussi un
+témoin gameplay explicite; le build et le cold start ne le transforment pas en
+PASS implicite.
+
+### Lot 0.13.8 approuvé — intersections orientées, rendu protégé et contrôle global
+
+Le 30 août 2026, Vincent donne explicitement **GO** pour ce lot dans la DLL
+autonome `RuffnecKkMapSense`, membre indépendante de la RuffnecKk D2RLoader
+Suite. La portée globale/mod-locale, la configuration TOML dédiée, la baseline
+SDK, l'empreinte native fail-closed et les propriétaires de hooks existants
+restent inchangés; aucune DLL d'eezstreet n'est modifiée, liée ou redistribuée.
+
+Le contrat approuvé traite chaque frontière physique comme une arête non
+orientée et n'affiche qu'un seul nom à son intersection. Le nom présenté est
+celui de l'autre côté relativement au Level courant : depuis une zone
+antérieure on voit la zone suivante, depuis une zone ultérieure on voit la zone
+précédente. La distance dans le graphe matérialisé tranche d'abord; l'ordre de
+progression canonique ne sert que de départage stable, notamment dans les
+bifurcations de l'acte III. Les labels de Level et de shrine sont rendus dans
+une couche protégée finale; les icônes, immunités et noms de monstres doivent
+s'en écarter sans modifier la priorité de rang monstre déjà validée.
+
+La détection des special/sparkly chests est globale et sémantique, jamais
+spécifique à Lower Kurast. Elle combine les classes runtime, leurs fonctions
+d'initialisation et les presets dédiés matérialisés par le DRLG; Lower Kurast
+est seulement le témoin gameplay le plus simple. Tous les special chests
+réutilisent une géométrie clean-room commune de coffre en trois-quarts : rail
+supérieur horizontal, contours bleus, intérieur or translucide, lock conservé,
+aucun motif, et étoiles configurables au-dessus. La configuration sépare le
+master coffre, la taille et la palette communes des accents locked/trapped et
+des paramètres d'étoiles.
+
+Le panneau obtient un master runtime persistant distinct du kill-switch de
+chargement. Son bouton est dynamique : `Disable MapSense` lorsque les features
+sont actives, puis `Enable MapSense` lorsqu'elles sont suspendues. Le lanceur,
+le panneau et leurs hotkeys restent accessibles dans les deux états; les
+préférences individuelles et l'intention Reveal All sont conservées. Cette
+suspension ne peut pas remettre du brouillard sur des cellules déjà révélées
+par D2R. Les actions deviennent idempotentes et portent les libellés
+`Arm Reveal All` et `Disarm Reveal All`.
+
+Le candidat Release 0.13.8 mesure 3 043 328 octets et vaut SHA-256
+`FC5BDD5BA37FE8BE9A8F3FEC7C99375CF4DCF18FA876B74B37C84564FCC39A59`.
+Deux builds Release `/W4 /WX` issus d'un rebuild propre sont byte-identiques;
+CTest `1/1`, PE/PluginInfo 0.13.8 et les quatre exports passent. La DLL déployée
+dans le profil BKVince porte exactement le même hash et la même taille.
+
+Le cold start daté du 30 août 2026 charge MapSense 0.13.8 dans la pile complète,
+36 plugins et les cinq DLL eezstreet, applique 18 patches, recompile 190 tables
+TXT et atteint `24/24` puis `D2R startup complete`. MapSense valide son empreinte
+fail-closed, acquiert la command queue D3D12 exacte, initialise l'hôte ImGui
+in-frame, charge Exocet et rend le catalogue localisé disponible. Aucune erreur
+MapSense fraîche n'apparaît; Revive Overhaul reste l'unique échec plugin connu
+et l'assertion TACT ignorée reste l'incident loader préexistant. Le témoin visuel
+du même processus montre le launcher et le panneau 0.13.8 en jeu, dont le bouton
+actif `Disable MapSense` et les actions idempotentes `Arm Reveal All` /
+`Disarm Reveal All`. Les gates build, tests, déploiement et cold start sont donc
+**PASS**. Le verdict gameplay ultérieur accepte l'orientation des jungles et
+les étoiles des special chests, mais rejette le spam de labels aux frontières,
+la silhouette du coffre et l'absence de route verte utile depuis Great Marsh.
+Ces trois points sont donc **FAIL 0.13.8** et motivent le lot 0.13.9; la bascule
+off/on demeure à revalider sur le nouveau candidat.
+
+### Lot 0.13.9 autorisé — identité physique, route Great Marsh et noms de waypoints
+
+Le 30 août 2026, Vincent donne **GO** à la correction complète. Les sorties
+outdoor retiennent maintenant une identité persistable formée de l'axe, de la
+coordonnée fixe de la seam et de l'intervalle exact. Deux côtés réciproques de
+la même frontière partagent cette identité même si leur point projeté diffère;
+ils sont rendus une seule fois. Deux intersections structurellement distinctes
+ne sont jamais fusionnées, même sous le seuil spatial historique. Une preuve
+native plus forte peut déplacer le point affiché sans effacer l'identité de la
+frontière. L'ancre native du Monastery Gate reste canonique et absorbe tous les
+fragments de cette seule façade. Les tests couvrent les identités Right/Left,
+la fusion au-delà de dix subtiles, la séparation sous dix subtiles, l'ancre
+canonique et les deux vrais chemins outdoor de la fixture jungle.
+
+Great Marsh conserve `77 → 78` comme cible principale lorsqu'une sortie directe
+Flayer Jungle existe. Quand le seed fait de Great Marsh une branche morte, la
+sortie exacte `77 → 76` devient le prochain hop vert vers Spider Forest puis son
+bypass Flayer Jungle. Aucun point Flayer Jungle n'est inventé; les fixtures
+prouvent la priorité 78, le fallback 76 et l'absence de destination sans preuve.
+
+Le coffre est redessiné à neuf sans reprendre la géométrie rejetée : faces
+trois-quarts régulières, rail supérieur, seam du couvercle et base horizontaux,
+diagonales cohérentes, contours bleus, aplats or plus transparents, lock centré
+et aucun motif. Les étoiles de special chest, déjà acceptées, ne changent pas.
+
+Les waypoints utilisent le preset généré exact déjà résolu par la navigation,
+y compris dans les cinq villes. Un POI séparé et retenu affiche
+`<nom localisé du niveau> Waypoint` au-dessus de l'icône native; il reste actif
+si la ligne bleue est désactivée. Reveal Level capture le waypoint du niveau
+révélé; Reveal Act et Reveal All capturent ceux de tous les niveaux effectivement
+matérialisés par leur parcours. Au Save & Exit, les coordonnées copiées sont
+invalidées avec la session. Seuls les intents Reveal restent en mémoire de
+processus, puis leur replay reconstruit le catalogue depuis la nouvelle seed :
+aucune position de l'ancienne partie n'est réutilisée. Activation, jaune et
+taille sont configurables sous `Objects`; le texte est précomposé dans le
+catalogue immuable et rendu dans la couche protégée avec séparation des noms de
+sorties. Le schéma 13 ajoute
+`[objects.waypoint_labels]`; les schémas 1–12 migrent vers activé, jaune et
+28 px sans écraser les préférences existantes.
+
+Le collecteur Reveal-wide est maintenant strictement passif : il ne demande
+aucune `ActiveRoom` supplémentaire et parcourt seulement les `DrlgRoom`,
+`RoomTile` et `PresetUnit` que D2R a déjà générés. Un preset waypoint unique
+donne sa position exacte; une ambiguïté conserve l'ancien owner. Les pending
+sorties et waypoint sont publiés indépendamment, donc une famille incomplète
+n'efface ni ne bloque une preuve complète de l'autre. La matérialisation
+bornée reste réservée au resolver du niveau courant.
+
+Deux builds Release propres et le build normal sont byte-identiques; CTest
+`1/1` passe dans les deux arbres propres. La DLL de 3 117 568 octets porte
+PE/PluginInfo 0.13.9, expose les quatre exports attendus et vaut SHA-256
+`5C0FD8DE0D143FEF4B4D04C86C2F1D1D1B4B35379EE70CF372D46A0CD9BD1E9F`.
+Le même hash est maintenant déployé mod-local dans BKVince. Le cold start frais
+officiel D2R 3.3.93847 du 30 août accepte l'empreinte fail-closed complète,
+initialise l'hôte D3D12/ImGui, compile 190 tables TXT, charge 36 plugins dont les
+cinq eezstreet, applique 18 patches et atteint 24/24. Revive Overhaul demeure
+l'unique échec plugin préexistant. Le TOML personnel a migré du schéma 12 au
+schéma 13 sans perdre ses choix; après le test off/on, il conserve
+`features_enabled = true`, les waypoint labels activés et vaut SHA-256
+`748CF1EED016DD31EA1B58D13EA2B7C1A1CDDB6C0A2748F3B3B63609B3E3FE46`.
+
+Le témoin live du même processus ferme trois gates 0.13.9 : le master switch
+passe de `Disable MapSense` à `Enable MapSense` puis revient sans crash;
+`Arm Reveal All` affiche `Kurast Docks Waypoint` en jaune au-dessus du waypoint
+natif; après un vrai Save & Exit puis une nouvelle partie Insanity, sans
+réarmer, l'automap révélée et ce nom de waypoint sont reconstruits. L'intent
+Reveal survit donc au Save & Exit dans le même processus et la nouvelle session
+recalcule ses POI au lieu de réutiliser les coordonnées quittées.
+
+La déduplication générique, la silhouette finale du coffre, la route Great
+Marsh et les trois transitions Frigid Highlands restent des gates gameplay
+ouverts. Le crash Frigid Highlands reste
+**non attribué** : le rapport frais montre une écriture nulle pendant
+l'allocation native des données d'un portail permanent dans `D2RLoader.exe`,
+aucune frame MapSense finale, une frame de retour BurnDamageFix non causale à
+elle seule, et un assert TACT antérieur d'ordre temporel inconnu. Une influence
+indirecte n'est pas exclue; trois transitions avec la pile complète et, en cas
+de récidive, un dump complet restent le gate honnête.
+
+### Candidat 0.13.11 — artwork PrimeMH exact et coordination Reveal
+
+Le 30 août 2026, Vincent confirme avoir obtenu de Joffreybesos la permission
+d'utiliser les images exactes de PrimeMH, choisit explicitement l'option A et
+donne `GO` : les chests ordinaires emploient `chest.png`; tous les chests
+spéciaux emploient `superchest.png` avec les trois étoiles PrimeMH déjà
+intégrées. MapSense n'altère ni la palette ni les pixels de ces images. Il
+ajoute seulement une serrure d'état séparée lorsque le chest est réellement
+locked ou trapped; les valeurs par défaut sont aqua et rouge, le piège garde
+la priorité, et les deux couleurs restent configurables.
+
+Les payloads autorisés sont intégrés dans la DLL et décodés une seule fois par
+WIC lors de l'initialisation du renderer. `chest.png` mesure 58×50, 7 025
+octets et vaut SHA-256
+`BA429FA42223DE03E4B347E0AE5F28CE188C4CBB140687C0A526A180BF869BDC`;
+`superchest.png` mesure 69×110, 11 627 octets et vaut SHA-256
+`D3DC7EE43A74B7BEA491576DC5B7E418D0CB22D38280C773FAAC0DF5D2372D2B`.
+Le canvas spécial est ancré sur le centre du chest embarqué à `(36,85)`, pas
+sur le centre des 110 pixels, afin que ses étoiles montent au-dessus sans
+décaler le coffre. Deux SRV dédiés suivent le même cycle reset/resize/shutdown
+que l'atlas ImGui. Un échec de décodage ou d'upload masque les textures et
+conserve le dessin procédural historique comme fallback fail-safe.
+
+Le schéma 14 conserve les anciennes clés de palette et d'étoiles pour rollback
+et compatibilité de lecture, mais le panneau ne présente plus ces contrôles
+trompeurs : seules la visibilité, la taille et les deux couleurs de serrure
+d'état restent utiles. L'ancien amber exact `#D89B2BFF` migre vers l'aqua
+`#00FFFFFF`; toute couleur personnalisée survit. Le crédit documenté est :
+« Exact PrimeMH chest artwork by Joffreybesos, used with permission obtained by
+Vincent Barrière on 2026-08-30. »
+
+Le même candidat resserre la séquence Reveal All signalée comme lente. Un
+`ActChanged` sans LevelId ne soumet plus une tâche anonyme susceptible de viser
+le DRLG précédent; `LevelChanged` ou le premier callback automap fournit la
+cible précise. Un Reveal Act/Arm explicite accepté et confirmé par le parcours
+direct du niveau courant crédite immédiatement l'acte au lieu de programmer le
+même replay 250 ms plus tard. Tant qu'une réconciliation Reveal est active,
+les refresh navigation concurrents sont différés; chaque chemin terminal en
+demande ensuite un seul. Aucune nouvelle RVA, signature, structure, ABI ou
+surface de hook n'est introduite : `npm run re:d2r33 -- status` confirme le
+workbench commun 3.2/3.3 prêt et vérifié.
+
+Qualification statique finale : le build normal et deux arbres Release propres
+sont byte-identiques. La DLL de 3 153 920 octets porte PE/PluginInfo 0.13.11,
+expose `D2RLoaderGetPluginInfo`, `D2RLoaderLoadPlugin`,
+`D2RLoaderUnloadPlugin` et `RuffnecKkMapSenseGetOverlayHostApi`, et vaut
+SHA-256
+`388A26155ACFDB2B3F38243E88C19C75ED6F5027146339BF799BA18BDB2D69BA`.
+CTest rapporte `1/1` dans les trois arbres et `git diff --check` est propre.
+Conformément à la demande de Vincent, l'agent n'a ni arrêté/lancé D2R, ni
+déployé la DLL, ni transformé ces preuves en validation visuelle ou en mesure
+de latence gameplay.
 
 ## Validation future
 
@@ -1462,11 +1875,27 @@ statique ou cold start ne sera transformé en succès gameplay.
 
 ## Rollback et frontière Git
 
-Le runtime BKVince normal porte MapSense 0.12.1, SHA-256
-`DAB61AADE352C87B9CA4F57DF1184EAA663617103AC7B1B9B80182066F8C39B4`;
-le TOML runtime demeure sur `diagnostics = false` et le rayon choisi de 170
-vrais subtiles, SHA-256
-`B6243A1ACD240BF1D6F9955AD16D462BA58A9BABA0F82459CB5E2512613E9EEE`.
+Le runtime BKVince porte actuellement le candidat MapSense 0.13.9, SHA-256
+`5C0FD8DE0D143FEF4B4D04C86C2F1D1D1B4B35379EE70CF372D46A0CD9BD1E9F`.
+Le TOML personnel schéma 13 post-migration vaut SHA-256
+`748CF1EED016DD31EA1B58D13EA2B7C1A1CDDB6C0A2748F3B3B63609B3E3FE46`.
+Le rollback immédiat sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.9-predeploy-20260830T140216/`
+conserve la DLL 0.13.8 exacte de SHA-256
+`FC5BDD5BA37FE8BE9A8F3FEC7C99375CF4DCF18FA876B74B37C84564FCC39A59`
+et le TOML personnel schéma 12 pré-migration de SHA-256
+`8A8D06D2D4837EE594018EB90FF18285B87A0AE1EBF6461C210E27F3A400A760`.
+Le rollback antérieur conserve aussi la DLL 0.13.7 de 2 913 280 octets,
+SHA-256 `AE95D7A710100A8121F10C99F34739B2444E9AFB2D759E066AC0B0D3D7AFAA15`,
+la DLL 0.13.8 exacte et son TOML sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.8-predeploy-20260830T113926/`.
+La copie exacte de rollback 0.13.5
+(`D1ADEBCCA0B15E1217A7574ABEE62CEE129712E47115FC43294D4B4609C292A4`)
+et ce TOML sont conservés sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.6-localization-reveal-20260830T000126/`.
+Le runtime 0.13.0 précédemment qualifié, ainsi que la copie exacte de rollback
+0.12.5 (`67AA43A3…FC1301CD9`), restent conservés sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.0-20260829T192433/`.
 La copie byte-identique de rollback 0.12.0 (`7E4F56DC…5AB04D9`) et ce TOML
 pré-déploiement sont conservés sous
 `analysis-cache/runtime-sync-backups/mapsense-0.12.1-20260828-181409/`.

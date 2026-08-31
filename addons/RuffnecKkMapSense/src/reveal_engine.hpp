@@ -25,9 +25,59 @@ struct RevealCounters {
 };
 
 inline constexpr std::int32_t UnknownRevealDifficulty = -1;
+inline constexpr std::int32_t UnknownRevealLevelId = -1;
 inline constexpr std::size_t RevealDifficultyCount = 3U;
 inline constexpr std::size_t RevealPersistenceActCount = 5U;
 inline constexpr std::size_t RevealPersistenceLevelCapacity = 256U;
+
+// Pure coordinator state shared with policy tests. A native automap
+// observation may arrive while a readiness retry for the same level is
+// already pending; that observation must upgrade the existing request rather
+// than being discarded as a duplicate.
+struct RevealReplayRequestState final {
+    std::uint64_t sessionGeneration{};
+    std::int32_t targetLevelId{UnknownRevealLevelId};
+    std::uint32_t retriesRemaining{};
+    bool playerReady{};
+    bool automapObserved{};
+    bool reconcilePending{};
+    bool callbackQueued{};
+};
+
+[[nodiscard]] constexpr auto MergePendingRevealAutomapObservation(
+        RevealReplayRequestState& pending,
+        std::int32_t targetLevelId,
+        bool automapObserved) noexcept -> bool {
+    if (!pending.reconcilePending) return false;
+    if (targetLevelId > 0) {
+        if (pending.targetLevelId > 0
+            && pending.targetLevelId != targetLevelId) {
+            return false;
+        }
+        // ActChanged has no LevelId and may arm an unknown request just before
+        // LevelChanged supplies the authoritative generated level. Upgrade the
+        // existing request instead of allowing the unknown act request to race
+        // and reveal the previous client DRLG.
+        pending.targetLevelId = targetLevelId;
+    }
+    pending.automapObserved = pending.automapObserved || automapObserved;
+    return true;
+}
+
+[[nodiscard]] constexpr auto CanConfirmWholeActReveal(
+        RevealOutcome actOutcome,
+        RevealOutcome currentLevelOutcome) noexcept -> bool {
+    // A successful direct current-level traversal proves that the generated
+    // client DRLG is ready. Requiring a later automap callback after that proof
+    // only resubmits the same whole-act command and stalls D2R's UI thread.
+    return actOutcome == RevealOutcome::Complete
+        && currentLevelOutcome == RevealOutcome::Complete;
+}
+
+[[nodiscard]] constexpr auto CanConfirmReplayedLevelReveal(
+        RevealOutcome outcome) noexcept -> bool {
+    return outcome == RevealOutcome::Complete;
+}
 
 // Authoritative contiguous act boundaries from the shipped D2R 3.3 Levels.txt
 // catalog (level ids 1..137). This lets reveal persistence bind an accepted
@@ -164,10 +214,8 @@ public:
                 levelId);
     }
 
-    // Reveal Act and Reveal All are process-lifetime intents, but native
-    // materialization is intentionally limited to the active client level.
-    // Each loaded level is accepted independently for the current gameplay
-    // session so no act-wide DRLG initialization or console worker is needed.
+    // Reveal Act and Reveal All are process-lifetime intents. Whole-act work is
+    // de-duplicated per session independently from single-level requests.
     [[nodiscard]] auto HasReplayIntentForLevel(
             std::int32_t difficulty,
             std::int32_t act,
@@ -189,11 +237,23 @@ public:
             std::int32_t difficulty,
             std::int32_t act,
             std::int32_t levelId) const noexcept -> bool {
-        return HasReplayIntentForLevel(difficulty, act, levelId)
-            && !Contains(
-                acceptedLevels_,
-                acceptedLevelCount_,
-                levelId);
+        if (!HasReplayIntentForLevel(difficulty, act, levelId)) return false;
+        if (ShouldRevealWholeAct(difficulty, act)) {
+            return !acceptedActs_[static_cast<std::size_t>(act)]
+                || !Contains(
+                    acceptedLevels_,
+                    acceptedLevelCount_,
+                    levelId);
+        }
+        return !Contains(acceptedLevels_, acceptedLevelCount_, levelId);
+    }
+
+    [[nodiscard]] auto ShouldRevealWholeAct(
+            std::int32_t difficulty,
+            std::int32_t act) const noexcept -> bool {
+        if (!MatchesDifficulty(difficulty) || !IsValidAct(act)) return false;
+        return revealAll_
+            || rememberedActs_[static_cast<std::size_t>(act)];
     }
 
     [[nodiscard]] auto IsLevelAccepted(
@@ -206,6 +266,13 @@ public:
                 levelId);
     }
 
+    [[nodiscard]] auto IsActAccepted(
+            std::int32_t difficulty,
+            std::int32_t act) const noexcept -> bool {
+        return MatchesDifficulty(difficulty) && IsValidAct(act)
+            && acceptedActs_[static_cast<std::size_t>(act)];
+    }
+
     [[nodiscard]] auto MarkLevelAccepted(
             std::int32_t difficulty,
             std::int32_t levelId) noexcept -> bool {
@@ -214,6 +281,17 @@ public:
             return false;
         }
         return AddUnique(acceptedLevels_, acceptedLevelCount_, levelId);
+    }
+
+    [[nodiscard]] auto MarkActAccepted(
+            std::int32_t difficulty,
+            std::int32_t act) noexcept -> bool {
+        if (sessionGeneration_ == 0U
+            || !MatchesDifficulty(difficulty) || !IsValidAct(act)) {
+            return false;
+        }
+        acceptedActs_[static_cast<std::size_t>(act)] = true;
+        return true;
     }
 
 private:
@@ -256,6 +334,7 @@ private:
     }
 
     void ResetSessionAcceptance() noexcept {
+        acceptedActs_.fill(false);
         acceptedLevelCount_ = 0U;
     }
 
@@ -266,6 +345,7 @@ private:
         RevealPersistenceLevelCapacity> rememberedLevels_{};
     std::size_t rememberedLevelCount_{};
     std::uint64_t sessionGeneration_{};
+    std::array<bool, RevealPersistenceActCount> acceptedActs_{};
     std::array<std::int32_t,
         RevealPersistenceLevelCapacity> acceptedLevels_{};
     std::size_t acceptedLevelCount_{};
@@ -284,10 +364,20 @@ struct ClientLevelView final {
     void* level{};
 };
 
+using RevealLevelInitializedCallback = void(*)(
+    std::uint8_t dataContext,
+    void* level,
+    void* userData) noexcept;
+
 auto InitializeRevealEngine(
     const D2RL::PluginContext* context,
     bool diagnostics) noexcept -> bool;
 void ShutdownRevealEngine() noexcept;
+// Observes the level only for the duration of MapSense's existing InitLevel
+// hook. The callback must not retain the borrowed native pointer.
+void SetRevealLevelInitializedCallback(
+    RevealLevelInitializedCallback callback,
+    void* userData) noexcept;
 // Session resets clear native DRLG references and diagnostics but intentionally
 // preserve process-lifetime Reveal Level, Reveal Act, and Reveal All intents.
 // The plugin coordinator invalidates them on a validated difficulty change.
@@ -296,6 +386,7 @@ void ResetRevealSession() noexcept;
 
 auto RevealCurrentZone() noexcept -> RevealOutcome;
 auto RevealCurrentAct() noexcept -> RevealOutcome;
+auto ArmRevealAll() noexcept -> RevealOutcome;
 auto ToggleRevealAll() noexcept -> RevealOutcome;
 auto DisableRevealAll() noexcept -> RevealOutcome;
 

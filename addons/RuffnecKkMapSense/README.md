@@ -1,17 +1,89 @@
 # RuffnecKk MapSense
 
 RuffnecKk MapSense is an experimental D2RLoader client plugin for Diablo II:
-Resurrected targeting builds 3.2.92777 and 3.3.93847. Version 0.12.5 is the
-current source candidate and combines the native
-map-reveal foundation, a compact in-game settings panel, simultaneous
-hostile-monster markers, configurable immunity indicators, and Direct
-navigation with static normal-quest routes and exact quest-object endpoints.
-Labels, GPS, and projectile collectors remain planned.
+Resurrected targeting builds 3.2.92777 and 3.3.93847. Version 0.13.11 is the
+current source candidate. It combines native map reveal, a compact in-game
+settings panel, hostile-monster markers, immunity indicators, Direct
+navigation, localized exit/waypoint/shrine/boss labels, and data-driven
+chest/rack markers. GPS corridor routing and projectile collectors remain
+planned.
 
-Version 0.12.5 restores strict per-back-buffer GPU fence synchronization in
-the D3D12 overlay host. It retains the 0.12.4 quest-navigation behavior while
-preventing reuse of an overlay command allocator before its previous GPU work
-has completed.
+Version 0.13.11 retains the structural identity of every proven outdoor
+boundary: axis, fixed seam, and exact interval. Reciprocal fragments with that
+same identity become one undirected physical intersection even when their
+projected coordinates differ, while genuinely separate openings remain
+separate. Relative graph distance still selects the name on the far side, and
+the native Monastery anchor remains authoritative for that generated facade.
+Retained Reveal Act/All definitions make the same rule available while panning
+the complete revealed act, including from town. Exit, waypoint, and shrine
+text owns the final protected render layer after every monster icon, immunity
+indicator, and boss name.
+
+Chest markers now use the exact transparent PrimeMH `chest.png` artwork by
+Joffreybesos. Special chests use the exact PrimeMH `superchest.png`, including
+its three integrated stars, while classification remains global from native
+object semantics such as generated `PlaceUniqueChest` presets and Arcane
+chests. MapSense preserves those source pixels and adds a separate state
+padlock only when needed: aqua for locked and red for trapped by default, with
+trap state taking priority. Both lock colors and marker size remain
+configurable. The previous procedural chest remains only as a fail-safe if the
+two D3D12 textures cannot initialize. MapSense no longer draws a second shrine
+icon; it adds only the proximity name above D2R's native marker. Waypoints gain
+an independently configurable `<localized level name> Waypoint` label above
+ D2R's native icon, sourced from the exact generated waypoint preset and
+ available even when the blue line is disabled. Reveal Level captures that
+ level's waypoint, while Reveal Act and Reveal All capture every waypoint in
+ the levels they actually materialize. The in-frame panel also has one
+persistent dynamic master control:
+**Disable MapSense** suspends every feature without erasing individual settings
+or Reveal All intent, and the same button becomes **Enable MapSense**.
+
+The 0.13.11 Reveal All coordinator also removes a duplicate whole-act replay
+window. Act changes wait for the following precise LevelId instead of queuing
+an anonymous act job, successful current-act traversal receives completion
+credit immediately, and reveal reconciliation requests one navigation rebuild
+only after the reveal work reaches a terminal state. This is intended to avoid
+the redundant reveal/navigation bursts previously observed after arming Reveal
+All and after cross-act waypoint travel; gameplay latency validation remains a
+human gate.
+
+Version 0.13.6 retains the strict per-back-buffer fence synchronization added
+in 0.12.5 and the static quest-navigation behavior from 0.12.4. It restores
+complete current-act Reveal through D2RCore's native `revealmap` command while keeping
+the fail-closed `sFillLocation` suppressions introduced in 0.12.3. It adds no
+second renderer hook: labels and objects reuse the existing native local-player
+automap pass and publish only short-lived value snapshots to Present.
+
+The 0.13.6 replay coordinator no longer equates D2RCore accepting `revealmap`
+with completed persistent work. It submits remembered whole-act work as soon as
+the new client map is ready after Save & Exit, directly confirms the current
+level, and upgrades the bounded request when D2R's first real automap pass is
+observed. Neither the replayed level nor its whole act receives per-session
+completion credit before that automap witness, so an early loading-window
+submission remains remembered and is repeated on the new game's real map.
+
+MapSense map additions use the current native viewport copied from D2R's
+borrowed `AutomapContext`, then intersect it with D2R's governed 32-byte
+interface-state table and HD side-panel geometry. This second step is required
+because D2R's native automap is hidden by panels through later draw order while
+the borrowed automap viewport itself remains full screen. Inventory and Skills
+clip the right side; Character and Quest clip the left side. Central,
+full-screen, combined, or not-yet-classified panels fail closed for map pixels.
+Navigation lines, monster icons, boss names, labels, chests and racks therefore
+remain visible only in the unobstructed region and cannot paint over a native
+panel. The movable MapSense launcher/settings menu is independent and never
+disappears merely because a native panel is open.
+
+Quest Log needs one additional native-safe rule. D2R 3.3 does not keep its
+generic interface-state byte asserted while that panel remains visible, and
+it pauses the local-player automap pass that normally refreshes MapSense's
+250 ms value snapshots. MapSense therefore polls the actual
+`QuestLogPanelExpansion`/`QuestLogPanelOriginal` visibility on D2RLoader's UI
+thread. Only while that observation is current, Quest is visible, the native
+automap state remains asserted, and no incompatible panel is open, MapSense
+retains its last pointer-free projection and clips it to the unobstructed right
+side. Closing Quest or losing the visibility proof immediately restores normal
+freshness requirements.
 
 ## Live monster markers
 
@@ -68,6 +140,14 @@ marker, with a customizable color, not the native marker texture. `x` preserves
 the earlier hollow angular cross, and `dot` provides a compact circular marker.
 Default colors remain white Normal, yellow Minion, blue Champion, orange Unique,
 and red Super Unique / Boss.
+
+Super Unique and boss names are independently configurable under
+`Monsters > Super Unique / Boss`. A Super Unique first resolves its runtime
+index through the active `SuperUniques.txt`; act bosses, quest bosses, Ubers,
+Mini-Ubers and other fixed bosses fall back to `MonStats.txt` only when that
+row carries `boss` or `primeevil`. The localized name is drawn above the
+regular marker and immunity indicators. Turning names off never removes the
+marker itself.
 
 The first in-game run of 0.7.0 exposed a rank-priority defect: Champions were
 classified as Unique. Version 0.7.1 routes production and tests through the same
@@ -170,14 +250,21 @@ and materializes each needed client room through the fingerprinted
 `DRLGROOM_CreateActiveRoom` helper. Version 0.12.2 collects both collision sides
 for each exact native `RoomsNear` pair and retains that pair's source-room
 identity, target-room identity, and fixed seam coordinate while merging
-fragments. A type-5 `RoomTile` remains higher-priority evidence. For an outdoor
-fallback, exactly one disconnected shared opening must remain; its midpoint is
-published on the source cell beside the shared seam (`fixed` for Left/Top and
-`fixed - 1` for Right/Bottom). Parallel seams and different room pairs cannot
-be cross-matched. Multiple disconnected
-openings are ambiguous and fail closed instead of selecting the widest seam.
-No rectangle-center, internal room seam, one-sided opening, or loaded-room
+fragments. A type-5 `RoomTile` remains higher-priority evidence. Each proven
+outdoor opening is published on the source cell beside the shared seam
+(`fixed` for Left/Top and `fixed - 1` for Right/Bottom). Parallel seams and
+different room pairs cannot be cross-matched. Direct navigation retains the
+first stable generated player path when jungle topology exposes several valid
+openings to the same level; exit labels retain every distinct opening. No
+rectangle-center, internal room seam, one-sided opening, or loaded-room
 fallback is published.
+
+Great Marsh has two legitimate generated topologies. A direct proven exit to
+Flayer Jungle remains the first green progression target. When Great Marsh is
+a dead-end branch, the exact return exit to Spider Forest becomes the green
+next hop because it is the real route back to the Spider Forest-to-Flayer
+Jungle bypass. MapSense never invents a Flayer Jungle coordinate that is not
+present in the generated map.
 
 Transitions represented by portal objects do not use room centers or guessed
 coordinates. MapSense traverses each materialized room's bounded native Unit
@@ -237,10 +324,10 @@ coordinates are copied before D2R may initialize a room. Version 0.10.0 first
 initializes the explicit progression target and configured custom targets that
 are direct `Vis` neighbours, then
 materializes every current-level source room before reading its RoomTile chain.
-The native town
-predicate suppresses every navigation destination, performs no waypoint/exit
-resolution, and explicitly clears the previous level's lines while the player
-is in town. Null native results produce no guessed destination. Malformed
+The native town predicate suppresses every navigation destination and waypoint
+lookup, and explicitly clears the previous level's lines while the player is
+in town. Physical exits are still enumerated there for persistent labels; they
+never become navigation lines in town. Null native results produce no guessed destination. Malformed
 pointers, cycles, oversized chains, signature mismatches, unknown names, and
 inconsistent room relationships fail closed.
 
@@ -265,6 +352,92 @@ pointer. Static quest routing and the Canyon adapter use the existing Quest
 Targets control in the panel. GPS routing is a later
 collision/room-graph lot and never silently replaces Direct mode.
 
+## Localized labels and automap objects
+
+After D2R reports `LocalPlayerReady`, MapSense reads `Levels.txt`, `Shrines.txt`,
+`SuperUniques.txt`, `MonStats.txt`, and `Objects.txt` from the mod directory
+reported by D2RLoader. Both ordinary `data/global/excel` layouts and the active
+`<mod>.mpq/data/global/excel` layout are supported. No BKVince name, level ID,
+boss roster, object ID, or English display string is compiled into this
+catalog. A contradictory active TXT, a binary-only override, invalid UTF-8,
+duplicate key, malformed row, or oversized table disables only its affected
+family instead of silently substituting unrelated data.
+
+Active mod TXT is enabled only when D2R was launched with `-txt`, which proves
+that the game and MapSense consume the same source tables. If that argument is
+absent, MapSense logs the mismatch and disables localized labels and
+data-driven objects rather than risk stale TXT/BIN semantics. Runtime IDs for
+`MonStats.txt` and `Objects.txt` are reconstructed from row order while
+excluding the `Expansion` separator; descriptive `*hcIdx` and `*ID` comment
+columns are deliberately ignored. Technical rows with an empty display key
+remain valid and simply produce no label.
+
+The plugin package does not redistribute Blizzard's five vanilla TXT
+tables. A mod must therefore provide each customized/required table in its
+active Excel root, provide a matching `base` subdirectory, or install an
+explicit trusted `vanilla-excel` companion beside the plugin. A missing family
+is reported as unavailable and only that label/object family is disabled; it
+is never replaced with a BKVince-specific catalog.
+
+The D2RLoader localization service is available before D2R has populated its
+language tables, so MapSense deliberately waits for the player-ready lifecycle
+event before resolving TXT keys. This turns keys such as `ShrId9`,
+`Crystalized Cavern Level 1`, and `Cellar of Pity` into the exact localized
+player strings used by the game instead of caching the technical keys. If no
+player-facing string has resolved yet, the catalog remains pending and retries
+on the next player/level event. Version 0.13.6 additionally detects the early
+successful key-echo state by comparing `Levels.txt:*StringName` and
+`Shrines.txt:Name` only as validation witnesses; those English comments are
+never substituted for the game locale. An unresolved key is never drawn as a
+label.
+The immutable UTF-8 results are then shared with Present; no file access or
+localization callback occurs in a frame. The merged ImGui atlas uses locally installed Windows fonts for Latin,
+Greek, Cyrillic, Vietnamese, Japanese, Korean, Simplified Chinese, and
+Traditional Chinese glyphs.
+
+Exit names come from `Levels.txt:LevelName` and are published for every
+physical generated-map exit known by the resolver, independently of whether a
+Direct navigation line is enabled. Proven outdoor observations are reduced by
+their normalized physical boundary identity; fallback spatial reduction is
+used only when one observation has no structural identity. Stronger native
+evidence may choose the displayed coordinate without erasing the proven seam,
+while distinct parallel exits to the same level retain separate labels. After
+a whole-act native reveal, MapSense
+walks the bounded generated Level chain belonging to the active act and retains
+the physical exits of every materialized Level in one projection catalog;
+current-level Direct-navigation destinations remain a separate concern.
+Waypoint text is precomposed once from the localized level name plus the fixed
+English suffix ` Waypoint`, then projected from the exact generated waypoint
+preset; no live proximity scan or render-thread string allocation is involved.
+The retained waypoint catalog is populated synchronously while Reveal still
+owns each transient generated Level. It stores only copied ids, text references,
+and coordinates for the current session; it never retains a native Level or
+Room pointer.
+Shrine names come from `Shrines.txt:StringName` only while the corresponding runtime
+shrine unit is available **and** D2R's native automap renderer has just submitted
+that unit. MapSense deliberately draws text only for a shrine; D2R's existing
+native shrine icon remains unchanged, and no orphan MapSense label remains when
+that icon is outside D2R's native visibility range.
+
+The native object/shrine fingerprint is validated during plugin load, before a
+later compatible plugin may hook a shared D2R getter. The catalog itself stays
+detached until localization is ready and is then attached without re-checking
+entry bytes that MapSense already proved. This staged initialization preserves
+both fail-closed ABI validation and coexistence with the complete plugin stack.
+
+Object families are classified from proven semantic `Objects.txt` fields, not
+fixed IDs or localized names: shrine `InitFn` 1 plus `SubClass` bit 0, chest `InitFn` 3/57,
+armor-rack `OperateFn` 19, and weapon-rack `OperateFn` 20. A live chest becomes
+a super chest when its special initializer/class semantic, a generated
+`PlaceUniqueChest` preset, or D2R's runtime `Unit+0xC8` sparkly bit proves it.
+Regular chests render the exact PrimeMH `chest.png`; special chests render the
+exact PrimeMH `superchest.png` with its integrated stars. Locked chests add the
+configured aqua state padlock, and valid trap types 1–9 take priority with the
+configured red padlock; neither state recolors the artwork. The two original
+PNG payloads are embedded byte-for-byte in the DLL and decoded once during
+renderer initialization. Used/opened objects disappear with their native
+object mode.
+
 ## In-frame settings panel
 
 MapSense renders Dear ImGui inside D2R's existing DirectX 12 frame. It creates
@@ -280,13 +453,18 @@ panel. The current candidate contains:
   automap opacity;
 - **Reveal Level**;
 - **Reveal Act**;
-- **Toggle Reveal All**;
-- **Reveal All Off**;
+- **Arm Reveal All**;
+- **Disarm Reveal All**;
+- one dynamic **Disable MapSense** / **Enable MapSense** master control that
+  preserves every individual option;
 - independent shape, color, alpha, and marker size for Normal, Minion,
   Champion, Unique, and Super Unique / Boss; each `X` or `Player Cross` category
   also exposes its own **Thickness**, while `Dot` deliberately does not;
 - immunity display mode, indicator size or halo thickness, and six element
-  colors.
+  colors;
+- an **Objects** master switch plus independent exit labels, waypoint labels,
+  shrine text, chests, super chests and stars, armor racks, and weapon racks,
+  with the relevant colors and sizes;
 - Direct-navigation thickness plus independent activation and colors for the
   waypoint, main progression, and custom-level lines; the custom section also
   shows the number of manually configured target levels.
@@ -338,7 +516,7 @@ fluidity gates remain to be measured.
 
 ## Configuration migration
 
-MapSense 0.12.2 writes configuration schema 9. Existing schemas 1 through 8 are
+MapSense 0.13.11 writes configuration schema 14. Existing schemas 1 through 13 are
 accepted only when they do not contain a removed key. Schemas 1 through 3
 migrate with `x` for every category, preserving
 the earlier hollow angular-cross appearance instead of silently changing marker
@@ -373,7 +551,43 @@ red quest family and
 exposes its switch and color in the in-game menu. Because schema 7 kept the
 reserved quest switch hidden and disabled, its exact old false value migrates
 once to enabled; schema 8 then preserves the player's explicit choice. Saving
-any accepted legacy configuration writes schema 9.
+any accepted legacy configuration writes schema 14.
+
+Schema 10 adds the optional boss-name fields and the complete `objects`
+section. Older schemas migrate to the documented 0.13.0 defaults: yellow exit
+labels, gold shrine text, boss names enabled, chest state colors, super-chest
+classification, and both rack families enabled. Every object family can be
+disabled independently in the in-game panel; unknown keys, invalid colors, and
+out-of-range text or marker sizes remain hard errors.
+
+Schema 11 changes only exact former defaults: shrine text now shares the exit
+label gold, normal chest interiors use gold, and locked chest interiors use
+amber instead of green. Every user-customized schema-10 color is preserved.
+
+Schema 12 adds the persistent `[general].features_enabled` master state. Chests
+now use `outline_color`, `interior_color`, `locked_accent_color`, and
+`trapped_accent_color`. Special chests inherit that exact palette, size, and
+geometry; their table retains only its visibility and star controls. Schemas 10
+and 11 migrate their former chest colors without losing customized values.
+
+Schema 13 adds `[objects.waypoint_labels]` with independent `enabled`, `color`,
+and `size` values. Schemas 1 through 12 migrate to enabled, Diablo gold, and
+28 px without changing any existing object, monster, navigation, or master
+setting.
+
+Schema 14 switches the rendered chest asset to the exact embedded PrimeMH
+images. The old outline/interior and star keys remain accepted and serialized
+for rollback compatibility, but only drive the procedural emergency fallback;
+the special-chest stars are part of the authorized image itself. The exact
+former amber locked-state default migrates to aqua `#00FFFFFF`; every custom
+locked or trapped color is preserved.
+
+The current defaults are 28 px for exit, waypoint, shrine, and boss text and
+36 px for chest/rack markers. The in-game sliders extend to 72 px for text
+and 80 px for object markers so labels can match or exceed D2R's large native
+NPC names. Chest pixels are fixed to the exact PrimeMH artwork; the panel
+therefore exposes marker size plus the locked/trapped state-padlock colors,
+without misleading outline, interior, or star-style controls.
 
 ## Renderer ownership and optional coexistence
 
@@ -396,22 +610,41 @@ The plugin registers four independent actions in the D2R Controls menu under
 - `Reveal Current Level` remembers the stable current LevelId and calls the
   native automap callback for every room in that level. Its stable logical ID
   remains `reveal-zone` for existing bindings.
-- `Reveal Current Act` remembers the act derived from the authoritative
-  LevelId ranges, reveals the active level natively, then applies the same
-  current-level operation as each later level in that act loads.
-- `Toggle Reveal All Acts` reveals the active level and arms that current-level
-  operation for every later loaded level in the current difficulty. Press it
-  again to disarm.
+- `Reveal Current Act` dispatches D2RCore's native `revealmap` operation for
+  the complete current act and remembers that act for later games.
+- `Toggle Reveal All Acts` reveals the complete current act immediately and
+  arms the same operation once when each later act loads. Press it again to disarm.
 - `Toggle MapSense Settings` expands or collapses the settings panel.
 
-D2R exposes generated client geometry incrementally. Version 0.12.2 therefore
-never mass-initializes unloaded acts and never dispatches D2RCore's `revealmap`
-console worker: each active client level is revealed directly through the
-already fingerprinted room callback when it loads. The plugin keeps remembered
+D2R exposes generated client geometry incrementally. MapSense never manually
+mass-initializes unloaded act levels. Whole-act requests use D2RCore's native
+`revealmap` command on D2R's UI thread; single-level requests use the already
+fingerprinted room callback. The plugin keeps remembered
 LevelIds, ActIds, and Reveal All intent for the lifetime of the MapSense
 process. Save & Exit followed by a new game at the same difficulty resets only
-per-session acceptance/deduplication and reapplies matching remembered intent
-as the new geometry appears, with at most eight retries spaced 250 ms apart.
+per-session acceptance/deduplication. After `LocalPlayerReady`, the current
+level is directly confirmed after a 750 ms readiness delay, with at most eight
+retries spaced 250 ms apart. A remembered Act or All request is then submitted
+only after the first real native automap pass for that level. Complete-act
+command acceptance and direct current-level confirmation are tracked
+independently, so an early accepted command can no longer suppress the
+per-level replay. Matching remembered levels are confirmed again as newly
+generated geometry appears.
+After whole-act acceptance, the bounded InitLevel observer builds exit labels
+and waypoint labels from every materialized Level linked to that act's generated
+DRLG. Retrying these catalogs is independent of the current-level
+Direct-navigation line, and changing levels preserves them until D2R reports an
+act or session transition. Save & Exit clears all copied positions. The
+remembered Reveal Level/Act/All intent then replays on the new game and rebuilds
+the waypoint catalog from that game's new generated seed; stale coordinates are
+never reused.
+Reveal-wide catalog collection is passive: it scans only generated `DrlgRoom`,
+`RoomTile`, and `PresetUnit` data that D2R has already linked and never calls
+`DRLGROOM_CreateActiveRoom` itself. Waypoint and exit owners settle
+independently, so one incomplete family preserves its previous proof without
+blocking a complete result from the other. Only the local-player navigation
+refresh retains the bounded room-materialization path needed for exact current
+routes.
 An actual Normal/Nightmare/Hell change clears all remembered Reveal intent;
 an unknown difficulty fails closed. `off` only disarms progressive Reveal All
 and does not erase automap exploration already held by D2R. This memory is not
@@ -457,9 +690,9 @@ hybrid DLL. D2RLoader creates `ruffneckk-mapsense.toml` in the matching config
 scope from the default embedded in the plugin.
 
 No Diablo II: Lord of Destruction installation, MPQ, map server, companion EXE,
-or external overlay is required. Reveal Level, Reveal Act, and Reveal All use
-D2R's current native client DRLG and automap callback; Act and All differ only
-in the process-lifetime intent that is reapplied as matching levels load. The
+or external overlay is required. Reveal Level uses D2R's current native client
+DRLG and automap callback; Reveal Act and Reveal All use D2RCore's native
+`revealmap` operation and differ by the process-lifetime intent applied to later acts. The
 plugin owns two independent signature-checked hooks:
 the existing level-initialization hook captures the current client DRLG, while
 the automap-unit hook publishes copied monster observations and projects Direct
@@ -484,6 +717,51 @@ Another build is covered without a duplicate gameplay matrix only when the
 governed corpus proves every native surface used by MapSense byte-identical,
 with the same RVAs, signatures, layout, and ABI. Any difference reopens a
 separate runtime qualification.
+
+Version 0.13.11 is the current **source candidate**. Its native hook/RVA/ABI
+surface is unchanged from the governed 0.13.9 runtime candidate; this increment
+adds D3D12 texture resources, chest-state rendering, schema-14 migration, and
+Reveal replay scheduling only. The embedded PrimeMH files decode to their exact
+original payloads: `chest.png` is 7,025 bytes at 58×50 with SHA-256
+`BA429FA42223DE03E4B347E0AE5F28CE188C4CBB140687C0A526A180BF869BDC`;
+`superchest.png` is 11,627 bytes at 69×110 with SHA-256
+`D3DC7EE43A74B7BEA491576DC5B7E418D0CB22D38280C773FAAC0DF5D2372D2B`.
+The normal build and two independent strict Release trees are byte-identical;
+CTest reports `1/1` passing in all three. Their 3,153,920-byte DLL carries
+PE/PluginInfo version 0.13.11, exposes the four expected exports, and has
+SHA-256
+`388A26155ACFDB2B3F38243E88C19C75ED6F5027146339BF799BA18BDB2D69BA`.
+Deployment, gameplay visuals, and the perceived Reveal All/cross-act delay
+remain intentionally unclaimed.
+
+Version 0.13.9 is the deployed runtime candidate. Two independent strict
+Release builds and the normal build are byte-identical; CTest reports `1/1`
+passing. The 3,117,568-byte DLL carries PE/PluginInfo version 0.13.9, exposes
+the four expected exports, and has SHA-256
+`5C0FD8DE0D143FEF4B4D04C86C2F1D1D1B4B35379EE70CF372D46A0CD9BD1E9F`.
+The same hash is deployed mod-locally in BKVince. A fresh official
+D2R 3.3.93847 cold start on August 30, 2026 accepts the complete fail-closed
+fingerprint, initializes the D3D12/ImGui host, compiles 190 TXT tables, loads
+36 plugins and all five eezstreet plugins, applies 18 memory patches, and
+reaches 24/24 startup completion. Revive Overhaul remains the sole known
+pre-existing plugin failure.
+
+The same live process confirms that the master button changes from
+`Disable MapSense` to `Enable MapSense` and back without a crash. After
+`Arm Reveal All`, the yellow `Kurast Docks Waypoint` label appears over the
+native waypoint. A real Save & Exit followed by a new Insanity game, without
+arming Reveal All again, reconstructs the revealed map and the waypoint label.
+This proves process-local Reveal intent replay and fresh-session waypoint
+publication; no coordinate from the departed game is retained.
+
+Runtime qualification remains open for generic intersection deduplication,
+the Great Marsh progression fallback, final chest geometry, and three complete
+Frigid Highlands transitions with the full installed stack. The latest Frigid
+Highlands crash wrote through a null native object-data allocation inside
+`D2RLoader.exe`; no MapSense frame appears in the final stack, but an indirect
+contribution is not disproved. It is therefore recorded as unattributed and
+still requires full-stack reproduction rather than being claimed fixed by this
+release.
 
 Version 0.12.2 is currently an offline source candidate. It removes the false
 distance control and all spatial monster filtering, refreshes every copied
@@ -721,3 +999,10 @@ legacy address, 32-bit ABI, source file, or binary is copied into this plugin.
 D2RMH is credited as the semantic reference for intersecting native collision
 openings; MapSense uses independently proven D2R 3.2/3.3 layouts and contains
 no copied D2RMH code.
+
+Exact chest artwork is credited to
+[Joffreybesos/PrimeMH](https://github.com/joffreybesos/PrimeMH): MapSense embeds
+the original `src/gui/images/chest.png` and `superchest.png` with permission
+obtained by Vincent Barrière from Joffreybesos on August 30, 2026. MapSense's
+separate locked/trapped padlock overlay and D3D12 integration are RuffnecKk
+work; this permission notice does not claim a broader license for PrimeMH.

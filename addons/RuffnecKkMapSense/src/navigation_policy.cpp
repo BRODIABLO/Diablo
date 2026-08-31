@@ -191,7 +191,8 @@ constexpr std::array ProgressionGraph{
     ProgressionEdge{75, 76},  // Kurast Docks -> Spider Forest
     ProgressionEdge{76, 78},  // Spider Forest -> Flayer Jungle (bypass)
     ProgressionEdge{76, 77},  // Spider Forest -> Great Marsh (fallback)
-    ProgressionEdge{77, 78},  // Great Marsh -> Flayer Jungle
+    ProgressionEdge{77, 78},  // Great Marsh -> Flayer Jungle when connected
+    ProgressionEdge{77, 76},  // Great Marsh dead-end -> bypass via Spider Forest
     ProgressionEdge{78, 79},  // Flayer Jungle -> Lower Kurast
     ProgressionEdge{79, 80},  // Lower Kurast -> Kurast Bazaar
     ProgressionEdge{80, 81},  // Kurast Bazaar -> Upper Kurast

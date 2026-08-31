@@ -1,13 +1,17 @@
 #include <D2RLPlugin/api.h>
 
 #include <Windows.h>
+#include <shellapi.h>
 
 #include "d3d12_imgui_host.hpp"
 #include "imgui_settings_panel.hpp"
 #include "mapsense_config.hpp"
+#include "mapsense_data_catalog.hpp"
 #include "navigation_engine.hpp"
 #include "navigation_resolver.hpp"
 #include "native_automap_marker.hpp"
+#include "native_automap_poi.hpp"
+#include "native_ui_state.hpp"
 #include "native_settings_policy.hpp"
 #include "overlay_host_api.hpp"
 #include "reveal_engine.hpp"
@@ -19,13 +23,17 @@
 #include <array>
 #include <atomic>
 #include <cctype>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <exception>
 #include <cmath>
+#include <filesystem>
+#include <memory>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -34,16 +42,18 @@ namespace RuffnecKk::MapSense {
 namespace {
 
 constexpr std::size_t MaximumConfigBytes = 65'536;
-constexpr std::int32_t UnknownRevealLevelId = -1;
 constexpr std::uint32_t RevealReplayRetryLimit = 8U;
 constexpr std::uint32_t RevealReplayRetryDelayMilliseconds = 250U;
+constexpr std::uint32_t RevealReplayInitialDelayMilliseconds = 750U;
 constexpr std::uint32_t NavigationRefreshRetryLimit = 8U;
 constexpr std::uint32_t NavigationRefreshRetryDelayMilliseconds = 250U;
 constexpr std::uint64_t DynamicNavigationRefreshIntervalMilliseconds = 1'000U;
+constexpr std::uint64_t NativeUiPanelRefreshIntervalMilliseconds = 50U;
 
 enum class Action {
     RevealZone,
     RevealAct,
+    ArmRevealAll,
     ToggleRevealAll,
     DisableRevealAll,
     ToggleMenu,
@@ -62,15 +72,22 @@ const D2RL::LifecycleServiceV1* LifecycleService{};
 const D2RL::ThreadServiceV1* ThreadService{};
 Config Settings{};
 std::atomic_bool Operational{};
+std::atomic_bool FeaturesEnabled{true};
 std::atomic_bool HostApiAvailable{};
 std::atomic_bool GameplayReady{};
 std::atomic_bool MenuExpanded{};
 std::atomic_bool MarkerAvailable{};
+std::atomic_bool PoiRuntimeAvailable{};
+std::atomic_bool PoiAvailable{};
 std::atomic_uint64_t SessionEpoch{1};
 std::atomic_uint64_t CurrentSessionGeneration{};
 std::atomic_uint64_t LastDynamicNavigationRefreshTick{};
+std::atomic_uint64_t LastNativeUiPanelRefreshRequestTick{};
+std::atomic_bool NativeUiPanelRefreshQueued{};
 std::vector<NavigationLineSnapshot> NavigationLineSnapshots;
 std::vector<NativeAutomapMarkerSnapshot> MarkerSnapshots;
+std::vector<NativeAutomapPoiSnapshot> PoiSnapshots;
+std::atomic<std::shared_ptr<const MapSenseDataCatalog>> DataCatalog{};
 std::array<D2RL::Input::ActionHandle, ActionTokens.size()> ActionHandles{};
 std::array<D2RL::Lifecycle::ListenerHandle, 5> LifecycleHandles{};
 
@@ -90,6 +107,7 @@ HANDLE HostRetryWorker{};
 std::mutex ConfigSaveMutex;
 std::string PendingConfigSave;
 bool ConfigSaveDrainScheduled{};
+std::mutex DataCatalogLoadMutex;
 std::mutex HostUiTaskMutex;
 D3D12ImGuiUiTaskCallback PendingHostUiTask{};
 void* PendingHostUiTaskData{};
@@ -99,6 +117,7 @@ struct NavigationRefreshState {
     std::uint64_t sessionGeneration{};
     std::int32_t levelId{UnknownNavigationLevelId};
     std::uint32_t retriesRemaining{};
+    bool refreshRevealedActPoiDefinitions{};
     bool hasPendingTarget{};
     bool callbackQueued{};
 };
@@ -106,15 +125,6 @@ struct NavigationRefreshState {
 std::mutex NavigationRefreshMutex;
 NavigationRefreshState PendingNavigationRefresh{};
 PTP_TIMER NavigationRefreshTimer{};
-
-struct RevealReplayRequestState {
-    std::uint64_t sessionGeneration{};
-    std::int32_t targetLevelId{UnknownRevealLevelId};
-    std::uint32_t retriesRemaining{};
-    bool playerReady{};
-    bool reconcilePending{};
-    bool callbackQueued{};
-};
 
 std::mutex RevealReplayMutex;
 RevealPersistenceState RevealPersistence{};
@@ -197,6 +207,201 @@ auto LoadConfig(Config& config) noexcept -> bool {
     }
 }
 
+[[nodiscard]] constexpr auto DataCatalogFamilyStateName(
+        DataCatalogFamilyState state) noexcept -> const char* {
+    switch (state) {
+        case DataCatalogFamilyState::Unavailable: return "unavailable";
+        case DataCatalogFamilyState::ActiveTxt: return "active-txt";
+        case DataCatalogFamilyState::VanillaFallbackTxt:
+            return "vanilla-fallback";
+        case DataCatalogFamilyState::BinaryOnlyConflict:
+            return "binary-only-conflict";
+        case DataCatalogFamilyState::Invalid: return "invalid";
+    }
+    return "unknown";
+}
+
+void LogDataCatalogLoad(
+        const MapSenseDataCatalogLoadResult& result) noexcept {
+    if (Context == nullptr) return;
+    for (const auto& diagnostic : result.diagnostics) {
+        const auto family = DataCatalogFamilyName(diagnostic.family);
+        char message[1'024]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "MapSense data catalog [%.*s/%s]: %s",
+            static_cast<int>(family.size()),
+            family.data(),
+            diagnostic.code.c_str(),
+            diagnostic.message.c_str());
+        switch (diagnostic.severity) {
+            case DataCatalogDiagnosticSeverity::Info:
+                if (Settings.diagnostics) Context->LogInfo(message);
+                break;
+            case DataCatalogDiagnosticSeverity::Warning:
+                Context->LogWarn(message);
+                break;
+            case DataCatalogDiagnosticSeverity::Error:
+                // A single unavailable family must not disable Reveal or any
+                // other independently validated MapSense capability.
+                Context->LogError(message);
+                break;
+        }
+    }
+    if (result.catalog == nullptr) {
+        Context->LogWarn(
+            "MapSense: the immutable TXT/localization catalog is unavailable; localized labels and data-driven objects are disabled while other features remain active.");
+        return;
+    }
+    for (const auto& status : result.catalog->FamilyStatuses()) {
+        if (!Settings.diagnostics && status.Available()) continue;
+        const auto family = DataCatalogFamilyName(status.family);
+        char message[512]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "MapSense data catalog: family=%.*s state=%s rows=%zu localized=%zu unresolved=%zu.",
+            static_cast<int>(family.size()),
+            family.data(),
+            DataCatalogFamilyStateName(status.state),
+            status.rowCount,
+            status.localizedNameCount,
+            status.unresolvedNameCount);
+        if (status.Available()) {
+            Context->LogInfo(message);
+        } else {
+            Context->LogWarn(message);
+        }
+    }
+}
+
+[[nodiscard]] auto CommandLineEnablesTxtMode() noexcept -> bool {
+    int argumentCount{};
+    auto** const arguments = CommandLineToArgvW(
+        GetCommandLineW(),
+        &argumentCount);
+    if (arguments == nullptr) return false;
+    auto enabled = false;
+    for (int index = 1; index < argumentCount; ++index) {
+        if (CompareStringOrdinal(
+                arguments[index],
+                -1,
+                L"-txt",
+                -1,
+                TRUE) == CSTR_EQUAL) {
+            enabled = true;
+            break;
+        }
+    }
+    LocalFree(arguments);
+    return enabled;
+}
+
+[[nodiscard]] auto HasActiveTxtFamily(
+        const MapSenseDataCatalog& catalog) noexcept -> bool {
+    return std::any_of(
+        catalog.FamilyStatuses().begin(),
+        catalog.FamilyStatuses().end(),
+        [](const auto& status) {
+            return status.state == DataCatalogFamilyState::ActiveTxt;
+        });
+}
+
+[[nodiscard]] auto BuildNativeAutomapPoiCollectionMask() noexcept
+        -> std::uint32_t {
+    if (!FeaturesEnabled.load(std::memory_order_acquire)
+            || !Settings.overlay.enabled || !Settings.objects.enabled) {
+        return 0U;
+    }
+    std::uint32_t mask{};
+    const auto enable = [&mask](
+            bool enabled,
+            AutomapPoiCollection collection) noexcept {
+        if (enabled) mask |= AutomapPoiCollectionBit(collection);
+    };
+    enable(Settings.objects.exitLabels.enabled,
+        AutomapPoiCollection::ExitLabels);
+    enable(Settings.objects.waypointLabels.enabled,
+        AutomapPoiCollection::WaypointLabels);
+    enable(Settings.objects.shrineLabels.enabled,
+        AutomapPoiCollection::ShrineLabels);
+    enable(Settings.objects.chests.enabled,
+        AutomapPoiCollection::Chests);
+    enable(Settings.objects.superChests.enabled,
+        AutomapPoiCollection::SuperChests);
+    enable(Settings.objects.armorRacks.enabled,
+        AutomapPoiCollection::ArmorRacks);
+    enable(Settings.objects.weaponRacks.enabled,
+        AutomapPoiCollection::WeaponRacks);
+    return mask;
+}
+
+void ApplyNativeAutomapPoiCollectionSettings() noexcept {
+    SetNativeAutomapPoiCollectionMask(
+        BuildNativeAutomapPoiCollectionMask());
+}
+
+[[nodiscard]] auto HasResolvedCatalogLocalization(
+        const MapSenseDataCatalog& catalog) noexcept -> bool {
+    return catalog.HasLocalizationService()
+        && catalog.HasVerifiedPlayerFacingLocalization();
+}
+
+[[nodiscard]] auto EnsureLocalizedDataCatalogReady(
+        std::uint64_t sessionGeneration) noexcept -> bool {
+    if (DataCatalog.load(std::memory_order_acquire) != nullptr) return true;
+
+    std::scoped_lock lock(DataCatalogLoadMutex);
+    if (DataCatalog.load(std::memory_order_acquire) != nullptr) return true;
+
+    auto catalogLoad = MapSenseDataCatalog::Load(Context);
+    LogDataCatalogLoad(catalogLoad);
+    if (catalogLoad.catalog != nullptr
+        && HasActiveTxtFamily(*catalogLoad.catalog)
+        && !CommandLineEnablesTxtMode()) {
+        if (Context != nullptr) {
+            Context->LogWarn(
+                "MapSense: active mod TXT catalogs require the D2R -txt launch argument; localized labels and data-driven objects are disabled to prevent TXT/BIN divergence.");
+        }
+        catalogLoad.catalog.reset();
+    }
+    if (catalogLoad.catalog == nullptr) return false;
+
+    // D2RLoader publishes LocalizationService before D2R has populated its
+    // language tables. A catalog built during plugin load therefore resolves
+    // every entry to technical keys such as ShrId9. LocalPlayerReady is the
+    // first safe lifecycle point, and this guard leaves the catalog pending
+    // if a future runtime still reports no resolved player-facing string.
+    if (!HasResolvedCatalogLocalization(*catalogLoad.catalog)) {
+        if (Context != nullptr) {
+            Context->LogWarn(
+                "MapSense: D2R localization tables are not ready yet; labels and data-driven objects remain pending and will retry on the next player/level lifecycle event.");
+        }
+        return false;
+    }
+
+    auto catalog = std::move(catalogLoad.catalog);
+    DataCatalog.store(catalog, std::memory_order_release);
+    (void)BindNavigationResolverCatalog(catalog);
+    const auto poiAvailable =
+        PoiRuntimeAvailable.load(std::memory_order_acquire)
+        && BindNativeAutomapPoiCatalog(catalog);
+    PoiAvailable.store(poiAvailable, std::memory_order_release);
+    if (poiAvailable) {
+        ResetNativeAutomapPoiSession(sessionGeneration);
+        ApplyNativeAutomapPoiCollectionSettings();
+    } else if (Context != nullptr) {
+        Context->LogWarn(
+            "MapSense: localized names are ready, but native object collection is unavailable; boss names remain independently available.");
+    }
+    if (Context != nullptr) {
+        Context->LogInfo(
+            "MapSense: the localized TXT catalog is ready after D2R language initialization.");
+    }
+    return true;
+}
+
 void WriteOutcome(
         const D2RL::PluginContext* context,
         RevealOutcome outcome,
@@ -207,14 +412,14 @@ void WriteOutcome(
     switch (outcome) {
         case RevealOutcome::Complete:
             if (action == Action::RevealAct) {
-                message = "MapSense: current level revealed; Reveal Act will reveal each level in this act as it loads.";
+                message = "MapSense: current-act reveal submitted and remembered; it will be verified and reapplied when the automap is ready.";
             } else {
                 message = "MapSense: current level revealed and remembered for new games at this difficulty.";
             }
             kind = D2RL::ConsoleMessageKind::Output;
             break;
         case RevealOutcome::Armed:
-            message = "MapSense: Reveal All armed; each level will be revealed natively as it loads in this difficulty.";
+            message = "MapSense: Reveal All armed; the current act was submitted now and will be verified and reapplied as each act map becomes ready.";
             kind = D2RL::ConsoleMessageKind::Output;
             break;
         case RevealOutcome::Disarmed:
@@ -236,6 +441,7 @@ auto ExecuteAction(Action action) noexcept -> RevealOutcome {
     switch (action) {
         case Action::RevealZone: return RevealCurrentZone();
         case Action::RevealAct: return RevealCurrentAct();
+        case Action::ArmRevealAll: return ArmRevealAll();
         case Action::ToggleRevealAll: return ToggleRevealAll();
         case Action::DisableRevealAll: return DisableRevealAll();
         case Action::ToggleMenu: return RevealOutcome::Unavailable;
@@ -243,14 +449,30 @@ auto ExecuteAction(Action action) noexcept -> RevealOutcome {
     return RevealOutcome::Unavailable;
 }
 
+[[nodiscard]] constexpr auto IsRevealAllArmAction(
+        Action action) noexcept -> bool {
+    return action == Action::ArmRevealAll
+        || action == Action::ToggleRevealAll;
+}
+
 constexpr auto IsIdempotent(Action action) noexcept -> bool {
-    return action == Action::RevealZone || action == Action::RevealAct;
+    return action == Action::RevealZone
+        || action == Action::RevealAct
+        || action == Action::ArmRevealAll;
 }
 
 auto RequestNavigationRefresh(
     std::uint64_t sessionGeneration,
-    std::int32_t levelId) noexcept -> bool;
+    std::int32_t levelId,
+    bool refreshRevealedActPoiDefinitions = false) noexcept -> bool;
 auto ExecuteTrackedRevealAction(Action action) noexcept -> RevealOutcome;
+auto RequestRememberedRevealForCurrentSession(
+    std::int32_t targetLevelId = UnknownRevealLevelId,
+    std::uint32_t delayMilliseconds = 0U,
+    bool automapObserved = false) noexcept -> bool;
+auto HasPendingRevealWorkForLevel(
+    std::int32_t levelId) noexcept -> bool;
+auto HasPendingRevealReconciliation() noexcept -> bool;
 
 void __cdecl DrainActionsOnUi(
         const D2RL::PluginContext* context,
@@ -289,19 +511,36 @@ void __cdecl DrainActionsOnUi(
             SetD3D12ImGuiMenuOpen(true);
             continue;
         }
+        if (!FeaturesEnabled.load(std::memory_order_acquire)
+                && request.action != Action::DisableRevealAll) {
+            context->WriteConsoleMessage(
+                "MapSense: features are disabled; open the MapSense panel to enable them.",
+                D2RL::ConsoleMessageKind::Warning);
+            continue;
+        }
         const auto outcome = ExecuteTrackedRevealAction(request.action);
         WriteOutcome(context, outcome, request.action);
         const auto revealed = request.action == Action::RevealZone
-            || request.action == Action::RevealAct;
-        const auto accepted = outcome == RevealOutcome::Complete;
+            || request.action == Action::RevealAct
+            || (IsRevealAllArmAction(request.action)
+                && outcome == RevealOutcome::Armed);
+        const auto accepted = outcome == RevealOutcome::Complete
+            || outcome == RevealOutcome::Armed;
+        const auto revealedWholeAct =
+            (request.action == Action::RevealAct
+                && outcome == RevealOutcome::Complete)
+            || (IsRevealAllArmAction(request.action)
+                && outcome == RevealOutcome::Armed);
         if (revealed && accepted
+            && !HasPendingRevealReconciliation()
             && GameplayReady.load(std::memory_order_acquire)) {
             const auto sessionGeneration = CurrentSessionGeneration.load(
                 std::memory_order_acquire);
             if (sessionGeneration != 0U
                 && !RequestNavigationRefresh(
                     sessionGeneration,
-                    UnknownNavigationLevelId)
+                    UnknownNavigationLevelId,
+                    revealedWholeAct)
                 && Settings.diagnostics) {
                 context->LogWarn(
                     "MapSense navigation: the post-reveal exact-endpoint refresh could not be queued.");
@@ -402,6 +641,7 @@ void CancelPendingNavigationRefresh(bool clearQueuedCallback = false) noexcept {
     PendingNavigationRefresh.sessionGeneration = 0U;
     PendingNavigationRefresh.levelId = UnknownNavigationLevelId;
     PendingNavigationRefresh.retriesRemaining = 0U;
+    PendingNavigationRefresh.refreshRevealedActPoiDefinitions = false;
     PendingNavigationRefresh.hasPendingTarget = false;
     if (clearQueuedCallback) {
         PendingNavigationRefresh.callbackQueued = false;
@@ -433,13 +673,21 @@ void ScheduleNavigationRefreshTimer(
 void ArmPendingNavigationRefresh(
         std::uint64_t sessionGeneration,
         std::int32_t levelId,
-        std::uint32_t delayMilliseconds) noexcept {
+        std::uint32_t delayMilliseconds,
+        bool refreshRevealedActPoiDefinitions) noexcept {
     {
         std::scoped_lock lock(NavigationRefreshMutex);
+        const bool preserveActLabelRefresh =
+            PendingNavigationRefresh.sessionGeneration == sessionGeneration
+            && PendingNavigationRefresh.refreshRevealedActPoiDefinitions
+            && (PendingNavigationRefresh.hasPendingTarget
+                || PendingNavigationRefresh.callbackQueued);
         PendingNavigationRefresh.sessionGeneration = sessionGeneration;
         PendingNavigationRefresh.levelId = levelId;
         PendingNavigationRefresh.retriesRemaining
             = NavigationRefreshRetryLimit;
+        PendingNavigationRefresh.refreshRevealedActPoiDefinitions
+            = refreshRevealedActPoiDefinitions || preserveActLabelRefresh;
         PendingNavigationRefresh.hasPendingTarget = true;
     }
     ScheduleNavigationRefreshTimer(delayMilliseconds);
@@ -459,6 +707,7 @@ auto TryArmPendingNavigationRefresh(
         PendingNavigationRefresh.levelId = levelId;
         PendingNavigationRefresh.retriesRemaining
             = NavigationRefreshRetryLimit;
+        PendingNavigationRefresh.refreshRevealedActPoiDefinitions = false;
         PendingNavigationRefresh.hasPendingTarget = true;
     }
     ScheduleNavigationRefreshTimer(delayMilliseconds);
@@ -491,15 +740,33 @@ auto SchedulePendingNavigationRefresh() noexcept -> bool {
 
 auto RequestNavigationRefresh(
         std::uint64_t sessionGeneration,
-        std::int32_t levelId) noexcept -> bool {
-    if (!IsNavigationResolverActive()) {
+        std::int32_t levelId,
+        bool refreshRevealedActPoiDefinitions) noexcept -> bool {
+    if (!FeaturesEnabled.load(std::memory_order_acquire)
+            || !IsNavigationResolverActive()) {
         CancelPendingNavigationRefresh();
         return false;
     }
-    const auto result = RefreshNavigationDestinations(
+    const auto navigationResult = RefreshNavigationDestinations(
         sessionGeneration,
         levelId,
         Settings.navigation.customLevels.targets);
+    auto result = navigationResult;
+    if (refreshRevealedActPoiDefinitions) {
+        const auto labelResult = RefreshRevealedActPoiDefinitions(
+            sessionGeneration);
+        if (navigationResult == NavigationRefreshResult::Failed
+                || labelResult == NavigationRefreshResult::Failed) {
+            result = NavigationRefreshResult::Failed;
+        } else if (navigationResult
+                    == NavigationRefreshResult::PartialRetryable
+                || labelResult
+                    == NavigationRefreshResult::PartialRetryable) {
+            result = NavigationRefreshResult::PartialRetryable;
+        } else {
+            result = NavigationRefreshResult::Complete;
+        }
+    }
     if (result == NavigationRefreshResult::Complete) {
         CancelPendingNavigationRefresh();
         return true;
@@ -512,7 +779,8 @@ auto RequestNavigationRefresh(
     ArmPendingNavigationRefresh(
         sessionGeneration,
         retryLevelId,
-        NavigationRefreshRetryDelayMilliseconds);
+        NavigationRefreshRetryDelayMilliseconds,
+        refreshRevealedActPoiDefinitions);
     return true;
 }
 
@@ -528,16 +796,33 @@ void __cdecl RetryNavigationOnUi(
     }
 
     if (!Operational.load(std::memory_order_acquire)
+        || !FeaturesEnabled.load(std::memory_order_acquire)
         || !GameplayReady.load(std::memory_order_acquire)
         || !IsNavigationResolverActive()) {
         CancelPendingNavigationRefresh();
         return;
     }
 
-    const auto result = RefreshNavigationDestinations(
+    const auto navigationResult = RefreshNavigationDestinations(
         attempt.sessionGeneration,
         attempt.levelId,
         Settings.navigation.customLevels.targets);
+    auto result = navigationResult;
+    if (attempt.refreshRevealedActPoiDefinitions) {
+        const auto labelResult = RefreshRevealedActPoiDefinitions(
+            attempt.sessionGeneration);
+        if (navigationResult == NavigationRefreshResult::Failed
+                || labelResult == NavigationRefreshResult::Failed) {
+            result = NavigationRefreshResult::Failed;
+        } else if (navigationResult
+                    == NavigationRefreshResult::PartialRetryable
+                || labelResult
+                    == NavigationRefreshResult::PartialRetryable) {
+            result = NavigationRefreshResult::PartialRetryable;
+        } else {
+            result = NavigationRefreshResult::Complete;
+        }
+    }
     if (result == NavigationRefreshResult::Complete) {
         std::scoped_lock lock(NavigationRefreshMutex);
         if (PendingNavigationRefresh.hasPendingTarget
@@ -546,6 +831,7 @@ void __cdecl RetryNavigationOnUi(
             && PendingNavigationRefresh.levelId == attempt.levelId) {
             PendingNavigationRefresh.hasPendingTarget = false;
             PendingNavigationRefresh.retriesRemaining = 0U;
+            PendingNavigationRefresh.refreshRevealedActPoiDefinitions = false;
         }
         return;
     }
@@ -563,6 +849,7 @@ void __cdecl RetryNavigationOnUi(
             --PendingNavigationRefresh.retriesRemaining;
         } else {
             PendingNavigationRefresh.retriesRemaining = 0U;
+            PendingNavigationRefresh.refreshRevealedActPoiDefinitions = false;
             PendingNavigationRefresh.hasPendingTarget = false;
             exhausted = true;
         }
@@ -594,6 +881,7 @@ void OnNativeAutomapLevelObserved(
         bool levelChanged,
         void*) noexcept {
     if (!Operational.load(std::memory_order_acquire)
+        || !FeaturesEnabled.load(std::memory_order_acquire)
         || !GameplayReady.load(std::memory_order_acquire)
         || currentLevelId == UnknownNavigationLevelId) {
         return;
@@ -601,11 +889,25 @@ void OnNativeAutomapLevelObserved(
     const auto sessionGeneration = CurrentSessionGeneration.load(
         std::memory_order_acquire);
     if (sessionGeneration == 0U) return;
+    const bool revealPending = HasPendingRevealWorkForLevel(currentLevelId);
+    const bool revealQueued = revealPending
+        && RequestRememberedRevealForCurrentSession(
+            currentLevelId,
+            0U,
+            true);
     if (levelChanged) {
         LastDynamicNavigationRefreshTick.store(
             GetTickCount64(),
             std::memory_order_release);
-        ArmPendingNavigationRefresh(sessionGeneration, currentLevelId, 0U);
+        // The successful reveal reconciliation performs the one authoritative
+        // full navigation refresh. Do not race it with a second topology scan
+        // from the same native automap observation.
+        if (revealQueued) return;
+        ArmPendingNavigationRefresh(
+            sessionGeneration,
+            currentLevelId,
+            0U,
+            false);
         return;
     }
     // Only genuinely dynamic progression contracts receive periodic refreshes.
@@ -636,6 +938,25 @@ void OnNativeAutomapLevelObserved(
             return;
         }
     }
+}
+
+void OnRevealLevelInitialized(
+        std::uint8_t dataContext,
+        void* level,
+        void*) noexcept {
+    if (!Operational.load(std::memory_order_acquire)
+            || !FeaturesEnabled.load(std::memory_order_acquire)
+            || !GameplayReady.load(std::memory_order_acquire)
+            || !PoiAvailable.load(std::memory_order_acquire)) {
+        return;
+    }
+    const auto sessionGeneration = CurrentSessionGeneration.load(
+        std::memory_order_acquire);
+    if (sessionGeneration == 0U) return;
+    (void)ObserveInitializedClientLevelPoiDefinitions(
+        sessionGeneration,
+        dataContext,
+        level);
 }
 
 [[nodiscard]] auto InitializeNavigationRefreshTimer() noexcept -> bool {
@@ -694,6 +1015,7 @@ void CancelPendingRevealReplay() noexcept {
     std::scoped_lock lock(RevealReplayMutex);
     PendingRevealReplay.targetLevelId = UnknownRevealLevelId;
     PendingRevealReplay.retriesRemaining = 0U;
+    PendingRevealReplay.automapObserved = false;
     PendingRevealReplay.reconcilePending = false;
     PendingRevealReplay.callbackQueued = false;
     if (RevealReplayTimer != nullptr) {
@@ -734,6 +1056,7 @@ auto ObserveValidatedRevealDifficulty(
         if (observation == RevealDifficultyObservation::Changed) {
             PendingRevealReplay.targetLevelId = UnknownRevealLevelId;
             PendingRevealReplay.retriesRemaining = 0U;
+            PendingRevealReplay.automapObserved = false;
             PendingRevealReplay.reconcilePending = false;
             PendingRevealReplay.callbackQueued = false;
             if (RevealReplayTimer != nullptr) {
@@ -760,12 +1083,14 @@ auto HasRememberedRevealIntent() noexcept -> bool {
 auto ArmRevealReplayRequest(
         std::uint64_t sessionGeneration,
         std::int32_t targetLevelId,
-        std::uint32_t delayMilliseconds) noexcept -> bool {
+        std::uint32_t delayMilliseconds,
+        bool automapObserved) noexcept -> bool {
     if (!Operational.load(std::memory_order_acquire)
         || sessionGeneration == 0U) {
         return false;
     }
 
+    bool scheduleTimer{};
     {
         std::scoped_lock lock(RevealReplayMutex);
         if (PendingRevealReplay.sessionGeneration != sessionGeneration) {
@@ -778,21 +1103,45 @@ auto ArmRevealReplayRequest(
         if (PendingRevealReplay.reconcilePending) {
             // ActChanged may arrive without a level id. It must not consume a
             // second budget or replace a more precise LevelChanged target.
-            if (targetLevelId <= 0
-                || PendingRevealReplay.targetLevelId == targetLevelId) {
-                return true;
+            const bool wasAutomapObserved =
+                PendingRevealReplay.automapObserved;
+            if (MergePendingRevealAutomapObservation(
+                    PendingRevealReplay,
+                    targetLevelId,
+                    automapObserved)) {
+                if (!wasAutomapObserved
+                    && PendingRevealReplay.automapObserved) {
+                    // A real automap pass is stronger evidence than the
+                    // readiness timer. Give that upgraded request a fresh
+                    // bounded attempt immediately.
+                    PendingRevealReplay.retriesRemaining =
+                        RevealReplayRetryLimit;
+                    scheduleTimer = true;
+                } else {
+                    return true;
+                }
             }
         }
-        PendingRevealReplay.targetLevelId = targetLevelId;
-        PendingRevealReplay.retriesRemaining = RevealReplayRetryLimit;
-        PendingRevealReplay.reconcilePending = true;
+        if (!PendingRevealReplay.reconcilePending
+            || !scheduleTimer) {
+            PendingRevealReplay.targetLevelId = targetLevelId;
+            PendingRevealReplay.retriesRemaining = RevealReplayRetryLimit;
+            PendingRevealReplay.automapObserved = automapObserved;
+            PendingRevealReplay.reconcilePending = true;
+            scheduleTimer = true;
+        }
     }
-    ScheduleRevealReplayRetryTimer(delayMilliseconds);
+    if (scheduleTimer) {
+        ScheduleRevealReplayRetryTimer(delayMilliseconds);
+    }
     return true;
 }
 
 auto RequestRememberedRevealForCurrentSession(
-        std::int32_t targetLevelId = UnknownRevealLevelId) noexcept -> bool {
+        std::int32_t targetLevelId,
+        std::uint32_t delayMilliseconds,
+        bool automapObserved) noexcept -> bool {
+    if (!FeaturesEnabled.load(std::memory_order_acquire)) return true;
     if (!HasRememberedRevealIntent()) return true;
     if (!GameplayReady.load(std::memory_order_acquire)) {
         // The process-lifetime ids remain remembered. LocalPlayerReady will
@@ -802,7 +1151,27 @@ auto RequestRememberedRevealForCurrentSession(
     const auto sessionGeneration = CurrentSessionGeneration.load(
         std::memory_order_acquire);
     if (sessionGeneration == 0U) return true;
-    return ArmRevealReplayRequest(sessionGeneration, targetLevelId, 0U);
+    return ArmRevealReplayRequest(
+        sessionGeneration,
+        targetLevelId,
+        delayMilliseconds,
+        automapObserved);
+}
+
+auto HasPendingRevealWorkForLevel(
+        std::int32_t levelId) noexcept -> bool {
+    if (levelId <= 0) return false;
+    std::scoped_lock lock(RevealReplayMutex);
+    const auto difficulty = RevealPersistence.Difficulty();
+    return RevealPersistence.ShouldReplayCurrentLevel(
+        difficulty,
+        RevealActForLevelId(levelId),
+        levelId);
+}
+
+auto HasPendingRevealReconciliation() noexcept -> bool {
+    std::scoped_lock lock(RevealReplayMutex);
+    return PendingRevealReplay.reconcilePending;
 }
 
 void SetRevealReplayPlayerReady(
@@ -817,20 +1186,15 @@ auto ObserveRevealReplayAct(
         std::uint64_t sessionGeneration,
         std::int32_t,
         std::int32_t) noexcept -> bool {
-    bool shouldRequest{};
-    {
-        std::scoped_lock lock(RevealReplayMutex);
-        if (PendingRevealReplay.sessionGeneration != sessionGeneration) {
-            return false;
-        }
-        shouldRequest = PendingRevealReplay.playerReady
-            && RevealPersistence.HasAnyIntent();
+    std::scoped_lock lock(RevealReplayMutex);
+    if (PendingRevealReplay.sessionGeneration != sessionGeneration) {
+        return false;
     }
-    if (!shouldRequest) return true;
-    return ArmRevealReplayRequest(
-        sessionGeneration,
-        UnknownRevealLevelId,
-        0U);
+    // ActChanged deliberately carries no authoritative LevelId. LevelChanged
+    // or the first native automap observation will queue one precise request;
+    // submitting here can still target the previous act and doubles the
+    // expensive revealmap work during cross-act waypoint travel.
+    return true;
 }
 
 void CompletePendingRevealReplay(
@@ -839,7 +1203,24 @@ void CompletePendingRevealReplay(
     if (PendingRevealReplay.sessionGeneration != sessionGeneration) return;
     PendingRevealReplay.targetLevelId = UnknownRevealLevelId;
     PendingRevealReplay.retriesRemaining = 0U;
+    PendingRevealReplay.automapObserved = false;
     PendingRevealReplay.reconcilePending = false;
+}
+
+void RequestNavigationRefreshAfterRevealReconciliation(
+        std::uint64_t sessionGeneration,
+        std::int32_t levelId,
+        bool refreshRevealedActPoiDefinitions) noexcept {
+    if (RequestNavigationRefresh(
+            sessionGeneration,
+            levelId,
+            refreshRevealedActPoiDefinitions)) {
+        return;
+    }
+    if (Context != nullptr && Settings.diagnostics) {
+        Context->LogWarn(
+            "MapSense navigation: the single post-reveal refresh could not be queued.");
+    }
 }
 
 auto RetryPendingRevealReplay(
@@ -857,6 +1238,7 @@ auto RetryPendingRevealReplay(
         } else {
             PendingRevealReplay.targetLevelId = UnknownRevealLevelId;
             PendingRevealReplay.retriesRemaining = 0U;
+            PendingRevealReplay.automapObserved = false;
             PendingRevealReplay.reconcilePending = false;
         }
     }
@@ -880,6 +1262,7 @@ void __cdecl RetryRememberedRevealOnUi(
     }
 
     if (!Operational.load(std::memory_order_acquire)
+        || !FeaturesEnabled.load(std::memory_order_acquire)
         || !GameplayReady.load(std::memory_order_acquire)
         || attempt.sessionGeneration == 0U
         || attempt.sessionGeneration
@@ -892,10 +1275,15 @@ void __cdecl RetryRememberedRevealOnUi(
     const bool clientReady = ResolveCurrentClientLevelView(current);
     if (!clientReady
         || !ObserveValidatedRevealDifficulty(current.difficulty)) {
-        if (!RetryPendingRevealReplay(attempt.sessionGeneration)
-            && Context != nullptr) {
-            Context->LogWarn(
-                "MapSense: remembered reveal intent expired before the new client map became ready.");
+        if (!RetryPendingRevealReplay(attempt.sessionGeneration)) {
+            if (Context != nullptr) {
+                Context->LogWarn(
+                    "MapSense: remembered reveal intent expired before the new client map became ready.");
+            }
+            RequestNavigationRefreshAfterRevealReconciliation(
+                attempt.sessionGeneration,
+                attempt.targetLevelId,
+                false);
         }
         return;
     }
@@ -916,10 +1304,15 @@ void __cdecl RetryRememberedRevealOnUi(
     // consuming or crediting the wrong generated level.
     if (attempt.targetLevelId > 0
         && current.levelId != attempt.targetLevelId) {
-        if (!RetryPendingRevealReplay(attempt.sessionGeneration)
-            && Context != nullptr) {
-            Context->LogWarn(
-                "MapSense: remembered reveal target did not become the active client level before its bounded retries expired.");
+        if (!RetryPendingRevealReplay(attempt.sessionGeneration)) {
+            if (Context != nullptr) {
+                Context->LogWarn(
+                    "MapSense: remembered reveal target did not become the active client level before its bounded retries expired.");
+            }
+            RequestNavigationRefreshAfterRevealReconciliation(
+                attempt.sessionGeneration,
+                attempt.targetLevelId,
+                false);
         }
         return;
     }
@@ -949,6 +1342,10 @@ void __cdecl RetryRememberedRevealOnUi(
 
     if (!hasIntent) {
         CompletePendingRevealReplay(attempt.sessionGeneration);
+        RequestNavigationRefreshAfterRevealReconciliation(
+            attempt.sessionGeneration,
+            current.levelId,
+            false);
         return;
     }
     if (!shouldReveal) {
@@ -956,12 +1353,44 @@ void __cdecl RetryRememberedRevealOnUi(
             1U,
             std::memory_order_relaxed);
         CompletePendingRevealReplay(attempt.sessionGeneration);
+        RequestNavigationRefreshAfterRevealReconciliation(
+            attempt.sessionGeneration,
+            current.levelId,
+            false);
         return;
     }
 
     AutomaticLevelRevealRequests.fetch_add(1U, std::memory_order_relaxed);
-    const auto outcome = RevealCurrentZone();
-    const bool accepted = outcome == RevealOutcome::Complete;
+    bool revealWholeAct{};
+    bool submitWholeAct{};
+    bool revealCurrentLevel{};
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        revealWholeAct = RevealPersistence.ShouldRevealWholeAct(
+            current.difficulty,
+            currentAct);
+        submitWholeAct = revealWholeAct
+            && !RevealPersistence.IsActAccepted(
+                current.difficulty,
+                currentAct);
+        revealCurrentLevel = !RevealPersistence.IsLevelAccepted(
+            current.difficulty,
+            current.levelId);
+    }
+    const auto actOutcome = submitWholeAct
+        ? RevealCurrentAct()
+        : RevealOutcome::Complete;
+    const auto levelOutcome = revealCurrentLevel
+        ? RevealCurrentZone()
+        : RevealOutcome::Complete;
+    const bool actAccepted = actOutcome == RevealOutcome::Complete;
+    const bool levelAccepted = levelOutcome == RevealOutcome::Complete;
+    // Submit whole-act work as soon as the client level is ready, including
+    // after Save & Exit. The governed direct current-level traversal proves
+    // that the generated DRLG is ready, so a later automap callback is not
+    // required to repeat and credit the same work.
+    const bool accepted = levelAccepted
+        && (!submitWholeAct || actAccepted);
     (accepted
             ? AutomaticLevelRevealAccepted
             : AutomaticLevelRevealRejected)
@@ -974,11 +1403,22 @@ void __cdecl RetryRememberedRevealOnUi(
                 || !PendingRevealReplay.reconcilePending) {
                 return;
             }
-            (void)RevealPersistence.MarkLevelAccepted(
-                current.difficulty,
-                current.levelId);
+            if (submitWholeAct && CanConfirmWholeActReveal(
+                    actOutcome,
+                    levelOutcome)) {
+                (void)RevealPersistence.MarkActAccepted(
+                    current.difficulty,
+                    currentAct);
+            }
+            if (revealCurrentLevel && CanConfirmReplayedLevelReveal(
+                    levelOutcome)) {
+                (void)RevealPersistence.MarkLevelAccepted(
+                    current.difficulty,
+                    current.levelId);
+            }
             PendingRevealReplay.targetLevelId = UnknownRevealLevelId;
             PendingRevealReplay.retriesRemaining = 0U;
+            PendingRevealReplay.automapObserved = false;
             PendingRevealReplay.reconcilePending = false;
         }
         if (Context != nullptr && Settings.diagnostics) {
@@ -986,18 +1426,39 @@ void __cdecl RetryRememberedRevealOnUi(
             std::snprintf(
                 message,
                 sizeof(message),
-                "MapSense native reveal replay: accepted current level %d for session %llu.",
+                "MapSense native reveal replay: current level %d submission=%s and complete-act submission=%s for session %llu.",
                 current.levelId,
+                levelAccepted ? "confirmed-at-ready-drlg" : "rejected",
+                submitWholeAct
+                    ? (actAccepted
+                        ? "confirmed-at-ready-drlg"
+                        : "rejected")
+                    : "not-required",
                 static_cast<unsigned long long>(attempt.sessionGeneration));
             Context->LogInfo(message);
+        }
+        // Reveal replay materializes every room in the current generated
+        // level. Rebuild the static exit-label catalog now; otherwise a new
+        // game keeps only the room links that happened to be ready before the
+        // delayed replay and distant exit names appear proximity-dependent.
+        if (GameplayReady.load(std::memory_order_acquire)) {
+            RequestNavigationRefreshAfterRevealReconciliation(
+                attempt.sessionGeneration,
+                current.levelId,
+                submitWholeAct);
         }
         return;
     }
 
-    if (!RetryPendingRevealReplay(attempt.sessionGeneration)
-        && Context != nullptr) {
-        Context->LogWarn(
-            "MapSense: remembered reveal intent remained unavailable after its bounded native current-level retries; it stays remembered for the next matching level event.");
+    if (!RetryPendingRevealReplay(attempt.sessionGeneration)) {
+        if (Context != nullptr) {
+            Context->LogWarn(
+                "MapSense: remembered reveal intent remained unavailable after its bounded native current-level retries; it stays remembered for the next matching level event.");
+        }
+        RequestNavigationRefreshAfterRevealReconciliation(
+            attempt.sessionGeneration,
+            current.levelId,
+            false);
     }
 }
 
@@ -1089,6 +1550,10 @@ auto ExecuteTrackedRevealAction(Action action) noexcept -> RevealOutcome {
         return outcome;
     }
 
+    if (!FeaturesEnabled.load(std::memory_order_acquire)) {
+        return RevealOutcome::Unavailable;
+    }
+
     ClientLevelView current{};
     if (!ResolveCurrentClientLevelView(current)
         || !ObserveValidatedRevealDifficulty(current.difficulty)) {
@@ -1097,13 +1562,20 @@ auto ExecuteTrackedRevealAction(Action action) noexcept -> RevealOutcome {
 
     const auto currentAct = RevealActForLevelId(current.levelId);
     const auto outcome = ExecuteAction(action);
-    bool currentLevelRevealed = outcome == RevealOutcome::Complete;
-    if (action == Action::ToggleRevealAll
-        && outcome == RevealOutcome::Armed) {
+    bool currentLevelRevealed = action == Action::RevealZone
+        && outcome == RevealOutcome::Complete;
+    if ((action == Action::RevealAct
+            && outcome == RevealOutcome::Complete)
+        || (IsRevealAllArmAction(action)
+            && outcome == RevealOutcome::Armed)) {
+        // D2RCore reports only that revealmap was accepted. Confirm the
+        // current level synchronously with MapSense's governed room callback
+        // before crediting any persistent current-level work.
         currentLevelRevealed =
             RevealCurrentZone() == RevealOutcome::Complete;
     }
     bool remembered{true};
+    bool currentActConfirmed{};
     {
         std::scoped_lock lock(RevealReplayMutex);
         if (action == Action::RevealZone
@@ -1125,10 +1597,17 @@ auto ExecuteTrackedRevealAction(Action action) noexcept -> RevealOutcome {
                 // persisted safely as an Act intent.
                 remembered = false;
             }
-            (void)RevealPersistence.MarkLevelAccepted(
-                current.difficulty,
-                current.levelId);
-        } else if (action == Action::ToggleRevealAll
+            if (currentLevelRevealed) {
+                (void)RevealPersistence.MarkLevelAccepted(
+                    current.difficulty,
+                    current.levelId);
+                if (IsKnownRevealAct(currentAct)) {
+                    currentActConfirmed = RevealPersistence.MarkActAccepted(
+                        current.difficulty,
+                        currentAct);
+                }
+            }
+        } else if (IsRevealAllArmAction(action)
             && (outcome == RevealOutcome::Armed
                 || outcome == RevealOutcome::Disarmed)) {
             remembered = RevealPersistence.SetRevealAll(
@@ -1139,6 +1618,11 @@ auto ExecuteTrackedRevealAction(Action action) noexcept -> RevealOutcome {
                 (void)RevealPersistence.MarkLevelAccepted(
                     current.difficulty,
                     current.levelId);
+                if (IsKnownRevealAct(currentAct)) {
+                    currentActConfirmed = RevealPersistence.MarkActAccepted(
+                        current.difficulty,
+                        currentAct);
+                }
             }
         }
     }
@@ -1147,15 +1631,29 @@ auto ExecuteTrackedRevealAction(Action action) noexcept -> RevealOutcome {
             "MapSense: a successful reveal could not be added to the bounded process-lifetime intent set.");
     }
 
-    if (action == Action::ToggleRevealAll) {
+    if (IsRevealAllArmAction(action)) {
         CancelPendingRevealReplay();
-        if ((!currentLevelRevealed
-                || outcome == RevealOutcome::Disarmed)
-            && !RequestRememberedRevealForCurrentSession()
+        const bool shouldReplay = outcome == RevealOutcome::Armed
+            && !currentActConfirmed;
+        if (shouldReplay
+            && !RequestRememberedRevealForCurrentSession(
+                current.levelId,
+                RevealReplayRetryDelayMilliseconds,
+                false)
             && Context != nullptr) {
             Context->LogWarn(
                 "MapSense: remembered reveal intent could not be scheduled for the current session.");
         }
+    } else if (action == Action::RevealAct
+        && outcome == RevealOutcome::Complete
+        && !currentActConfirmed
+        && !RequestRememberedRevealForCurrentSession(
+            current.levelId,
+            RevealReplayRetryDelayMilliseconds,
+            false)
+        && Context != nullptr) {
+        Context->LogWarn(
+            "MapSense: the verification replay for remembered Reveal Act could not be scheduled.");
     }
     return outcome;
 }
@@ -1169,6 +1667,8 @@ void __cdecl OnGameplayEvent(
         return;
     }
     if (event->kind == D2RL::Lifecycle::GameplayEventKind::GameJoined) {
+        ResetNativeUiPanelVisibility();
+        LastNativeUiPanelRefreshRequestTick.store(0U, std::memory_order_release);
         CurrentSessionGeneration.store(
             event->sessionGeneration,
             std::memory_order_release);
@@ -1178,6 +1678,7 @@ void __cdecl OnGameplayEvent(
         CancelPendingNavigationRefresh();
         ResetNavigationSession(event->sessionGeneration);
         ResetNativeAutomapMarker();
+        ResetNativeAutomapPoiSession(event->sessionGeneration);
         GameplayReady.store(false, std::memory_order_release);
         MenuExpanded.store(false, std::memory_order_release);
         SetD3D12ImGuiMenuOpen(false);
@@ -1190,21 +1691,30 @@ void __cdecl OnGameplayEvent(
         BeginRevealSession();
     } else if (event->kind
         == D2RL::Lifecycle::GameplayEventKind::LocalPlayerReady) {
+        ResetNativeUiPanelVisibility();
+        LastNativeUiPanelRefreshRequestTick.store(0U, std::memory_order_release);
         CurrentSessionGeneration.store(
             event->sessionGeneration,
             std::memory_order_release);
+        (void)EnsureLocalizedDataCatalogReady(event->sessionGeneration);
         GameplayReady.store(true, std::memory_order_release);
         MenuExpanded.store(
             Settings.menu.startExpanded || Settings.overlay.startMenuOpen,
             std::memory_order_release);
         SetD3D12ImGuiMenuOpen(true);
         SetRevealReplayPlayerReady(event->sessionGeneration);
-        if (!RequestRememberedRevealForCurrentSession()
-            && Context != nullptr) {
+        const bool revealPending = HasRememberedRevealIntent();
+        const bool revealQueued = !revealPending
+            || RequestRememberedRevealForCurrentSession(
+                UnknownRevealLevelId,
+                RevealReplayInitialDelayMilliseconds,
+                false);
+        if (!revealQueued && Context != nullptr) {
             Context->LogWarn(
                 "MapSense: remembered reveals for the new game could not be scheduled.");
         }
-        if (IsNavigationResolverActive()
+        if ((!revealPending || !revealQueued)
+            && IsNavigationResolverActive()
             && !RequestNavigationRefresh(
                 event->sessionGeneration,
                 UnknownNavigationLevelId)
@@ -1213,9 +1723,12 @@ void __cdecl OnGameplayEvent(
                 "MapSense navigation: the initial level refresh could not be queued.");
         }
     } else if (event->kind == D2RL::Lifecycle::GameplayEventKind::GameLeft) {
+        ResetNativeUiPanelVisibility();
+        LastNativeUiPanelRefreshRequestTick.store(0U, std::memory_order_release);
         CancelPendingNavigationRefresh();
         ResetNavigationSession(event->sessionGeneration);
         ResetNativeAutomapMarker();
+        ResetNativeAutomapPoiSession(0U);
         GameplayReady.store(false, std::memory_order_release);
         CurrentSessionGeneration.store(0U, std::memory_order_release);
         LastDynamicNavigationRefreshTick.store(
@@ -1228,25 +1741,26 @@ void __cdecl OnGameplayEvent(
         ResetRevealSession();
     } else if (event->kind == D2RL::Lifecycle::GameplayEventKind::ActChanged) {
         ResetNativeAutomapMarker();
-        const auto replayQueued = ObserveRevealReplayAct(
+        ResetNativeAutomapPoiSession(event->sessionGeneration);
+        const auto actObservationAccepted = ObserveRevealReplayAct(
             event->sessionGeneration,
             event->previousValue,
             event->currentValue);
-        if (!replayQueued && Context != nullptr) {
+        if (!actObservationAccepted && Context != nullptr) {
             Context->LogWarn(
-                "MapSense: remembered reveals for the newly loaded act could not be scheduled.");
+                "MapSense: the act transition could not be associated with the current reveal session.");
         }
         if (Settings.diagnostics && Context != nullptr) {
             char message[256]{};
             std::snprintf(
                 message,
                 sizeof(message),
-                "MapSense reveal persistence diagnostic: act-change session=%llu previous=%d current=%d armed=%d queued=%d.",
+                "MapSense reveal persistence diagnostic: act-change session=%llu previous=%d current=%d armed=%d deferred-to-level=%d.",
                 static_cast<unsigned long long>(event->sessionGeneration),
                 static_cast<std::int32_t>(event->previousValue),
                 static_cast<std::int32_t>(event->currentValue),
                 IsRevealAllArmed() ? 1 : 0,
-                replayQueued ? 1 : 0);
+                actObservationAccepted ? 1 : 0);
             Context->LogInfo(message);
         }
     } else if (event->kind
@@ -1254,6 +1768,9 @@ void __cdecl OnGameplayEvent(
         CurrentSessionGeneration.store(
             event->sessionGeneration,
             std::memory_order_release);
+        if (DataCatalog.load(std::memory_order_acquire) == nullptr) {
+            (void)EnsureLocalizedDataCatalogReady(event->sessionGeneration);
+        }
         LastDynamicNavigationRefreshTick.store(
             0U,
             std::memory_order_release);
@@ -1262,12 +1779,19 @@ void __cdecl OnGameplayEvent(
             event->sessionGeneration,
             event->currentValue);
         ResetNativeAutomapMarker();
-        if (!RequestRememberedRevealForCurrentSession(event->currentValue)
-            && Context != nullptr) {
+        ResetNativeAutomapPoiLevel(
+            event->sessionGeneration,
+            event->currentValue);
+        const bool revealPending = HasPendingRevealWorkForLevel(
+            event->currentValue);
+        const bool revealQueued = !revealPending
+            || RequestRememberedRevealForCurrentSession(event->currentValue);
+        if (!revealQueued && Context != nullptr) {
             Context->LogWarn(
                 "MapSense: remembered reveals for the changed level could not be scheduled.");
         }
-        if (IsNavigationResolverActive()
+        if ((!revealPending || !revealQueued)
+            && IsNavigationResolverActive()
             && !RequestNavigationRefresh(
                 event->sessionGeneration,
                 event->currentValue)
@@ -1287,7 +1811,7 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
     std::snprintf(
         message,
         sizeof(message),
-            "RuffnecKk MapSense 0.12.5 candidate: active=%s; gameplay=%s; reveal-all=%s; markers=%s; immunity-scan=%s; renderer-hooks=%s; renderer=%s; input=%s; menu=%s; presents=%llu; rendered=%llu; level traversals=%llu; rooms=%llu; failures=%llu; traversal limits=%llu; automap-pulses=%llu; table-scans=%llu; buckets=%llu; table-limits=%llu; automap units=%llu; monsters=%llu; enemy-rejects=dead/unit/class/alignment:%llu/%llu/%llu/%llu; filter-faults=%llu; hostiles=%llu; hostile-bands=0-80/81-140/141-220/>220:%llu/%llu/%llu/%llu; projection-rejects=%llu; clip-rejects=%llu; max-hostile-subtiles=%u; max-accepted-subtiles=%u; max-published-subtiles=%u; accepted=%llu; inserted=%llu; refreshed=%llu; fresh=%llu; expired=%llu; marker waits=%llu; storage faults=%llu; marker faults=%llu.",
+            "RuffnecKk MapSense 0.13.11 candidate: active=%s; gameplay=%s; reveal-all=%s; markers=%s; immunity-scan=%s; renderer-hooks=%s; renderer=%s; chest-textures=%s; input=%s; menu=%s; presents=%llu; rendered=%llu; level traversals=%llu; rooms=%llu; failures=%llu; traversal limits=%llu; automap-pulses=%llu; table-scans=%llu; buckets=%llu; table-limits=%llu; automap units=%llu; monsters=%llu; enemy-rejects=dead/unit/class/alignment:%llu/%llu/%llu/%llu; filter-faults=%llu; hostiles=%llu; hostile-bands=0-80/81-140/141-220/>220:%llu/%llu/%llu/%llu; projection-rejects=%llu; clip-rejects=%llu; max-hostile-subtiles=%u; max-accepted-subtiles=%u; max-published-subtiles=%u; accepted=%llu; inserted=%llu; refreshed=%llu; fresh=%llu; expired=%llu; marker waits=%llu; storage faults=%llu; marker faults=%llu.",
         IsRevealEngineActive() ? "true" : "false",
         GameplayReady.load(std::memory_order_acquire) ? "ready" : "inactive",
         IsRevealAllArmed() ? "armed" : "off",
@@ -1301,6 +1825,7 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
             : "disabled",
         renderer.hooksInstalled ? "installed" : "waiting",
         renderer.rendererInitialized ? "ready" : "waiting",
+        renderer.primeMhChestTexturesReady ? "PrimeMH-ready" : "fallback",
         renderer.inputSubclassInstalled ? "isolated" : "waiting",
         MenuExpanded.load(std::memory_order_acquire)
             ? "expanded"
@@ -1352,7 +1877,7 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
     std::snprintf(
         revealMessage,
         sizeof(revealMessage),
-        "MapSense native reveal replay: automatic calls=%llu; accepted=%llu; rejected=%llu; duplicate refusals=%llu; session=%llu; difficulty=%d; target-level=%d; pending=%s; retries=%u.",
+        "MapSense native reveal replay: automatic calls=%llu; accepted=%llu; rejected=%llu; duplicate refusals=%llu; session=%llu; difficulty=%d; target-level=%d; automap-observed=%s; pending=%s; retries=%u.",
         static_cast<unsigned long long>(
             AutomaticLevelRevealRequests.load(std::memory_order_relaxed)),
         static_cast<unsigned long long>(
@@ -1365,9 +1890,27 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
         static_cast<unsigned long long>(pendingReveal.sessionGeneration),
         revealDifficulty,
         pendingReveal.targetLevelId,
+        pendingReveal.automapObserved ? "yes" : "no",
         pendingReveal.reconcilePending ? "yes" : "no",
         pendingReveal.retriesRemaining);
     context->WriteConsoleMessage(revealMessage);
+    NativeUiStateStatus nativeUi{};
+    (void)AcquireNativeUiStateStatus(nativeUi);
+    char nativeUiMessage[384]{};
+    std::snprintf(
+        nativeUiMessage,
+        sizeof(nativeUiMessage),
+        "MapSense native panel occlusion: active=%s; ui-mask=0x%08X; panel-mask=0x%08X; quest-known=%s; quest-visible=%s; retained-projection=%s; read-failures=%llu; quest-read-failures=%llu; render-policy=native-ui-state-plus-live-quest-widget-clip.",
+        nativeUi.active ? "true" : "false",
+        static_cast<unsigned>(nativeUi.activeMask),
+        static_cast<unsigned>(nativeUi.blockingPanelMask),
+        nativeUi.questVisibilityKnown ? "yes" : "no",
+        nativeUi.questPanelVisible ? "yes" : "no",
+        nativeUi.retainAutomapProjection ? "yes" : "no",
+        static_cast<unsigned long long>(nativeUi.readFailures),
+        static_cast<unsigned long long>(
+            nativeUi.questVisibilityReadFailures));
+    context->WriteConsoleMessage(nativeUiMessage);
     const auto averageDiscoveryMicroseconds =
         marker.discoveryTimingSamples != 0U
         ? marker.totalDiscoveryMicroseconds / marker.discoveryTimingSamples
@@ -1404,6 +1947,51 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
             marker.clipRejectedFrom141Through220),
         static_cast<unsigned long long>(marker.clipRejectedBeyond220));
     context->WriteConsoleMessage(markerMessage);
+    const auto poi = GetNativeAutomapPoiCounters();
+    const auto dataCatalog = DataCatalog.load(std::memory_order_acquire);
+    const auto* const poiPipeline = PoiAvailable.load(
+            std::memory_order_acquire)
+        ? "ready"
+        : MarkerAvailable.load(std::memory_order_acquire)
+                && dataCatalog == nullptr
+            ? "pending-localization"
+            : "unavailable";
+    char poiMessage[768]{};
+    std::snprintf(
+        poiMessage,
+        sizeof(poiMessage),
+        "MapSense objects/labels: pipeline=%s; mask=0x%02X; automap-pulses=%llu; object-scans=%llu; buckets=%llu; observed=%llu; classified=%llu; traversal-limits=%llu; exit-definitions=%llu; projected=%llu; projection-rejects=%llu; waits=%llu; access-faults=%llu.",
+        poiPipeline,
+        BuildNativeAutomapPoiCollectionMask(),
+        static_cast<unsigned long long>(poi.automapPulses),
+        static_cast<unsigned long long>(poi.objectTableScans),
+        static_cast<unsigned long long>(poi.objectBucketsVisited),
+        static_cast<unsigned long long>(poi.objectUnitsObserved),
+        static_cast<unsigned long long>(poi.objectUnitsClassified),
+        static_cast<unsigned long long>(poi.objectTraversalLimits),
+        static_cast<unsigned long long>(poi.exitDefinitionsPublished),
+        static_cast<unsigned long long>(poi.projected),
+        static_cast<unsigned long long>(poi.projectionRejected),
+        static_cast<unsigned long long>(poi.contentionWaits),
+        static_cast<unsigned long long>(poi.accessFaults));
+    context->WriteConsoleMessage(poiMessage);
+    if (dataCatalog != nullptr) {
+        for (const auto& status : dataCatalog->FamilyStatuses()) {
+            const auto family = DataCatalogFamilyName(status.family);
+            char catalogMessage[512]{};
+            std::snprintf(
+                catalogMessage,
+                sizeof(catalogMessage),
+                "MapSense TXT/localization: family=%.*s state=%s rows=%zu localized=%zu unresolved=%zu.",
+                static_cast<int>(family.size()),
+                family.data(),
+                DataCatalogFamilyStateName(status.state),
+                status.rowCount,
+                status.localizedNameCount,
+                status.unresolvedNameCount);
+            context->WriteConsoleMessage(catalogMessage);
+        }
+    }
     const auto navigation = GetNavigationResolverCounters();
     const auto navigationEngine = GetNavigationEngineStatus();
     NavigationRefreshState pendingNavigation{};
@@ -1608,8 +2196,8 @@ void OnImGuiSettingsAction(ImGuiSettingsAction action) noexcept {
         case ImGuiSettingsAction::RevealAct:
             requested = Action::RevealAct;
             break;
-        case ImGuiSettingsAction::ToggleRevealAll:
-            requested = Action::ToggleRevealAll;
+        case ImGuiSettingsAction::ArmRevealAll:
+            requested = Action::ArmRevealAll;
             break;
         case ImGuiSettingsAction::RevealAllOff:
             requested = Action::DisableRevealAll;
@@ -1685,21 +2273,116 @@ void QueueSettingsSaveFromMenu() noexcept {
         "MapSense: menu settings save could not be queued on the UI thread.");
 }
 
+void __cdecl RefreshNativeUiPanelsOnUi(
+        const D2RL::PluginContext*,
+        void*) noexcept {
+    (void)RefreshNativeUiPanelVisibilityOnUiThread();
+    NativeUiPanelRefreshQueued.store(false, std::memory_order_release);
+}
+
+void RequestNativeUiPanelVisibilityRefresh() noexcept {
+    if (!GameplayReady.load(std::memory_order_acquire)
+        || Context == nullptr || ThreadService == nullptr
+        || ThreadService->runOnUiThread == nullptr) {
+        return;
+    }
+    const auto now = static_cast<std::uint64_t>(GetTickCount64());
+    auto previous = LastNativeUiPanelRefreshRequestTick.load(
+        std::memory_order_acquire);
+    if (now >= previous
+        && now - previous < NativeUiPanelRefreshIntervalMilliseconds) {
+        return;
+    }
+    if (!LastNativeUiPanelRefreshRequestTick.compare_exchange_strong(
+            previous,
+            now,
+            std::memory_order_acq_rel,
+            std::memory_order_acquire)) {
+        return;
+    }
+    bool expected{};
+    if (!NativeUiPanelRefreshQueued.compare_exchange_strong(
+            expected,
+            true,
+            std::memory_order_acq_rel,
+            std::memory_order_acquire)) {
+        return;
+    }
+    if (ThreadService->runOnUiThread(
+            Context,
+            RefreshNativeUiPanelsOnUi,
+            nullptr) != D2RL::Threads::Result::Success) {
+        NativeUiPanelRefreshQueued.store(false, std::memory_order_release);
+    }
+}
+
+void ApplyMapSenseFeatureState(bool enabled) noexcept {
+    FeaturesEnabled.store(enabled, std::memory_order_release);
+    SetNativeAutomapMarkerEnabled(
+        enabled && Settings.overlay.enabled);
+    SetNativeAutomapImmunityCollectionEnabled(
+        enabled && Settings.overlay.enabled && Settings.immunities.enabled);
+    ApplyNativeAutomapPoiCollectionSettings();
+
+    if (!enabled) {
+        CancelPendingNavigationRefresh();
+        CancelPendingRevealReplay();
+        InvalidateNavigationProjection();
+        InvalidateNativeAutomapMarkerFrame();
+        InvalidateNativeAutomapPoiFrame();
+        return;
+    }
+
+    if (!GameplayReady.load(std::memory_order_acquire)) return;
+    const auto sessionGeneration = CurrentSessionGeneration.load(
+        std::memory_order_acquire);
+    if (sessionGeneration == 0U) return;
+    // The settings panel runs from Present, not D2R's UI/game thread. Queue
+    // native DRLG work through the existing refresh coordinator instead of
+    // resolving it synchronously from the renderer thread.
+    const bool revealPending = HasRememberedRevealIntent();
+    const bool revealQueued = revealPending
+        && RequestRememberedRevealForCurrentSession(
+            UnknownRevealLevelId,
+            0U,
+            false);
+    if (!revealQueued) {
+        ArmPendingNavigationRefresh(
+            sessionGeneration,
+            UnknownNavigationLevelId,
+            0U,
+            IsRevealAllArmed());
+    }
+}
+
 auto DrawMapSensePanel(bool* open, void*) noexcept
         -> D3D12ImGuiPanelBounds {
     if (open == nullptr || !*open) return {};
-    if (!GameplayReady.load(std::memory_order_acquire)) {
+    const auto gameplayReady = GameplayReady.load(std::memory_order_acquire);
+    if (!ShouldDrawMapSenseSettingsMenu(
+            gameplayReady,
+            false)) {
         *open = false;
         return {};
     }
     auto expanded = MenuExpanded.load(std::memory_order_acquire);
+    const auto featuresBefore = FeaturesEnabled.load(
+        std::memory_order_acquire);
     const auto bounds = DrawImGuiSettingsPanel(
         Settings,
         expanded,
         OnImGuiSettingsAction);
-    SetNativeAutomapMarkerEnabled(Settings.overlay.enabled);
-    SetNativeAutomapImmunityCollectionEnabled(
-        Settings.overlay.enabled && Settings.immunities.enabled);
+    if (featuresBefore != Settings.featuresEnabled) {
+        ApplyMapSenseFeatureState(Settings.featuresEnabled);
+    } else {
+        SetNativeAutomapMarkerEnabled(
+            featuresBefore && Settings.overlay.enabled);
+        SetNativeAutomapImmunityCollectionEnabled(
+            featuresBefore
+                && Settings.overlay.enabled
+                && Settings.immunities.enabled);
+        ApplyNativeAutomapPoiCollectionSettings();
+    }
     MenuExpanded.store(expanded, std::memory_order_release);
     if (bounds.saveRequested) QueueSettingsSaveFromMenu();
     return {
@@ -1712,15 +2395,25 @@ auto DrawMapSensePanel(bool* open, void*) noexcept
 }
 
 auto WantsMapSenseOwnedOverlay(void*) noexcept -> bool {
+    if (!FeaturesEnabled.load(std::memory_order_acquire)) return false;
+    RequestNativeUiPanelVisibilityRefresh();
+    NativeUiStateStatus nativeUi{};
+    if (!AcquireNativeUiStateStatus(nativeUi)) return false;
+    const auto retainCurrentProjection = nativeUi.retainAutomapProjection;
     const auto navigationEnabled = Settings.navigation.waypoint.enabled
         || Settings.navigation.progression.enabled
         || Settings.navigation.customLevels.enabled
         || Settings.navigation.quests.enabled;
+    const auto gameplayReady = GameplayReady.load(std::memory_order_acquire);
     return Operational.load(std::memory_order_acquire)
-        && GameplayReady.load(std::memory_order_acquire)
+        && ShouldDrawMapSenseOwnedMapOverlay(
+            gameplayReady,
+            false)
         && Settings.overlay.enabled
-        && ((navigationEnabled && WantsNavigationLineFrame())
-            || WantsNativeAutomapMarkerFrame());
+        && ((navigationEnabled
+                && WantsNavigationLineFrame(retainCurrentProjection))
+            || WantsNativeAutomapMarkerFrame(retainCurrentProjection)
+            || WantsNativeAutomapPoiFrame(retainCurrentProjection));
 }
 
 auto MarkerStyleFor(MonsterRank rank) noexcept
@@ -2023,56 +2716,1293 @@ void DrawMonsterImmunities(
         opacity);
 }
 
+[[nodiscard]] auto TryScaleNativeAutomapPoint(
+        const ImGuiIO& io,
+        std::int32_t nativeWidth,
+        std::int32_t nativeHeight,
+        std::int32_t nativeX,
+        std::int32_t nativeY,
+        ImVec2& point) noexcept -> bool {
+    if (nativeWidth <= 0 || nativeHeight <= 0) return false;
+    const auto scaleX = io.DisplaySize.x
+        / static_cast<float>(nativeWidth);
+    const auto scaleY = io.DisplaySize.y
+        / static_cast<float>(nativeHeight);
+    if (!std::isfinite(scaleX) || !std::isfinite(scaleY)
+        || scaleX <= 0.0F || scaleY <= 0.0F) {
+        return false;
+    }
+    const auto scaleTolerance = std::max(
+        0.01F,
+        std::max(scaleX, scaleY) * 0.01F);
+    if (std::abs(scaleX - scaleY) > scaleTolerance) return false;
+    point = {
+        static_cast<float>(nativeX) * scaleX,
+        static_cast<float>(nativeY) * scaleY,
+    };
+    return std::isfinite(point.x) && std::isfinite(point.y)
+        && point.x >= 0.0F && point.y >= 0.0F
+        && point.x < io.DisplaySize.x && point.y < io.DisplaySize.y;
+}
+
+[[nodiscard]] auto DecodeAutomapUtf8Codepoint(
+        const char*& cursor,
+        std::uint32_t& codepoint) noexcept -> bool {
+    const auto first = static_cast<unsigned char>(*cursor);
+    if (first == 0U) return false;
+    if (first <= 0x7FU) {
+        codepoint = first;
+        ++cursor;
+        return true;
+    }
+    std::uint32_t value{};
+    std::uint32_t minimum{};
+    std::size_t continuationCount{};
+    if ((first & 0xE0U) == 0xC0U) {
+        value = first & 0x1FU;
+        minimum = 0x80U;
+        continuationCount = 1U;
+    } else if ((first & 0xF0U) == 0xE0U) {
+        value = first & 0x0FU;
+        minimum = 0x800U;
+        continuationCount = 2U;
+    } else if ((first & 0xF8U) == 0xF0U) {
+        value = first & 0x07U;
+        minimum = 0x10000U;
+        continuationCount = 3U;
+    } else {
+        return false;
+    }
+    for (std::size_t index = 1U; index <= continuationCount; ++index) {
+        const auto next = static_cast<unsigned char>(cursor[index]);
+        if (next == 0U || (next & 0xC0U) != 0x80U) return false;
+        value = (value << 6U) | (next & 0x3FU);
+    }
+    if (value < minimum || value > 0xFFFFU
+        || (value >= 0xD800U && value <= 0xDFFFU)) {
+        return false;
+    }
+    cursor += continuationCount + 1U;
+    codepoint = value;
+    return true;
+}
+
+[[nodiscard]] auto SelectAutomapLabelFont(const char* text) noexcept
+        -> ImFont* {
+    auto* const automapFont = GetD3D12ImGuiAutomapFont();
+    if (automapFont == nullptr || text == nullptr) return ImGui::GetFont();
+    const char* cursor = text;
+    while (*cursor != '\0') {
+        std::uint32_t codepoint{};
+        if (!DecodeAutomapUtf8Codepoint(cursor, codepoint)
+            || automapFont->FindGlyphNoFallback(
+                static_cast<ImWchar>(codepoint)) == nullptr) {
+            return ImGui::GetFont();
+        }
+    }
+    return automapFont;
+}
+
+enum class AutomapTextPlacement : std::uint8_t {
+    Top,
+    AboveIcon,
+};
+
+[[nodiscard]] auto DrawCenteredShadowedText(
+        ImDrawList* drawList,
+        const ImGuiIO& io,
+        const char* text,
+        ImVec2 anchor,
+        float fontSize,
+        ImU32 color,
+        float opacity,
+        AutomapTextPlacement placement = AutomapTextPlacement::Top,
+        float iconTopExtent = 0.0F,
+        float gap = 0.0F) noexcept -> float {
+    if (drawList == nullptr || text == nullptr || text[0] == '\0') return 0.0F;
+    auto* const font = SelectAutomapLabelFont(text);
+    if (font == nullptr) return 0.0F;
+    const auto bounds = font->CalcTextSizeA(
+        fontSize,
+        std::max(1.0F, io.DisplaySize.x),
+        0.0F,
+        text);
+    const auto top = placement == AutomapTextPlacement::AboveIcon
+        ? AutomapLabelTopAboveIcon(
+            anchor.y,
+            bounds.y,
+            iconTopExtent,
+            gap)
+        : anchor.y;
+    const auto position = ImVec2{
+        std::clamp(anchor.x - bounds.x * 0.5F,
+            0.0F,
+            std::max(0.0F, io.DisplaySize.x - bounds.x)),
+        std::clamp(top,
+            0.0F,
+            std::max(0.0F, io.DisplaySize.y - bounds.y)),
+    };
+    const auto shadow = ToImGuiColor(
+        RgbaColor{0.0F, 0.0F, 0.0F, 0.98F},
+        opacity);
+    const auto outlineRadius = std::clamp(
+        fontSize * 0.035F,
+        1.0F,
+        2.0F);
+    const std::array<ImVec2, 5> outlineOffsets{
+        ImVec2{0.0F, -outlineRadius},
+        ImVec2{-outlineRadius, 0.0F},
+        ImVec2{outlineRadius, 0.0F},
+        ImVec2{0.0F, outlineRadius},
+        ImVec2{outlineRadius, outlineRadius},
+    };
+    for (const auto& offset : outlineOffsets) {
+        drawList->AddText(
+            font,
+            fontSize,
+            ImVec2{position.x + offset.x, position.y + offset.y},
+            shadow,
+            text);
+    }
+    drawList->AddText(font, fontSize, position, color, text);
+    return bounds.y;
+}
+
+void DrawShrineIcon(
+        ImDrawList* drawList,
+        ImVec2 center,
+        float size,
+        ImU32 color,
+        float opacity) noexcept {
+    if (drawList == nullptr || size <= 0.0F) return;
+    const auto radius = size * 0.42F;
+    const auto line = std::clamp(size * 0.095F, 1.25F, 2.4F);
+    const auto shadow = ToImGuiColor(
+        RgbaColor{0.0F, 0.0F, 0.0F, 0.90F}, opacity);
+    auto fillValue = ImGui::ColorConvertU32ToFloat4(color);
+    fillValue.w = std::clamp(fillValue.w * 0.22F, 0.0F, 1.0F);
+    const auto fill = ImGui::ColorConvertFloat4ToU32(fillValue);
+    drawList->AddCircleFilled(center, radius + 2.0F, shadow, 20);
+    drawList->AddCircleFilled(center, radius, fill, 20);
+    drawList->AddCircle(center, radius, color, 20, line);
+    const auto arm = radius * 0.64F;
+    drawList->AddLine(
+        ImVec2{center.x - arm, center.y},
+        ImVec2{center.x + arm, center.y},
+        shadow,
+        line + 2.0F);
+    drawList->AddLine(
+        ImVec2{center.x, center.y - arm},
+        ImVec2{center.x, center.y + arm},
+        shadow,
+        line + 2.0F);
+    drawList->AddLine(
+        ImVec2{center.x - arm, center.y},
+        ImVec2{center.x + arm, center.y},
+        color,
+        line);
+    drawList->AddLine(
+        ImVec2{center.x, center.y - arm},
+        ImVec2{center.x, center.y + arm},
+        color,
+        line);
+}
+
+void DrawFallbackChestIcon(
+        ImDrawList* drawList,
+        ImVec2 center,
+        float size,
+        ImU32 outlineColor,
+        ImU32 interiorColor,
+        ImU32 accentColor,
+        float opacity) noexcept {
+    if (drawList == nullptr || size <= 0.0F) return;
+    const auto tint = [](ImU32 source, float brightness, float alphaScale) {
+        auto value = ImGui::ColorConvertU32ToFloat4(source);
+        value.x = std::clamp(value.x * brightness, 0.0F, 1.0F);
+        value.y = std::clamp(value.y * brightness, 0.0F, 1.0F);
+        value.z = std::clamp(value.z * brightness, 0.0F, 1.0F);
+        value.w = std::clamp(value.w * alphaScale, 0.0F, 1.0F);
+        return ImGui::ColorConvertFloat4ToU32(value);
+    };
+    const auto x = [center, size](float value) {
+        return std::floor(center.x + value * size) + 0.5F;
+    };
+    const auto y = [center, size](float value) {
+        return std::floor(center.y + value * size) + 0.5F;
+    };
+    const auto fillSide = tint(interiorColor, 0.60F, 0.52F);
+    const auto fillFront = tint(interiorColor, 0.88F, 0.62F);
+    const auto fillLidSide = tint(interiorColor, 0.72F, 0.56F);
+    const auto fillLidFront = tint(interiorColor, 1.02F, 0.68F);
+    const auto fillLock = tint(accentColor, 1.04F, 0.92F);
+    const auto shadow = ToImGuiColor(
+        RgbaColor{0.0F, 0.0F, 0.0F, 0.60F}, opacity);
+    const auto lockOutline = tint(outlineColor, 0.58F, 1.0F);
+    const auto keyhole = ToImGuiColor(
+        RgbaColor{0.035F, 0.025F, 0.015F, 0.96F}, opacity);
+    const auto lineThickness = std::clamp(size * 0.047F, 1.0F, 1.55F);
+    const auto underStroke = lineThickness + 0.70F;
+
+    // Compact clean-room three-quarter trunk. The lid is deliberately built
+    // from a small, regular grid: the back rail, front seam and base are each
+    // perfectly horizontal, while every depth edge uses the same diagonal.
+    // At automap scale this reads as a chest instead of a basket or cage.
+    const ImVec2 rearSeam{x(-0.48F), y(-0.11F)};
+    const ImVec2 rearBottom{x(-0.48F), y(0.25F)};
+    const ImVec2 frontSeamLeft{x(-0.28F), y(-0.01F)};
+    const ImVec2 frontSeamRight{x(0.48F), y(-0.01F)};
+    const ImVec2 frontBottomLeft{x(-0.28F), y(0.35F)};
+    const ImVec2 frontBottomRight{x(0.48F), y(0.35F)};
+
+    const ImVec2 rearShoulder{x(-0.44F), y(-0.25F)};
+    const ImVec2 backRailLeft{x(-0.14F), y(-0.42F)};
+    const ImVec2 backRailRight{x(0.22F), y(-0.42F)};
+    const ImVec2 frontShoulderLeft{x(-0.28F), y(-0.19F)};
+    const ImVec2 frontShoulderRight{x(0.43F), y(-0.24F)};
+
+    const std::array<ImVec2, 4> sideFace{
+        rearSeam,
+        frontSeamLeft,
+        frontBottomLeft,
+        rearBottom,
+    };
+    const std::array<ImVec2, 4> frontFace{
+        frontSeamLeft,
+        frontSeamRight,
+        frontBottomRight,
+        frontBottomLeft,
+    };
+    const std::array<ImVec2, 4> sideLidFace{
+        rearSeam,
+        rearShoulder,
+        backRailLeft,
+        frontSeamLeft,
+    };
+    const std::array<ImVec2, 6> frontLidFace{
+        frontSeamLeft,
+        frontShoulderLeft,
+        backRailLeft,
+        backRailRight,
+        frontShoulderRight,
+        frontSeamRight,
+    };
+    drawList->AddConvexPolyFilled(
+        sideFace.data(),
+        static_cast<int>(sideFace.size()),
+        fillSide);
+    drawList->AddConvexPolyFilled(
+        frontFace.data(),
+        static_cast<int>(frontFace.size()),
+        fillFront);
+    drawList->AddConvexPolyFilled(
+        sideLidFace.data(),
+        static_cast<int>(sideLidFace.size()),
+        fillLidSide);
+    drawList->AddConvexPolyFilled(
+        frontLidFace.data(),
+        static_cast<int>(frontLidFace.size()),
+        fillLidFront);
+
+    const std::array<ImVec2, 10> silhouette{
+        rearBottom,
+        rearSeam,
+        rearShoulder,
+        backRailLeft,
+        backRailRight,
+        frontShoulderRight,
+        frontSeamRight,
+        frontBottomRight,
+        frontBottomLeft,
+        rearBottom,
+    };
+    drawList->AddPolyline(
+        silhouette.data(),
+        static_cast<int>(silhouette.size()),
+        shadow,
+        ImDrawFlags_None,
+        underStroke);
+    drawList->AddPolyline(
+        silhouette.data(),
+        static_cast<int>(silhouette.size()),
+        outlineColor,
+        ImDrawFlags_None,
+        lineThickness);
+
+    const auto drawStructure = [drawList, shadow, outlineColor, underStroke,
+            lineThickness](const ImVec2* points, std::size_t count) noexcept {
+        drawList->AddPolyline(
+            points,
+            static_cast<int>(count),
+            shadow,
+            ImDrawFlags_None,
+            underStroke);
+        drawList->AddPolyline(
+            points,
+            static_cast<int>(count),
+            outlineColor,
+            ImDrawFlags_None,
+            lineThickness);
+    };
+    const std::array<ImVec2, 3> lidSeam{
+        rearSeam,
+        frontSeamLeft,
+        frontSeamRight,
+    };
+    drawStructure(lidSeam.data(), lidSeam.size());
+    const std::array<ImVec2, 2> cornerPost{
+        frontSeamLeft,
+        frontBottomLeft,
+    };
+    drawStructure(cornerPost.data(), cornerPost.size());
+    const std::array<ImVec2, 3> lidCorner{
+        backRailLeft,
+        frontShoulderLeft,
+        frontSeamLeft,
+    };
+    drawStructure(lidCorner.data(), lidCorner.size());
+
+    const std::array<ImVec2, 4> lockPlate{
+        ImVec2{x(0.035F), y(-0.045F)},
+        ImVec2{x(0.195F), y(-0.045F)},
+        ImVec2{x(0.195F), y(0.185F)},
+        ImVec2{x(0.035F), y(0.185F)},
+    };
+    drawList->AddConvexPolyFilled(
+        lockPlate.data(),
+        static_cast<int>(lockPlate.size()),
+        fillLock);
+    drawList->AddPolyline(
+        lockPlate.data(),
+        static_cast<int>(lockPlate.size()),
+        lockOutline,
+        ImDrawFlags_Closed,
+        std::max(1.0F, lineThickness * 0.85F));
+    drawList->AddCircleFilled(
+        ImVec2{x(0.115F), y(0.035F)},
+        std::max(0.75F, size * 0.024F),
+        keyhole);
+    drawList->AddLine(
+        ImVec2{x(0.115F), y(0.050F)},
+        ImVec2{x(0.115F), y(0.125F)},
+        keyhole,
+        std::max(1.0F, size * 0.024F));
+}
+
+[[nodiscard]] auto DrawPrimeMhChestImage(
+        ImDrawList* drawList,
+        ImVec2 center,
+        float chestSize,
+        D3D12ImGuiTextureView texture,
+        bool specialChest,
+        float opacity) noexcept -> bool {
+    if (drawList == nullptr || chestSize <= 0.0F || !texture) return false;
+    const auto placement = ComputePrimeMhChestImagePlacement(
+        center.x,
+        center.y,
+        chestSize,
+        specialChest);
+    const auto alpha = static_cast<int>(std::lround(
+        std::clamp(opacity, 0.0F, 1.0F) * 255.0F));
+    drawList->AddImage(
+        static_cast<ImTextureID>(texture.textureId),
+        ImVec2{placement.left, placement.top},
+        ImVec2{placement.right, placement.bottom},
+        ImVec2{0.0F, 0.0F},
+        ImVec2{1.0F, 1.0F},
+        IM_COL32(255, 255, 255, alpha));
+    return true;
+}
+
+void DrawChestStateLock(
+        ImDrawList* drawList,
+        ImVec2 chestCenter,
+        float chestSize,
+        ImU32 stateColor,
+        float opacity) noexcept {
+    if (drawList == nullptr || chestSize <= 0.0F) return;
+    const float width = std::clamp(chestSize * 0.24F, 5.5F, 15.0F);
+    const float bodyHeight = width * 0.72F;
+    const float lineThickness = std::clamp(
+        chestSize * 0.045F, 1.1F, 2.2F);
+    const ImVec2 lockCenter{
+        chestCenter.x + chestSize * 0.14F,
+        chestCenter.y + chestSize * 0.12F,
+    };
+    const auto shadow = ToImGuiColor(
+        RgbaColor{0.0F, 0.0F, 0.0F, 0.92F}, opacity);
+    const auto keyhole = ToImGuiColor(
+        RgbaColor{0.015F, 0.015F, 0.02F, 0.98F}, opacity);
+    const ImVec2 shackleMinimum{
+        lockCenter.x - width * 0.28F,
+        lockCenter.y - bodyHeight * 1.03F,
+    };
+    const ImVec2 shackleMaximum{
+        lockCenter.x + width * 0.28F,
+        lockCenter.y - bodyHeight * 0.06F,
+    };
+    drawList->AddRect(
+        ImVec2{shackleMinimum.x + 1.0F, shackleMinimum.y + 1.0F},
+        ImVec2{shackleMaximum.x + 1.0F, shackleMaximum.y + 1.0F},
+        shadow,
+        width * 0.30F,
+        ImDrawFlags_RoundCornersTop,
+        lineThickness + 2.0F);
+    drawList->AddRect(
+        shackleMinimum,
+        shackleMaximum,
+        stateColor,
+        width * 0.30F,
+        ImDrawFlags_RoundCornersTop,
+        lineThickness);
+    const ImVec2 bodyMinimum{
+        lockCenter.x - width * 0.5F,
+        lockCenter.y - bodyHeight * 0.25F,
+    };
+    const ImVec2 bodyMaximum{
+        lockCenter.x + width * 0.5F,
+        lockCenter.y + bodyHeight * 0.75F,
+    };
+    drawList->AddRectFilled(
+        ImVec2{bodyMinimum.x + 1.0F, bodyMinimum.y + 1.0F},
+        ImVec2{bodyMaximum.x + 1.0F, bodyMaximum.y + 1.0F},
+        shadow,
+        width * 0.10F);
+    drawList->AddRectFilled(
+        bodyMinimum,
+        bodyMaximum,
+        stateColor,
+        width * 0.10F);
+    drawList->AddRect(
+        bodyMinimum,
+        bodyMaximum,
+        shadow,
+        width * 0.10F,
+        ImDrawFlags_RoundCornersAll,
+        std::max(1.0F, lineThickness * 0.65F));
+    const ImVec2 keyholeCenter{
+        lockCenter.x,
+        lockCenter.y + bodyHeight * 0.16F,
+    };
+    drawList->AddCircleFilled(
+        keyholeCenter,
+        std::max(0.85F, width * 0.10F),
+        keyhole,
+        12);
+    drawList->AddLine(
+        ImVec2{keyholeCenter.x, keyholeCenter.y + width * 0.06F},
+        ImVec2{keyholeCenter.x, keyholeCenter.y + width * 0.22F},
+        keyhole,
+        std::max(1.0F, width * 0.10F));
+}
+
+void DrawArmorRackIcon(
+        ImDrawList* drawList,
+        ImVec2 center,
+        float size,
+        ImU32 color,
+        float opacity) noexcept {
+    if (drawList == nullptr) return;
+    const auto half = size * 0.5F;
+    const auto outline = ToImGuiColor(
+        RgbaColor{0.0F, 0.0F, 0.0F, 0.90F},
+        opacity);
+    const std::array<ImVec2, 6> shield{
+        ImVec2{center.x - half * 0.72F, center.y - half * 0.72F},
+        ImVec2{center.x, center.y - half},
+        ImVec2{center.x + half * 0.72F, center.y - half * 0.72F},
+        ImVec2{center.x + half * 0.58F, center.y + half * 0.28F},
+        ImVec2{center.x, center.y + half},
+        ImVec2{center.x - half * 0.58F, center.y + half * 0.28F},
+    };
+    drawList->AddPolyline(
+        shield.data(),
+        static_cast<int>(shield.size()),
+        outline,
+        ImDrawFlags_Closed,
+        std::max(3.0F, size * 0.18F));
+    drawList->AddPolyline(
+        shield.data(),
+        static_cast<int>(shield.size()),
+        color,
+        ImDrawFlags_Closed,
+        std::max(1.5F, size * 0.09F));
+    drawList->AddLine(
+        ImVec2{center.x, center.y - half * 0.62F},
+        ImVec2{center.x, center.y + half * 0.50F},
+        color,
+        std::max(1.0F, size * 0.07F));
+}
+
+void DrawWeaponRackIcon(
+        ImDrawList* drawList,
+        ImVec2 center,
+        float size,
+        ImU32 color,
+        float opacity) noexcept {
+    if (drawList == nullptr) return;
+    const auto half = size * 0.5F;
+    const auto outline = ToImGuiColor(
+        RgbaColor{0.0F, 0.0F, 0.0F, 0.90F},
+        opacity);
+    const auto drawSword = [drawList, center, half](
+            float direction,
+            ImU32 swordColor,
+            float thickness) noexcept {
+        const ImVec2 bladeStart{
+            center.x - direction * half * 0.72F,
+            center.y + half * 0.72F,
+        };
+        const ImVec2 bladeEnd{
+            center.x + direction * half * 0.72F,
+            center.y - half * 0.72F,
+        };
+        drawList->AddLine(bladeStart, bladeEnd, swordColor, thickness);
+        const ImVec2 guardCenter{
+            center.x - direction * half * 0.42F,
+            center.y + half * 0.42F,
+        };
+        drawList->AddLine(
+            ImVec2{guardCenter.x - half * 0.20F,
+                guardCenter.y - direction * half * 0.20F},
+            ImVec2{guardCenter.x + half * 0.20F,
+                guardCenter.y + direction * half * 0.20F},
+            swordColor,
+            thickness);
+    };
+    drawSword(1.0F, outline, std::max(3.0F, size * 0.18F));
+    drawSword(-1.0F, outline, std::max(3.0F, size * 0.18F));
+    drawSword(1.0F, color, std::max(1.4F, size * 0.08F));
+    drawSword(-1.0F, color, std::max(1.4F, size * 0.08F));
+}
+
+enum class AutomapPoiRenderPass : std::uint8_t {
+    Objects,
+    ProtectedLabels,
+};
+
+void DrawAutomapPoiSnapshots(
+        ImDrawList* drawList,
+        const ImGuiIO& io,
+        const std::shared_ptr<const MapSenseDataCatalog>& dataCatalog,
+        float opacity,
+        AutomapPoiRenderPass renderPass) noexcept {
+    if (drawList == nullptr || dataCatalog == nullptr
+        || !Settings.objects.enabled) {
+        return;
+    }
+    struct DrawnExitLabel final {
+        bool isExitLabel{};
+        std::int32_t targetLevelId{};
+        AutomapLabelRectangle anchorRectangle{};
+        AutomapLabelRectangle placedRectangle{};
+    };
+    std::array<
+        DrawnExitLabel,
+        MaximumAutomapExitLabels + 1U> drawnExitLabels{};
+    std::size_t drawnExitLabelCount{};
+    const bool labelPass = renderPass
+        == AutomapPoiRenderPass::ProtectedLabels;
+    const auto primeMhChestTexture = labelPass
+        ? D3D12ImGuiTextureView{}
+        : GetD3D12ImGuiPrimeMhChestTexture(false);
+    const auto primeMhSuperChestTexture = labelPass
+        ? D3D12ImGuiTextureView{}
+        : GetD3D12ImGuiPrimeMhChestTexture(true);
+    for (const auto& poi : PoiSnapshots) {
+        const bool isLabel = poi.kind == AutomapPoiKind::ExitLabel
+            || poi.kind == AutomapPoiKind::WaypointLabel
+            || poi.kind == AutomapPoiKind::ShrineLabel;
+        if (isLabel != labelPass) continue;
+            ImVec2 center{};
+            if (!TryScaleNativeAutomapPoint(
+                    io,
+                    poi.nativeWidth,
+                    poi.nativeHeight,
+                    poi.x,
+                    poi.y,
+                    center)) {
+                continue;
+            }
+            switch (poi.kind) {
+            case AutomapPoiKind::ExitLabel: {
+                if (!Settings.objects.exitLabels.enabled
+                    || poi.sourceId < 0) {
+                    break;
+                }
+                const auto* const level = dataCatalog->FindLevel(poi.sourceId);
+                if (level == nullptr || !level->name.localized
+                    || level->name.utf8.empty()) {
+                    break;
+                }
+                const auto fontSize = std::clamp(
+                    Settings.objects.exitLabels.size
+                        * Settings.overlay.scale,
+                    MinimumAutomapLabelSize,
+                    MaximumAutomapLabelSize);
+                auto* const font = SelectAutomapLabelFont(
+                    level->name.utf8.c_str());
+                if (font == nullptr) break;
+                const auto textBounds = font->CalcTextSizeA(
+                    fontSize,
+                    std::max(1.0F, io.DisplaySize.x),
+                    0.0F,
+                    level->name.utf8.c_str());
+                const auto textTop = AutomapLabelTopAboveIcon(
+                    center.y,
+                    textBounds.y,
+                    NativeExitIconTopExtent * Settings.overlay.scale,
+                    NativeAutomapLabelGap * Settings.overlay.scale);
+                const auto textPosition = ImVec2{
+                    std::clamp(
+                        center.x - textBounds.x * 0.5F,
+                        0.0F,
+                        std::max(0.0F, io.DisplaySize.x - textBounds.x)),
+                    std::clamp(
+                        textTop,
+                        0.0F,
+                        std::max(0.0F, io.DisplaySize.y - textBounds.y)),
+                };
+                const AutomapLabelRectangle anchorRectangle{
+                    .left = textPosition.x,
+                    .top = textPosition.y,
+                    .right = textPosition.x + textBounds.x,
+                    .bottom = textPosition.y + textBounds.y,
+                };
+                bool duplicate{};
+                for (std::size_t drawnIndex = 0U;
+                        drawnIndex < drawnExitLabelCount;
+                        ++drawnIndex) {
+                    const auto& drawn = drawnExitLabels[drawnIndex];
+                    if (drawn.isExitLabel
+                            && drawn.targetLevelId == poi.sourceId
+                            && AutomapLabelRectanglesOverlap(
+                                drawn.anchorRectangle,
+                                anchorRectangle,
+                                std::max(1.0F, Settings.overlay.scale))) {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (duplicate) break;
+                auto placedRectangle = anchorRectangle;
+                bool placed{};
+                const auto separation = textBounds.y
+                    + std::max(4.0F, 5.0F * Settings.overlay.scale);
+                constexpr std::size_t MaximumSeparationSlots = 16U;
+                for (std::size_t slot = 0U;
+                        slot < MaximumSeparationSlots;
+                        ++slot) {
+                    // Prefer stacking above the icon. Downward slots are a
+                    // bounded fallback for labels already clipped at the top
+                    // edge of the display.
+                    const auto offset = slot == 0U
+                        ? 0.0F
+                        : slot <= MaximumSeparationSlots / 2U
+                            ? -static_cast<float>(slot) * separation
+                            : static_cast<float>(
+                                slot - MaximumSeparationSlots / 2U)
+                                * separation;
+                    const auto candidateTop = std::clamp(
+                        anchorRectangle.top + offset,
+                        0.0F,
+                        std::max(0.0F, io.DisplaySize.y - textBounds.y));
+                    const AutomapLabelRectangle candidate{
+                        .left = anchorRectangle.left,
+                        .top = candidateTop,
+                        .right = anchorRectangle.right,
+                        .bottom = candidateTop + textBounds.y,
+                    };
+                    bool collision{};
+                    for (std::size_t drawnIndex = 0U;
+                            drawnIndex < drawnExitLabelCount;
+                            ++drawnIndex) {
+                        if (AutomapLabelRectanglesOverlap(
+                                drawnExitLabels[drawnIndex].placedRectangle,
+                                candidate,
+                                std::max(
+                                    2.0F,
+                                    3.0F * Settings.overlay.scale))) {
+                            collision = true;
+                            break;
+                        }
+                    }
+                    if (collision) continue;
+                    placedRectangle = candidate;
+                    placed = true;
+                    break;
+                }
+                if (!placed) break;
+                if (drawnExitLabelCount < drawnExitLabels.size()) {
+                    drawnExitLabels[drawnExitLabelCount++] = {
+                        .isExitLabel = true,
+                        .targetLevelId = poi.sourceId,
+                        .anchorRectangle = anchorRectangle,
+                        .placedRectangle = placedRectangle,
+                    };
+                }
+                const ImVec2 placedCenter{
+                    center.x,
+                    center.y + placedRectangle.top - anchorRectangle.top,
+                };
+                (void)DrawCenteredShadowedText(
+                    drawList,
+                    io,
+                    level->name.utf8.c_str(),
+                    placedCenter,
+                    fontSize,
+                    ToImGuiColor(Settings.objects.exitLabels.color, opacity),
+                    opacity,
+                    AutomapTextPlacement::AboveIcon,
+                    NativeExitIconTopExtent * Settings.overlay.scale,
+                    NativeAutomapLabelGap * Settings.overlay.scale);
+                break;
+            }
+            case AutomapPoiKind::WaypointLabel: {
+                if (!Settings.objects.waypointLabels.enabled
+                        || poi.sourceId <= 0) {
+                    break;
+                }
+                const auto* const level = dataCatalog->FindLevel(poi.sourceId);
+                if (level == nullptr || !level->name.localized
+                        || level->waypointLabelUtf8.empty()) {
+                    break;
+                }
+                const auto fontSize = std::clamp(
+                    Settings.objects.waypointLabels.size
+                        * Settings.overlay.scale,
+                    MinimumAutomapLabelSize,
+                    MaximumAutomapLabelSize);
+                auto* const font = SelectAutomapLabelFont(
+                    level->waypointLabelUtf8.c_str());
+                if (font == nullptr) break;
+                const auto textBounds = font->CalcTextSizeA(
+                    fontSize,
+                    std::max(1.0F, io.DisplaySize.x),
+                    0.0F,
+                    level->waypointLabelUtf8.c_str());
+                const auto textTop = AutomapLabelTopAboveIcon(
+                    center.y,
+                    textBounds.y,
+                    NativeWaypointIconTopExtent * Settings.overlay.scale,
+                    NativeWaypointLabelGap * Settings.overlay.scale);
+                const auto textPosition = ImVec2{
+                    std::clamp(
+                        center.x - textBounds.x * 0.5F,
+                        0.0F,
+                        std::max(0.0F, io.DisplaySize.x - textBounds.x)),
+                    std::clamp(
+                        textTop,
+                        0.0F,
+                        std::max(0.0F, io.DisplaySize.y - textBounds.y)),
+                };
+                const AutomapLabelRectangle anchorRectangle{
+                    .left = textPosition.x,
+                    .top = textPosition.y,
+                    .right = textPosition.x + textBounds.x,
+                    .bottom = textPosition.y + textBounds.y,
+                };
+                auto placedRectangle = anchorRectangle;
+                bool placed{};
+                const auto separation = textBounds.y
+                    + std::max(4.0F, 5.0F * Settings.overlay.scale);
+                constexpr std::size_t MaximumSeparationSlots = 16U;
+                for (std::size_t slot = 0U;
+                        slot < MaximumSeparationSlots;
+                        ++slot) {
+                    const auto offset = slot == 0U
+                        ? 0.0F
+                        : slot <= MaximumSeparationSlots / 2U
+                            ? -static_cast<float>(slot) * separation
+                            : static_cast<float>(
+                                slot - MaximumSeparationSlots / 2U)
+                                * separation;
+                    const auto candidateTop = std::clamp(
+                        anchorRectangle.top + offset,
+                        0.0F,
+                        std::max(0.0F, io.DisplaySize.y - textBounds.y));
+                    const AutomapLabelRectangle candidate{
+                        .left = anchorRectangle.left,
+                        .top = candidateTop,
+                        .right = anchorRectangle.right,
+                        .bottom = candidateTop + textBounds.y,
+                    };
+                    bool collision{};
+                    for (std::size_t drawnIndex = 0U;
+                            drawnIndex < drawnExitLabelCount;
+                            ++drawnIndex) {
+                        if (AutomapLabelRectanglesOverlap(
+                                drawnExitLabels[drawnIndex].placedRectangle,
+                                candidate,
+                                std::max(
+                                    2.0F,
+                                    3.0F * Settings.overlay.scale))) {
+                            collision = true;
+                            break;
+                        }
+                    }
+                    if (collision) continue;
+                    placedRectangle = candidate;
+                    placed = true;
+                    break;
+                }
+                if (!placed) break;
+                if (drawnExitLabelCount < drawnExitLabels.size()) {
+                    drawnExitLabels[drawnExitLabelCount++] = {
+                        .targetLevelId = poi.sourceId,
+                        .anchorRectangle = anchorRectangle,
+                        .placedRectangle = placedRectangle,
+                    };
+                }
+                const ImVec2 placedCenter{
+                    center.x,
+                    center.y + placedRectangle.top - anchorRectangle.top,
+                };
+                (void)DrawCenteredShadowedText(
+                    drawList,
+                    io,
+                    level->waypointLabelUtf8.c_str(),
+                    placedCenter,
+                    fontSize,
+                    ToImGuiColor(
+                        Settings.objects.waypointLabels.color,
+                        opacity),
+                    opacity,
+                    AutomapTextPlacement::AboveIcon,
+                    NativeWaypointIconTopExtent * Settings.overlay.scale,
+                    NativeWaypointLabelGap * Settings.overlay.scale);
+                break;
+            }
+            case AutomapPoiKind::ShrineIcon: {
+                // Keep D2R's native shrine marker. MapSense adds only the
+                // proximity label; it no longer draws a second shrine icon.
+                break;
+            }
+            case AutomapPoiKind::ShrineLabel: {
+                if (!Settings.objects.shrineLabels.enabled
+                    || poi.sourceId < 0) {
+                    break;
+                }
+                const auto* const shrine = dataCatalog->FindShrineByInteractType(
+                    static_cast<std::uint32_t>(poi.sourceId));
+                if (shrine == nullptr || !shrine->name.localized
+                    || shrine->name.utf8.empty()) {
+                    break;
+                }
+                const auto fontSize = std::clamp(
+                    Settings.objects.shrineLabels.size
+                        * Settings.overlay.scale,
+                    MinimumAutomapLabelSize,
+                    MaximumAutomapLabelSize);
+                // The localized buff name is proximity-gated by the native
+                // collector and stays clearly above D2R's native marker.
+                (void)DrawCenteredShadowedText(
+                    drawList,
+                    io,
+                    shrine->name.utf8.c_str(),
+                    center,
+                    fontSize,
+                    ToImGuiColor(Settings.objects.shrineLabels.color, opacity),
+                    opacity,
+                    AutomapTextPlacement::AboveIcon,
+                    NativeShrineIconTopExtent * Settings.overlay.scale,
+                    NativeShrineLabelGap * Settings.overlay.scale);
+                break;
+            }
+            case AutomapPoiKind::Chest: {
+                if (!Settings.objects.chests.enabled) break;
+                const auto size = std::clamp(
+                    Settings.objects.chests.size * Settings.overlay.scale,
+                    MinimumAutomapObjectSize,
+                    MaximumAutomapObjectSize);
+                if (!DrawPrimeMhChestImage(
+                        drawList,
+                        center,
+                        size,
+                        primeMhChestTexture,
+                        false,
+                        opacity)) {
+                    DrawFallbackChestIcon(
+                        drawList,
+                        center,
+                        size,
+                        ToImGuiColor(
+                            Settings.objects.chests.outlineColor,
+                            opacity),
+                        ToImGuiColor(
+                            Settings.objects.chests.interiorColor,
+                            opacity),
+                        ToImGuiColor(
+                            Settings.objects.chests.interiorColor,
+                            opacity),
+                        opacity);
+                }
+                if ((poi.stateFlags & AutomapPoiStateTrapped) != 0U) {
+                    DrawChestStateLock(
+                        drawList,
+                        center,
+                        size,
+                        ToImGuiColor(
+                            Settings.objects.chests.trappedAccentColor,
+                            opacity),
+                        opacity);
+                } else if ((poi.stateFlags & AutomapPoiStateLocked) != 0U) {
+                    DrawChestStateLock(
+                        drawList,
+                        center,
+                        size,
+                        ToImGuiColor(
+                            Settings.objects.chests.lockedAccentColor,
+                            opacity),
+                        opacity);
+                }
+                break;
+            }
+            case AutomapPoiKind::SuperChest: {
+                if (!Settings.objects.superChests.enabled) break;
+                const auto size = std::clamp(
+                    Settings.objects.chests.size * Settings.overlay.scale,
+                    MinimumAutomapObjectSize,
+                    MaximumAutomapObjectSize);
+                if (!DrawPrimeMhChestImage(
+                        drawList,
+                        center,
+                        size,
+                        primeMhSuperChestTexture,
+                        true,
+                        opacity)) {
+                    DrawFallbackChestIcon(
+                        drawList,
+                        center,
+                        size,
+                        ToImGuiColor(
+                            Settings.objects.chests.outlineColor,
+                            opacity),
+                        ToImGuiColor(
+                            Settings.objects.chests.interiorColor,
+                            opacity),
+                        ToImGuiColor(
+                            Settings.objects.chests.interiorColor,
+                            opacity),
+                        opacity);
+                }
+                if ((poi.stateFlags & AutomapPoiStateTrapped) != 0U) {
+                    DrawChestStateLock(
+                        drawList,
+                        center,
+                        size,
+                        ToImGuiColor(
+                            Settings.objects.chests.trappedAccentColor,
+                            opacity),
+                        opacity);
+                } else if ((poi.stateFlags & AutomapPoiStateLocked) != 0U) {
+                    DrawChestStateLock(
+                        drawList,
+                        center,
+                        size,
+                        ToImGuiColor(
+                            Settings.objects.chests.lockedAccentColor,
+                            opacity),
+                        opacity);
+                }
+                break;
+            }
+            case AutomapPoiKind::ArmorRack: {
+                if (!Settings.objects.armorRacks.enabled) break;
+                const auto size = std::clamp(
+                    Settings.objects.armorRacks.size * Settings.overlay.scale,
+                    MinimumAutomapObjectSize,
+                    MaximumAutomapObjectSize);
+                DrawArmorRackIcon(
+                    drawList,
+                    center,
+                    size,
+                    ToImGuiColor(Settings.objects.armorRacks.color, opacity),
+                    opacity);
+                break;
+            }
+            case AutomapPoiKind::WeaponRack: {
+                if (!Settings.objects.weaponRacks.enabled) break;
+                const auto size = std::clamp(
+                    Settings.objects.weaponRacks.size * Settings.overlay.scale,
+                    MinimumAutomapObjectSize,
+                    MaximumAutomapObjectSize);
+                DrawWeaponRackIcon(
+                    drawList,
+                    center,
+                    size,
+                    ToImGuiColor(Settings.objects.weaponRacks.color, opacity),
+                    opacity);
+                break;
+            }
+            }
+        }
+}
+
+[[nodiscard]] auto ResolveBossName(
+        const MapSenseDataCatalog& dataCatalog,
+        const NativeAutomapMarkerSnapshot& marker) noexcept
+        -> const DataCatalogLocalizedText* {
+    if (!Settings.monsters.superUniqueBoss.showNames) {
+        return nullptr;
+    }
+    if (marker.superUniqueIndex >= 0) {
+        const auto* const superUnique = dataCatalog.FindSuperUnique(
+            static_cast<std::uint32_t>(marker.superUniqueIndex));
+        if (superUnique != nullptr && superUnique->name.localized
+            && !superUnique->name.utf8.empty()) {
+            return &superUnique->name;
+        }
+    }
+    if (marker.classId < 0) return nullptr;
+    const auto* const monStats = dataCatalog.FindMonStats(
+        static_cast<std::uint32_t>(marker.classId));
+    if (monStats == nullptr || (!monStats->boss && !monStats->primeEvil)
+        || !monStats->name.localized || monStats->name.utf8.empty()) {
+        return nullptr;
+    }
+    return &monStats->name;
+}
+
+[[nodiscard]] auto HasBossIdentity(
+        const std::shared_ptr<const MapSenseDataCatalog>& dataCatalog,
+        const NativeAutomapMarkerSnapshot& marker) noexcept -> bool {
+    if (marker.rank == MonsterRank::SuperUnique
+            || marker.superUniqueIndex >= 0) {
+        return true;
+    }
+    if (dataCatalog == nullptr || marker.classId < 0) return false;
+    const auto* const monStats = dataCatalog->FindMonStats(
+        static_cast<std::uint32_t>(marker.classId));
+    return monStats != nullptr && (monStats->boss || monStats->primeEvil);
+}
+
+[[nodiscard]] auto CountImmunities(std::uint8_t mask) noexcept
+        -> std::size_t {
+    std::size_t count{};
+    while (mask != 0U) {
+        count += mask & 1U;
+        mask = static_cast<std::uint8_t>(mask >> 1U);
+    }
+    return count;
+}
+
+[[nodiscard]] auto MonsterNameTop(
+        const NativeAutomapMarkerSnapshot& marker,
+        ImVec2 markerCenter,
+        float markerSize,
+        float fontSize) noexcept -> float {
+    const auto gap = std::max(2.0F, 2.0F * Settings.overlay.scale);
+    auto occupiedTop = markerCenter.y - markerSize * 0.5F;
+    if (Settings.immunities.enabled && marker.immunityMask != 0U) {
+        if (Settings.immunities.style == ImmunityDisplayStyle::ColoredI) {
+            auto* const font = ImGui::GetFont();
+            const auto indicatorSize = std::clamp(
+                Settings.immunities.indicatorSize * Settings.overlay.scale,
+                MinimumImmunityIndicatorSize,
+                MaximumImmunityIndicatorSize);
+            const auto indicatorHeight = font != nullptr
+                ? std::max(
+                    font->CalcTextSizeA(
+                        indicatorSize,
+                        1'000.0F,
+                        0.0F,
+                        "i").y,
+                    indicatorSize)
+                : indicatorSize;
+            const auto rows = (CountImmunities(marker.immunityMask) + 2U)
+                / 3U;
+            occupiedTop -= gap + static_cast<float>(rows) * indicatorHeight;
+        } else {
+            const auto thickness = std::clamp(
+                Settings.immunities.haloThickness * Settings.overlay.scale,
+                MinimumImmunityHaloThickness,
+                MaximumImmunityHaloThickness);
+            const auto radius = markerSize * 0.5F
+                + thickness
+                + std::max(1.5F, Settings.overlay.scale * 1.5F);
+            occupiedTop = markerCenter.y - radius;
+        }
+    }
+    return occupiedTop - gap - fontSize;
+}
+
+void DrawBossName(
+        ImDrawList* drawList,
+        const ImGuiIO& io,
+        const std::shared_ptr<const MapSenseDataCatalog>& dataCatalog,
+        const NativeAutomapMarkerSnapshot& marker,
+        ImVec2 markerCenter,
+        float markerSize,
+        float opacity) noexcept {
+    if (dataCatalog == nullptr) return;
+    const auto* const name = ResolveBossName(*dataCatalog, marker);
+    if (name == nullptr) return;
+    const auto fontSize = std::clamp(
+        Settings.monsters.superUniqueBoss.nameSize * Settings.overlay.scale,
+        MinimumAutomapLabelSize,
+        MaximumAutomapLabelSize);
+    (void)DrawCenteredShadowedText(
+        drawList,
+        io,
+        name->utf8.c_str(),
+        ImVec2{markerCenter.x,
+            MonsterNameTop(marker, markerCenter, markerSize, fontSize)},
+        fontSize,
+        ToImGuiColor(
+            Settings.monsters.superUniqueBoss.nameColor,
+            opacity),
+        opacity);
+}
+
+struct MonsterMarkerScreenGeometry final {
+    ImVec2 center{};
+    float size{};
+};
+
+[[nodiscard]] auto TryResolveMonsterMarkerScreenGeometry(
+        const NativeAutomapMarkerSnapshot& marker,
+        const ImGuiIO& io,
+        MonsterMarkerScreenGeometry& output) noexcept -> bool {
+    if (marker.nativeWidth <= 0 || marker.nativeHeight <= 0) return false;
+    const auto scaleX = io.DisplaySize.x
+        / static_cast<float>(marker.nativeWidth);
+    const auto scaleY = io.DisplaySize.y
+        / static_cast<float>(marker.nativeHeight);
+    if (!std::isfinite(scaleX) || !std::isfinite(scaleY)
+            || scaleX <= 0.0F || scaleY <= 0.0F) {
+        return false;
+    }
+    const auto scaleTolerance = std::max(
+        0.01F,
+        std::max(scaleX, scaleY) * 0.01F);
+    if (std::abs(scaleX - scaleY) > scaleTolerance) return false;
+
+    const auto x = static_cast<float>(marker.x) * scaleX;
+    const auto y = static_cast<float>(marker.y) * scaleY;
+    if (!std::isfinite(x) || !std::isfinite(y)
+            || x < 0.0F || y < 0.0F
+            || x >= io.DisplaySize.x || y >= io.DisplaySize.y) {
+        return false;
+    }
+    const auto& style = MarkerStyleFor(marker.rank);
+    output = {
+        .center = ImVec2{x, y},
+        .size = std::clamp(
+            style.size * Settings.overlay.scale,
+            MinimumMonsterMarkerSize,
+            MaximumMonsterMarkerSize),
+    };
+    return true;
+}
+
 void DrawMapSenseOwnedOverlay(void*) noexcept {
     if (!WantsMapSenseOwnedOverlay(nullptr)) return;
 
+    RequestNativeUiPanelVisibilityRefresh();
+    NativeUiStateStatus nativeUi{};
+    if (!AcquireNativeUiStateStatus(nativeUi)) return;
+    const auto retainCurrentProjection = nativeUi.retainAutomapProjection;
     const auto navigationLineCount = AcquireNavigationLineSnapshots(
-        NavigationLineSnapshots);
-    const auto markerCount = AcquireNativeAutomapMarkers(MarkerSnapshots);
-    if (navigationLineCount == 0U && markerCount == 0U) return;
+        NavigationLineSnapshots,
+        retainCurrentProjection);
+    const auto markerCount = AcquireNativeAutomapMarkers(
+        MarkerSnapshots,
+        retainCurrentProjection);
+    const auto poiCount = AcquireNativeAutomapPoiSnapshots(
+        PoiSnapshots,
+        retainCurrentProjection);
+    if (navigationLineCount == 0U && markerCount == 0U && poiCount == 0U) {
+        return;
+    }
 
     const auto& io = ImGui::GetIO();
     if (io.DisplaySize.x <= 0.0F || io.DisplaySize.y <= 0.0F) {
+        return;
+    }
+    NativeAutomapViewportSnapshot viewport{};
+    NativeAutomapClipBounds nativeClip{};
+    if (!AcquireNativeAutomapViewport(viewport, retainCurrentProjection)
+        || !TryResolveNativeAutomapClipBounds(viewport, nativeClip)) {
+        return;
+    }
+    NativeUiMapHorizontalClip panelClip{};
+    if (!TryResolveNativeUiMapHorizontalClip(
+            viewport.nativeWidth,
+            viewport.nativeHeight,
+            nativeUi.activeMask,
+            panelClip)) {
+        return;
+    }
+    nativeClip.left = std::max(nativeClip.left, panelClip.left);
+    nativeClip.right = std::min(nativeClip.right, panelClip.right);
+    if (nativeClip.right <= nativeClip.left) return;
+    const auto viewportScaleX = io.DisplaySize.x
+        / static_cast<float>(viewport.nativeWidth);
+    const auto viewportScaleY = io.DisplaySize.y
+        / static_cast<float>(viewport.nativeHeight);
+    const auto viewportScaleTolerance = std::max(
+        0.01F,
+        std::max(viewportScaleX, viewportScaleY) * 0.01F);
+    if (!std::isfinite(viewportScaleX)
+        || !std::isfinite(viewportScaleY)
+        || viewportScaleX <= 0.0F || viewportScaleY <= 0.0F
+        || std::abs(viewportScaleX - viewportScaleY)
+            > viewportScaleTolerance) {
+        return;
+    }
+    const ImVec2 clipMinimum{
+        static_cast<float>(nativeClip.left) * viewportScaleX,
+        static_cast<float>(nativeClip.top) * viewportScaleY,
+    };
+    const ImVec2 clipMaximum{
+        static_cast<float>(nativeClip.right) * viewportScaleX,
+        static_cast<float>(nativeClip.bottom) * viewportScaleY,
+    };
+    if (!std::isfinite(clipMinimum.x) || !std::isfinite(clipMinimum.y)
+        || !std::isfinite(clipMaximum.x) || !std::isfinite(clipMaximum.y)
+        || clipMaximum.x <= clipMinimum.x
+        || clipMaximum.y <= clipMinimum.y) {
         return;
     }
     const auto opacity = std::clamp(
         Settings.overlay.opacity,
         0.10F,
         1.0F);
+    const auto dataCatalog = DataCatalog.load(std::memory_order_acquire);
     auto* const drawList = ImGui::GetForegroundDrawList();
-    // Navigation is the map underlay. Monster markers and their immunity
-    // indicators remain readable because they are always submitted after it.
+    // D2R submits the native automap before its panels, so later panel artwork
+    // hides it even though AutomapContext still spans the complete viewport.
+    // Intersect that viewport with the current native UI-state side-panel clip
+    // so every MapSense map primitive follows the same visible region. The
+    // MapSense launcher/settings menu is drawn independently.
+    drawList->PushClipRect(clipMinimum, clipMaximum, true);
+    // Navigation and translucent POIs are the map underlay. Monster ranks are
+    // then submitted from
+    // weakest to strongest so dense packs cannot bury minions, uniques,
+    // superuniques, or native MonStats bosses.
     DrawNavigationLines(drawList, io, opacity);
-    for (const auto& marker : MarkerSnapshots) {
-        if (marker.nativeWidth <= 0 || marker.nativeHeight <= 0) continue;
-        const auto scaleX = io.DisplaySize.x
-            / static_cast<float>(marker.nativeWidth);
-        const auto scaleY = io.DisplaySize.y
-            / static_cast<float>(marker.nativeHeight);
-        if (!std::isfinite(scaleX) || !std::isfinite(scaleY)
-            || scaleX <= 0.0F || scaleY <= 0.0F) {
-            continue;
-        }
-        const auto scaleTolerance = std::max(
-            0.01F,
-            std::max(scaleX, scaleY) * 0.01F);
-        if (std::abs(scaleX - scaleY) > scaleTolerance) continue;
-
-        const auto x = static_cast<float>(marker.x) * scaleX;
-        const auto y = static_cast<float>(marker.y) * scaleY;
-        if (!std::isfinite(x) || !std::isfinite(y)
-            || x < 0.0F || y < 0.0F
-            || x >= io.DisplaySize.x || y >= io.DisplaySize.y) {
-            continue;
-        }
-
-        const auto& style = MarkerStyleFor(marker.rank);
-        const auto size = std::clamp(
-            style.size * Settings.overlay.scale,
-            MinimumMonsterMarkerSize,
-            MaximumMonsterMarkerSize);
-        const auto color = ToImGuiColor(style.color, opacity);
-        switch (style.shape) {
+    DrawAutomapPoiSnapshots(
+        drawList,
+        io,
+        dataCatalog,
+        opacity,
+        AutomapPoiRenderPass::Objects);
+    for (std::uint8_t layer = 0U;
+            layer <= MaximumMonsterMarkerRenderLayer;
+            ++layer) {
+        for (const auto& marker : MarkerSnapshots) {
+            const auto bossIdentity = HasBossIdentity(dataCatalog, marker);
+            if (MonsterMarkerRenderLayer(marker.rank, bossIdentity) != layer) {
+                continue;
+            }
+            MonsterMarkerScreenGeometry geometry{};
+            if (!TryResolveMonsterMarkerScreenGeometry(marker, io, geometry)) {
+                continue;
+            }
+            const auto& style = MarkerStyleFor(marker.rank);
+            const auto color = ToImGuiColor(style.color, opacity);
+            switch (style.shape) {
             case MonsterMarkerShape::X: {
                 const auto thickness = std::clamp(
                     style.thickness * Settings.overlay.scale,
@@ -2080,7 +4010,9 @@ void DrawMapSenseOwnedOverlay(void*) noexcept {
                     MaximumMonsterMarkerThickness);
                 DrawClosedMarkerOutline(
                     drawList,
-                    BuildCrossOutline(Vec2{x, y}, size * 0.5F),
+                    BuildCrossOutline(
+                        Vec2{geometry.center.x, geometry.center.y},
+                        geometry.size * 0.5F),
                     color,
                     thickness);
                 break;
@@ -2090,7 +4022,9 @@ void DrawMapSenseOwnedOverlay(void*) noexcept {
                     style.thickness * Settings.overlay.scale,
                     MinimumMonsterMarkerThickness,
                     MaximumMonsterMarkerThickness);
-                const auto outline = BuildPlayerCrossOutline(Vec2{x, y}, size);
+                const auto outline = BuildPlayerCrossOutline(
+                    Vec2{geometry.center.x, geometry.center.y},
+                    geometry.size);
                 const auto edgeThickness = thickness
                     + std::max(1.0F, Settings.overlay.scale);
                 DrawClosedMarkerOutline(
@@ -2109,29 +4043,55 @@ void DrawMapSenseOwnedOverlay(void*) noexcept {
             }
             case MonsterMarkerShape::Dot: {
                 constexpr float OutlineThickness = 1.0F;
-                const ImVec2 center{x, y};
-                const auto radius = size * 0.5F;
+                const auto radius = geometry.size * 0.5F;
                 const auto outlineColor = ToImGuiColor(
                     RgbaColor{0.02F, 0.015F, 0.01F, 0.72F},
                     opacity);
                 drawList->AddCircleFilled(
-                    center,
+                    geometry.center,
                     radius + OutlineThickness,
                     outlineColor);
                 drawList->AddCircleFilled(
-                    center,
+                    geometry.center,
                     radius,
                     color);
                 break;
             }
+            }
+            DrawMonsterImmunities(
+                drawList,
+                marker,
+                geometry.center,
+                geometry.size,
+                opacity);
         }
-        DrawMonsterImmunities(
+    }
+    // Text always wins the final compositing pass. A normal/minion marker that
+    // happens to share the same screen pixels can no longer cover a boss name.
+    for (const auto& marker : MarkerSnapshots) {
+        MonsterMarkerScreenGeometry geometry{};
+        if (!TryResolveMonsterMarkerScreenGeometry(marker, io, geometry)) {
+            continue;
+        }
+        DrawBossName(
             drawList,
+            io,
+            dataCatalog,
             marker,
-            ImVec2{x, y},
-            size,
+            geometry.center,
+            geometry.size,
             opacity);
     }
+    // Exit, waypoint, and shrine labels own the final protected layer. No
+    // monster icon, immunity badge, or boss name can paint over these
+    // player-facing names.
+    DrawAutomapPoiSnapshots(
+        drawList,
+        io,
+        dataCatalog,
+        opacity,
+        AutomapPoiRenderPass::ProtectedLabels);
+    drawList->PopClipRect();
 }
 
 void LogRendererInfo(const char* message) noexcept {
@@ -2195,6 +4155,99 @@ void OnOwnedOverlayDismissal(void*) noexcept {
     // MapSense-owned automap pixel before D2R handles Tab or Escape itself.
     InvalidateNavigationProjection();
     InvalidateNativeAutomapMarkerFrame();
+    InvalidateNativeAutomapPoiFrame();
+}
+
+[[nodiscard]] auto IsSafeActiveModFontToken(
+        std::string_view value) noexcept -> bool {
+    if (value.empty() || value == "." || value == "..") return false;
+    for (const char character : value) {
+        const auto byte = static_cast<unsigned char>(character);
+        if (byte < 0x20U || character == '/' || character == '\\'
+            || character == ':') {
+            return false;
+        }
+    }
+    return true;
+}
+
+[[nodiscard]] auto EndsWithMpqFontSuffix(
+        std::string_view value) noexcept -> bool {
+    if (value.size() < 4U) return false;
+    constexpr std::string_view suffix{".mpq"};
+    const auto offset = value.size() - suffix.size();
+    for (std::size_t index = 0U; index < suffix.size(); ++index) {
+        auto character = value[offset + index];
+        if (character >= 'A' && character <= 'Z')
+            character = static_cast<char>(character + ('a' - 'A'));
+        if (character != suffix[index]) return false;
+    }
+    return true;
+}
+
+void ConfigureD2RAutomapFont(
+        const D2RL::PluginContext* context) noexcept {
+    SetD3D12ImGuiAutomapFontPath(nullptr);
+    if (context == nullptr) return;
+    constexpr auto ActiveModEnd =
+        offsetof(D2RL::PluginContext, activeMod) + sizeof(const char*);
+    constexpr auto ModDirectoryEnd =
+        offsetof(D2RL::PluginContext, modDirectory)
+        + sizeof(const wchar_t*);
+    if (static_cast<std::size_t>(context->contextSize) < ActiveModEnd
+        || static_cast<std::size_t>(context->contextSize) < ModDirectoryEnd
+        || context->modDirectory == nullptr
+        || context->modDirectory[0] == L'\0') {
+        return;
+    }
+
+    try {
+        const std::filesystem::path root(context->modDirectory);
+        std::vector<std::filesystem::path> candidates;
+        candidates.reserve(2U);
+        if (context->activeMod != nullptr) {
+            std::size_t length{};
+            constexpr std::size_t MaximumActiveModBytes = 256U;
+            while (length < MaximumActiveModBytes
+                && context->activeMod[length] != '\0') {
+                ++length;
+            }
+            if (length < MaximumActiveModBytes) {
+                std::string packageName(context->activeMod, length);
+                if (IsSafeActiveModFontToken(packageName)) {
+                    if (!EndsWithMpqFontSuffix(packageName))
+                        packageName += ".mpq";
+                    const auto* const begin =
+                        reinterpret_cast<const char8_t*>(packageName.data());
+                    const std::filesystem::path package(std::u8string(
+                        begin,
+                        begin + packageName.size()));
+                    candidates.push_back(
+                        root / package / L"data" / L"hd" / L"ui"
+                            / L"fonts" / L"exocetblizzardot-medium.otf");
+                }
+            }
+        }
+        candidates.push_back(
+            root / L"data" / L"hd" / L"ui" / L"fonts"
+                / L"exocetblizzardot-medium.otf");
+        for (const auto& candidate : candidates) {
+            std::error_code error;
+            if (!std::filesystem::is_regular_file(candidate, error)
+                || error) {
+                continue;
+            }
+            SetD3D12ImGuiAutomapFontPath(candidate.c_str());
+            if (Context != nullptr)
+                Context->LogInfo(
+                    "MapSense: D2R Exocet automap font found in the active mod package.");
+            return;
+        }
+    } catch (...) {
+    }
+    if (Context != nullptr)
+        Context->LogWarn(
+            "MapSense: D2R Exocet font was not exposed by the active mod; localized system font fallback remains active.");
 }
 
 DWORD WINAPI HostRetryWorkerMain(void*) noexcept {
@@ -2303,7 +4356,7 @@ constexpr D2RL::PluginInfo PluginInfo{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "ruffneckk-mapsense",
     .name = "RuffnecKk MapSense",
-    .version = "0.12.5",
+    .version = "0.13.11",
     .author = "RuffnecKk",
     .description = "Reveals maps, marks monsters, and draws direct navigation lines.",
     .flags = D2RL::PluginFlags::Client | D2RL::PluginFlags::NativeHooks,
@@ -2325,13 +4378,19 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     }
     Context = context;
     Operational.store(false, std::memory_order_release);
+    FeaturesEnabled.store(true, std::memory_order_release);
     HostApiAvailable.store(false, std::memory_order_release);
     GameplayReady.store(false, std::memory_order_release);
     MenuExpanded.store(false, std::memory_order_release);
     MarkerAvailable.store(false, std::memory_order_release);
+    PoiRuntimeAvailable.store(false, std::memory_order_release);
+    PoiAvailable.store(false, std::memory_order_release);
     SessionEpoch.store(1, std::memory_order_release);
     CurrentSessionGeneration.store(0U, std::memory_order_release);
     LastDynamicNavigationRefreshTick.store(0U, std::memory_order_release);
+    LastNativeUiPanelRefreshRequestTick.store(0U, std::memory_order_release);
+    NativeUiPanelRefreshQueued.store(false, std::memory_order_release);
+    DataCatalog.store({}, std::memory_order_release);
     {
         QueueLockGuard lock;
         ActionQueueHead = 0;
@@ -2352,18 +4411,23 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     CancelPendingNavigationRefresh(true);
     ResetRevealReplayProcessState();
     if (!LoadConfig(Settings)) return false;
+    FeaturesEnabled.store(
+        Settings.featuresEnabled,
+        std::memory_order_release);
     if (!Settings.enabled) {
         context->LogInfo(
-            "RuffnecKk MapSense 0.12.5 candidate is disabled; no hook or Controls action was installed.");
+            "RuffnecKk MapSense 0.13.11 candidate is disabled; no hook or Controls action was installed.");
         return true;
     }
 
     try {
         MarkerSnapshots.clear();
         MarkerSnapshots.reserve(MaximumRecentNativeAutomapMarkers);
+        PoiSnapshots.clear();
+        PoiSnapshots.reserve(MaximumAutomapPoiSnapshots);
     } catch (...) {
         context->LogError(
-            "MapSense: the bounded renderer marker snapshot reserve could not be allocated.");
+            "MapSense: the bounded renderer marker/POI snapshot reserve could not be allocated.");
         return false;
     }
 
@@ -2450,16 +4514,38 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         context,
         Settings.diagnostics);
     MarkerAvailable.store(markerAvailable, std::memory_order_release);
+    const auto poiRuntimeAvailable = markerAvailable
+        && InitializeNativeAutomapPoi(context, Settings.diagnostics);
+    PoiRuntimeAvailable.store(poiRuntimeAvailable, std::memory_order_release);
+    PoiAvailable.store(false, std::memory_order_release);
+    SetRevealLevelInitializedCallback(
+        OnRevealLevelInitialized,
+        nullptr);
     if (markerAvailable) {
         SetNativeAutomapLevelObservedCallback(
             OnNativeAutomapLevelObserved,
             nullptr);
-        SetNativeAutomapMarkerEnabled(Settings.overlay.enabled);
+        SetNativeAutomapMarkerEnabled(
+            Settings.featuresEnabled && Settings.overlay.enabled);
         SetNativeAutomapImmunityCollectionEnabled(
-            Settings.overlay.enabled && Settings.immunities.enabled);
+            Settings.featuresEnabled
+                && Settings.overlay.enabled
+                && Settings.immunities.enabled);
     } else {
         context->LogWarn(
             "MapSense: monster markers and native navigation projection are unavailable; Reveal and the settings panel remain active.");
+    }
+    if (poiRuntimeAvailable) {
+        context->LogInfo(
+            "MapSense: localized labels and data-driven objects are pending D2R language initialization.");
+    } else {
+        context->LogWarn(
+            "MapSense: localized automap labels and data-driven object markers are unavailable; Reveal, navigation, and independently validated monster markers remain active.");
+    }
+    const auto nativeUiTelemetryAvailable = InitializeNativeUiState(context);
+    if (!nativeUiTelemetryAvailable) {
+        context->LogWarn(
+            "MapSense: native panel-state fingerprint is unavailable; MapSense map pixels will fail closed while the launcher remains available.");
     }
     MenuExpanded.store(
         Settings.menu.startExpanded || Settings.overlay.startMenuOpen,
@@ -2472,26 +4558,37 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         ShutdownRevealReplayTimer();
         ShutdownNavigationRefreshTimer();
         ShutdownNativeAutomapMarker();
+        ShutdownNativeAutomapPoi();
         ShutdownNavigationResolver();
         ShutdownNavigationEngine();
         StopImGuiHost();
+        ShutdownNativeUiState();
         ShutdownRevealEngine();
         UnregisterServices();
+        PoiAvailable.store(false, std::memory_order_release);
+        PoiRuntimeAvailable.store(false, std::memory_order_release);
+        DataCatalog.store({}, std::memory_order_release);
         context->LogError(
             "MapSense: renderer startup was refused to prevent competing DirectX 12 owners.");
         return false;
     }
+    ConfigureD2RAutomapFont(context);
     if (!StartImGuiHost()) {
         HostApiAvailable.store(false, std::memory_order_release);
         SetNativeAutomapLevelObservedCallback(nullptr, nullptr);
         ShutdownRevealReplayTimer();
         ShutdownNavigationRefreshTimer();
         ShutdownNativeAutomapMarker();
+        ShutdownNativeAutomapPoi();
         ShutdownNavigationResolver();
         ShutdownNavigationEngine();
         StopImGuiHost();
+        ShutdownNativeUiState();
         ShutdownRevealEngine();
         UnregisterServices();
+        PoiAvailable.store(false, std::memory_order_release);
+        PoiRuntimeAvailable.store(false, std::memory_order_release);
+        DataCatalog.store({}, std::memory_order_release);
         context->LogError(
             "MapSense: the in-frame DirectX 12/ImGui host could not start or schedule a retry.");
         return false;
@@ -2503,11 +4600,16 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         ShutdownRevealReplayTimer();
         ShutdownNavigationRefreshTimer();
         ShutdownNativeAutomapMarker();
+        ShutdownNativeAutomapPoi();
         ShutdownNavigationResolver();
         ShutdownNavigationEngine();
         StopImGuiHost();
+        ShutdownNativeUiState();
         ShutdownRevealEngine();
         UnregisterServices();
+        PoiAvailable.store(false, std::memory_order_release);
+        PoiRuntimeAvailable.store(false, std::memory_order_release);
+        DataCatalog.store({}, std::memory_order_release);
         return false;
     }
 
@@ -2522,29 +4624,45 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     }
 
     Operational.store(true, std::memory_order_release);
-    context->LogInfo(
-        "RuffnecKk MapSense 0.12.5 candidate loaded; native current-level Reveal persistence, fence-synchronized rendering, bounded live monster refresh, and exact static quest navigation are active.");
+    char loadedMessage[384]{};
+    std::snprintf(
+        loadedMessage,
+        sizeof(loadedMessage),
+        "RuffnecKk MapSense 0.13.11 candidate loaded; labels/objects=%s; monster-markers=%s; Direct-navigation=%s; Reveal/settings=active; native-panel-occlusion=%s.",
+        poiRuntimeAvailable ? "pending-localization" : "unavailable",
+        markerAvailable ? "active" : "unavailable",
+        IsNavigationResolverActive() ? "active" : "unavailable",
+        nativeUiTelemetryAvailable ? "active" : "fail-closed");
+    context->LogInfo(loadedMessage);
     return true;
 }
 
 D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
     using namespace RuffnecKk::MapSense;
     Operational.store(false, std::memory_order_release);
+    FeaturesEnabled.store(false, std::memory_order_release);
     HostApiAvailable.store(false, std::memory_order_release);
     GameplayReady.store(false, std::memory_order_release);
     MarkerAvailable.store(false, std::memory_order_release);
+    PoiRuntimeAvailable.store(false, std::memory_order_release);
+    PoiAvailable.store(false, std::memory_order_release);
     CurrentSessionGeneration.store(0U, std::memory_order_release);
     LastDynamicNavigationRefreshTick.store(0U, std::memory_order_release);
+    LastNativeUiPanelRefreshRequestTick.store(0U, std::memory_order_release);
+    NativeUiPanelRefreshQueued.store(false, std::memory_order_release);
     SessionEpoch.fetch_add(1, std::memory_order_acq_rel);
+    SetRevealLevelInitializedCallback(nullptr, nullptr);
     SetNativeAutomapLevelObservedCallback(nullptr, nullptr);
     CancelPendingNavigationRefresh(true);
     CancelPendingRevealReplay();
     ShutdownRevealReplayTimer();
     ShutdownNavigationRefreshTimer();
     ShutdownNativeAutomapMarker();
+    ShutdownNativeAutomapPoi();
     ShutdownNavigationResolver();
     ShutdownNavigationEngine();
     StopImGuiHost();
+    ShutdownNativeUiState();
     {
         std::scoped_lock lock(ConfigSaveMutex);
         PendingConfigSave.clear();
@@ -2559,6 +4677,8 @@ D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
     ShutdownRevealEngine();
     UnregisterServices();
     ShutdownSFillLocationDiagnosticSuppression();
+    PoiSnapshots.clear();
+    DataCatalog.store({}, std::memory_order_release);
     InputService = nullptr;
     LifecycleService = nullptr;
     ThreadService = nullptr;

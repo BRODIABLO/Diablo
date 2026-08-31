@@ -22,7 +22,7 @@
 
 namespace RuffnecKk::MapSense {
 
-inline constexpr std::int64_t CurrentConfigSchemaVersion = 9;
+inline constexpr std::int64_t CurrentConfigSchemaVersion = 14;
 
 inline constexpr float MinimumMonsterMarkerSize = 3.0F;
 inline constexpr float MaximumMonsterMarkerSize = 40.0F;
@@ -34,6 +34,12 @@ inline constexpr float MaximumImmunityIndicatorSize = 32.0F;
 inline constexpr float MinimumImmunityHaloThickness = 1.0F;
 inline constexpr float DefaultImmunityHaloThickness = 2.0F;
 inline constexpr float MaximumImmunityHaloThickness = 6.0F;
+inline constexpr float MinimumAutomapLabelSize = 8.0F;
+inline constexpr float DefaultAutomapLabelSize = 28.0F;
+inline constexpr float MaximumAutomapLabelSize = 72.0F;
+inline constexpr float MinimumAutomapObjectSize = 6.0F;
+inline constexpr float DefaultAutomapObjectSize = 36.0F;
+inline constexpr float MaximumAutomapObjectSize = 80.0F;
 inline constexpr float MinimumNavigationLineThickness = 1.0F;
 inline constexpr float DefaultNavigationLineThickness = 2.0F;
 inline constexpr float MaximumNavigationLineThickness = 8.0F;
@@ -61,6 +67,94 @@ inline constexpr RgbaColor LegacyPhysicalImmunityColor{
     199.0F / 255.0F,
     1.0F,
 };
+inline constexpr RgbaColor DefaultExitLabelColor{
+    1.0F,
+    211.0F / 255.0F,
+    61.0F / 255.0F,
+    1.0F,
+};
+inline constexpr RgbaColor LegacyShrineLabelColor{
+    1.0F,
+    191.0F / 255.0F,
+    31.0F / 255.0F,
+    1.0F,
+};
+inline constexpr RgbaColor DefaultShrineLabelColor = DefaultExitLabelColor;
+inline constexpr RgbaColor DefaultWaypointLabelColor = DefaultExitLabelColor;
+inline constexpr RgbaColor DefaultBossNameColor{
+    1.0F,
+    211.0F / 255.0F,
+    61.0F / 255.0F,
+    1.0F,
+};
+inline constexpr RgbaColor LegacyAutomapObjectColor{
+    216.0F / 255.0F,
+    195.0F / 255.0F,
+    154.0F / 255.0F,
+    1.0F,
+};
+inline constexpr RgbaColor DefaultAutomapObjectColor{
+    184.0F / 255.0F,
+    138.0F / 255.0F,
+    42.0F / 255.0F,
+    1.0F,
+};
+inline constexpr RgbaColor DefaultChestOutlineColor{
+    20.0F / 255.0F,
+    80.0F / 255.0F,
+    173.0F / 255.0F,
+    1.0F,
+};
+inline constexpr RgbaColor DefaultChestInteriorColor{
+    184.0F / 255.0F,
+    138.0F / 255.0F,
+    42.0F / 255.0F,
+    176.0F / 255.0F,
+};
+inline constexpr RgbaColor LegacyLockedChestColor{
+    87.0F / 255.0F,
+    224.0F / 255.0F,
+    61.0F / 255.0F,
+    1.0F,
+};
+inline constexpr RgbaColor LegacyAmberLockedChestColor{
+    216.0F / 255.0F,
+    155.0F / 255.0F,
+    43.0F / 255.0F,
+    1.0F,
+};
+inline constexpr RgbaColor DefaultLockedChestColor{
+    0.0F,
+    1.0F,
+    1.0F,
+    1.0F,
+};
+inline constexpr RgbaColor DefaultTrappedChestColor{
+    1.0F,
+    59.0F / 255.0F,
+    48.0F / 255.0F,
+    1.0F,
+};
+inline constexpr RgbaColor DefaultSuperChestColor{
+    1.0F,
+    211.0F / 255.0F,
+    61.0F / 255.0F,
+    1.0F,
+};
+inline constexpr RgbaColor DefaultSuperChestStarColor =
+    DefaultExitLabelColor;
+inline constexpr RgbaColor DefaultArmorRackColor{
+    61.0F / 255.0F,
+    139.0F / 255.0F,
+    1.0F,
+    1.0F,
+};
+inline constexpr RgbaColor DefaultWeaponRackColor{
+    1.0F,
+    138.0F / 255.0F,
+    36.0F / 255.0F,
+    1.0F,
+};
 
 struct OverlayOptions {
     bool enabled{true};
@@ -83,6 +177,9 @@ struct MonsterMarkerStyle {
     float size{18.0F};
     MonsterMarkerShape shape{MonsterMarkerShape::PlayerCross};
     float thickness{2.0F};
+    bool showNames{};
+    RgbaColor nameColor{1.0F, 1.0F, 1.0F, 1.0F};
+    float nameSize{DefaultAutomapLabelSize};
 };
 
 struct MonsterOptions {
@@ -90,7 +187,15 @@ struct MonsterOptions {
     MonsterMarkerStyle minion{{1.0F, 0.831F, 0.231F, 1.0F}, 18.0F};
     MonsterMarkerStyle champion{{0.239F, 0.545F, 1.0F, 1.0F}, 20.0F};
     MonsterMarkerStyle unique{{1.0F, 0.541F, 0.141F, 1.0F}, 22.0F};
-    MonsterMarkerStyle superUniqueBoss{{1.0F, 0.231F, 0.188F, 1.0F}, 24.0F};
+    MonsterMarkerStyle superUniqueBoss{
+        {1.0F, 0.231F, 0.188F, 1.0F},
+        24.0F,
+        MonsterMarkerShape::PlayerCross,
+        2.0F,
+        true,
+        DefaultBossNameColor,
+        DefaultAutomapLabelSize,
+    };
 };
 
 enum class ImmunityDisplayStyle : std::uint8_t {
@@ -109,6 +214,65 @@ struct ImmunityOptions {
     RgbaColor lightning{1.0F, 0.88F, 0.18F, 1.0F};
     RgbaColor poison{0.34F, 0.88F, 0.24F, 1.0F};
     RgbaColor magic{0.78F, 0.36F, 1.0F, 1.0F};
+};
+
+struct AutomapLabelOptions {
+    bool enabled{true};
+    RgbaColor color{1.0F, 1.0F, 1.0F, 1.0F};
+    float size{DefaultAutomapLabelSize};
+};
+
+struct AutomapObjectOptions {
+    bool enabled{true};
+    RgbaColor color{DefaultAutomapObjectColor};
+    float size{DefaultAutomapObjectSize};
+};
+
+struct ChestOptions {
+    bool enabled{true};
+    RgbaColor outlineColor{DefaultChestOutlineColor};
+    RgbaColor interiorColor{DefaultChestInteriorColor};
+    RgbaColor lockedAccentColor{DefaultLockedChestColor};
+    RgbaColor trappedAccentColor{DefaultTrappedChestColor};
+    float size{DefaultAutomapObjectSize};
+};
+
+struct SuperChestOptions {
+    bool enabled{true};
+    bool starsEnabled{true};
+    RgbaColor starsColor{DefaultSuperChestStarColor};
+    float starsSize{DefaultAutomapLabelSize};
+};
+
+struct ObjectsOptions {
+    bool enabled{true};
+    AutomapLabelOptions exitLabels{
+        true,
+        DefaultExitLabelColor,
+        DefaultAutomapLabelSize,
+    };
+    AutomapLabelOptions waypointLabels{
+        true,
+        DefaultWaypointLabelColor,
+        DefaultAutomapLabelSize,
+    };
+    AutomapLabelOptions shrineLabels{
+        true,
+        DefaultShrineLabelColor,
+        DefaultAutomapLabelSize,
+    };
+    ChestOptions chests{};
+    SuperChestOptions superChests{};
+    AutomapObjectOptions armorRacks{
+        true,
+        DefaultArmorRackColor,
+        DefaultAutomapObjectSize,
+    };
+    AutomapObjectOptions weaponRacks{
+        true,
+        DefaultWeaponRackColor,
+        DefaultAutomapObjectSize,
+    };
 };
 
 using CustomLevelTarget = std::variant<std::int32_t, std::string>;
@@ -158,10 +322,12 @@ struct MenuOptions {
 
 struct Config {
     bool enabled{true};
+    bool featuresEnabled{true};
     bool diagnostics{};
     OverlayOptions overlay{};
     MonsterOptions monsters{};
     ImmunityOptions immunities{};
+    ObjectsOptions objects{};
     NavigationOptions navigation{};
     HudOptions hud{};
     MenuOptions menu{};
@@ -385,7 +551,8 @@ inline auto ReadMonsterMarkerStyle(
         std::string_view key,
         MonsterMarkerStyle fallback,
         bool readShape,
-        bool readThickness) -> MonsterMarkerStyle {
+        bool readThickness,
+        bool readNames = false) -> MonsterMarkerStyle {
     const auto* style = ReadOptionalTable(monsters, key);
     if (style == nullptr) return fallback;
     if (readShape) {
@@ -394,7 +561,30 @@ inline auto ReadMonsterMarkerStyle(
             "shape",
             fallback.shape);
     }
-    if (readThickness && fallback.shape != MonsterMarkerShape::Dot) {
+    if (readNames && readThickness
+            && fallback.shape != MonsterMarkerShape::Dot) {
+        RejectUnknownKeys(
+            *style,
+            {"shape", "color", "size", "thickness", "show_names", "name_color", "name_size"},
+            key);
+        fallback.thickness = ReadOptionalFloat(
+            *style,
+            "thickness",
+            fallback.thickness,
+            MinimumMonsterMarkerThickness,
+            MaximumMonsterMarkerThickness);
+    } else if (readNames && readShape) {
+        RejectUnknownKeys(
+            *style,
+            {"shape", "color", "size", "show_names", "name_color", "name_size"},
+            key);
+    } else if (readNames) {
+        RejectUnknownKeys(
+            *style,
+            {"color", "size", "show_names", "name_color", "name_size"},
+            key);
+    } else if (readThickness
+            && fallback.shape != MonsterMarkerShape::Dot) {
         RejectUnknownKeys(
             *style,
             {"shape", "color", "size", "thickness"},
@@ -417,6 +607,238 @@ inline auto ReadMonsterMarkerStyle(
         fallback.size,
         MinimumMonsterMarkerSize,
         MaximumMonsterMarkerSize);
+    if (readNames) {
+        fallback.showNames = ReadOptional(
+            *style,
+            "show_names",
+            fallback.showNames);
+        fallback.nameColor = ReadOptionalColor(
+            *style,
+            "name_color",
+            fallback.nameColor);
+        fallback.nameSize = ReadOptionalFloat(
+            *style,
+            "name_size",
+            fallback.nameSize,
+            MinimumAutomapLabelSize,
+            MaximumAutomapLabelSize);
+    }
+    return fallback;
+}
+
+inline auto ReadAutomapLabelOptions(
+        const toml::table& objects,
+        std::string_view key,
+        AutomapLabelOptions fallback) -> AutomapLabelOptions {
+    const auto* labels = ReadOptionalTable(objects, key);
+    if (labels == nullptr) return fallback;
+    RejectUnknownKeys(*labels, {"enabled", "color", "size"}, key);
+    fallback.enabled = ReadOptional(
+        *labels,
+        "enabled",
+        fallback.enabled);
+    fallback.color = ReadOptionalColor(
+        *labels,
+        "color",
+        fallback.color);
+    fallback.size = ReadOptionalFloat(
+        *labels,
+        "size",
+        fallback.size,
+        MinimumAutomapLabelSize,
+        MaximumAutomapLabelSize);
+    return fallback;
+}
+
+inline auto ReadAutomapObjectOptions(
+        const toml::table& objects,
+        std::string_view key,
+        AutomapObjectOptions fallback) -> AutomapObjectOptions {
+    const auto* marker = ReadOptionalTable(objects, key);
+    if (marker == nullptr) return fallback;
+    RejectUnknownKeys(*marker, {"enabled", "color", "size"}, key);
+    fallback.enabled = ReadOptional(
+        *marker,
+        "enabled",
+        fallback.enabled);
+    fallback.color = ReadOptionalColor(
+        *marker,
+        "color",
+        fallback.color);
+    fallback.size = ReadOptionalFloat(
+        *marker,
+        "size",
+        fallback.size,
+        MinimumAutomapObjectSize,
+        MaximumAutomapObjectSize);
+    return fallback;
+}
+
+inline auto ReadChestOptions(
+        const toml::table& objects,
+        ChestOptions fallback,
+        std::int64_t schemaVersion) -> ChestOptions {
+    const auto* chests = ReadOptionalTable(objects, "chests");
+    if (chests == nullptr) return fallback;
+    if (schemaVersion >= 12) {
+        RejectUnknownKeys(
+            *chests,
+            {"enabled", "outline_color", "interior_color", "locked_accent_color", "trapped_accent_color", "size"},
+            "objects.chests");
+    } else {
+        RejectUnknownKeys(
+            *chests,
+            {"enabled", "color", "locked_color", "trapped_color", "size"},
+            "objects.chests");
+    }
+    fallback.enabled = ReadOptional(
+        *chests,
+        "enabled",
+        fallback.enabled);
+    if (schemaVersion >= 12) {
+        fallback.outlineColor = ReadOptionalColor(
+            *chests,
+            "outline_color",
+            fallback.outlineColor);
+        fallback.interiorColor = ReadOptionalColor(
+            *chests,
+            "interior_color",
+            fallback.interiorColor);
+        fallback.lockedAccentColor = ReadOptionalColor(
+            *chests,
+            "locked_accent_color",
+            fallback.lockedAccentColor);
+        fallback.trappedAccentColor = ReadOptionalColor(
+            *chests,
+            "trapped_accent_color",
+            fallback.trappedAccentColor);
+    } else {
+        fallback.interiorColor = ReadOptionalColor(
+            *chests,
+            "color",
+            fallback.interiorColor);
+        fallback.lockedAccentColor = ReadOptionalColor(
+            *chests,
+            "locked_color",
+            fallback.lockedAccentColor);
+        fallback.trappedAccentColor = ReadOptionalColor(
+            *chests,
+            "trapped_color",
+            fallback.trappedAccentColor);
+    }
+    fallback.size = ReadOptionalFloat(
+        *chests,
+        "size",
+        fallback.size,
+        MinimumAutomapObjectSize,
+        MaximumAutomapObjectSize);
+    return fallback;
+}
+
+inline auto ReadSuperChestOptions(
+        const toml::table& objects,
+        SuperChestOptions fallback,
+        std::int64_t schemaVersion) -> SuperChestOptions {
+    const auto* chests = ReadOptionalTable(objects, "super_chests");
+    if (chests == nullptr) return fallback;
+    if (schemaVersion >= 12) {
+        RejectUnknownKeys(
+            *chests,
+            {"enabled", "stars_enabled", "stars_color", "stars_size"},
+            "objects.super_chests");
+    } else {
+        RejectUnknownKeys(
+            *chests,
+            {"enabled", "color", "size", "stars_enabled", "stars_color", "stars_size"},
+            "objects.super_chests");
+    }
+    fallback.enabled = ReadOptional(
+        *chests,
+        "enabled",
+        fallback.enabled);
+    if (schemaVersion < 12) {
+        // Schema 12 deliberately gives ordinary and special chests one shared
+        // geometry, size and palette. Read the retired values for strict type
+        // and range validation, then discard them during migration.
+        (void)ReadOptionalColor(
+            *chests,
+            "color",
+            DefaultSuperChestColor);
+        (void)ReadOptionalFloat(
+            *chests,
+            "size",
+            DefaultAutomapObjectSize,
+            MinimumAutomapObjectSize,
+            MaximumAutomapObjectSize);
+    }
+    fallback.starsEnabled = ReadOptional(
+        *chests,
+        "stars_enabled",
+        fallback.starsEnabled);
+    fallback.starsColor = ReadOptionalColor(
+        *chests,
+        "stars_color",
+        fallback.starsColor);
+    fallback.starsSize = ReadOptionalFloat(
+        *chests,
+        "stars_size",
+        fallback.starsSize,
+        MinimumAutomapLabelSize,
+        MaximumAutomapLabelSize);
+    return fallback;
+}
+
+inline auto ReadObjectsOptions(
+        const toml::table& root,
+        ObjectsOptions fallback,
+        std::int64_t schemaVersion) -> ObjectsOptions {
+    const auto* objects = ReadOptionalTable(root, "objects");
+    if (objects == nullptr) return fallback;
+    if (schemaVersion >= 13) {
+        RejectUnknownKeys(
+            *objects,
+            {"enabled", "exit_labels", "waypoint_labels", "shrine_labels", "chests", "super_chests", "armor_racks", "weapon_racks"},
+            "objects");
+    } else {
+        RejectUnknownKeys(
+            *objects,
+            {"enabled", "exit_labels", "shrine_labels", "chests", "super_chests", "armor_racks", "weapon_racks"},
+            "objects");
+    }
+    fallback.enabled = ReadOptional(
+        *objects,
+        "enabled",
+        fallback.enabled);
+    fallback.exitLabels = ReadAutomapLabelOptions(
+        *objects,
+        "exit_labels",
+        fallback.exitLabels);
+    if (schemaVersion >= 13) {
+        fallback.waypointLabels = ReadAutomapLabelOptions(
+            *objects,
+            "waypoint_labels",
+            fallback.waypointLabels);
+    }
+    fallback.shrineLabels = ReadAutomapLabelOptions(
+        *objects,
+        "shrine_labels",
+        fallback.shrineLabels);
+    fallback.chests = ReadChestOptions(
+        *objects,
+        fallback.chests,
+        schemaVersion);
+    fallback.superChests = ReadSuperChestOptions(
+        *objects,
+        fallback.superChests,
+        schemaVersion);
+    fallback.armorRacks = ReadAutomapObjectOptions(
+        *objects,
+        "armor_racks",
+        fallback.armorRacks);
+    fallback.weaponRacks = ReadAutomapObjectOptions(
+        *objects,
+        "weapon_racks",
+        fallback.weaponRacks);
     return fallback;
 }
 
@@ -548,7 +970,7 @@ inline auto ReadCustomLevelLineOptions(
 inline auto ParseConfig(const toml::table& root) -> Config {
     RejectUnknownKeys(
         root,
-        {"schema_version", "general", "overlay", "monsters", "immunities", "navigation", "hud", "menu", "diagnostics"},
+        {"schema_version", "general", "overlay", "monsters", "immunities", "objects", "navigation", "hud", "menu", "diagnostics"},
         "root");
 
     const auto* schemaNode = root.get("schema_version");
@@ -567,6 +989,10 @@ inline auto ParseConfig(const toml::table& root) -> Config {
         throw std::runtime_error(
             "MapSense navigation settings require schema_version 6");
     }
+    if (*schemaVersion < 10 && root.contains("objects")) {
+        throw std::runtime_error(
+            "MapSense object settings require schema_version 10");
+    }
 
     Config config{};
     if (*schemaVersion < 4) {
@@ -579,8 +1005,21 @@ inline auto ParseConfig(const toml::table& root) -> Config {
         config.monsters.superUniqueBoss.shape = MonsterMarkerShape::X;
     }
     if (const auto* general = ReadOptionalTable(root, "general")) {
-        RejectUnknownKeys(*general, {"enabled"}, "general");
+        if (*schemaVersion >= 12) {
+            RejectUnknownKeys(
+                *general,
+                {"enabled", "features_enabled"},
+                "general");
+        } else {
+            RejectUnknownKeys(*general, {"enabled"}, "general");
+        }
         config.enabled = ReadOptional(*general, "enabled", config.enabled);
+        if (*schemaVersion >= 12) {
+            config.featuresEnabled = ReadOptional(
+                *general,
+                "features_enabled",
+                config.featuresEnabled);
+        }
     }
     if (const auto* overlay = ReadOptionalTable(root, "overlay")) {
         RejectUnknownKeys(
@@ -670,7 +1109,8 @@ inline auto ParseConfig(const toml::table& root) -> Config {
                 "super_unique_boss",
                 config.monsters.superUniqueBoss,
                 *schemaVersion >= 4,
-                *schemaVersion >= 9);
+                *schemaVersion >= 9,
+                *schemaVersion >= 10);
         }
     }
     if (const auto* immunities = ReadOptionalTable(root, "immunities")) {
@@ -726,6 +1166,58 @@ inline auto ParseConfig(const toml::table& root) -> Config {
                     LegacyPhysicalImmunityColor)) {
             config.immunities.physical = DefaultPhysicalImmunityColor;
         }
+    }
+    if (*schemaVersion >= 10) {
+        config.objects = ReadObjectsOptions(
+            root,
+            std::move(config.objects),
+            *schemaVersion);
+    }
+    if (*schemaVersion < 11) {
+        // Schema 11 unifies the two player-facing label yellows and replaces
+        // the misleading green locked-chest signal with aged amber. Upgrade
+        // only exact shipped defaults so every customized color survives.
+        if (IsSameRgbaColor(
+                config.objects.shrineLabels.color,
+                LegacyShrineLabelColor)) {
+            config.objects.shrineLabels.color = DefaultShrineLabelColor;
+        }
+        if (IsSameRgbaColor(
+                config.objects.chests.interiorColor,
+                LegacyAutomapObjectColor)) {
+            config.objects.chests.interiorColor = DefaultChestInteriorColor;
+        }
+        if (IsSameRgbaColor(
+                config.objects.chests.lockedAccentColor,
+                LegacyLockedChestColor)) {
+            config.objects.chests.lockedAccentColor =
+                LegacyAmberLockedChestColor;
+        }
+    }
+    if (*schemaVersion < 12) {
+        // Schema 12 separates structural outline from the translucent fill and
+        // aligns special-chest stars with the native D2 gold. Upgrade only the
+        // exact schema-11 shipped defaults; customized legacy values survive.
+        if (IsSameRgbaColor(
+                config.objects.chests.interiorColor,
+                DefaultAutomapObjectColor)) {
+            config.objects.chests.interiorColor = DefaultChestInteriorColor;
+        }
+        if (IsSameRgbaColor(
+                config.objects.superChests.starsColor,
+                RgbaColor{1.0F, 1.0F, 1.0F, 1.0F})) {
+            config.objects.superChests.starsColor =
+                DefaultSuperChestStarColor;
+        }
+    }
+    if (*schemaVersion < 14
+        && IsSameRgbaColor(
+            config.objects.chests.lockedAccentColor,
+            LegacyAmberLockedChestColor)) {
+        // Schema 14 preserves PrimeMH's exact chest pixels and reserves aqua
+        // exclusively for the separate locked-state padlock. Upgrade only the
+        // shipped amber value so customized legacy lock colors survive.
+        config.objects.chests.lockedAccentColor = DefaultLockedChestColor;
     }
     if (const auto* navigation = ReadOptionalTable(root, "navigation")) {
         RejectUnknownKeys(
@@ -877,7 +1369,8 @@ inline auto SerializeConfig(const Config& config) -> std::string {
         << "# Changes made in the MapSense menu are saved here.\n\n"
         << "schema_version = " << CurrentConfigSchemaVersion << "\n\n"
         << "[general]\n"
-        << "enabled = " << config.enabled << "\n\n"
+        << "enabled = " << config.enabled << "\n"
+        << "features_enabled = " << config.featuresEnabled << "\n\n"
         << "[overlay]\n"
         << "enabled = " << config.overlay.enabled << "\n"
         << "diagnostic_preview = " << config.overlay.diagnosticPreview << "\n"
@@ -938,6 +1431,12 @@ inline auto SerializeConfig(const Config& config) -> std::string {
                << config.monsters.superUniqueBoss.thickness << "\n";
     }
     output
+        << "show_names = "
+        << config.monsters.superUniqueBoss.showNames << "\n"
+        << "name_color = \""
+        << ColorToHex(config.monsters.superUniqueBoss.nameColor) << "\"\n"
+        << "name_size = "
+        << config.monsters.superUniqueBoss.nameSize << "\n"
         << "\n"
         << "[immunities]\n"
         << "enabled = " << config.immunities.enabled << "\n"
@@ -952,6 +1451,53 @@ inline auto SerializeConfig(const Config& config) -> std::string {
         << "lightning = \"" << ColorToHex(config.immunities.lightning) << "\"\n"
         << "poison = \"" << ColorToHex(config.immunities.poison) << "\"\n"
         << "magic = \"" << ColorToHex(config.immunities.magic) << "\"\n\n"
+        << "[objects]\n"
+        << "enabled = " << config.objects.enabled << "\n\n"
+        << "[objects.exit_labels]\n"
+        << "enabled = " << config.objects.exitLabels.enabled << "\n"
+        << "color = \"" << ColorToHex(config.objects.exitLabels.color)
+        << "\"\n"
+        << "size = " << config.objects.exitLabels.size << "\n\n"
+        << "[objects.waypoint_labels]\n"
+        << "enabled = " << config.objects.waypointLabels.enabled << "\n"
+        << "color = \"" << ColorToHex(config.objects.waypointLabels.color)
+        << "\"\n"
+        << "size = " << config.objects.waypointLabels.size << "\n\n"
+        << "[objects.shrine_labels]\n"
+        << "enabled = " << config.objects.shrineLabels.enabled << "\n"
+        << "color = \"" << ColorToHex(config.objects.shrineLabels.color)
+        << "\"\n"
+        << "size = " << config.objects.shrineLabels.size << "\n\n"
+        << "[objects.chests]\n"
+        << "enabled = " << config.objects.chests.enabled << "\n"
+        << "outline_color = \""
+        << ColorToHex(config.objects.chests.outlineColor)
+        << "\"\n"
+        << "interior_color = \""
+        << ColorToHex(config.objects.chests.interiorColor) << "\"\n"
+        << "locked_accent_color = \""
+        << ColorToHex(config.objects.chests.lockedAccentColor) << "\"\n"
+        << "trapped_accent_color = \""
+        << ColorToHex(config.objects.chests.trappedAccentColor) << "\"\n"
+        << "size = " << config.objects.chests.size << "\n\n"
+        << "[objects.super_chests]\n"
+        << "enabled = " << config.objects.superChests.enabled << "\n"
+        << "stars_enabled = "
+        << config.objects.superChests.starsEnabled << "\n"
+        << "stars_color = \""
+        << ColorToHex(config.objects.superChests.starsColor) << "\"\n"
+        << "stars_size = "
+        << config.objects.superChests.starsSize << "\n\n"
+        << "[objects.armor_racks]\n"
+        << "enabled = " << config.objects.armorRacks.enabled << "\n"
+        << "color = \"" << ColorToHex(config.objects.armorRacks.color)
+        << "\"\n"
+        << "size = " << config.objects.armorRacks.size << "\n\n"
+        << "[objects.weapon_racks]\n"
+        << "enabled = " << config.objects.weaponRacks.enabled << "\n"
+        << "color = \"" << ColorToHex(config.objects.weaponRacks.color)
+        << "\"\n"
+        << "size = " << config.objects.weaponRacks.size << "\n\n"
         << "[navigation]\n"
         << "line_thickness = " << config.navigation.lineThickness << "\n\n"
         << "[navigation.waypoint]\n"

@@ -1,6 +1,7 @@
 #include "native_automap_marker.hpp"
 
 #include "navigation_engine.hpp"
+#include "native_automap_poi.hpp"
 
 #include <D2RLPlugin/api.h>
 
@@ -42,9 +43,11 @@ constexpr std::uintptr_t GetUnitClientYRva = 0x34AFB0;
 constexpr std::uintptr_t PathGetXRva = 0x341A20;
 constexpr std::uintptr_t PathGetYRva = 0x341A30;
 constexpr std::uintptr_t GetMonStatsRecordRva = 0x0976E0;
+constexpr std::uintptr_t GetSuperUniqueIndexRva = 0x38E3D0;
 constexpr std::uintptr_t MonsterRankWitnessRva = 0x51F280;
 constexpr std::uintptr_t GetUnitRoomRva = 0x34B440;
 constexpr std::uintptr_t UnitRoomLayoutWitnessRva = 0x34B461;
+constexpr std::uintptr_t ActiveRoomGetDrlgRoomRva = 0x192B20;
 constexpr std::uintptr_t PathGetRoomRva = 0x341C30;
 constexpr std::uintptr_t IsRoomInTownRva = 0x2F0750;
 constexpr std::uintptr_t GetDrlgRoomLevelIdRva = 0x360FC0;
@@ -97,6 +100,8 @@ struct NativePoint final {
 
 struct Candidate final {
     std::uint32_t unitId{};
+    std::int32_t classId{-1};
+    std::int32_t superUniqueIndex{-1};
     std::int32_t x{};
     std::int32_t y{};
     std::int32_t nativeWidth{};
@@ -110,6 +115,8 @@ struct Candidate final {
 
 struct TrackedMonster final {
     std::uint32_t unitId{};
+    std::int32_t classId{-1};
+    std::int32_t superUniqueIndex{-1};
     MonsterRank rank{MonsterRank::Normal};
     std::uint8_t immunityMask{};
 };
@@ -183,6 +190,7 @@ using IsRoomInTownFn = std::int32_t(__fastcall*)(void*) noexcept;
 using GetMonStatsRecordFn = const std::uint8_t*(__fastcall*)(
     std::uint8_t dataContext,
     std::int32_t classId) noexcept;
+using GetSuperUniqueIndexFn = std::int32_t(__fastcall*)(void*) noexcept;
 using ProjectClientToAutomapFn = NativePoint*(__fastcall*)(
     void* automapContext,
     NativePoint* output,
@@ -214,6 +222,7 @@ GetNativePointerFn GetUnitRoom{};
 GetLevelIdFn GetDrlgRoomLevelId{};
 IsRoomInTownFn IsRoomInTown{};
 GetMonStatsRecordFn GetMonStatsRecord{};
+GetSuperUniqueIndexFn GetSuperUniqueIndex{};
 GetUnitByIdAndTypeFn GetUnitByIdAndType{};
 ProjectClientToAutomapFn ProjectClientToAutomap{};
 RenderAutomapUnitFn OriginalRenderAutomapUnit{};
@@ -235,6 +244,8 @@ std::int32_t PendingObservationBuffer{-1};
 std::uint64_t RendererEpoch{};
 std::uint64_t LastPurgeTick{};
 std::unordered_map<std::uint32_t, Candidate> MarkerCache;
+std::atomic_flag NativeAutomapViewportLock = ATOMIC_FLAG_INIT;
+NativeAutomapViewportSnapshot PublishedNativeAutomapViewport{};
 std::vector<TrackedMonster> TrackedMonsters;
 std::vector<TrackedMonster> DiscoveryScratch;
 std::uint64_t TrackedMonsterEpoch{};
@@ -288,8 +299,8 @@ std::atomic<void*> LevelObservedUserData{};
 
 static_assert(std::is_trivially_copyable_v<NativeAutomapMarkerSnapshot>);
 static_assert(std::is_standard_layout_v<NativeAutomapMarkerSnapshot>);
-static_assert(sizeof(Candidate) == 48U);
-static_assert(sizeof(NativeAutomapMarkerSnapshot) == 40U);
+static_assert(sizeof(Candidate) == 56U);
+static_assert(sizeof(NativeAutomapMarkerSnapshot) == 48U);
 static_assert(sizeof(NativePoint) == sizeof(std::uint64_t));
 static_assert(UnitHashTypeStride == 0x400U);
 static_assert(
@@ -590,7 +601,38 @@ void ObserveNavigationPlayerPass(
             .diagnosticUserData = const_cast<D2RL::PluginContext*>(
                 diagnosticContext),
         };
+        NativeAutomapViewportSnapshot viewport{
+            .nativeWidth = pass.nativeWidth,
+            .nativeHeight = pass.nativeHeight,
+            .clipLeft = pass.clipLeft,
+            .clipTop = pass.clipTop,
+            .clipWidth = pass.clipWidth,
+            .clipHeight = pass.clipHeight,
+            .observedTick = static_cast<std::uint64_t>(GetTickCount64()),
+            .epoch = Epoch.load(std::memory_order_acquire),
+        };
+        NativeAutomapClipBounds clipBounds{};
+        if (TryResolveNativeAutomapClipBounds(viewport, clipBounds)
+            && !NativeAutomapViewportLock.test_and_set(
+                std::memory_order_acquire)) {
+            PublishedNativeAutomapViewport = viewport;
+            NativeAutomapViewportLock.clear(std::memory_order_release);
+        }
         const auto observation = ObserveNavigationAutomapPass(pass);
+        ObserveNativeAutomapPoiPass(NativeAutomapPoiPass{
+            .currentLevelId = currentLevelId,
+            .inTown = inTown,
+            .playerClientX = pass.playerClientX,
+            .playerClientY = pass.playerClientY,
+            .nativeWidth = nativeWidth,
+            .nativeHeight = nativeHeight,
+            .clipLeft = pass.clipLeft,
+            .clipTop = pass.clipTop,
+            .clipWidth = pass.clipWidth,
+            .clipHeight = pass.clipHeight,
+            .projectClient = pass.projectClient,
+            .borrowedAutomapContext = automapContext,
+        });
         const auto callback = LevelObservedCallback.load(
             std::memory_order_acquire);
         if (callback != nullptr) {
@@ -873,6 +915,11 @@ auto DiscoverTrackedMonster(
         }
         tracked.rank = Detail::ClassifyMonsterRankFlags(
             monsterData[MonsterRankFlagsOffset]);
+        tracked.classId = classId;
+        tracked.superUniqueIndex = tracked.rank == MonsterRank::SuperUnique
+                && GetSuperUniqueIndex != nullptr
+            ? GetSuperUniqueIndex(unit)
+            : -1;
 
         void* const unitPath = GetDynamicPath(unit);
         if (!IsAlignedPointer(unitPath)) {
@@ -989,6 +1036,8 @@ auto RefreshTrackedMonster(
 
         candidate = {
             .unitId = tracked.unitId,
+            .classId = tracked.classId,
+            .superUniqueIndex = tracked.superUniqueIndex,
             .x = projected.x,
             .y = projected.y,
             .nativeWidth = scan.nativeWidth,
@@ -1197,6 +1246,7 @@ __declspec(noinline) void __fastcall HookRenderAutomapUnit(
     if (!Active.load(std::memory_order_acquire)) {
         return;
     }
+    ObserveNativeAutomapRenderedUnit(unit);
 
     // Navigation and the complete client-unit scan share this one canonical
     // automap hook. Both begin only on the local-player pass and retain no
@@ -1340,12 +1390,34 @@ auto ValidateRuntime(const D2RL::PluginContext* context) noexcept -> bool {
         0x24, 0x20, 0x57, 0x48, 0x83, 0xEC, 0x30, 0x48,
         0x63, 0xF2, 0xE8, 0x99, 0x93, 0x26, 0x00, 0x48,
         0x8B, 0xF8, 0x48, 0x8B, 0xDE, 0x85, 0xF6, 0x78};
+    constexpr std::array<std::uint8_t, 92> getSuperUniqueIndexExpected{
+        0x40, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B,
+        0xD9, 0x48, 0x85, 0xC9, 0x74, 0x0A, 0xE8, 0xED,
+        0xD5, 0xFB, 0xFF, 0x83, 0xF8, 0x01, 0x74, 0x19,
+        0x48, 0x8D, 0x4C, 0x24, 0x30, 0xC6, 0x44, 0x24,
+        0x30, 0x00, 0xE8, 0xF9, 0x40, 0xE1, 0xFF, 0x84,
+        0xC0, 0x74, 0x01, 0xCC, 0x48, 0x85, 0xDB, 0x74,
+        0x20, 0x48, 0x8B, 0xCB, 0xE8, 0xC7, 0xD5, 0xFB,
+        0xFF, 0x83, 0xF8, 0x01, 0x75, 0x13, 0x48, 0x8B,
+        0x43, 0x10, 0x48, 0x85, 0xC0, 0x74, 0x0A, 0x0F,
+        0xB7, 0x40, 0x2A, 0x48, 0x83, 0xC4, 0x20, 0x5B,
+        0xC3, 0xB8, 0xFF, 0xFF, 0xFF, 0xFF, 0x48, 0x83,
+        0xC4, 0x20, 0x5B, 0xC3};
+    constexpr std::array<std::uint8_t, 32> getUnitRoomExpected{
+        0x40, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B,
+        0xD9, 0x48, 0x85, 0xC9, 0x75, 0x13, 0x88, 0x4C,
+        0x24, 0x30, 0x48, 0x8D, 0x4C, 0x24, 0x30, 0xE8,
+        0x54, 0xA7, 0xFF, 0xFF, 0x84, 0xC0, 0x74, 0x01};
     constexpr std::array<std::uint8_t, 36> unitRoomLayoutWitnessExpected{
         0x8B, 0x0B, 0x83, 0xE9, 0x02, 0x74, 0x25, 0x83,
         0xE9, 0x02, 0x74, 0x20, 0x83, 0xF9, 0x01, 0x74,
         0x1B, 0x48, 0x8B, 0x4B, 0x38, 0x48, 0x85, 0xC9,
         0x74, 0x0A, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xE9,
         0xAB, 0x67, 0xFF, 0xFF};
+    constexpr std::array<std::uint8_t, 16>
+        activeRoomGetDrlgRoomExpected{
+            0x48, 0x8B, 0x41, 0x18, 0xC3, 0xCC, 0xCC, 0xCC,
+            0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC};
     constexpr std::array<std::uint8_t, 5> pathGetRoomExpected{
         0x48, 0x8B, 0x41, 0x20, 0xC3};
     constexpr std::array<std::uint8_t, 25> isRoomInTownExpected{
@@ -1393,8 +1465,13 @@ auto ValidateRuntime(const D2RL::PluginContext* context) noexcept -> bool {
         && check(PathGetXRva, pathGetXExpected)
         && check(PathGetYRva, pathGetYExpected)
         && check(GetMonStatsRecordRva, getMonStatsRecordExpected)
+        && check(GetSuperUniqueIndexRva, getSuperUniqueIndexExpected)
         && check(MonsterRankWitnessRva, monsterRankWitnessExpected)
+        && check(GetUnitRoomRva, getUnitRoomExpected)
         && check(UnitRoomLayoutWitnessRva, unitRoomLayoutWitnessExpected)
+        && check(
+            ActiveRoomGetDrlgRoomRva,
+            activeRoomGetDrlgRoomExpected)
         && check(PathGetRoomRva, pathGetRoomExpected)
         && check(IsRoomInTownRva, isRoomInTownExpected)
         && check(GetDrlgRoomLevelIdRva, drlgRoomLevelIdExpected)
@@ -1488,6 +1565,8 @@ auto InitializeNativeAutomapMarker(
     GetDrlgRoomLevelId = At<GetLevelIdFn>(GetDrlgRoomLevelIdRva);
     IsRoomInTown = At<IsRoomInTownFn>(IsRoomInTownRva);
     GetMonStatsRecord = At<GetMonStatsRecordFn>(GetMonStatsRecordRva);
+    GetSuperUniqueIndex = At<GetSuperUniqueIndexFn>(
+        GetSuperUniqueIndexRva);
     GetUnitByIdAndType = At<GetUnitByIdAndTypeFn>(
         ClientUnitHashTableWitnessRva);
     ProjectClientToAutomap = At<ProjectClientToAutomapFn>(
@@ -1527,6 +1606,7 @@ auto InitializeNativeAutomapMarker(
         GetDrlgRoomLevelId = nullptr;
         IsRoomInTown = nullptr;
         GetMonStatsRecord = nullptr;
+        GetSuperUniqueIndex = nullptr;
         GetUnitByIdAndType = nullptr;
         ProjectClientToAutomap = nullptr;
         DiagnosticContext = nullptr;
@@ -1586,7 +1666,8 @@ void SetNativeAutomapLevelObservedCallback(
 }
 
 auto AcquireNativeAutomapMarkers(
-        std::vector<NativeAutomapMarkerSnapshot>& snapshots) noexcept
+        std::vector<NativeAutomapMarkerSnapshot>& snapshots,
+        bool retainCurrentProjection) noexcept
         -> std::size_t {
     snapshots.clear();
     if (!Active.load(std::memory_order_acquire)
@@ -1595,7 +1676,7 @@ auto AcquireNativeAutomapMarkers(
     }
 
     const auto currentTick = static_cast<std::uint64_t>(GetTickCount64());
-    if (!IsRecent(
+    if (!retainCurrentProjection && !IsRecent(
             LastAutomapPulseTick.load(std::memory_order_acquire),
             currentTick)) {
         return 0U;
@@ -1679,9 +1760,10 @@ auto AcquireNativeAutomapMarkers(
             }
         }
 
-        if (LastPurgeTick == 0U || currentTick < LastPurgeTick
+        if (!retainCurrentProjection
+            && (LastPurgeTick == 0U || currentTick < LastPurgeTick
             || (currentTick - LastPurgeTick)
-                >= MarkerLifetimeMilliseconds) {
+                >= MarkerLifetimeMilliseconds)) {
             std::uint64_t expired{};
             for (auto iterator = MarkerCache.begin();
                     iterator != MarkerCache.end();) {
@@ -1711,11 +1793,14 @@ auto AcquireNativeAutomapMarkers(
             std::memory_order_acquire);
         for (const auto& [unitId, marker] : MarkerCache) {
             if (marker.epoch != epoch
-                || !IsRecent(marker.observedTick, currentTick)) {
+                || (!retainCurrentProjection
+                    && !IsRecent(marker.observedTick, currentTick))) {
                 continue;
             }
             snapshots.push_back(NativeAutomapMarkerSnapshot{
                 .unitId = unitId,
+                .classId = marker.classId,
+                .superUniqueIndex = marker.superUniqueIndex,
                 .x = marker.x,
                 .y = marker.y,
                 .nativeWidth = marker.nativeWidth,
@@ -1740,10 +1825,41 @@ auto AcquireNativeAutomapMarkers(
     }
 }
 
-auto WantsNativeAutomapMarkerFrame() noexcept -> bool {
+auto AcquireNativeAutomapViewport(
+        NativeAutomapViewportSnapshot& snapshot,
+        bool retainCurrentProjection) noexcept -> bool {
+    snapshot = {};
+    if (!Active.load(std::memory_order_acquire)
+        || NativeAutomapViewportLock.test_and_set(
+            std::memory_order_acquire)) {
+        return false;
+    }
+    {
+        const AtomicFlagRelease viewportRelease{NativeAutomapViewportLock};
+        snapshot = PublishedNativeAutomapViewport;
+    }
+
+    const auto epoch = Epoch.load(std::memory_order_acquire);
+    const auto currentTick = static_cast<std::uint64_t>(GetTickCount64());
+    NativeAutomapClipBounds clipBounds{};
+    if (snapshot.epoch != epoch
+        || (!retainCurrentProjection
+            && !IsRecent(snapshot.observedTick, currentTick))
+        || !TryResolveNativeAutomapClipBounds(snapshot, clipBounds)) {
+        snapshot = {};
+        return false;
+    }
+    return true;
+}
+
+auto WantsNativeAutomapMarkerFrame(
+        bool retainCurrentProjection) noexcept -> bool {
     if (!Active.load(std::memory_order_acquire)
         || !CollectionEnabled.load(std::memory_order_acquire)) {
         return false;
+    }
+    if (retainCurrentProjection) {
+        return LastAutomapPulseTick.load(std::memory_order_acquire) != 0U;
     }
     const auto currentTick = static_cast<std::uint64_t>(GetTickCount64());
     if (!IsRecent(

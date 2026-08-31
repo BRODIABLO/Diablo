@@ -187,8 +187,66 @@ private:
 
 } // namespace Detail
 
+// Latest renderer-facing copy of D2R's own automap viewport. The native
+// context uses an exclusive right/bottom rectangle; MapSense copies only
+// values and never retains the borrowed AutomapContext pointer.
+struct NativeAutomapViewportSnapshot final {
+    std::int32_t nativeWidth{};
+    std::int32_t nativeHeight{};
+    std::int32_t clipLeft{};
+    std::int32_t clipTop{};
+    std::int32_t clipWidth{};
+    std::int32_t clipHeight{};
+    std::uint64_t observedTick{};
+    std::uint64_t epoch{};
+};
+
+struct NativeAutomapClipBounds final {
+    std::int32_t left{};
+    std::int32_t top{};
+    std::int32_t right{};
+    std::int32_t bottom{};
+};
+
+// Normalizes the native clip to the native render surface. This is the same
+// rectangle D2R supplies while laying the automap around Inventory, Character,
+// Quest and the other native panels. Invalid or empty snapshots fail closed.
+[[nodiscard]] constexpr auto TryResolveNativeAutomapClipBounds(
+        const NativeAutomapViewportSnapshot& viewport,
+        NativeAutomapClipBounds& output) noexcept -> bool {
+    if (viewport.nativeWidth <= 0 || viewport.nativeWidth > 32768
+        || viewport.nativeHeight <= 0 || viewport.nativeHeight > 32768
+        || viewport.clipWidth <= 0 || viewport.clipHeight <= 0) {
+        return false;
+    }
+
+    const auto rawRight = static_cast<std::int64_t>(viewport.clipLeft)
+        + static_cast<std::int64_t>(viewport.clipWidth);
+    const auto rawBottom = static_cast<std::int64_t>(viewport.clipTop)
+        + static_cast<std::int64_t>(viewport.clipHeight);
+    const auto left = viewport.clipLeft < 0 ? 0 : viewport.clipLeft;
+    const auto top = viewport.clipTop < 0 ? 0 : viewport.clipTop;
+    const auto right = rawRight > viewport.nativeWidth
+        ? viewport.nativeWidth
+        : static_cast<std::int32_t>(rawRight);
+    const auto bottom = rawBottom > viewport.nativeHeight
+        ? viewport.nativeHeight
+        : static_cast<std::int32_t>(rawBottom);
+    if (right <= left || bottom <= top) return false;
+
+    output = {
+        .left = left,
+        .top = top,
+        .right = right,
+        .bottom = bottom,
+    };
+    return true;
+}
+
 struct NativeAutomapMarkerSnapshot final {
     std::uint32_t unitId{};
+    std::int32_t classId{-1};
+    std::int32_t superUniqueIndex{-1};
     std::int32_t x{};
     std::int32_t y{};
     std::int32_t nativeWidth{};
@@ -198,6 +256,26 @@ struct NativeAutomapMarkerSnapshot final {
     std::uint64_t epoch{};
     std::uint64_t sequence{};
 };
+
+// ImGui preserves submission order. Draw lower-value layers first so a dense
+// pack cannot bury the marker that carries the most useful combat identity.
+// A MonStats boss may not expose the SuperUnique runtime rank, so callers can
+// explicitly promote that independently verified identity to the top layer.
+[[nodiscard]] constexpr auto MonsterMarkerRenderLayer(
+        MonsterRank rank,
+        bool bossIdentity = false) noexcept -> std::uint8_t {
+    if (bossIdentity || rank == MonsterRank::SuperUnique) return 4U;
+    switch (rank) {
+        case MonsterRank::Normal: return 0U;
+        case MonsterRank::Minion: return 1U;
+        case MonsterRank::Champion: return 2U;
+        case MonsterRank::Unique: return 3U;
+        case MonsterRank::SuperUnique: return 4U;
+    }
+    return 0U;
+}
+
+inline constexpr std::uint8_t MaximumMonsterMarkerRenderLayer = 4U;
 
 inline constexpr std::size_t MaximumNativeAutomapMarkers = 32'768U;
 inline constexpr std::size_t MaximumRecentNativeAutomapMarkers = 65'536U;
@@ -274,13 +352,22 @@ void SetNativeAutomapLevelObservedCallback(
 // Copies every recent marker projected from the complete client monster table.
 // The cache is keyed by native unit id and does not retain any D2R pointer.
 auto AcquireNativeAutomapMarkers(
-    std::vector<NativeAutomapMarkerSnapshot>& snapshots) noexcept
+    std::vector<NativeAutomapMarkerSnapshot>& snapshots,
+    bool retainCurrentProjection = false) noexcept
     -> std::size_t;
+
+// Copies the freshest native automap viewport published by the local-player
+// pass. A false result means MapSense cannot prove a safe map drawing region
+// for this frame and must emit no map pixels; the settings menu is independent.
+[[nodiscard]] auto AcquireNativeAutomapViewport(
+    NativeAutomapViewportSnapshot& snapshot,
+    bool retainCurrentProjection = false) noexcept -> bool;
 
 // Cheap frame predicate for a renderer that otherwise sleeps with its menu
 // closed. A true result still requires AcquireNativeAutomapMarkers to return
 // at least one fresh snapshot.
-auto WantsNativeAutomapMarkerFrame() noexcept -> bool;
+auto WantsNativeAutomapMarkerFrame(
+    bool retainCurrentProjection = false) noexcept -> bool;
 
 auto GetNativeAutomapMarkerCounters() noexcept
     -> NativeAutomapMarkerCounters;

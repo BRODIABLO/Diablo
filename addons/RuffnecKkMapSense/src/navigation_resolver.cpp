@@ -3,6 +3,8 @@
 #include "navigation_engine.hpp"
 #include "navigation_level_catalog.hpp"
 #include "navigation_policy.hpp"
+#include "mapsense_data_catalog.hpp"
+#include "native_automap_poi.hpp"
 #include "reveal_engine.hpp"
 
 #include <D2RLPlugin/api.h>
@@ -14,6 +16,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <memory>
 #include <optional>
 #include <span>
 #include <string>
@@ -124,6 +127,7 @@ constexpr std::size_t MaximumNearRoomsPerRoom = 64U;
 constexpr std::size_t MaximumWaypointPresetsPerRoom = 64U;
 constexpr std::size_t MaximumUnitsPerRoom = 16'384U;
 constexpr std::size_t MaximumLevelsPerDrlg = 512U;
+static_assert(MaximumAutomapWaypointLabels == MaximumLevelsPerDrlg);
 constexpr std::size_t MaximumOutdoorBoundarySpans = 16'384U;
 constexpr std::uint64_t MaximumCollisionCellsPerRoom = 16'777'216U;
 constexpr std::size_t VisibilitySlotCount = 8U;
@@ -179,6 +183,14 @@ struct CandidateBatch final {
         Detail::NavigationExitSelection,
         MaximumNavigationDestinations> exitSelections{};
     std::size_t exitSelectionCount{};
+    std::array<
+        Detail::NavigationExitSelection,
+        MaximumNavigationDestinations> exitLabelEvidence{};
+    std::size_t exitLabelEvidenceCount{};
+    std::array<
+        AutomapSpecialChestDefinition,
+        MaximumAutomapSpecialChestPresets> specialChestPresets{};
+    std::size_t specialChestPresetCount{};
     NavigationPointCandidate waypoint{};
     bool hasWaypoint{};
     std::int32_t waypointNativeTileX{-1};
@@ -245,6 +257,7 @@ GetObjectsTxtRecordFn GetObjectsTxtRecord{};
 FindWaypointRoomAndCoordinatesFn FindWaypointRoomAndCoordinates{};
 std::atomic_bool Active{};
 std::atomic_bool Diagnostics{};
+std::atomic<std::shared_ptr<const MapSenseDataCatalog>> ResolverCatalog{};
 std::atomic_uint64_t Refreshes{};
 std::atomic_uint64_t Rooms{};
 std::atomic_uint64_t Presets{};
@@ -258,6 +271,9 @@ std::atomic_uint64_t PartialRefreshes{};
 std::atomic_uint64_t VisibilitySlots{};
 std::atomic_uint64_t VisibilityPairs{};
 std::atomic_uint64_t PendingVisibilityTargets{};
+std::atomic_uint64_t RevealedLevelsCaptured{};
+std::atomic_uint64_t RevealedLabelsCaptured{};
+std::atomic_uint64_t RevealedWaypointsCaptured{};
 std::atomic_int32_t LastLevelId{UnknownNavigationLevelId};
 std::atomic_uint32_t LastDestinationCount{};
 std::atomic_int32_t LastWaypointX{};
@@ -272,6 +288,72 @@ std::array<
     Detail::NavigationBoundarySpan,
     MaximumOutdoorBoundarySpans> OutdoorTargetSpanScratch{};
 std::atomic_flag OutdoorSpanScratchInUse = ATOMIC_FLAG_INIT;
+
+struct InitializedLevelCaptureRequest final {
+    std::uint8_t dataContext{};
+    void* level{};
+};
+
+struct RevealedWaypointResolution final {
+    std::int32_t levelId{UnknownNavigationLevelId};
+    AutomapWaypointLabelDefinition definition{};
+    bool hasWaypoint{};
+};
+
+// InitLevel is reentrant: resolving an outdoor boundary can initialize a
+// neighbouring Level before the outer observer has finished. Keep those
+// pointers only for the duration of the outer hook invocation, then drain the
+// complete bounded queue before returning control to D2R. This is the only
+// window in which transient revealmap Levels are guaranteed to remain valid.
+thread_local std::array<
+    InitializedLevelCaptureRequest,
+    MaximumLevelsPerDrlg> InitializedLevelCaptureQueue{};
+thread_local std::size_t InitializedLevelCaptureQueueCount{};
+thread_local bool InitializedLevelCaptureActive{};
+thread_local bool InitializedLevelCaptureQueueOverflow{};
+
+[[nodiscard]] auto QueueInitializedLevelCapture(
+        std::uint8_t dataContext,
+        void* level) noexcept -> bool {
+    if (dataContext >= 8U || level == nullptr) return false;
+    for (std::size_t index = 0U;
+            index < InitializedLevelCaptureQueueCount;
+            ++index) {
+        const auto& queued = InitializedLevelCaptureQueue[index];
+        if (queued.dataContext == dataContext && queued.level == level) {
+            return true;
+        }
+    }
+    if (InitializedLevelCaptureQueueCount
+            >= InitializedLevelCaptureQueue.size()) {
+        InitializedLevelCaptureQueueOverflow = true;
+        return false;
+    }
+    InitializedLevelCaptureQueue[InitializedLevelCaptureQueueCount++] = {
+        .dataContext = dataContext,
+        .level = level,
+    };
+    return true;
+}
+
+class InitializedLevelCaptureScope final {
+public:
+    InitializedLevelCaptureScope() noexcept {
+        InitializedLevelCaptureQueueCount = 0U;
+        InitializedLevelCaptureQueueOverflow = false;
+        InitializedLevelCaptureActive = true;
+    }
+
+    ~InitializedLevelCaptureScope() {
+        InitializedLevelCaptureActive = false;
+        InitializedLevelCaptureQueueCount = 0U;
+        InitializedLevelCaptureQueueOverflow = false;
+    }
+
+    InitializedLevelCaptureScope(const InitializedLevelCaptureScope&) = delete;
+    auto operator=(const InitializedLevelCaptureScope&)
+        -> InitializedLevelCaptureScope& = delete;
+};
 
 class OutdoorSpanScratchLease final {
 public:
@@ -401,15 +483,25 @@ enum class CollisionGridReadResult : std::uint8_t {
     Invalid,
 };
 
+// Full materialization is reserved for the local-player navigation pass. The
+// reveal-wide POI passes may inspect only rooms D2R already made active; asking
+// them to create rooms makes a large act scan retain far more map state.
+enum class RoomMaterializationPolicy : std::uint8_t {
+    Passive,
+    CurrentLevel,
+};
+
 [[nodiscard]] auto ReadCollisionGridUnchecked(
         std::uint8_t dataContext,
         std::uint8_t* room,
         const Detail::NavigationRoomRectangle& rectangle,
+        RoomMaterializationPolicy materialization,
         Detail::NavigationCollisionGridView& output) noexcept
         -> CollisionGridReadResult {
     auto* activeRoom = *reinterpret_cast<std::uint8_t**>(
         room + DrlgRoomActiveRoomOffset);
-    if (activeRoom == nullptr) {
+    if (activeRoom == nullptr
+        && materialization == RoomMaterializationPolicy::CurrentLevel) {
         activeRoom = static_cast<std::uint8_t*>(
             MaterializeClientRoom(dataContext, room));
     }
@@ -737,6 +829,29 @@ void UpsertExitCandidate(
         batch.traversalLimited = batch.exitSelectionCount
             >= batch.exitSelections.size();
     }
+    if (!Detail::AppendPhysicalExitEvidence(
+            batch.levelId,
+            batch.exitLabelEvidence,
+            batch.exitLabelEvidenceCount,
+            selection)) {
+        batch.traversalLimited = batch.traversalLimited
+            || batch.exitLabelEvidenceCount
+                >= batch.exitLabelEvidence.size();
+    }
+}
+
+void AppendExitLabelEvidence(
+        CandidateBatch& batch,
+        Detail::NavigationExitSelection selection) noexcept {
+    if (!Detail::AppendPhysicalExitEvidence(
+            batch.levelId,
+            batch.exitLabelEvidence,
+            batch.exitLabelEvidenceCount,
+            selection)) {
+        batch.traversalLimited = batch.traversalLimited
+            || batch.exitLabelEvidenceCount
+                >= batch.exitLabelEvidence.size();
+    }
 }
 
 void AppendQuestTarget(
@@ -760,6 +875,42 @@ void AppendQuestTarget(
         return;
     }
     batch.questTargets[batch.questTargetCount++] = candidate;
+}
+
+void AppendSpecialChestPreset(
+        CandidateBatch& batch,
+        std::int32_t classId,
+        std::int32_t subtileX,
+        std::int32_t subtileY) noexcept {
+    if (classId < 0 || subtileX < 0 || subtileY < 0) return;
+    const auto stableId = MakeDestinationId(
+        PresetObject,
+        classId,
+        subtileX,
+        subtileY);
+    for (std::size_t index = 0U;
+            index < batch.specialChestPresetCount;
+            ++index) {
+        const auto& existing = batch.specialChestPresets[index];
+        if (existing.stableId == stableId
+                || (existing.classId == classId
+                    && existing.subtileX == subtileX
+                    && existing.subtileY == subtileY)) {
+            return;
+        }
+    }
+    if (batch.specialChestPresetCount
+            >= batch.specialChestPresets.size()) {
+        batch.traversalLimited = true;
+        return;
+    }
+    batch.specialChestPresets[batch.specialChestPresetCount++] = {
+        .stableId = stableId,
+        .levelId = batch.levelId,
+        .classId = classId,
+        .subtileX = subtileX,
+        .subtileY = subtileY,
+    };
 }
 
 [[nodiscard]] auto ResolveNativeMonasteryAnchorUnchecked(
@@ -803,6 +954,7 @@ void AppendQuestTarget(
             },
             .evidence = Detail::NavigationExitEvidence::OutdoorLevelBoundary,
             .spanSubtiles = 0,
+            .canonicalLevelPairAnchor = true,
         });
     return !batch.traversalLimited;
 }
@@ -811,6 +963,7 @@ void AppendQuestTarget(
         std::uint8_t dataContext,
         std::uint8_t* sourceLevel,
         std::int32_t currentLevelId,
+        RoomMaterializationPolicy materialization,
         CandidateBatch& batch,
         Detail::NavigationLevelSubtileBounds& bounds,
         bool& ready) noexcept -> bool {
@@ -836,6 +989,7 @@ void AppendQuestTarget(
             dataContext,
             room,
             rectangle,
+            materialization,
             grid);
         if (readResult == CollisionGridReadResult::Invalid) return false;
         if (readResult == CollisionGridReadResult::Pending) {
@@ -865,6 +1019,7 @@ void AppendQuestTarget(
         std::int32_t targetLevelId,
         std::uint8_t sourceSlot,
         std::uint8_t reciprocalSlot,
+        RoomMaterializationPolicy materialization,
         std::span<Detail::NavigationBoundarySpan> sourceSpans,
         std::size_t& sourceSpanCount,
         std::span<Detail::NavigationBoundarySpan> targetSpans,
@@ -942,6 +1097,7 @@ void AppendQuestTarget(
                 dataContext,
                 room,
                 sourceRectangle,
+                materialization,
                 sourceGrid);
             if (sourceReadResult == CollisionGridReadResult::Invalid) {
                 return false;
@@ -950,6 +1106,7 @@ void AppendQuestTarget(
                 dataContext,
                 targetRoom,
                 targetRectangle,
+                materialization,
                 targetGrid);
             if (targetReadResult == CollisionGridReadResult::Invalid) {
                 return false;
@@ -1022,6 +1179,7 @@ void AppendQuestTarget(
         std::int32_t targetLevelId,
         std::uint8_t sourceSlot,
         std::uint8_t reciprocalSlot,
+        RoomMaterializationPolicy materialization,
         CandidateBatch& batch) noexcept -> bool {
     if (currentLevelId == TamoeHighlandLevelId
         && targetLevelId == MonasteryGateLevelId) {
@@ -1040,6 +1198,7 @@ void AppendQuestTarget(
             dataContext,
             sourceLevel,
             currentLevelId,
+            materialization,
             batch,
             sourceBounds,
             ready)) {
@@ -1057,6 +1216,7 @@ void AppendQuestTarget(
             targetLevelId,
             sourceSlot,
             reciprocalSlot,
+            materialization,
             sourceSpans,
             sourceSpanCount,
             targetSpans,
@@ -1085,6 +1245,10 @@ void AppendQuestTarget(
         + mergedTargetSpanCount;
 
     Detail::NavigationOutdoorOpening opening{};
+    std::array<
+        Detail::NavigationOutdoorOpening,
+        MaximumNavigationDestinations> physicalOpenings{};
+    std::size_t physicalOpeningCount{};
     const auto matchResult = Detail::FindUniqueOutdoorLevelBoundaryOpening(
         sourceBounds,
         targetLevelId,
@@ -1092,7 +1256,9 @@ void AppendQuestTarget(
         targetSpans.first(mergedTargetSpanCount),
         opening,
         Detail::NavigationOutdoorOpeningSelectionPolicy::
-            AcceptStablePlayerPath);
+            AcceptStablePlayerPath,
+        physicalOpenings,
+        &physicalOpeningCount);
     if (matchResult
             == Detail::NavigationOutdoorBoundaryMatchResult::Invalid) {
         return false;
@@ -1124,7 +1290,31 @@ void AppendQuestTarget(
             .evidence = Detail::NavigationExitEvidence::
                 OutdoorLevelBoundary,
             .spanSubtiles = opening.spanSubtiles,
+            .boundaryIdentity = opening.boundaryIdentity,
         });
+    for (std::size_t index = 0U;
+            index < physicalOpeningCount;
+            ++index) {
+        const auto& physical = physicalOpenings[index];
+        AppendExitLabelEvidence(
+            batch,
+            Detail::NavigationExitSelection{
+                .candidate = NavigationExitCandidate{
+                    .destinationId = MakeDestinationId(
+                        PresetLevelExit,
+                        targetLevelId,
+                        physical.subtileX,
+                        physical.subtileY),
+                    .targetLevelId = targetLevelId,
+                    .subtileX = physical.subtileX,
+                    .subtileY = physical.subtileY,
+                },
+                .evidence = Detail::NavigationExitEvidence::
+                    OutdoorLevelBoundary,
+                .spanSubtiles = physical.spanSubtiles,
+                .boundaryIdentity = physical.boundaryIdentity,
+            });
+    }
     return !batch.traversalLimited;
 }
 
@@ -1252,7 +1442,167 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
         std::uint8_t dataContext,
         std::uint8_t* level,
         std::int32_t levelId,
+        RoomMaterializationPolicy materialization,
         CandidateBatch& batch) noexcept -> bool {
+    if (!Detail::AllowsWaypointLabelForLevel(levelId)) {
+        // Publish a complete empty owner for towns. This both avoids needless
+        // preset traversal and clears any town label retained by an earlier
+        // build when the catalog is reconstructed after Reveal All.
+        batch.hasWaypoint = false;
+        batch.pendingWaypoint = false;
+        return true;
+    }
+    if (materialization == RoomMaterializationPolicy::Passive) {
+        // The governed native resolver initializes the selected DrlgRoom before
+        // it searches presets. Reveal-wide collection instead reads only the
+        // already-linked PresetUnit chains. A missing chain is deliberately
+        // pending rather than a proved no-waypoint result, so the owner catalog
+        // cannot be replaced by an empty entry.
+        const auto objectRecordCount = GetObjectsTxtRecordCount(dataContext);
+        if (objectRecordCount <= 0 || objectRecordCount > 1'000'000) {
+            return false;
+        }
+        auto* room = *reinterpret_cast<std::uint8_t**>(
+            level + LevelFirstRoomOffset);
+        if (HasCycleOrExceedsLimitUnchecked(
+                room,
+                DrlgRoomNextOffset,
+                MaximumRoomsPerLevel)) {
+            batch.traversalLimited = true;
+            return false;
+        }
+        std::array<Detail::NavigationWaypointPresetCandidate, 2U>
+            candidates{};
+        std::size_t candidateCount{};
+        bool hasIncompleteRoom{};
+        std::size_t roomCount{};
+        while (room != nullptr && roomCount < MaximumRoomsPerLevel) {
+            if (!IsAlignedPointer(room)
+                || *reinterpret_cast<std::uint8_t**>(
+                    room + DrlgRoomLevelOffset) != level) {
+                return false;
+            }
+            Detail::NavigationRoomRectangle roomRectangle{};
+            if (!ReadRoomRectangleUnchecked(room, roomRectangle)
+                || roomRectangle.levelId != levelId) {
+                return false;
+            }
+            auto* preset = *reinterpret_cast<std::uint8_t**>(
+                room + DrlgRoomPresetUnitOffset);
+            if (preset == nullptr) {
+                // HookInitLevel calls us after the native initialization, so a
+                // null PresetUnit head is a proved no-preset room, not a
+                // request to materialize it again.
+            } else if (HasCycleOrExceedsLimitUnchecked(
+                    preset,
+                    PresetNextOffset,
+                    MaximumPresetsPerRoom)) {
+                batch.traversalLimited = true;
+                return false;
+            } else {
+                std::size_t presetCount{};
+                while (preset != nullptr && presetCount < MaximumPresetsPerRoom) {
+                    const auto presetType = *reinterpret_cast<const std::uint32_t*>(
+                        preset + PresetUnitTypeOffset);
+                    const auto classId = *reinterpret_cast<const std::int32_t*>(
+                        preset + PresetClassIdOffset);
+                    const auto relativeX = *reinterpret_cast<const std::int32_t*>(
+                        preset + PresetRelativeXOffset);
+                    const auto relativeY = *reinterpret_cast<const std::int32_t*>(
+                        preset + PresetRelativeYOffset);
+                    if (presetType == PresetObject
+                        && classId >= 0 && classId < objectRecordCount
+                        && IsPresetWithinRoom(
+                            roomRectangle.width,
+                            roomRectangle.height,
+                            relativeX,
+                            relativeY)) {
+                        auto* const record = GetObjectsTxtRecord(dataContext, classId);
+                        if (record == nullptr) return false;
+                        if ((record[ObjectsTxtSubClassOffset]
+                                & ObjectsTxtWaypointSubClass) != 0U) {
+                            Detail::NavigationWaypointPresetCandidate candidate{};
+                            if (!CheckedGameTileCoordinate(
+                                    roomRectangle.tileX,
+                                    relativeX,
+                                    candidate.nativeTileX)
+                                || !CheckedGameTileCoordinate(
+                                    roomRectangle.tileY,
+                                    relativeY,
+                                    candidate.nativeTileY)
+                                || !CheckedNavigationSubtileCoordinate(
+                                    roomRectangle.tileX,
+                                    relativeX,
+                                    candidate.subtileX)
+                                || !CheckedNavigationSubtileCoordinate(
+                                    roomRectangle.tileY,
+                                    relativeY,
+                                    candidate.subtileY)) {
+                                return false;
+                            }
+                            candidate.classId = classId;
+                            if (candidateCount < candidates.size()) {
+                                candidates[candidateCount++] = candidate;
+                            }
+                        }
+                    }
+                    preset = *reinterpret_cast<std::uint8_t**>(
+                        preset + PresetNextOffset);
+                    ++presetCount;
+                }
+                if (preset != nullptr) {
+                    batch.traversalLimited = true;
+                    return false;
+                }
+            }
+            room = *reinterpret_cast<std::uint8_t**>(
+                room + DrlgRoomNextOffset);
+            ++roomCount;
+        }
+        if (room != nullptr) {
+            batch.traversalLimited = true;
+            return false;
+        }
+        const auto selection = Detail::SelectPassiveWaypointPreset(
+            std::span(candidates.data(), candidateCount),
+            hasIncompleteRoom || candidateCount >= candidates.size());
+        if (selection.pending) {
+            batch.pendingWaypoint = true;
+            return true;
+        }
+        if (!selection.exact.has_value()) {
+            // A complete passive traversal with no waypoint preset proves
+            // absence for this source level. Leave hasWaypoint false so the
+            // owner can be cleared without dereferencing an empty selection.
+            return true;
+        }
+        const auto& exact = *selection.exact;
+        batch.waypointNativeTileX = exact.nativeTileX;
+        batch.waypointNativeTileY = exact.nativeTileY;
+        batch.waypointExactSubtileX = exact.subtileX;
+        batch.waypointExactSubtileY = exact.subtileY;
+        NavigationNativePoint derivedClient{};
+        if (!ConvertNavigationSubtileToClientCoordinates(
+                exact.subtileX,
+                exact.subtileY,
+                derivedClient)) {
+            return false;
+        }
+        batch.waypointExactClientX = derivedClient.x;
+        batch.waypointExactClientY = derivedClient.y;
+        batch.waypoint = {
+            .destinationId = MakeDestinationId(
+                PresetObject,
+                levelId,
+                exact.subtileX,
+                exact.subtileY),
+            .subtileX = exact.subtileX,
+            .subtileY = exact.subtileY,
+            .useExactClientCoordinates = false,
+        };
+        batch.hasWaypoint = true;
+        return true;
+    }
     std::int32_t nativeTileX{-1};
     std::int32_t nativeTileY{-1};
     auto* const waypointRoom = static_cast<std::uint8_t*>(
@@ -1396,30 +1746,63 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
     return true;
 }
 
+[[nodiscard]] auto CopyWaypointLabelDefinition(
+        const CandidateBatch& batch,
+        AutomapWaypointLabelDefinition& output) noexcept -> bool {
+    if (!batch.hasWaypoint || batch.levelId <= 0
+            || batch.waypoint.subtileX < 0
+            || batch.waypoint.subtileY < 0) {
+        output = {};
+        return false;
+    }
+    output = {
+        .stableId = batch.waypoint.destinationId,
+        .levelId = batch.levelId,
+        .subtileX = batch.waypoint.subtileX,
+        .subtileY = batch.waypoint.subtileY,
+    };
+    return true;
+}
+
 [[nodiscard]] auto ResolveRoomTileExitsUnchecked(
         std::uint8_t dataContext,
         std::uint8_t* room,
         std::int32_t currentLevelId,
+        RoomMaterializationPolicy materialization,
         CandidateBatch& batch) noexcept -> bool {
-    // D2R creates a room's RoomTile chain lazily. Materialize every source
-    // room before reading +0x78; otherwise only the player's already-active
-    // room contributes exits (the Barracks/Jail 1 failure observed in-game).
-    auto* const activeRoom = static_cast<std::uint8_t*>(
-        MaterializeClientRoom(dataContext, room));
+    // D2R creates a room's RoomTile chain lazily. The local-player refresh owns
+    // this materialization; reveal-wide passes inspect only an already-active
+    // room and defer the source when no such room exists.
+    auto* activeRoom = *reinterpret_cast<std::uint8_t**>(
+        room + DrlgRoomActiveRoomOffset);
+    if (activeRoom == nullptr
+        && materialization == RoomMaterializationPolicy::CurrentLevel) {
+        activeRoom = static_cast<std::uint8_t*>(
+            MaterializeClientRoom(dataContext, room));
+    }
     if (activeRoom == nullptr) {
-        ++batch.pendingRoomTileRoomCount;
-        return true;
-    }
-    if (!IsAlignedPointer(activeRoom)
-        || GetDrlgRoomFromActiveRoom(activeRoom) != room) {
-        return false;
-    }
-    if (!ResolveDynamicProgressionObjectsUnchecked(
-            dataContext,
-            activeRoom,
-            currentLevelId,
-            batch)) {
-        return false;
+        if (materialization == RoomMaterializationPolicy::CurrentLevel) {
+            ++batch.pendingRoomTileRoomCount;
+            return true;
+        }
+        // Ordinary preset and RoomTile chains belong to the initialized
+        // DrlgRoom and can be read without creating an ActiveRoom. Dynamic
+        // progression objects are the sole active-room-only evidence here.
+        if (HasDynamicMainProgressionTargetFor(currentLevelId)) {
+            ++batch.pendingRoomTileRoomCount;
+        }
+    } else {
+        if (!IsAlignedPointer(activeRoom)
+            || GetDrlgRoomFromActiveRoom(activeRoom) != room) {
+            return false;
+        }
+        if (!ResolveDynamicProgressionObjectsUnchecked(
+                dataContext,
+                activeRoom,
+                currentLevelId,
+                batch)) {
+            return false;
+        }
     }
 
     Detail::NavigationRoomRectangle sourceRectangle{};
@@ -1511,6 +1894,7 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
         batch.traversalLimited = true;
         return false;
     }
+    const auto catalog = ResolverCatalog.load(std::memory_order_acquire);
     std::size_t presetCount{};
     while (preset != nullptr && presetCount < MaximumPresetsPerRoom) {
         const auto presetType = *reinterpret_cast<const std::uint32_t*>(
@@ -1527,6 +1911,32 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
                 relativeX,
                 relativeY);
         if (isWithinRoom) {
+            if (presetType == PresetObject && presetId >= 0
+                    && catalog != nullptr) {
+                const auto* const record = catalog->FindObjectById(
+                    static_cast<std::uint32_t>(presetId));
+                if (record != nullptr
+                        && IsSpecialChestPresetObjectDefinition(*record)) {
+                    std::int32_t subtileX{};
+                    std::int32_t subtileY{};
+                    if (!CheckedNavigationSubtileCoordinate(
+                            sourceRectangle.tileX,
+                            relativeX,
+                            subtileX)
+                        || !CheckedNavigationSubtileCoordinate(
+                            sourceRectangle.tileY,
+                            relativeY,
+                            subtileY)) {
+                        return false;
+                    }
+                    AppendSpecialChestPreset(
+                        batch,
+                        presetId,
+                        subtileX,
+                        subtileY);
+                    if (batch.traversalLimited) return false;
+                }
+            }
             const auto presetProgression = PresetMainProgressionTargetFor(
                 currentLevelId,
                 presetType,
@@ -1633,6 +2043,10 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
                         .evidence = Detail::NavigationExitEvidence::RoomTile,
                     });
                 ++batch.exactRoomTileCount;
+            } else {
+                // The preset proves an exit, but a lazy/missing RoomTile map
+                // cannot prove its destination. Preserve this exit owner.
+                ++batch.pendingRoomTileRoomCount;
             }
         }
         preset = *reinterpret_cast<std::uint8_t**>(
@@ -1655,6 +2069,7 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
         std::int32_t targetLevelId,
         std::uint8_t sourceSlot,
         std::uint8_t reciprocalSlot,
+        RoomMaterializationPolicy materialization,
         CandidateBatch& batch) noexcept -> bool {
     auto* const sourceRoom = *reinterpret_cast<std::uint8_t**>(
         sourceLevel + LevelFirstRoomOffset);
@@ -1680,12 +2095,14 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
         targetLevelId,
         sourceSlot,
         reciprocalSlot,
+        materialization,
         batch);
 }
 
 [[nodiscard]] auto ResolveOutdoorVisibilityLinksUnchecked(
         const ClientLevelView& current,
         std::int32_t currentLevelId,
+        RoomMaterializationPolicy materialization,
         CandidateBatch& batch) noexcept -> bool {
     const auto dataContext = current.dataContext;
     auto* const level = static_cast<std::uint8_t*>(current.level);
@@ -1750,6 +2167,7 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
                     targetLevelId,
                     static_cast<std::uint8_t>(slot),
                     static_cast<std::uint8_t>(reciprocal),
+                    materialization,
                     batch)) {
                 return false;
             }
@@ -1915,32 +2333,39 @@ void FinalizeCanyonCorrectTomb(CandidateBatch& batch) noexcept {
         }
         batch.levelId = levelId;
         batch.inTown = IsRoomInTown(activeRoom) != 0;
-        if (batch.inTown) return true;
 
-        // DRLG links are lazy. Initialize only the requested progression and
-        // configured targets before source-room materialization so forward
-        // links such as Barracks -> Jail 1 and Jail 1 -> Jail 2 exist during
-        // this same refresh.
-        if (!PrepareCanyonCorrectTombUnchecked(current, batch)) {
-            return false;
+        if (!batch.inTown) {
+            // DRLG links are lazy. Initialize only the requested progression
+            // and configured targets before source-room materialization so
+            // forward links such as Barracks -> Jail 1 and Jail 1 -> Jail 2
+            // exist during this same refresh. Towns deliberately skip these
+            // navigation-only targets, but still enumerate their physical
+            // boundaries below so exit labels remain available.
+            if (!PrepareCanyonCorrectTombUnchecked(current, batch)) {
+                return false;
+            }
+            if (!InitializeRequestedTargetLevelsUnchecked(
+                    current,
+                    customTargetLevelIds,
+                    batch)) {
+                return false;
+            }
         }
-        if (!InitializeRequestedTargetLevelsUnchecked(
-                current,
-                customTargetLevelIds,
-                batch)) {
-            return false;
-        }
-
+        // Waypoint labels are object POIs, not navigation lines. Town owners
+        // resolve to a complete empty entry; non-town levels keep the exact
+        // generated preset independently of the navigation-line policy.
         if (!ResolveExactWaypointUnchecked(
                 current.dataContext,
                 level,
                 levelId,
+                RoomMaterializationPolicy::CurrentLevel,
                 batch)) {
             return false;
         }
         if (!ResolveOutdoorVisibilityLinksUnchecked(
                 current,
                 levelId,
+                RoomMaterializationPolicy::CurrentLevel,
                 batch)) {
             return false;
         }
@@ -1965,6 +2390,7 @@ void FinalizeCanyonCorrectTomb(CandidateBatch& batch) noexcept {
                     current.dataContext,
                     room,
                     levelId,
+                    RoomMaterializationPolicy::CurrentLevel,
                     batch)) {
                 return false;
             }
@@ -1980,6 +2406,309 @@ void FinalizeCanyonCorrectTomb(CandidateBatch& batch) noexcept {
         FinalizeCanyonCorrectTomb(batch);
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+[[nodiscard]] auto AppendPhysicalExitLabels(
+        CandidateBatch& batch,
+        std::array<
+            AutomapExitLabelDefinition,
+            MaximumAutomapExitLabels>& output,
+        std::size_t& outputCount) noexcept -> bool {
+    std::array<
+        Detail::NavigationPhysicalExitSelection,
+        MaximumAutomapExitLabels> physical{};
+    std::size_t physicalCount{};
+    if (!Detail::ReducePhysicalExitEvidence(
+            batch.exitLabelEvidence,
+            batch.exitLabelEvidenceCount,
+            physical,
+            physicalCount)) {
+        return false;
+    }
+    for (std::size_t index = 0U; index < physicalCount; ++index) {
+        const auto& exit = physical[index].winner.candidate;
+        const AutomapExitLabelDefinition definition{
+            .stableId = exit.destinationId,
+            .sourceLevelId = batch.levelId,
+            .targetLevelId = exit.targetLevelId,
+            .subtileX = exit.subtileX,
+            .subtileY = exit.subtileY,
+            .exactClientX = exit.exactClientX,
+            .exactClientY = exit.exactClientY,
+            .useExactClientCoordinates = exit.useExactClientCoordinates,
+            .boundaryIdentity = physical[index].boundaryIdentity,
+            .canonicalLevelPairAnchor =
+                physical[index].winner.canonicalLevelPairAnchor,
+        };
+        std::size_t existing{};
+        while (existing < outputCount) {
+            const auto& candidate = output[existing];
+            if (candidate.sourceLevelId == definition.sourceLevelId
+                && (candidate.stableId == definition.stableId
+                || (candidate.targetLevelId == definition.targetLevelId
+                    && candidate.subtileX == definition.subtileX
+                    && candidate.subtileY == definition.subtileY))) {
+                break;
+            }
+            ++existing;
+        }
+        if (existing < outputCount) {
+            output[existing] = definition;
+            continue;
+        }
+        if (outputCount >= output.size()) return false;
+        output[outputCount++] = definition;
+    }
+    return true;
+}
+
+[[nodiscard]] auto EnumerateRevealedActPoiDefinitionsUnchecked(
+        std::array<
+            AutomapExitLabelDefinition,
+            MaximumAutomapExitLabels>& output,
+        std::size_t& outputCount,
+        std::array<
+            RevealedWaypointResolution,
+            MaximumAutomapWaypointLabels>& waypointOutput,
+        std::size_t& waypointOutputCount,
+        std::size_t& levelCount,
+        std::uint64_t& pendingCount) noexcept -> bool {
+    outputCount = 0U;
+    waypointOutputCount = 0U;
+    levelCount = 0U;
+    pendingCount = 0U;
+    __try {
+        ClientLevelView current{};
+        if (!ResolveCurrentClientLevelView(current)
+                || current.dataContext >= 8U
+                || !IsAlignedPointer(current.drlg)) {
+            return false;
+        }
+        auto* const drlg = static_cast<std::uint8_t*>(current.drlg);
+        auto* level = *reinterpret_cast<std::uint8_t**>(
+            drlg + DrlgFirstLevelOffset);
+        if (HasCycleOrExceedsLimitUnchecked(
+                level,
+                LevelNextOffset,
+                MaximumLevelsPerDrlg)) {
+            return false;
+        }
+        std::array<std::uint8_t*, MaximumLevelsPerDrlg> levels{};
+        std::size_t linkedLevelCount{};
+        while (level != nullptr
+                && linkedLevelCount < levels.size()) {
+            if (!IsAlignedPointer(level)
+                    || *reinterpret_cast<std::uint8_t**>(
+                        level + LevelDrlgOffset) != drlg) {
+                return false;
+            }
+            levels[linkedLevelCount++] = level;
+            level = *reinterpret_cast<std::uint8_t**>(
+                level + LevelNextOffset);
+        }
+        if (level != nullptr) return false;
+
+        for (std::size_t levelIndex = 0U;
+                levelIndex < linkedLevelCount;
+                ++levelIndex) {
+            auto* const sourceLevel = levels[levelIndex];
+            const auto sourceLevelId = *reinterpret_cast<const std::int32_t*>(
+                sourceLevel + LevelIdOffset);
+            if (sourceLevelId <= 0
+                    || sourceLevelId > MaximumSupportedLevelId) {
+                return false;
+            }
+            auto* room = *reinterpret_cast<std::uint8_t**>(
+                sourceLevel + LevelFirstRoomOffset);
+            if (room == nullptr) {
+                ++pendingCount;
+                continue;
+            }
+
+            CandidateBatch batch{};
+            batch.levelId = sourceLevelId;
+            if (!ResolveExactWaypointUnchecked(
+                    current.dataContext,
+                    sourceLevel,
+                    sourceLevelId,
+                    RoomMaterializationPolicy::Passive,
+                    batch)) {
+                return false;
+            }
+            ClientLevelView source = current;
+            source.level = sourceLevel;
+            source.levelId = sourceLevelId;
+            if (!ResolveOutdoorVisibilityLinksUnchecked(
+                    source,
+                    sourceLevelId,
+                    RoomMaterializationPolicy::Passive,
+                    batch)) {
+                return false;
+            }
+            if (HasCycleOrExceedsLimitUnchecked(
+                    room,
+                    DrlgRoomNextOffset,
+                    MaximumRoomsPerLevel)) {
+                return false;
+            }
+            std::size_t roomCount{};
+            while (room != nullptr
+                    && roomCount < MaximumRoomsPerLevel) {
+                if (!IsAlignedPointer(room)
+                        || *reinterpret_cast<std::uint8_t**>(
+                            room + DrlgRoomLevelOffset) != sourceLevel
+                        || !ResolveRoomTileExitsUnchecked(
+                            current.dataContext,
+                            room,
+                            sourceLevelId,
+                            RoomMaterializationPolicy::Passive,
+                            batch)) {
+                    return false;
+                }
+                room = *reinterpret_cast<std::uint8_t**>(
+                    room + DrlgRoomNextOffset);
+                ++roomCount;
+            }
+            if (room != nullptr || batch.traversalLimited) {
+                return false;
+            }
+            const auto pendingExits = batch.pendingCollisionRoomCount != 0U
+                || batch.pendingRoomTileRoomCount != 0U
+                || batch.pendingVisibilityTargetCount != 0U;
+            const auto publication = Detail::MakePassivePoiPublicationPolicy(
+                pendingExits,
+                batch.pendingWaypoint);
+            pendingCount += batch.pendingCollisionRoomCount
+                + batch.pendingRoomTileRoomCount
+                + batch.pendingVisibilityTargetCount;
+            ++levelCount;
+            if (batch.pendingWaypoint) ++pendingCount;
+            if (publication.publishWaypoint) {
+                if (waypointOutputCount >= waypointOutput.size()) return false;
+                auto& resolution = waypointOutput[waypointOutputCount++];
+                resolution = {
+                    .levelId = sourceLevelId,
+                    .hasWaypoint = batch.hasWaypoint,
+                };
+                if (batch.hasWaypoint
+                        && !CopyWaypointLabelDefinition(
+                            batch,
+                            resolution.definition)) {
+                    return false;
+                }
+            }
+            if (publication.publishExitLabels
+                    && !AppendPhysicalExitLabels(batch, output, outputCount)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+[[nodiscard]] auto CollectInitializedLevelPoiDefinitionsUnchecked(
+        std::uint8_t dataContext,
+        void* level,
+        std::array<
+            AutomapExitLabelDefinition,
+            MaximumAutomapExitLabels>& output,
+        std::size_t& outputCount,
+        std::int32_t& sourceLevelId,
+        AutomapWaypointLabelDefinition& waypointOutput,
+        bool& hasWaypoint,
+        bool& pendingWaypoint,
+        bool& pendingExits) noexcept -> bool {
+    outputCount = 0U;
+    sourceLevelId = UnknownNavigationLevelId;
+    waypointOutput = {};
+    hasWaypoint = false;
+    pendingWaypoint = false;
+    pendingExits = false;
+    __try {
+        if (dataContext >= 8U || !IsAlignedPointer(level)) return false;
+        auto* const sourceLevel = static_cast<std::uint8_t*>(level);
+        auto* const drlg = *reinterpret_cast<std::uint8_t**>(
+            sourceLevel + LevelDrlgOffset);
+        sourceLevelId = *reinterpret_cast<const std::int32_t*>(
+            sourceLevel + LevelIdOffset);
+        if (!IsAlignedPointer(drlg) || sourceLevelId <= 0
+                || sourceLevelId > MaximumSupportedLevelId) {
+            return false;
+        }
+        auto* room = *reinterpret_cast<std::uint8_t**>(
+            sourceLevel + LevelFirstRoomOffset);
+        if (room == nullptr || HasCycleOrExceedsLimitUnchecked(
+                room,
+                DrlgRoomNextOffset,
+                MaximumRoomsPerLevel)) {
+            return false;
+        }
+
+        CandidateBatch batch{};
+        batch.levelId = sourceLevelId;
+        if (!ResolveExactWaypointUnchecked(
+                dataContext,
+                sourceLevel,
+                sourceLevelId,
+                RoomMaterializationPolicy::Passive,
+                batch)) {
+            return false;
+        }
+        if (batch.hasWaypoint) {
+            if (!CopyWaypointLabelDefinition(batch, waypointOutput)) {
+                return false;
+            }
+            hasWaypoint = true;
+        }
+        const ClientLevelView source{
+            .dataContext = dataContext,
+            .levelId = sourceLevelId,
+            .drlg = drlg,
+            .level = sourceLevel,
+        };
+        if (!ResolveOutdoorVisibilityLinksUnchecked(
+                source,
+                sourceLevelId,
+                RoomMaterializationPolicy::Passive,
+                batch)) {
+            return false;
+        }
+        std::size_t roomCount{};
+        while (room != nullptr && roomCount < MaximumRoomsPerLevel) {
+            if (!IsAlignedPointer(room)
+                    || *reinterpret_cast<std::uint8_t**>(
+                        room + DrlgRoomLevelOffset) != sourceLevel
+                    || !ResolveRoomTileExitsUnchecked(
+                        dataContext,
+                        room,
+                        sourceLevelId,
+                        RoomMaterializationPolicy::Passive,
+                        batch)) {
+                return false;
+            }
+            room = *reinterpret_cast<std::uint8_t**>(
+                room + DrlgRoomNextOffset);
+            ++roomCount;
+        }
+        if (room != nullptr || batch.traversalLimited) return false;
+        pendingWaypoint = batch.pendingWaypoint;
+        pendingExits = batch.pendingCollisionRoomCount != 0U
+            || batch.pendingRoomTileRoomCount != 0U
+            || batch.pendingVisibilityTargetCount != 0U;
+        return AppendPhysicalExitLabels(batch, output, outputCount);
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        outputCount = 0U;
+        sourceLevelId = UnknownNavigationLevelId;
+        waypointOutput = {};
+        hasWaypoint = false;
+        pendingWaypoint = false;
+        pendingExits = false;
         return false;
     }
 }
@@ -2622,6 +3351,9 @@ void ResetCounters() noexcept {
     VisibilitySlots.store(0U, std::memory_order_relaxed);
     VisibilityPairs.store(0U, std::memory_order_relaxed);
     PendingVisibilityTargets.store(0U, std::memory_order_relaxed);
+    RevealedLevelsCaptured.store(0U, std::memory_order_relaxed);
+    RevealedLabelsCaptured.store(0U, std::memory_order_relaxed);
+    RevealedWaypointsCaptured.store(0U, std::memory_order_relaxed);
     LastLevelId.store(UnknownNavigationLevelId, std::memory_order_relaxed);
     LastDestinationCount.store(0U, std::memory_order_relaxed);
     LastWaypointX.store(0, std::memory_order_relaxed);
@@ -2680,8 +3412,18 @@ auto InitializeNavigationResolver(
     return true;
 }
 
+auto BindNavigationResolverCatalog(
+        std::shared_ptr<const MapSenseDataCatalog> catalog) noexcept -> bool {
+    if (!Active.load(std::memory_order_acquire) || catalog == nullptr) {
+        return false;
+    }
+    ResolverCatalog.store(std::move(catalog), std::memory_order_release);
+    return true;
+}
+
 void ShutdownNavigationResolver() noexcept {
     Active.store(false, std::memory_order_release);
+    ResolverCatalog.store(nullptr, std::memory_order_release);
     GetLocalDataContext = nullptr;
     GetLocalPlayer = nullptr;
     GetDrlgRoomFromActiveRoom = nullptr;
@@ -2796,14 +3538,81 @@ auto RefreshNavigationDestinations(
         batch.pendingVisibilityTargetCount,
         std::memory_order_relaxed);
 
-    // Publishing an empty town batch is intentional: it clears any line from
-    // the level that was active before the transition without inventing a POI.
+    // Publishing an empty town line batch is intentional: it clears any line
+    // from the level active before the transition. The independently retained
+    // waypoint label may still be published below.
     if (!BindNavigationLevelForPublish(sessionGeneration, batch.levelId)
         || !PublishNavigationDestinations(
             sessionGeneration,
             batch.levelId,
             destinations.data(),
             destinationCount)) {
+        Failures.fetch_add(1U, std::memory_order_relaxed);
+        return NavigationRefreshResult::Failed;
+    }
+    AutomapWaypointLabelDefinition waypointLabel{};
+    const auto hasWaypointLabel = CopyWaypointLabelDefinition(
+        batch,
+        waypointLabel);
+    // A transient resolver miss must not erase an exact waypoint already
+    // proven for this level. Only a complete no-waypoint result owns an empty
+    // replacement; pending keeps the existing owner entry untouched.
+    if (!batch.pendingWaypoint) {
+        if (batch.hasWaypoint != hasWaypointLabel
+                || !PublishNativeAutomapWaypointLabels(
+                    sessionGeneration,
+                    batch.levelId,
+                    hasWaypointLabel ? &waypointLabel : nullptr,
+                    hasWaypointLabel ? 1U : 0U)) {
+            Failures.fetch_add(1U, std::memory_order_relaxed);
+            return NavigationRefreshResult::Failed;
+        }
+    }
+    std::array<AutomapExitLabelDefinition, MaximumAutomapExitLabels>
+        exitLabels{};
+    std::array<
+        Detail::NavigationPhysicalExitSelection,
+        MaximumAutomapExitLabels> physicalExitLabels{};
+    std::size_t physicalExitLabelCount{};
+    if (!Detail::ReducePhysicalExitEvidence(
+            batch.exitLabelEvidence,
+            batch.exitLabelEvidenceCount,
+            physicalExitLabels,
+            physicalExitLabelCount)) {
+        Failures.fetch_add(1U, std::memory_order_relaxed);
+        return NavigationRefreshResult::Failed;
+    }
+    // Navigation retains one target winner, while labels retain every distinct
+    // physical doorway and spatially merge competing evidence for that door.
+    for (std::size_t index = 0U;
+            index < physicalExitLabelCount;
+            ++index) {
+        const auto& exit = physicalExitLabels[index].winner.candidate;
+        exitLabels[index] = {
+            .stableId = exit.destinationId,
+            .sourceLevelId = batch.levelId,
+            .targetLevelId = exit.targetLevelId,
+            .subtileX = exit.subtileX,
+            .subtileY = exit.subtileY,
+            .exactClientX = exit.exactClientX,
+            .exactClientY = exit.exactClientY,
+            .useExactClientCoordinates = exit.useExactClientCoordinates,
+            .boundaryIdentity =
+                physicalExitLabels[index].boundaryIdentity,
+            .canonicalLevelPairAnchor =
+                physicalExitLabels[index].winner.canonicalLevelPairAnchor,
+        };
+    }
+    (void)PublishNativeAutomapExitLabels(
+        sessionGeneration,
+        batch.levelId,
+        exitLabels.data(),
+        physicalExitLabelCount);
+    if (!PublishNativeAutomapSpecialChests(
+            sessionGeneration,
+            batch.levelId,
+            batch.specialChestPresets.data(),
+            batch.specialChestPresetCount)) {
         Failures.fetch_add(1U, std::memory_order_relaxed);
         return NavigationRefreshResult::Failed;
     }
@@ -2852,6 +3661,252 @@ auto RefreshNavigationDestinations(
         || batch.pendingRoomTileRoomCount != 0U
         || completeness
             == NavigationResolutionCompleteness::PartialRetryable) {
+        PartialRefreshes.fetch_add(1U, std::memory_order_relaxed);
+        return NavigationRefreshResult::PartialRetryable;
+    }
+    return NavigationRefreshResult::Complete;
+}
+
+auto ObserveInitializedClientLevelPoiDefinitions(
+        std::uint64_t sessionGeneration,
+        std::uint8_t dataContext,
+        void* level) noexcept -> bool {
+    if (!Active.load(std::memory_order_acquire)
+            || sessionGeneration == 0U || level == nullptr) {
+        return false;
+    }
+    // A nested InitLevel belongs to the same synchronous reveal traversal.
+    // Queue it for the outer observer instead of dropping it behind the shared
+    // scratch lease. The outer call drains every queued pointer before D2R can
+    // release any transient revealmap Level.
+    if (InitializedLevelCaptureActive) {
+        return QueueInitializedLevelCapture(dataContext, level);
+    }
+    OutdoorSpanScratchLease scratchLease;
+    if (!scratchLease) return false;
+
+    InitializedLevelCaptureScope captureScope;
+    if (!QueueInitializedLevelCapture(dataContext, level)) return false;
+
+    // First walk is discovery-only. Resolving one source can synchronously
+    // initialize and enqueue its neighbouring Levels; publishing that source
+    // immediately records an incomplete, mostly reverse-only graph (for
+    // example several Spider Forest labels but no Great Marsh/Flayer Jungle).
+    std::size_t cursor{};
+    while (cursor < InitializedLevelCaptureQueueCount) {
+        const auto request = InitializedLevelCaptureQueue[cursor++];
+        std::array<AutomapExitLabelDefinition, MaximumAutomapExitLabels>
+            labels{};
+        std::size_t labelCount{};
+        std::int32_t sourceLevelId{UnknownNavigationLevelId};
+        AutomapWaypointLabelDefinition waypoint{};
+        bool hasWaypoint{};
+        bool pendingWaypoint{};
+        bool pendingExits{};
+        (void)CollectInitializedLevelPoiDefinitionsUnchecked(
+            request.dataContext,
+            request.level,
+            labels,
+            labelCount,
+            sourceLevelId,
+            waypoint,
+            hasWaypoint,
+            pendingWaypoint,
+            pendingExits);
+    }
+
+    // Revisit the complete queue after discovery has settled. A second bounded
+    // pass is available only if the first settled walk exposes one last nested
+    // Level; the final pass atomically replaces every source-owned definition.
+    bool complete{};
+    bool settled{};
+    std::uint64_t capturedLevels{};
+    std::uint64_t capturedLabels{};
+    std::uint64_t capturedWaypoints{};
+    constexpr std::size_t MaximumSettlementPasses = 3U;
+    for (std::size_t pass = 0U;
+            pass < MaximumSettlementPasses && !settled;
+            ++pass) {
+        const auto passLevelCount = InitializedLevelCaptureQueueCount;
+        bool passComplete = true;
+        std::uint64_t passCapturedLevels{};
+        std::uint64_t passCapturedLabels{};
+        std::uint64_t passCapturedWaypoints{};
+        for (std::size_t index = 0U; index < passLevelCount; ++index) {
+            const auto request = InitializedLevelCaptureQueue[index];
+            std::array<AutomapExitLabelDefinition, MaximumAutomapExitLabels>
+                labels{};
+            std::size_t labelCount{};
+            std::int32_t sourceLevelId{UnknownNavigationLevelId};
+            AutomapWaypointLabelDefinition waypoint{};
+            bool hasWaypoint{};
+            bool pendingWaypoint{};
+            bool pendingExits{};
+            if (!CollectInitializedLevelPoiDefinitionsUnchecked(
+                    request.dataContext,
+                    request.level,
+                    labels,
+                    labelCount,
+                    sourceLevelId,
+                    waypoint,
+                    hasWaypoint,
+                    pendingWaypoint,
+                    pendingExits)) {
+                passComplete = false;
+                continue;
+            }
+            const auto publication = Detail::MakePassivePoiPublicationPolicy(
+                pendingExits,
+                pendingWaypoint);
+            if (!publication.publishExitLabels) {
+                // Preserve only the incomplete exit owner. A verified passive
+                // waypoint below remains independently publishable.
+                passComplete = false;
+            } else if (!PublishNativeAutomapExitLabels(
+                           sessionGeneration,
+                           sourceLevelId,
+                           labels.data(),
+                           labelCount)) {
+                passComplete = false;
+            }
+            if (!publication.publishWaypoint) {
+                // A missing or ambiguous preset chain cannot erase an exact
+                // waypoint retained from an earlier proven collection.
+                passComplete = false;
+                continue;
+            }
+            if (!PublishNativeAutomapWaypointLabels(
+                    sessionGeneration,
+                    sourceLevelId,
+                    hasWaypoint ? &waypoint : nullptr,
+                    hasWaypoint ? 1U : 0U)) {
+                passComplete = false;
+                continue;
+            }
+            if (hasWaypoint) {
+                ++passCapturedWaypoints;
+            }
+            ++passCapturedLevels;
+            passCapturedLabels += labelCount;
+        }
+        settled = passLevelCount == InitializedLevelCaptureQueueCount;
+        complete = passComplete && settled;
+        capturedLevels = passCapturedLevels;
+        capturedLabels = passCapturedLabels;
+        capturedWaypoints = passCapturedWaypoints;
+    }
+    RevealedLevelsCaptured.fetch_add(
+        capturedLevels,
+        std::memory_order_relaxed);
+    RevealedLabelsCaptured.fetch_add(
+        capturedLabels,
+        std::memory_order_relaxed);
+    RevealedWaypointsCaptured.fetch_add(
+        capturedWaypoints,
+        std::memory_order_relaxed);
+    return complete && !InitializedLevelCaptureQueueOverflow;
+}
+
+auto RefreshRevealedActPoiDefinitions(
+        std::uint64_t sessionGeneration) noexcept
+        -> NavigationRefreshResult {
+    if (!Active.load(std::memory_order_acquire)) {
+        return NavigationRefreshResult::Failed;
+    }
+    OutdoorSpanScratchLease scratchLease;
+    if (!scratchLease) return NavigationRefreshResult::Failed;
+
+    std::array<AutomapExitLabelDefinition, MaximumAutomapExitLabels> labels{};
+    std::array<
+        RevealedWaypointResolution,
+        MaximumAutomapWaypointLabels> waypointResolutions{};
+    std::size_t labelCount{};
+    std::size_t waypointResolutionCount{};
+    std::size_t levelCount{};
+    std::uint64_t pendingCount{};
+    const auto enumerated = EnumerateRevealedActPoiDefinitionsUnchecked(
+            labels,
+            labelCount,
+            waypointResolutions,
+            waypointResolutionCount,
+            levelCount,
+            pendingCount);
+    if (!enumerated) {
+        Failures.fetch_add(1U, std::memory_order_relaxed);
+        if (Diagnostics.load(std::memory_order_acquire)
+                && Context != nullptr) {
+            Context->LogWarn(
+                "MapSense revealed-act POIs: DRLG enumeration failed; the existing catalogs were preserved.");
+        }
+        return NavigationRefreshResult::Failed;
+    }
+
+    // D2R unlinks transient revealmap Levels before this deferred refresh can
+    // run. Therefore pendingCount == 0 does not prove that the linked list is
+    // the complete act; replacing the whole catalog here erased the labels
+    // retained by the InitLevel observer. The session/act reset is the sole
+    // full-catalog invalidation. Every later scan updates only source Levels it
+    // can actually prove and leaves the transient captures intact.
+    bool published = true;
+    std::size_t first{};
+    while (first < labelCount) {
+        const auto sourceLevelId = labels[first].sourceLevelId;
+        auto end = first + 1U;
+        while (end < labelCount
+                && labels[end].sourceLevelId == sourceLevelId) {
+            ++end;
+        }
+        if (!PublishNativeAutomapExitLabels(
+                sessionGeneration,
+                sourceLevelId,
+                labels.data() + first,
+                end - first)) {
+            published = false;
+            break;
+        }
+        first = end;
+    }
+    for (std::size_t index = 0U;
+            published && index < waypointResolutionCount;
+            ++index) {
+        const auto& resolution = waypointResolutions[index];
+        if (!PublishNativeAutomapWaypointLabels(
+                sessionGeneration,
+                resolution.levelId,
+                resolution.hasWaypoint ? &resolution.definition : nullptr,
+                resolution.hasWaypoint ? 1U : 0U)) {
+            published = false;
+        }
+    }
+    if (!published) {
+        Failures.fetch_add(1U, std::memory_order_relaxed);
+        if (Diagnostics.load(std::memory_order_acquire)
+                && Context != nullptr) {
+            Context->LogWarn(
+                "MapSense revealed-act POIs: owner publication failed; no guessed definition was added.");
+        }
+        return NavigationRefreshResult::Failed;
+    }
+    if (Diagnostics.load(std::memory_order_acquire)
+            && Context != nullptr) {
+        char message[352]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "MapSense revealed-act POIs: retained-init-levels=%llu retained-init-labels=%llu retained-init-waypoints=%llu linked-levels=%zu linked-labels=%zu linked-waypoint-owners=%zu pending=%llu.",
+            static_cast<unsigned long long>(
+                RevealedLevelsCaptured.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(
+                RevealedLabelsCaptured.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(
+                RevealedWaypointsCaptured.load(std::memory_order_relaxed)),
+            levelCount,
+            labelCount,
+            waypointResolutionCount,
+            static_cast<unsigned long long>(pendingCount));
+        Context->LogInfo(message);
+    }
+    if (pendingCount != 0U) {
         PartialRefreshes.fetch_add(1U, std::memory_order_relaxed);
         return NavigationRefreshResult::PartialRetryable;
     }

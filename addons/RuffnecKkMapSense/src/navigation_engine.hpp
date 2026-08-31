@@ -21,6 +21,33 @@ enum class NavigationDestinationSelection : std::uint8_t {
     NearestToPlayer,
 };
 
+// Stable value identity for one physical outdoor seam. Room pointers are
+// deliberately excluded: they are valid only during one resolver refresh,
+// while these four coordinates survive safely in the reveal-wide label
+// catalog and normalize both sides of the same generated boundary.
+enum class NavigationBoundaryAxis : std::uint8_t {
+    None,
+    Vertical,
+    Horizontal,
+};
+
+struct NavigationExitBoundaryIdentity final {
+    NavigationBoundaryAxis axis{NavigationBoundaryAxis::None};
+    std::int32_t fixedSubtile{-1};
+    std::int32_t startSubtile{-1};
+    std::int32_t endSubtile{-1};
+
+    [[nodiscard]] constexpr auto Valid() const noexcept -> bool {
+        return axis != NavigationBoundaryAxis::None
+            && fixedSubtile >= 0
+            && startSubtile >= 0
+            && endSubtile > startSubtile;
+    }
+
+    constexpr auto operator==(
+        const NavigationExitBoundaryIdentity&) const noexcept -> bool = default;
+};
+
 // Immutable destination description produced by a resolver on D2R's game/UI
 // thread. It deliberately contains no D2R pointer or renderer state.
 struct NavigationSubtileDestination final {
@@ -179,14 +206,16 @@ void ResetNavigationLevel(
     -> NavigationAutomapObservationResult;
 
 [[nodiscard]] auto AcquireNavigationLineSnapshots(
-    std::vector<NavigationLineSnapshot>& snapshots) noexcept -> std::size_t;
+    std::vector<NavigationLineSnapshot>& snapshots,
+    bool retainCurrentProjection = false) noexcept -> std::size_t;
 
 // Drops only the renderer-facing projection. Resolver destinations, level and
 // session state remain intact so the next native automap pass can republish
 // exact lines without repeating destination discovery.
 void InvalidateNavigationProjection() noexcept;
 
-[[nodiscard]] auto WantsNavigationLineFrame() noexcept -> bool;
+[[nodiscard]] auto WantsNavigationLineFrame(
+    bool retainCurrentProjection = false) noexcept -> bool;
 
 [[nodiscard]] auto GetNavigationEngineStatus() noexcept
     -> NavigationEngineStatus;

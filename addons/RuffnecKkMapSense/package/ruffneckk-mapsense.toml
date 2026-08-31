@@ -2,11 +2,13 @@
 # Configure normal settings in the in-game MapSense menu.
 # Only navigation.custom_levels.targets is intended for manual editing.
 
-schema_version = 9
+schema_version = 14
 
 [general]
 # Enables the plugin, reveal engine, in-frame settings panel, and Controls actions.
 enabled = true
+# Suspends or resumes every MapSense feature without changing individual settings.
+features_enabled = true
 
 [overlay]
 # Enables MapSense additions to D2R's native automap when their live collectors are available.
@@ -52,6 +54,9 @@ shape = "player_cross"
 color = "#FF3B30FF"
 size = 24.00
 thickness = 2.00
+show_names = true
+name_color = "#FFD33DFF"
+name_size = 28.00
 
 [immunities]
 enabled = true
@@ -65,6 +70,55 @@ cold = "#33A6FFFF"
 lightning = "#FFE02EFF"
 poison = "#57E03DFF"
 magic = "#C75CFFFF"
+
+[objects]
+# Master switch for MapSense object labels and markers on the native automap.
+enabled = true
+
+[objects.exit_labels]
+# Exit names stay visible whenever their generated-map destination is known.
+enabled = true
+color = "#FFD33DFF"
+size = 28.00
+
+[objects.waypoint_labels]
+# Shows "<localized level name> Waypoint" above D2R's native waypoint icon.
+enabled = true
+color = "#FFD33DFF"
+size = 28.00
+
+[objects.shrine_labels]
+# Adds localized buff text above D2R's existing shrine icon; no icon is added.
+enabled = true
+color = "#FFD33DFF"
+size = 28.00
+
+[objects.chests]
+enabled = true
+# Used only by the procedural fallback if the exact PrimeMH texture cannot load.
+outline_color = "#1450ADFF"
+interior_color = "#B88A2AB0"
+# Locked and trapped state colors affect only the separate state padlock.
+locked_accent_color = "#00FFFFFF"
+trapped_accent_color = "#FF3B30FF"
+size = 36.00
+
+[objects.super_chests]
+enabled = true
+# Legacy compatibility values; PrimeMH's exact special-chest stars are embedded.
+stars_enabled = true
+stars_color = "#FFD33DFF"
+stars_size = 28.00
+
+[objects.armor_racks]
+enabled = true
+color = "#3D8BFFFF"
+size = 36.00
+
+[objects.weapon_racks]
+enabled = true
+color = "#FF8A24FF"
+size = 36.00
 
 [navigation]
 # Configure this and every navigation switch/color in the MapSense menu.

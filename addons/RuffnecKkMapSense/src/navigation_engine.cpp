@@ -549,7 +549,8 @@ auto ObserveNavigationAutomapPass(
 }
 
 auto AcquireNavigationLineSnapshots(
-        std::vector<NavigationLineSnapshot>& snapshots) noexcept
+        std::vector<NavigationLineSnapshot>& snapshots,
+        bool retainCurrentProjection) noexcept
         -> std::size_t {
     snapshots.clear();
     if (!Active.load(std::memory_order_acquire)
@@ -557,7 +558,7 @@ auto AcquireNavigationLineSnapshots(
         return 0U;
     }
     const auto currentTick = CurrentTickMilliseconds();
-    if (!IsRecent(
+    if (!retainCurrentProjection && !IsRecent(
             PublishedProjectionTick.load(std::memory_order_acquire),
             currentTick)) {
         return 0U;
@@ -567,7 +568,8 @@ auto AcquireNavigationLineSnapshots(
         StateLockGuard lock(false);
         if (!lock || ProjectedLineCount == 0U
             || ProjectedRevision != DestinationRevision
-            || !IsRecent(LastProjectionTick, currentTick)) {
+            || (!retainCurrentProjection
+                && !IsRecent(LastProjectionTick, currentTick))) {
             return 0U;
         }
         snapshots.assign(
@@ -586,15 +588,15 @@ void InvalidateNavigationProjection() noexcept {
     ClearProjectedLinesLocked();
 }
 
-auto WantsNavigationLineFrame() noexcept -> bool {
+auto WantsNavigationLineFrame(bool retainCurrentProjection) noexcept -> bool {
     if (!Active.load(std::memory_order_acquire)
         || PublishedLineCount.load(std::memory_order_acquire) == 0U) {
         return false;
     }
     const auto currentTick = CurrentTickMilliseconds();
-    return IsRecent(
+    return (retainCurrentProjection || IsRecent(
             PublishedProjectionTick.load(std::memory_order_acquire),
-            currentTick)
+            currentTick))
         && PublishedProjectionRevision.load(std::memory_order_acquire) != 0U;
 }
 

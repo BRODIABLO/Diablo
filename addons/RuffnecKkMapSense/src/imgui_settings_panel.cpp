@@ -422,7 +422,8 @@ struct ImmunityColorControl final {
 [[nodiscard]] auto DrawMonsterMarkerStyle(
         const char* label,
         MonsterMarkerStyle& style,
-        float dpiScale) noexcept -> bool {
+        float dpiScale,
+        bool drawNameOptions = false) noexcept -> bool {
     ImGui::PushID(label);
     ImGui::SeparatorText(label);
 
@@ -449,6 +450,134 @@ struct ImmunityColorControl final {
     }
     saveRequested |= DrawMonsterMarkerColor(style.color, dpiScale);
 
+    if (drawNameOptions) {
+        ImGui::PushID("Names");
+        ImGui::SeparatorText("Names");
+        saveRequested |= ImGui::Checkbox(
+            "Show Names",
+            &style.showNames);
+        if (style.showNames) {
+            (void)ImGui::SliderFloat(
+                "Name Size",
+                &style.nameSize,
+                MinimumAutomapLabelSize,
+                MaximumAutomapLabelSize,
+                "%.0f px",
+                ImGuiSliderFlags_AlwaysClamp);
+            saveRequested |= ImGui::IsItemDeactivatedAfterEdit();
+            saveRequested |= DrawMonsterMarkerColor(
+                style.nameColor,
+                dpiScale,
+                "Name Color");
+        }
+        ImGui::PopID();
+    }
+
+    ImGui::PopID();
+    return saveRequested;
+}
+
+[[nodiscard]] auto DrawAutomapLabelOptions(
+        const char* sectionLabel,
+        const char* enabledLabel,
+        AutomapLabelOptions& options,
+        float dpiScale,
+        const char* description = nullptr) noexcept -> bool {
+    ImGui::PushID(sectionLabel);
+    ImGui::SeparatorText(sectionLabel);
+    auto saveRequested = ImGui::Checkbox(enabledLabel, &options.enabled);
+    if (description != nullptr) {
+        ImGui::TextDisabled("%s", description);
+    }
+    if (options.enabled) {
+        (void)ImGui::SliderFloat(
+            "Text Size",
+            &options.size,
+            MinimumAutomapLabelSize,
+            MaximumAutomapLabelSize,
+            "%.0f px",
+            ImGuiSliderFlags_AlwaysClamp);
+        saveRequested |= ImGui::IsItemDeactivatedAfterEdit();
+        saveRequested |= DrawMonsterMarkerColor(
+            options.color,
+            dpiScale,
+            "Text Color");
+    }
+    ImGui::PopID();
+    return saveRequested;
+}
+
+[[nodiscard]] auto DrawAutomapObjectOptions(
+        const char* sectionLabel,
+        const char* enabledLabel,
+        AutomapObjectOptions& options,
+        float dpiScale) noexcept -> bool {
+    ImGui::PushID(sectionLabel);
+    ImGui::SeparatorText(sectionLabel);
+    auto saveRequested = ImGui::Checkbox(enabledLabel, &options.enabled);
+    if (options.enabled) {
+        (void)ImGui::SliderFloat(
+            "Marker Size",
+            &options.size,
+            MinimumAutomapObjectSize,
+            MaximumAutomapObjectSize,
+            "%.0f px",
+            ImGuiSliderFlags_AlwaysClamp);
+        saveRequested |= ImGui::IsItemDeactivatedAfterEdit();
+        ImGui::PushID("MarkerColor");
+        saveRequested |= DrawMonsterMarkerColor(
+            options.color,
+            dpiScale,
+            "Marker Color");
+        ImGui::PopID();
+    }
+    ImGui::PopID();
+    return saveRequested;
+}
+
+[[nodiscard]] auto DrawChestOptions(
+        ChestOptions& options,
+        SuperChestOptions& specialOptions,
+        float dpiScale) noexcept -> bool {
+    ImGui::PushID("Chests");
+    ImGui::SeparatorText("Chests");
+    auto saveRequested = ImGui::Checkbox(
+        "Show Chests",
+        &options.enabled);
+    if (options.enabled) {
+        (void)ImGui::SliderFloat(
+            "Marker Size",
+            &options.size,
+            MinimumAutomapObjectSize,
+            MaximumAutomapObjectSize,
+            "%.0f px",
+            ImGuiSliderFlags_AlwaysClamp);
+        saveRequested |= ImGui::IsItemDeactivatedAfterEdit();
+
+        ImGui::PushID("LockedAccentColor");
+        saveRequested |= DrawMonsterMarkerColor(
+            options.lockedAccentColor,
+            dpiScale,
+            "Locked Lock Color");
+        ImGui::PopID();
+        ImGui::PushID("TrappedAccentColor");
+        saveRequested |= DrawMonsterMarkerColor(
+            options.trappedAccentColor,
+            dpiScale,
+            "Trapped Lock Color");
+        ImGui::PopID();
+        ImGui::TextWrapped(
+            "Chest artwork uses the exact PrimeMH image; only the state lock colors are configurable.");
+    }
+
+    ImGui::SeparatorText("Special Chests");
+    saveRequested |= ImGui::Checkbox(
+        "Show Special Chests",
+        &specialOptions.enabled);
+    if (specialOptions.enabled) {
+        ImGui::TextWrapped(
+            "PrimeMH's special-chest stars are embedded in the exact artwork.");
+    }
     ImGui::PopID();
     return saveRequested;
 }
@@ -572,13 +701,27 @@ auto DrawImGuiSettingsPanel(
     if (contentVisible) {
         if (!frameExpanded) {
             if (ImGui::Button(
-                    "Open",
+                    config.featuresEnabled ? "Open" : "Open (OFF)",
                     ImVec2{ImGui::GetContentRegionAvail().x, 0.0F})) {
                 expanded = true;
             }
         } else {
             if (ImGui::Button("Collapse")) {
                 expanded = false;
+            }
+
+            const auto masterLabel = config.featuresEnabled
+                ? "Disable MapSense"
+                : "Enable MapSense";
+            if (ImGui::Button(
+                    masterLabel,
+                    ImVec2{ImGui::GetContentRegionAvail().x, 0.0F})) {
+                config.featuresEnabled = !config.featuresEnabled;
+                saveRequested = true;
+            }
+            if (!config.featuresEnabled) {
+                ImGui::TextDisabled(
+                    "Features are suspended. Cells already revealed by D2R remain revealed.");
             }
 
             if (ImGui::CollapsingHeader(
@@ -593,6 +736,7 @@ auto DrawImGuiSettingsPanel(
                     ImGuiSliderFlags_AlwaysClamp);
                 saveRequested |= ImGui::IsItemDeactivatedAfterEdit();
 
+                ImGui::BeginDisabled(!config.featuresEnabled);
                 DrawActionButton(
                     "Reveal Level",
                     ImGuiSettingsAction::RevealLevel,
@@ -602,11 +746,12 @@ auto DrawImGuiSettingsPanel(
                     ImGuiSettingsAction::RevealAct,
                     actionCallback);
                 DrawActionButton(
-                    "Toggle Reveal All",
-                    ImGuiSettingsAction::ToggleRevealAll,
+                    "Arm Reveal All",
+                    ImGuiSettingsAction::ArmRevealAll,
                     actionCallback);
+                ImGui::EndDisabled();
                 DrawActionButton(
-                    "Reveal All Off",
+                    "Disarm Reveal All",
                     ImGuiSettingsAction::RevealAllOff,
                     actionCallback);
             }
@@ -638,7 +783,8 @@ auto DrawImGuiSettingsPanel(
                 saveRequested |= DrawMonsterMarkerStyle(
                     "Super Unique / Boss",
                     config.monsters.superUniqueBoss,
-                    dpiScale);
+                    dpiScale,
+                    true);
             }
 
             if (ImGui::CollapsingHeader("Immunities")) {
@@ -673,6 +819,46 @@ auto DrawImGuiSettingsPanel(
                     ImGui::SeparatorText("Colors");
                     saveRequested |= DrawImmunityColors(
                         config.immunities,
+                        dpiScale);
+                }
+            }
+
+            if (ImGui::CollapsingHeader("Objects")) {
+                saveRequested |= ImGui::Checkbox(
+                    "Show Automap Objects",
+                    &config.objects.enabled);
+
+                if (config.objects.enabled) {
+                    saveRequested |= DrawAutomapLabelOptions(
+                        "Exit Labels",
+                        "Show Exit Labels",
+                        config.objects.exitLabels,
+                        dpiScale);
+                    saveRequested |= DrawAutomapLabelOptions(
+                        "Waypoint Labels",
+                        "Show Waypoint Labels",
+                        config.objects.waypointLabels,
+                        dpiScale,
+                        "Shows the current area's localized name above D2R's native waypoint icon.");
+                    saveRequested |= DrawAutomapLabelOptions(
+                        "Shrine Labels",
+                        "Show Shrine Labels",
+                        config.objects.shrineLabels,
+                        dpiScale,
+                        "Shows the localized buff name near D2R's native shrine marker.");
+                    saveRequested |= DrawChestOptions(
+                        config.objects.chests,
+                        config.objects.superChests,
+                        dpiScale);
+                    saveRequested |= DrawAutomapObjectOptions(
+                        "Armor Racks",
+                        "Show Armor Racks",
+                        config.objects.armorRacks,
+                        dpiScale);
+                    saveRequested |= DrawAutomapObjectOptions(
+                        "Weapon Racks",
+                        "Show Weapon Racks",
+                        config.objects.weaponRacks,
                         dpiScale);
                 }
             }

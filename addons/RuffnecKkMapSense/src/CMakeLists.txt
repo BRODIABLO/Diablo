@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(RuffnecKkMapSense VERSION 0.12.5 LANGUAGES C CXX RC)
+project(RuffnecKkMapSense VERSION 0.13.11 LANGUAGES C CXX RC)
 
 include(FetchContent)
 
@@ -70,11 +70,14 @@ endif()
 add_library(RuffnecKkMapSense SHARED
     d3d12_imgui_host.cpp
     imgui_settings_panel.cpp
+    mapsense_data_catalog.cpp
     navigation_engine.cpp
     navigation_level_catalog.cpp
     navigation_policy.cpp
     navigation_resolver.cpp
     native_automap_marker.cpp
+    native_automap_poi.cpp
+    native_ui_state.cpp
     overlay_scene.cpp
     plugin.cpp
     reveal_engine.cpp
@@ -95,6 +98,10 @@ target_link_libraries(RuffnecKkMapSense PRIVATE
     tomlplusplus::tomlplusplus
     dxgi
     comctl32
+    shell32
+    windowscodecs
+    ole32
+    crypt32
 )
 set_target_properties(RuffnecKkMapSense PROPERTIES
     OUTPUT_NAME "RuffnecKkMapSense"
@@ -106,6 +113,7 @@ d2rlplugin_embed_config(
 )
 
 add_executable(RuffnecKkMapSenseTests
+    mapsense_data_catalog.cpp
     mapsense_tests.cpp
     navigation_engine.cpp
     navigation_level_catalog.cpp
@@ -120,6 +128,7 @@ target_compile_definitions(RuffnecKkMapSenseTests PRIVATE
     _UNICODE
 )
 target_link_libraries(RuffnecKkMapSenseTests PRIVATE
+    D2RLPlugin::D2RLPlugin
     tomlplusplus::tomlplusplus
     nlohmann_json::nlohmann_json
 )

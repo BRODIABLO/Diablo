@@ -9,7 +9,7 @@ namespace RuffnecKk::MapSense {
 enum class ImGuiSettingsAction : std::uint8_t {
     RevealLevel,
     RevealAct,
-    ToggleRevealAll,
+    ArmRevealAll,
     RevealAllOff,
 };
 

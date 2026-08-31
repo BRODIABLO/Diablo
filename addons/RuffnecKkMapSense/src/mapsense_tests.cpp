@@ -1,10 +1,13 @@
 #include "d3d12_imgui_host.hpp"
 #include "mapsense_config.hpp"
+#include "mapsense_data_catalog.hpp"
 #include "navigation_engine.hpp"
 #include "navigation_level_catalog.hpp"
 #include "navigation_policy.hpp"
 #include "navigation_resolver.hpp"
 #include "native_automap_marker.hpp"
+#include "native_automap_poi.hpp"
+#include "native_ui_state.hpp"
 #include "native_settings_layout.hpp"
 #include "native_settings_panel.hpp"
 #include "native_settings_policy.hpp"
@@ -13,18 +16,25 @@
 
 #include <nlohmann/json.hpp>
 
+#include <D2RLPlugin/api.h>
+
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <chrono>
 #include <cmath>
+#include <cstring>
 #include <cstdlib>
 #include <exception>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <set>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <type_traits>
 #include <variant>
 #include <vector>
@@ -59,6 +69,510 @@ auto ReadFile(const char* path) -> std::string {
     std::ostringstream text;
     text << input.rdbuf();
     return text.str();
+}
+
+class ScopedCatalogTestDirectory final {
+public:
+    explicit ScopedCatalogTestDirectory(std::string_view label) {
+        const auto base = std::filesystem::temp_directory_path();
+        const auto stamp = std::chrono::steady_clock::now()
+            .time_since_epoch().count();
+        for (std::uint32_t attempt{}; attempt < 64U; ++attempt) {
+            path_ = base / (
+                "ruffneckk-mapsense-catalog-" + std::string(label) + "-"
+                + std::to_string(stamp) + "-" + std::to_string(attempt));
+            std::error_code error;
+            if (std::filesystem::create_directory(path_, error)) return;
+            if (error) continue;
+        }
+        throw std::runtime_error(
+            "cannot create an isolated MapSense catalog test directory");
+    }
+
+    ScopedCatalogTestDirectory(const ScopedCatalogTestDirectory&) = delete;
+    auto operator=(const ScopedCatalogTestDirectory&)
+        -> ScopedCatalogTestDirectory& = delete;
+
+    ~ScopedCatalogTestDirectory() {
+        std::error_code ignored;
+        std::filesystem::remove_all(path_, ignored);
+    }
+
+    [[nodiscard]] auto Path() const noexcept
+            -> const std::filesystem::path& {
+        return path_;
+    }
+
+private:
+    std::filesystem::path path_{};
+};
+
+void WriteCatalogFixture(
+        const std::filesystem::path& path,
+        std::string_view bytes) {
+    std::error_code error;
+    std::filesystem::create_directories(path.parent_path(), error);
+    if (error) {
+        throw std::runtime_error("cannot create catalog fixture directory");
+    }
+    std::ofstream output(path, std::ios::binary | std::ios::trunc);
+    if (!output) throw std::runtime_error("cannot create catalog fixture");
+    output.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+    if (!output) throw std::runtime_error("cannot write catalog fixture");
+}
+
+const std::map<std::string, std::string, std::less<>> CatalogTranslations{
+    {"LevelKey", "Sortie \xC3\x89preuve"},
+    {"ShrineKey", "Sanctuaire d\xE2\x80\x99" "exp\xC3\xA9rience"},
+    {"SuNameKey", "Unique supr\xC3\xAAme"},
+    {"BossKey", "D\xC3\xA9mon majeur"},
+};
+bool EchoCatalogLocalizationKeys{};
+
+auto __cdecl FakeCatalogGetStringByKey(
+        const D2RL::PluginContext*,
+        const char* key,
+        char* output,
+        std::uint32_t outputSize,
+        std::uint32_t* requiredSize) noexcept
+        -> D2RL::Localization::Result {
+    if (key == nullptr || requiredSize == nullptr) {
+        return D2RL::Localization::Result::InvalidArgument;
+    }
+    const auto found = CatalogTranslations.find(key);
+    if (!EchoCatalogLocalizationKeys
+        && found == CatalogTranslations.end()) {
+        *requiredSize = 0U;
+        return D2RL::Localization::Result::NotFound;
+    }
+    const std::string value = EchoCatalogLocalizationKeys
+        ? std::string(key)
+        : found->second;
+    if (value.size()
+            >= (std::numeric_limits<std::uint32_t>::max)()) {
+        *requiredSize = 0U;
+        return D2RL::Localization::Result::Unavailable;
+    }
+    const auto required = static_cast<std::uint32_t>(
+        value.size() + 1U);
+    *requiredSize = required;
+    if (output == nullptr || outputSize < required) {
+        return D2RL::Localization::Result::BufferTooSmall;
+    }
+    std::memcpy(output, value.c_str(), required);
+    return D2RL::Localization::Result::Success;
+}
+
+const D2RL::LocalizationServiceV1 FakeCatalogLocalizationService{
+    .serviceSize = D2RL::LocalizationServiceV1Size,
+    .serviceVersion = D2RL::LocalizationServiceV1Version,
+    .getStringById = nullptr,
+    .getStringByKey = FakeCatalogGetStringByKey,
+};
+
+auto __cdecl FakeCatalogQueryService(
+        const D2RL::PluginContext*,
+        D2RL::ServiceId serviceId,
+        std::uint32_t serviceVersion,
+        const void** service) noexcept -> D2RL::ServiceQueryResult {
+    if (service == nullptr) return D2RL::ServiceQueryResult::InvalidArgument;
+    *service = nullptr;
+    if (serviceId != D2RL::ServiceId::Localization) {
+        return D2RL::ServiceQueryResult::UnknownService;
+    }
+    if (serviceVersion != D2RL::LocalizationServiceV1Version) {
+        return D2RL::ServiceQueryResult::UnsupportedVersion;
+    }
+    *service = &FakeCatalogLocalizationService;
+    return D2RL::ServiceQueryResult::Success;
+}
+
+const D2RL::PluginApi FakeCatalogPluginApi{
+    .apiSize = D2RL::PluginApiSize,
+    .queryService = FakeCatalogQueryService,
+};
+
+[[nodiscard]] auto MakeCatalogContext(
+        const wchar_t* modDirectory,
+        const char* activeMod = "TestMod") noexcept -> D2RL::PluginContext {
+    D2RL::PluginContext context{};
+    context.contextSize = sizeof(context);
+    context.api = &FakeCatalogPluginApi;
+    context.activeMod = activeMod;
+    context.modDirectory = modDirectory;
+    return context;
+}
+
+[[nodiscard]] auto HasCatalogDiagnostic(
+        const RuffnecKk::MapSense::MapSenseDataCatalogLoadResult& result,
+        std::string_view code) noexcept -> bool {
+    return std::any_of(
+        result.diagnostics.begin(),
+        result.diagnostics.end(),
+        [code](const auto& diagnostic) { return diagnostic.code == code; });
+}
+
+void WriteCompleteCatalog(
+        const std::filesystem::path& excel,
+        std::string_view levelKey = "LevelKey") {
+    WriteCatalogFixture(
+        excel / "levels.txt",
+        "Name\t*StringName\tId\tLevelName\r\n"
+        "Null\tNull\t0\t\r\n"
+        "Expansion\t\t\t\r\n"
+        "Act 1 - Town\tPlayer Level\t12\t"
+            + std::string(levelKey) + "\r\n");
+    WriteCatalogFixture(
+        excel / "shrines.txt",
+        "Name\tCode\tStringName\r\n"
+        "None\t0\tNoneShrineKey\r\n"
+        "Experience Shrine\t5\tShrineKey\r\n");
+    WriteCatalogFixture(
+        excel / "superuniques.txt",
+        "Superunique\tName\tClass\thcIdx\r\n"
+        "Expansion\t\t\t\r\n"
+        "SUOne\tSuNameKey\tfallen\t7\r\n");
+    WriteCatalogFixture(
+        excel / "monstats.txt",
+        "Id\t*hcIdx\tNameStr\tboss\tprimeevil\r\n"
+        "Expansion\t\t\t\t\r\n"
+        "DiabloMod\t42\tBossKey\t1\t1\r\n");
+    WriteCatalogFixture(
+        excel / "objects.txt",
+        "Class\tName\t*ID\tSubClass\tLockable\tOperateFn\tPopulateFn\tInitFn\t"
+        "ClientFn\tShrineFunction\r\n"
+        "Expansion\t\t\t\t\t\t\t\t\t\r\n"
+        "chest_mod\tChestKey\t99\t0\t1\t4\t3\t3\t0\t0\r\n");
+}
+
+void CheckMapSenseDataCatalogContract() {
+    using namespace RuffnecKk::MapSense;
+    try {
+        {
+            const DataCatalogObject shrine{
+                .subClass = 0x01U,
+                .initFn = 1U,
+            };
+            const DataCatalogObject subclassOnly{.subClass = 0x01U};
+            const DataCatalogObject ordinaryChest{.initFn = 3U};
+            const DataCatalogObject betterChest{.initFn = 57U};
+            const DataCatalogObject arcaneChest{
+                .classId = "ArcaneChest3",
+                .initFn = 3U,
+            };
+            const DataCatalogObject placeUniqueChest{
+                .classId = "PlaceUniqueChest",
+                .initFn = 79U,
+            };
+            const DataCatalogObject placeRandomTreasureChest{
+                .classId = "PlaceRandomTreasureChest",
+                .initFn = 79U,
+            };
+            const DataCatalogObject operateFourNonChest{
+                .operateFn = 4U,
+                .initFn = 45U,
+            };
+            const DataCatalogObject ordinaryWell{
+                .subClass = 32U,
+                .operateFn = 22U,
+                .initFn = 16U,
+            };
+            CHECK(IsShrineObjectDefinition(shrine));
+            CHECK(!IsShrineObjectDefinition(subclassOnly));
+            CHECK(!IsChestObjectDefinition(shrine));
+            CHECK(IsChestObjectDefinition(ordinaryChest));
+            CHECK(IsChestObjectDefinition(betterChest));
+            CHECK(!IsSpecialChestObjectDefinition(ordinaryChest));
+            CHECK(IsSpecialChestObjectDefinition(betterChest));
+            CHECK(IsSpecialChestObjectDefinition(arcaneChest));
+            CHECK(IsSpecialChestPresetObjectDefinition(placeUniqueChest));
+            CHECK(!IsSpecialChestPresetObjectDefinition(
+                placeRandomTreasureChest));
+            CHECK(!IsChestObjectDefinition(operateFourNonChest));
+            CHECK(!IsShrineObjectDefinition(ordinaryWell));
+            CHECK(!IsChestObjectDefinition(ordinaryWell));
+            CHECK(!IsLockedChestInteractType(0x09U));
+            CHECK(IsLockedChestInteractType(0x80U));
+            CHECK(IsTrappedChestInteractType(0x01U));
+            CHECK(IsTrappedChestInteractType(0x89U));
+            CHECK(!IsTrappedChestInteractType(0x00U));
+            CHECK(!IsTrappedChestInteractType(0x0AU));
+            CHECK(IsSparklyChestRuntimeFlags(0x01U));
+            CHECK(!IsSparklyChestRuntimeFlags(0x02U));
+            CHECK(AutomapPoiWithinSubtileDistance(
+                0,
+                0,
+                16 * NativeShrineLabelProximitySubtiles,
+                8 * NativeShrineLabelProximitySubtiles,
+                NativeShrineLabelProximitySubtiles));
+            CHECK(!AutomapPoiWithinSubtileDistance(
+                0,
+                0,
+                16 * (NativeShrineLabelProximitySubtiles + 1),
+                8 * (NativeShrineLabelProximitySubtiles + 1),
+                NativeShrineLabelProximitySubtiles));
+            constexpr AutomapLabelRectangle firstLabel{
+                10.0F, 20.0F, 110.0F, 40.0F};
+            constexpr AutomapLabelRectangle overlappingLabel{
+                100.0F, 22.0F, 180.0F, 42.0F};
+            constexpr AutomapLabelRectangle separatedLabel{
+                112.0F, 20.0F, 190.0F, 40.0F};
+            static_assert(AutomapLabelRectanglesOverlap(
+                firstLabel,
+                overlappingLabel));
+            static_assert(!AutomapLabelRectanglesOverlap(
+                firstLabel,
+                separatedLabel));
+            static_assert(AutomapLabelRectanglesOverlap(
+                firstLabel,
+                separatedLabel,
+                3.0F));
+            CHECK(AutomapLabelRectanglesOverlap(
+                firstLabel,
+                overlappingLabel));
+            CHECK(!AutomapLabelRectanglesOverlap(
+                firstLabel,
+                separatedLabel));
+            CHECK(AutomapLabelRectanglesOverlap(
+                firstLabel,
+                separatedLabel,
+                3.0F));
+        }
+
+        {
+            ScopedCatalogTestDirectory directory("active");
+            const auto activeExcel = directory.Path()
+                / "TestMod.mpq" / "data" / "global" / "excel";
+            const auto vanillaExcel = directory.Path() / "vanilla";
+            WriteCompleteCatalog(activeExcel);
+            WriteCompleteCatalog(vanillaExcel, "VanillaLevelKey");
+            const auto root = directory.Path().wstring();
+            const auto context = MakeCatalogContext(root.c_str());
+            MapSenseDataCatalogLoadOptions options{};
+            options.vanillaExcelDirectories.push_back(vanillaExcel);
+            const auto result = MapSenseDataCatalog::Load(&context, options);
+            CHECK(result);
+            CHECK(result.catalog->HasLocalizationService());
+            CHECK(result.catalog->HasVerifiedPlayerFacingLocalization());
+            CHECK(result.catalog->AllFamiliesAvailable());
+            for (std::size_t familyIndex = 0U;
+                    familyIndex < result.catalog->FamilyStatuses().size();
+                    ++familyIndex) {
+                const auto& status =
+                    result.catalog->FamilyStatuses()[familyIndex];
+                CHECK(status.state == DataCatalogFamilyState::ActiveTxt);
+                const auto expectedRows = familyIndex
+                        == static_cast<std::size_t>(DataCatalogFamily::Shrines)
+                    ? 2U
+                    : 1U;
+                CHECK(status.rowCount == expectedRows);
+            }
+
+            const auto* level = result.catalog->FindLevel(12);
+            CHECK(level != nullptr);
+            CHECK(level != nullptr && level->name.key == "LevelKey");
+            CHECK(level != nullptr && level->name.localized);
+            CHECK(level != nullptr
+                && level->name.utf8 == "Sortie \xC3\x89preuve");
+            CHECK(level != nullptr
+                && level->waypointLabelUtf8
+                    == "Sortie \xC3\x89preuve Waypoint");
+            CHECK(result.catalog->FindLevel(13) == nullptr);
+
+            const auto* const noneShrine =
+                result.catalog->FindShrineByRow(0U);
+            CHECK(noneShrine != nullptr);
+            CHECK(noneShrine != nullptr && noneShrine->code == 0U);
+            CHECK(result.catalog->FindShrineByInteractType(0U) == nullptr);
+
+            const auto* shrine = result.catalog->FindShrineByInteractType(1U);
+            CHECK(shrine != nullptr);
+            CHECK(shrine != nullptr && shrine->code == 5U);
+            CHECK(shrine != nullptr && shrine->name.localized);
+            CHECK(shrine != nullptr
+                && shrine->name.utf8
+                    == "Sanctuaire d\xE2\x80\x99" "exp\xC3\xA9rience");
+            const auto shrineRows = result.catalog->ShrineRowsForCode(5U);
+            CHECK(shrineRows.size() == 1U);
+            CHECK(!shrineRows.empty() && shrineRows.front() == 1U);
+
+            const auto* superUnique = result.catalog->FindSuperUnique(7U);
+            CHECK(superUnique != nullptr);
+            CHECK(superUnique != nullptr
+                && superUnique->name.utf8 == "Unique supr\xC3\xAAme");
+            // Runtime IDs are row ordinals. The descriptive *hcIdx/*ID
+            // comments (42/99 in these fixtures) must not drive lookup.
+            const auto* boss = result.catalog->FindMonStats(0U);
+            CHECK(boss != nullptr);
+            CHECK(boss != nullptr && boss->boss && boss->primeEvil);
+            CHECK(boss != nullptr
+                && boss->name.utf8 == "D\xC3\xA9mon majeur");
+            CHECK(result.catalog->FindMonStats(42U) == nullptr);
+            const auto* object = result.catalog->FindObjectById(0U);
+            CHECK(object != nullptr);
+            CHECK(object == result.catalog->FindObject("chest_mod"));
+            CHECK(object != nullptr && object->lockable);
+            CHECK(object != nullptr && object->subClass == 0U);
+            CHECK(object != nullptr && object->operateFn == 4U);
+            CHECK(object != nullptr && IsChestObjectDefinition(*object));
+            CHECK(object != nullptr && !IsShrineObjectDefinition(*object));
+            CHECK(object != nullptr && !object->name.localized);
+            CHECK(object != nullptr && object->name.utf8 == "ChestKey");
+            CHECK(result.catalog->FindObjectById(99U) == nullptr);
+        }
+
+        {
+            // LocalizationService is callable before D2R's language tables are
+            // ready and then echoes keys while reporting Success. Technical
+            // LevelName/ShrId values must remain unresolved, never drawable.
+            ScopedCatalogTestDirectory directory("localization-key-echo");
+            const auto activeExcel = directory.Path()
+                / "TestMod.mpq" / "data" / "global" / "excel";
+            WriteCompleteCatalog(activeExcel, "Cellar of Pity");
+            WriteCatalogFixture(
+                activeExcel / "levels.txt",
+                "Name\t*StringName\tId\tLevelName\r\n"
+                "Null\tNull\t0\t\r\n"
+                "Expansion\t\t\t\r\n"
+                "Act 5 - Frozen River\tFrozen River\t114\tCellar of Pity\r\n");
+            WriteCatalogFixture(
+                activeExcel / "shrines.txt",
+                "Name\tCode\tStringName\r\n"
+                "None\t0\tShrId0\r\n"
+                "Resist Cold Shrine\t9\tShrId9\r\n");
+            const auto root = directory.Path().wstring();
+            const auto context = MakeCatalogContext(root.c_str());
+            EchoCatalogLocalizationKeys = true;
+            const auto result = MapSenseDataCatalog::Load(&context);
+            EchoCatalogLocalizationKeys = false;
+            CHECK(result);
+            CHECK(result.catalog->HasLocalizationService());
+            CHECK(!result.catalog->HasVerifiedPlayerFacingLocalization());
+            const auto* level = result.catalog->FindLevel(114);
+            CHECK(level != nullptr);
+            CHECK(level != nullptr && level->name.key == "Cellar of Pity");
+            CHECK(level != nullptr && !level->name.localized);
+            const auto* shrine = result.catalog->FindShrineByInteractType(1U);
+            CHECK(shrine != nullptr);
+            CHECK(shrine != nullptr && shrine->name.key == "ShrId9");
+            CHECK(shrine != nullptr && !shrine->name.localized);
+        }
+
+        {
+            // Official fallback tables contain technical rows with no display
+            // key, and comment columns may be omitted entirely by a valid mod.
+            ScopedCatalogTestDirectory directory("blank-technical-rows");
+            const auto activeExcel = directory.Path()
+                / "TestMod.mpq" / "data" / "global" / "excel";
+            WriteCompleteCatalog(activeExcel);
+            WriteCatalogFixture(
+                activeExcel / "monstats.txt",
+                "Id\tNameStr\tboss\tprimeevil\r\n"
+                "Expansion\t\t\t\r\n"
+                "TechnicalMonster\t\t0\t0\r\n"
+                "DiabloMod\tBossKey\t1\t1\r\n");
+            WriteCatalogFixture(
+                activeExcel / "objects.txt",
+                "Class\tName\tSubClass\tLockable\tOperateFn\tPopulateFn\t"
+                "InitFn\tClientFn\tShrineFunction\r\n"
+                "Expansion\t\t\t\t\t\t\t\t\r\n"
+                "technical_object\t\t0\t0\t0\t0\t0\t0\t0\r\n"
+                "chest_mod\tChestKey\t0\t1\t4\t3\t3\t0\t0\r\n");
+            const auto root = directory.Path().wstring();
+            const auto context = MakeCatalogContext(root.c_str());
+            const auto result = MapSenseDataCatalog::Load(&context);
+            CHECK(result);
+            CHECK(result.catalog->AllFamiliesAvailable());
+            const auto* technicalMonster =
+                result.catalog->FindMonStats(0U);
+            CHECK(technicalMonster != nullptr);
+            CHECK(technicalMonster != nullptr
+                && technicalMonster->name.key.empty());
+            const auto* blankObject = result.catalog->FindObjectById(0U);
+            CHECK(blankObject != nullptr);
+            CHECK(blankObject != nullptr && blankObject->name.key.empty());
+            const auto* ordinalBoss = result.catalog->FindMonStats(1U);
+            CHECK(ordinalBoss != nullptr && ordinalBoss->boss);
+            CHECK(ordinalBoss != nullptr
+                && ordinalBoss->name.utf8 == "D\xC3\xA9mon majeur");
+            CHECK(result.catalog->FindObjectById(1U) != nullptr);
+            CHECK(result.catalog->FamilyStatus(DataCatalogFamily::MonStats)
+                .unresolvedNameCount == 0U);
+            CHECK(result.catalog->FamilyStatus(DataCatalogFamily::Objects)
+                .unresolvedNameCount == 1U);
+        }
+
+        {
+            // An unrelated BKVince directory must never become an implicit
+            // fallback for the active mod selected by D2RLoader.
+            ScopedCatalogTestDirectory directory("no-bk-fallback");
+            WriteCatalogFixture(
+                directory.Path() / "BKVince.mpq" / "data" / "global"
+                    / "excel" / "levels.txt",
+                "Name\tId\tLevelName\r\n"
+                "Act 1 - Town\t12\tLevelKey\r\n");
+            const auto root = directory.Path().wstring();
+            const auto context = MakeCatalogContext(root.c_str());
+            const auto result = MapSenseDataCatalog::Load(&context);
+            CHECK(result);
+            CHECK(result.catalog->FamilyStatus(DataCatalogFamily::Levels).state
+                == DataCatalogFamilyState::Unavailable);
+            CHECK(result.catalog->FindLevel(12) == nullptr);
+        }
+
+        {
+            // A compiled override without its auditable TXT source blocks
+            // fallback for that family instead of silently using stale data.
+            ScopedCatalogTestDirectory directory("binary-only");
+            const auto activeExcel = directory.Path()
+                / "TestMod.mpq" / "data" / "global" / "excel";
+            const auto vanillaExcel = directory.Path() / "vanilla";
+            WriteCatalogFixture(activeExcel / "levels.bin", "binary");
+            WriteCatalogFixture(
+                vanillaExcel / "levels.txt",
+                "Name\tId\tLevelName\r\n"
+                "Act 1 - Town\t12\tLevelKey\r\n");
+            const auto root = directory.Path().wstring();
+            const auto context = MakeCatalogContext(root.c_str());
+            MapSenseDataCatalogLoadOptions options{};
+            options.vanillaExcelDirectories.push_back(vanillaExcel);
+            const auto result = MapSenseDataCatalog::Load(&context, options);
+            CHECK(result);
+            CHECK(result.catalog->FamilyStatus(DataCatalogFamily::Levels).state
+                == DataCatalogFamilyState::BinaryOnlyConflict);
+            CHECK(result.catalog->FindLevel(12) == nullptr);
+            CHECK(HasCatalogDiagnostic(result, "binary_without_txt"));
+        }
+
+        {
+            ScopedCatalogTestDirectory directory("invalid");
+            const auto activeExcel = directory.Path()
+                / "TestMod.mpq" / "data" / "global" / "excel";
+            WriteCatalogFixture(
+                activeExcel / "levels.txt",
+                "Name\tId\tLevelName\r\n"
+                "Act 1 - Town\t12\tLevelKey\r\n"
+                "Act 1 - Duplicate\t12\tOtherKey\r\n");
+            WriteCatalogFixture(
+                activeExcel / "shrines.txt",
+                "Code\tWrongHeader\r\n5\tShrineKey\r\n");
+            const auto root = directory.Path().wstring();
+            const auto context = MakeCatalogContext(root.c_str());
+            const auto result = MapSenseDataCatalog::Load(&context);
+            CHECK(result);
+            CHECK(result.catalog->FamilyStatus(DataCatalogFamily::Levels).state
+                == DataCatalogFamilyState::Invalid);
+            CHECK(result.catalog->FamilyStatus(DataCatalogFamily::Shrines).state
+                == DataCatalogFamilyState::Invalid);
+            CHECK(result.catalog->FindLevel(12) == nullptr);
+            CHECK(result.catalog->FindShrineByRow(0U) == nullptr);
+            CHECK(HasCatalogDiagnostic(result, "table_parse_failed"));
+        }
+    } catch (const std::exception& exception) {
+        std::cerr << "FAIL MapSense data catalog: " << exception.what()
+                  << '\n';
+        ++Failures;
+    }
 }
 
 auto ProjectNavigationClientIdentity(
@@ -131,17 +645,32 @@ void CheckRevealPersistenceContract() {
     CHECK(state.HasReplayIntentForLevel(0, 1, 40));
     CHECK(state.ShouldReplayCurrentLevel(0, 0, 3));
     CHECK(state.ShouldReplayCurrentLevel(0, 1, 40));
+    CHECK(state.ShouldRevealWholeAct(0, 0));
+    CHECK(state.ShouldRevealWholeAct(0, 1));
 
     CHECK(state.MarkLevelAccepted(0, 3));
     CHECK(!state.ShouldReplayLevel(0, 3));
+    CHECK(state.ShouldReplayCurrentLevel(0, 0, 3));
+    CHECK(state.MarkActAccepted(0, 0));
     CHECK(!state.ShouldReplayCurrentLevel(0, 0, 3));
+    CHECK(state.IsActAccepted(0, 0));
+    // Whole-act command acceptance never substitutes for direct confirmation
+    // of each current level. This is the Save & Exit regression guard.
     CHECK(state.ShouldReplayCurrentLevel(0, 0, 4));
+    CHECK(state.MarkLevelAccepted(0, 4));
+    CHECK(!state.ShouldReplayCurrentLevel(0, 0, 4));
     CHECK(state.IsLevelAccepted(0, 3));
 
     // Re-entering the same session cannot accidentally reopen accepted work.
     state.BeginSession(101U);
     CHECK(!state.ShouldReplayLevel(0, 3));
     CHECK(!state.ShouldReplayCurrentLevel(0, 0, 3));
+
+    // GameLeft clears only the session generation. Its process-lifetime
+    // intent must survive the Save & Exit boundary unchanged.
+    state.BeginSession(0U);
+    CHECK(state.HasAnyIntent(0));
+    CHECK(!state.ShouldReplayLevel(0, 3));
 
     // A new game in the same difficulty replays stable ids on fresh geometry.
     state.BeginSession(102U);
@@ -170,6 +699,9 @@ void CheckRevealPersistenceContract() {
     CHECK(RevealActForLevelId(137) == 4);
     CHECK(RevealActForLevelId(0) == -1);
     CHECK(RevealActForLevelId(138) == -1);
+    CHECK(state.ShouldReplayCurrentLevel(
+        0, RevealActForLevelId(39), 39));
+    CHECK(state.MarkActAccepted(0, RevealActForLevelId(39)));
     CHECK(state.ShouldReplayCurrentLevel(
         0, RevealActForLevelId(39), 39));
     CHECK(state.MarkLevelAccepted(0, 39));
@@ -201,6 +733,247 @@ void CheckRevealPersistenceContract() {
         == RevealDifficultyObservation::Changed);
     CHECK(state.Difficulty() == 0);
     CHECK(!state.HasAnyIntent());
+}
+
+void CheckRevealReplayRequestPolicy() {
+    using namespace RuffnecKk::MapSense;
+
+    RevealReplayRequestState pending{
+        .sessionGeneration = 77U,
+        .targetLevelId = 40,
+        .retriesRemaining = 3U,
+        .playerReady = true,
+        .automapObserved = false,
+        .reconcilePending = true,
+    };
+    CHECK(MergePendingRevealAutomapObservation(pending, 40, true));
+    CHECK(pending.automapObserved);
+
+    pending.targetLevelId = UnknownRevealLevelId;
+    pending.automapObserved = false;
+    CHECK(MergePendingRevealAutomapObservation(pending, 40, true));
+    CHECK(pending.targetLevelId == 40);
+    CHECK(pending.automapObserved);
+
+    pending.automapObserved = false;
+    CHECK(MergePendingRevealAutomapObservation(
+        pending,
+        UnknownRevealLevelId,
+        false));
+    CHECK(!pending.automapObserved);
+    CHECK(!MergePendingRevealAutomapObservation(pending, 41, true));
+    CHECK(!pending.automapObserved);
+
+    pending.reconcilePending = false;
+    CHECK(!MergePendingRevealAutomapObservation(pending, 40, true));
+    CHECK(!CanConfirmWholeActReveal(
+        RevealOutcome::Unavailable,
+        RevealOutcome::Complete));
+    CHECK(!CanConfirmWholeActReveal(
+        RevealOutcome::Complete,
+        RevealOutcome::Unavailable));
+    CHECK(CanConfirmWholeActReveal(
+        RevealOutcome::Complete,
+        RevealOutcome::Complete));
+    CHECK(!CanConfirmReplayedLevelReveal(
+        RevealOutcome::Unavailable));
+    CHECK(CanConfirmReplayedLevelReveal(
+        RevealOutcome::Complete));
+}
+
+void CheckNativeUiPanelPolicy() {
+    using namespace RuffnecKk::MapSense;
+
+    std::array<std::uint8_t, NativeUiStateCount> states{};
+    CHECK(NativeUiStateMask(states) == 0U);
+    CHECK(NativeUiBlockingPanelMask(states) == 0U);
+
+    // World/HUD states coexist with MapSense.
+    for (const auto state : std::array<std::size_t, 8>{
+            0U, 10U, 12U, 18U, 20U, 26U, 28U, 29U}) {
+        states.fill(0U);
+        states[state] = 1U;
+        CHECK(!IsNativeUiPanelState(state));
+        CHECK(NativeUiBlockingPanelMask(states) == 0U);
+    }
+
+    // Known panels and every unclassified state fail closed. Quest is native
+    // interface state 0x0E; 0x0F remains unknown and therefore full-screen.
+    for (const auto state : std::array<std::size_t, 14>{
+            1U, 2U, 3U, 4U, 5U, 8U, 9U, 11U,
+            14U, 15U, 19U, 21U, 24U, 25U}) {
+        states.fill(0U);
+        states[state] = 1U;
+        CHECK(IsNativeUiPanelState(state));
+        CHECK(NativeUiBlockingPanelMask(states)
+            == (std::uint32_t{1U} << state));
+    }
+
+    states.fill(0U);
+    states[31U] = 1U;
+    CHECK(IsNativeUiPanelState(31U));
+    CHECK(NativeUiBlockingPanelMask(states) == 0x80000000U);
+
+    // Native panels never hide the launcher or all map additions. Map pixels
+    // are constrained later by the current UI state and side-panel geometry.
+    CHECK(ShouldDrawMapSenseSettingsMenu(true, false));
+    CHECK(ShouldDrawMapSenseSettingsMenu(true, true));
+    CHECK(!ShouldDrawMapSenseSettingsMenu(false, false));
+    CHECK(ShouldDrawMapSenseOwnedMapOverlay(true, false));
+    CHECK(ShouldDrawMapSenseOwnedMapOverlay(true, true));
+    CHECK(!ShouldDrawMapSenseOwnedMapOverlay(false, false));
+
+    CHECK(ClassifyNativeUiMapPanelCoverage(
+        (std::uint32_t{1U} << 0U) | (std::uint32_t{1U} << 10U))
+        == NativeUiMapPanelCoverage::None);
+    CHECK(ClassifyNativeUiMapPanelCoverage(
+        (std::uint32_t{1U} << 0U) | (std::uint32_t{1U} << 1U)
+            | (std::uint32_t{1U} << 10U))
+        == NativeUiMapPanelCoverage::Right);
+    CHECK(ClassifyNativeUiMapPanelCoverage(
+        (std::uint32_t{1U} << 0U) | (std::uint32_t{1U} << 2U)
+            | (std::uint32_t{1U} << 10U))
+        == NativeUiMapPanelCoverage::Left);
+    CHECK(ClassifyNativeUiMapPanelCoverage(
+        (std::uint32_t{1U} << 0U)
+            | (std::uint32_t{1U} << NativeUiQuestPanelState)
+            | (std::uint32_t{1U} << 10U))
+        == NativeUiMapPanelCoverage::Left);
+    CHECK(ClassifyNativeUiMapPanelCoverage(
+        (std::uint32_t{1U} << 0U) | (std::uint32_t{1U} << 15U)
+            | (std::uint32_t{1U} << 10U))
+        == NativeUiMapPanelCoverage::Full);
+    CHECK(ClassifyNativeUiMapPanelCoverage(
+        (std::uint32_t{1U} << 1U) | (std::uint32_t{1U} << 2U))
+        == NativeUiMapPanelCoverage::Full);
+    CHECK(ClassifyNativeUiMapPanelCoverage(
+        std::uint32_t{1U} << 9U)
+        == NativeUiMapPanelCoverage::Full);
+
+    constexpr auto questWorldMask =
+        (std::uint32_t{1U} << 0U) | (std::uint32_t{1U} << 10U)
+        | (std::uint32_t{1U} << 20U) | (std::uint32_t{1U} << 29U);
+    CHECK(ShouldRetainNativeAutomapProjectionForQuest(
+        questWorldMask,
+        true,
+        true,
+        1'000U,
+        1'050U));
+    CHECK(!ShouldRetainNativeAutomapProjectionForQuest(
+        questWorldMask,
+        false,
+        true,
+        1'000U,
+        1'050U));
+    CHECK(!ShouldRetainNativeAutomapProjectionForQuest(
+        questWorldMask,
+        true,
+        false,
+        1'000U,
+        1'050U));
+    CHECK(!ShouldRetainNativeAutomapProjectionForQuest(
+        questWorldMask & ~(std::uint32_t{1U} << 10U),
+        true,
+        true,
+        1'000U,
+        1'050U));
+    CHECK(!ShouldRetainNativeAutomapProjectionForQuest(
+        questWorldMask,
+        true,
+        true,
+        1'000U,
+        1'501U));
+    CHECK(!ShouldRetainNativeAutomapProjectionForQuest(
+        questWorldMask | (std::uint32_t{1U} << 9U),
+        true,
+        true,
+        1'000U,
+        1'050U));
+
+    NativeUiMapHorizontalClip panelClip{};
+    CHECK(TryResolveNativeUiMapHorizontalClip(
+        2560,
+        1440,
+        (std::uint32_t{1U} << 0U) | (std::uint32_t{1U} << 1U),
+        panelClip));
+    CHECK(panelClip.left == 0);
+    CHECK(panelClip.right == 1210);
+    CHECK(panelClip.coverage == NativeUiMapPanelCoverage::Right);
+    CHECK(TryResolveNativeUiMapHorizontalClip(
+        2560,
+        1440,
+        (std::uint32_t{1U} << 0U)
+            | (std::uint32_t{1U} << NativeUiQuestPanelState),
+        panelClip));
+    CHECK(panelClip.left == 1339);
+    CHECK(panelClip.right == 2560);
+    CHECK(panelClip.coverage == NativeUiMapPanelCoverage::Left);
+    CHECK(TryResolveNativeUiMapHorizontalClip(
+        3840,
+        2160,
+        (std::uint32_t{1U} << 0U) | (std::uint32_t{1U} << 1U),
+        panelClip));
+    CHECK(panelClip.right == 1819);
+    CHECK(!TryResolveNativeUiMapHorizontalClip(
+        2560,
+        1440,
+        (std::uint32_t{1U} << 9U),
+        panelClip));
+
+    NativeAutomapClipBounds clip{};
+    CHECK(TryResolveNativeAutomapClipBounds(
+        NativeAutomapViewportSnapshot{
+            .nativeWidth = 3840,
+            .nativeHeight = 2160,
+            .clipLeft = 0,
+            .clipTop = 0,
+            .clipWidth = 1920,
+            .clipHeight = 2160,
+        },
+        clip));
+    CHECK(clip.left == 0);
+    CHECK(clip.top == 0);
+    CHECK(clip.right == 1920);
+    CHECK(clip.bottom == 2160);
+
+    CHECK(TryResolveNativeAutomapClipBounds(
+        NativeAutomapViewportSnapshot{
+            .nativeWidth = 3840,
+            .nativeHeight = 2160,
+            .clipLeft = 1920,
+            .clipTop = 0,
+            .clipWidth = 1920,
+            .clipHeight = 2160,
+        },
+        clip));
+    CHECK(clip.left == 1920);
+    CHECK(clip.right == 3840);
+
+    CHECK(TryResolveNativeAutomapClipBounds(
+        NativeAutomapViewportSnapshot{
+            .nativeWidth = 3840,
+            .nativeHeight = 2160,
+            .clipLeft = -20,
+            .clipTop = -10,
+            .clipWidth = 3880,
+            .clipHeight = 2180,
+        },
+        clip));
+    CHECK(clip.left == 0);
+    CHECK(clip.top == 0);
+    CHECK(clip.right == 3840);
+    CHECK(clip.bottom == 2160);
+
+    CHECK(!TryResolveNativeAutomapClipBounds(
+        NativeAutomapViewportSnapshot{
+            .nativeWidth = 3840,
+            .nativeHeight = 2160,
+            .clipLeft = 4000,
+            .clipTop = 0,
+            .clipWidth = 100,
+            .clipHeight = 100,
+        },
+        clip));
 }
 
 void CheckNavigationEngineContract() {
@@ -287,6 +1060,14 @@ void CheckNavigationEngineContract() {
     CHECK(lines[1].endY == 599);
     CHECK(lines[1].kind == NavigationLineKind::Progression);
     CHECK(WantsNavigationLineFrame());
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(275));
+    CHECK(!WantsNavigationLineFrame());
+    CHECK(AcquireNavigationLineSnapshots(lines) == 0U);
+    CHECK(WantsNavigationLineFrame(true));
+    CHECK(AcquireNavigationLineSnapshots(lines, true) == 2U);
+    CHECK(ObserveNavigationAutomapPass(pass)
+        == NavigationAutomapObservationResult::Projected);
 
     const auto projectedStatus = GetNavigationEngineStatus();
     InvalidateNavigationProjection();
@@ -514,7 +1295,7 @@ void CheckNavigationPolicyContract() {
 
         ProgressionRegression{75, {76, -1}, 1U, true},
         ProgressionRegression{76, {78, 77}, 2U},
-        ProgressionRegression{77, {78, -1}, 1U},
+        ProgressionRegression{77, {78, 76}, 2U},
         ProgressionRegression{78, {79, -1}, 1U},
         ProgressionRegression{79, {80, -1}, 1U},
         ProgressionRegression{80, {81, -1}, 1U},
@@ -672,6 +1453,50 @@ void CheckNavigationPolicyContract() {
                 == static_cast<std::uint64_t>(questRouteTargets[index]));
         }
     }
+
+    // Great Marsh can be generated either with a direct Flayer Jungle seam or
+    // as a dead-end off Spider Forest. Always prefer the direct exit, but keep
+    // the exact return seam as the next green hop when the bypass is required.
+    const std::array greatMarshDeadEndExits{
+        NavigationExitCandidate{
+            .destinationId = 77'076U,
+            .targetLevelId = 76,
+            .subtileX = 7'600,
+            .subtileY = 7'601,
+        },
+    };
+    CHECK(SelectMainProgressionTargetFor(
+        77,
+        greatMarshDeadEndExits).value_or(-1) == 76);
+    CHECK(EvaluateNavigationResolutionCompleteness(
+        77,
+        greatMarshDeadEndExits) == NavigationResolutionCompleteness::Complete);
+    CHECK(BuildNavigationDestinations(
+        NavigationPolicyInput{
+            .currentLevelId = 77,
+            .exits = greatMarshDeadEndExits,
+        },
+        interiorDestinations) == 1U);
+    CHECK(interiorDestinations[0].kind == NavigationLineKind::Progression);
+    CHECK(interiorDestinations[0].subtileX == 7'600);
+    CHECK(interiorDestinations[0].subtileY == 7'601);
+
+    const std::array greatMarshDirectExits{
+        greatMarshDeadEndExits[0],
+        NavigationExitCandidate{
+            .destinationId = 77'078U,
+            .targetLevelId = 78,
+            .subtileX = 7'800,
+            .subtileY = 7'801,
+        },
+    };
+    CHECK(SelectMainProgressionTargetFor(
+        77,
+        greatMarshDirectExits).value_or(-1) == 78);
+    CHECK(EvaluateNavigationResolutionCompleteness(
+        77,
+        std::span<const NavigationExitCandidate>{})
+        == NavigationResolutionCompleteness::PartialRetryable);
 
     struct QuestRouteRegression final {
         std::int32_t from{};
@@ -1241,6 +2066,40 @@ void CheckNavigationResolverHelpers() {
         200,
         waypointCandidates).has_value());
 
+    const std::array onePassiveWaypoint{
+        Detail::NavigationWaypointPresetCandidate{120, 240, 600, 1'200, 119},
+    };
+    const std::array twoPassiveWaypoints{
+        Detail::NavigationWaypointPresetCandidate{120, 240, 600, 1'200, 119},
+        Detail::NavigationWaypointPresetCandidate{121, 240, 605, 1'200, 145},
+    };
+    const std::array<Detail::NavigationWaypointPresetCandidate, 0U>
+        noPassiveWaypoints{};
+    const auto passiveExact = Detail::SelectPassiveWaypointPreset(
+        onePassiveWaypoint,
+        false);
+    CHECK(!passiveExact.pending);
+    CHECK(passiveExact.exact.has_value());
+    CHECK(passiveExact.exact->subtileX == 600);
+    const auto passiveNone = Detail::SelectPassiveWaypointPreset(
+        noPassiveWaypoints,
+        false);
+    CHECK(!passiveNone.pending);
+    CHECK(!passiveNone.exact.has_value());
+    CHECK(Detail::SelectPassiveWaypointPreset(
+        twoPassiveWaypoints,
+        false).pending);
+    CHECK(Detail::SelectPassiveWaypointPreset(
+        onePassiveWaypoint,
+        true).pending);
+
+    const auto exitOnly = Detail::MakePassivePoiPublicationPolicy(true, false);
+    CHECK(!exitOnly.publishExitLabels);
+    CHECK(exitOnly.publishWaypoint);
+    const auto waypointOnly = Detail::MakePassivePoiPublicationPolicy(false, true);
+    CHECK(waypointOnly.publishExitLabels);
+    CHECK(!waypointOnly.publishWaypoint);
+
     const std::array roomTileLinks{
         Detail::NavigationRoomTileLinkCandidate{501, 29},
         Detail::NavigationRoomTileLinkCandidate{502, 30},
@@ -1613,6 +2472,46 @@ void CheckNavigationResolverHelpers() {
     CHECK(opening.subtileX == 649);
     CHECK(opening.subtileY == 1'043);
     CHECK(opening.spanSubtiles == 7);
+    const auto normalizedPairedBoundary = opening.boundaryIdentity;
+    CHECK(normalizedPairedBoundary.Valid());
+    CHECK(normalizedPairedBoundary.axis
+        == NavigationBoundaryAxis::Vertical);
+    CHECK(normalizedPairedBoundary.fixedSubtile == 650);
+    CHECK(normalizedPairedBoundary.startSubtile == 1'040);
+    CHECK(normalizedPairedBoundary.endSubtile == 1'047);
+
+    // The reciprocal level sees the same seam from its opposite side. Its
+    // projected point may differ by one source cell, but its retained physical
+    // identity must be byte-for-byte equal for reveal-wide deduplication.
+    const std::array reciprocalSourceSpans{
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 26,
+            .side = Detail::NavigationBoundarySide::Left,
+            .startSubtile = 1'040,
+            .endSubtile = 1'047,
+            .fixedSubtile = 650,
+            .sourceRoomIdentity = 0x2000U,
+            .targetRoomIdentity = 0x1000U,
+        },
+    };
+    const std::array reciprocalTargetSpans{
+        Detail::NavigationBoundarySpan{
+            .targetLevelId = 7,
+            .side = Detail::NavigationBoundarySide::Left,
+            .startSubtile = 1'039,
+            .endSubtile = 1'048,
+            .fixedSubtile = 650,
+            .sourceRoomIdentity = 0x2000U,
+            .targetRoomIdentity = 0x1000U,
+        },
+    };
+    CHECK(Detail::FindUniqueOutdoorLevelBoundaryOpening(
+        levelBounds,
+        7,
+        reciprocalSourceSpans,
+        reciprocalTargetSpans,
+        opening) == Detail::NavigationOutdoorBoundaryMatchResult::Found);
+    CHECK(opening.boundaryIdentity == normalizedPairedBoundary);
 
     // Exact RoomsNear identities remain separate even when side, fixed seam,
     // and projected interval are identical. A target fragment from the other
@@ -1771,6 +2670,8 @@ void CheckNavigationResolverHelpers() {
         tamoeFacadeSource,
         tamoeFacadeTarget,
         opening) == Detail::NavigationOutdoorBoundaryMatchResult::Ambiguous);
+    std::array<Detail::NavigationOutdoorOpening, 4> tamoePhysicalOpenings{};
+    std::size_t tamoePhysicalOpeningCount{};
     CHECK(Detail::FindUniqueOutdoorLevelBoundaryOpening(
         tamoeBounds,
         26,
@@ -1778,11 +2679,33 @@ void CheckNavigationResolverHelpers() {
         tamoeFacadeTarget,
         opening,
         Detail::NavigationOutdoorOpeningSelectionPolicy::
-            AcceptStablePlayerPath)
+            AcceptStablePlayerPath,
+        tamoePhysicalOpenings,
+        &tamoePhysicalOpeningCount)
         == Detail::NavigationOutdoorBoundaryMatchResult::Found);
     CHECK(opening.subtileX == 15'042);
     CHECK(opening.subtileY == 5'090);
     CHECK(opening.spanSubtiles == 4);
+    CHECK(tamoePhysicalOpeningCount == 2U);
+    CHECK(tamoePhysicalOpenings[0].subtileX == 15'042);
+    CHECK(tamoePhysicalOpenings[0].subtileY == 5'090);
+    CHECK(tamoePhysicalOpenings[1].subtileX == 15'162);
+    CHECK(tamoePhysicalOpenings[1].subtileY == 5'090);
+    CHECK(tamoePhysicalOpenings[1].spanSubtiles == 40);
+    CHECK(tamoePhysicalOpenings[0].boundaryIdentity.Valid());
+    CHECK(tamoePhysicalOpenings[1].boundaryIdentity.Valid());
+    CHECK(tamoePhysicalOpenings[0].boundaryIdentity.axis
+        == NavigationBoundaryAxis::Horizontal);
+    CHECK(tamoePhysicalOpenings[1].boundaryIdentity.axis
+        == NavigationBoundaryAxis::Horizontal);
+    CHECK(tamoePhysicalOpenings[0].boundaryIdentity.fixedSubtile == 5'091);
+    CHECK(tamoePhysicalOpenings[1].boundaryIdentity.fixedSubtile == 5'091);
+    CHECK(tamoePhysicalOpenings[0].boundaryIdentity.startSubtile == 15'040);
+    CHECK(tamoePhysicalOpenings[0].boundaryIdentity.endSubtile == 15'044);
+    CHECK(tamoePhysicalOpenings[1].boundaryIdentity.startSubtile == 15'142);
+    CHECK(tamoePhysicalOpenings[1].boundaryIdentity.endSubtile == 15'182);
+    CHECK(tamoePhysicalOpenings[0].boundaryIdentity
+        != tamoePhysicalOpenings[1].boundaryIdentity);
 
     std::array partiallyIdentifiedSpan{
         Detail::NavigationBoundarySpan{
@@ -1865,7 +2788,9 @@ void CheckNavigationResolverHelpers() {
             std::int32_t subtileX,
             std::int32_t subtileY,
             Detail::NavigationExitEvidence evidence,
-            std::int32_t span) noexcept {
+            std::int32_t span,
+            NavigationExitBoundaryIdentity boundaryIdentity = {},
+            bool canonicalLevelPairAnchor = false) noexcept {
         return Detail::NavigationExitSelection{
             .candidate = NavigationExitCandidate{
                 .destinationId = destinationId,
@@ -1875,6 +2800,8 @@ void CheckNavigationResolverHelpers() {
             },
             .evidence = evidence,
             .spanSubtiles = span,
+            .boundaryIdentity = boundaryIdentity,
+            .canonicalLevelPairAnchor = canonicalLevelPairAnchor,
         };
     };
     CHECK(Detail::UpsertExitSelection(
@@ -2032,6 +2959,431 @@ void CheckNavigationResolverHelpers() {
             1'000,
             Detail::NavigationExitEvidence::OutdoorCollision,
             10)));
+
+    std::array<Detail::NavigationExitSelection, 8> physicalEvidence{};
+    std::size_t physicalEvidenceCount{};
+    CHECK(Detail::AppendPhysicalExitEvidence(
+        3,
+        physicalEvidence,
+        physicalEvidenceCount,
+        makeSelection(
+            30U,
+            4,
+            100,
+            200,
+            Detail::NavigationExitEvidence::OutdoorCollision,
+            8)));
+    CHECK(physicalEvidenceCount == 1U);
+    CHECK(Detail::AppendPhysicalExitEvidence(
+        3,
+        physicalEvidence,
+        physicalEvidenceCount,
+        makeSelection(
+            31U,
+            4,
+            108,
+            207,
+            Detail::NavigationExitEvidence::RoomTile,
+            0)));
+    CHECK(physicalEvidenceCount == 2U);
+    CHECK(Detail::AppendPhysicalExitEvidence(
+        3,
+        physicalEvidence,
+        physicalEvidenceCount,
+        makeSelection(
+            32U,
+            4,
+            140,
+            200,
+            Detail::NavigationExitEvidence::OutdoorCollision,
+            8)));
+    CHECK(Detail::AppendPhysicalExitEvidence(
+        3,
+        physicalEvidence,
+        physicalEvidenceCount,
+        makeSelection(
+            33U,
+            5,
+            100,
+            200,
+            Detail::NavigationExitEvidence::RoomTile,
+            0)));
+    CHECK(!Detail::AppendPhysicalExitEvidence(
+        3,
+        physicalEvidence,
+        physicalEvidenceCount,
+        makeSelection(
+            34U,
+            3,
+            500,
+            600,
+            Detail::NavigationExitEvidence::RoomTile,
+            0)));
+
+    std::array<Detail::NavigationPhysicalExitSelection, 8> physicalLabels{};
+    std::size_t physicalLabelCount{};
+    CHECK(Detail::ReducePhysicalExitEvidence(
+        physicalEvidence,
+        physicalEvidenceCount,
+        physicalLabels,
+        physicalLabelCount));
+    CHECK(physicalLabelCount == 3U);
+    CHECK(physicalLabels[0].winner.candidate.destinationId == 31U);
+
+    auto samePointA = makeSelection(
+        80U, 8, 400, 500,
+        Detail::NavigationExitEvidence::RoomTile, 0);
+    auto samePointB = samePointA;
+    samePointB.candidate.destinationId = 79U;
+    std::array<Detail::NavigationExitSelection, 2> samePointForward{};
+    std::array<Detail::NavigationExitSelection, 2> samePointReverse{};
+    std::size_t samePointForwardCount{};
+    std::size_t samePointReverseCount{};
+    CHECK(Detail::AppendPhysicalExitEvidence(
+        3, samePointForward, samePointForwardCount, samePointA));
+    CHECK(Detail::AppendPhysicalExitEvidence(
+        3, samePointForward, samePointForwardCount, samePointB));
+    CHECK(Detail::AppendPhysicalExitEvidence(
+        3, samePointReverse, samePointReverseCount, samePointB));
+    CHECK(Detail::AppendPhysicalExitEvidence(
+        3, samePointReverse, samePointReverseCount, samePointA));
+    CHECK(samePointForwardCount == 1U);
+    CHECK(samePointReverseCount == 1U);
+    CHECK(samePointForward[0].candidate.destinationId == 79U);
+    CHECK(samePointReverse[0].candidate.destinationId == 79U);
+
+    const NavigationExitBoundaryIdentity exactPointBoundary{
+        .axis = NavigationBoundaryAxis::Horizontal,
+        .fixedSubtile = 500,
+        .startSubtile = 390,
+        .endSubtile = 410,
+    };
+    const auto exactPointOutdoor = makeSelection(
+        81U, 8, 400, 500,
+        Detail::NavigationExitEvidence::OutdoorCollision, 20,
+        exactPointBoundary);
+    const auto exactPointRoomTile = makeSelection(
+        82U, 8, 400, 500,
+        Detail::NavigationExitEvidence::RoomTile, 0);
+    std::array<Detail::NavigationExitSelection, 2>
+        exactPointIdentityForward{};
+    std::array<Detail::NavigationExitSelection, 2>
+        exactPointIdentityReverse{};
+    std::size_t exactPointIdentityForwardCount{};
+    std::size_t exactPointIdentityReverseCount{};
+    CHECK(Detail::AppendPhysicalExitEvidence(
+        3,
+        exactPointIdentityForward,
+        exactPointIdentityForwardCount,
+        exactPointOutdoor));
+    CHECK(Detail::AppendPhysicalExitEvidence(
+        3,
+        exactPointIdentityForward,
+        exactPointIdentityForwardCount,
+        exactPointRoomTile));
+    CHECK(Detail::AppendPhysicalExitEvidence(
+        3,
+        exactPointIdentityReverse,
+        exactPointIdentityReverseCount,
+        exactPointRoomTile));
+    CHECK(Detail::AppendPhysicalExitEvidence(
+        3,
+        exactPointIdentityReverse,
+        exactPointIdentityReverseCount,
+        exactPointOutdoor));
+    CHECK(exactPointIdentityForwardCount == 1U);
+    CHECK(exactPointIdentityReverseCount == 1U);
+    CHECK(exactPointIdentityForward[0].candidate.destinationId == 82U);
+    CHECK(exactPointIdentityReverse[0].candidate.destinationId == 82U);
+    CHECK(exactPointIdentityForward[0].boundaryIdentity
+        == exactPointBoundary);
+    CHECK(exactPointIdentityReverse[0].boundaryIdentity
+        == exactPointBoundary);
+
+    const std::array chain{
+        makeSelection(
+            40U, 4, 100, 100,
+            Detail::NavigationExitEvidence::OutdoorCollision, 0),
+        makeSelection(
+            41U, 4, 108, 100,
+            Detail::NavigationExitEvidence::RuntimeObject, 0),
+        makeSelection(
+            42U, 4, 116, 100,
+            Detail::NavigationExitEvidence::RoomTile, 0),
+    };
+    auto forwardChain = chain;
+    auto reverseChain = std::array{
+        chain[2], chain[1], chain[0],
+    };
+    std::array<Detail::NavigationPhysicalExitSelection, 3> forwardClusters{};
+    std::array<Detail::NavigationPhysicalExitSelection, 3> reverseClusters{};
+    std::size_t forwardCount{};
+    std::size_t reverseCount{};
+    CHECK(Detail::ReducePhysicalExitEvidence(
+        forwardChain,
+        forwardChain.size(),
+        forwardClusters,
+        forwardCount));
+    CHECK(Detail::ReducePhysicalExitEvidence(
+        reverseChain,
+        reverseChain.size(),
+        reverseClusters,
+        reverseCount));
+    CHECK(forwardCount == 2U);
+    CHECK(reverseCount == forwardCount);
+    for (std::size_t index = 0U; index < forwardCount; ++index) {
+        CHECK(forwardClusters[index].anchorSubtileX
+            == reverseClusters[index].anchorSubtileX);
+        CHECK(forwardClusters[index].anchorSubtileY
+            == reverseClusters[index].anchorSubtileY);
+        CHECK(forwardClusters[index].winner.candidate.destinationId
+            == reverseClusters[index].winner.candidate.destinationId);
+    }
+
+    const NavigationExitBoundaryIdentity sharedBoundary{
+        .axis = NavigationBoundaryAxis::Vertical,
+        .fixedSubtile = 2'000,
+        .startSubtile = 3'000,
+        .endSubtile = 3'010,
+    };
+    auto sameBoundaryEvidence = std::array{
+        makeSelection(
+            90U, 9, 1'000, 1'000,
+            Detail::NavigationExitEvidence::OutdoorCollision, 10,
+            sharedBoundary),
+        makeSelection(
+            91U, 9, 1'080, 1'000,
+            Detail::NavigationExitEvidence::OutdoorCollision, 10,
+            sharedBoundary),
+    };
+    std::array<Detail::NavigationPhysicalExitSelection, 2>
+        sameBoundaryClusters{};
+    std::size_t sameBoundaryCount{};
+    CHECK(Detail::ReducePhysicalExitEvidence(
+        sameBoundaryEvidence,
+        sameBoundaryEvidence.size(),
+        sameBoundaryClusters,
+        sameBoundaryCount));
+    CHECK(sameBoundaryCount == 1U);
+    CHECK(sameBoundaryClusters[0].boundaryIdentity == sharedBoundary);
+
+    const NavigationExitBoundaryIdentity nearbyDistinctBoundary{
+        .axis = NavigationBoundaryAxis::Vertical,
+        .fixedSubtile = 2'001,
+        .startSubtile = 3'000,
+        .endSubtile = 3'010,
+    };
+    auto distinctBoundaryEvidence = std::array{
+        makeSelection(
+            92U, 9, 1'000, 1'000,
+            Detail::NavigationExitEvidence::OutdoorCollision, 10,
+            sharedBoundary),
+        makeSelection(
+            93U, 9, 1'002, 1'002,
+            Detail::NavigationExitEvidence::OutdoorCollision, 10,
+            nearbyDistinctBoundary),
+    };
+    std::array<Detail::NavigationPhysicalExitSelection, 2>
+        distinctBoundaryClusters{};
+    std::size_t distinctBoundaryCount{};
+    CHECK(Detail::ReducePhysicalExitEvidence(
+        distinctBoundaryEvidence,
+        distinctBoundaryEvidence.size(),
+        distinctBoundaryClusters,
+        distinctBoundaryCount));
+    CHECK(distinctBoundaryCount == 2U);
+
+    // Stronger non-structural evidence may choose the displayed coordinate,
+    // but it must not erase the proven seam used to merge the reciprocal side.
+    auto retainedBoundaryEvidence = std::array{
+        makeSelection(
+            94U, 9, 1'000, 1'000,
+            Detail::NavigationExitEvidence::OutdoorCollision, 10,
+            sharedBoundary),
+        makeSelection(
+            95U, 9, 1'003, 1'003,
+            Detail::NavigationExitEvidence::RoomTile, 0),
+    };
+    std::array<Detail::NavigationPhysicalExitSelection, 2>
+        retainedBoundaryClusters{};
+    std::size_t retainedBoundaryCount{};
+    CHECK(Detail::ReducePhysicalExitEvidence(
+        retainedBoundaryEvidence,
+        retainedBoundaryEvidence.size(),
+        retainedBoundaryClusters,
+        retainedBoundaryCount));
+    CHECK(retainedBoundaryCount == 1U);
+    CHECK(retainedBoundaryClusters[0].winner.candidate.destinationId == 95U);
+    CHECK(retainedBoundaryClusters[0].boundaryIdentity == sharedBoundary);
+
+    const AutomapExitLabelDefinition forwardDefinition{
+        .sourceLevelId = 7,
+        .targetLevelId = 26,
+        .subtileX = 1'000,
+        .subtileY = 1'000,
+        .boundaryIdentity = sharedBoundary,
+    };
+    const AutomapExitLabelDefinition reverseDefinition{
+        .sourceLevelId = 26,
+        .targetLevelId = 7,
+        .boundaryIdentity = sharedBoundary,
+    };
+    const AutomapExitLabelDefinition separateDefinition{
+        .sourceLevelId = 26,
+        .targetLevelId = 7,
+        .boundaryIdentity = nearbyDistinctBoundary,
+    };
+    CHECK(SameAutomapExitLevelPair(forwardDefinition, reverseDefinition));
+    CHECK(SameAutomapExitPhysicalBoundary(
+        forwardDefinition,
+        reverseDefinition));
+    CHECK(IsAutomapExitPhysicalGroupMember(
+        forwardDefinition,
+        reverseDefinition,
+        false));
+    CHECK(!SameAutomapExitPhysicalBoundary(
+        forwardDefinition,
+        separateDefinition));
+    CHECK(!IsAutomapExitPhysicalGroupMember(
+        forwardDefinition,
+        separateDefinition,
+        false));
+
+    const std::array canonicalPairDefinitions{
+        forwardDefinition,
+        reverseDefinition,
+        separateDefinition,
+        AutomapExitLabelDefinition{
+            .sourceLevelId = 7,
+            .targetLevelId = 26,
+            .canonicalLevelPairAnchor = true,
+        },
+        AutomapExitLabelDefinition{
+            .sourceLevelId = 26,
+            .targetLevelId = 27,
+        },
+    };
+    CHECK(HasCanonicalAutomapExitLevelPair(
+        canonicalPairDefinitions,
+        forwardDefinition));
+    std::size_t canonicalGroupCount{};
+    for (const auto& definition : canonicalPairDefinitions) {
+        if (IsAutomapExitPhysicalGroupMember(
+                forwardDefinition,
+                definition,
+                true)) {
+            ++canonicalGroupCount;
+        }
+    }
+    CHECK(canonicalGroupCount == 4U);
+
+    const AutomapExitLabelDefinition mixedReverseWithoutIdentity{
+        .stableId = 300U,
+        .sourceLevelId = 26,
+        .targetLevelId = 7,
+        .subtileX = 1'001,
+        .subtileY = 1'000,
+    };
+    const auto mixedIdentityFirst = std::array{
+        forwardDefinition,
+        mixedReverseWithoutIdentity,
+    };
+    const auto mixedIdentityLast = std::array{
+        mixedReverseWithoutIdentity,
+        forwardDefinition,
+    };
+    CHECK(ResolvedAutomapExitBoundaryIdentity(
+        mixedIdentityFirst,
+        mixedReverseWithoutIdentity) == sharedBoundary);
+    CHECK(ResolvedAutomapExitBoundaryIdentity(
+        mixedIdentityLast,
+        mixedReverseWithoutIdentity) == sharedBoundary);
+    CHECK(IsResolvedAutomapExitPhysicalGroupMember(
+        mixedIdentityFirst,
+        forwardDefinition,
+        mixedReverseWithoutIdentity,
+        false));
+    CHECK(IsResolvedAutomapExitPhysicalGroupMember(
+        mixedIdentityFirst,
+        mixedReverseWithoutIdentity,
+        forwardDefinition,
+        false));
+    CHECK(IsResolvedAutomapExitPhysicalGroupMember(
+        mixedIdentityLast,
+        forwardDefinition,
+        mixedReverseWithoutIdentity,
+        false));
+
+    const AutomapExitLabelDefinition secondValidForward{
+        .stableId = 301U,
+        .sourceLevelId = 7,
+        .targetLevelId = 26,
+        .subtileX = 1'008,
+        .subtileY = 1'000,
+        .boundaryIdentity = nearbyDistinctBoundary,
+    };
+    const AutomapExitLabelDefinition reverseNearFirst{
+        .stableId = 302U,
+        .sourceLevelId = 26,
+        .targetLevelId = 7,
+        .subtileX = 1'002,
+        .subtileY = 1'000,
+    };
+    const auto mixedDistinctForward = std::array{
+        forwardDefinition,
+        secondValidForward,
+        reverseNearFirst,
+    };
+    const auto mixedDistinctReverse = std::array{
+        reverseNearFirst,
+        secondValidForward,
+        forwardDefinition,
+    };
+    CHECK(ResolvedAutomapExitBoundaryIdentity(
+        mixedDistinctForward,
+        reverseNearFirst) == sharedBoundary);
+    CHECK(ResolvedAutomapExitBoundaryIdentity(
+        mixedDistinctReverse,
+        reverseNearFirst) == sharedBoundary);
+    CHECK(IsResolvedAutomapExitPhysicalGroupMember(
+        mixedDistinctForward,
+        forwardDefinition,
+        reverseNearFirst,
+        false));
+    CHECK(!IsResolvedAutomapExitPhysicalGroupMember(
+        mixedDistinctForward,
+        secondValidForward,
+        reverseNearFirst,
+        false));
+    CHECK(!IsResolvedAutomapExitPhysicalGroupMember(
+        mixedDistinctReverse,
+        forwardDefinition,
+        secondValidForward,
+        false));
+
+    const AutomapExitLabelDefinition reverseEquidistant{
+        .stableId = 303U,
+        .sourceLevelId = 26,
+        .targetLevelId = 7,
+        .subtileX = 1'004,
+        .subtileY = 1'000,
+    };
+    const auto mixedTieForward = std::array{
+        forwardDefinition,
+        secondValidForward,
+        reverseEquidistant,
+    };
+    const auto mixedTieReverse = std::array{
+        reverseEquidistant,
+        secondValidForward,
+        forwardDefinition,
+    };
+    CHECK(ResolvedAutomapExitBoundaryIdentity(
+        mixedTieForward,
+        reverseEquidistant) == sharedBoundary);
+    CHECK(ResolvedAutomapExitBoundaryIdentity(
+        mixedTieReverse,
+        reverseEquidistant) == sharedBoundary);
 }
 
 void CheckNavigationLevelCatalogContract() {
@@ -2125,19 +3477,155 @@ auto RectsOverlap(
         && left[1] + left[3] > right[1];
 }
 
+void CheckAutomapWaypointCatalogContract() {
+    using RuffnecKk::MapSense::AutomapWaypointLabelDefinition;
+    using RuffnecKk::MapSense::Detail::AutomapWaypointDefinitionCatalog;
+
+    const AutomapWaypointLabelDefinition levelOne{
+        .stableId = 101U,
+        .levelId = 1,
+        .subtileX = 110,
+        .subtileY = 120,
+    };
+    const AutomapWaypointLabelDefinition levelTwo{
+        .stableId = 202U,
+        .levelId = 2,
+        .subtileX = 210,
+        .subtileY = 220,
+    };
+    const AutomapWaypointLabelDefinition levelOneReplacement{
+        .stableId = 103U,
+        .levelId = 1,
+        .subtileX = 130,
+        .subtileY = 140,
+    };
+    const AutomapWaypointLabelDefinition overflowOwner{
+        .stableId = 303U,
+        .levelId = 3,
+        .subtileX = 310,
+        .subtileY = 320,
+    };
+    const AutomapWaypointLabelDefinition nextSeedLevelTwo{
+        .stableId = 204U,
+        .levelId = 2,
+        .subtileX = 410,
+        .subtileY = 420,
+    };
+    const auto one = [](const AutomapWaypointLabelDefinition& definition) {
+        return std::span<const AutomapWaypointLabelDefinition>{&definition, 1U};
+    };
+
+    AutomapWaypointDefinitionCatalog<2U> catalog;
+    CHECK(catalog.ReplaceOwner(1, one(levelOne)));
+    CHECK(catalog.ReplaceOwner(2, one(levelTwo)));
+    CHECK(catalog.Definitions().size() == 2U);
+
+    CHECK(catalog.ReplaceOwner(1, one(levelOneReplacement)));
+    CHECK(catalog.Definitions().size() == 2U);
+    CHECK(catalog.Definitions()[0].levelId == 2);
+    CHECK(catalog.Definitions()[1].stableId == levelOneReplacement.stableId);
+    CHECK(catalog.Definitions()[1].subtileX == 130);
+
+    const std::array beforeOverflow{
+        catalog.Definitions()[0],
+        catalog.Definitions()[1],
+    };
+    CHECK(!catalog.ReplaceOwner(3, one(overflowOwner)));
+    CHECK(catalog.Definitions().size() == beforeOverflow.size());
+    CHECK(catalog.Definitions()[0].stableId == beforeOverflow[0].stableId);
+    CHECK(catalog.Definitions()[0].subtileX == beforeOverflow[0].subtileX);
+    CHECK(catalog.Definitions()[1].stableId == beforeOverflow[1].stableId);
+    CHECK(catalog.Definitions()[1].subtileX == beforeOverflow[1].subtileX);
+
+    // Pending resolution performs no replacement and therefore preserves the
+    // exact owner definition already proven by an earlier settlement pass.
+    CHECK(catalog.Definitions()[1].stableId == levelOneReplacement.stableId);
+
+    // A complete no-waypoint result erases only that source level.
+    CHECK(catalog.ReplaceOwner(
+        1,
+        std::span<const AutomapWaypointLabelDefinition>{}));
+    CHECK(catalog.Definitions().size() == 1U);
+    CHECK(catalog.Definitions()[0].levelId == 2);
+
+    // Session reset drops all old-seed coordinates. Replay may republish the
+    // same owner only from the newly materialized DRLG coordinates.
+    catalog.Clear();
+    CHECK(catalog.Definitions().empty());
+    CHECK(catalog.ReplaceOwner(2, one(nextSeedLevelTwo)));
+    CHECK(catalog.Definitions().size() == 1U);
+    CHECK(catalog.Definitions()[0].stableId == nextSeedLevelTwo.stableId);
+    CHECK(catalog.Definitions()[0].subtileX == 410);
+    CHECK(catalog.Definitions()[0].subtileY == 420);
+}
+
+void CheckTownWaypointLabelPolicy() {
+    using RuffnecKk::MapSense::Detail::AllowsWaypointLabelForLevel;
+
+    CHECK(!AllowsWaypointLabelForLevel(1));
+    CHECK(!AllowsWaypointLabelForLevel(40));
+    CHECK(!AllowsWaypointLabelForLevel(75));
+    CHECK(!AllowsWaypointLabelForLevel(103));
+    CHECK(!AllowsWaypointLabelForLevel(109));
+
+    // Adjacent outdoor/dungeon levels retain their labels. This also guards
+    // against replacing the exact owner policy with a broad act or id range.
+    CHECK(AllowsWaypointLabelForLevel(2));
+    CHECK(AllowsWaypointLabelForLevel(39));
+    CHECK(AllowsWaypointLabelForLevel(41));
+    CHECK(AllowsWaypointLabelForLevel(74));
+    CHECK(AllowsWaypointLabelForLevel(76));
+    CHECK(AllowsWaypointLabelForLevel(102));
+    CHECK(AllowsWaypointLabelForLevel(104));
+    CHECK(AllowsWaypointLabelForLevel(108));
+    CHECK(AllowsWaypointLabelForLevel(110));
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
     using namespace RuffnecKk::MapSense;
 
     CheckNavigationProjectionDiagnosticCacheContract();
+    CheckMapSenseDataCatalogContract();
     CheckRevealPersistenceContract();
+    CheckRevealReplayRequestPolicy();
+    CheckNativeUiPanelPolicy();
     CheckNavigationEngineContract();
     CheckNavigationLevelCatalogContract();
     CheckNavigationPolicyContract();
     CheckNavigationResolverHelpers();
+    CheckAutomapWaypointCatalogContract();
+    CheckTownWaypointLabelPolicy();
 
-    static_assert(CurrentConfigSchemaVersion == 9);
+    static_assert(CurrentConfigSchemaVersion == 14);
+    static_assert(MaximumAutomapPoiSnapshots
+        == MaximumAutomapExitLabels
+            + MaximumAutomapWaypointLabels
+            + MaximumAutomapSpecialChestPresets
+            + MaximumTrackedAutomapObjects * 2U);
+    static_assert(OrientedAutomapExitLevel(1, 1, 2, 0U, 1U) == 2);
+    static_assert(OrientedAutomapExitLevel(2, 1, 2, 1U, 0U) == 1);
+    static_assert(OrientedAutomapExitLevel(2, 2, 3, 0U, 1U) == 3);
+    static_assert(OrientedAutomapExitLevel(3, 2, 3, 1U, 0U) == 2);
+    static_assert(OrientedAutomapExitLevel(1, 2, 3, 0xFFFFU, 0xFFFFU)
+        == 3);
+    static_assert(OrientedAutomapExitLevel(3, 2, 3, 0xFFFFU, 0xFFFFU)
+        == 2);
+    static_assert(NativeAutomapLabelGap == 12.0F);
+    static_assert(
+        AutomapPoiCollectionBit(AutomapPoiCollection::WaypointLabels)
+            == (1U << 6U));
+    static_assert(AutomapLabelTopAboveIcon(
+        100.0F,
+        20.0F,
+        NativeWaypointIconTopExtent,
+        NativeWaypointLabelGap) == 26.0F);
+    static_assert(AutomapLabelTopAboveIcon(
+        100.0F,
+        20.0F,
+        NativeShrineIconTopExtent,
+        NativeAutomapLabelGap) == 24.0F);
     static_assert(Detail::SquaredWorldSubtileDistance(0U, 0U, 3U, 4U)
         == 25U);
     static_assert(Detail::ClassifyWorldSubtileDistanceSquared(79U * 79U)
@@ -2191,6 +3679,18 @@ int main(int argc, char** argv) {
         Detail::ClassifyMonsterRankFlags(0x40) == MonsterRank::Normal);
     static_assert(
         Detail::ClassifyMonsterRankFlags(0x80) == MonsterRank::Normal);
+    static_assert(
+        MonsterMarkerRenderLayer(MonsterRank::Normal) == 0U);
+    static_assert(
+        MonsterMarkerRenderLayer(MonsterRank::Minion) == 1U);
+    static_assert(
+        MonsterMarkerRenderLayer(MonsterRank::Champion) == 2U);
+    static_assert(
+        MonsterMarkerRenderLayer(MonsterRank::Unique) == 3U);
+    static_assert(
+        MonsterMarkerRenderLayer(MonsterRank::SuperUnique) == 4U);
+    static_assert(
+        MonsterMarkerRenderLayer(MonsterRank::Normal, true) == 4U);
     static_assert(Detail::IsEnemyMarkerUnitEligible(0U));
     static_assert(!Detail::IsEnemyMarkerUnitEligible(
         Detail::UnitIsMercenaryFlag));
@@ -2342,7 +3842,7 @@ int main(int argc, char** argv) {
         "RuffnecKkMapSenseRevealLevel").has_value());
 
     const auto configured = ParseConfig(R"toml(
-    schema_version = 9
+    schema_version = 10
 [general]
 enabled = false
 [overlay]
@@ -2374,6 +3874,9 @@ thickness = 4.00
 shape = "dot"
 color = "#FF3B30FF"
 size = 27
+show_names = false
+name_color = "#12345678"
+name_size = 18
 [immunities]
 enabled = true
 style = "split_halo"
@@ -2381,6 +3884,37 @@ indicator_size = 19
 halo_thickness = 3.5
 physical = "#AABBCCDD"
 fire = "#FF2200CC"
+[objects]
+enabled = true
+[objects.exit_labels]
+enabled = false
+color = "#ABC123EF"
+size = 11
+[objects.shrine_labels]
+enabled = true
+color = "#11223344"
+size = 24
+[objects.chests]
+enabled = false
+color = "#13579BDF"
+locked_color = "#2468ACE0"
+trapped_color = "#FEDCBA98"
+size = 7
+[objects.super_chests]
+enabled = true
+color = "#10203040"
+size = 40
+stars_enabled = false
+stars_color = "#50607080"
+stars_size = 32
+[objects.armor_racks]
+enabled = false
+color = "#90A0B0C0"
+size = 6
+[objects.weapon_racks]
+enabled = true
+color = "#D0E0F0FF"
+size = 39
 [navigation]
 line_thickness = 3.25
 [navigation.waypoint]
@@ -2441,6 +3975,10 @@ enabled = true
     CHECK(ColorToHex(configured.monsters.unique.color) == "#FF8A24FF");
     CHECK(ColorToHex(configured.monsters.superUniqueBoss.color)
         == "#FF3B30FF");
+    CHECK(!configured.monsters.superUniqueBoss.showNames);
+    CHECK(ColorToHex(configured.monsters.superUniqueBoss.nameColor)
+        == "#12345678");
+    CHECK(configured.monsters.superUniqueBoss.nameSize == 18.0F);
     CHECK(configured.immunities.enabled);
     CHECK(configured.immunities.style == ImmunityDisplayStyle::SplitHalo);
     CHECK(configured.immunities.indicatorSize == 19.0F);
@@ -2448,6 +3986,34 @@ enabled = true
     CHECK(ColorToHex(configured.immunities.physical) == "#AABBCCDD");
     CHECK(configured.immunities.fire.red == 1.0F);
     CHECK(configured.immunities.fire.alpha > 0.79F);
+    CHECK(configured.objects.enabled);
+    CHECK(!configured.objects.exitLabels.enabled);
+    CHECK(ColorToHex(configured.objects.exitLabels.color) == "#ABC123EF");
+    CHECK(configured.objects.exitLabels.size == 11.0F);
+    CHECK(configured.objects.waypointLabels.enabled);
+    CHECK(ColorToHex(configured.objects.waypointLabels.color)
+        == "#FFD33DFF");
+    CHECK(configured.objects.waypointLabels.size
+        == DefaultAutomapLabelSize);
+    CHECK(configured.objects.shrineLabels.enabled);
+    CHECK(ColorToHex(configured.objects.shrineLabels.color) == "#11223344");
+    CHECK(configured.objects.shrineLabels.size == 24.0F);
+    CHECK(!configured.objects.chests.enabled);
+    CHECK(ColorToHex(configured.objects.chests.outlineColor) == "#1450ADFF");
+    CHECK(ColorToHex(configured.objects.chests.interiorColor) == "#13579BDF");
+    CHECK(ColorToHex(configured.objects.chests.lockedAccentColor) == "#2468ACE0");
+    CHECK(ColorToHex(configured.objects.chests.trappedAccentColor) == "#FEDCBA98");
+    CHECK(configured.objects.chests.size == 7.0F);
+    CHECK(configured.objects.superChests.enabled);
+    CHECK(!configured.objects.superChests.starsEnabled);
+    CHECK(ColorToHex(configured.objects.superChests.starsColor) == "#50607080");
+    CHECK(configured.objects.superChests.starsSize == 32.0F);
+    CHECK(!configured.objects.armorRacks.enabled);
+    CHECK(ColorToHex(configured.objects.armorRacks.color) == "#90A0B0C0");
+    CHECK(configured.objects.armorRacks.size == 6.0F);
+    CHECK(configured.objects.weaponRacks.enabled);
+    CHECK(ColorToHex(configured.objects.weaponRacks.color) == "#D0E0F0FF");
+    CHECK(configured.objects.weaponRacks.size == 39.0F);
     CHECK(configured.navigation.lineThickness == 3.25F);
     CHECK(!configured.navigation.waypoint.enabled);
     CHECK(ColorToHex(configured.navigation.waypoint.color) == "#1020F0CC");
@@ -2474,10 +4040,90 @@ enabled = true
     CHECK(configured.menu.positionX == 0.23F);
     CHECK(configured.menu.positionY == 0.81F);
 
+    const auto schema12FeaturesAndChestPalette = ParseConfig(R"toml(
+schema_version = 12
+[general]
+enabled = true
+features_enabled = false
+[objects.chests]
+enabled = true
+outline_color = "#12345678"
+interior_color = "#23456789"
+locked_accent_color = "#3456789A"
+trapped_accent_color = "#456789AB"
+size = 42
+[objects.super_chests]
+enabled = false
+stars_enabled = true
+stars_color = "#56789ABC"
+stars_size = 33
+)toml");
+    CHECK(schema12FeaturesAndChestPalette.enabled);
+    CHECK(!schema12FeaturesAndChestPalette.featuresEnabled);
+    CHECK(ColorToHex(
+        schema12FeaturesAndChestPalette.objects.chests.outlineColor)
+        == "#12345678");
+    CHECK(ColorToHex(
+        schema12FeaturesAndChestPalette.objects.chests.interiorColor)
+        == "#23456789");
+    CHECK(ColorToHex(
+        schema12FeaturesAndChestPalette.objects.chests.lockedAccentColor)
+        == "#3456789A");
+    CHECK(ColorToHex(
+        schema12FeaturesAndChestPalette.objects.chests.trappedAccentColor)
+        == "#456789AB");
+    CHECK(schema12FeaturesAndChestPalette.objects.chests.size == 42.0F);
+    CHECK(!schema12FeaturesAndChestPalette.objects.superChests.enabled);
+    CHECK(ColorToHex(
+        schema12FeaturesAndChestPalette.objects.superChests.starsColor)
+        == "#56789ABC");
+    CHECK(schema12FeaturesAndChestPalette.objects.superChests.starsSize
+        == 33.0F);
+    CHECK(schema12FeaturesAndChestPalette.objects.waypointLabels.enabled);
+    CHECK(ColorToHex(
+        schema12FeaturesAndChestPalette.objects.waypointLabels.color)
+        == "#FFD33DFF");
+    CHECK(schema12FeaturesAndChestPalette.objects.waypointLabels.size
+        == DefaultAutomapLabelSize);
+
+    const auto schema13WaypointLabels = ParseConfig(R"toml(
+schema_version = 13
+[objects.waypoint_labels]
+enabled = false
+color = "#12345678"
+size = 31
+)toml");
+    CHECK(!schema13WaypointLabels.objects.waypointLabels.enabled);
+    CHECK(ColorToHex(schema13WaypointLabels.objects.waypointLabels.color)
+        == "#12345678");
+    CHECK(schema13WaypointLabels.objects.waypointLabels.size == 31.0F);
+    const auto serializedWaypointLabels = SerializeConfig(
+        schema13WaypointLabels);
+    CHECK(serializedWaypointLabels.find(
+        "[objects.waypoint_labels]\nenabled = false\n"
+        "color = \"#12345678\"\nsize = 31.00")
+        != std::string::npos);
+    const auto roundTripWaypointLabels = ParseConfig(
+        serializedWaypointLabels);
+    CHECK(SameAutomapLabelOptions(
+        roundTripWaypointLabels.objects.waypointLabels,
+        schema13WaypointLabels.objects.waypointLabels));
+
     const auto serialized = SerializeConfig(configured);
     CHECK(serialized.find("[hud]") == std::string::npos);
     CHECK(serialized.find("start_menu_open") == std::string::npos);
     CHECK(serialized.find("marker_size") == std::string::npos);
+    CHECK(serialized.find("features_enabled = true")
+        != std::string::npos);
+    CHECK(serialized.find("outline_color = \"#1450ADFF\"")
+        != std::string::npos);
+    CHECK(serialized.find("interior_color = \"#13579BDF\"")
+        != std::string::npos);
+    CHECK(serialized.find("locked_accent_color = \"#2468ACE0\"")
+        != std::string::npos);
+    CHECK(serialized.find("trapped_accent_color = \"#FEDCBA98\"")
+        != std::string::npos);
+    CHECK(serialized.find("locked_color") == std::string::npos);
     constexpr std::array legacyMonsterToggleKeys{
         "\nnormal = ",
         "\nminion = ",
@@ -2521,9 +4167,27 @@ enabled = true
         != std::string::npos);
     CHECK(serialized.find(
         "[monsters.super_unique_boss]\nshape = \"dot\"\n"
-        "color = \"#FF3B30FF\"\nsize = 27.00\n\n")
+        "color = \"#FF3B30FF\"\nsize = 27.00\n"
+        "show_names = false\nname_color = \"#12345678\"\n"
+        "name_size = 18.00\n\n")
         != std::string::npos);
     CHECK(serialized.find("halo_thickness = 3.50")
+        != std::string::npos);
+    CHECK(serialized.find("[objects]\nenabled = true")
+        != std::string::npos);
+    CHECK(serialized.find("[objects.exit_labels]\nenabled = false")
+        != std::string::npos);
+    CHECK(serialized.find(
+        "[objects.waypoint_labels]\nenabled = true\n"
+        "color = \"#FFD33DFF\"\nsize = 28.00")
+        != std::string::npos);
+    CHECK(serialized.find("[objects.super_chests]\nenabled = true")
+        != std::string::npos);
+    CHECK(serialized.find("stars_enabled = false")
+        != std::string::npos);
+    CHECK(serialized.find("stars_color = \"#50607080\"")
+        != std::string::npos);
+    CHECK(serialized.find("stars_size = 32.00")
         != std::string::npos);
     CHECK(serialized.find("[navigation]\nline_thickness = 3.25")
         != std::string::npos);
@@ -2569,12 +4233,17 @@ enabled = true
     CHECK(ColorToHex(roundTrip.monsters.unique.color) == "#FF8A24FF");
     CHECK(ColorToHex(roundTrip.monsters.superUniqueBoss.color)
         == "#FF3B30FF");
+    CHECK(!roundTrip.monsters.superUniqueBoss.showNames);
+    CHECK(ColorToHex(roundTrip.monsters.superUniqueBoss.nameColor)
+        == "#12345678");
+    CHECK(roundTrip.monsters.superUniqueBoss.nameSize == 18.0F);
     CHECK(roundTrip.immunities.enabled);
     CHECK(roundTrip.immunities.style == ImmunityDisplayStyle::SplitHalo);
     CHECK(roundTrip.immunities.indicatorSize == 19.0F);
     CHECK(roundTrip.immunities.haloThickness == 3.5F);
     CHECK(ColorToHex(roundTrip.immunities.physical) == "#AABBCCDD");
     CHECK(ColorToHex(roundTrip.immunities.fire) == "#FF2200CC");
+    CHECK(SameObjectsOptions(roundTrip.objects, configured.objects));
     CHECK(roundTrip.navigation.lineThickness == 3.25F);
     CHECK(!roundTrip.navigation.waypoint.enabled);
     CHECK(ColorToHex(roundTrip.navigation.waypoint.color) == "#1020F0CC");
@@ -2627,6 +4296,11 @@ color = "#F02030EE"
     CHECK(defaults.monsters.champion.thickness == 2.0F);
     CHECK(defaults.monsters.unique.thickness == 2.0F);
     CHECK(defaults.monsters.superUniqueBoss.thickness == 2.0F);
+    CHECK(defaults.monsters.superUniqueBoss.showNames);
+    CHECK(ColorToHex(defaults.monsters.superUniqueBoss.nameColor)
+        == "#FFD33DFF");
+    CHECK(defaults.monsters.superUniqueBoss.nameSize
+        == DefaultAutomapLabelSize);
     CHECK(ColorToHex(defaults.monsters.normal.color) == "#FFFFFFFF");
     CHECK(ColorToHex(defaults.monsters.minion.color) == "#FFD43BFF");
     CHECK(ColorToHex(defaults.monsters.champion.color) == "#3D8BFFFF");
@@ -2639,6 +4313,30 @@ color = "#F02030EE"
     CHECK(defaults.immunities.haloThickness
         == DefaultImmunityHaloThickness);
     CHECK(ColorToHex(defaults.immunities.physical) == "#D8C39AFF");
+    CHECK(defaults.objects.enabled);
+    CHECK(defaults.objects.exitLabels.enabled);
+    CHECK(ColorToHex(defaults.objects.exitLabels.color) == "#FFD33DFF");
+    CHECK(defaults.objects.exitLabels.size == DefaultAutomapLabelSize);
+    CHECK(defaults.objects.shrineLabels.enabled);
+    CHECK(ColorToHex(defaults.objects.shrineLabels.color) == "#FFD33DFF");
+    CHECK(defaults.objects.shrineLabels.size == DefaultAutomapLabelSize);
+    CHECK(defaults.objects.chests.enabled);
+    CHECK(ColorToHex(defaults.objects.chests.outlineColor) == "#1450ADFF");
+    CHECK(ColorToHex(defaults.objects.chests.interiorColor) == "#B88A2AB0");
+    CHECK(ColorToHex(defaults.objects.chests.lockedAccentColor) == "#00FFFFFF");
+    CHECK(ColorToHex(defaults.objects.chests.trappedAccentColor) == "#FF3B30FF");
+    CHECK(defaults.objects.chests.size == DefaultAutomapObjectSize);
+    CHECK(defaults.objects.superChests.enabled);
+    CHECK(defaults.objects.superChests.starsEnabled);
+    CHECK(ColorToHex(defaults.objects.superChests.starsColor)
+        == "#FFD33DFF");
+    CHECK(defaults.objects.superChests.starsSize == DefaultAutomapLabelSize);
+    CHECK(defaults.objects.armorRacks.enabled);
+    CHECK(ColorToHex(defaults.objects.armorRacks.color) == "#3D8BFFFF");
+    CHECK(defaults.objects.armorRacks.size == DefaultAutomapObjectSize);
+    CHECK(defaults.objects.weaponRacks.enabled);
+    CHECK(ColorToHex(defaults.objects.weaponRacks.color) == "#FF8A24FF");
+    CHECK(defaults.objects.weaponRacks.size == DefaultAutomapObjectSize);
     CHECK(defaults.navigation.lineThickness
         == DefaultNavigationLineThickness);
     CHECK(defaults.navigation.waypoint.enabled);
@@ -2658,6 +4356,63 @@ color = "#F02030EE"
     CHECK(defaults.menu.rememberPosition);
     CHECK(defaults.menu.positionX == 0.86F);
     CHECK(defaults.menu.positionY == 0.04F);
+
+    const auto schema10ObjectPaletteMigration = ParseConfig(R"toml(
+schema_version = 10
+[objects.shrine_labels]
+color = "#FFBF1FFF"
+[objects.chests]
+color = "#D8C39AFF"
+locked_color = "#57E03DFF"
+)toml");
+    CHECK(ColorToHex(
+        schema10ObjectPaletteMigration.objects.shrineLabels.color)
+        == "#FFD33DFF");
+    CHECK(ColorToHex(
+        schema10ObjectPaletteMigration.objects.chests.interiorColor)
+        == "#B88A2AB0");
+    CHECK(ColorToHex(
+        schema10ObjectPaletteMigration.objects.chests.lockedAccentColor)
+        == "#00FFFFFF");
+
+    const auto schema13LockedStateMigration = ParseConfig(R"toml(
+schema_version = 13
+[objects.chests]
+locked_accent_color = "#D89B2BFF"
+)toml");
+    CHECK(ColorToHex(
+        schema13LockedStateMigration.objects.chests.lockedAccentColor)
+        == "#00FFFFFF");
+
+    const auto schema11ChestVisualMigration = ParseConfig(R"toml(
+schema_version = 11
+[objects.chests]
+color = "#B88A2AFF"
+[objects.super_chests]
+stars_color = "#FFFFFFFF"
+)toml");
+    CHECK(ColorToHex(
+        schema11ChestVisualMigration.objects.chests.interiorColor)
+        == "#B88A2AB0");
+    CHECK(ColorToHex(
+        schema11ChestVisualMigration.objects.superChests.starsColor)
+        == "#FFD33DFF");
+
+    const auto schema10CustomObjectPalette = ParseConfig(R"toml(
+schema_version = 10
+[objects.shrine_labels]
+color = "#12345678"
+[objects.chests]
+color = "#23456789"
+locked_color = "#3456789A"
+)toml");
+    CHECK(ColorToHex(schema10CustomObjectPalette.objects.shrineLabels.color)
+        == "#12345678");
+    CHECK(ColorToHex(schema10CustomObjectPalette.objects.chests.interiorColor)
+        == "#23456789");
+    CHECK(ColorToHex(
+        schema10CustomObjectPalette.objects.chests.lockedAccentColor)
+        == "#3456789A");
 
     const auto schema4GreyMigration = ParseConfig(R"toml(
 schema_version = 4
@@ -2826,7 +4581,7 @@ show_with_automap_only = true
     CHECK(ColorToHex(legacyRuntime.immunities.physical) == "#D8C39AFF");
 
     CHECK(Throws([] { ParseConfig(""); }));
-    CHECK(Throws([] { ParseConfig("schema_version = 10"); }));
+    CHECK(Throws([] { ParseConfig("schema_version = 15"); }));
     CHECK(Throws([] { ParseConfig("schema_version = true"); }));
     CHECK(Throws([] {
         ParseConfig(
@@ -2844,6 +4599,157 @@ show_with_automap_only = true
     CHECK(Throws([] {
         ParseConfig("schema_version = 1\n[diagnostics]\nverbose = true");
     }));
+    CHECK(Throws([] {
+        ParseConfig("schema_version = 9\n[objects]\nenabled = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 9\n[monsters.super_unique_boss]\n"
+            "show_names = false");
+    }));
+    CHECK(Throws([] {
+        ParseConfig("schema_version = 10\n[objects]\nunknown = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.exit_labels]\nunknown = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.shrine_labels]\nunknown = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 12\n[objects.waypoint_labels]\n"
+            "enabled = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 13\n[objects.waypoint_labels]\n"
+            "unknown = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.chests]\nunknown = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.super_chests]\nunknown = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.armor_racks]\nunknown = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.weapon_racks]\nunknown = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.exit_labels]\nsize = 7.5");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.shrine_labels]\nsize = 72.5");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 13\n[objects.waypoint_labels]\nsize = 7.5");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 13\n[objects.waypoint_labels]\nsize = 72.5");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.chests]\nsize = 5.5");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.super_chests]\nsize = 80.5");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.super_chests]\nstars_size = 7.5");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.super_chests]\nstars_size = 72.5");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.armor_racks]\nsize = 5.5");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.weapon_racks]\nsize = 80.5");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.chests]\nlocked_color = \"green\"");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[objects.super_chests]\n"
+            "stars_enabled = 1");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 12\n[objects.chests]\n"
+            "color = \"#FFFFFFFF\"");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 12\n[objects.super_chests]\n"
+            "size = 36");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[monsters.super_unique_boss]\n"
+            "name_size = 7.5");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 10\n[monsters.super_unique_boss]\n"
+            "name_size = 72.5");
+    }));
+    const auto objectRangeBoundaries = ParseConfig(R"toml(
+schema_version = 10
+[objects.exit_labels]
+size = 8
+[objects.shrine_labels]
+size = 72
+[objects.chests]
+size = 6
+[objects.super_chests]
+size = 80
+stars_size = 8
+[objects.armor_racks]
+size = 80
+[objects.weapon_racks]
+size = 6
+[monsters.super_unique_boss]
+name_size = 72
+)toml");
+    CHECK(objectRangeBoundaries.objects.exitLabels.size == 8.0F);
+    CHECK(objectRangeBoundaries.objects.shrineLabels.size == 72.0F);
+    CHECK(objectRangeBoundaries.objects.chests.size == 6.0F);
+    CHECK(objectRangeBoundaries.objects.superChests.starsSize == 8.0F);
+    CHECK(objectRangeBoundaries.objects.armorRacks.size == 80.0F);
+    CHECK(objectRangeBoundaries.objects.weaponRacks.size == 6.0F);
+    CHECK(objectRangeBoundaries.monsters.superUniqueBoss.nameSize == 72.0F);
+    const auto waypointLabelRangeBoundaries = ParseConfig(R"toml(
+schema_version = 13
+[objects.waypoint_labels]
+size = 8
+)toml");
+    CHECK(waypointLabelRangeBoundaries.objects.waypointLabels.size == 8.0F);
+    const auto waypointLabelMaximumBoundary = ParseConfig(R"toml(
+schema_version = 13
+[objects.waypoint_labels]
+size = 72
+)toml");
+    CHECK(waypointLabelMaximumBoundary.objects.waypointLabels.size == 72.0F);
     CHECK(Throws([] {
         ParseConfig("schema_version = 3\n[overlay]\nopacity = 1.5");
     }));
@@ -3308,6 +5214,19 @@ thickness = 5
     CHECK(!ShouldSubmitD3D12DrawData(0, 0));
     CHECK(!ShouldSubmitD3D12DrawData(1, 0));
     CHECK(ShouldSubmitD3D12DrawData(1, 3));
+    constexpr auto regularChestPlacement =
+        ComputePrimeMhChestImagePlacement(100.0F, 200.0F, 58.0F, false);
+    static_assert(regularChestPlacement.left == 71.0F);
+    static_assert(regularChestPlacement.top == 175.0F);
+    static_assert(regularChestPlacement.right == 129.0F);
+    static_assert(regularChestPlacement.bottom == 225.0F);
+    constexpr auto specialChestPlacement =
+        ComputePrimeMhChestImagePlacement(100.0F, 200.0F, 58.0F, true);
+    static_assert(specialChestPlacement.left == 64.0F);
+    static_assert(specialChestPlacement.top == 115.0F);
+    static_assert(specialChestPlacement.right == 133.0F);
+    static_assert(specialChestPlacement.bottom == 225.0F);
+    CHECK(regularChestPlacement.bottom == specialChestPlacement.bottom);
     static_assert(NativeSettingsTabs[0].tab == NativeSettingsTab::Map);
     static_assert(NativeSettingsTabs[1].tab == NativeSettingsTab::Monsters);
     static_assert(NativeSettingsTabs[2].tab == NativeSettingsTab::Navigation);
@@ -3328,6 +5247,15 @@ thickness = 5
     auto sameDotStyle = dotStyleWithHiddenThickness;
     sameDotStyle.thickness = MaximumMonsterMarkerThickness;
     CHECK(SameMonsterMarkerStyle(dotStyleWithHiddenThickness, sameDotStyle));
+    sameDotStyle.showNames = !dotStyleWithHiddenThickness.showNames;
+    CHECK(!SameMonsterMarkerStyle(dotStyleWithHiddenThickness, sameDotStyle));
+    sameDotStyle.showNames = dotStyleWithHiddenThickness.showNames;
+    sameDotStyle.nameColor = ParseColor("#12345678");
+    CHECK(!SameMonsterMarkerStyle(dotStyleWithHiddenThickness, sameDotStyle));
+    sameDotStyle.nameColor = dotStyleWithHiddenThickness.nameColor;
+    sameDotStyle.nameSize += 1.0F;
+    CHECK(!SameMonsterMarkerStyle(dotStyleWithHiddenThickness, sameDotStyle));
+    sameDotStyle.nameSize = dotStyleWithHiddenThickness.nameSize;
     dotStyleWithHiddenThickness.shape = MonsterMarkerShape::X;
     sameDotStyle.shape = MonsterMarkerShape::X;
     CHECK(!SameMonsterMarkerStyle(dotStyleWithHiddenThickness, sameDotStyle));
@@ -3420,6 +5348,25 @@ thickness = 5
     appliedSettings.monsters.normal.thickness = 3.0F;
     appliedSettings.monsters.normal.color = ParseColor("#ABCDEFCC");
     appliedSettings.monsters.normal.size = 14.0F;
+    appliedSettings.monsters.superUniqueBoss.showNames = false;
+    appliedSettings.monsters.superUniqueBoss.nameColor = ParseColor("#12345678");
+    appliedSettings.monsters.superUniqueBoss.nameSize = 21.0F;
+    appliedSettings.objects.enabled = false;
+    appliedSettings.objects.exitLabels.enabled = false;
+    appliedSettings.objects.exitLabels.color = ParseColor("#ABC123EF");
+    appliedSettings.objects.exitLabels.size = 11.0F;
+    appliedSettings.objects.waypointLabels.enabled = false;
+    appliedSettings.objects.waypointLabels.color = ParseColor("#11223344");
+    appliedSettings.objects.waypointLabels.size = 19.0F;
+    appliedSettings.objects.shrineLabels.enabled = false;
+    appliedSettings.featuresEnabled = false;
+    appliedSettings.objects.chests.lockedAccentColor =
+        ParseColor("#2468ACE0");
+    appliedSettings.objects.superChests.starsEnabled = false;
+    appliedSettings.objects.superChests.starsColor = ParseColor("#50607080");
+    appliedSettings.objects.superChests.starsSize = 31.0F;
+    appliedSettings.objects.armorRacks.size = 8.0F;
+    appliedSettings.objects.weaponRacks.color = ParseColor("#D0E0F0FF");
     appliedSettings.hud.sessionTimer = true;
     appliedSettings.menu.showLauncher = false;
     ApplyImmunityPalette(appliedSettings, ImmunityPalette::HighContrast);
@@ -3437,11 +5384,27 @@ thickness = 5
     draftModel.Discard();
     CHECK(!draftModel.Dirty());
     CHECK(!draftModel.Draft().enabled);
+    CHECK(!draftModel.Draft().featuresEnabled);
     CHECK(draftModel.Draft().overlay.opacity == 0.50F);
     CHECK(draftModel.Draft().monsters.normal.thickness == 3.0F);
     CHECK(draftModel.Draft().monsters.normal.size == 14.0F);
     CHECK(ColorToHex(draftModel.Draft().monsters.normal.color)
         == "#ABCDEFCC");
+    CHECK(!draftModel.Draft().monsters.superUniqueBoss.showNames);
+    CHECK(ColorToHex(draftModel.Draft().monsters.superUniqueBoss.nameColor)
+        == "#12345678");
+    CHECK(draftModel.Draft().monsters.superUniqueBoss.nameSize == 21.0F);
+    CHECK(!draftModel.Draft().objects.enabled);
+    CHECK(!draftModel.Draft().objects.exitLabels.enabled);
+    CHECK(ColorToHex(draftModel.Draft().objects.exitLabels.color)
+        == "#ABC123EF");
+    CHECK(!draftModel.Draft().objects.waypointLabels.enabled);
+    CHECK(ColorToHex(draftModel.Draft().objects.waypointLabels.color)
+        == "#11223344");
+    CHECK(draftModel.Draft().objects.waypointLabels.size == 19.0F);
+    CHECK(!draftModel.Draft().objects.superChests.starsEnabled);
+    CHECK(ColorToHex(draftModel.Draft().objects.superChests.starsColor)
+        == "#50607080");
 
     draftModel.Draft().immunities.style = ImmunityDisplayStyle::SplitHalo;
     CHECK(draftModel.Dirty());
@@ -3453,11 +5416,33 @@ thickness = 5
     draftModel.Draft().immunities.haloThickness = 4.0F;
     CHECK(draftModel.Dirty());
     draftModel.Discard();
+    draftModel.Draft().monsters.superUniqueBoss.showNames = true;
+    CHECK(draftModel.Dirty());
+    draftModel.Discard();
+    draftModel.Draft().objects.enabled = true;
+    CHECK(draftModel.Dirty());
+    draftModel.Discard();
+    draftModel.Draft().objects.exitLabels.size = 17.0F;
+    CHECK(draftModel.Dirty());
+    draftModel.Discard();
+    draftModel.Draft().objects.waypointLabels.enabled = true;
+    CHECK(draftModel.Dirty());
+    draftModel.Discard();
+    draftModel.Draft().objects.superChests.starsEnabled = true;
+    CHECK(draftModel.Dirty());
+    draftModel.Discard();
+    draftModel.Draft().objects.superChests.starsColor = ParseColor("#FFFFFFFF");
+    CHECK(draftModel.Dirty());
+    draftModel.Discard();
+    draftModel.Draft().objects.weaponRacks.color = ParseColor("#000000FF");
+    CHECK(draftModel.Dirty());
+    draftModel.Discard();
     CHECK(!draftModel.Dirty());
 
     draftModel.ResetToDefaults();
     CHECK(draftModel.Dirty());
     CHECK(draftModel.Draft().enabled);
+    CHECK(draftModel.Draft().featuresEnabled);
     CHECK(draftModel.Draft().overlay.opacity == 1.0F);
     CHECK(draftModel.Draft().overlay.scale == 1.0F);
     CHECK(draftModel.Draft().overlay.enabled);
@@ -3478,6 +5463,11 @@ thickness = 5
     CHECK(draftModel.Draft().monsters.champion.size == 20.0F);
     CHECK(draftModel.Draft().monsters.unique.size == 22.0F);
     CHECK(draftModel.Draft().monsters.superUniqueBoss.size == 24.0F);
+    CHECK(draftModel.Draft().monsters.superUniqueBoss.showNames);
+    CHECK(ColorToHex(draftModel.Draft().monsters.superUniqueBoss.nameColor)
+        == "#FFD33DFF");
+    CHECK(draftModel.Draft().monsters.superUniqueBoss.nameSize
+        == DefaultAutomapLabelSize);
     CHECK(draftModel.Draft().immunities.style
         == ImmunityDisplayStyle::ColoredI);
     CHECK(draftModel.Draft().immunities.indicatorSize
@@ -3486,6 +5476,20 @@ thickness = 5
         == DefaultImmunityHaloThickness);
     CHECK(ColorToHex(draftModel.Draft().immunities.physical)
         == "#D8C39AFF");
+    CHECK(draftModel.Draft().objects.enabled);
+    CHECK(draftModel.Draft().objects.exitLabels.enabled);
+    CHECK(ColorToHex(draftModel.Draft().objects.exitLabels.color)
+        == "#FFD33DFF");
+    CHECK(draftModel.Draft().objects.waypointLabels.enabled);
+    CHECK(ColorToHex(draftModel.Draft().objects.waypointLabels.color)
+        == "#FFD33DFF");
+    CHECK(draftModel.Draft().objects.waypointLabels.size
+        == DefaultAutomapLabelSize);
+    CHECK(draftModel.Draft().objects.superChests.starsEnabled);
+    CHECK(ColorToHex(draftModel.Draft().objects.superChests.starsColor)
+        == "#FFD33DFF");
+    CHECK(draftModel.Draft().objects.superChests.starsSize
+        == DefaultAutomapLabelSize);
     CHECK(draftModel.Draft().overlay.frameRate == 37);
     CHECK(!draftModel.Draft().overlay.followNativeAutomap);
     CHECK(draftModel.Draft().hud.sessionTimer);
@@ -3502,6 +5506,11 @@ thickness = 5
     CHECK(!newlyApplied.overlay.followNativeAutomap);
     CHECK(newlyApplied.monsters.normal.thickness == 2.0F);
     CHECK(newlyApplied.monsters.normal.size == 18.0F);
+    CHECK(newlyApplied.monsters.superUniqueBoss.showNames);
+    CHECK(newlyApplied.objects.enabled);
+    CHECK(newlyApplied.objects.exitLabels.enabled);
+    CHECK(newlyApplied.objects.waypointLabels.enabled);
+    CHECK(newlyApplied.objects.superChests.starsEnabled);
     CHECK(newlyApplied.hud.sessionTimer);
     CHECK(!newlyApplied.menu.showLauncher);
 
@@ -3515,6 +5524,7 @@ thickness = 5
             CHECK(shippedSchema.value_or(0) == CurrentConfigSchemaVersion);
             const auto shipped = ParseConfig(shippedDocument);
             CHECK(shipped.enabled);
+            CHECK(shipped.featuresEnabled);
             CHECK(!shipped.diagnostics);
             CHECK(shipped.overlay.opacity == 1.0F);
             CHECK(shippedText.find("detection_radius") == std::string::npos);
@@ -3545,6 +5555,11 @@ thickness = 5
             CHECK(ColorToHex(shipped.monsters.unique.color) == "#FF8A24FF");
             CHECK(ColorToHex(shipped.monsters.superUniqueBoss.color)
                 == "#FF3B30FF");
+            CHECK(shipped.monsters.superUniqueBoss.showNames);
+            CHECK(ColorToHex(shipped.monsters.superUniqueBoss.nameColor)
+                == "#FFD33DFF");
+            CHECK(shipped.monsters.superUniqueBoss.nameSize
+                == DefaultAutomapLabelSize);
             CHECK(shipped.immunities.enabled);
             CHECK(shipped.immunities.style
                 == ImmunityDisplayStyle::ColoredI);
@@ -3554,6 +5569,37 @@ thickness = 5
                 == DefaultImmunityHaloThickness);
             CHECK(ColorToHex(shipped.immunities.physical)
                 == "#D8C39AFF");
+            CHECK(shipped.objects.enabled);
+            CHECK(shipped.objects.exitLabels.enabled);
+            CHECK(ColorToHex(shipped.objects.exitLabels.color)
+                == "#FFD33DFF");
+            CHECK(shipped.objects.exitLabels.size
+                == DefaultAutomapLabelSize);
+            CHECK(shipped.objects.waypointLabels.enabled);
+            CHECK(ColorToHex(shipped.objects.waypointLabels.color)
+                == "#FFD33DFF");
+            CHECK(shipped.objects.waypointLabels.size
+                == DefaultAutomapLabelSize);
+            CHECK(shippedText.find("[objects.waypoint_labels]")
+                != std::string::npos);
+            CHECK(shipped.objects.shrineLabels.enabled);
+            CHECK(ColorToHex(shipped.objects.shrineLabels.color)
+                == "#FFD33DFF");
+            CHECK(shipped.objects.chests.enabled);
+            CHECK(ColorToHex(shipped.objects.chests.outlineColor)
+                == "#1450ADFF");
+            CHECK(ColorToHex(shipped.objects.chests.interiorColor)
+                == "#B88A2AB0");
+            CHECK(ColorToHex(shipped.objects.chests.lockedAccentColor)
+                == "#00FFFFFF");
+            CHECK(ColorToHex(shipped.objects.chests.trappedAccentColor)
+                == "#FF3B30FF");
+            CHECK(shipped.objects.superChests.enabled);
+            CHECK(shipped.objects.superChests.starsEnabled);
+            CHECK(ColorToHex(shipped.objects.superChests.starsColor)
+                == "#FFD33DFF");
+            CHECK(shipped.objects.armorRacks.enabled);
+            CHECK(shipped.objects.weaponRacks.enabled);
             CHECK(shipped.navigation.lineThickness == 2.0F);
             CHECK(shipped.navigation.waypoint.enabled);
             CHECK(ColorToHex(shipped.navigation.waypoint.color)

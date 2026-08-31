@@ -4,9 +4,11 @@
 #include "navigation_policy.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <span>
 
@@ -16,7 +18,25 @@ struct PluginContext;
 
 namespace RuffnecKk::MapSense {
 
+class MapSenseDataCatalog;
+
 namespace Detail {
+
+inline constexpr std::array<std::int32_t, 5U> TownLevelIds{
+    1,   // Rogue Encampment
+    40,  // Lut Gholein
+    75,  // Kurast Docks
+    103, // The Pandemonium Fortress
+    109, // Harrogath
+};
+
+// Waypoint labels add no navigation value inside D2R's five canonical towns.
+// Keep this owner-level policy independent of the player's current room so a
+// Reveal All capture cannot reintroduce a town label while viewed from outside.
+[[nodiscard]] constexpr auto AllowsWaypointLabelForLevel(
+        std::int32_t levelId) noexcept -> bool {
+    return std::ranges::find(TownLevelIds, levelId) == TownLevelIds.end();
+}
 
 struct NavigationWaypointPresetCandidate final {
     std::int32_t nativeTileX{};
@@ -51,6 +71,7 @@ struct NavigationOutdoorOpening final {
     std::int32_t subtileX{};
     std::int32_t subtileY{};
     std::int32_t spanSubtiles{};
+    NavigationExitBoundaryIdentity boundaryIdentity{};
 };
 
 inline constexpr std::int32_t NavigationSubtilesPerGameTile = 5;
@@ -159,6 +180,8 @@ struct NavigationExitSelection final {
     NavigationExitCandidate candidate{};
     NavigationExitEvidence evidence{NavigationExitEvidence::OutdoorCollision};
     std::int32_t spanSubtiles{};
+    NavigationExitBoundaryIdentity boundaryIdentity{};
+    bool canonicalLevelPairAnchor{};
 };
 
 // Native waypoint output is quantized to game tiles. The exact endpoint must
@@ -181,6 +204,44 @@ struct NavigationExitSelection final {
         return candidate;
     }
     return std::nullopt;
+}
+
+struct PassiveWaypointPresetSelection final {
+    std::optional<NavigationWaypointPresetCandidate> exact{};
+    bool pending{true};
+};
+
+// Passive reveal-wide collection has no native tile result to disambiguate a
+// room. A complete traversal proves absence when it finds zero waypoint
+// presets; it may publish one valid preset, while multiple or an incomplete
+// room chain keeps the existing owner definition.
+[[nodiscard]] inline auto SelectPassiveWaypointPreset(
+        std::span<const NavigationWaypointPresetCandidate> candidates,
+        bool hasIncompleteRoom) noexcept -> PassiveWaypointPresetSelection {
+    if (hasIncompleteRoom || candidates.size() > 1U
+        || (candidates.size() == 1U
+            && (candidates.front().subtileX < 0
+                || candidates.front().subtileY < 0))) {
+        return {};
+    }
+    if (candidates.empty()) {
+        return {.exact = std::nullopt, .pending = false};
+    }
+    return {.exact = candidates.front(), .pending = false};
+}
+
+struct PassivePoiPublicationPolicy final {
+    bool publishExitLabels{};
+    bool publishWaypoint{};
+};
+
+[[nodiscard]] constexpr auto MakePassivePoiPublicationPolicy(
+        bool pendingExits,
+        bool pendingWaypoint) noexcept -> PassivePoiPublicationPolicy {
+    return {
+        .publishExitLabels = !pendingExits,
+        .publishWaypoint = !pendingWaypoint,
+    };
 }
 
 // A type-5 PresetUnit stores the source-side LvlWarp id. RoomTile+0 points to
@@ -547,8 +608,11 @@ struct NavigationExitSelection final {
         std::span<const NavigationBoundarySpan> targetSpans,
         NavigationOutdoorOpening& output,
         NavigationOutdoorOpeningSelectionPolicy selectionPolicy =
-            NavigationOutdoorOpeningSelectionPolicy::RequireUnique) noexcept
+            NavigationOutdoorOpeningSelectionPolicy::RequireUnique,
+        std::span<NavigationOutdoorOpening> collectedOpenings = {},
+        std::size_t* collectedOpeningCount = nullptr) noexcept
         -> NavigationOutdoorBoundaryMatchResult {
+    if (collectedOpeningCount != nullptr) *collectedOpeningCount = 0U;
     if (targetLevelId <= 0
         || sourceBounds.left < 0 || sourceBounds.top < 0
         || sourceBounds.right <= sourceBounds.left
@@ -584,23 +648,147 @@ struct NavigationExitSelection final {
     std::int32_t candidateFixedSubtile{-1};
     std::int32_t candidateStart{};
     std::int32_t candidateEnd{};
+    NavigationOutdoorOpening candidateOpening{};
+    bool invalidCandidate{};
+    bool collectionOverflow{};
+    const auto makeOpening = [&sourceBounds](
+            NavigationBoundarySide side,
+            std::int32_t fixedCoordinate,
+            std::int32_t start,
+            std::int32_t end,
+            NavigationOutdoorOpening& opening) noexcept -> bool {
+        const auto midpoint = start + (end - start) / 2;
+        const auto fixedSubtile = fixedCoordinate >= 0
+            ? fixedCoordinate
+            : side == NavigationBoundarySide::Left
+                ? sourceBounds.left
+                : side == NavigationBoundarySide::Right
+                    ? sourceBounds.right
+                    : side == NavigationBoundarySide::Top
+                        ? sourceBounds.top
+                        : sourceBounds.bottom;
+        switch (side) {
+            case NavigationBoundarySide::Left:
+                if (fixedSubtile < sourceBounds.left
+                    || fixedSubtile >= sourceBounds.right
+                    || start < sourceBounds.top
+                    || end > sourceBounds.bottom) {
+                    return false;
+                }
+                opening = {
+                    .subtileX = fixedSubtile,
+                    .subtileY = midpoint,
+                    .spanSubtiles = end - start,
+                };
+                return true;
+            case NavigationBoundarySide::Right:
+                if (fixedSubtile <= sourceBounds.left
+                    || fixedSubtile > sourceBounds.right
+                    || start < sourceBounds.top
+                    || end > sourceBounds.bottom) {
+                    return false;
+                }
+                opening = {
+                    .subtileX = fixedSubtile - 1,
+                    .subtileY = midpoint,
+                    .spanSubtiles = end - start,
+                };
+                return true;
+            case NavigationBoundarySide::Top:
+                if (fixedSubtile < sourceBounds.top
+                    || fixedSubtile >= sourceBounds.bottom
+                    || start < sourceBounds.left
+                    || end > sourceBounds.right) {
+                    return false;
+                }
+                opening = {
+                    .subtileX = midpoint,
+                    .subtileY = fixedSubtile,
+                    .spanSubtiles = end - start,
+                };
+                return true;
+            case NavigationBoundarySide::Bottom:
+                if (fixedSubtile <= sourceBounds.top
+                    || fixedSubtile > sourceBounds.bottom
+                    || start < sourceBounds.left
+                    || end > sourceBounds.right) {
+                    return false;
+                }
+                opening = {
+                    .subtileX = midpoint,
+                    .subtileY = fixedSubtile - 1,
+                    .spanSubtiles = end - start,
+                };
+                return true;
+        }
+        return false;
+    };
     const auto accept = [&hasCandidate,
             &candidateSide,
             &candidateFixedSubtile,
             &candidateStart,
             &candidateEnd,
+            &candidateOpening,
             &candidateIsAmbiguous,
+            &invalidCandidate,
+            &collectionOverflow,
+            &makeOpening,
+            collectedOpenings,
+            collectedOpeningCount,
             selectionPolicy](const NavigationBoundarySpan& span,
             std::int32_t start,
             std::int32_t end) noexcept {
         const auto spanLength = end - start;
         if (spanLength < 3) return;
+        NavigationOutdoorOpening opening{};
+        if (!makeOpening(
+                span.side,
+                span.fixedSubtile,
+                start,
+                end,
+                opening)) {
+            invalidCandidate = true;
+            return;
+        }
+        if (span.fixedSubtile >= 0) {
+            opening.boundaryIdentity = {
+                .axis = span.side == NavigationBoundarySide::Left
+                        || span.side == NavigationBoundarySide::Right
+                    ? NavigationBoundaryAxis::Vertical
+                    : NavigationBoundaryAxis::Horizontal,
+                .fixedSubtile = span.fixedSubtile,
+                .startSubtile = start,
+                .endSubtile = end,
+            };
+        }
+        if (collectedOpeningCount != nullptr) {
+            auto duplicate = false;
+            for (std::size_t index = 0U;
+                    index < *collectedOpeningCount;
+                    ++index) {
+                const auto& existing = collectedOpenings[index];
+                if (existing.subtileX == opening.subtileX
+                    && existing.subtileY == opening.subtileY
+                    && existing.spanSubtiles == opening.spanSubtiles) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (!duplicate) {
+                if (*collectedOpeningCount >= collectedOpenings.size()) {
+                    collectionOverflow = true;
+                    return;
+                }
+                collectedOpenings[(*collectedOpeningCount)++] = opening;
+            }
+        }
         if (!hasCandidate) {
             hasCandidate = true;
             candidateSide = span.side;
             candidateFixedSubtile = span.fixedSubtile;
             candidateStart = start;
             candidateEnd = end;
+            candidateOpening = opening;
             candidateIsAmbiguous = false;
             return;
         }
@@ -686,6 +874,9 @@ struct NavigationExitSelection final {
         if (source.endSubtile <= target.endSubtile) ++sourceIndex;
         if (target.endSubtile <= source.endSubtile) ++targetIndex;
     }
+    if (invalidCandidate || collectionOverflow) {
+        return NavigationOutdoorBoundaryMatchResult::Invalid;
+    }
     if (!hasCandidate) {
         return NavigationOutdoorBoundaryMatchResult::NotFound;
     }
@@ -693,77 +884,52 @@ struct NavigationExitSelection final {
         return NavigationOutdoorBoundaryMatchResult::Ambiguous;
     }
 
-    const auto midpoint = candidateStart
-        + (candidateEnd - candidateStart) / 2;
-    const auto fixedSubtile = candidateFixedSubtile >= 0
-        ? candidateFixedSubtile
-        : candidateSide == NavigationBoundarySide::Left
-            ? sourceBounds.left
-            : candidateSide == NavigationBoundarySide::Right
-                ? sourceBounds.right
-                : candidateSide == NavigationBoundarySide::Top
-                    ? sourceBounds.top
-                    : sourceBounds.bottom;
-    switch (candidateSide) {
-        case NavigationBoundarySide::Left:
-            if (fixedSubtile < sourceBounds.left
-                || fixedSubtile >= sourceBounds.right
-                || candidateStart < sourceBounds.top
-                || candidateEnd > sourceBounds.bottom) {
-                return NavigationOutdoorBoundaryMatchResult::Invalid;
-            }
-            output = {
-                .subtileX = fixedSubtile,
-                .subtileY = midpoint,
-                .spanSubtiles = candidateEnd - candidateStart,
-            };
-            break;
-        case NavigationBoundarySide::Right:
-            if (fixedSubtile <= sourceBounds.left
-                || fixedSubtile > sourceBounds.right
-                || candidateStart < sourceBounds.top
-                || candidateEnd > sourceBounds.bottom) {
-                return NavigationOutdoorBoundaryMatchResult::Invalid;
-            }
-            output = {
-                .subtileX = fixedSubtile - 1,
-                .subtileY = midpoint,
-                .spanSubtiles = candidateEnd - candidateStart,
-            };
-            break;
-        case NavigationBoundarySide::Top:
-            if (fixedSubtile < sourceBounds.top
-                || fixedSubtile >= sourceBounds.bottom
-                || candidateStart < sourceBounds.left
-                || candidateEnd > sourceBounds.right) {
-                return NavigationOutdoorBoundaryMatchResult::Invalid;
-            }
-            output = {
-                .subtileX = midpoint,
-                .subtileY = fixedSubtile,
-                .spanSubtiles = candidateEnd - candidateStart,
-            };
-            break;
-        case NavigationBoundarySide::Bottom:
-            if (fixedSubtile <= sourceBounds.top
-                || fixedSubtile > sourceBounds.bottom
-                || candidateStart < sourceBounds.left
-                || candidateEnd > sourceBounds.right) {
-                return NavigationOutdoorBoundaryMatchResult::Invalid;
-            }
-            output = {
-                .subtileX = midpoint,
-                .subtileY = fixedSubtile - 1,
-                .spanSubtiles = candidateEnd - candidateStart,
-            };
-            break;
-    }
+    output = candidateOpening;
     return NavigationOutdoorBoundaryMatchResult::Found;
 }
 
-// One destination is published per target level. An exact active runtime
-// object wins over generated boss/quest presets, which win over RoomTile and
-// outdoor collision evidence; equal evidence uses a stable tie-breaker.
+[[nodiscard]] constexpr auto StrongerExitSelection(
+        const NavigationExitSelection& incoming,
+        const NavigationExitSelection& existing) noexcept -> bool {
+    if (incoming.canonicalLevelPairAnchor
+            != existing.canonicalLevelPairAnchor) {
+        return incoming.canonicalLevelPairAnchor;
+    }
+    const auto incomingEvidence = static_cast<std::uint8_t>(
+        incoming.evidence);
+    const auto existingEvidence = static_cast<std::uint8_t>(
+        existing.evidence);
+    const auto& candidate = incoming.candidate;
+    if (incomingEvidence != existingEvidence) {
+        return incomingEvidence > existingEvidence;
+    }
+    if (incoming.spanSubtiles != existing.spanSubtiles) {
+        return incoming.spanSubtiles > existing.spanSubtiles;
+    }
+    const auto& previous = existing.candidate;
+    if (candidate.subtileX != previous.subtileX) {
+        return candidate.subtileX < previous.subtileX;
+    }
+    if (candidate.subtileY != previous.subtileY) {
+        return candidate.subtileY < previous.subtileY;
+    }
+    if (candidate.useExactClientCoordinates
+            != previous.useExactClientCoordinates) {
+        return candidate.useExactClientCoordinates;
+    }
+    if (candidate.exactClientX != previous.exactClientX) {
+        return candidate.exactClientX < previous.exactClientX;
+    }
+    if (candidate.exactClientY != previous.exactClientY) {
+        return candidate.exactClientY < previous.exactClientY;
+    }
+    return candidate.destinationId < previous.destinationId;
+}
+
+// One navigation destination is published per target level. An exact active
+// runtime object wins over generated boss/quest presets, which win over
+// RoomTile and outdoor collision evidence; equal evidence uses a stable
+// tie-breaker.
 [[nodiscard]] inline auto UpsertExitSelection(
         std::int32_t currentLevelId,
         std::span<NavigationExitSelection> selections,
@@ -781,25 +947,191 @@ struct NavigationExitSelection final {
         if (existing.candidate.targetLevelId != candidate.targetLevelId) {
             continue;
         }
-        const auto incomingEvidence = static_cast<std::uint8_t>(
-            incoming.evidence);
-        const auto existingEvidence = static_cast<std::uint8_t>(
-            existing.evidence);
-        const auto replace = incomingEvidence > existingEvidence
-            || (incomingEvidence == existingEvidence
-                && (incoming.spanSubtiles > existing.spanSubtiles
-                    || (incoming.spanSubtiles == existing.spanSubtiles
-                        && (candidate.subtileX
-                                < existing.candidate.subtileX
-                            || (candidate.subtileX
-                                    == existing.candidate.subtileX
-                                && candidate.subtileY
-                                    < existing.candidate.subtileY)))));
-        if (replace) existing = incoming;
+        if (StrongerExitSelection(incoming, existing)) existing = incoming;
         return true;
     }
     if (count >= selections.size()) return false;
     selections[count++] = incoming;
+    return true;
+}
+
+inline constexpr std::int32_t ExitLabelEvidenceClusterSubtiles = 10;
+
+struct NavigationPhysicalExitSelection final {
+    NavigationExitSelection winner{};
+    std::int32_t anchorSubtileX{};
+    std::int32_t anchorSubtileY{};
+    NavigationExitBoundaryIdentity boundaryIdentity{};
+};
+
+// Preserve raw physical evidence until enumeration is complete. Exact duplicate
+// coordinates are reduced immediately, but spatial clustering is deliberately
+// deferred so native traversal order cannot affect the result.
+[[nodiscard]] inline auto AppendPhysicalExitEvidence(
+        std::int32_t currentLevelId,
+        std::span<NavigationExitSelection> evidence,
+        std::size_t& count,
+        NavigationExitSelection incoming) noexcept -> bool {
+    const auto& candidate = incoming.candidate;
+    if (currentLevelId <= 0
+        || candidate.targetLevelId <= 0
+        || candidate.targetLevelId == currentLevelId
+        || candidate.subtileX < 0 || candidate.subtileY < 0) {
+        return false;
+    }
+    for (std::size_t index = 0U; index < count; ++index) {
+        auto& existing = evidence[index];
+        if (existing.candidate.targetLevelId != candidate.targetLevelId
+            || existing.candidate.subtileX != candidate.subtileX
+            || existing.candidate.subtileY != candidate.subtileY) {
+            continue;
+        }
+        if (existing.boundaryIdentity.Valid()
+                && incoming.boundaryIdentity.Valid()
+                && existing.boundaryIdentity != incoming.boundaryIdentity) {
+            continue;
+        }
+        // Coordinate de-duplication can combine a strong RoomTile/runtime
+        // witness with the outdoor collision witness that owns the stable seam
+        // identity. Select the stronger display point without throwing away
+        // that structural key; otherwise the later reciprocal reduction falls
+        // back to a fragile distance cluster.
+        const auto retainedBoundaryIdentity =
+            existing.boundaryIdentity.Valid()
+                ? existing.boundaryIdentity
+                : incoming.boundaryIdentity;
+        if (StrongerExitSelection(incoming, existing)) existing = incoming;
+        if (!existing.boundaryIdentity.Valid()
+                && retainedBoundaryIdentity.Valid()) {
+            existing.boundaryIdentity = retainedBoundaryIdentity;
+        }
+        return true;
+    }
+    if (count >= evidence.size()) return false;
+    evidence[count++] = incoming;
+    return true;
+}
+
+// Labels retain distinct physical exits even when several lead to the same
+// target. A proven boundary identity is authoritative regardless of projected
+// distance; the legacy fixed spatial anchor is used only when either piece of
+// evidence lacks that identity. A stronger winner never moves the anchor or
+// erases a proven seam, keeping the reduction deterministic and preventing
+// transitive A-near-B-near-C chains from absorbing A and C.
+[[nodiscard]] inline auto ReducePhysicalExitEvidence(
+        std::span<NavigationExitSelection> evidence,
+        std::size_t evidenceCount,
+        std::span<NavigationPhysicalExitSelection> selections,
+        std::size_t& selectionCount) noexcept -> bool {
+    selectionCount = 0U;
+    if (evidenceCount > evidence.size()) return false;
+    std::sort(
+        evidence.begin(),
+        evidence.begin() + static_cast<std::ptrdiff_t>(evidenceCount),
+        [](const NavigationExitSelection& left,
+                const NavigationExitSelection& right) noexcept {
+            const auto& a = left.candidate;
+            const auto& b = right.candidate;
+            if (a.targetLevelId != b.targetLevelId) {
+                return a.targetLevelId < b.targetLevelId;
+            }
+            if (left.canonicalLevelPairAnchor
+                    != right.canonicalLevelPairAnchor) {
+                return left.canonicalLevelPairAnchor;
+            }
+            const auto leftIdentity = left.boundaryIdentity.Valid();
+            const auto rightIdentity = right.boundaryIdentity.Valid();
+            if (leftIdentity != rightIdentity) return leftIdentity;
+            if (leftIdentity) {
+                if (left.boundaryIdentity.axis
+                        != right.boundaryIdentity.axis) {
+                    return static_cast<std::uint8_t>(
+                        left.boundaryIdentity.axis)
+                        < static_cast<std::uint8_t>(
+                            right.boundaryIdentity.axis);
+                }
+                if (left.boundaryIdentity.fixedSubtile
+                        != right.boundaryIdentity.fixedSubtile) {
+                    return left.boundaryIdentity.fixedSubtile
+                        < right.boundaryIdentity.fixedSubtile;
+                }
+                if (left.boundaryIdentity.startSubtile
+                        != right.boundaryIdentity.startSubtile) {
+                    return left.boundaryIdentity.startSubtile
+                        < right.boundaryIdentity.startSubtile;
+                }
+                if (left.boundaryIdentity.endSubtile
+                        != right.boundaryIdentity.endSubtile) {
+                    return left.boundaryIdentity.endSubtile
+                        < right.boundaryIdentity.endSubtile;
+                }
+            }
+            if (a.subtileX != b.subtileX) return a.subtileX < b.subtileX;
+            if (a.subtileY != b.subtileY) return a.subtileY < b.subtileY;
+            if (left.evidence != right.evidence) {
+                return static_cast<std::uint8_t>(left.evidence)
+                    > static_cast<std::uint8_t>(right.evidence);
+            }
+            if (left.spanSubtiles != right.spanSubtiles) {
+                return left.spanSubtiles > right.spanSubtiles;
+            }
+            return a.destinationId < b.destinationId;
+        });
+    for (std::size_t evidenceIndex = 0U;
+            evidenceIndex < evidenceCount;
+            ++evidenceIndex) {
+        const auto& incoming = evidence[evidenceIndex];
+        const auto& candidate = incoming.candidate;
+        NavigationPhysicalExitSelection* cluster{};
+        for (std::size_t selectionIndex = 0U;
+                selectionIndex < selectionCount;
+                ++selectionIndex) {
+            auto& existing = selections[selectionIndex];
+            if (existing.winner.candidate.targetLevelId
+                    != candidate.targetLevelId) {
+                continue;
+            }
+            const auto incomingIdentity = incoming.boundaryIdentity.Valid();
+            const auto existingIdentity = existing.boundaryIdentity.Valid();
+            if (incomingIdentity && existingIdentity) {
+                if (incoming.boundaryIdentity
+                        != existing.boundaryIdentity) {
+                    continue;
+                }
+                cluster = &existing;
+                break;
+            }
+            const auto deltaX = static_cast<std::int64_t>(candidate.subtileX)
+                - static_cast<std::int64_t>(existing.anchorSubtileX);
+            const auto deltaY = static_cast<std::int64_t>(candidate.subtileY)
+                - static_cast<std::int64_t>(existing.anchorSubtileY);
+            if (deltaX < -ExitLabelEvidenceClusterSubtiles
+                || deltaX > ExitLabelEvidenceClusterSubtiles
+                || deltaY < -ExitLabelEvidenceClusterSubtiles
+                || deltaY > ExitLabelEvidenceClusterSubtiles) {
+                continue;
+            }
+            cluster = &existing;
+            break;
+        }
+        if (cluster != nullptr) {
+            if (!cluster->boundaryIdentity.Valid()
+                    && incoming.boundaryIdentity.Valid()) {
+                cluster->boundaryIdentity = incoming.boundaryIdentity;
+            }
+            if (StrongerExitSelection(incoming, cluster->winner)) {
+                cluster->winner = incoming;
+            }
+            continue;
+        }
+        if (selectionCount >= selections.size()) return false;
+        selections[selectionCount++] = {
+            .winner = incoming,
+            .anchorSubtileX = candidate.subtileX,
+            .anchorSubtileY = candidate.subtileY,
+            .boundaryIdentity = incoming.boundaryIdentity,
+        };
+    }
     return true;
 }
 
@@ -836,6 +1168,8 @@ struct NavigationResolverCounters final {
 [[nodiscard]] auto InitializeNavigationResolver(
     const D2RL::PluginContext* context,
     bool diagnostics) noexcept -> bool;
+[[nodiscard]] auto BindNavigationResolverCatalog(
+    std::shared_ptr<const MapSenseDataCatalog> catalog) noexcept -> bool;
 void ShutdownNavigationResolver() noexcept;
 
 // Runs only from D2RLoader's gameplay/UI thread. UnknownNavigationLevelId lets
@@ -846,6 +1180,22 @@ void ShutdownNavigationResolver() noexcept;
     std::int32_t expectedLevelId,
     std::span<const CustomLevelTarget> customTargets) noexcept
     -> NavigationRefreshResult;
+
+// Called synchronously from MapSense's already-owned DRLG_InitLevel hook,
+// immediately after D2R has materialized a generated level. D2RCore may unload
+// those rooms again before revealmap returns, so this is the authoritative
+// window for retaining every revealed exit and waypoint definition.
+[[nodiscard]] auto ObserveInitializedClientLevelPoiDefinitions(
+    std::uint64_t sessionGeneration,
+    std::uint8_t dataContext,
+    void* level) noexcept -> bool;
+
+// Enumerates every generated Level currently linked into the active client
+// DRLG after D2RCore's revealmap operation. It publishes only static POI
+// definitions; navigation lines remain owned by RefreshNavigationDestinations and
+// stay scoped to the player's current level.
+[[nodiscard]] auto RefreshRevealedActPoiDefinitions(
+    std::uint64_t sessionGeneration) noexcept -> NavigationRefreshResult;
 
 [[nodiscard]] auto IsNavigationResolverActive() noexcept -> bool;
 [[nodiscard]] auto GetNavigationResolverCounters() noexcept

@@ -11,6 +11,8 @@
 
 #include <cstdint>
 
+struct ImFont;
+
 namespace RuffnecKk::MapSense {
 
 // Tab is owned exclusively by D2R's native automap. This policy is evaluated
@@ -70,6 +72,58 @@ struct D3D12ImGuiPanelBounds {
     float bottom{};
 };
 
+struct D3D12ImGuiTextureView {
+    std::uint64_t textureId{};
+    std::uint32_t width{};
+    std::uint32_t height{};
+
+    [[nodiscard]] constexpr explicit operator bool() const noexcept {
+        return textureId != 0U && width != 0U && height != 0U;
+    }
+};
+
+struct PrimeMhChestImagePlacement {
+    float left{};
+    float top{};
+    float right{};
+    float bottom{};
+};
+
+// PrimeMH's regular chest occupies 58x50 pixels. Its 69x110 special-chest
+// image embeds the same chest at source offset (7,60), with its exact stars
+// above it. Anchor both images on the center of the chest itself rather than
+// on the center of the taller special-chest canvas.
+[[nodiscard]] constexpr auto ComputePrimeMhChestImagePlacement(
+        float centerX,
+        float centerY,
+        float chestWidth,
+        bool specialChest) noexcept -> PrimeMhChestImagePlacement {
+    if (chestWidth <= 0.0F) return {};
+    constexpr float regularWidth = 58.0F;
+    const float scale = chestWidth / regularWidth;
+    if (!specialChest) {
+        constexpr float regularHeight = 50.0F;
+        return {
+            centerX - regularWidth * 0.5F * scale,
+            centerY - regularHeight * 0.5F * scale,
+            centerX + regularWidth * 0.5F * scale,
+            centerY + regularHeight * 0.5F * scale,
+        };
+    }
+    constexpr float specialWidth = 69.0F;
+    constexpr float specialHeight = 110.0F;
+    constexpr float embeddedChestCenterX = 7.0F + regularWidth * 0.5F;
+    constexpr float embeddedChestCenterY = 60.0F + 50.0F * 0.5F;
+    const float left = centerX - embeddedChestCenterX * scale;
+    const float top = centerY - embeddedChestCenterY * scale;
+    return {
+        left,
+        top,
+        left + specialWidth * scale,
+        top + specialHeight * scale,
+    };
+}
+
 // The callback runs on D2R's Present thread between ImGui::NewFrame() and
 // ImGui::Render(). It may change *open (for example, from a close button) and
 // must return the complete interactive bounds of the rendered surface.
@@ -122,9 +176,19 @@ struct D3D12ImGuiHostStatus {
     bool commandQueueReady{};
     bool rendererInitialized{};
     bool inputSubclassInstalled{};
+    bool primeMhChestTexturesReady{};
     bool menuOpen{};
     HWND gameWindow{};
 };
+
+// Configure a player-owned D2R font before host initialization. The host
+// copies the path and preloads the bytes before any Present hook can run.
+// Passing nullptr clears the optional font and preserves the localized system
+// fallback used by the menu and unsupported scripts.
+void SetD3D12ImGuiAutomapFontPath(const wchar_t* path) noexcept;
+[[nodiscard]] auto GetD3D12ImGuiAutomapFont() noexcept -> ImFont*;
+[[nodiscard]] auto GetD3D12ImGuiPrimeMhChestTexture(
+    bool specialChest) noexcept -> D3D12ImGuiTextureView;
 
 // Stores the callbacks and attempts to install the process-wide D3D12 hooks.
 // It is safe to call this repeatedly from a short-lived plugin retry worker;

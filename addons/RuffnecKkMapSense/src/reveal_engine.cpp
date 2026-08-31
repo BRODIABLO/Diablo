@@ -1,6 +1,7 @@
 #include "reveal_engine.hpp"
 
 #include <D2RLPlugin/api.h>
+#include <D2RLPlugin/core_exports.h>
 
 #include <Windows.h>
 
@@ -8,6 +9,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 namespace RuffnecKk::MapSense {
 namespace {
@@ -20,6 +22,7 @@ constexpr std::uintptr_t CreateActiveRoomRva = 0x3289A0;
 constexpr std::uintptr_t PathGetRoomRva = 0x341C30;
 constexpr std::uintptr_t StandardAutomapCallbackRva = 0x0D2240;
 constexpr std::uintptr_t ClientDrlgDifficultyWitnessRva = 0x32766A;
+constexpr char SupportedCoreVersion[] = "1.1.0-beta";
 
 constexpr std::size_t UnitTypeOffset = 0x00;
 constexpr std::size_t UnitDynamicPathOffset = 0x38;
@@ -50,6 +53,8 @@ InitLevelFn OriginalInitLevel{};
 GetLevelFn GetLevel{};
 CreateActiveRoomFn CreateActiveRoom{};
 PathGetRoomFn PathGetRoom{};
+D2RL::CoreExports::IsInGameFn IsInGame{};
+D2RL::CoreExports::ExecuteConsoleCommandFn ExecuteConsoleCommand{};
 
 std::atomic_bool Active{};
 std::atomic_bool RevealAllArmed{};
@@ -60,6 +65,32 @@ std::atomic_uint64_t LevelsRevealed{};
 std::atomic_uint64_t RoomsRevealed{};
 std::atomic_uint64_t RevealFailures{};
 std::atomic_uint64_t TraversalLimits{};
+std::atomic<RevealLevelInitializedCallback> LevelInitializedCallback{};
+std::atomic<void*> LevelInitializedUserData{};
+
+auto ResolveCoreBridge() noexcept -> bool {
+    const HMODULE core = GetModuleHandleA(D2RL::CoreExports::CoreDllName);
+    if (core == nullptr) return false;
+    const auto version = reinterpret_cast<D2RL::CoreExports::VersionFn>(
+        GetProcAddress(core, D2RL::CoreExports::VersionInfo.name));
+    IsInGame = reinterpret_cast<D2RL::CoreExports::IsInGameFn>(
+        GetProcAddress(core, D2RL::CoreExports::IsInGameInfo.name));
+    ExecuteConsoleCommand =
+        reinterpret_cast<D2RL::CoreExports::ExecuteConsoleCommandFn>(
+            GetProcAddress(core,
+                D2RL::CoreExports::ExecuteConsoleCommandInfo.name));
+    if (version == nullptr || IsInGame == nullptr
+        || ExecuteConsoleCommand == nullptr) return false;
+    const char* const activeVersion = version();
+    return activeVersion != nullptr
+        && std::strcmp(activeVersion, SupportedCoreVersion) == 0;
+}
+
+auto SubmitNativeActReveal() noexcept -> bool {
+    return IsInGame != nullptr && IsInGame()
+        && ExecuteConsoleCommand != nullptr
+        && ExecuteConsoleCommand("revealmap");
+}
 
 class ClientDrlgLockGuard {
 public:
@@ -276,6 +307,14 @@ __declspec(noinline) void __fastcall HookInitLevel(
     original(dataContext, level);
     if (!Active.load(std::memory_order_acquire)) return;
     CaptureClientDrlg(dataContext, level);
+    const auto callback = LevelInitializedCallback.load(
+        std::memory_order_acquire);
+    if (callback != nullptr) {
+        callback(
+            dataContext,
+            level,
+            LevelInitializedUserData.load(std::memory_order_acquire));
+    }
 }
 
 auto ValidateRuntime() noexcept -> bool {
@@ -348,6 +387,13 @@ auto InitializeRevealEngine(
     (void)diagnostics;
     RevealAllArmed.store(false, std::memory_order_release);
     ResetRevealSession();
+    if (!ResolveCoreBridge()) {
+        Context->LogError(
+            "MapSense: D2RCore 1.1.0-beta reveal command bridge is unavailable.");
+        Context = nullptr;
+        Base = nullptr;
+        return false;
+    }
     if (!ValidateRuntime()) {
         Context->LogError(
             "MapSense: D2R automap native fingerprint or ABI mismatch; plugin refused.");
@@ -382,8 +428,21 @@ auto InitializeRevealEngine(
     return true;
 }
 
+void SetRevealLevelInitializedCallback(
+        RevealLevelInitializedCallback callback,
+        void* userData) noexcept {
+    if (callback == nullptr) {
+        LevelInitializedCallback.store(nullptr, std::memory_order_release);
+        LevelInitializedUserData.store(nullptr, std::memory_order_release);
+        return;
+    }
+    LevelInitializedUserData.store(userData, std::memory_order_release);
+    LevelInitializedCallback.store(callback, std::memory_order_release);
+}
+
 void ShutdownRevealEngine() noexcept {
     Active.store(false, std::memory_order_release);
+    SetRevealLevelInitializedCallback(nullptr, nullptr);
     RevealAllArmed.store(false, std::memory_order_release);
     ResetRevealSession();
     // D2RLoader owns the inline hook and restores it after the plugin unload
@@ -449,10 +508,26 @@ auto MaterializeClientRoom(
 }
 
 auto RevealCurrentAct() noexcept -> RevealOutcome {
-    // Reveal Act is a persistence policy in plugin.cpp. Its immediate native
-    // operation is deliberately restricted to the current client level;
-    // subsequent levels in that act are revealed as they become active.
-    return RevealCurrentZone();
+    if (!Active.load(std::memory_order_acquire)) {
+        return RevealOutcome::Unavailable;
+    }
+    if (SubmitNativeActReveal()) return RevealOutcome::Complete;
+    RevealFailures.fetch_add(1, std::memory_order_relaxed);
+    return RevealOutcome::Unavailable;
+}
+
+auto ArmRevealAll() noexcept -> RevealOutcome {
+    if (!Active.load(std::memory_order_acquire)) {
+        return RevealOutcome::Unavailable;
+    }
+    if (RevealAllArmed.load(std::memory_order_acquire)) {
+        return RevealOutcome::Armed;
+    }
+    if (RevealCurrentAct() == RevealOutcome::Unavailable) {
+        return RevealOutcome::Unavailable;
+    }
+    RevealAllArmed.store(true, std::memory_order_release);
+    return RevealOutcome::Armed;
 }
 
 auto ToggleRevealAll() noexcept -> RevealOutcome {
@@ -462,6 +537,10 @@ auto ToggleRevealAll() noexcept -> RevealOutcome {
     if (RevealAllArmed.exchange(true, std::memory_order_acq_rel)) {
         RevealAllArmed.store(false, std::memory_order_release);
         return RevealOutcome::Disarmed;
+    }
+    if (RevealCurrentAct() == RevealOutcome::Unavailable) {
+        RevealAllArmed.store(false, std::memory_order_release);
+        return RevealOutcome::Unavailable;
     }
     return RevealOutcome::Armed;
 }
