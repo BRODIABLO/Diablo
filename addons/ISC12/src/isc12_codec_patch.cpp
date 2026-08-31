@@ -6,6 +6,33 @@
 namespace ruffneckk::isc12 {
 namespace {
 
+template<std::size_t Size>
+consteval auto CountByteDifferences(
+        const std::array<std::uint8_t, Size>& expected,
+        const std::array<std::uint8_t, Size>& replacement) noexcept
+        -> std::size_t {
+    std::size_t count{};
+    for (std::size_t index{}; index < Size; ++index) {
+        if (expected[index] != replacement[index]) ++count;
+    }
+    return count;
+}
+
+template<std::size_t MutationCount, std::size_t Size>
+consteval auto BuildLiteralMutations(
+        const std::array<std::uint8_t, Size>& expected,
+        const std::array<std::uint8_t, Size>& replacement) noexcept
+        -> std::array<CodecByteMutation, MutationCount> {
+    std::array<CodecByteMutation, MutationCount> mutations{};
+    std::size_t mutationIndex{};
+    for (std::size_t index{}; index < Size; ++index) {
+        if (expected[index] == replacement[index]) continue;
+        mutations[mutationIndex++] =
+            CodecByteMutation{index, expected[index], replacement[index]};
+    }
+    return mutations;
+}
+
 inline constexpr std::array WidthAndSentinelMutations{
     CodecByteMutation{1, 0x09, 0x0C},
     CodecByteMutation{19, 0x01, 0x0F},
@@ -30,10 +57,13 @@ inline constexpr std::array GenericItemReaderNextMutations{
     CodecByteMutation{1, 0x09, 0x0C},
     CodecByteMutation{17, 0x01, 0x0F},
 };
-inline constexpr std::array GenericItemWriterIdMutations{
-    CodecByteMutation{2, 0x01, 0x0F},
-    CodecByteMutation{12, 0x09, 0x0C},
-};
+static_assert(CountByteDifferences(
+    GenericItemBoundedWriterBytes,
+    GenericItemBoundedWriterReplacementBytes) == 37);
+inline constexpr auto GenericItemBoundedWriterMutations =
+    BuildLiteralMutations<37>(
+        GenericItemBoundedWriterBytes,
+        GenericItemBoundedWriterReplacementBytes);
 inline constexpr std::array GenericItemWriterTerminatorMutations{
     CodecByteMutation{2, 0x01, 0x0F},
     CodecByteMutation{7, 0x09, 0x0C},
@@ -92,8 +122,111 @@ inline constexpr std::array OverflowGuardStatusMutations{
     CodecByteMutation{11, 0x33, 0x8B},
     CodecByteMutation{12, 0xC0, 0xC2},
 };
+inline constexpr std::array Packet9CQueueRelayCallMutations{
+    CodecByteMutation{1, 0xDB, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9CQueueRelayRel32, 0},
+    CodecByteMutation{2, 0x79, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9CQueueRelayRel32, 1},
+    CodecByteMutation{3, 0x00, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9CQueueRelayRel32, 2},
+    CodecByteMutation{4, 0x00, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9CQueueRelayRel32, 3},
+};
+inline constexpr std::array Packet9DQueueRelayCallMutations{
+    CodecByteMutation{1, 0xEA, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9DQueueRelayRel32, 0},
+    CodecByteMutation{2, 0x77, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9DQueueRelayRel32, 1},
+    CodecByteMutation{3, 0x00, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9DQueueRelayRel32, 2},
+    CodecByteMutation{4, 0x00, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9DQueueRelayRel32, 3},
+};
+inline constexpr std::array Packet9CEntryRelayJumpMutations{
+    CodecByteMutation{0, 0x40, 0xE9},
+    CodecByteMutation{1, 0x53, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9CEntryRelayRel32, 0},
+    CodecByteMutation{2, 0x55, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9CEntryRelayRel32, 1},
+    CodecByteMutation{3, 0x56, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9CEntryRelayRel32, 2},
+    CodecByteMutation{4, 0x57, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9CEntryRelayRel32, 3},
+};
+inline constexpr std::array Packet9DEntryRelayJumpMutations{
+    CodecByteMutation{0, 0x40, 0xE9},
+    CodecByteMutation{1, 0x53, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9DEntryRelayRel32, 0},
+    CodecByteMutation{2, 0x55, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9DEntryRelayRel32, 1},
+    CodecByteMutation{3, 0x56, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9DEntryRelayRel32, 2},
+    CodecByteMutation{4, 0x57, 0x00,
+        CodecByteMutation::ReplacementSource::Packet9DEntryRelayRel32, 3},
+};
+
+inline constexpr std::array G9Sites{
+    // The two queue calls suppress native dispatch before either producer
+    // entry can begin a staged transaction. The entry JMPs publish last.
+    CodecPatchSite{
+        NativePattern{"transport.g9-queue-9c-call", 0x479E10,
+            Packet9CQueueCallBytes, Packet9CQueueCallMask},
+        Packet9CQueueRelayCallMutations},
+    CodecPatchSite{
+        NativePattern{"transport.g9-queue-9d-call", 0x47A001,
+            Packet9DQueueCallBytes, Packet9DQueueCallMask},
+        Packet9DQueueRelayCallMutations},
+    CodecPatchSite{
+        NativePattern{"transport.g9-producer-9c-entry", 0x479CD0,
+            Packet9CProducerEntryBytes, Packet9CProducerEntryMask},
+        Packet9CEntryRelayJumpMutations},
+    CodecPatchSite{
+        NativePattern{"transport.g9-producer-9d-entry", 0x479EA0,
+            Packet9DProducerEntryBytes, Packet9DProducerEntryMask},
+        Packet9DEntryRelayJumpMutations},
+};
+
+inline constexpr std::array G9Witnesses{
+    NativePattern{"transport.g9-packet-9c-before-queue", 0x479D85,
+        Packet9CBeforeQueueBytes, Packet9CBeforeQueueMask},
+    NativePattern{"transport.g9-packet-9c-after-queue", 0x479E15,
+        Packet9CAfterQueueBytes, Packet9CAfterQueueMask},
+    NativePattern{"transport.g9-packet-9d-before-queue", 0x479F76,
+        Packet9DBeforeQueueBytes, Packet9DBeforeQueueMask},
+    NativePattern{"transport.g9-packet-9d-after-queue", 0x47A006,
+        Packet9DAfterQueueBytes, Packet9DAfterQueueMask},
+    NativePattern{"transport.g9-producer-9c-epilogue", 0x479E23,
+        Packet9CProducerEpilogueBytes,
+        Packet9CProducerEpilogueMask},
+    NativePattern{"transport.g9-producer-9d-epilogue", 0x47A019,
+        Packet9DProducerEpilogueBytes,
+        Packet9DProducerEpilogueMask},
+    NativePattern{"transport.g9-serializer-overflow", 0x375F25,
+        FullItemSerializerOverflowBytes, FullItemSerializerOverflowMask},
+    NativePattern{"transport.g9-packet-9c-consumer-bound", 0x12E2F0,
+        Packet9CConsumerPayloadBoundBytes,
+        Packet9CConsumerPayloadBoundMask},
+    NativePattern{"transport.g9-packet-9d-consumer-buffer-header", 0x12E4B0,
+        Packet9DConsumerBufferHeaderBytes,
+        Packet9DConsumerBufferHeaderMask},
+    NativePattern{"transport.g9-socketed-item-walker", 0x481BAD,
+        SocketedItemPacketWalkerBytes,
+        SocketedItemPacketWalkerMask},
+    NativePattern{"transport.g9-native-queue-entry", 0x4817F0,
+        NativeQueueEntryBytes, NativeQueueEntryMask},
+    NativePattern{"transport.g9-native-queue-span-dispatch", 0x4818B6,
+        NativeQueueSpanDispatchBytes, NativeQueueSpanDispatchMask},
+};
 
 inline constexpr std::array G1Sites{
+    // Publish the bounded serializer body before any other G1 width change.
+    // IDs 0..510 retain the native compound suppression-table comparison;
+    // IDs >=511 bypass that fixed 511-DWORD table and write a 12-bit token.
+    CodecPatchSite{
+        NativePattern{"codec.g1-bounded-writer", 0x37F174,
+            GenericItemBoundedWriterBytes,
+            GenericItemBoundedWriterMask},
+        GenericItemBoundedWriterMutations},
     CodecPatchSite{
         NativePattern{"codec.g1-reader-first", 0x37AB2B,
             GenericItemReaderFirstBytes, GenericItemReaderFirstMask},
@@ -103,21 +236,59 @@ inline constexpr std::array G1Sites{
             GenericItemReaderNextBytes, GenericItemReaderNextMask},
         GenericItemReaderNextMutations},
     CodecPatchSite{
-        NativePattern{"codec.g1-writer-id", 0x37F186,
-            GenericItemWriterIdBytes, GenericItemWriterIdMask},
-        GenericItemWriterIdMutations},
-    CodecPatchSite{
         NativePattern{"codec.g1-writer-terminator", 0x37F983,
             GenericItemWriterTerminatorBytes,
             GenericItemWriterTerminatorMask},
         GenericItemWriterTerminatorMutations},
 };
 
-// Decoder/serializer entries may be owned by a compatible PluginSDK inline
-// hook before ISC12 loads. The four unique interior mutation windows remain the
-// G1 fingerprint; entry ownership is diagnosed separately and never claimed by
-// this literal patch group.
-inline constexpr std::array<NativePattern, 0> G1Witnesses{};
+// These fourteen witnesses close every fixed-scratch assumption consumed
+// by the bounded rewrite: sole owner callsite/frame, the 511-DWORD clear,
+// adjacent snapshot, its bounded 8-byte copy, direct uint16 ID extraction and
+// all eight low-ID compound partner writes.
+inline constexpr std::array G1Witnesses{
+    NativePattern{"codec.g1-serializer-owner-frame", 0x37D140,
+        GenericItemSerializerOwnerFrameBytes,
+        GenericItemSerializerOwnerFrameMask},
+    NativePattern{"codec.g1-serializer-owner-call", 0x3800E8,
+        GenericItemSerializerOwnerCallBytes,
+        GenericItemSerializerOwnerCallMask},
+    NativePattern{"codec.g1-suppression-table-clear", 0x37F08A,
+        GenericItemSuppressionTableClearBytes,
+        GenericItemSuppressionTableClearMask},
+    NativePattern{"codec.g1-snapshot-layout", 0x37F09B,
+        GenericItemSnapshotLayoutBytes, GenericItemSnapshotLayoutMask},
+    NativePattern{"codec.g1-snapshot-direct-id", 0x37F0D0,
+        GenericItemSnapshotDirectIdBytes,
+        GenericItemSnapshotDirectIdMask},
+    NativePattern{"codec.g1-snapshot-copy-body", 0x2F6527,
+        GenericItemSnapshotCopyBodyBytes,
+        GenericItemSnapshotCopyBodyMask},
+    NativePattern{"codec.g1-compound-write-51", 0x37F295,
+        GenericItemCompoundWrite51Bytes,
+        GenericItemCompoundWrite51Mask},
+    NativePattern{"codec.g1-compound-write-49", 0x37F36D,
+        GenericItemCompoundWrite49Bytes,
+        GenericItemCompoundWrite49Mask},
+    NativePattern{"codec.g1-compound-write-18", 0x37F445,
+        GenericItemCompoundWrite18Bytes,
+        GenericItemCompoundWrite18Mask},
+    NativePattern{"codec.g1-compound-write-53", 0x37F51D,
+        GenericItemCompoundWrite53Bytes,
+        GenericItemCompoundWrite53Mask},
+    NativePattern{"codec.g1-compound-write-58", 0x37F685,
+        GenericItemCompoundWrite58Bytes,
+        GenericItemCompoundWrite58Mask},
+    NativePattern{"codec.g1-compound-write-59", 0x37F754,
+        GenericItemCompoundWrite59Bytes,
+        GenericItemCompoundWrite59Mask},
+    NativePattern{"codec.g1-compound-write-55", 0x37F832,
+        GenericItemCompoundWrite55Bytes,
+        GenericItemCompoundWrite55Mask},
+    NativePattern{"codec.g1-compound-write-56", 0x37F901,
+        GenericItemCompoundWrite56Bytes,
+        GenericItemCompoundWrite56Mask},
+};
 
 inline constexpr std::array G2Sites{
     // Publish the fail-closed reader guard before changing any ID width.
@@ -329,6 +500,13 @@ inline constexpr std::array G4Witnesses{
 };
 
 inline constexpr std::array CodecGroups{
+    // G9 owns transport before any 12-bit codec can become reachable. Its
+    // internal order is queue9C, queue9D, entry9C, entry9D.
+    CodecPatchGroup{
+        CodecPatchGroupId::FullItemTransport,
+        "G9-full-item-transport",
+        G9Sites,
+        G9Witnesses},
     CodecPatchGroup{
         CodecPatchGroupId::AuxiliaryPlayer,
         "G2-aux-player-codec",
@@ -339,7 +517,7 @@ inline constexpr std::array CodecGroups{
         "G4-player-preview-codec",
         G4Sites,
         G4Witnesses},
-    // The exhaustive G2/G4 guards publish before G1's literal-only windows.
+    // The exhaustive G2/G4 guards publish before G1's width windows.
     // The live quiescence lease still spans the whole canonical transaction.
     CodecPatchGroup{
         CodecPatchGroupId::GenericItem,
@@ -398,7 +576,32 @@ auto IsRel32Source(CodecByteMutation::ReplacementSource source) noexcept
     return source == Source::AuxiliaryReaderRelayRel32
         || source == Source::PlayerReaderRelayRel32
         || source == Source::PlayerPreviewRelayRel32
-        || source == Source::PlayerSaveFinalizeRel32;
+        || source == Source::PlayerSaveFinalizeRel32
+        || source == Source::Packet9CQueueRelayRel32
+        || source == Source::Packet9DQueueRelayRel32
+        || source == Source::Packet9CEntryRelayRel32
+        || source == Source::Packet9DEntryRelayRel32;
+}
+
+auto IsEntryJmpSource(
+        CodecByteMutation::ReplacementSource source) noexcept -> bool {
+    using Source = CodecByteMutation::ReplacementSource;
+    return source == Source::Packet9CEntryRelayRel32
+        || source == Source::Packet9DEntryRelayRel32;
+}
+
+auto HasEntryJmpOpcodeMutation(const CodecPatchSite& site) noexcept -> bool {
+    for (const auto& mutation : site.mutations) {
+        if (mutation.patternOffset == 0
+                && mutation.expected == 0x40
+                && mutation.replacement == 0xE9
+                && mutation.source
+                    == CodecByteMutation::ReplacementSource::Literal
+                && mutation.sourceByteIndex == 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 auto RelayTargetRva(
@@ -415,6 +618,14 @@ auto RelayTargetRva(
         return activationTargets.PlayerPreviewRelayRva();
     case Source::PlayerSaveFinalizeRel32:
         return activationTargets.PlayerSaveFinalizeRelayRva();
+    case Source::Packet9CQueueRelayRel32:
+        return activationTargets.Packet9CQueueRelayRva();
+    case Source::Packet9DQueueRelayRel32:
+        return activationTargets.Packet9DQueueRelayRva();
+    case Source::Packet9CEntryRelayRel32:
+        return activationTargets.Packet9CEntryRelayRva();
+    case Source::Packet9DEntryRelayRel32:
+        return activationTargets.Packet9DEntryRelayRva();
     case Source::Literal:
         return 0;
     }
@@ -468,10 +679,15 @@ auto ResolveCodecReplacement(
     }
     const auto displacementOffset =
         mutation.patternOffset - mutation.sourceByteIndex;
+    const auto entryJmp = IsEntryJmpSource(mutation.source);
+    const auto expectedOpcode = static_cast<std::uint8_t>(
+        entryJmp ? 0x40 : 0xE8);
     if (site.pattern.bytes.size() < 4U
             || displacementOffset == 0
             || displacementOffset > site.pattern.bytes.size() - 4U
-            || site.pattern.bytes[displacementOffset - 1U] != 0xE8
+            || site.pattern.bytes[displacementOffset - 1U]
+                != expectedOpcode
+            || (entryJmp && !HasEntryJmpOpcodeMutation(site))
             || site.pattern.rva >
                 (std::numeric_limits<std::uintptr_t>::max)()
                     - displacementOffset - 4U) {
@@ -480,8 +696,11 @@ auto ResolveCodecReplacement(
     const auto nextInstructionRva =
         site.pattern.rva + displacementOffset + 4U;
     std::array<std::uint8_t, 4> encoded{};
-    if (!EncodeRel32(
-            RelayTargetRva(mutation.source, activationTargets),
+    const auto target = RelayTargetRva(mutation.source, activationTargets);
+    if (target == site.pattern.rva
+            || target == site.pattern.rva + 5U
+            || !EncodeRel32(
+            target,
             nextInstructionRva,
             encoded)) {
         return false;
@@ -495,6 +714,37 @@ auto ResolveCodecReplacement(
     if (redirectsToOriginal) return false;
     output = encoded[mutation.sourceByteIndex];
     return true;
+}
+
+auto WitnessOverlapsSiteMutation(
+        const NativePattern& witness,
+        const CodecPatchSite& site) noexcept -> bool {
+    for (const auto& mutation : site.mutations) {
+        std::uintptr_t mutationRva{};
+        if (!AbsoluteMutationRva(site, mutation, mutationRva)) return true;
+        if (mutationRva >= witness.rva
+                && mutationRva - witness.rva < witness.bytes.size()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+auto ValidateWitnessMutationSeparation(
+        std::span<const CodecPatchGroup> groups) noexcept
+        -> CodecPatchPlanError {
+    for (const auto& witnessGroup : groups) {
+        for (const auto& witness : witnessGroup.witnesses) {
+            for (const auto& mutationGroup : groups) {
+                for (const auto& site : mutationGroup.sites) {
+                    if (WitnessOverlapsSiteMutation(witness, site)) {
+                        return CodecPatchPlanError::WitnessOverlapsMutation;
+                    }
+                }
+            }
+        }
+    }
+    return CodecPatchPlanError::None;
 }
 
 } // namespace
@@ -579,10 +829,14 @@ auto ValidateCodecPatchGroup(const CodecPatchGroup& group) noexcept
             }
         }
         if (hasRel32) {
+            const auto entryJmp = IsEntryJmpSource(rel32Source);
             if (pattern.bytes.size() < 4U
                     || rel32Offset == 0
                     || rel32Offset > pattern.bytes.size() - 4U
-                    || pattern.bytes[rel32Offset - 1U] != 0xE8) {
+                    || pattern.bytes[rel32Offset - 1U]
+                        != static_cast<std::uint8_t>(
+                            entryJmp ? 0x40 : 0xE8)
+                    || (entryJmp && !HasEntryJmpOpcodeMutation(site))) {
                 return CodecPatchPlanError::InvalidMutation;
             }
             for (const auto observed : rel32Bytes) {
@@ -597,18 +851,24 @@ auto ValidateCodecPatchGroup(const CodecPatchGroup& group) noexcept
                 || witness.bytes.size() != witness.mask.size()) {
             return CodecPatchPlanError::InvalidPattern;
         }
+        for (const auto& site : group.sites) {
+            if (WitnessOverlapsSiteMutation(witness, site)) {
+                return CodecPatchPlanError::WitnessOverlapsMutation;
+            }
+        }
     }
     return CodecPatchPlanError::None;
 }
 
 auto CommitPreparedCodecPatchSet(
-        const CodecPublicationQuiescenceLease& quiescence,
+        const NativePublicationQuiescenceLease& quiescence,
         const CodecPatchActivationTargets& activationTargets,
         const CodecPatchCallbacks& callbacks) noexcept
         -> CodecPatchCommitResult {
     const std::span<const CodecPatchGroup> groups{CodecGroups};
     if (groups.empty() || !callbacks.verifyPattern || !callbacks.writeByte
-            || !callbacks.flushInstructionCache) {
+            || !callbacks.flushInstructionCache
+            || !callbacks.reserveMutationLifetime) {
         return {
             .status = CodecPatchCommitStatus::InvalidPlan,
             .planError = groups.empty()
@@ -624,6 +884,14 @@ auto CommitPreparedCodecPatchSet(
                 .planError = planError,
             };
         }
+    }
+    const auto witnessSeparationError =
+        ValidateWitnessMutationSeparation(groups);
+    if (witnessSeparationError != CodecPatchPlanError::None) {
+        return {
+            .status = CodecPatchCommitStatus::InvalidPlan,
+            .planError = witnessSeparationError,
+        };
     }
     for (std::size_t groupIndex{}; groupIndex < groups.size(); ++groupIndex) {
         const auto& group = groups[groupIndex];
@@ -719,6 +987,15 @@ auto CommitPreparedCodecPatchSet(
         return {.status = CodecPatchCommitStatus::QuiescenceRequired};
     }
 
+    // The patch service cannot prove that a failed byte-write made no native
+    // change. Reserve every copied relay/state/unwind allocation before the
+    // first write attempt, even though the canonical publisher is currently
+    // unreachable in production because no lease issuer exists.
+    callbacks.reserveMutationLifetime(callbacks.context);
+    if (!quiescence.IsHeld()) {
+        return {.status = CodecPatchCommitStatus::QuiescenceRequired};
+    }
+
     CodecPatchCommitResult result{
         .status = CodecPatchCommitStatus::Active,
     };
@@ -796,7 +1073,7 @@ auto CommitPreparedCodecPatchSet(
 static_assert(
     GenericItemReaderFirstMutations.size()
         + GenericItemReaderNextMutations.size()
-        + GenericItemWriterIdMutations.size()
+        + GenericItemBoundedWriterMutations.size()
         + GenericItemWriterTerminatorMutations.size()
         + WidthAndSentinelMutations.size() * 4
         + WriterIdMutation.size() * 2
@@ -808,12 +1085,18 @@ static_assert(
         + PlayerPreviewRelayCallMutations.size()
         + PlayerSaveRelayCallMutations.size()
         + OverflowGuardStatusMutations.size()
+        + Packet9CQueueRelayCallMutations.size()
+        + Packet9DQueueRelayCallMutations.size()
+        + Packet9CEntryRelayJumpMutations.size()
+        + Packet9DEntryRelayJumpMutations.size()
     == PreparedCodecMutationCount);
 static_assert(
-    G1Sites.size() + G2Sites.size() + G3Sites.size() + G4Sites.size()
+    G9Sites.size() + G1Sites.size() + G2Sites.size() + G3Sites.size()
+        + G4Sites.size()
     == PreparedCodecMutableSiteCount);
 static_assert(
-    G1Witnesses.size() + G2Witnesses.size() + G3Witnesses.size()
+    G9Witnesses.size() + G1Witnesses.size() + G2Witnesses.size()
+        + G3Witnesses.size()
         + G4Witnesses.size()
     == PreparedCodecWitnessCount);
 

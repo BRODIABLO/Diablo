@@ -17,6 +17,7 @@ const defaultLedgerPath = path.join(
 const allowedStatuses = new Set(['ready', 'identified', 'blocked', 'excluded']);
 const requiredGroups = [
   'G0-loader-descfunc',
+  'G0-BBE-stat-formula',
   'G1-generic-item-codec',
   'G2-aux-player-codec',
   'G3-player-save-codec',
@@ -118,6 +119,11 @@ function validateSites(sites, errors) {
 
     if (!allowedStatuses.has(site.status)) {
       errors.push(`${location}.status must be one of: ${[...allowedStatuses].join(', ')}`);
+    }
+
+    if (site.atomicGroup === 'G0-BBE-stat-formula'
+        && site.targetValue !== 'unchanged') {
+      errors.push(`${location} (${site.id ?? 'missing id'}) makes the proof-only G0-BBE group mutable`);
     }
 
     if (site.status === 'ready') {

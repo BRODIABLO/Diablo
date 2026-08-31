@@ -3,6 +3,7 @@
 #include "isc12_contract.hpp"
 #include "isc12_atomic_file.hpp"
 #include "isc12_codec_patch.hpp"
+#include "isc12_item_packet_budget.hpp"
 #include "isc12_loader.hpp"
 #include "isc12_native_persistence_adapter.hpp"
 #include "isc12_native_schema_adapter.hpp"
@@ -33,6 +34,7 @@ void* gISC12PersistenceWriterVanillaExit{};
 void* gISC12PersistenceWriterCommittedExit{};
 void* gISC12PersistenceWriterRejectedExit{};
 void* gISC12CodecReturnExit{};
+void* gISC12ItemTransportReturnExit{};
 
 void ISC12LoaderTailMidHook() noexcept;
 extern std::uint8_t ISC12LoaderRelayTemplateBegin;
@@ -46,6 +48,10 @@ void ISC12PersistenceWriterMidHook() noexcept;
 void ISC12AuxiliaryReaderCallHook() noexcept;
 void ISC12PlayerReaderCallHook() noexcept;
 void ISC12PlayerPreviewCallHook() noexcept;
+void ISC12ItemAction9CEntryHook() noexcept;
+void ISC12ItemAction9DEntryHook() noexcept;
+void ISC12ItemAction9CQueueHook() noexcept;
+void ISC12ItemAction9DQueueHook() noexcept;
 extern std::uint8_t ISC12PersistenceRelayTemplateBegin;
 extern std::uint8_t ISC12PersistenceRelayTemplateWriterEntry;
 extern std::uint8_t ISC12PersistenceRelayTemplateReaderContinueExit;
@@ -58,6 +64,18 @@ extern std::uint8_t ISC12PersistenceRelayTemplateAuxiliaryReaderEntry;
 extern std::uint8_t ISC12PersistenceRelayTemplatePlayerReaderEntry;
 extern std::uint8_t ISC12PersistenceRelayTemplatePlayerPreviewEntry;
 extern std::uint8_t ISC12PersistenceRelayTemplateCodecReturnExit;
+extern std::uint8_t ISC12PersistenceRelayTemplatePacket9CQueueEntry;
+extern std::uint8_t ISC12PersistenceRelayTemplatePacket9DQueueEntry;
+extern std::uint8_t ISC12PersistenceRelayTemplatePacket9CProducerEntry;
+extern std::uint8_t ISC12PersistenceRelayTemplatePacket9DProducerEntry;
+extern std::uint8_t ISC12PersistenceRelayTemplateItemTransportReturnExit;
+extern std::uint8_t ISC12PersistenceRelayTemplatePacket9CTrampoline;
+extern std::uint8_t ISC12PersistenceRelayTemplatePacket9CTrampolineRel32;
+extern std::uint8_t ISC12PersistenceRelayTemplatePacket9CTrampolineEnd;
+extern std::uint8_t ISC12PersistenceRelayTemplatePacket9DTrampoline;
+extern std::uint8_t ISC12PersistenceRelayTemplatePacket9DTrampolineRel32;
+extern std::uint8_t ISC12PersistenceRelayTemplatePacket9DTrampolineEnd;
+extern std::uint8_t ISC12PersistenceRelayTemplateItemTrampolineUnwindInfo;
 extern std::uint8_t ISC12PersistenceRelayTemplateStatePointer;
 extern std::uint8_t ISC12PersistenceRelayTemplateEnd;
 
@@ -71,13 +89,21 @@ public:
             std::uintptr_t auxiliaryReaderRelayRva,
             std::uintptr_t playerReaderRelayRva,
             std::uintptr_t playerPreviewRelayRva,
-            std::uintptr_t playerSaveFinalizeRelayRva) noexcept
+            std::uintptr_t playerSaveFinalizeRelayRva,
+            std::uintptr_t packet9CQueueRelayRva,
+            std::uintptr_t packet9DQueueRelayRva,
+            std::uintptr_t packet9CEntryRelayRva,
+            std::uintptr_t packet9DEntryRelayRva) noexcept
             -> CodecPatchActivationTargets {
         return CodecPatchActivationTargets{
             auxiliaryReaderRelayRva,
             playerReaderRelayRva,
             playerPreviewRelayRva,
-            playerSaveFinalizeRelayRva};
+            playerSaveFinalizeRelayRva,
+            packet9CQueueRelayRva,
+            packet9DQueueRelayRva,
+            packet9CEntryRelayRva,
+            packet9DEntryRelayRva};
     }
 };
 
@@ -102,6 +128,15 @@ constexpr std::uintptr_t PlayerReaderPrimaryCallRva = 0x52EC4A;
 constexpr std::uintptr_t PlayerReaderLegacyCallRva = 0x530A34;
 constexpr std::uintptr_t PlayerPreviewCallRva = 0x61CF90;
 constexpr std::uintptr_t PlayerSaveFinalizeCallRva = 0x5353C2;
+constexpr std::uintptr_t Packet9CProducerEntryRva = 0x479CD0;
+constexpr std::uintptr_t Packet9CProducerContinuationRva = 0x479CD5;
+constexpr std::uintptr_t Packet9CProducerEpilogueEndRva = 0x479E41;
+constexpr std::uintptr_t Packet9DProducerEntryRva = 0x479EA0;
+constexpr std::uintptr_t Packet9DProducerContinuationRva = 0x479EA5;
+constexpr std::uintptr_t Packet9DProducerEpilogueEndRva = 0x47A037;
+constexpr std::uintptr_t Packet9CQueueCallRva = 0x479E10;
+constexpr std::uintptr_t Packet9DQueueCallRva = 0x47A001;
+constexpr std::uintptr_t NativeFullItemPacketQueueRva = 0x4817F0;
 constexpr std::uintptr_t NativeAuxiliaryReaderRva = 0x530A00;
 constexpr std::uintptr_t NativePlayerReaderRva = 0x533760;
 constexpr std::uintptr_t NativePlayerPreviewCopyRva = 0xA1E110;
@@ -163,6 +198,17 @@ struct PersistenceRelayState {
     void* auxiliaryReaderHandler{};
     void* playerReaderHandler{};
     void* playerPreviewHandler{};
+    volatile LONG itemTransportReady{};
+    LONG itemTransportReserved{};
+    void* packet9CProducerHandler{};
+    void* packet9DProducerHandler{};
+    void* packet9CQueueHandler{};
+    void* packet9DQueueHandler{};
+    void* packet9CTrampoline{};
+    void* packet9DTrampoline{};
+    void* nativeFullItemPacketQueue{};
+    RUNTIME_FUNCTION itemTrampolineRuntimeFunctions[2]{};
+    volatile LONG itemTrampolineFunctionTableRegistered{};
 };
 
 struct NativeVectorU16 {
@@ -190,6 +236,12 @@ using NativePlayerStatReaderFn = std::int32_t(__fastcall*)(
     std::int32_t);
 using NativePlayerPreviewCopyFn = std::uint32_t(__fastcall*)(
     void*, void*, std::uint32_t, std::uint64_t);
+using NativeItemAction9CFn = void(__fastcall*)(
+    void*, void*, std::uint8_t, std::uint32_t, std::uint32_t);
+using NativeItemAction9DFn = void(__fastcall*)(
+    void*, void*, void*, std::uint8_t, std::uint32_t, std::uint32_t);
+using NativeFullItemPacketQueueFn = void(__fastcall*)(
+    void*, const std::uint8_t*, std::size_t);
 
 static_assert(sizeof(DescriptionEntry) == 4);
 static_assert(offsetof(DescriptionEntry, statId) == 0);
@@ -211,6 +263,19 @@ static_assert(
     offsetof(PersistenceRelayState, auxiliaryReaderHandler) == 0x48);
 static_assert(offsetof(PersistenceRelayState, playerReaderHandler) == 0x50);
 static_assert(offsetof(PersistenceRelayState, playerPreviewHandler) == 0x58);
+static_assert(offsetof(PersistenceRelayState, itemTransportReady) == 0x60);
+static_assert(offsetof(PersistenceRelayState, packet9CProducerHandler) == 0x68);
+static_assert(offsetof(PersistenceRelayState, packet9DProducerHandler) == 0x70);
+static_assert(offsetof(PersistenceRelayState, packet9CQueueHandler) == 0x78);
+static_assert(offsetof(PersistenceRelayState, packet9DQueueHandler) == 0x80);
+static_assert(offsetof(PersistenceRelayState, packet9CTrampoline) == 0x88);
+static_assert(offsetof(PersistenceRelayState, packet9DTrampoline) == 0x90);
+static_assert(
+    offsetof(PersistenceRelayState, nativeFullItemPacketQueue) == 0x98);
+static_assert(offsetof(
+    PersistenceRelayState, itemTrampolineRuntimeFunctions) == 0xA0);
+static_assert(offsetof(
+    PersistenceRelayState, itemTrampolineFunctionTableRegistered) == 0xB8);
 static_assert(sizeof(NativeVectorU16) == 24);
 static_assert(offsetof(NativeVectorU16, begin) == 0);
 static_assert(offsetof(NativeVectorU16, size) == 8);
@@ -236,6 +301,12 @@ void* PersistencePlayerSaveFinalizeRelayEntry{};
 void* PersistenceAuxiliaryReaderRelayEntry{};
 void* PersistencePlayerReaderRelayEntry{};
 void* PersistencePlayerPreviewRelayEntry{};
+void* PersistencePacket9CQueueRelayEntry{};
+void* PersistencePacket9DQueueRelayEntry{};
+void* PersistencePacket9CProducerRelayEntry{};
+void* PersistencePacket9DProducerRelayEntry{};
+NativeItemAction9CFn PersistencePacket9CTrampoline{};
+NativeItemAction9DFn PersistencePacket9DTrampoline{};
 CodecPatchActivationTargets PreparedCodecActivationTargets{};
 NativeQsortFn NativeQsort{};
 NativeComparatorFn NativeComparator{};
@@ -248,6 +319,7 @@ NativeSetObjectAuxFn NativeSetObjectAux{};
 NativePlayerStatReaderFn NativeAuxiliaryReader{};
 NativePlayerStatReaderFn NativePlayerReader{};
 NativePlayerPreviewCopyFn NativePlayerPreviewCopy{};
+NativeFullItemPacketQueueFn NativeFullItemPacketQueue{};
 bool Prepared{};
 bool PersistencePrepared{};
 bool AnyMutationInstalled{};
@@ -272,6 +344,7 @@ thread_local std::array<std::uint8_t, MaximumPlayerStatSectionBytes>
     PlayerStatPreflightBuffer{};
 thread_local std::array<std::uint8_t, PlayerPreviewBufferCapacity>
     PlayerPreviewPreflightBuffer{};
+thread_local FullItemPacketStagingContext FullItemPacketTransaction{};
 
 auto SetError(std::string& error, std::string_view message) noexcept -> bool {
     try {
@@ -374,6 +447,172 @@ auto SafeCopyReadable(
     } __except (NativeExceptionFilter(GetExceptionCode())) {
         return false;
     }
+}
+
+struct NativeUnwindInfoHeader {
+    std::uint8_t versionAndFlags{};
+    std::uint8_t prologSize{};
+    std::uint8_t codeCount{};
+    std::uint8_t frameRegisterAndOffset{};
+};
+
+struct NativeUnwindCode {
+    std::uint8_t codeOffset{};
+    std::uint8_t operationAndInfo{};
+};
+
+static_assert(sizeof(NativeUnwindInfoHeader) == 4);
+static_assert(sizeof(NativeUnwindCode) == 2);
+
+auto ValidateNativeProducerUnwind(
+        std::uintptr_t entryRva,
+        std::uintptr_t expectedEpilogueEndRva,
+        std::uint8_t finalNonvolatileRegister,
+        std::uint32_t expectedAllocation) noexcept -> bool {
+    if (!LoaderBase || finalNonvolatileRegister >= 16
+            || entryRva > LoaderImageSize
+            || LoaderImageSize - entryRva <= 5U
+            || expectedEpilogueEndRva <= entryRva + 5U
+            || expectedEpilogueEndRva > LoaderImageSize
+            || !IsAccessibleRange(
+                LoaderBase + entryRva + 5U, 1, false, true)
+            || !IsAccessibleRange(
+                LoaderBase + expectedEpilogueEndRva - 1U,
+                1,
+                false,
+                true)) {
+        return false;
+    }
+    DWORD64 imageBase{};
+    const auto instructionAddress = reinterpret_cast<DWORD64>(
+        LoaderBase + entryRva + 5U);
+    const auto* liveFunction = RtlLookupFunctionEntry(
+        instructionAddress, &imageBase, nullptr);
+    if (!liveFunction
+            || imageBase != reinterpret_cast<DWORD64>(LoaderBase)) {
+        return false;
+    }
+    RUNTIME_FUNCTION function{};
+    if (!SafeRead(liveFunction, function)
+            || function.BeginAddress != entryRva
+            || function.EndAddress < expectedEpilogueEndRva
+            || function.EndAddress > LoaderImageSize
+            || function.UnwindData > LoaderImageSize
+            || LoaderImageSize - function.UnwindData < 20U) {
+        return false;
+    }
+    DWORD64 epilogueImageBase{};
+    const auto* liveEpilogueFunction = RtlLookupFunctionEntry(
+        reinterpret_cast<DWORD64>(
+            LoaderBase + expectedEpilogueEndRva - 1U),
+        &epilogueImageBase,
+        nullptr);
+    RUNTIME_FUNCTION epilogueFunction{};
+    if (!liveEpilogueFunction
+            || epilogueImageBase != imageBase
+            || !SafeRead(liveEpilogueFunction, epilogueFunction)
+            || epilogueFunction.BeginAddress != function.BeginAddress
+            || epilogueFunction.EndAddress != function.EndAddress
+            || epilogueFunction.UnwindData != function.UnwindData) {
+        return false;
+    }
+    NativeUnwindInfoHeader header{};
+    if (!SafeRead(LoaderBase + function.UnwindData, header)
+            || header.versionAndFlags != 1U
+            || header.prologSize != 14U
+            || header.codeCount != 7U
+            || header.frameRegisterAndOffset != 0U) {
+        return false;
+    }
+    std::array<NativeUnwindCode, 7> codes{};
+    if (!SafeCopyReadable(
+            LoaderBase + function.UnwindData + sizeof(header),
+            codes.data(),
+            sizeof(codes))) {
+        return false;
+    }
+    std::uint16_t padding{};
+    if (!SafeRead(
+            LoaderBase + function.UnwindData + sizeof(header)
+                + sizeof(codes),
+            padding)
+            || padding != 0U
+            || (finalNonvolatileRegister != 14U
+                && finalNonvolatileRegister != 15U)
+            || (finalNonvolatileRegister == 14U
+                && expectedAllocation != 0x160U)
+            || (finalNonvolatileRegister == 15U
+                && expectedAllocation != 0x170U)) {
+        return false;
+    }
+    const auto allocationSlots = static_cast<std::uint16_t>(
+        expectedAllocation / 8U);
+    const auto expectedCodes = std::to_array<std::uint8_t>({
+        0x0E,0x01,
+        static_cast<std::uint8_t>(allocationSlots & 0xFFU),
+        static_cast<std::uint8_t>(allocationSlots >> 8U),
+        0x07,static_cast<std::uint8_t>(finalNonvolatileRegister << 4U),
+        0x05,0x70,0x04,0x60,0x03,0x50,0x02,0x30,
+    });
+    if (std::memcmp(
+            codes.data(), expectedCodes.data(), expectedCodes.size()) != 0) {
+        return false;
+    }
+
+    constexpr std::uint16_t BasePushMask =
+        (UINT16_C(1) << 3U) | (UINT16_C(1) << 5U)
+        | (UINT16_C(1) << 6U) | (UINT16_C(1) << 7U);
+    const auto expectedPushMask = static_cast<std::uint16_t>(
+        BasePushMask | (UINT16_C(1) << finalNonvolatileRegister));
+    std::uint16_t pushMask{};
+    std::uint32_t allocation{};
+    bool allocationObserved{};
+    for (std::size_t index{}; index < codes.size();) {
+        const auto operation = codes[index].operationAndInfo & 0x0FU;
+        const auto operationInfo = codes[index].operationAndInfo >> 4U;
+        if (operation == 0U) { // UWOP_PUSH_NONVOL
+            if (operationInfo >= 16U
+                    || (pushMask & (UINT16_C(1) << operationInfo)) != 0U) {
+                return false;
+            }
+            const auto expectedOffset = operationInfo == 3U ? 2U
+                : operationInfo == 5U ? 3U
+                : operationInfo == 6U ? 4U
+                : operationInfo == 7U ? 5U
+                : operationInfo == finalNonvolatileRegister ? 7U
+                : 0U;
+            if (expectedOffset == 0U
+                    || codes[index].codeOffset != expectedOffset) {
+                return false;
+            }
+            pushMask = static_cast<std::uint16_t>(
+                pushMask | (UINT16_C(1) << operationInfo));
+            ++index;
+            continue;
+        }
+        if (operation != 1U || allocationObserved
+                || codes[index].codeOffset != 14U) { // UWOP_ALLOC_LARGE
+            return false;
+        }
+        if (operationInfo == 0U) {
+            if (index + 1U >= codes.size()) return false;
+            std::uint16_t scaled{};
+            std::memcpy(&scaled, &codes[index + 1U], sizeof(scaled));
+            allocation = static_cast<std::uint32_t>(scaled) * 8U;
+            index += 2U;
+        } else if (operationInfo == 1U) {
+            if (index + 2U >= codes.size()) return false;
+            std::memcpy(
+                &allocation, &codes[index + 1U], sizeof(allocation));
+            index += 3U;
+        } else {
+            return false;
+        }
+        allocationObserved = true;
+    }
+    return pushMask == expectedPushMask
+        && allocationObserved
+        && allocation == expectedAllocation;
 }
 
 auto InvokeNativePlayerStatReader(
@@ -1008,6 +1247,24 @@ auto ValidateImageTarget(
 auto ReleaseUnpatchedResources() noexcept -> void {
     if (AnyMutationInstalled) return;
     PersistencePrepared = false;
+    if (PersistenceState
+            && InterlockedCompareExchange(
+                &PersistenceState->itemTrampolineFunctionTableRegistered,
+                0,
+                0) != 0) {
+        if (!RtlDeleteFunctionTable(
+                PersistenceState->itemTrampolineRuntimeFunctions)) {
+            // The OS may still consult both this table and its copied xdata.
+            // Treat a failed deregistration exactly like an uncertain native
+            // write: retain every process-bound allocation and prohibit a
+            // second preparation attempt.
+            AnyMutationInstalled = true;
+            ColdRestartRequired = true;
+            return;
+        }
+        InterlockedExchange(
+            &PersistenceState->itemTrampolineFunctionTableRegistered, 0);
+    }
     if (PersistenceRelayPage) {
         VirtualFree(PersistenceRelayPage, 0, MEM_RELEASE);
         PersistenceRelayPage = nullptr;
@@ -1024,6 +1281,12 @@ auto ReleaseUnpatchedResources() noexcept -> void {
     PersistenceAuxiliaryReaderRelayEntry = nullptr;
     PersistencePlayerReaderRelayEntry = nullptr;
     PersistencePlayerPreviewRelayEntry = nullptr;
+    PersistencePacket9CQueueRelayEntry = nullptr;
+    PersistencePacket9DQueueRelayEntry = nullptr;
+    PersistencePacket9CProducerRelayEntry = nullptr;
+    PersistencePacket9DProducerRelayEntry = nullptr;
+    PersistencePacket9CTrampoline = nullptr;
+    PersistencePacket9DTrampoline = nullptr;
     PreparedCodecActivationTargets = {};
     gISC12PersistenceReaderContinueExit = nullptr;
     gISC12PersistenceReaderRejectedExit = nullptr;
@@ -1031,9 +1294,11 @@ auto ReleaseUnpatchedResources() noexcept -> void {
     gISC12PersistenceWriterCommittedExit = nullptr;
     gISC12PersistenceWriterRejectedExit = nullptr;
     gISC12CodecReturnExit = nullptr;
+    gISC12ItemTransportReturnExit = nullptr;
     NativeAuxiliaryReader = nullptr;
     NativePlayerReader = nullptr;
     NativePlayerPreviewCopy = nullptr;
+    NativeFullItemPacketQueue = nullptr;
     if (RelayPage) {
         VirtualFree(RelayPage, 0, MEM_RELEASE);
         RelayPage = nullptr;
@@ -1073,6 +1338,14 @@ auto AllocatePersistenceRelayPageNear(std::uint8_t* base) noexcept -> void* {
         base + PlayerReaderLegacyCallRva);
     const auto playerPreviewSite = reinterpret_cast<std::uintptr_t>(
         base + PlayerPreviewCallRva);
+    const auto packet9CQueueSite = reinterpret_cast<std::uintptr_t>(
+        base + Packet9CQueueCallRva);
+    const auto packet9DQueueSite = reinterpret_cast<std::uintptr_t>(
+        base + Packet9DQueueCallRva);
+    const auto packet9CProducerSite = reinterpret_cast<std::uintptr_t>(
+        base + Packet9CProducerEntryRva);
+    const auto packet9DProducerSite = reinterpret_cast<std::uintptr_t>(
+        base + Packet9DProducerEntryRva);
     const auto aligned = readerSite & ~(granularity - 1U);
     for (std::uintptr_t delta = granularity;
             delta < UINT64_C(0x70000000);
@@ -1087,7 +1360,11 @@ auto AllocatePersistenceRelayPageNear(std::uint8_t* base) noexcept -> void* {
                 || !CanEncodeRel32(auxiliaryReaderSite, candidate)
                 || !CanEncodeRel32(playerReaderPrimarySite, candidate)
                 || !CanEncodeRel32(playerReaderLegacySite, candidate)
-                || !CanEncodeRel32(playerPreviewSite, candidate)) {
+                || !CanEncodeRel32(playerPreviewSite, candidate)
+                || !CanEncodeRel32(packet9CQueueSite, candidate)
+                || !CanEncodeRel32(packet9DQueueSite, candidate)
+                || !CanEncodeRel32(packet9CProducerSite, candidate)
+                || !CanEncodeRel32(packet9DProducerSite, candidate)) {
             break;
         }
         if (auto* allocation = VirtualAlloc(
@@ -1281,6 +1558,31 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
         &ISC12PersistenceRelayTemplatePlayerPreviewEntry);
     const auto codecReturn = reinterpret_cast<std::uintptr_t>(
         &ISC12PersistenceRelayTemplateCodecReturnExit);
+    const auto packet9CQueue = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplatePacket9CQueueEntry);
+    const auto packet9DQueue = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplatePacket9DQueueEntry);
+    const auto packet9CProducer = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplatePacket9CProducerEntry);
+    const auto packet9DProducer = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplatePacket9DProducerEntry);
+    const auto itemTransportReturn = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplateItemTransportReturnExit);
+    const auto packet9CTrampoline = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplatePacket9CTrampoline);
+    const auto packet9CTrampolineRel32 = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplatePacket9CTrampolineRel32);
+    const auto packet9CTrampolineEnd = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplatePacket9CTrampolineEnd);
+    const auto packet9DTrampoline = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplatePacket9DTrampoline);
+    const auto packet9DTrampolineRel32 = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplatePacket9DTrampolineRel32);
+    const auto packet9DTrampolineEnd = reinterpret_cast<std::uintptr_t>(
+        &ISC12PersistenceRelayTemplatePacket9DTrampolineEnd);
+    const auto itemTrampolineUnwindInfo =
+        reinterpret_cast<std::uintptr_t>(
+            &ISC12PersistenceRelayTemplateItemTrampolineUnwindInfo);
     const auto statePointer = reinterpret_cast<std::uintptr_t>(
         &ISC12PersistenceRelayTemplateStatePointer);
     const auto end = reinterpret_cast<std::uintptr_t>(
@@ -1300,6 +1602,18 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
             || !labelInside(playerReader)
             || !labelInside(playerPreview)
             || !labelInside(codecReturn)
+            || !labelInside(packet9CQueue)
+            || !labelInside(packet9DQueue)
+            || !labelInside(packet9CProducer)
+            || !labelInside(packet9DProducer)
+            || !labelInside(itemTransportReturn)
+            || !labelInside(packet9CTrampoline)
+            || !labelInside(packet9CTrampolineRel32)
+            || !labelInside(packet9CTrampolineEnd)
+            || !labelInside(packet9DTrampoline)
+            || !labelInside(packet9DTrampolineRel32)
+            || !labelInside(packet9DTrampolineEnd)
+            || !labelInside(itemTrampolineUnwindInfo)
             || statePointer < begin
             || statePointer > end - sizeof(void*)
             || !(begin < readerContinue
@@ -1313,7 +1627,23 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
                 && auxiliaryReader < playerReader
                 && playerReader < playerPreview
                 && playerPreview < codecReturn
-                && codecReturn < statePointer)) {
+                && codecReturn < packet9CQueue
+                && packet9CQueue < packet9DQueue
+                && packet9DQueue < packet9CProducer
+                && packet9CProducer < packet9DProducer
+                && packet9DProducer < itemTransportReturn
+                && itemTransportReturn < packet9CTrampoline
+                && packet9CTrampoline < packet9CTrampolineRel32
+                && packet9CTrampolineRel32 < packet9CTrampolineEnd
+                && packet9CTrampolineEnd <= packet9DTrampoline
+                && packet9DTrampoline < packet9DTrampolineRel32
+                && packet9DTrampolineRel32 < packet9DTrampolineEnd
+                && packet9DTrampolineEnd <= itemTrampolineUnwindInfo
+                && itemTrampolineUnwindInfo < statePointer)
+            || packet9CTrampolineEnd - packet9CTrampoline != 10U
+            || packet9DTrampolineEnd - packet9DTrampoline != 10U
+            || packet9CTrampolineRel32 - packet9CTrampoline != 6U
+            || packet9DTrampolineRel32 - packet9DTrampoline != 6U) {
         ReleaseUnpatchedResources();
         return SetError(
             error, "persistence relay template layout is invalid");
@@ -1333,6 +1663,75 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
         copied + static_cast<std::size_t>(statePointer - begin),
         &PersistenceState,
         sizeof(PersistenceState));
+
+    constexpr auto ExpectedTrampolinePrefix =
+        std::to_array<std::uint8_t>({0x40,0x53,0x55,0x56,0x57,0xE9});
+    constexpr auto ExpectedTrampolineUnwindInfo =
+        std::to_array<std::uint8_t>({
+            0x01,0x05,0x04,0x00,0x05,0x70,
+            0x04,0x60,0x03,0x50,0x02,0x30,
+        });
+    auto* const copiedPacket9CTrampoline =
+        copied + static_cast<std::size_t>(packet9CTrampoline - begin);
+    auto* const copiedPacket9DTrampoline =
+        copied + static_cast<std::size_t>(packet9DTrampoline - begin);
+    auto* const copiedItemTrampolineUnwindInfo =
+        copied + static_cast<std::size_t>(
+            itemTrampolineUnwindInfo - begin);
+    if (std::memcmp(
+            copiedPacket9CTrampoline,
+            ExpectedTrampolinePrefix.data(),
+            ExpectedTrampolinePrefix.size()) != 0
+            || std::memcmp(
+                copiedPacket9DTrampoline,
+                ExpectedTrampolinePrefix.data(),
+                ExpectedTrampolinePrefix.size()) != 0
+            || std::memcmp(
+                copiedItemTrampolineUnwindInfo,
+                ExpectedTrampolineUnwindInfo.data(),
+                ExpectedTrampolineUnwindInfo.size()) != 0) {
+        ReleaseUnpatchedResources();
+        return SetError(error, "item producer trampoline bytes are invalid");
+    }
+    const auto patchTrampolineRel32 = [begin, copied](
+            std::uintptr_t displacementLabel,
+            std::uintptr_t target) noexcept -> bool {
+        auto* const displacement = copied
+            + static_cast<std::size_t>(displacementLabel - begin);
+        const auto next = reinterpret_cast<std::uintptr_t>(displacement)
+            + sizeof(std::int32_t);
+        std::int64_t distance{};
+        if (target >= next) {
+            const auto positive = target - next;
+            if (positive > static_cast<std::uintptr_t>(
+                    (std::numeric_limits<std::int32_t>::max)())) {
+                return false;
+            }
+            distance = static_cast<std::int64_t>(positive);
+        } else {
+            const auto negative = next - target;
+            constexpr auto MaximumNegative =
+                static_cast<std::uint64_t>(
+                    (std::numeric_limits<std::int32_t>::max)()) + 1ULL;
+            if (negative > MaximumNegative) return false;
+            distance = -static_cast<std::int64_t>(negative);
+        }
+        const auto encoded = static_cast<std::int32_t>(distance);
+        std::memcpy(displacement, &encoded, sizeof(encoded));
+        return true;
+    };
+    if (!patchTrampolineRel32(
+            packet9CTrampolineRel32,
+            reinterpret_cast<std::uintptr_t>(
+                LoaderBase + Packet9CProducerContinuationRva))
+            || !patchTrampolineRel32(
+                packet9DTrampolineRel32,
+                reinterpret_cast<std::uintptr_t>(
+                    LoaderBase + Packet9DProducerContinuationRva))) {
+        ReleaseUnpatchedResources();
+        return SetError(
+            error, "item producer trampoline lies outside rel32 reach");
+    }
 
     PersistenceReaderRelayEntry = copied;
     PersistenceWriterRelayEntry =
@@ -1357,6 +1756,20 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
         copied + static_cast<std::size_t>(playerPreview - begin);
     gISC12CodecReturnExit =
         copied + static_cast<std::size_t>(codecReturn - begin);
+    PersistencePacket9CQueueRelayEntry =
+        copied + static_cast<std::size_t>(packet9CQueue - begin);
+    PersistencePacket9DQueueRelayEntry =
+        copied + static_cast<std::size_t>(packet9DQueue - begin);
+    PersistencePacket9CProducerRelayEntry =
+        copied + static_cast<std::size_t>(packet9CProducer - begin);
+    PersistencePacket9DProducerRelayEntry =
+        copied + static_cast<std::size_t>(packet9DProducer - begin);
+    gISC12ItemTransportReturnExit =
+        copied + static_cast<std::size_t>(itemTransportReturn - begin);
+    PersistencePacket9CTrampoline =
+        reinterpret_cast<NativeItemAction9CFn>(copiedPacket9CTrampoline);
+    PersistencePacket9DTrampoline =
+        reinterpret_cast<NativeItemAction9DFn>(copiedPacket9DTrampoline);
 
     PersistenceState->readerHandler =
         reinterpret_cast<void*>(&ISC12PersistenceReaderMidHook);
@@ -1378,6 +1791,20 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
         reinterpret_cast<void*>(&ISC12PlayerReaderCallHook);
     PersistenceState->playerPreviewHandler =
         reinterpret_cast<void*>(&ISC12PlayerPreviewCallHook);
+    PersistenceState->packet9CProducerHandler =
+        reinterpret_cast<void*>(&ISC12ItemAction9CEntryHook);
+    PersistenceState->packet9DProducerHandler =
+        reinterpret_cast<void*>(&ISC12ItemAction9DEntryHook);
+    PersistenceState->packet9CQueueHandler =
+        reinterpret_cast<void*>(&ISC12ItemAction9CQueueHook);
+    PersistenceState->packet9DQueueHandler =
+        reinterpret_cast<void*>(&ISC12ItemAction9DQueueHook);
+    PersistenceState->packet9CTrampoline =
+        reinterpret_cast<void*>(PersistencePacket9CTrampoline);
+    PersistenceState->packet9DTrampoline =
+        reinterpret_cast<void*>(PersistencePacket9DTrampoline);
+    PersistenceState->nativeFullItemPacketQueue =
+        reinterpret_cast<void*>(NativeFullItemPacketQueue);
 
     const auto baseAddress = reinterpret_cast<std::uintptr_t>(LoaderBase);
     const auto playerSaveFinalizeRelayAddress =
@@ -1392,10 +1819,26 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
     const auto playerPreviewRelayAddress =
         reinterpret_cast<std::uintptr_t>(
             PersistencePlayerPreviewRelayEntry);
+    const auto packet9CQueueRelayAddress =
+        reinterpret_cast<std::uintptr_t>(
+            PersistencePacket9CQueueRelayEntry);
+    const auto packet9DQueueRelayAddress =
+        reinterpret_cast<std::uintptr_t>(
+            PersistencePacket9DQueueRelayEntry);
+    const auto packet9CProducerRelayAddress =
+        reinterpret_cast<std::uintptr_t>(
+            PersistencePacket9CProducerRelayEntry);
+    const auto packet9DProducerRelayAddress =
+        reinterpret_cast<std::uintptr_t>(
+            PersistencePacket9DProducerRelayEntry);
     if (playerSaveFinalizeRelayAddress < baseAddress
             || auxiliaryReaderRelayAddress < baseAddress
             || playerReaderRelayAddress < baseAddress
-            || playerPreviewRelayAddress < baseAddress) {
+            || playerPreviewRelayAddress < baseAddress
+            || packet9CQueueRelayAddress < baseAddress
+            || packet9DQueueRelayAddress < baseAddress
+            || packet9CProducerRelayAddress < baseAddress
+            || packet9DProducerRelayAddress < baseAddress) {
         ReleaseUnpatchedResources();
         return SetError(
             error, "persistence codec relay precedes the D2R image");
@@ -1405,7 +1848,11 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
             auxiliaryReaderRelayAddress - baseAddress,
             playerReaderRelayAddress - baseAddress,
             playerPreviewRelayAddress - baseAddress,
-            playerSaveFinalizeRelayAddress - baseAddress);
+            playerSaveFinalizeRelayAddress - baseAddress,
+            packet9CQueueRelayAddress - baseAddress,
+            packet9DQueueRelayAddress - baseAddress,
+            packet9CProducerRelayAddress - baseAddress,
+            packet9DProducerRelayAddress - baseAddress);
     if (!CanEncodeRel32(
             baseAddress + PersistenceReaderPatchRva,
             reinterpret_cast<std::uintptr_t>(
@@ -1429,9 +1876,36 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
                 playerReaderRelayAddress)
             || !CanEncodeRel32(
                 baseAddress + PlayerPreviewCallRva,
-                playerPreviewRelayAddress)) {
+                playerPreviewRelayAddress)
+            || !CanEncodeRel32(
+                baseAddress + Packet9CQueueCallRva,
+                packet9CQueueRelayAddress)
+            || !CanEncodeRel32(
+                baseAddress + Packet9DQueueCallRva,
+                packet9DQueueRelayAddress)
+            || !CanEncodeRel32(
+                baseAddress + Packet9CProducerEntryRva,
+                packet9CProducerRelayAddress)
+            || !CanEncodeRel32(
+                baseAddress + Packet9DProducerEntryRva,
+                packet9DProducerRelayAddress)) {
         ReleaseUnpatchedResources();
         return SetError(error, "persistence relay lies outside rel32 reach");
+    }
+    if (!ValidateNativeProducerUnwind(
+            Packet9CProducerEntryRva,
+            Packet9CProducerEpilogueEndRva,
+            14U,
+            0x160U)
+            || !ValidateNativeProducerUnwind(
+                Packet9DProducerEntryRva,
+                Packet9DProducerEpilogueEndRva,
+                15U,
+                0x170U)) {
+        ReleaseUnpatchedResources();
+        return SetError(
+            error,
+            "live item producer unwind metadata is incompatible");
     }
 
     DWORD previousProtection{};
@@ -1450,6 +1924,55 @@ auto PreparePersistenceRelay(std::string& error) noexcept -> bool {
         ReleaseUnpatchedResources();
         return SetError(error, "persistence relay cache flush failed");
     }
+    const auto relayBaseAddress = reinterpret_cast<std::uintptr_t>(
+        PersistenceRelayPage);
+    const auto asRuntimeOffset = [relayBaseAddress](
+            const void* address,
+            DWORD& output) noexcept -> bool {
+        const auto absolute = reinterpret_cast<std::uintptr_t>(address);
+        if (absolute < relayBaseAddress
+                || absolute - relayBaseAddress
+                    > (std::numeric_limits<DWORD>::max)()) {
+            return false;
+        }
+        output = static_cast<DWORD>(absolute - relayBaseAddress);
+        return true;
+    };
+    auto& packet9CFunction =
+        PersistenceState->itemTrampolineRuntimeFunctions[0];
+    auto& packet9DFunction =
+        PersistenceState->itemTrampolineRuntimeFunctions[1];
+    if (!asRuntimeOffset(
+            copiedPacket9CTrampoline, packet9CFunction.BeginAddress)
+            || !asRuntimeOffset(
+                copied + static_cast<std::size_t>(
+                    packet9CTrampolineEnd - begin),
+                packet9CFunction.EndAddress)
+            || !asRuntimeOffset(
+                copiedItemTrampolineUnwindInfo,
+                packet9CFunction.UnwindData)
+            || !asRuntimeOffset(
+                copiedPacket9DTrampoline, packet9DFunction.BeginAddress)
+            || !asRuntimeOffset(
+                copied + static_cast<std::size_t>(
+                    packet9DTrampolineEnd - begin),
+                packet9DFunction.EndAddress)
+            || !asRuntimeOffset(
+                copiedItemTrampolineUnwindInfo,
+                packet9DFunction.UnwindData)
+            || packet9CFunction.BeginAddress >= packet9CFunction.EndAddress
+            || packet9DFunction.BeginAddress >= packet9DFunction.EndAddress
+            || packet9CFunction.EndAddress > packet9DFunction.BeginAddress
+            || !RtlAddFunctionTable(
+                PersistenceState->itemTrampolineRuntimeFunctions,
+                2,
+                reinterpret_cast<DWORD64>(PersistenceRelayPage))) {
+        ReleaseUnpatchedResources();
+        return SetError(
+            error, "item producer trampoline unwind registration failed");
+    }
+    InterlockedExchange(
+        &PersistenceState->itemTrampolineFunctionTableRegistered, 1);
     PersistencePrepared = true;
     return true;
 }
@@ -1624,7 +2147,166 @@ auto BuildDescriptionIndexNative(void* dataTables) -> std::uint32_t {
     return 1;
 }
 
+auto QueueCapturedFullItemPacket(
+        void*,
+        void* client,
+        const std::uint8_t* bytes,
+        std::size_t length) noexcept -> void {
+    if (!NativeFullItemPacketQueue) {
+        FailClosed("native full-item queue is unavailable", 0);
+    }
+    __try {
+        NativeFullItemPacketQueue(client, bytes, length);
+    } __except (GuardedCodecExceptionFilter(GetExceptionCode())) {
+        FailClosed("native full-item queue raised an exception", 0);
+    }
+}
+
+auto CompleteFullItemProducer(
+        const FullItemProducerToken& token,
+        bool aborted) noexcept -> void {
+    const auto completion = aborted
+        ? AbortFullItemPacketProducer(FullItemPacketTransaction, token)
+        : EndFullItemPacketProducer(FullItemPacketTransaction, token);
+    if (completion == FullItemProducerCompletion::Fatal
+            || FullItemPacketTransaction.state
+                == FullItemPacketStagingState::Fatal) {
+        FailClosed("full-item staging transaction became fatal", 0);
+    }
+    if (completion != FullItemProducerCompletion::RootReady
+            && completion != FullItemProducerCompletion::RootRejected) {
+        return;
+    }
+    const auto flush = FlushOrDiscardFullItemPacketTransaction(
+        FullItemPacketTransaction,
+        &QueueCapturedFullItemPacket,
+        nullptr);
+    if (FullItemPacketTransaction.state
+            == FullItemPacketStagingState::Fatal
+            || (!flush.completed && flush.queuedPacketCount != 0)) {
+        FailClosed(
+            "full-item queue reentered after staged publication began", 0);
+    }
+}
+
 } // namespace
+
+extern "C" auto ISC12InvokeItemAction9CNative(
+        void* client,
+        void* item,
+        std::uint8_t action,
+        std::uint32_t temporaryFlags,
+        std::uint32_t gamble) noexcept -> void {
+    const auto admission = BeginFullItemPacketProducer(
+        FullItemPacketTransaction,
+        FullItemProducerDescriptor{
+            .kind = FullItemPacketKind::ItemAction9C,
+            .client = client,
+            .item = item,
+            .action = action,
+            .temporaryFlags = temporaryFlags,
+            .gamble = gamble,
+        });
+    if (FullItemPacketTransaction.state
+            == FullItemPacketStagingState::Fatal) {
+        FailClosed("full-item 0x9C producer admission became fatal", 0);
+    }
+    __try {
+        __try {
+            if (admission.disposition
+                    == FullItemProducerDisposition::InvokeOriginal) {
+                if (!PersistencePacket9CTrampoline) {
+                    FailClosed("full-item 0x9C trampoline is unavailable", 0);
+                }
+                PersistencePacket9CTrampoline(
+                    client, item, action, temporaryFlags, gamble);
+            }
+        } __finally {
+            CompleteFullItemProducer(
+                admission.token, AbnormalTermination() != FALSE);
+        }
+    } __except (GuardedCodecExceptionFilter(GetExceptionCode())) {
+        FailClosed("full-item 0x9C producer raised an exception", 0);
+    }
+}
+
+extern "C" auto ISC12InvokeItemAction9DNative(
+        void* client,
+        void* parentItem,
+        void* item,
+        std::uint8_t action,
+        std::uint32_t temporaryFlags,
+        std::uint32_t gamble) noexcept -> void {
+    const auto admission = BeginFullItemPacketProducer(
+        FullItemPacketTransaction,
+        FullItemProducerDescriptor{
+            .kind = FullItemPacketKind::ItemAction9D,
+            .client = client,
+            .parentItem = parentItem,
+            .item = item,
+            .action = action,
+            .temporaryFlags = temporaryFlags,
+            .gamble = gamble,
+        });
+    if (FullItemPacketTransaction.state
+            == FullItemPacketStagingState::Fatal) {
+        FailClosed("full-item 0x9D producer admission became fatal", 0);
+    }
+    __try {
+        __try {
+            if (admission.disposition
+                    == FullItemProducerDisposition::InvokeOriginal) {
+                if (!PersistencePacket9DTrampoline) {
+                    FailClosed("full-item 0x9D trampoline is unavailable", 0);
+                }
+                PersistencePacket9DTrampoline(
+                    client,
+                    parentItem,
+                    item,
+                    action,
+                    temporaryFlags,
+                    gamble);
+            }
+        } __finally {
+            CompleteFullItemProducer(
+                admission.token, AbnormalTermination() != FALSE);
+        }
+    } __except (GuardedCodecExceptionFilter(GetExceptionCode())) {
+        FailClosed("full-item 0x9D producer raised an exception", 0);
+    }
+}
+
+extern "C" auto ISC12CaptureItemAction9CQueue(
+        void* client,
+        const std::uint8_t* bytes,
+        std::size_t length) noexcept -> void {
+    (void)CaptureFullItemPacketQueueCall(
+        FullItemPacketTransaction,
+        FullItemPacketKind::ItemAction9C,
+        client,
+        bytes,
+        length);
+    if (FullItemPacketTransaction.state
+            == FullItemPacketStagingState::Fatal) {
+        FailClosed("full-item 0x9C queue relay was reached out of contract", 0);
+    }
+}
+
+extern "C" auto ISC12CaptureItemAction9DQueue(
+        void* client,
+        const std::uint8_t* bytes,
+        std::size_t length) noexcept -> void {
+    (void)CaptureFullItemPacketQueueCall(
+        FullItemPacketTransaction,
+        FullItemPacketKind::ItemAction9D,
+        client,
+        bytes,
+        length);
+    if (FullItemPacketTransaction.state
+            == FullItemPacketStagingState::Fatal) {
+        FailClosed("full-item 0x9D queue relay was reached out of contract", 0);
+    }
+}
 
 extern "C" auto ISC12ReadAuxiliaryWithPreflight(
         void* context,
@@ -1856,6 +2538,11 @@ auto PrepareLoaderExtension(
     }
 
     ReleaseUnpatchedResources();
+    if (AnyMutationInstalled) {
+        return SetError(
+            error,
+            "loader resources remain process-bound after unwind deregistration failure");
+    }
     Prepared = false;
     PersistencePrepared = false;
     TailPatchInstalled = false;
@@ -1902,6 +2589,26 @@ auto PrepareLoaderExtension(
             || !ValidateImageTarget(
                 PlayerSaveFinalizeCallRva, 5, true)
             || !ValidateImageTarget(
+                Packet9CProducerEntryRva,
+                Packet9CProducerEntryBytes.size(),
+                true)
+            || !ValidateImageTarget(
+                Packet9DProducerEntryRva,
+                Packet9DProducerEntryBytes.size(),
+                true)
+            || !ValidateImageTarget(
+                Packet9CQueueCallRva,
+                Packet9CQueueCallBytes.size(),
+                true)
+            || !ValidateImageTarget(
+                Packet9DQueueCallRva,
+                Packet9DQueueCallBytes.size(),
+                true)
+            || !ValidateImageTarget(
+                NativeFullItemPacketQueueRva,
+                NativeQueueEntryBytes.size(),
+                true)
+            || !ValidateImageTarget(
                 NativeAuxiliaryReaderRva, 1, true)
             || !ValidateImageTarget(
                 NativePlayerReaderRva, 1, true)
@@ -1943,6 +2650,9 @@ auto PrepareLoaderExtension(
         LoaderBase + NativePlayerReaderRva);
     NativePlayerPreviewCopy = reinterpret_cast<NativePlayerPreviewCopyFn>(
         LoaderBase + NativePlayerPreviewCopyRva);
+    NativeFullItemPacketQueue =
+        reinterpret_cast<NativeFullItemPacketQueueFn>(
+            LoaderBase + NativeFullItemPacketQueueRva);
     if (!PrepareRelay(error)) return false;
     if (!PreparePersistenceRelay(error)) return false;
 
@@ -1950,9 +2660,16 @@ auto PrepareLoaderExtension(
     return true;
 }
 
-auto InstallLoaderExtension(std::string& error) noexcept
+auto InstallLoaderExtension(
+        const NativePublicationQuiescenceLease& quiescence,
+        std::string& error) noexcept
         -> LoaderInstallResult {
     error.clear();
+    if (!quiescence.IsHeld()) {
+        SetError(error,
+            "loader-owned native publication quiescence is unavailable");
+        return LoaderInstallResult::QuiescenceRequired;
+    }
     if (!Prepared || !PersistencePrepared
             || !LoaderContext || !LoaderBase || !RelayPage || !State
             || !PersistenceRelayPage || !PersistenceState
@@ -1962,10 +2679,18 @@ auto InstallLoaderExtension(std::string& error) noexcept
             || !PersistenceAuxiliaryReaderRelayEntry
             || !PersistencePlayerReaderRelayEntry
             || !PersistencePlayerPreviewRelayEntry
+            || !PersistencePacket9CQueueRelayEntry
+            || !PersistencePacket9DQueueRelayEntry
+            || !PersistencePacket9CProducerRelayEntry
+            || !PersistencePacket9DProducerRelayEntry
+            || !PersistencePacket9CTrampoline
+            || !PersistencePacket9DTrampoline
             || !gISC12CodecReturnExit
+            || !gISC12ItemTransportReturnExit
             || !NativeAuxiliaryReader
             || !NativePlayerReader
             || !NativePlayerPreviewCopy
+            || !NativeFullItemPacketQueue
             || PreparedCodecActivationTargets.AuxiliaryReaderRelayRva()
                 == 0
             || PreparedCodecActivationTargets.PlayerReaderRelayRva()
@@ -1973,7 +2698,11 @@ auto InstallLoaderExtension(std::string& error) noexcept
             || PreparedCodecActivationTargets.PlayerPreviewRelayRva()
                 == 0
             || PreparedCodecActivationTargets.PlayerSaveFinalizeRelayRva()
-                == 0) {
+                == 0
+            || PreparedCodecActivationTargets.Packet9CQueueRelayRva() == 0
+            || PreparedCodecActivationTargets.Packet9DQueueRelayRva() == 0
+            || PreparedCodecActivationTargets.Packet9CEntryRelayRva() == 0
+            || PreparedCodecActivationTargets.Packet9DEntryRelayRva() == 0) {
         SetError(error, "loader extension was not prepared");
         return LoaderInstallResult::FailedBeforeMutation;
     }
@@ -1987,6 +2716,7 @@ auto InstallLoaderExtension(std::string& error) noexcept
     }
     const auto relayRva = relayAddress - baseAddress;
     const auto result = CommitLoaderMutation(
+        quiescence,
         [&]() noexcept {
             // A false PluginSDK result does not prove that this non-aligned
             // seam remained untouched. Reserve the relay/state for the rest
@@ -2088,6 +2818,7 @@ auto InstallLoaderExtension(std::string& error) noexcept
 
 auto ShutdownLoaderExtension() noexcept -> void {
     if (PersistenceState) {
+        InterlockedExchange(&PersistenceState->itemTransportReady, 0);
         InterlockedExchange(&PersistenceState->codecReady, 0);
         InterlockedExchange(&PersistenceState->operational, 0);
         const auto deadline = GetTickCount64()
@@ -2106,6 +2837,10 @@ auto ShutdownLoaderExtension() noexcept -> void {
         PersistenceState->auxiliaryReaderHandler = nullptr;
         PersistenceState->playerReaderHandler = nullptr;
         PersistenceState->playerPreviewHandler = nullptr;
+        PersistenceState->packet9CProducerHandler = nullptr;
+        PersistenceState->packet9DProducerHandler = nullptr;
+        PersistenceState->packet9CQueueHandler = nullptr;
+        PersistenceState->packet9DQueueHandler = nullptr;
     }
     if (State) {
         InterlockedExchange(&State->operational, 0);

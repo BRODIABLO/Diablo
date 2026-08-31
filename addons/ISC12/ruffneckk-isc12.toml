@@ -1,8 +1,8 @@
 config_version = 1
-# ISC12 0.2.0 contains only the guarded loader extension. Keep it disabled
-# until the clean-sheet marker, save codecs and network gates are complete.
+# ISC12 0.2.0 remains non-operational. The pinned loader exposes no native
+# publication-quiescence authority, so enabled=true is refused with zero writes.
 enabled = false
 
 [diagnostics]
-# Logs the guarded loader diagnostics when the experimental stage is enabled.
+# Reserved for guarded diagnostics after a loader authority becomes available.
 enabled = false

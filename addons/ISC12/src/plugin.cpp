@@ -330,6 +330,14 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
             "ISC12 0.2.0 by RuffnecKk loaded disabled; hooks=0; writes=0.");
         return true;
     }
+    NativePublicationQuiescenceLease publicationLease;
+    if (!publicationLease.IsHeld()) {
+        context->LogError(
+            "ISC12: enabled=true refused with zero native writes because the "
+            "pinned D2RLoader SDK exposes no loader-owned native publication "
+            "quiescence service.");
+        return false;
+    }
     if (!AcquireProcessMutex()) return false;
 
     char identity[256]{};
@@ -360,7 +368,17 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         ReleaseProcessMutex();
         return false;
     }
-    const auto installResult = InstallLoaderExtension(loaderError);
+    const auto installResult =
+        InstallLoaderExtension(publicationLease, loaderError);
+    if (installResult == LoaderInstallResult::QuiescenceRequired) {
+        const auto message = std::string(
+            "ISC12: loader publication refused before the first native write (")
+            + loaderError + ").";
+        context->LogError(message.c_str());
+        ShutdownLoaderExtension();
+        ReleaseProcessMutex();
+        return false;
+    }
     if (installResult == LoaderInstallResult::FailedBeforeMutation) {
         const auto message = std::string("ISC12: loader install failed (")
             + loaderError + ").";

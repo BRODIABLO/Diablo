@@ -35,10 +35,12 @@ add_library(ISC12 SHARED
     isc12_atomic_file.cpp
     isc12_codec_patch.cpp
     isc12_envelope.cpp
+    isc12_item_packet_budget.cpp
     isc12_native_persistence_adapter.cpp
     isc12_native_schema_adapter.cpp
     isc12_persistence_policy.cpp
     isc12_player_stat_preflight.cpp
+    isc12_publication_coordinator.cpp
     isc12_schema.cpp
     isc12_loader.cpp
     isc12_loader_tail.asm
@@ -84,6 +86,7 @@ if(BUILD_TESTING)
         isc12_atomic_file.cpp
         isc12_codec_patch.cpp
         isc12_envelope.cpp
+        isc12_item_packet_budget.cpp
         isc12_persistence_policy.cpp
         isc12_player_stat_preflight.cpp
         isc12_schema.cpp
@@ -107,6 +110,11 @@ if(BUILD_TESTING)
         target_compile_options(ISC12Tests PRIVATE
             /W4 /WX /permissive- /EHsc /utf-8
         )
+        # The exhaustive G9 staging cases deliberately keep many independent
+        # fixed-size transaction/probe fixtures alive in one test function.
+        # This raises only the policy-test executable's reserve; the plugin
+        # keeps its single thread_local, allocation-free production context.
+        target_link_options(ISC12Tests PRIVATE /STACK:4194304)
     endif()
     add_test(NAME isc12-policy COMMAND ISC12Tests)
 
@@ -146,5 +154,25 @@ if(BUILD_TESTING)
     add_test(
         NAME isc12-native-persistence-adapter
         COMMAND ISC12NativePersistenceAdapterTests
+    )
+
+    add_executable(ISC12PublicationCoordinatorTests
+        publication_coordinator_tests.cpp
+        isc12_publication_coordinator.cpp
+    )
+    target_compile_features(ISC12PublicationCoordinatorTests PRIVATE
+        cxx_std_20
+    )
+    target_compile_definitions(ISC12PublicationCoordinatorTests PRIVATE
+        ISC12_CODEC_PATCH_TESTING=1
+    )
+    if(MSVC)
+        target_compile_options(ISC12PublicationCoordinatorTests PRIVATE
+            /W4 /WX /permissive- /EHsc /utf-8
+        )
+    endif()
+    add_test(
+        NAME isc12-publication-coordinator
+        COMMAND ISC12PublicationCoordinatorTests
     )
 endif()

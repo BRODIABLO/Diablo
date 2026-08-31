@@ -5,6 +5,10 @@ EXTERN ISC12PrepareNativeStoreWrite:PROC
 EXTERN ISC12ReadAuxiliaryWithPreflight:PROC
 EXTERN ISC12ReadRegularWithPreflight:PROC
 EXTERN ISC12CopyPreviewWithPreflight:PROC
+EXTERN ISC12InvokeItemAction9CNative:PROC
+EXTERN ISC12InvokeItemAction9DNative:PROC
+EXTERN ISC12CaptureItemAction9CQueue:PROC
+EXTERN ISC12CaptureItemAction9DQueue:PROC
 
 EXTERN gISC12PersistenceReaderContinueExit:QWORD
 EXTERN gISC12PersistenceReaderRejectedExit:QWORD
@@ -12,12 +16,17 @@ EXTERN gISC12PersistenceWriterVanillaExit:QWORD
 EXTERN gISC12PersistenceWriterCommittedExit:QWORD
 EXTERN gISC12PersistenceWriterRejectedExit:QWORD
 EXTERN gISC12CodecReturnExit:QWORD
+EXTERN gISC12ItemTransportReturnExit:QWORD
 
 PUBLIC ISC12PersistenceReaderMidHook
 PUBLIC ISC12PersistenceWriterMidHook
 PUBLIC ISC12AuxiliaryReaderCallHook
 PUBLIC ISC12PlayerReaderCallHook
 PUBLIC ISC12PlayerPreviewCallHook
+PUBLIC ISC12ItemAction9CEntryHook
+PUBLIC ISC12ItemAction9DEntryHook
+PUBLIC ISC12ItemAction9CQueueHook
+PUBLIC ISC12ItemAction9DQueueHook
 PUBLIC ISC12PersistenceRelayTemplateBegin
 PUBLIC ISC12PersistenceRelayTemplateWriterEntry
 PUBLIC ISC12PersistenceRelayTemplateReaderContinueExit
@@ -30,6 +39,18 @@ PUBLIC ISC12PersistenceRelayTemplateAuxiliaryReaderEntry
 PUBLIC ISC12PersistenceRelayTemplatePlayerReaderEntry
 PUBLIC ISC12PersistenceRelayTemplatePlayerPreviewEntry
 PUBLIC ISC12PersistenceRelayTemplateCodecReturnExit
+PUBLIC ISC12PersistenceRelayTemplatePacket9CQueueEntry
+PUBLIC ISC12PersistenceRelayTemplatePacket9DQueueEntry
+PUBLIC ISC12PersistenceRelayTemplatePacket9CProducerEntry
+PUBLIC ISC12PersistenceRelayTemplatePacket9DProducerEntry
+PUBLIC ISC12PersistenceRelayTemplateItemTransportReturnExit
+PUBLIC ISC12PersistenceRelayTemplatePacket9CTrampoline
+PUBLIC ISC12PersistenceRelayTemplatePacket9CTrampolineRel32
+PUBLIC ISC12PersistenceRelayTemplatePacket9CTrampolineEnd
+PUBLIC ISC12PersistenceRelayTemplatePacket9DTrampoline
+PUBLIC ISC12PersistenceRelayTemplatePacket9DTrampolineRel32
+PUBLIC ISC12PersistenceRelayTemplatePacket9DTrampolineEnd
+PUBLIC ISC12PersistenceRelayTemplateItemTrampolineUnwindInfo
 PUBLIC ISC12PersistenceRelayTemplateStatePointer
 PUBLIC ISC12PersistenceRelayTemplateEnd
 
@@ -141,6 +162,74 @@ ISC12PersistenceRelayTemplateCodecReturnExit:
     mov r11, qword ptr [ISC12PersistenceRelayTemplateStatePointer]
     lock dec dword ptr [r11]
     ret
+
+; When the canonical transaction is eventually activated, G9 transport is
+; published before every codec width mutation. Queue relays suppress native
+; dispatch and copy into TLS staging; producer relays invoke the DLL FRAME
+; wrappers. A non-ready or inactive copied relay may never pass through.
+ALIGN 16
+ISC12PersistenceRelayTemplatePacket9CQueueEntry:
+    mov r11, qword ptr [ISC12PersistenceRelayTemplateStatePointer]
+    lock inc dword ptr [r11]
+    cmp dword ptr [r11+4], 0
+    je PersistenceRelayFailClosed
+    cmp dword ptr [r11+60h], 0
+    je PersistenceRelayFailClosed
+    jmp qword ptr [r11+78h]
+
+ALIGN 16
+ISC12PersistenceRelayTemplatePacket9DQueueEntry:
+    mov r11, qword ptr [ISC12PersistenceRelayTemplateStatePointer]
+    lock inc dword ptr [r11]
+    cmp dword ptr [r11+4], 0
+    je PersistenceRelayFailClosed
+    cmp dword ptr [r11+60h], 0
+    je PersistenceRelayFailClosed
+    jmp qword ptr [r11+80h]
+
+ALIGN 16
+ISC12PersistenceRelayTemplatePacket9CProducerEntry:
+    mov r11, qword ptr [ISC12PersistenceRelayTemplateStatePointer]
+    lock inc dword ptr [r11]
+    cmp dword ptr [r11+4], 0
+    je PersistenceRelayFailClosed
+    cmp dword ptr [r11+60h], 0
+    je PersistenceRelayFailClosed
+    jmp qword ptr [r11+68h]
+
+ALIGN 16
+ISC12PersistenceRelayTemplatePacket9DProducerEntry:
+    mov r11, qword ptr [ISC12PersistenceRelayTemplateStatePointer]
+    lock inc dword ptr [r11]
+    cmp dword ptr [r11+4], 0
+    je PersistenceRelayFailClosed
+    cmp dword ptr [r11+60h], 0
+    je PersistenceRelayFailClosed
+    jmp qword ptr [r11+70h]
+
+ISC12PersistenceRelayTemplateItemTransportReturnExit:
+    mov r11, qword ptr [ISC12PersistenceRelayTemplateStatePointer]
+    lock dec dword ptr [r11]
+    ret
+
+ALIGN 16
+ISC12PersistenceRelayTemplatePacket9CTrampoline LABEL BYTE
+    db 040h,053h,055h,056h,057h,0E9h
+ISC12PersistenceRelayTemplatePacket9CTrampolineRel32 LABEL BYTE
+    dd 0
+ISC12PersistenceRelayTemplatePacket9CTrampolineEnd LABEL BYTE
+
+ALIGN 16
+ISC12PersistenceRelayTemplatePacket9DTrampoline LABEL BYTE
+    db 040h,053h,055h,056h,057h,0E9h
+ISC12PersistenceRelayTemplatePacket9DTrampolineRel32 LABEL BYTE
+    dd 0
+ISC12PersistenceRelayTemplatePacket9DTrampolineEnd LABEL BYTE
+
+ALIGN 4
+ISC12PersistenceRelayTemplateItemTrampolineUnwindInfo LABEL BYTE
+    db 001h,005h,004h,000h,005h,070h
+    db 004h,060h,003h,050h,002h,030h
 
 ALIGN 8
 ISC12PersistenceRelayTemplateStatePointer QWORD 0
@@ -254,5 +343,56 @@ ISC12PlayerPreviewCallHook PROC FRAME
     add rsp, 28h
     jmp qword ptr [gISC12CodecReturnExit]
 ISC12PlayerPreviewCallHook ENDP
+
+ALIGN 16
+ISC12ItemAction9CEntryHook PROC FRAME
+    ; Native ABI: client, item, action, temporary flags, gamble. The helper
+    ; owns staging and invokes the registered 10-byte producer trampoline.
+    sub rsp, 38h
+    .allocstack 38h
+    .endprolog
+    mov eax, dword ptr [rsp+60h]
+    mov dword ptr [rsp+20h], eax
+    call ISC12InvokeItemAction9CNative
+    add rsp, 38h
+    jmp qword ptr [gISC12ItemTransportReturnExit]
+ISC12ItemAction9CEntryHook ENDP
+
+ALIGN 16
+ISC12ItemAction9DEntryHook PROC FRAME
+    ; Native ABI: client, parent, item, action, temporary flags, gamble.
+    sub rsp, 38h
+    .allocstack 38h
+    .endprolog
+    mov eax, dword ptr [rsp+60h]
+    mov dword ptr [rsp+20h], eax
+    mov eax, dword ptr [rsp+68h]
+    mov dword ptr [rsp+28h], eax
+    call ISC12InvokeItemAction9DNative
+    add rsp, 38h
+    jmp qword ptr [gISC12ItemTransportReturnExit]
+ISC12ItemAction9DEntryHook ENDP
+
+ALIGN 16
+ISC12ItemAction9CQueueHook PROC FRAME
+    ; The staged queue relay never calls the native queue here. Root exit
+    ; performs the final all-packet validation before any synchronous flush.
+    sub rsp, 28h
+    .allocstack 28h
+    .endprolog
+    call ISC12CaptureItemAction9CQueue
+    add rsp, 28h
+    jmp qword ptr [gISC12ItemTransportReturnExit]
+ISC12ItemAction9CQueueHook ENDP
+
+ALIGN 16
+ISC12ItemAction9DQueueHook PROC FRAME
+    sub rsp, 28h
+    .allocstack 28h
+    .endprolog
+    call ISC12CaptureItemAction9DQueue
+    add rsp, 28h
+    jmp qword ptr [gISC12ItemTransportReturnExit]
+ISC12ItemAction9DQueueHook ENDP
 
 END

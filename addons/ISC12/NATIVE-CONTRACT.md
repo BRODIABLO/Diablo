@@ -12,14 +12,21 @@ inside each process.
 
 Version 0.2.0 fingerprints the complete loader/count/DescFunc seam, signed
 priority comparator, native qsort, native vector layout, resizer, register
-restores and epilogue contract. It installs a `PatchJmpRel32` over the exact
-eight-byte seam at `0x31F0AB`, activates the guarded replacement, and only then
-writes the aligned count immediate at `0x31ED38` from `0x1FF` to `0xFFF`.
+restores and epilogue contract. Its prepared transaction would install a
+`PatchJmpRel32` over the exact eight-byte seam at `0x31F0AB`, activate the
+guarded replacement, and only then write the aligned count immediate at
+`0x31ED38` from `0x1FF` to `0xFFF`, but only while a valid publication lease is
+held. No production issuer currently exists, so that transaction is not run.
 
 The eight-byte seam is not naturally aligned, and the PluginSDK contract does
 not prove that `PatchJmpRel32` suspends competing threads or publishes the write
 atomically. Runtime activation therefore remains blocked until quiescent loader
 startup or an equivalent transactional guarantee is proven.
+
+The same opaque `NativePublicationQuiescenceLease` now gates G0 before resource
+reservation, before the first native write and after every attempted write.
+The pinned SDK has no production issuer, so `enabled=true` currently refuses
+with zero native writes. This is a material activation barrier, not a warning.
 
 Before calling `PatchJmpRel32`, ISC12 irrevocably reserves the RX relay and RW
 state for the process lifetime. A false return is an uncertain mutation result,
@@ -45,31 +52,78 @@ bound and also fast-fails rather than permitting the DLL to unmap with an active
 callback. This closes the DLL-unload race. Hot rollback remains unsupported.
 
 The full-item decoder and serializer entries are intentionally absent from the
-exclusive foundation fingerprint because `plugin-items` may already own those
-entry hooks. ISC12 fingerprints and will later mutate only the proven internal
-ID-width sites; both plugin load orders must remain valid.
+exclusive foundation fingerprint. ISC12 fingerprints and will later mutate
+only the proven internal ID-width sites; it neither needs nor claims either
+native entry.
+
+G0-BBE is a separate static proof of the native `stat()` expression path, from
+the ItemStatCost linker through bytecode and evaluation. The official eezstreet
+`items.playerConditionCalc` feature remains an external coexistence surface; it
+does not own, implement or close the ISC12 ordinal-width proof.
+
+The governed native census finds seven compiler call sites, three resolver
+front ends converging on one shared core, and seven evaluator call sites. The
+ItemStatCost branch at `0x3B5D80` stores the linker result as a full dword. The
+generic compiler emits callback token 5 plus a 16-bit operand for every ISC12
+ID `512..4094`; the decoder restores that operand into EDX, and the attested
+stat callback at `0x3B33F0` preserves the dword through its row-count guard and
+three stat-accessor tails. Ten proof-only ledger sites fingerprint this path,
+and the ledger validator forbids any G0-BBE target other than `unchanged`.
+
+The native membership proof is closed by a governed read-only capture of D2R
+`3.3.93847`. Both exact `.text` anchors match. Protected RDATA at `0x1CFA68C`
+contains the NUL-terminated keyword `stat`; its captured 16-byte SHA-256 is
+`83626D991B1A0AD789DDB50D993623989AB1C1257879530005CEE0CA411F0E4F`.
+The protected table at `0x1D09C50` is nine 16-byte records, not nine QWORDs:
+`{callback VA:qword, arity:dword, padding:dword}`. Record 5 at `0x1D09CA0`
+contains callback RVA `0x3B33F0`, arity 2 and zero padding. Its complete
+ASLR-normalized SHA-256 is
+`E8B9B76F9D7320BDFA8129F8D22B0CB19B450AC4D655F53A8D2E56E47CF224ED`.
+The capture requested query/read rights only and attempted no mutation. D2MOO
+remains semantic corroboration and no BBE byte is ever patched. This closure
+does not grant publication authority or constitute a save/network runtime test.
 
 Current and planned atomic groups are:
 
 1. loader count plus bounded DescFunc replacement tail;
-2. generic item reader plus writer plus sentinels;
-3. each player/save reader-writer pair plus preview readers;
-4. packet `0x3E` producer and consumer;
-5. packet `0xA8` producer, consumer and terminator;
-6. packet `0xAA` producer, consumer, count and estimator.
+2. G9 full-item transport: queue `0x9C`, queue `0x9D`, producer entry `0x9C`,
+   then producer entry `0x9D`;
+3. generic item reader plus writer plus sentinels;
+4. each player/save reader-writer pair plus preview readers;
+5. packet `0x3E` producer and consumer;
+6. packet `0xA8` producer, consumer and terminator;
+7. packet `0xAA` producer, consumer, count and estimator.
 
-Quantity and outer State-ID fields remain 9-bit exclusions. Packet `0xAC`,
-the shared-stash envelope and the native-cap fallback for item packets remain
-blocked. The entry hooks already owned by `plugin-items` are never claimed by
-ISC12.
+Quantity and outer State-ID fields remain 9-bit exclusions. Packet `0xAC`
+remains blocked. The G9-A whole-tree staging transaction is source-prepared and
+statically validated, but unpublished. The shared-stash envelope is
+code-complete off-runtime; its publication, runtime round trip and failure
+recovery remain blocked. ISC12 claims no decoder, serializer, dispatcher or
+native queue-entry mutation: `0x4817F0` remains unchanged as a governed witness
+and the replay target.
 
-G1 contributes nine one-byte semantic mutations across four unique interior
-windows, including preservation of the first-reader `previousStatId = -1`
-invariant. It is integrated into the canonical G1–G4 planner without claiming
-the entry hooks owned by `plugin-items`, but remains unpublished pending the
-format/network gates and a real publication-quiescence authority. Its
-subsequent-reader interior CALL must retain the exact governed target
-`BITSTREAM_ReadBitsThunk 0xA1B6C0`; an arbitrary retarget is not compatible.
+The earlier narrow G1 writer patch is invalid. The serializer owner allocates a
+511-DWORD compound-suppression table and the vanilla lookup beginning at
+`0x37F17C` indexes it with the current stat ID; IDs at or above 511 would read
+adjacent frame storage before any G9 transport guard could run. The approved
+replacement must own exactly `[0x37F17C,0x37F1A6)` as one 42-byte in-place body
+and supersedes the old `0x37F186` writer site. Its exact 50-byte fingerprint is
+`[0x37F174,0x37F1A6)`: the unchanged nonzero guard at `0x37F174` dominates the
+body and the unchanged final CALL remains inside the fingerprint. IDs `0..510`
+retain the table comparison and
+compound suppression, while IDs at or above 511 bypass that lookup. The body
+then emits `min(ID,0xFFF)` at width 12 and preserves the native CALL at
+`0x37F1A1`; the schema rejects a real ID `0xFFF` because that value remains the
+terminator. No second owner or relay is permitted for this body. The source
+planner contains this replacement; Release `/W4 /WX`, CTest `4/4` and all exact
+signatures pass statically. No native write is authorized.
+
+The remaining G1 reader/terminator changes include preservation of the
+first-reader `previousStatId = -1` invariant. G1 still claims neither decoder
+nor serializer entry and remains unpublished pending the format/network gates
+and a real publication-quiescence authority. Its subsequent-reader interior
+CALL must retain the exact governed target `BITSTREAM_ReadBitsThunk 0xA1B6C0`;
+an arbitrary retarget is not compatible.
 
 ## Prepared persistence boundary
 
@@ -99,15 +153,20 @@ does not claim generic recoverable unwind across these boundaries. Callbacks are
 every unexpected exception. Any future recoverable cross-boundary unwind would
 require a separately governed registered/chained unwind design.
 
-## Canonical prepared G1–G4 codec transaction
+## Canonical prepared G9 plus G1–G4 transaction
 
-The canonical transaction contains four unpublished groups, 20 exact mutable
-windows, 49 governed byte slots and 51 runtime witnesses. G1 contributes four
-windows and nine one-byte slots; G2–G4 retain their 16-window, 40-slot and
-51-witness subplan. Publication order is G2, G4, G1, G3 so G3 overflow-status
-publication remains strictly final. G1 decoder/serializer entry fingerprints
-remain static identity and ownership evidence rather than runtime witnesses,
-because compatible `plugin-items` entry hooks may legitimately own them.
+The canonical source transaction contains five unpublished groups, 24 mutable
+sites, 102 differing-byte mutations and 77 witnesses. G1–G4 retain their 20-site,
+84-slot subplan: G2–G4 contribute 16 windows, 40 slots and 51 witnesses, while
+bounded G1 contributes four mutable sites, 44 slots and 14 exact
+owner/caller/table/snapshot/compound witnesses. G9 contributes four mutable
+transport sites, 18 slots and twelve exact witnesses. Replacement and full-set
+tests pass in Release. G9 publishes first, internally ordered queue `0x9C`,
+queue `0x9D`, entry `0x9C`, entry `0x9D`; the remaining order is G2, G4, G1,
+G3 so G3 overflow-status publication is strictly final. G1
+decoder/serializer entry fingerprints remain static identity and ownership
+evidence rather than runtime witnesses, because the transaction mutates neither
+entry.
 
 G2 auxiliary player stats, G3 regular modern player stats and G4 frontend
 preview are represented as three unpublished atomic groups. Sixteen exact
@@ -128,7 +187,7 @@ to the writer, while each complete instruction range is still flushed. A target
 that resolves back to the original native CALL target is rejected. The plan
 validates every mutation and witness signature before the first write and
 refuses publication without a live opaque, move-only RAII
-`CodecPublicationQuiescenceLease`. The lease is revalidated before every
+`NativePublicationQuiescenceLease`. The lease is revalidated before every
 fingerprint and write and before and after every instruction-cache flush. The
 pinned D2RLoader SDK exposes neither a quiescence transaction nor a production
 issuer, so production code cannot construct or forge this authority.
@@ -136,6 +195,130 @@ Because the patch API cannot prove that a false result left a byte unchanged,
 any attempted failure is a partial/uncertain commit requiring a cold restart;
 there is no speculative hot rollback. `PublishedCodecMutationCount == 0`, and
 no current loader path invokes the prepared commit function.
+
+The SDK audit is conclusive for the pinned API v3 commit
+`4933e2c42cb2592958cd0df3b6dc5003102252d1`: public service IDs stop at 15;
+Lifecycle and ThreadService define callback timing, not exclusion of every D2R
+consumer. `D2RLoaderLoadPlugin` is therefore not itself a production lease.
+The minimum acceptable upstream contract is a synchronous, loader-owned,
+non-escaping publication callback that is valid only in a proven quiescent
+startup phase, serializes native publishers, binds owner/thread/epoch, permits
+the required Patch calls without deadlock, and prevents runtime resumption when
+the transaction reports `Poisoned`.
+
+Receiving such a service is necessary but not sufficient. ISC12 now compiles a
+production-neutral, one-shot coordinator with no production caller or lease
+issuer. It preflights G0, G10 and the codec domain before reservation or write;
+reserves every relay/state allocation once for process lifetime; commits G0,
+G10 and codec in that order; and invokes one infallible readiness publication
+only after every commit. The codec domain retains its internal G9, G2, G4, G1,
+G3 order. Absent/revoked leases, every preflight rejection, reentry,
+mutate-then-uncertain results, terminal-state monotonicity and lease
+move/release are executable unit tests. The lease is checked again after the
+final readiness callback; loss there invokes the same poison callback so the
+publication is cleared before any possible resume. Any post-write or uncertain
+result exposes terminal `Poisoned` and forbids rollback.
+
+The coordinator is an orchestration contract, not yet a production adapter.
+The current G0, G10 and codec functions must still be split into immutable
+preflight and commit phases, bound to that coordinator, and invoked only inside
+the future loader transaction. Calling the current publishers sequentially
+would still violate the global-preflight rule and remains forbidden.
+
+## G9-A native-only bounded staging transaction
+
+The 0x9C and 0x9D producers call the shared serializer with recursion disabled.
+A root is therefore one 0x9C or 0x9D packet; the native walker later sends each
+socketed descendant as a separate 0x9D. Twelve exact witnesses govern both
+recursion-zero call setups split around the mutable queue CALLs, capacities,
+header arithmetic, serializer zero-on-overflow, consumer buffer/header
+assumptions, the descendant walker, the native queue entry at `0x4817F0` and
+its span dispatch. The added exact unique ranges `[0x479E23,0x479E41)` and
+`[0x47A019,0x47A037)` cover each producer's cookie check, stack deallocation,
+nonvolatile pops and `RET`. ISC12 owns neither a decoder nor serializer entry,
+dispatcher or native queue entry.
+
+The native-safe payload ceilings are 244 bytes for a root 0x9C and 239 bytes for
+every 0x9D node. The pure snapshot planner computes each node from all emitted
+ID and sentinel tokens, classifies the root with its packet kind, then every
+descendant as 0x9D. A root sent as 0x9D therefore also has a 239-byte cap. It
+validates the complete packed tree before the first callback, including
+independent occupied-child counts, socket capacity, indices, shared children,
+cycles and unreachable nodes. Accepted callbacks follow the native depth-first
+preorder. Rejection invokes zero callbacks. These are accounting and planner
+facts, not a runtime capability claim or an ISC12 worst-case item guarantee.
+The serializer window beginning at `0x37D60B` counts every immediate inventory
+child into EBX, clamps every count at or above seven to exactly seven, then
+writes that occupied-child count in three bits at `0x37D66F..0x37D678`. This is
+independent from `STAT_ITEM_NUMSOCKETS` (`0xC2`) capacity and proves the local
+encoding constraint `occupied <= 7`. ISC12 separately requires
+`occupied <= capacity` without assuming equality. The walker at
+`0x481B50` and recursive 0x9D call at `0x47A014` expose no global node/depth
+counter. The staging transaction must therefore impose and prove its own
+bounded-storage contract; no global native tree maximum is claimed.
+
+The native stat-list loop exposes at most seven list positions per node: base,
+five set slots and one runeword list. Each list snapshots at most 511 eight-byte
+records. Six low-ID compound primaries suppress eight partner records after one
+ID token carries multiple values. A purely structural ceiling is therefore
+3,577 ID tokens and seven sentinels per node, but skipped/null values and
+compound suppression mean this is neither a realizable item claim nor a
+worst-case byte bound. G9 therefore copies the actual bytes produced by the one
+real native serialization; record-count estimates never authorize a queue
+flush.
+
+Vincent selected autonomous native-only G9-A on 30 August 2026. A second scratch
+serialization at producer entry is forbidden because both producers temporarily
+change serialized item state before calling the real serializer. The
+source-prepared implementation instead stages the real output in one
+allocation-free thread-local transaction with fixed caps of 64 packets,
+`0x4000` total bytes, depth 16 and seven immediate children per node. These are
+ISC12 safety limits, not an inferred native global tree maximum.
+
+Entry wrappers at `0x479CD0` and `0x479EA0` preserve the native preparation and
+recursive traversal. Relays at queue CALLs `0x479E10` and `0x47A001` copy each
+stack packet into fixed storage without sending it. The split witnesses now
+exclude those mutable five-byte CALLs: 0x9C owns
+`[0x479D85,0x479E10)` (139 bytes) plus `[0x479E15,0x479E23)` (14 bytes), while
+0x9D owns `[0x479F76,0x47A001)` (139 bytes) plus
+`[0x47A006,0x47A019)` (19 bytes).
+
+Only after the root returns does the wrapper validate the complete captured
+batch, including packet headers and lengths, preorder, parent links, cycles and
+all four fixed caps. Rejection discards the entire transaction before any real
+queue call. Acceptance replays the batch through the unchanged native queue at
+`0x4817F0`. The four mutable sites publish first in the fail-closed order queue
+`0x9C`, queue `0x9D`, entry `0x9C`, entry `0x9D`, ensuring both queue calls are
+intercepted before either producer entry can begin staging.
+
+Each producer entry uses a registered 10-byte trampoline that preserves its
+overwritten prologue and resumes the native function. Live unwind metadata is
+registered through `RtlAddFunctionTable` before publication can be attempted;
+registration failure is fail-closed. SEH `finally` paths abort and discard the
+thread-local transaction after an abnormal producer exit. Before publication,
+the source loader also calls `RtlLookupFunctionEntry` at both the producer body
+and governed `RET`. Both lookups must report identical BeginAddress, EndAddress
+and UnwindData, with EndAddress inside the image and the function range covering
+the complete epilogue. The rehydrated static `.pdata` is protected and
+non-authoritative; only a future live lookup can attest this contract, and it
+may reject the official runtime. The source/static contract is closed: the full
+Release `/W4 /WX` build and CTest `4/4` pass after adding the coordinator test,
+and the ledger is `VALID` at 211 sites / 15 groups. The governed DLL SHA-256 is
+`FF8D16AF4A6DBCB9BD3AD86A6A6DFCBB4553D26A200DF161B1065C6A5DFE5286`.
+It is still unpublished and not an ISC12 cold-start, save or multiplayer claim.
+
+The engineering dependency is explicit and satisfied: the bounded G1
+serializer body precedes G9 staging. No production caller invokes the prepared
+commit, `itemTransportReady == false`, `codecReady == false` and the published
+mutation count remains zero. G1, G9, G10 and G0 remain unpublished until a real
+loader-issued publication-quiescence authority closes the native transaction.
+Only then may cold-start and live 0x9C/0x9D, overflow, reentry, backpressure and
+coexistence validation begin.
+
+For historical provenance only, the six entry hooks previously audited belong
+to the RuffnecKk ExtendedItemStats prototype and an experimental RuffDood fork
+build. They are absent from the pinned upstream eezstreet baseline and are not
+part of the ISC12 product, contract or active gate.
 
 G2 owns a fixed `0x4000` buffer and an unchanged 512-entry cap. ISC12 rejects
 the native schema before publication when `CsvBits > 32` or
@@ -153,8 +336,8 @@ The abandoned bytes at `0x5353F0` are not a code cave: they belong to the next
 function's PDATA/unwind range and are never mutated.
 
 Future publication must reserve every copied relay for process lifetime before
-the first codec byte and hold a loader-owned quiescence lease across every
-G1–G4 fingerprint, write and cache flush. Lease loss or any uncertain
+the first codec byte and hold a loader-owned quiescence lease across every G9
+and G1–G4 fingerprint, write and cache flush. Lease loss or any uncertain
 write/flush after the first attempted mutation requires an immediate cold
 restart; hot rollback remains forbidden. These are activation gates, not
 claims of current runtime behavior.

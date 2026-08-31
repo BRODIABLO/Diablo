@@ -1,5 +1,6 @@
 #pragma once
 
+#include "isc12_codec_patch.hpp"
 #include "isc12_envelope.hpp"
 
 #include <cstddef>
@@ -16,27 +17,44 @@ namespace ruffneckk::isc12 {
 enum class LoaderInstallResult : std::uint8_t {
     Active,
     FailedBeforeMutation,
+    QuiescenceRequired,
     PartialCommitColdRestartRequired,
 };
 
 template <typename ReserveTailAttempt, typename PatchTail, typename ActivateTail,
           typename PatchCap, typename PublishCap>
 auto CommitLoaderMutation(
+        const NativePublicationQuiescenceLease& quiescence,
         ReserveTailAttempt&& reserveTailAttempt,
         PatchTail&& patchTail,
         ActivateTail&& activateTail,
         PatchCap&& patchCap,
         PublishCap&& publishCap) noexcept -> LoaderInstallResult {
+    if (!quiescence.IsHeld()) {
+        return LoaderInstallResult::QuiescenceRequired;
+    }
     // The PluginSDK forwards a bool from its patch service but does not
     // guarantee that a false result left the target bytes untouched. Once a
     // native write is attempted, its relay/state lifetime therefore becomes
     // process-bound even before the call returns.
     reserveTailAttempt();
+    if (!quiescence.IsHeld()) {
+        return LoaderInstallResult::QuiescenceRequired;
+    }
     if (!patchTail()) {
         return LoaderInstallResult::PartialCommitColdRestartRequired;
     }
+    if (!quiescence.IsHeld()) {
+        return LoaderInstallResult::PartialCommitColdRestartRequired;
+    }
     activateTail();
+    if (!quiescence.IsHeld()) {
+        return LoaderInstallResult::PartialCommitColdRestartRequired;
+    }
     if (!patchCap()) {
+        return LoaderInstallResult::PartialCommitColdRestartRequired;
+    }
+    if (!quiescence.IsHeld()) {
         return LoaderInstallResult::PartialCommitColdRestartRequired;
     }
     publishCap();
@@ -84,7 +102,9 @@ auto PrepareLoaderExtension(
     bool diagnostics,
     std::string& error) noexcept -> bool;
 
-auto InstallLoaderExtension(std::string& error) noexcept
+auto InstallLoaderExtension(
+    const NativePublicationQuiescenceLease& quiescence,
+    std::string& error) noexcept
     -> LoaderInstallResult;
 
 auto ShutdownLoaderExtension() noexcept -> void;

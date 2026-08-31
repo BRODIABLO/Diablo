@@ -3,6 +3,7 @@
 #include "isc12_atomic_file.hpp"
 #include "isc12_codec_patch.hpp"
 #include "isc12_envelope.hpp"
+#include "isc12_item_packet_budget.hpp"
 #include "isc12_loader.hpp"
 #include "isc12_native_sites.hpp"
 #include "isc12_persistence_policy.hpp"
@@ -138,6 +139,7 @@ struct CodecFixtureSite {
 struct CodecPatchFixture {
     std::vector<CodecFixtureSite> sites{};
     std::size_t verifyCalls{};
+    std::size_t reserveLifetimeCalls{};
     std::size_t writeCalls{};
     std::size_t flushCalls{};
     std::size_t failWriteAttempt{(std::numeric_limits<std::size_t>::max)()};
@@ -294,6 +296,11 @@ auto WriteCodecFixtureByte(
     return false;
 }
 
+auto ReserveCodecFixtureMutationLifetime(void* context) noexcept -> void {
+    auto& fixture = *static_cast<CodecPatchFixture*>(context);
+    ++fixture.reserveLifetimeCalls;
+}
+
 auto FlushCodecFixtureInstructionCache(
         void* context,
         std::uintptr_t firstRva,
@@ -399,6 +406,24 @@ auto EncodePlayerStatPreflightFixture(
     return bytes;
 }
 
+struct FullItemPacketVisitProbe {
+    std::array<std::size_t, 16> nodeIndices{};
+    std::array<ruffneckk::isc12::FullItemPacketKind, 16> packetKinds{};
+    std::size_t callCount{};
+};
+
+auto RecordFullItemPacketVisit(
+        void* context,
+        std::size_t nodeIndex,
+        ruffneckk::isc12::FullItemPacketKind packet) noexcept -> void {
+    auto& probe = *static_cast<FullItemPacketVisitProbe*>(context);
+    if (probe.callCount < probe.nodeIndices.size()) {
+        probe.nodeIndices[probe.callCount] = nodeIndex;
+        probe.packetKinds[probe.callCount] = packet;
+    }
+    ++probe.callCount;
+}
+
 #define CHECK(expression) \
     do { \
         if (!(expression)) { \
@@ -407,6 +432,1265 @@ auto EncodePlayerStatPreflightFixture(
             ++Failures; \
         } \
     } while (false)
+
+struct FullItemStagingQueueProbe {
+    std::array<std::array<std::uint8_t,
+        ruffneckk::isc12::MaximumStagedItemPacketBytes>,
+        ruffneckk::isc12::MaximumStagedItemPacketCount> packets{};
+    std::array<std::size_t,
+        ruffneckk::isc12::MaximumStagedItemPacketCount> lengths{};
+    std::array<void*,
+        ruffneckk::isc12::MaximumStagedItemPacketCount> clients{};
+    std::size_t callCount{};
+    bool rootReturned{};
+    bool observedBeforeRootReturn{};
+    ruffneckk::isc12::FullItemPacketStagingContext* reentryTransaction{};
+    ruffneckk::isc12::FullItemProducerDisposition reentryDisposition{
+        ruffneckk::isc12::FullItemProducerDisposition::InvokeOriginal};
+    int reentryClient{};
+    int reentryItem{};
+};
+
+auto RecordStagedFullItemPacket(
+        void* context,
+        void* client,
+        const std::uint8_t* bytes,
+        std::size_t length) noexcept -> void {
+    auto& probe = *static_cast<FullItemStagingQueueProbe*>(context);
+    if (!probe.rootReturned) probe.observedBeforeRootReturn = true;
+    if (probe.callCount < probe.packets.size()
+            && length <= probe.packets[probe.callCount].size()) {
+        probe.lengths[probe.callCount] = length;
+        probe.clients[probe.callCount] = client;
+        std::copy_n(
+            bytes,
+            length,
+            probe.packets[probe.callCount].begin());
+    }
+    ++probe.callCount;
+
+    if (probe.reentryTransaction != nullptr && probe.callCount == 1) {
+        const auto admission = BeginFullItemPacketProducer(
+            *probe.reentryTransaction,
+            {
+                .kind = ruffneckk::isc12::FullItemPacketKind::ItemAction9C,
+                .client = &probe.reentryClient,
+                .item = &probe.reentryItem,
+                .action = 0x10,
+            });
+        probe.reentryDisposition = admission.disposition;
+    }
+}
+
+auto MakeStagedFullItemPacket(
+        ruffneckk::isc12::FullItemPacketKind kind,
+        std::uint8_t action,
+        std::size_t length,
+        std::uint8_t seed = 0x40)
+        -> std::array<std::uint8_t, 256> {
+    std::array<std::uint8_t, 256> packet{};
+    for (std::size_t index{}; index < packet.size(); ++index) {
+        packet[index] = static_cast<std::uint8_t>(seed + index);
+    }
+    packet[0] = kind
+            == ruffneckk::isc12::FullItemPacketKind::ItemAction9C
+        ? 0x9C
+        : 0x9D;
+    packet[1] = action;
+    packet[2] = static_cast<std::uint8_t>(length);
+    return packet;
+}
+
+auto RunFullItemPacketStagingTests() -> void {
+    using namespace ruffneckk::isc12;
+
+    static_assert(MaximumStagedItemPacketBytes == 0xFC);
+    static_assert(MaximumStagedItemImmediateChildren == 7);
+    static_assert(MaximumStagedItemPacketCount == 64);
+    static_assert(MaximumStagedItemTreeDepth == 16);
+    static_assert(MaximumStagedItemTransactionBytes == 0x4000);
+    static_assert(noexcept(BeginFullItemPacketProducer(
+        std::declval<FullItemPacketStagingContext&>(),
+        std::declval<const FullItemProducerDescriptor&>())));
+    static_assert(noexcept(CaptureFullItemPacketQueueCall(
+        std::declval<FullItemPacketStagingContext&>(),
+        FullItemPacketKind::ItemAction9C,
+        nullptr,
+        nullptr,
+        0)));
+    static_assert(noexcept(AbortFullItemPacketProducer(
+        std::declval<FullItemPacketStagingContext&>(),
+        std::declval<const FullItemProducerToken&>())));
+
+    int client{};
+    std::array<int, MaximumStagedItemPacketCount + 2U> items{};
+    const auto root9C = FullItemProducerDescriptor{
+        .kind = FullItemPacketKind::ItemAction9C,
+        .client = &client,
+        .item = &items[0],
+        .action = 0x10,
+        .temporaryFlags = 0xA5A5,
+        .gamble = 1,
+    };
+    const auto child9D = [&](std::size_t parent, std::size_t item) {
+        return FullItemProducerDescriptor{
+            .kind = FullItemPacketKind::ItemAction9D,
+            .client = &client,
+            .parentItem = &items[parent],
+            .item = &items[item],
+            .action = 0x12,
+            .temporaryFlags = 0xA5A5,
+            .gamble = 0,
+        };
+    };
+
+    const auto expectInvalidRoot = [&](FullItemProducerDescriptor descriptor) {
+        FullItemPacketStagingContext transaction{};
+        const auto admission = BeginFullItemPacketProducer(
+            transaction, descriptor);
+        CHECK(admission.disposition
+            == FullItemProducerDisposition::SkipOriginal);
+        CHECK(admission.error == FullItemPacketStagingError::InvalidArgument);
+        CHECK(admission.token.ownsRoot);
+        CHECK(EndFullItemPacketProducer(transaction, admission.token)
+            == FullItemProducerCompletion::RootRejected);
+        FullItemStagingQueueProbe probe{.rootReturned = true};
+        const auto result = FlushOrDiscardFullItemPacketTransaction(
+            transaction,
+            &RecordStagedFullItemPacket,
+            &probe);
+        CHECK(result.error == FullItemPacketStagingError::InvalidArgument);
+        CHECK(probe.callCount == 0);
+        CHECK(transaction.state == FullItemPacketStagingState::Idle);
+    };
+    auto nullRootClient = root9C;
+    nullRootClient.client = nullptr;
+    expectInvalidRoot(nullRootClient);
+    auto nullRootItem = root9C;
+    nullRootItem.item = nullptr;
+    expectInvalidRoot(nullRootItem);
+    auto nullRoot9DParent = root9C;
+    nullRoot9DParent.kind = FullItemPacketKind::ItemAction9D;
+    nullRoot9DParent.parentItem = nullptr;
+    expectInvalidRoot(nullRoot9DParent);
+    auto invalidRootKind = root9C;
+    invalidRootKind.kind = static_cast<FullItemPacketKind>(0xFF);
+    expectInvalidRoot(invalidRootKind);
+
+    // A copied root packet is not exposed until the root producer returns.
+    FullItemPacketStagingContext copiedRootTransaction{};
+    const auto copiedRootAdmission = BeginFullItemPacketProducer(
+        copiedRootTransaction,
+        root9C);
+    CHECK(copiedRootAdmission.disposition
+        == FullItemProducerDisposition::InvokeOriginal);
+    CHECK(copiedRootAdmission.token.ownsRoot);
+    auto copiedRootPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9C,
+        root9C.action,
+        MaximumStagedItemPacketBytes,
+        0x21);
+    const auto copiedRootExpected = copiedRootPacket;
+    CHECK(CaptureFullItemPacketQueueCall(
+        copiedRootTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        copiedRootPacket.data(),
+        MaximumStagedItemPacketBytes)
+        == FullItemPacketStagingError::None);
+    copiedRootPacket.fill(0xEE);
+    CHECK(EndFullItemPacketProducer(
+        copiedRootTransaction,
+        copiedRootAdmission.token)
+        == FullItemProducerCompletion::RootReady);
+    FullItemStagingQueueProbe copiedRootProbe{};
+    CHECK(copiedRootProbe.callCount == 0);
+    copiedRootProbe.rootReturned = true;
+    const auto copiedRootFlush = FlushOrDiscardFullItemPacketTransaction(
+        copiedRootTransaction,
+        &RecordStagedFullItemPacket,
+        &copiedRootProbe);
+    CHECK(copiedRootFlush.completed);
+    CHECK(copiedRootFlush.queuedPacketCount == 1);
+    CHECK(copiedRootProbe.callCount == 1);
+    CHECK(!copiedRootProbe.observedBeforeRootReturn);
+    CHECK(copiedRootProbe.clients[0] == &client);
+    CHECK(std::equal(
+        copiedRootExpected.begin(),
+        copiedRootExpected.begin() + MaximumStagedItemPacketBytes,
+        copiedRootProbe.packets[0].begin()));
+    CHECK(copiedRootTransaction.state == FullItemPacketStagingState::Idle);
+
+    // An SEH unwind after capture poisons the batch before producer balance;
+    // the already-copied root packet can therefore never be published.
+    FullItemPacketStagingContext exceptionalRootTransaction{};
+    const auto exceptionalRootAdmission = BeginFullItemPacketProducer(
+        exceptionalRootTransaction,
+        root9C);
+    auto exceptionalRootPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9C, root9C.action, 32, 0x2A);
+    CHECK(CaptureFullItemPacketQueueCall(
+        exceptionalRootTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        exceptionalRootPacket.data(),
+        32) == FullItemPacketStagingError::None);
+    CHECK(AbortFullItemPacketProducer(
+        exceptionalRootTransaction,
+        exceptionalRootAdmission.token)
+        == FullItemProducerCompletion::RootRejected);
+    FullItemStagingQueueProbe exceptionalRootProbe{.rootReturned = true};
+    const auto exceptionalRootFlush =
+        FlushOrDiscardFullItemPacketTransaction(
+            exceptionalRootTransaction,
+            &RecordStagedFullItemPacket,
+            &exceptionalRootProbe);
+    CHECK(exceptionalRootFlush.error
+        == FullItemPacketStagingError::NativeProducerException);
+    CHECK(exceptionalRootFlush.queuedPacketCount == 0);
+    CHECK(exceptionalRootProbe.callCount == 0);
+    CHECK(exceptionalRootTransaction.state
+        == FullItemPacketStagingState::Idle);
+
+    // A 0x9D entry outside another transaction is a valid autonomous root.
+    FullItemPacketStagingContext root9DTransaction{};
+    const auto root9D = FullItemProducerDescriptor{
+        .kind = FullItemPacketKind::ItemAction9D,
+        .client = &client,
+        .parentItem = &items[1],
+        .item = &items[0],
+        .action = 0x22,
+        .temporaryFlags = 0x55,
+        .gamble = 1,
+    };
+    const auto root9DAdmission = BeginFullItemPacketProducer(
+        root9DTransaction,
+        root9D);
+    CHECK(root9DAdmission.token.ownsRoot);
+    auto root9DPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9D,
+        root9D.action,
+        MaximumStagedItemPacketBytes);
+    CHECK(CaptureFullItemPacketQueueCall(
+        root9DTransaction,
+        FullItemPacketKind::ItemAction9D,
+        &client,
+        root9DPacket.data(),
+        MaximumStagedItemPacketBytes)
+        == FullItemPacketStagingError::None);
+    CHECK(EndFullItemPacketProducer(
+        root9DTransaction,
+        root9DAdmission.token)
+        == FullItemProducerCompletion::RootReady);
+    FullItemStagingQueueProbe root9DProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        root9DTransaction,
+        &RecordStagedFullItemPacket,
+        &root9DProbe).completed);
+    CHECK(root9DProbe.callCount == 1);
+    CHECK(root9DProbe.packets[0][0] == 0x9D);
+
+    FullItemPacketStagingContext root9DTreeTransaction{};
+    const auto root9DTreeRoot = BeginFullItemPacketProducer(
+        root9DTreeTransaction,
+        root9D);
+    CHECK(CaptureFullItemPacketQueueCall(
+        root9DTreeTransaction,
+        FullItemPacketKind::ItemAction9D,
+        &client,
+        root9DPacket.data(),
+        MaximumStagedItemPacketBytes)
+        == FullItemPacketStagingError::None);
+    const auto root9DTreeChild = BeginFullItemPacketProducer(
+        root9DTreeTransaction,
+        {
+            .kind = FullItemPacketKind::ItemAction9D,
+            .client = &client,
+            .parentItem = &items[0],
+            .item = &items[2],
+            .action = 0x12,
+            .temporaryFlags = root9D.temporaryFlags,
+        });
+    auto root9DTreeChildPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9D,
+        0x12,
+        32);
+    CHECK(CaptureFullItemPacketQueueCall(
+        root9DTreeTransaction,
+        FullItemPacketKind::ItemAction9D,
+        &client,
+        root9DTreeChildPacket.data(), 32)
+        == FullItemPacketStagingError::None);
+    CHECK(EndFullItemPacketProducer(
+        root9DTreeTransaction, root9DTreeChild.token)
+        == FullItemProducerCompletion::NestedComplete);
+    CHECK(EndFullItemPacketProducer(
+        root9DTreeTransaction, root9DTreeRoot.token)
+        == FullItemProducerCompletion::RootReady);
+    FullItemStagingQueueProbe root9DTreeProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        root9DTreeTransaction,
+        &RecordStagedFullItemPacket,
+        &root9DTreeProbe).completed);
+    CHECK(root9DTreeProbe.callCount == 2);
+    CHECK(root9DTreeProbe.packets[0][0] == 0x9D);
+    CHECK(root9DTreeProbe.packets[1][0] == 0x9D);
+
+    // Expected recursive 9D calls preserve native depth-first preorder.
+    FullItemPacketStagingContext preorderTransaction{};
+    const auto preorderRoot = BeginFullItemPacketProducer(
+        preorderTransaction,
+        root9C);
+    auto preorderRootPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9C, root9C.action, 32, 0x10);
+    CHECK(CaptureFullItemPacketQueueCall(
+        preorderTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        preorderRootPacket.data(), 32) == FullItemPacketStagingError::None);
+    const auto childA = BeginFullItemPacketProducer(
+        preorderTransaction, child9D(0, 1));
+    auto childAPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9D, 0x12, 33, 0x20);
+    CHECK(CaptureFullItemPacketQueueCall(
+        preorderTransaction,
+        FullItemPacketKind::ItemAction9D,
+        &client,
+        childAPacket.data(), 33) == FullItemPacketStagingError::None);
+    const auto grandchild = BeginFullItemPacketProducer(
+        preorderTransaction, child9D(1, 2));
+    auto grandchildPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9D, 0x12, 34, 0x30);
+    CHECK(CaptureFullItemPacketQueueCall(
+        preorderTransaction,
+        FullItemPacketKind::ItemAction9D,
+        &client,
+        grandchildPacket.data(), 34) == FullItemPacketStagingError::None);
+    CHECK(EndFullItemPacketProducer(
+        preorderTransaction, grandchild.token)
+        == FullItemProducerCompletion::NestedComplete);
+    CHECK(EndFullItemPacketProducer(preorderTransaction, childA.token)
+        == FullItemProducerCompletion::NestedComplete);
+    const auto childB = BeginFullItemPacketProducer(
+        preorderTransaction, child9D(0, 3));
+    auto childBPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9D, 0x12, 35, 0x40);
+    CHECK(CaptureFullItemPacketQueueCall(
+        preorderTransaction,
+        FullItemPacketKind::ItemAction9D,
+        &client,
+        childBPacket.data(), 35) == FullItemPacketStagingError::None);
+    CHECK(EndFullItemPacketProducer(preorderTransaction, childB.token)
+        == FullItemProducerCompletion::NestedComplete);
+    CHECK(EndFullItemPacketProducer(preorderTransaction, preorderRoot.token)
+        == FullItemProducerCompletion::RootReady);
+    FullItemStagingQueueProbe preorderProbe{.rootReturned = true};
+    const auto preorderFlush = FlushOrDiscardFullItemPacketTransaction(
+        preorderTransaction,
+        &RecordStagedFullItemPacket,
+        &preorderProbe);
+    CHECK(preorderFlush.completed);
+    CHECK(preorderProbe.callCount == 4);
+    CHECK(preorderProbe.packets[0][0] == 0x9C);
+    CHECK(preorderProbe.packets[1][0] == 0x9D);
+    CHECK(preorderProbe.packets[2][0] == 0x9D);
+    CHECK(preorderProbe.packets[3][0] == 0x9D);
+    CHECK(preorderProbe.packets[0][3] == preorderRootPacket[3]);
+    CHECK(preorderProbe.packets[1][3] == childAPacket[3]);
+    CHECK(preorderProbe.packets[2][3] == grandchildPacket[3]);
+    CHECK(preorderProbe.packets[3][3] == childBPacket[3]);
+
+    const auto expectCaptureRejection = [&](FullItemPacketKind rootKind,
+                                             FullItemPacketKind relayKind,
+                                             const std::uint8_t* packetBytes,
+                                             std::size_t packetLength,
+                                             void* relayClient,
+                                             FullItemPacketStagingError expected) {
+        auto descriptor = root9C;
+        descriptor.kind = rootKind;
+        descriptor.parentItem = rootKind == FullItemPacketKind::ItemAction9D
+            ? static_cast<void*>(&items[1])
+            : nullptr;
+        FullItemPacketStagingContext transaction{};
+        const auto admission = BeginFullItemPacketProducer(
+            transaction, descriptor);
+        CHECK(admission.disposition
+            == FullItemProducerDisposition::InvokeOriginal);
+        CHECK(CaptureFullItemPacketQueueCall(
+            transaction,
+            relayKind,
+            relayClient,
+            packetBytes,
+            packetLength) == expected);
+        CHECK(EndFullItemPacketProducer(transaction, admission.token)
+            == FullItemProducerCompletion::RootRejected);
+        FullItemStagingQueueProbe probe{.rootReturned = true};
+        const auto result = FlushOrDiscardFullItemPacketTransaction(
+            transaction,
+            &RecordStagedFullItemPacket,
+            &probe);
+        CHECK(result.error == expected);
+        CHECK(result.queuedPacketCount == 0);
+        CHECK(probe.callCount == 0);
+        CHECK(transaction.state == FullItemPacketStagingState::Idle);
+    };
+
+    const auto expectAcceptedRootLength = [&](FullItemPacketKind kind,
+                                              std::size_t length) {
+        auto descriptor = root9C;
+        descriptor.kind = kind;
+        descriptor.parentItem = kind == FullItemPacketKind::ItemAction9D
+            ? static_cast<void*>(&items[1])
+            : nullptr;
+        FullItemPacketStagingContext transaction{};
+        const auto admission = BeginFullItemPacketProducer(
+            transaction, descriptor);
+        auto packet = MakeStagedFullItemPacket(
+            kind, descriptor.action, length);
+        CHECK(CaptureFullItemPacketQueueCall(
+            transaction,
+            kind,
+            &client,
+            packet.data(),
+            length) == FullItemPacketStagingError::None);
+        CHECK(EndFullItemPacketProducer(transaction, admission.token)
+            == FullItemProducerCompletion::RootReady);
+        FullItemStagingQueueProbe probe{.rootReturned = true};
+        const auto result = FlushOrDiscardFullItemPacketTransaction(
+            transaction,
+            &RecordStagedFullItemPacket,
+            &probe);
+        CHECK(result.completed);
+        CHECK(probe.callCount == 1);
+        CHECK(probe.lengths[0] == length);
+    };
+    expectAcceptedRootLength(
+        FullItemPacketKind::ItemAction9C,
+        Packet9CHeaderBytes + 1U);
+    expectAcceptedRootLength(
+        FullItemPacketKind::ItemAction9D,
+        Packet9DHeaderBytes + 1U);
+
+    auto packet9CHeaderOnly = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9C, root9C.action, 8);
+    expectCaptureRejection(
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketKind::ItemAction9C,
+        packet9CHeaderOnly.data(), 8, &client,
+        FullItemPacketStagingError::InvalidPacketLength);
+    auto packet9DHeaderOnly = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9D, root9C.action, 13);
+    expectCaptureRejection(
+        FullItemPacketKind::ItemAction9D,
+        FullItemPacketKind::ItemAction9D,
+        packet9DHeaderOnly.data(), 13, &client,
+        FullItemPacketStagingError::InvalidPacketLength);
+    for (const auto invalidLength : {
+            std::size_t{253}, std::size_t{254}, std::size_t{255},
+            std::size_t{0}, std::size_t{1}}) {
+        auto packet = MakeStagedFullItemPacket(
+            FullItemPacketKind::ItemAction9D,
+            root9C.action,
+            invalidLength);
+        expectCaptureRejection(
+            FullItemPacketKind::ItemAction9D,
+            FullItemPacketKind::ItemAction9D,
+            packet.data(), invalidLength, &client,
+            FullItemPacketStagingError::InvalidPacketLength);
+    }
+    auto invalidOpcodePacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9C, root9C.action, 32);
+    invalidOpcodePacket[0] = 0x9D;
+    expectCaptureRejection(
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketKind::ItemAction9C,
+        invalidOpcodePacket.data(), 32, &client,
+        FullItemPacketStagingError::InvalidPacketHeader);
+    auto invalidActionPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9C, root9C.action, 32);
+    invalidActionPacket[1] ^= 1;
+    expectCaptureRejection(
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketKind::ItemAction9C,
+        invalidActionPacket.data(), 32, &client,
+        FullItemPacketStagingError::InvalidPacketHeader);
+    auto invalidLengthHeaderPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9C, root9C.action, 32);
+    invalidLengthHeaderPacket[2] = 31;
+    expectCaptureRejection(
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketKind::ItemAction9C,
+        invalidLengthHeaderPacket.data(), 32, &client,
+        FullItemPacketStagingError::InvalidPacketHeader);
+    auto validFailurePacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9C, root9C.action, 32);
+    expectCaptureRejection(
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketKind::ItemAction9D,
+        validFailurePacket.data(), 32, &client,
+        FullItemPacketStagingError::RelayKindMismatch);
+    int wrongClient{};
+    expectCaptureRejection(
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketKind::ItemAction9C,
+        validFailurePacket.data(), 32, &wrongClient,
+        FullItemPacketStagingError::ClientMismatch);
+    expectCaptureRejection(
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketKind::ItemAction9C,
+        nullptr, 32, &client,
+        FullItemPacketStagingError::InvalidPacketPointer);
+
+    // The first relay error is sticky, and a second relay cannot publish it.
+    FullItemPacketStagingContext stickyTransaction{};
+    const auto stickyRoot = BeginFullItemPacketProducer(
+        stickyTransaction, root9C);
+    CHECK(CaptureFullItemPacketQueueCall(
+        stickyTransaction,
+        FullItemPacketKind::ItemAction9D,
+        &client,
+        validFailurePacket.data(), 32)
+        == FullItemPacketStagingError::RelayKindMismatch);
+    CHECK(CaptureFullItemPacketQueueCall(
+        stickyTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &wrongClient,
+        validFailurePacket.data(), 32)
+        == FullItemPacketStagingError::RelayKindMismatch);
+    CHECK(EndFullItemPacketProducer(stickyTransaction, stickyRoot.token)
+        == FullItemProducerCompletion::RootRejected);
+    FullItemStagingQueueProbe stickyProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        stickyTransaction,
+        &RecordStagedFullItemPacket,
+        &stickyProbe).error
+        == FullItemPacketStagingError::RelayKindMismatch);
+    CHECK(stickyProbe.callCount == 0);
+
+    // Duplicate relays and missing relays reject the complete root.
+    FullItemPacketStagingContext duplicateRelayTransaction{};
+    const auto duplicateRelayRoot = BeginFullItemPacketProducer(
+        duplicateRelayTransaction, root9C);
+    auto duplicateRelayPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9C, root9C.action, 32);
+    CHECK(CaptureFullItemPacketQueueCall(
+        duplicateRelayTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        duplicateRelayPacket.data(), 32)
+        == FullItemPacketStagingError::None);
+    CHECK(CaptureFullItemPacketQueueCall(
+        duplicateRelayTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        duplicateRelayPacket.data(), 32)
+        == FullItemPacketStagingError::DuplicatePacket);
+    CHECK(EndFullItemPacketProducer(
+        duplicateRelayTransaction, duplicateRelayRoot.token)
+        == FullItemProducerCompletion::RootRejected);
+    FullItemStagingQueueProbe duplicateRelayProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        duplicateRelayTransaction,
+        &RecordStagedFullItemPacket,
+        &duplicateRelayProbe).error
+        == FullItemPacketStagingError::DuplicatePacket);
+    CHECK(duplicateRelayProbe.callCount == 0);
+
+    FullItemPacketStagingContext missingRelayTransaction{};
+    const auto missingRelayRoot = BeginFullItemPacketProducer(
+        missingRelayTransaction, root9C);
+    CHECK(EndFullItemPacketProducer(
+        missingRelayTransaction, missingRelayRoot.token)
+        == FullItemProducerCompletion::RootRejected);
+    FullItemStagingQueueProbe missingRelayProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        missingRelayTransaction,
+        &RecordStagedFullItemPacket,
+        &missingRelayProbe).error
+        == FullItemPacketStagingError::MissingPacket);
+    CHECK(missingRelayProbe.callCount == 0);
+
+    // A relay outside a wrapped producer is a process-fatal invariant breach.
+    FullItemPacketStagingContext idleRelayTransaction{};
+    CHECK(CaptureFullItemPacketQueueCall(
+        idleRelayTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        validFailurePacket.data(), 32)
+        == FullItemPacketStagingError::RelayWithoutTransaction);
+    CHECK(idleRelayTransaction.state == FullItemPacketStagingState::Fatal);
+
+    // Root, middle and final-sibling errors all precede the first real queue.
+    const auto expectLateTreeRejection = [&](std::size_t corruptNode) {
+        FullItemPacketStagingContext transaction{};
+        const auto root = BeginFullItemPacketProducer(transaction, root9C);
+        auto rootPacket = MakeStagedFullItemPacket(
+            FullItemPacketKind::ItemAction9C, root9C.action, 32);
+        if (corruptNode == 0) rootPacket[0] = 0;
+        CHECK(CaptureFullItemPacketQueueCall(
+            transaction,
+            FullItemPacketKind::ItemAction9C,
+            &client,
+            rootPacket.data(), 32)
+            == (corruptNode == 0
+                ? FullItemPacketStagingError::InvalidPacketHeader
+                : FullItemPacketStagingError::None));
+        for (std::size_t node = 1; node <= 3; ++node) {
+            const auto child = BeginFullItemPacketProducer(
+                transaction, child9D(0, node));
+            if (child.disposition
+                    == FullItemProducerDisposition::InvokeOriginal) {
+                auto packet = MakeStagedFullItemPacket(
+                    FullItemPacketKind::ItemAction9D, 0x12, 32);
+                if (node == corruptNode) packet[2] = 31;
+                CHECK(CaptureFullItemPacketQueueCall(
+                    transaction,
+                    FullItemPacketKind::ItemAction9D,
+                    &client,
+                    packet.data(), 32)
+                    == (node == corruptNode
+                        ? FullItemPacketStagingError::InvalidPacketHeader
+                        : FullItemPacketStagingError::None));
+                CHECK(EndFullItemPacketProducer(transaction, child.token)
+                    == FullItemProducerCompletion::NestedComplete);
+            }
+        }
+        CHECK(EndFullItemPacketProducer(transaction, root.token)
+            == FullItemProducerCompletion::RootRejected);
+        FullItemStagingQueueProbe probe{.rootReturned = true};
+        const auto result = FlushOrDiscardFullItemPacketTransaction(
+            transaction,
+            &RecordStagedFullItemPacket,
+            &probe);
+        CHECK(result.error == FullItemPacketStagingError::InvalidPacketHeader);
+        CHECK(result.queuedPacketCount == 0);
+        CHECK(probe.callCount == 0);
+    };
+    expectLateTreeRejection(0);
+    expectLateTreeRejection(2);
+    expectLateTreeRejection(3);
+
+    const auto expectNestedAdmissionRejection = [&](FullItemProducerDescriptor nested,
+                                                     FullItemPacketStagingError expected) {
+        FullItemPacketStagingContext transaction{};
+        const auto root = BeginFullItemPacketProducer(transaction, root9C);
+        auto packet = MakeStagedFullItemPacket(
+            FullItemPacketKind::ItemAction9C, root9C.action, 32);
+        CHECK(CaptureFullItemPacketQueueCall(
+            transaction,
+            FullItemPacketKind::ItemAction9C,
+            &client,
+            packet.data(), 32) == FullItemPacketStagingError::None);
+        const auto rejected = BeginFullItemPacketProducer(transaction, nested);
+        CHECK(rejected.disposition == FullItemProducerDisposition::SkipOriginal);
+        CHECK(rejected.error == expected);
+        CHECK(EndFullItemPacketProducer(transaction, root.token)
+            == FullItemProducerCompletion::RootRejected);
+        FullItemStagingQueueProbe probe{.rootReturned = true};
+        const auto result = FlushOrDiscardFullItemPacketTransaction(
+            transaction,
+            &RecordStagedFullItemPacket,
+            &probe);
+        CHECK(result.error == expected);
+        CHECK(result.queuedPacketCount == 0);
+        CHECK(probe.callCount == 0);
+    };
+
+    auto nested9C = root9C;
+    nested9C.item = &items[1];
+    nested9C.parentItem = &items[0];
+    expectNestedAdmissionRejection(
+        nested9C,
+        FullItemPacketStagingError::UnexpectedNested9C);
+    auto wrongNestedClient = child9D(0, 1);
+    wrongNestedClient.client = &wrongClient;
+    expectNestedAdmissionRejection(
+        wrongNestedClient,
+        FullItemPacketStagingError::ClientMismatch);
+    auto nullNestedItem = child9D(0, 1);
+    nullNestedItem.item = nullptr;
+    expectNestedAdmissionRejection(
+        nullNestedItem,
+        FullItemPacketStagingError::InvalidArgument);
+    auto wrongNestedParent = child9D(0, 1);
+    wrongNestedParent.parentItem = &items[2];
+    expectNestedAdmissionRejection(
+        wrongNestedParent,
+        FullItemPacketStagingError::ParentMismatch);
+    auto wrongNestedAction = child9D(0, 1);
+    wrongNestedAction.action = 0x11;
+    expectNestedAdmissionRejection(
+        wrongNestedAction,
+        FullItemPacketStagingError::NestedActionMismatch);
+    auto wrongNestedFlags = child9D(0, 1);
+    wrongNestedFlags.temporaryFlags ^= 1;
+    expectNestedAdmissionRejection(
+        wrongNestedFlags,
+        FullItemPacketStagingError::NestedFlagsMismatch);
+    auto wrongNestedGamble = child9D(0, 1);
+    wrongNestedGamble.gamble = 1;
+    expectNestedAdmissionRejection(
+        wrongNestedGamble,
+        FullItemPacketStagingError::NestedGambleMismatch);
+    expectNestedAdmissionRejection(
+        child9D(0, 0),
+        FullItemPacketStagingError::DuplicateOrCycle);
+
+    FullItemPacketStagingContext parentMissingTransaction{};
+    const auto parentMissingRoot = BeginFullItemPacketProducer(
+        parentMissingTransaction, root9C);
+    const auto parentMissingChild = BeginFullItemPacketProducer(
+        parentMissingTransaction, child9D(0, 1));
+    CHECK(parentMissingChild.error
+        == FullItemPacketStagingError::ParentPacketMissing);
+    CHECK(EndFullItemPacketProducer(
+        parentMissingTransaction, parentMissingRoot.token)
+        == FullItemProducerCompletion::RootRejected);
+    FullItemStagingQueueProbe parentMissingProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        parentMissingTransaction,
+        &RecordStagedFullItemPacket,
+        &parentMissingProbe).error
+        == FullItemPacketStagingError::ParentPacketMissing);
+    CHECK(parentMissingProbe.callCount == 0);
+
+    // The same child cannot appear twice, even after its first subtree returns.
+    FullItemPacketStagingContext sharedChildTransaction{};
+    const auto sharedRoot = BeginFullItemPacketProducer(
+        sharedChildTransaction, root9C);
+    auto sharedRootPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9C, root9C.action, 32);
+    CHECK(CaptureFullItemPacketQueueCall(
+        sharedChildTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        sharedRootPacket.data(), 32) == FullItemPacketStagingError::None);
+    const auto sharedFirst = BeginFullItemPacketProducer(
+        sharedChildTransaction, child9D(0, 1));
+    auto sharedPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9D, 0x12, 32);
+    CHECK(CaptureFullItemPacketQueueCall(
+        sharedChildTransaction,
+        FullItemPacketKind::ItemAction9D,
+        &client,
+        sharedPacket.data(), 32) == FullItemPacketStagingError::None);
+    CHECK(EndFullItemPacketProducer(
+        sharedChildTransaction, sharedFirst.token)
+        == FullItemProducerCompletion::NestedComplete);
+    CHECK(BeginFullItemPacketProducer(
+        sharedChildTransaction, child9D(0, 1)).error
+        == FullItemPacketStagingError::DuplicateOrCycle);
+    CHECK(EndFullItemPacketProducer(sharedChildTransaction, sharedRoot.token)
+        == FullItemProducerCompletion::RootRejected);
+    FullItemStagingQueueProbe sharedProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        sharedChildTransaction,
+        &RecordStagedFullItemPacket,
+        &sharedProbe).error
+        == FullItemPacketStagingError::DuplicateOrCycle);
+    CHECK(sharedProbe.callCount == 0);
+
+    // Seven direct children are accepted; the eighth poisons the whole batch.
+    FullItemPacketStagingContext childLimitTransaction{};
+    const auto childLimitRoot = BeginFullItemPacketProducer(
+        childLimitTransaction, root9C);
+    auto limitRootPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9C, root9C.action, 32);
+    auto limitChildPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9D, 0x12, 32);
+    CHECK(CaptureFullItemPacketQueueCall(
+        childLimitTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        limitRootPacket.data(), 32) == FullItemPacketStagingError::None);
+    for (std::size_t child = 1;
+            child <= MaximumStagedItemImmediateChildren; ++child) {
+        const auto admission = BeginFullItemPacketProducer(
+            childLimitTransaction, child9D(0, child));
+        CHECK(admission.disposition
+            == FullItemProducerDisposition::InvokeOriginal);
+        CHECK(CaptureFullItemPacketQueueCall(
+            childLimitTransaction,
+            FullItemPacketKind::ItemAction9D,
+            &client,
+            limitChildPacket.data(), 32) == FullItemPacketStagingError::None);
+        CHECK(EndFullItemPacketProducer(
+            childLimitTransaction, admission.token)
+            == FullItemProducerCompletion::NestedComplete);
+    }
+    CHECK(BeginFullItemPacketProducer(
+        childLimitTransaction,
+        child9D(0, MaximumStagedItemImmediateChildren + 1U)).error
+        == FullItemPacketStagingError::ImmediateChildLimitExceeded);
+    CHECK(EndFullItemPacketProducer(
+        childLimitTransaction, childLimitRoot.token)
+        == FullItemProducerCompletion::RootRejected);
+    FullItemStagingQueueProbe childLimitProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        childLimitTransaction,
+        &RecordStagedFullItemPacket,
+        &childLimitProbe).error
+        == FullItemPacketStagingError::ImmediateChildLimitExceeded);
+    CHECK(childLimitProbe.callCount == 0);
+
+    // A depth-16 chain is admissible; attempting depth 17 rejects everything.
+    FullItemPacketStagingContext depthLimitTransaction{};
+    const auto depthRoot = BeginFullItemPacketProducer(
+        depthLimitTransaction, root9C);
+    CHECK(CaptureFullItemPacketQueueCall(
+        depthLimitTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        limitRootPacket.data(), 32) == FullItemPacketStagingError::None);
+    std::array<FullItemProducerToken, MaximumStagedItemTreeDepth - 1U>
+        depthTokens{};
+    for (std::size_t depth = 2;
+            depth <= MaximumStagedItemTreeDepth; ++depth) {
+        const auto admission = BeginFullItemPacketProducer(
+            depthLimitTransaction,
+            child9D(depth - 2U, depth - 1U));
+        CHECK(admission.disposition
+            == FullItemProducerDisposition::InvokeOriginal);
+        depthTokens[depth - 2U] = admission.token;
+        CHECK(CaptureFullItemPacketQueueCall(
+            depthLimitTransaction,
+            FullItemPacketKind::ItemAction9D,
+            &client,
+            limitChildPacket.data(), 32) == FullItemPacketStagingError::None);
+    }
+    CHECK(BeginFullItemPacketProducer(
+        depthLimitTransaction,
+        child9D(
+            MaximumStagedItemTreeDepth - 1U,
+            MaximumStagedItemTreeDepth)).error
+        == FullItemPacketStagingError::DepthLimitExceeded);
+    for (std::size_t remaining = depthTokens.size(); remaining != 0; --remaining) {
+        CHECK(EndFullItemPacketProducer(
+            depthLimitTransaction, depthTokens[remaining - 1U])
+            == FullItemProducerCompletion::NestedComplete);
+    }
+    CHECK(EndFullItemPacketProducer(depthLimitTransaction, depthRoot.token)
+        == FullItemProducerCompletion::RootRejected);
+    FullItemStagingQueueProbe depthLimitProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        depthLimitTransaction,
+        &RecordStagedFullItemPacket,
+        &depthLimitProbe).error
+        == FullItemPacketStagingError::DepthLimitExceeded);
+    CHECK(depthLimitProbe.callCount == 0);
+
+    FullItemPacketStagingContext maximumDepthTransaction{};
+    const auto maximumDepthRoot = BeginFullItemPacketProducer(
+        maximumDepthTransaction, root9C);
+    CHECK(CaptureFullItemPacketQueueCall(
+        maximumDepthTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        limitRootPacket.data(), 32) == FullItemPacketStagingError::None);
+    std::array<FullItemProducerToken, MaximumStagedItemTreeDepth - 1U>
+        maximumDepthTokens{};
+    for (std::size_t depth = 2;
+            depth <= MaximumStagedItemTreeDepth; ++depth) {
+        const auto admission = BeginFullItemPacketProducer(
+            maximumDepthTransaction,
+            child9D(depth - 2U, depth - 1U));
+        maximumDepthTokens[depth - 2U] = admission.token;
+        CHECK(CaptureFullItemPacketQueueCall(
+            maximumDepthTransaction,
+            FullItemPacketKind::ItemAction9D,
+            &client,
+            limitChildPacket.data(), 32) == FullItemPacketStagingError::None);
+    }
+    for (std::size_t remaining = maximumDepthTokens.size();
+            remaining != 0; --remaining) {
+        CHECK(EndFullItemPacketProducer(
+            maximumDepthTransaction,
+            maximumDepthTokens[remaining - 1U])
+            == FullItemProducerCompletion::NestedComplete);
+    }
+    CHECK(EndFullItemPacketProducer(
+        maximumDepthTransaction, maximumDepthRoot.token)
+        == FullItemProducerCompletion::RootReady);
+    FullItemStagingQueueProbe maximumDepthProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        maximumDepthTransaction,
+        &RecordStagedFullItemPacket,
+        &maximumDepthProbe).completed);
+    CHECK(maximumDepthProbe.callCount == MaximumStagedItemTreeDepth);
+
+    const auto stageMaximumTree = [&](FullItemPacketStagingContext& transaction,
+                                      bool attemptSixtyFifth,
+                                      FullItemProducerToken& rootToken) {
+        const auto root = BeginFullItemPacketProducer(transaction, root9C);
+        rootToken = root.token;
+        auto rootPacket = MakeStagedFullItemPacket(
+            FullItemPacketKind::ItemAction9C,
+            root9C.action,
+            MaximumStagedItemPacketBytes,
+            0x11);
+        auto descendantPacket = MakeStagedFullItemPacket(
+            FullItemPacketKind::ItemAction9D,
+            0x12,
+            MaximumStagedItemPacketBytes,
+            0x33);
+        CHECK(CaptureFullItemPacketQueueCall(
+            transaction,
+            FullItemPacketKind::ItemAction9C,
+            &client,
+            rootPacket.data(),
+            MaximumStagedItemPacketBytes)
+            == FullItemPacketStagingError::None);
+        std::size_t nextItem{1};
+        for (std::size_t childNumber{};
+                childNumber < MaximumStagedItemImmediateChildren;
+                ++childNumber) {
+            const auto childItem = nextItem++;
+            const auto child = BeginFullItemPacketProducer(
+                transaction, child9D(0, childItem));
+            CHECK(CaptureFullItemPacketQueueCall(
+                transaction,
+                FullItemPacketKind::ItemAction9D,
+                &client,
+                descendantPacket.data(),
+                MaximumStagedItemPacketBytes)
+                == FullItemPacketStagingError::None);
+            for (std::size_t grandchildNumber{};
+                    grandchildNumber < MaximumStagedItemImmediateChildren;
+                    ++grandchildNumber) {
+                const auto grandchildItem = nextItem++;
+                const auto grandchildAdmission = BeginFullItemPacketProducer(
+                    transaction, child9D(childItem, grandchildItem));
+                CHECK(CaptureFullItemPacketQueueCall(
+                    transaction,
+                    FullItemPacketKind::ItemAction9D,
+                    &client,
+                    descendantPacket.data(),
+                    MaximumStagedItemPacketBytes)
+                    == FullItemPacketStagingError::None);
+                if (childNumber == 0 && grandchildNumber == 0) {
+                    for (std::size_t greatGrandchildNumber{};
+                            greatGrandchildNumber
+                                < MaximumStagedItemImmediateChildren;
+                            ++greatGrandchildNumber) {
+                        const auto greatGrandchildItem = nextItem++;
+                        const auto greatGrandchild =
+                            BeginFullItemPacketProducer(
+                                transaction,
+                                child9D(
+                                    grandchildItem,
+                                    greatGrandchildItem));
+                        CHECK(CaptureFullItemPacketQueueCall(
+                            transaction,
+                            FullItemPacketKind::ItemAction9D,
+                            &client,
+                            descendantPacket.data(),
+                            MaximumStagedItemPacketBytes)
+                            == FullItemPacketStagingError::None);
+                        CHECK(EndFullItemPacketProducer(
+                            transaction, greatGrandchild.token)
+                            == FullItemProducerCompletion::NestedComplete);
+                    }
+                }
+                CHECK(EndFullItemPacketProducer(
+                    transaction, grandchildAdmission.token)
+                    == FullItemProducerCompletion::NestedComplete);
+            }
+            CHECK(EndFullItemPacketProducer(transaction, child.token)
+                == FullItemProducerCompletion::NestedComplete);
+        }
+        CHECK(nextItem == MaximumStagedItemPacketCount);
+        CHECK(transaction.nodeCount == MaximumStagedItemPacketCount);
+        CHECK(transaction.packetCount == MaximumStagedItemPacketCount);
+        CHECK(transaction.totalBytes
+            == MaximumStagedItemPacketCount
+                * MaximumStagedItemPacketBytes);
+        if (attemptSixtyFifth) {
+            return BeginFullItemPacketProducer(
+                transaction,
+                child9D(0, MaximumStagedItemPacketCount)).error;
+        }
+        return FullItemPacketStagingError::None;
+    };
+
+    FullItemPacketStagingContext maximumTreeTransaction{};
+    FullItemProducerToken maximumTreeRoot{};
+    CHECK(stageMaximumTree(
+        maximumTreeTransaction,
+        false,
+        maximumTreeRoot) == FullItemPacketStagingError::None);
+    CHECK(EndFullItemPacketProducer(
+        maximumTreeTransaction, maximumTreeRoot)
+        == FullItemProducerCompletion::RootReady);
+    CHECK(ValidateCapturedFullItemPacketTransaction(maximumTreeTransaction)
+        == FullItemPacketStagingError::None);
+    FullItemStagingQueueProbe maximumTreeProbe{.rootReturned = true};
+    const auto maximumTreeFlush = FlushOrDiscardFullItemPacketTransaction(
+        maximumTreeTransaction,
+        &RecordStagedFullItemPacket,
+        &maximumTreeProbe);
+    CHECK(maximumTreeFlush.completed);
+    CHECK(maximumTreeFlush.queuedPacketCount
+        == MaximumStagedItemPacketCount);
+    CHECK(maximumTreeProbe.callCount == MaximumStagedItemPacketCount);
+
+    FullItemPacketStagingContext nodeLimitTransaction{};
+    FullItemProducerToken nodeLimitRoot{};
+    CHECK(stageMaximumTree(
+        nodeLimitTransaction,
+        true,
+        nodeLimitRoot) == FullItemPacketStagingError::NodeLimitExceeded);
+    CHECK(EndFullItemPacketProducer(nodeLimitTransaction, nodeLimitRoot)
+        == FullItemProducerCompletion::RootRejected);
+    FullItemStagingQueueProbe nodeLimitProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        nodeLimitTransaction,
+        &RecordStagedFullItemPacket,
+        &nodeLimitProbe).error
+        == FullItemPacketStagingError::NodeLimitExceeded);
+    CHECK(nodeLimitProbe.callCount == 0);
+
+    FullItemPacketStagingContext byteLimitTransaction{};
+    const auto byteLimitRoot = BeginFullItemPacketProducer(
+        byteLimitTransaction, root9C);
+    byteLimitTransaction.totalBytes =
+        MaximumStagedItemTransactionBytes - Packet9CHeaderBytes;
+    auto minimum9CPacket = MakeStagedFullItemPacket(
+        FullItemPacketKind::ItemAction9C,
+        root9C.action,
+        Packet9CHeaderBytes + 1U);
+    CHECK(CaptureFullItemPacketQueueCall(
+        byteLimitTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        minimum9CPacket.data(),
+        Packet9CHeaderBytes + 1U)
+        == FullItemPacketStagingError::ByteLimitExceeded);
+    CHECK(EndFullItemPacketProducer(
+        byteLimitTransaction, byteLimitRoot.token)
+        == FullItemProducerCompletion::RootRejected);
+    FullItemStagingQueueProbe byteLimitProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        byteLimitTransaction,
+        &RecordStagedFullItemPacket,
+        &byteLimitProbe).error
+        == FullItemPacketStagingError::ByteLimitExceeded);
+    CHECK(byteLimitProbe.callCount == 0);
+
+    // Out-of-order exits cannot accidentally make a partially captured tree ready.
+    FullItemPacketStagingContext unbalancedTransaction{};
+    const auto unbalancedRoot = BeginFullItemPacketProducer(
+        unbalancedTransaction, root9C);
+    CHECK(CaptureFullItemPacketQueueCall(
+        unbalancedTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        limitRootPacket.data(), 32) == FullItemPacketStagingError::None);
+    const auto unbalancedChild = BeginFullItemPacketProducer(
+        unbalancedTransaction, child9D(0, 1));
+    CHECK(CaptureFullItemPacketQueueCall(
+        unbalancedTransaction,
+        FullItemPacketKind::ItemAction9D,
+        &client,
+        limitChildPacket.data(), 32) == FullItemPacketStagingError::None);
+    CHECK(EndFullItemPacketProducer(
+        unbalancedTransaction, unbalancedRoot.token)
+        == FullItemProducerCompletion::RootRejected);
+    CHECK(EndFullItemPacketProducer(
+        unbalancedTransaction, unbalancedChild.token)
+        == FullItemProducerCompletion::NestedComplete);
+    CHECK(EndFullItemPacketProducer(
+        unbalancedTransaction, unbalancedRoot.token)
+        == FullItemProducerCompletion::RootRejected);
+    FullItemStagingQueueProbe unbalancedProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        unbalancedTransaction,
+        &RecordStagedFullItemPacket,
+        &unbalancedProbe).error
+        == FullItemPacketStagingError::UnbalancedProducerExit);
+    CHECK(unbalancedProbe.callCount == 0);
+
+    // A stale token poisons only the current transaction and cannot pop it.
+    FullItemPacketStagingContext staleTokenTransaction{};
+    const auto staleFirst = BeginFullItemPacketProducer(
+        staleTokenTransaction, root9C);
+    CHECK(CaptureFullItemPacketQueueCall(
+        staleTokenTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        limitRootPacket.data(), 32) == FullItemPacketStagingError::None);
+    CHECK(EndFullItemPacketProducer(staleTokenTransaction, staleFirst.token)
+        == FullItemProducerCompletion::RootReady);
+    FullItemStagingQueueProbe staleFirstProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        staleTokenTransaction,
+        &RecordStagedFullItemPacket,
+        &staleFirstProbe).completed);
+    const auto staleSecond = BeginFullItemPacketProducer(
+        staleTokenTransaction, root9C);
+    CHECK(CaptureFullItemPacketQueueCall(
+        staleTokenTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        limitRootPacket.data(), 32) == FullItemPacketStagingError::None);
+    CHECK(EndFullItemPacketProducer(staleTokenTransaction, staleFirst.token)
+        == FullItemProducerCompletion::RootRejected);
+    CHECK(EndFullItemPacketProducer(staleTokenTransaction, staleSecond.token)
+        == FullItemProducerCompletion::RootRejected);
+    FullItemStagingQueueProbe staleSecondProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        staleTokenTransaction,
+        &RecordStagedFullItemPacket,
+        &staleSecondProbe).error
+        == FullItemPacketStagingError::StaleToken);
+    CHECK(staleSecondProbe.callCount == 0);
+
+    // The final byte scan catches metadata or copied-byte corruption before flush.
+    FullItemPacketStagingContext corruptFinalTransaction{};
+    const auto corruptFinalRoot = BeginFullItemPacketProducer(
+        corruptFinalTransaction, root9C);
+    CHECK(CaptureFullItemPacketQueueCall(
+        corruptFinalTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        limitRootPacket.data(), 32) == FullItemPacketStagingError::None);
+    CHECK(EndFullItemPacketProducer(
+        corruptFinalTransaction, corruptFinalRoot.token)
+        == FullItemProducerCompletion::RootReady);
+    corruptFinalTransaction.bytes[0] = 0;
+    CHECK(ValidateCapturedFullItemPacketTransaction(corruptFinalTransaction)
+        == FullItemPacketStagingError::InvalidPacketHeader);
+    FullItemStagingQueueProbe corruptFinalProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        corruptFinalTransaction,
+        &RecordStagedFullItemPacket,
+        &corruptFinalProbe).error
+        == FullItemPacketStagingError::InvalidPacketHeader);
+    CHECK(corruptFinalProbe.callCount == 0);
+    CHECK(corruptFinalTransaction.state == FullItemPacketStagingState::Idle);
+
+    FullItemPacketStagingContext corruptOffsetTransaction{};
+    const auto corruptOffsetRoot = BeginFullItemPacketProducer(
+        corruptOffsetTransaction, root9C);
+    CHECK(CaptureFullItemPacketQueueCall(
+        corruptOffsetTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        limitRootPacket.data(), 32) == FullItemPacketStagingError::None);
+    CHECK(EndFullItemPacketProducer(
+        corruptOffsetTransaction, corruptOffsetRoot.token)
+        == FullItemProducerCompletion::RootReady);
+    corruptOffsetTransaction.packets[0].byteOffset = 1;
+    CHECK(ValidateCapturedFullItemPacketTransaction(corruptOffsetTransaction)
+        == FullItemPacketStagingError::FinalBatchInvalid);
+    FullItemStagingQueueProbe corruptOffsetProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        corruptOffsetTransaction,
+        &RecordStagedFullItemPacket,
+        &corruptOffsetProbe).error
+        == FullItemPacketStagingError::FinalBatchInvalid);
+    CHECK(corruptOffsetProbe.callCount == 0);
+
+    FullItemPacketStagingContext nullCallbackTransaction{};
+    const auto nullCallbackRoot = BeginFullItemPacketProducer(
+        nullCallbackTransaction, root9C);
+    CHECK(CaptureFullItemPacketQueueCall(
+        nullCallbackTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        limitRootPacket.data(), 32) == FullItemPacketStagingError::None);
+    CHECK(EndFullItemPacketProducer(
+        nullCallbackTransaction, nullCallbackRoot.token)
+        == FullItemProducerCompletion::RootReady);
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        nullCallbackTransaction, nullptr, nullptr).error
+        == FullItemPacketStagingError::InvalidArgument);
+    CHECK(nullCallbackTransaction.state == FullItemPacketStagingState::Idle);
+
+    // A rejected context resets cleanly and accepts the following transaction.
+    FullItemPacketStagingContext resetTransaction{};
+    const auto resetRejectedRoot = BeginFullItemPacketProducer(
+        resetTransaction, root9C);
+    auto resetBadPacket = limitRootPacket;
+    resetBadPacket[1] ^= 1;
+    CHECK(CaptureFullItemPacketQueueCall(
+        resetTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        resetBadPacket.data(), 32)
+        == FullItemPacketStagingError::InvalidPacketHeader);
+    CHECK(EndFullItemPacketProducer(
+        resetTransaction, resetRejectedRoot.token)
+        == FullItemProducerCompletion::RootRejected);
+    FullItemStagingQueueProbe resetRejectedProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        resetTransaction,
+        &RecordStagedFullItemPacket,
+        &resetRejectedProbe).error
+        == FullItemPacketStagingError::InvalidPacketHeader);
+    const auto resetValidRoot = BeginFullItemPacketProducer(
+        resetTransaction, root9C);
+    CHECK(CaptureFullItemPacketQueueCall(
+        resetTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        limitRootPacket.data(), 32) == FullItemPacketStagingError::None);
+    CHECK(EndFullItemPacketProducer(resetTransaction, resetValidRoot.token)
+        == FullItemProducerCompletion::RootReady);
+    FullItemStagingQueueProbe resetValidProbe{.rootReturned = true};
+    CHECK(FlushOrDiscardFullItemPacketTransaction(
+        resetTransaction,
+        &RecordStagedFullItemPacket,
+        &resetValidProbe).completed);
+    CHECK(resetValidProbe.callCount == 1);
+
+    // A flush-time producer reentry is post-commit fatal and stops the batch.
+    FullItemPacketStagingContext reentrantFlushTransaction{};
+    const auto reentrantRoot = BeginFullItemPacketProducer(
+        reentrantFlushTransaction, root9C);
+    CHECK(CaptureFullItemPacketQueueCall(
+        reentrantFlushTransaction,
+        FullItemPacketKind::ItemAction9C,
+        &client,
+        limitRootPacket.data(), 32) == FullItemPacketStagingError::None);
+    const auto reentrantChild = BeginFullItemPacketProducer(
+        reentrantFlushTransaction, child9D(0, 1));
+    CHECK(CaptureFullItemPacketQueueCall(
+        reentrantFlushTransaction,
+        FullItemPacketKind::ItemAction9D,
+        &client,
+        limitChildPacket.data(), 32) == FullItemPacketStagingError::None);
+    CHECK(EndFullItemPacketProducer(
+        reentrantFlushTransaction, reentrantChild.token)
+        == FullItemProducerCompletion::NestedComplete);
+    CHECK(EndFullItemPacketProducer(
+        reentrantFlushTransaction, reentrantRoot.token)
+        == FullItemProducerCompletion::RootReady);
+    FullItemStagingQueueProbe reentrantProbe{
+        .rootReturned = true,
+        .reentryTransaction = &reentrantFlushTransaction,
+    };
+    const auto reentrantFlush = FlushOrDiscardFullItemPacketTransaction(
+        reentrantFlushTransaction,
+        &RecordStagedFullItemPacket,
+        &reentrantProbe);
+    CHECK(!reentrantFlush.completed);
+    CHECK(reentrantFlush.error
+        == FullItemPacketStagingError::ReenteredDuringFlush);
+    CHECK(reentrantFlush.queuedPacketCount == 1);
+    CHECK(reentrantProbe.callCount == 1);
+    CHECK(reentrantProbe.reentryDisposition
+        == FullItemProducerDisposition::SkipOriginal);
+    CHECK(reentrantFlushTransaction.state
+        == FullItemPacketStagingState::Fatal);
+
+    FullItemPacketStagingContext generationTransaction{};
+    generationTransaction.generation =
+        (std::numeric_limits<std::uint64_t>::max)();
+    CHECK(BeginFullItemPacketProducer(
+        generationTransaction, root9C).error
+        == FullItemPacketStagingError::GenerationExhausted);
+    CHECK(generationTransaction.state == FullItemPacketStagingState::Fatal);
+}
 } // namespace
 
 int main() {
@@ -422,21 +1706,606 @@ int main() {
     static_assert(MaximumSerializedCsvParamBits == 16);
     static_assert(InstalledHookCount == 0);
     static_assert(InstalledPatchCount == 2);
-    static_assert(PreparedCodecMutableSiteCount == 20);
-    static_assert(PreparedCodecMutationCount == 49);
-    static_assert(PreparedCodecWitnessCount == 51);
+    static_assert(PreparedCodecMutableSiteCount == 24);
+    static_assert(PreparedCodecMutationCount == 102);
+    static_assert(PreparedCodecWitnessCount == 77);
     static_assert(PublishedCodecMutationCount == 0);
     static_assert(MaximumPlayerStatSectionBytes == 3844);
 
+    constexpr auto packet9CBudget =
+        FullItemPacketBudgetFor(FullItemPacketKind::ItemAction9C);
+    constexpr auto packet9DBudget =
+        FullItemPacketBudgetFor(FullItemPacketKind::ItemAction9D);
+    CHECK(packet9CBudget.headerBytes == 8);
+    CHECK(packet9CBudget.payloadCapacityBytes == 244);
+    CHECK(packet9DBudget.headerBytes == 13);
+    CHECK(packet9DBudget.payloadCapacityBytes == 239);
+    CHECK(FullItemPacketBudgetFor(
+        static_cast<FullItemPacketKind>(0xFF)).packetLimitBytes == 0);
+    for (const auto bytes : {std::size_t{243}, std::size_t{244}}) {
+        CHECK(ClassifyFullItemPayload(
+            bytes,
+            FullItemPacketKind::ItemAction9C)
+            == FullItemPayloadDisposition::NativePacket);
+    }
+    CHECK(ClassifyFullItemPayload(
+        245,
+        FullItemPacketKind::ItemAction9C)
+        == FullItemPayloadDisposition::ExceedsNativePacketCapacity);
+    for (const auto bytes : {std::size_t{238}, std::size_t{239}}) {
+        CHECK(ClassifyFullItemPayload(
+            bytes,
+            FullItemPacketKind::ItemAction9D)
+            == FullItemPayloadDisposition::NativePacket);
+    }
+    for (const auto bytes : {
+            std::size_t{240}, std::size_t{242},
+            std::size_t{243}, std::size_t{244}}) {
+        CHECK(ClassifyFullItemPayload(
+            bytes,
+            FullItemPacketKind::ItemAction9D)
+            == FullItemPayloadDisposition::ExceedsNativePacketCapacity);
+    }
+
+    FullItemNodePayload itemNode{1000, 76};
+    auto fullItemEstimate = EstimateItemPacketPayload(itemNode);
+    CHECK(fullItemEstimate.valid);
+    CHECK(fullItemEstimate.totalBits == 1912);
+    CHECK(fullItemEstimate.totalBytes == 239);
+    CHECK(ClassifyFullItemPayload(
+        fullItemEstimate.totalBytes,
+        FullItemPacketKind::ItemAction9D)
+        == FullItemPayloadDisposition::NativePacket);
+
+    itemNode.directNonStatIdBits = 1001;
+    fullItemEstimate = EstimateItemPacketPayload(itemNode);
+    CHECK(fullItemEstimate.valid);
+    CHECK(fullItemEstimate.totalBytes == 240);
+    CHECK(ClassifyFullItemPayload(
+        fullItemEstimate.totalBytes,
+        FullItemPacketKind::ItemAction9D)
+        == FullItemPayloadDisposition::ExceedsNativePacketCapacity);
+    CHECK(ClassifyFullItemPayload(
+        fullItemEstimate.totalBytes,
+        FullItemPacketKind::ItemAction9C)
+        == FullItemPayloadDisposition::NativePacket);
+
+    // Arithmetic reference only: 4,095 table rows in one emitted list would
+    // require one token per record plus the terminating 0xFFF token. This is
+    // not a claim that the native item builder permits that list shape.
+    itemNode = {
+        .directNonStatIdBits = 0,
+        .statIdTokens = MaximumRecordCount + 1U,
+    };
+    const auto allTableRowsOneListEstimate = EstimateItemPacketPayload(itemNode);
+    CHECK(allTableRowsOneListEstimate.valid);
+    CHECK(allTableRowsOneListEstimate.totalBytes == 6144);
+    CHECK(ClassifyFullItemPayload(
+        allTableRowsOneListEstimate.totalBytes,
+        FullItemPacketKind::ItemAction9C)
+        == FullItemPayloadDisposition::ExceedsNativePacketCapacity);
+
+    itemNode = {
+        .directNonStatIdBits = (std::numeric_limits<std::size_t>::max)(),
+        .statIdTokens = 1,
+    };
+    CHECK(!EstimateItemPacketPayload(itemNode).valid);
+    itemNode = {
+        .directNonStatIdBits = 0,
+        .statIdTokens =
+            (std::numeric_limits<std::size_t>::max)() / 12U + 1U,
+    };
+    CHECK(!EstimateItemPacketPayload(itemNode).valid);
+
+    LegacyFullItemNodePayload legacyNode{1684, 76};
+    const auto expandedLegacyEstimate =
+        ExpandLegacyItemPacketPayload(legacyNode);
+    CHECK(expandedLegacyEstimate.valid);
+    CHECK(expandedLegacyEstimate.totalBits == 1912);
+    CHECK(expandedLegacyEstimate.totalBytes == 239);
+    legacyNode = {
+        .directLegacyBits = (std::numeric_limits<std::size_t>::max)(),
+        .statIdTokens = 1,
+    };
+    CHECK(!ExpandLegacyItemPacketPayload(legacyNode).valid);
+
+    const auto packetTree = std::to_array<FullItemNodePayload>({
+        FullItemNodePayload{.directNonStatIdBits = 1952},
+        FullItemNodePayload{.directNonStatIdBits = 1912},
+        FullItemNodePayload{.directNonStatIdBits = 1912},
+    });
+    CHECK(ClassifyFullItemPacketSequence(
+        packetTree,
+        FullItemPacketKind::ItemAction9C)
+        == FullItemPayloadDisposition::NativePacket);
+    auto oversizedChildTree = packetTree;
+    oversizedChildTree[1].directNonStatIdBits = 1913;
+    CHECK(ClassifyFullItemPacketSequence(
+        oversizedChildTree,
+        FullItemPacketKind::ItemAction9C)
+        == FullItemPayloadDisposition::ExceedsNativePacketCapacity);
+    auto oversizedRootTree = packetTree;
+    oversizedRootTree[0].directNonStatIdBits = 1960;
+    CHECK(ClassifyFullItemPacketSequence(
+        oversizedRootTree,
+        FullItemPacketKind::ItemAction9C)
+        == FullItemPayloadDisposition::ExceedsNativePacketCapacity);
+    auto packet9DRootTree = packetTree;
+    packet9DRootTree[0].directNonStatIdBits = 1912;
+    CHECK(ClassifyFullItemPacketSequence(
+        packet9DRootTree,
+        FullItemPacketKind::ItemAction9D)
+        == FullItemPayloadDisposition::NativePacket);
+    packet9DRootTree[0].directNonStatIdBits = 1913;
+    CHECK(ClassifyFullItemPacketSequence(
+        packet9DRootTree,
+        FullItemPacketKind::ItemAction9D)
+        == FullItemPayloadDisposition::ExceedsNativePacketCapacity);
+    auto invalidDescendantTree = packetTree;
+    invalidDescendantTree[2] = {};
+    CHECK(ClassifyFullItemPacketSequence(
+        invalidDescendantTree,
+        FullItemPacketKind::ItemAction9C)
+        == FullItemPayloadDisposition::InvalidEncoding);
+    CHECK(ClassifyFullItemPacketSequence(
+        std::span<const FullItemNodePayload>{},
+        FullItemPacketKind::ItemAction9C)
+        == FullItemPayloadDisposition::InvalidEncoding);
+    CHECK(ClassifyFullItemPayload(
+        0,
+        FullItemPacketKind::ItemAction9C)
+        == FullItemPayloadDisposition::InvalidEncoding);
+    CHECK(ClassifyFullItemPayload(
+        1,
+        static_cast<FullItemPacketKind>(0xFF))
+        == FullItemPayloadDisposition::InvalidEncoding);
+    CHECK(ClassifyFullItemPayload(
+        (std::numeric_limits<std::size_t>::max)(),
+        FullItemPacketKind::ItemAction9C)
+        == FullItemPayloadDisposition::ExceedsNativePacketCapacity);
+
+    static_assert(noexcept(PreflightAndVisitFullItemPacketTree(
+        FullItemPacketTreeView{},
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeScratch{},
+        nullptr,
+        nullptr)));
+    const auto makePacketTreeNode = [](
+            std::size_t directBits,
+            std::size_t firstChildListOffset,
+            std::size_t listedChildCount,
+            std::size_t declaredChildCount,
+            std::size_t socketCapacity) noexcept {
+        return FullItemPacketTreeNode{
+            .payload = {.directNonStatIdBits = directBits},
+            .firstChildListOffset = firstChildListOffset,
+            .listedChildCount = listedChildCount,
+            .declaredChildCount = declaredChildCount,
+            .socketCapacity = socketCapacity,
+        };
+    };
+    std::array<std::uint8_t, 16> packetTreeMarks{};
+    std::array<std::size_t, 16> packetTreeOrder{};
+    std::array<std::size_t, 16> packetTreeStack{};
+    FullItemPacketVisitProbe packetTreeProbe{};
+    const auto runPacketTree = [&packetTreeMarks,
+                                &packetTreeOrder,
+                                &packetTreeStack,
+                                &packetTreeProbe](
+            std::span<const FullItemPacketTreeNode> nodes,
+            std::span<const std::size_t> childNodeIndices,
+            std::size_t rootNodeIndex,
+            std::size_t declaredNodeCount,
+            FullItemPacketKind rootPacket) noexcept {
+        packetTreeProbe = {};
+        return PreflightAndVisitFullItemPacketTree(
+            {
+                .nodes = nodes,
+                .childNodeIndices = childNodeIndices,
+                .rootNodeIndex = rootNodeIndex,
+                .declaredNodeCount = declaredNodeCount,
+            },
+            rootPacket,
+            {
+                .nodeMarks = packetTreeMarks,
+                .traversalOrder = packetTreeOrder,
+                .nodeStack = packetTreeStack,
+            },
+            &RecordFullItemPacketVisit,
+            &packetTreeProbe);
+    };
+    const auto expectPacketTreeFailure = [&runPacketTree, &packetTreeProbe](
+            std::span<const FullItemPacketTreeNode> nodes,
+            std::span<const std::size_t> childNodeIndices,
+            std::size_t rootNodeIndex,
+            std::size_t declaredNodeCount,
+            FullItemPacketKind rootPacket,
+            FullItemPacketTreeError expected) {
+        CHECK(runPacketTree(
+            nodes,
+            childNodeIndices,
+            rootNodeIndex,
+            declaredNodeCount,
+            rootPacket) == expected);
+        CHECK(packetTreeProbe.callCount == 0);
+    };
+
+    const auto noChildIndices = std::array<std::size_t, 0>{};
+    auto rootOnlyPacketTree = std::to_array<FullItemPacketTreeNode>({
+        makePacketTreeNode(1952, 0, 0, 0, 0),
+    });
+    CHECK(runPacketTree(
+        rootOnlyPacketTree,
+        noChildIndices,
+        0,
+        1,
+        FullItemPacketKind::ItemAction9C)
+        == FullItemPacketTreeError::None);
+    CHECK(packetTreeProbe.callCount == 1);
+    CHECK(packetTreeProbe.nodeIndices[0] == 0);
+    CHECK(packetTreeProbe.packetKinds[0]
+        == FullItemPacketKind::ItemAction9C);
+
+    rootOnlyPacketTree[0].payload.directNonStatIdBits = 1912;
+    CHECK(runPacketTree(
+        rootOnlyPacketTree,
+        noChildIndices,
+        0,
+        1,
+        FullItemPacketKind::ItemAction9D)
+        == FullItemPacketTreeError::None);
+    CHECK(packetTreeProbe.callCount == 1);
+    CHECK(packetTreeProbe.packetKinds[0]
+        == FullItemPacketKind::ItemAction9D);
+
+    const auto fullPacketTreeChildren =
+        std::to_array<std::size_t>({3, 0, 1});
+    const auto fullPacketTree = std::to_array<FullItemPacketTreeNode>({
+        makePacketTreeNode(1912, 0, 1, 1, 2),
+        makePacketTreeNode(1912, 1, 0, 0, 0),
+        makePacketTreeNode(1952, 1, 2, 2, 3),
+        makePacketTreeNode(1912, 3, 0, 0, 0),
+    });
+    CHECK(runPacketTree(
+        fullPacketTree,
+        fullPacketTreeChildren,
+        2,
+        fullPacketTree.size(),
+        FullItemPacketKind::ItemAction9C)
+        == FullItemPacketTreeError::None);
+    CHECK(packetTreeProbe.callCount == fullPacketTree.size());
+    constexpr auto ExpectedPacketTreeOrder =
+        std::to_array<std::size_t>({2, 0, 3, 1});
+    for (std::size_t index{}; index < ExpectedPacketTreeOrder.size(); ++index) {
+        CHECK(packetTreeProbe.nodeIndices[index]
+            == ExpectedPacketTreeOrder[index]);
+        CHECK(packetTreeProbe.packetKinds[index]
+            == (index == 0
+                ? FullItemPacketKind::ItemAction9C
+                : FullItemPacketKind::ItemAction9D));
+    }
+
+    const auto emptyPacketTree = std::array<FullItemPacketTreeNode, 0>{};
+    expectPacketTreeFailure(
+        emptyPacketTree,
+        noChildIndices,
+        0,
+        0,
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::InvalidArgument);
+    expectPacketTreeFailure(
+        fullPacketTree,
+        fullPacketTreeChildren,
+        fullPacketTree.size(),
+        fullPacketTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::NodeIndexOutOfRange);
+    expectPacketTreeFailure(
+        fullPacketTree,
+        fullPacketTreeChildren,
+        2,
+        fullPacketTree.size(),
+        static_cast<FullItemPacketKind>(0xFF),
+        FullItemPacketTreeError::InvalidArgument);
+    expectPacketTreeFailure(
+        fullPacketTree,
+        fullPacketTreeChildren,
+        2,
+        fullPacketTree.size() - 1U,
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::CountMismatch);
+
+    packetTreeProbe = {};
+    CHECK(PreflightAndVisitFullItemPacketTree(
+        {
+            .nodes = fullPacketTree,
+            .childNodeIndices = fullPacketTreeChildren,
+            .rootNodeIndex = 2,
+            .declaredNodeCount = fullPacketTree.size(),
+        },
+        FullItemPacketKind::ItemAction9C,
+        {
+            .nodeMarks = packetTreeMarks,
+            .traversalOrder = packetTreeOrder,
+            .nodeStack = packetTreeStack,
+        },
+        nullptr,
+        &packetTreeProbe) == FullItemPacketTreeError::InvalidArgument);
+    CHECK(packetTreeProbe.callCount == 0);
+
+    packetTreeProbe = {};
+    CHECK(PreflightAndVisitFullItemPacketTree(
+        {
+            .nodes = fullPacketTree,
+            .childNodeIndices = fullPacketTreeChildren,
+            .rootNodeIndex = 2,
+            .declaredNodeCount = fullPacketTree.size(),
+        },
+        FullItemPacketKind::ItemAction9C,
+        {
+            .nodeMarks = std::span<std::uint8_t>{packetTreeMarks}.first(3),
+            .traversalOrder =
+                std::span<std::size_t>{packetTreeOrder}.first(3),
+            .nodeStack = packetTreeStack,
+        },
+        &RecordFullItemPacketVisit,
+        &packetTreeProbe) == FullItemPacketTreeError::InsufficientScratch);
+    CHECK(packetTreeProbe.callCount == 0);
+
+    auto mismatchedChildCountTree = fullPacketTree;
+    mismatchedChildCountTree[2].declaredChildCount = 1;
+    expectPacketTreeFailure(
+        mismatchedChildCountTree,
+        fullPacketTreeChildren,
+        2,
+        mismatchedChildCountTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::CountMismatch);
+
+    auto overSocketCapacityTree = fullPacketTree;
+    overSocketCapacityTree[2].socketCapacity = 1;
+    expectPacketTreeFailure(
+        overSocketCapacityTree,
+        fullPacketTreeChildren,
+        2,
+        overSocketCapacityTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::SocketCapacityExceeded);
+
+    auto mismatchedStatTokenTree = fullPacketTree;
+    mismatchedStatTokenTree[3].payload.statIdTokens = 2;
+    mismatchedStatTokenTree[3].emittedStatRecordCount = 1;
+    expectPacketTreeFailure(
+        mismatchedStatTokenTree,
+        fullPacketTreeChildren,
+        2,
+        mismatchedStatTokenTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::CountMismatch);
+
+    auto overflowingStatCountTree = fullPacketTree;
+    overflowingStatCountTree[3].payload.statIdTokens =
+        (std::numeric_limits<std::size_t>::max)();
+    overflowingStatCountTree[3].emittedStatRecordCount =
+        (std::numeric_limits<std::size_t>::max)();
+    overflowingStatCountTree[3].emittedStatListTerminatorCount = 1;
+    expectPacketTreeFailure(
+        overflowingStatCountTree,
+        fullPacketTreeChildren,
+        2,
+        overflowingStatCountTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::CountMismatch);
+
+    auto childListGapTree = fullPacketTree;
+    childListGapTree[0].firstChildListOffset = 1;
+    expectPacketTreeFailure(
+        childListGapTree,
+        fullPacketTreeChildren,
+        2,
+        childListGapTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::ChildListMismatch);
+
+    auto childListOverlapTree = fullPacketTree;
+    childListOverlapTree[2].firstChildListOffset = 0;
+    expectPacketTreeFailure(
+        childListOverlapTree,
+        fullPacketTreeChildren,
+        2,
+        childListOverlapTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::ChildListMismatch);
+
+    const auto trailingChildIndexList =
+        std::to_array<std::size_t>({3, 0, 1, 0});
+    expectPacketTreeFailure(
+        fullPacketTree,
+        trailingChildIndexList,
+        2,
+        fullPacketTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::ChildListMismatch);
+
+    auto overflowingChildRangeTree = fullPacketTree;
+    overflowingChildRangeTree[1].listedChildCount =
+        (std::numeric_limits<std::size_t>::max)();
+    overflowingChildRangeTree[1].declaredChildCount =
+        (std::numeric_limits<std::size_t>::max)();
+    overflowingChildRangeTree[1].socketCapacity =
+        (std::numeric_limits<std::size_t>::max)();
+    expectPacketTreeFailure(
+        overflowingChildRangeTree,
+        fullPacketTreeChildren,
+        2,
+        overflowingChildRangeTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::ChildListMismatch);
+
+    auto outOfRangeChildIndices = fullPacketTreeChildren;
+    outOfRangeChildIndices[0] = fullPacketTree.size();
+    expectPacketTreeFailure(
+        fullPacketTree,
+        outOfRangeChildIndices,
+        2,
+        fullPacketTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::NodeIndexOutOfRange);
+    outOfRangeChildIndices[0] =
+        (std::numeric_limits<std::size_t>::max)();
+    expectPacketTreeFailure(
+        fullPacketTree,
+        outOfRangeChildIndices,
+        2,
+        fullPacketTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::NodeIndexOutOfRange);
+
+    const auto duplicateSiblingIndices =
+        std::to_array<std::size_t>({3, 0, 0});
+    expectPacketTreeFailure(
+        fullPacketTree,
+        duplicateSiblingIndices,
+        2,
+        fullPacketTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::DuplicateOrCycle);
+    const auto sharedChildIndices =
+        std::to_array<std::size_t>({3, 0, 3});
+    expectPacketTreeFailure(
+        fullPacketTree,
+        sharedChildIndices,
+        2,
+        fullPacketTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::DuplicateOrCycle);
+    const auto rootBackEdgeIndices =
+        std::to_array<std::size_t>({2, 0, 1});
+    expectPacketTreeFailure(
+        fullPacketTree,
+        rootBackEdgeIndices,
+        2,
+        fullPacketTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::DuplicateOrCycle);
+
+    auto ancestorCycleTree = fullPacketTree;
+    ancestorCycleTree[3].listedChildCount = 1;
+    ancestorCycleTree[3].declaredChildCount = 1;
+    ancestorCycleTree[3].socketCapacity = 1;
+    const auto ancestorCycleIndices =
+        std::to_array<std::size_t>({3, 0, 1, 0});
+    expectPacketTreeFailure(
+        ancestorCycleTree,
+        ancestorCycleIndices,
+        2,
+        ancestorCycleTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::DuplicateOrCycle);
+
+    const auto isolatedNodeTree = std::to_array<FullItemPacketTreeNode>({
+        makePacketTreeNode(1952, 0, 0, 0, 0),
+        makePacketTreeNode(1912, 0, 0, 0, 0),
+    });
+    expectPacketTreeFailure(
+        isolatedNodeTree,
+        noChildIndices,
+        0,
+        isolatedNodeTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::UnreachableNode);
+
+    const auto disconnectedCycleTree =
+        std::to_array<FullItemPacketTreeNode>({
+            makePacketTreeNode(1952, 0, 0, 0, 0),
+            makePacketTreeNode(1912, 0, 1, 1, 1),
+        });
+    const auto disconnectedCycleIndices =
+        std::to_array<std::size_t>({1});
+    expectPacketTreeFailure(
+        disconnectedCycleTree,
+        disconnectedCycleIndices,
+        0,
+        disconnectedCycleTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::UnreachableNode);
+
+    auto oversizedLastDescendantTree = fullPacketTree;
+    oversizedLastDescendantTree[3].payload.directNonStatIdBits = 1913;
+    expectPacketTreeFailure(
+        oversizedLastDescendantTree,
+        fullPacketTreeChildren,
+        2,
+        oversizedLastDescendantTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::ExceedsNativePacketCapacity);
+
+    auto overflowingLastDescendantTree = fullPacketTree;
+    overflowingLastDescendantTree[3].payload = {
+        .directNonStatIdBits = (std::numeric_limits<std::size_t>::max)(),
+        .statIdTokens = 1,
+    };
+    overflowingLastDescendantTree[3].emittedStatRecordCount = 1;
+    expectPacketTreeFailure(
+        overflowingLastDescendantTree,
+        fullPacketTreeChildren,
+        2,
+        overflowingLastDescendantTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::InvalidEncoding);
+
+    auto overflowingTokenBitsTree = fullPacketTree;
+    overflowingTokenBitsTree[3].payload = {
+        .directNonStatIdBits = 1,
+        .statIdTokens =
+            (std::numeric_limits<std::size_t>::max)() / 12U + 1U,
+    };
+    overflowingTokenBitsTree[3].emittedStatRecordCount =
+        overflowingTokenBitsTree[3].payload.statIdTokens;
+    expectPacketTreeFailure(
+        overflowingTokenBitsTree,
+        fullPacketTreeChildren,
+        2,
+        overflowingTokenBitsTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::InvalidEncoding);
+
+    auto zeroPayloadDescendantTree = fullPacketTree;
+    zeroPayloadDescendantTree[3].payload = {};
+    expectPacketTreeFailure(
+        zeroPayloadDescendantTree,
+        fullPacketTreeChildren,
+        2,
+        zeroPayloadDescendantTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::InvalidEncoding);
+
+    auto oversizedRootPacketTree = fullPacketTree;
+    oversizedRootPacketTree[2].payload.directNonStatIdBits = 1960;
+    expectPacketTreeFailure(
+        oversizedRootPacketTree,
+        fullPacketTreeChildren,
+        2,
+        oversizedRootPacketTree.size(),
+        FullItemPacketKind::ItemAction9C,
+        FullItemPacketTreeError::ExceedsNativePacketCapacity);
+    expectPacketTreeFailure(
+        fullPacketTree,
+        fullPacketTreeChildren,
+        2,
+        fullPacketTree.size(),
+        FullItemPacketKind::ItemAction9D,
+        FullItemPacketTreeError::ExceedsNativePacketCapacity);
+
+    RunFullItemPacketStagingTests();
+
     const auto codecGroups = PreparedCodecPatchGroups();
-    CHECK(codecGroups.size() == 4);
+    CHECK(codecGroups.size() == 5);
     std::size_t observedCodecMutationCount{};
     std::size_t observedCodecSiteCount{};
     for (const auto& group : codecGroups) {
         CHECK(ValidateCodecPatchGroup(group) == CodecPatchPlanError::None);
-        if (group.id != CodecPatchGroupId::GenericItem) {
-            CHECK(!group.witnesses.empty());
-        }
+        CHECK(!group.witnesses.empty());
         observedCodecSiteCount += group.sites.size();
         for (const auto& site : group.sites) {
             observedCodecMutationCount += site.mutations.size();
@@ -444,33 +2313,169 @@ int main() {
     }
     CHECK(observedCodecMutationCount == PreparedCodecMutationCount);
     CHECK(observedCodecSiteCount == PreparedCodecMutableSiteCount);
-    CHECK(codecGroups[2].id == CodecPatchGroupId::GenericItem);
-    CHECK(codecGroups[2].sites.size() == 4);
+    CHECK(codecGroups[0].id == CodecPatchGroupId::FullItemTransport);
+    CHECK(codecGroups[0].sites.size() == 4);
+    CHECK(codecGroups[0].sites[0].pattern.rva == 0x479E10);
+    CHECK(codecGroups[0].sites[1].pattern.rva == 0x47A001);
+    CHECK(codecGroups[0].sites[2].pattern.rva == 0x479CD0);
+    CHECK(codecGroups[0].sites[3].pattern.rva == 0x479EA0);
+    CHECK(codecGroups[3].id == CodecPatchGroupId::GenericItem);
+    CHECK(codecGroups[3].sites.size() == 4);
     std::size_t observedG1Mutations{};
-    for (const auto& site : codecGroups[2].sites) {
+    for (const auto& site : codecGroups[3].sites) {
         observedG1Mutations += site.mutations.size();
     }
-    CHECK(observedG1Mutations == 9);
-    CHECK(codecGroups[2].sites[0].pattern.rva == 0x37AB2B);
-    CHECK(codecGroups[2].sites[1].pattern.rva == 0x37B7D4);
-    CHECK(codecGroups[2].sites[2].pattern.rva == 0x37F186);
-    CHECK(codecGroups[2].sites[3].pattern.rva == 0x37F983);
+    CHECK(observedG1Mutations == 44);
+    CHECK(codecGroups[3].sites[0].pattern.rva == 0x37F174);
+    CHECK(codecGroups[3].sites[1].pattern.rva == 0x37AB2B);
+    CHECK(codecGroups[3].sites[2].pattern.rva == 0x37B7D4);
+    CHECK(codecGroups[3].sites[3].pattern.rva == 0x37F983);
+    const auto& boundedWriterSite = codecGroups[3].sites[0];
+    CHECK(boundedWriterSite.pattern.bytes.size() == 50);
+    CHECK(boundedWriterSite.mutations.size() == 37);
+    for (std::size_t index{};
+            index < boundedWriterSite.pattern.mask.size(); ++index) {
+        CHECK(boundedWriterSite.pattern.mask[index] == 0xFF);
+    }
+    for (std::size_t index{};
+            index < boundedWriterSite.mutations.size(); ++index) {
+        const auto& mutation = boundedWriterSite.mutations[index];
+        CHECK(mutation.patternOffset == index + 8U);
+        CHECK(mutation.expected
+            == GenericItemBoundedWriterBytes[mutation.patternOffset]);
+        CHECK(mutation.replacement
+            == GenericItemBoundedWriterReplacementBytes[
+                mutation.patternOffset]);
+        CHECK(mutation.source
+            == CodecByteMutation::ReplacementSource::Literal);
+    }
+    for (std::size_t index{}; index < 8U; ++index) {
+        CHECK(GenericItemBoundedWriterBytes[index]
+            == GenericItemBoundedWriterReplacementBytes[index]);
+    }
+    for (std::size_t index = 45U;
+            index < GenericItemBoundedWriterBytes.size(); ++index) {
+        CHECK(GenericItemBoundedWriterBytes[index]
+            == GenericItemBoundedWriterReplacementBytes[index]);
+    }
+    auto duplicateBoundedMutations =
+        std::array<CodecByteMutation, 37>{};
+    std::copy(
+        boundedWriterSite.mutations.begin(),
+        boundedWriterSite.mutations.end(),
+        duplicateBoundedMutations.begin());
+    duplicateBoundedMutations[1] = duplicateBoundedMutations[0];
+    const std::array duplicateBoundedSites{
+        CodecPatchSite{
+            boundedWriterSite.pattern,
+            duplicateBoundedMutations},
+    };
+    const CodecPatchGroup duplicateBoundedGroup{
+        CodecPatchGroupId::GenericItem,
+        "duplicate-bounded-writer",
+        duplicateBoundedSites,
+        codecGroups[3].witnesses.first(1),
+    };
+    CHECK(ValidateCodecPatchGroup(duplicateBoundedGroup)
+        == CodecPatchPlanError::DuplicateMutation);
+
+    const std::array overlappingBoundedSites{
+        CodecPatchSite{
+            boundedWriterSite.pattern,
+            boundedWriterSite.mutations},
+    };
+    const std::array overlappingBoundedWitnesses{
+        boundedWriterSite.pattern,
+    };
+    const CodecPatchGroup overlappingBoundedGroup{
+        CodecPatchGroupId::GenericItem,
+        "overlapping-bounded-witness",
+        overlappingBoundedSites,
+        overlappingBoundedWitnesses,
+    };
+    CHECK(ValidateCodecPatchGroup(overlappingBoundedGroup)
+        == CodecPatchPlanError::WitnessOverlapsMutation);
+
+    constexpr auto expectedG1WitnessRvas =
+        std::to_array<std::uintptr_t>({
+        0x37D140, 0x3800E8, 0x37F08A, 0x37F09B, 0x37F0D0,
+        0x2F6527,
+        0x37F295, 0x37F36D, 0x37F445, 0x37F51D, 0x37F685,
+        0x37F754, 0x37F832, 0x37F901,
+    });
+    CHECK(codecGroups[3].witnesses.size()
+        == expectedG1WitnessRvas.size());
+    for (std::size_t index{}; index < expectedG1WitnessRvas.size(); ++index) {
+        CHECK(codecGroups[3].witnesses[index].rva
+            == expectedG1WitnessRvas[index]);
+        for (const auto mask : codecGroups[3].witnesses[index].mask) {
+            CHECK(mask == 0xFF);
+        }
+    }
+    constexpr auto expectedG9WitnessRvas =
+        std::to_array<std::uintptr_t>({
+        0x479D85, 0x479E15, 0x479F76, 0x47A006,
+        0x479E23, 0x47A019, 0x375F25, 0x12E2F0, 0x12E4B0,
+        0x481BAD, 0x4817F0, 0x4818B6,
+    });
+    CHECK(codecGroups[0].witnesses.size()
+        == expectedG9WitnessRvas.size());
+    for (std::size_t index{}; index < expectedG9WitnessRvas.size(); ++index) {
+        CHECK(codecGroups[0].witnesses[index].rva
+            == expectedG9WitnessRvas[index]);
+        for (const auto mask : codecGroups[0].witnesses[index].mask) {
+            CHECK(mask == 0xFF);
+        }
+    }
+    CHECK(codecGroups[0].witnesses[4].bytes.size() == 30);
+    CHECK(codecGroups[0].witnesses[4].bytes.back() == 0xC3);
+    CHECK(codecGroups[0].witnesses[5].bytes.size() == 30);
+    CHECK(codecGroups[0].witnesses[5].bytes.back() == 0xC3);
+    auto g9WitnessFixture = MakeCodecPatchSetFixture(codecGroups);
+    CHECK(CodecFixtureHasRel32(
+        g9WitnessFixture, 0x479D85, 52, 0x375EE0));
+    CHECK(CodecFixtureHasRel32(
+        g9WitnessFixture, 0x479E10, 1, 0x4817F0));
+    CHECK(CodecFixtureHasRel32(
+        g9WitnessFixture, 0x479E15, 10, 0x481B50));
+    CHECK(CodecFixtureHasRel32(
+        g9WitnessFixture, 0x479F76, 40, 0x375EE0));
+    CHECK(CodecFixtureHasRel32(
+        g9WitnessFixture, 0x47A001, 1, 0x4817F0));
+    CHECK(CodecFixtureHasRel32(
+        g9WitnessFixture, 0x47A006, 15, 0x481B50));
+    CHECK(CodecFixtureHasRel32(
+        g9WitnessFixture, 0x481BAD, 1, 0x388C10));
+    CHECK(CodecFixtureHasRel32(
+        g9WitnessFixture, 0x481BAD, 30, 0x38AAB0));
+    CHECK(CodecFixtureHasRel32(
+        g9WitnessFixture, 0x481BAD, 82, 0x479EA0));
+    CHECK(CodecFixtureHasRel32(
+        g9WitnessFixture, 0x481BAD, 90, 0x38ABA0));
     CHECK(codecGroups.back().id == CodecPatchGroupId::PlayerSave);
 
     constexpr std::uintptr_t AuxiliaryReaderRelayRva = 0x01F00000;
     constexpr std::uintptr_t PlayerReaderRelayRva = 0x01F01000;
     constexpr std::uintptr_t PlayerPreviewRelayRva = 0x01F02000;
     constexpr std::uintptr_t PlayerSaveFinalizeRelayRva = 0x01F03000;
+    constexpr std::uintptr_t Packet9CQueueRelayRva = 0x01F04000;
+    constexpr std::uintptr_t Packet9DQueueRelayRva = 0x01F05000;
+    constexpr std::uintptr_t Packet9CEntryRelayRva = 0x01F06000;
+    constexpr std::uintptr_t Packet9DEntryRelayRva = 0x01F07000;
     constexpr auto codecActivationTargets =
         CodecPatchActivationTargets::ForTesting(
             AuxiliaryReaderRelayRva,
             PlayerReaderRelayRva,
             PlayerPreviewRelayRva,
-            PlayerSaveFinalizeRelayRva);
+            PlayerSaveFinalizeRelayRva,
+            Packet9CQueueRelayRva,
+            Packet9DQueueRelayRva,
+            Packet9CEntryRelayRva,
+            Packet9DEntryRelayRva);
 
-    CodecPublicationQuiescenceLease noCodecLease;
+    NativePublicationQuiescenceLease noCodecLease;
     CodecQuiescenceFixture heldCodecQuiescence{.held = true};
-    auto heldCodecLease = CodecPublicationQuiescenceLease::ForTesting(
+    auto heldCodecLease = NativePublicationQuiescenceLease::ForTesting(
         &heldCodecQuiescence,
         &ValidateCodecQuiescence,
         &ReleaseCodecQuiescence);
@@ -478,7 +2483,7 @@ int main() {
         CodecQuiescenceFixture releasedLeaseFixture{.held = true};
         {
             auto releasedLease =
-                CodecPublicationQuiescenceLease::ForTesting(
+                NativePublicationQuiescenceLease::ForTesting(
                     &releasedLeaseFixture,
                     &ValidateCodecQuiescence,
                     &ReleaseCodecQuiescence);
@@ -494,12 +2499,14 @@ int main() {
         .verifyPattern = &VerifyCodecFixturePattern,
         .writeByte = &WriteCodecFixtureByte,
         .flushInstructionCache = &FlushCodecFixtureInstructionCache,
+        .reserveMutationLifetime = &ReserveCodecFixtureMutationLifetime,
     };
     auto codecSetResult = CommitPreparedCodecPatchSet(
         noCodecLease, codecActivationTargets, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::QuiescenceRequired);
     CHECK(codecSetResult.attemptedMutations == 0);
     CHECK(inactiveCodecSetFixture.verifyCalls == 0);
+    CHECK(inactiveCodecSetFixture.reserveLifetimeCalls == 0);
     CHECK(inactiveCodecSetFixture.writeCalls == 0);
     CHECK(inactiveCodecSetFixture.flushCalls == 0);
 
@@ -511,7 +2518,7 @@ int main() {
         .revokeOnValidation = 1,
     };
     {
-        auto revokedLease = CodecPublicationQuiescenceLease::ForTesting(
+        auto revokedLease = NativePublicationQuiescenceLease::ForTesting(
             &revokedBeforePreflight,
             &ValidateCodecQuiescence,
             &ReleaseCodecQuiescence);
@@ -521,6 +2528,7 @@ int main() {
     CHECK(codecSetResult.status
         == CodecPatchCommitStatus::QuiescenceRequired);
     CHECK(revokedBeforePreflightFixture.verifyCalls == 0);
+    CHECK(revokedBeforePreflightFixture.reserveLifetimeCalls == 0);
     CHECK(revokedBeforePreflightFixture.writeCalls == 0);
     CHECK(revokedBeforePreflightFixture.flushCalls == 0);
     CHECK(revokedBeforePreflight.releaseCalls == 1);
@@ -533,7 +2541,7 @@ int main() {
         .revokeAfterWriteCalls = 1,
     };
     {
-        auto revokedLease = CodecPublicationQuiescenceLease::ForTesting(
+        auto revokedLease = NativePublicationQuiescenceLease::ForTesting(
             &revokedAfterWrite,
             &ValidateCodecQuiescence,
             &ReleaseCodecQuiescence);
@@ -545,6 +2553,7 @@ int main() {
     CHECK(codecSetResult.attemptedMutations
         == codecSetResult.confirmedMutations);
     CHECK(codecSetResult.confirmedMutations >= 1);
+    CHECK(revokedAfterWriteFixture.reserveLifetimeCalls == 1);
     CHECK(revokedAfterWriteFixture.writeCalls == 1);
     CHECK(revokedAfterWriteFixture.flushCalls == 0);
     CHECK(revokedAfterWrite.releaseCalls == 1);
@@ -555,6 +2564,13 @@ int main() {
         heldCodecLease, codecActivationTargets, callbacksWithoutFlush).status
         == CodecPatchCommitStatus::InvalidPlan);
     CHECK(inactiveCodecSetFixture.verifyCalls == 0);
+    auto callbacksWithoutReservation = codecSetCallbacks;
+    callbacksWithoutReservation.reserveMutationLifetime = nullptr;
+    CHECK(CommitPreparedCodecPatchSet(
+        heldCodecLease,
+        codecActivationTargets,
+        callbacksWithoutReservation).status
+        == CodecPatchCommitStatus::InvalidPlan);
 
     auto codecSetFixture = MakeCodecPatchSetFixture(codecGroups);
     codecSetCallbacks.context = &codecSetFixture;
@@ -564,6 +2580,7 @@ int main() {
     CHECK(codecSetResult.attemptedMutations == PreparedCodecMutationCount);
     CHECK(codecSetResult.confirmedMutations == PreparedCodecMutationCount);
     CHECK(codecSetResult.confirmedFlushes == PreparedCodecMutableSiteCount);
+    CHECK(codecSetFixture.reserveLifetimeCalls == 1);
     CHECK(codecSetFixture.flushCalls == PreparedCodecMutableSiteCount);
     const auto activeCodecSetResult = codecSetResult;
     for (const auto& group : codecGroups) {
@@ -586,7 +2603,7 @@ int main() {
     const auto activeG1Next = FindCodecFixtureSite(
         codecSetFixture, 0x37B7D4);
     const auto activeG1Writer = FindCodecFixtureSite(
-        codecSetFixture, 0x37F186);
+        codecSetFixture, 0x37F174);
     const auto activeG1Terminator = FindCodecFixtureSite(
         codecSetFixture, 0x37F983);
     CHECK(activeG1First != nullptr);
@@ -603,15 +2620,59 @@ int main() {
         CHECK(activeG1Next->bytes[17] == 0x0F);
     }
     if (activeG1Writer) {
-        CHECK(activeG1Writer->bytes[2] == 0x0F);
-        CHECK(activeG1Writer->bytes[12] == 0x0C);
+        CHECK(std::equal(
+            activeG1Writer->bytes.begin(),
+            activeG1Writer->bytes.end(),
+            GenericItemBoundedWriterReplacementBytes.begin(),
+            GenericItemBoundedWriterReplacementBytes.end()));
+        CHECK(activeG1Writer->bytes[0] == 0x85);
+        CHECK(activeG1Writer->bytes[1] == 0xF6);
+        CHECK(activeG1Writer->bytes[8] == 0x81);
+        CHECK(activeG1Writer->bytes[14] == 0x73);
+        CHECK(activeG1Writer->bytes[16] == 0x3B);
+        CHECK(activeG1Writer->bytes[26] == 0xBA);
+        CHECK(activeG1Writer->bytes[28] == 0x0F);
+        CHECK(activeG1Writer->bytes[36] == 0x41);
+        CHECK(activeG1Writer->bytes[38] == 0x0C);
+        CHECK(activeG1Writer->bytes[45] == 0xE8);
     }
     if (activeG1Terminator) {
         CHECK(activeG1Terminator->bytes[2] == 0x0F);
         CHECK(activeG1Terminator->bytes[7] == 0x0C);
     }
 
-    const auto& g1NextPattern = codecGroups[2].sites[1].pattern;
+    CHECK(codecSetFixture.flushFirstRvas[0] == 0x479E11);
+    CHECK(codecSetFixture.flushSizes[0] == 4);
+    CHECK(codecSetFixture.flushFirstRvas[1] == 0x47A002);
+    CHECK(codecSetFixture.flushSizes[1] == 4);
+    CHECK(codecSetFixture.flushFirstRvas[2] == 0x479CD0);
+    CHECK(codecSetFixture.flushSizes[2] == 5);
+    CHECK(codecSetFixture.flushFirstRvas[3] == 0x479EA0);
+    CHECK(codecSetFixture.flushSizes[3] == 5);
+
+    CHECK(CodecFixtureHasRel32(
+        codecSetFixture, 0x479E10, 1, Packet9CQueueRelayRva));
+    CHECK(CodecFixtureHasRel32(
+        codecSetFixture, 0x47A001, 1, Packet9DQueueRelayRva));
+    const auto active9CEntry = FindCodecFixtureSite(
+        codecSetFixture, 0x479CD0);
+    const auto active9DEntry = FindCodecFixtureSite(
+        codecSetFixture, 0x479EA0);
+    CHECK(active9CEntry != nullptr);
+    CHECK(active9DEntry != nullptr);
+    if (active9CEntry) CHECK(active9CEntry->bytes[0] == 0xE9);
+    if (active9DEntry) CHECK(active9DEntry->bytes[0] == 0xE9);
+    CHECK(CodecFixtureHasRel32(
+        codecSetFixture, 0x479CD0, 1, Packet9CEntryRelayRva));
+    CHECK(CodecFixtureHasRel32(
+        codecSetFixture, 0x479EA0, 1, Packet9DEntryRelayRva));
+
+    const auto g1FirstFlush = codecGroups[0].sites.size()
+        + codecGroups[1].sites.size() + codecGroups[2].sites.size();
+    CHECK(codecSetFixture.flushFirstRvas[g1FirstFlush] == 0x37F17C);
+    CHECK(codecSetFixture.flushSizes[g1FirstFlush] == 37);
+
+    const auto& g1NextPattern = codecGroups[3].sites[2].pattern;
     for (std::size_t index{}; index < g1NextPattern.mask.size(); ++index) {
         CHECK(g1NextPattern.mask[index] == 0xFF);
     }
@@ -639,6 +2700,43 @@ int main() {
     CHECK(codecSetResult.status == CodecPatchCommitStatus::PreflightFailed);
     CHECK(corruptG1Fixture.writeCalls == 0);
     CHECK(corruptG1Fixture.flushCalls == 0);
+
+    for (const auto corruptOffset : {std::size_t{0}, std::size_t{49}}) {
+        auto corruptBoundedWriterFixture =
+            MakeCodecPatchSetFixture(codecGroups);
+        auto corruptBoundedWriter = FindCodecFixtureSite(
+            corruptBoundedWriterFixture, 0x37F174);
+        CHECK(corruptBoundedWriter != nullptr);
+        if (corruptBoundedWriter) {
+            corruptBoundedWriter->bytes[corruptOffset] ^= 0xFF;
+        }
+        codecSetCallbacks.context = &corruptBoundedWriterFixture;
+        codecSetResult = CommitPreparedCodecPatchSet(
+            heldCodecLease, codecActivationTargets, codecSetCallbacks);
+        CHECK(codecSetResult.status
+            == CodecPatchCommitStatus::PreflightFailed);
+        CHECK(corruptBoundedWriterFixture.writeCalls == 0);
+        CHECK(corruptBoundedWriterFixture.flushCalls == 0);
+    }
+
+    for (std::size_t index{}; index < 14U; ++index) {
+        auto corruptG1SafetyWitnessFixture =
+            MakeCodecPatchSetFixture(codecGroups);
+        const auto witnessRva = codecGroups[3].witnesses[index].rva;
+        auto corruptG1SafetyWitness = FindCodecFixtureSite(
+            corruptG1SafetyWitnessFixture, witnessRva);
+        CHECK(corruptG1SafetyWitness != nullptr);
+        if (corruptG1SafetyWitness) {
+            corruptG1SafetyWitness->bytes.back() ^= 0xFF;
+        }
+        codecSetCallbacks.context = &corruptG1SafetyWitnessFixture;
+        codecSetResult = CommitPreparedCodecPatchSet(
+            heldCodecLease, codecActivationTargets, codecSetCallbacks);
+        CHECK(codecSetResult.status
+            == CodecPatchCommitStatus::PreflightFailed);
+        CHECK(corruptG1SafetyWitnessFixture.writeCalls == 0);
+        CHECK(corruptG1SafetyWitnessFixture.flushCalls == 0);
+    }
 
     auto corruptCodecSetFixture = MakeCodecPatchSetFixture(codecGroups);
     corruptCodecSetFixture.sites.front().bytes.front() ^= 0xFF;
@@ -767,22 +2865,74 @@ int main() {
             0x530A00,
             PlayerReaderRelayRva,
             PlayerPreviewRelayRva,
-            PlayerSaveFinalizeRelayRva),
+            PlayerSaveFinalizeRelayRva,
+            Packet9CQueueRelayRva,
+            Packet9DQueueRelayRva,
+            Packet9CEntryRelayRva,
+            Packet9DEntryRelayRva),
         CodecPatchActivationTargets::ForTesting(
             AuxiliaryReaderRelayRva,
             0x533760,
             PlayerPreviewRelayRva,
-            PlayerSaveFinalizeRelayRva),
+            PlayerSaveFinalizeRelayRva,
+            Packet9CQueueRelayRva,
+            Packet9DQueueRelayRva,
+            Packet9CEntryRelayRva,
+            Packet9DEntryRelayRva),
         CodecPatchActivationTargets::ForTesting(
             AuxiliaryReaderRelayRva,
             PlayerReaderRelayRva,
             0xA1E110,
-            PlayerSaveFinalizeRelayRva),
+            PlayerSaveFinalizeRelayRva,
+            Packet9CQueueRelayRva,
+            Packet9DQueueRelayRva,
+            Packet9CEntryRelayRva,
+            Packet9DEntryRelayRva),
         CodecPatchActivationTargets::ForTesting(
             AuxiliaryReaderRelayRva,
             PlayerReaderRelayRva,
             PlayerPreviewRelayRva,
-            0xA1B610),
+            0xA1B610,
+            Packet9CQueueRelayRva,
+            Packet9DQueueRelayRva,
+            Packet9CEntryRelayRva,
+            Packet9DEntryRelayRva),
+        CodecPatchActivationTargets::ForTesting(
+            AuxiliaryReaderRelayRva,
+            PlayerReaderRelayRva,
+            PlayerPreviewRelayRva,
+            PlayerSaveFinalizeRelayRva,
+            0x4817F0,
+            Packet9DQueueRelayRva,
+            Packet9CEntryRelayRva,
+            Packet9DEntryRelayRva),
+        CodecPatchActivationTargets::ForTesting(
+            AuxiliaryReaderRelayRva,
+            PlayerReaderRelayRva,
+            PlayerPreviewRelayRva,
+            PlayerSaveFinalizeRelayRva,
+            Packet9CQueueRelayRva,
+            0x4817F0,
+            Packet9CEntryRelayRva,
+            Packet9DEntryRelayRva),
+        CodecPatchActivationTargets::ForTesting(
+            AuxiliaryReaderRelayRva,
+            PlayerReaderRelayRva,
+            PlayerPreviewRelayRva,
+            PlayerSaveFinalizeRelayRva,
+            Packet9CQueueRelayRva,
+            Packet9DQueueRelayRva,
+            0x479CD5,
+            Packet9DEntryRelayRva),
+        CodecPatchActivationTargets::ForTesting(
+            AuxiliaryReaderRelayRva,
+            PlayerReaderRelayRva,
+            PlayerPreviewRelayRva,
+            PlayerSaveFinalizeRelayRva,
+            Packet9CQueueRelayRva,
+            Packet9DQueueRelayRva,
+            Packet9CEntryRelayRva,
+            0x479EA5),
     };
     for (const auto& nativeNoOpTarget : nativeNoOpTargets) {
         codecSetResult = CommitPreparedCodecPatchSet(
@@ -800,7 +2950,11 @@ int main() {
             playerSaveCallNextRva
             + static_cast<std::uintptr_t>(
                 (std::numeric_limits<std::int32_t>::max)())
-            + 1U);
+            + 1U,
+            Packet9CQueueRelayRva,
+            Packet9DQueueRelayRva,
+            Packet9CEntryRelayRva,
+            Packet9DEntryRelayRva);
     codecSetResult = CommitPreparedCodecPatchSet(
         heldCodecLease, forwardRel32Overflow, codecSetCallbacks);
     CHECK(codecSetResult.planError
@@ -814,7 +2968,11 @@ int main() {
             AuxiliaryReaderRelayRva,
             PlayerReaderRelayRva,
             PlayerPreviewRelayRva,
-            0x00600000);
+            0x00600000,
+            Packet9CQueueRelayRva,
+            Packet9DQueueRelayRva,
+            Packet9CEntryRelayRva,
+            Packet9DEntryRelayRva);
     codecSetResult = CommitPreparedCodecPatchSet(
         heldCodecLease, noOpRelayByteTarget, codecSetCallbacks);
     CHECK(codecSetResult.status == CodecPatchCommitStatus::Active);
@@ -1753,6 +3911,80 @@ int main() {
 
     std::vector<std::string> commitEvents;
     auto commitResult = CommitLoaderMutation(
+        noCodecLease,
+        [&]() noexcept { commitEvents.emplace_back("reserve"); },
+        [&]() noexcept {
+            commitEvents.emplace_back("tail");
+            return true;
+        },
+        [&]() noexcept { commitEvents.emplace_back("activate"); },
+        [&]() noexcept {
+            commitEvents.emplace_back("cap");
+            return true;
+        },
+        [&]() noexcept { commitEvents.emplace_back("publish"); });
+    CHECK(commitResult == LoaderInstallResult::QuiescenceRequired);
+    CHECK(commitEvents.empty());
+
+    CodecQuiescenceFixture loaderRevokedBeforeWrite{
+        .held = true,
+        .revokeOnValidation = 1,
+    };
+    {
+        auto loaderLease = NativePublicationQuiescenceLease::ForTesting(
+            &loaderRevokedBeforeWrite,
+            &ValidateCodecQuiescence,
+            &ReleaseCodecQuiescence);
+        commitResult = CommitLoaderMutation(
+            loaderLease,
+            [&]() noexcept { commitEvents.emplace_back("reserve"); },
+            [&]() noexcept {
+                commitEvents.emplace_back("tail");
+                return true;
+            },
+            [&]() noexcept { commitEvents.emplace_back("activate"); },
+            [&]() noexcept {
+                commitEvents.emplace_back("cap");
+                return true;
+            },
+            [&]() noexcept { commitEvents.emplace_back("publish"); });
+    }
+    CHECK(commitResult == LoaderInstallResult::QuiescenceRequired);
+    CHECK((commitEvents == std::vector<std::string>{"reserve"}));
+    CHECK(loaderRevokedBeforeWrite.releaseCalls == 1);
+
+    commitEvents.clear();
+    CodecQuiescenceFixture loaderRevokedAfterTail{
+        .held = true,
+        .revokeOnValidation = 2,
+    };
+    {
+        auto loaderLease = NativePublicationQuiescenceLease::ForTesting(
+            &loaderRevokedAfterTail,
+            &ValidateCodecQuiescence,
+            &ReleaseCodecQuiescence);
+        commitResult = CommitLoaderMutation(
+            loaderLease,
+            [&]() noexcept { commitEvents.emplace_back("reserve"); },
+            [&]() noexcept {
+                commitEvents.emplace_back("tail");
+                return true;
+            },
+            [&]() noexcept { commitEvents.emplace_back("activate"); },
+            [&]() noexcept {
+                commitEvents.emplace_back("cap");
+                return true;
+            },
+            [&]() noexcept { commitEvents.emplace_back("publish"); });
+    }
+    CHECK(commitResult
+        == LoaderInstallResult::PartialCommitColdRestartRequired);
+    CHECK((commitEvents == std::vector<std::string>{"reserve", "tail"}));
+    CHECK(loaderRevokedAfterTail.releaseCalls == 1);
+
+    commitEvents.clear();
+    commitResult = CommitLoaderMutation(
+        heldCodecLease,
         [&]() noexcept { commitEvents.emplace_back("reserve"); },
         [&]() noexcept {
             commitEvents.emplace_back("tail");
@@ -1771,6 +4003,7 @@ int main() {
 
     commitEvents.clear();
     commitResult = CommitLoaderMutation(
+        heldCodecLease,
         [&]() noexcept { commitEvents.emplace_back("reserve"); },
         [&]() noexcept {
             commitEvents.emplace_back("tail");
@@ -1788,6 +4021,7 @@ int main() {
 
     commitEvents.clear();
     commitResult = CommitLoaderMutation(
+        heldCodecLease,
         [&]() noexcept { commitEvents.emplace_back("reserve"); },
         [&]() noexcept {
             commitEvents.emplace_back("tail");
@@ -1911,6 +4145,23 @@ enabled = false
     CHECK(deduplicated.size() == 2);
 
     CHECK(!FoundationPatterns.empty());
+    struct OwnedNativeRange {
+        std::uintptr_t begin;
+        std::size_t size;
+    };
+    // Historical RuffDood transport-prototype entry ranges. They are not part
+    // of eezstreet's official plugin-items. Every ISC12 surface remains
+    // disjoint except the deliberate exact queue-entry witness: that overlap
+    // makes the canonical preflight reject the old prototype fail-closed.
+    constexpr auto historicalTransportPrototypeRanges =
+        std::to_array<OwnedNativeRange>({
+        {0x12E2C0, 32},
+        {0x12E490, 32},
+        {0x374BF0, 14},
+        {0x374FF0, 27},
+        {0x375EE0, 26},
+        {0x4817F0, 22},
+    });
     for (const auto& pattern : FoundationPatterns) {
         CHECK(pattern.id != nullptr);
         CHECK(pattern.rva != 0);
@@ -1918,8 +4169,21 @@ enabled = false
         CHECK(pattern.bytes.size() == pattern.mask.size());
         CHECK(std::string_view{pattern.id} != "item.decode-entry");
         CHECK(std::string_view{pattern.id} != "item.serialize-entry");
-        CHECK(pattern.rva != 0x374BF0);
-        CHECK(pattern.rva != 0x375EE0);
+        CHECK(pattern.rva <=
+            (std::numeric_limits<std::uintptr_t>::max)()
+                - pattern.bytes.size());
+        const auto patternEnd = pattern.rva + pattern.bytes.size();
+        for (const auto& owned : historicalTransportPrototypeRanges) {
+            const auto ownedEnd = owned.begin + owned.size;
+            const auto deliberateQueueWitness =
+                std::string_view{pattern.id}
+                    == "transport.g9-native-queue-entry"
+                && pattern.rva == owned.begin
+                && pattern.bytes.size() == owned.size
+                && owned.begin == 0x4817F0;
+            CHECK(deliberateQueueWitness
+                || patternEnd <= owned.begin || pattern.rva >= ownedEnd);
+        }
         for (const auto mask : pattern.mask) CHECK(mask == 0xFF);
     }
 
@@ -2006,6 +4270,8 @@ enabled = false
         == std::string::npos);
     CHECK(loaderText.find("PersistenceState->codecReady, 1")
         == std::string::npos);
+    CHECK(loaderText.find("PersistenceState->itemTransportReady, 1")
+        == std::string::npos);
     CHECK(loaderText.find("CommitPreparedCodecPatchSet(")
         == std::string::npos);
     CHECK(loaderText.find(
@@ -2023,6 +4289,30 @@ enabled = false
     CHECK(loaderText.find(
         "ISC12PersistenceRelayTemplateCodecReturnExit")
         != std::string::npos);
+    CHECK(loaderText.find(
+        "ISC12PersistenceRelayTemplatePacket9CQueueEntry")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "ISC12PersistenceRelayTemplatePacket9DQueueEntry")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "ISC12PersistenceRelayTemplatePacket9CProducerEntry")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "ISC12PersistenceRelayTemplatePacket9DProducerEntry")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "ISC12PersistenceRelayTemplateItemTransportReturnExit")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "ISC12PersistenceRelayTemplatePacket9CTrampoline")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "ISC12PersistenceRelayTemplatePacket9DTrampoline")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "ISC12PersistenceRelayTemplateItemTrampolineUnwindInfo")
+        != std::string::npos);
     CHECK(loaderText.find("AuxiliaryReaderCallRva = 0x531A6D")
         != std::string::npos);
     CHECK(loaderText.find("PlayerReaderPrimaryCallRva = 0x52EC4A")
@@ -2032,6 +4322,20 @@ enabled = false
     CHECK(loaderText.find("PlayerPreviewCallRva = 0x61CF90")
         != std::string::npos);
     CHECK(loaderText.find("PlayerSaveFinalizeCallRva = 0x5353C2")
+        != std::string::npos);
+    CHECK(loaderText.find("Packet9CProducerEntryRva = 0x479CD0")
+        != std::string::npos);
+    CHECK(loaderText.find("Packet9CProducerEpilogueEndRva = 0x479E41")
+        != std::string::npos);
+    CHECK(loaderText.find("Packet9DProducerEntryRva = 0x479EA0")
+        != std::string::npos);
+    CHECK(loaderText.find("Packet9DProducerEpilogueEndRva = 0x47A037")
+        != std::string::npos);
+    CHECK(loaderText.find("Packet9CQueueCallRva = 0x479E10")
+        != std::string::npos);
+    CHECK(loaderText.find("Packet9DQueueCallRva = 0x47A001")
+        != std::string::npos);
+    CHECK(loaderText.find("NativeFullItemPacketQueueRva = 0x4817F0")
         != std::string::npos);
     CHECK(loaderText.find("ReadPlayerStatsWithPreflight")
         != std::string::npos);
@@ -2049,6 +4353,40 @@ enabled = false
         != std::string::npos);
     CHECK(loaderText.find(
         "offsetof(PersistenceRelayState, playerPreviewHandler) == 0x58")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "offsetof(PersistenceRelayState, itemTransportReady) == 0x60")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "offsetof(PersistenceRelayState, packet9CProducerHandler) == 0x68")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "offsetof(PersistenceRelayState, packet9DProducerHandler) == 0x70")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "offsetof(PersistenceRelayState, packet9CQueueHandler) == 0x78")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "offsetof(PersistenceRelayState, packet9DQueueHandler) == 0x80")
+        != std::string::npos);
+    CHECK(loaderText.find("RtlLookupFunctionEntry") != std::string::npos);
+    CHECK(loaderText.find("liveEpilogueFunction = RtlLookupFunctionEntry")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "epilogueFunction.UnwindData != function.UnwindData")
+        != std::string::npos);
+    CHECK(loaderText.find("function.EndAddress < expectedEpilogueEndRva")
+        != std::string::npos);
+    CHECK(loaderText.find("function.EndAddress > LoaderImageSize")
+        != std::string::npos);
+    CHECK(loaderText.find("RtlAddFunctionTable") != std::string::npos);
+    CHECK(loaderText.find("RtlDeleteFunctionTable") != std::string::npos);
+    CHECK(loaderText.find("AbortFullItemPacketProducer")
+        != std::string::npos);
+    CHECK(loaderText.find("AbnormalTermination() != FALSE")
+        != std::string::npos);
+    CHECK(loaderText.find(
+        "NativeFullItemPacketQueue(client, bytes, length)")
         != std::string::npos);
     CHECK(loaderText.find(
         "LoaderCodecPatchAuthority::BindPreparedRelay")
@@ -2138,11 +4476,52 @@ enabled = false
     CHECK(persistenceAsmText.find(
         "ISC12PersistenceRelayTemplateCodecReturnExit")
         != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "ISC12PersistenceRelayTemplatePacket9CQueueEntry")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "ISC12PersistenceRelayTemplatePacket9DQueueEntry")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "ISC12PersistenceRelayTemplatePacket9CProducerEntry")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "ISC12PersistenceRelayTemplatePacket9DProducerEntry")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "ISC12PersistenceRelayTemplateItemTransportReturnExit")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "ISC12PersistenceRelayTemplatePacket9CTrampoline LABEL BYTE")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "ISC12PersistenceRelayTemplatePacket9DTrampoline LABEL BYTE")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "ISC12PersistenceRelayTemplateItemTrampolineUnwindInfo LABEL BYTE")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "db 040h,053h,055h,056h,057h,0E9h")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "db 001h,005h,004h,000h,005h,070h")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "db 004h,060h,003h,050h,002h,030h")
+        != std::string::npos);
     CHECK(persistenceAsmText.find("ISC12AuxiliaryReaderCallHook PROC FRAME")
         != std::string::npos);
     CHECK(persistenceAsmText.find("ISC12PlayerReaderCallHook PROC FRAME")
         != std::string::npos);
     CHECK(persistenceAsmText.find("ISC12PlayerPreviewCallHook PROC FRAME")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("ISC12ItemAction9CEntryHook PROC FRAME")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("ISC12ItemAction9DEntryHook PROC FRAME")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("ISC12ItemAction9CQueueHook PROC FRAME")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("ISC12ItemAction9DQueueHook PROC FRAME")
         != std::string::npos);
     CHECK(persistenceAsmText.find(".allocstack 38h")
         != std::string::npos);
@@ -2155,7 +4534,28 @@ enabled = false
         != std::string::npos);
     CHECK(persistenceAsmText.find("call ISC12CopyPreviewWithPreflight")
         != std::string::npos);
+    CHECK(persistenceAsmText.find("call ISC12InvokeItemAction9CNative")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("call ISC12InvokeItemAction9DNative")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("call ISC12CaptureItemAction9CQueue")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("call ISC12CaptureItemAction9DQueue")
+        != std::string::npos);
     CHECK(persistenceAsmText.find("jmp qword ptr [gISC12CodecReturnExit]")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find(
+        "jmp qword ptr [gISC12ItemTransportReturnExit]")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("cmp dword ptr [r11+60h], 0")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("jmp qword ptr [r11+68h]")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("jmp qword ptr [r11+70h]")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("jmp qword ptr [r11+78h]")
+        != std::string::npos);
+    CHECK(persistenceAsmText.find("jmp qword ptr [r11+80h]")
         != std::string::npos);
     CHECK(persistenceAsmText.find("cmp qword ptr [rcx+18h], 0")
         != std::string::npos);
@@ -2179,6 +4579,46 @@ enabled = false
         == std::string::npos);
     CHECK(cmakeText.find("isc12_persistence_relay.asm")
         != std::string::npos);
+
+    const auto isc12SourceDirectory =
+        std::filesystem::path{ISC12_CMAKE_PATH}.parent_path();
+    std::ifstream codecPatchSourceFile(
+        isc12SourceDirectory / "isc12_codec_patch.cpp", std::ios::binary);
+    const std::string codecPatchSourceText{
+        std::istreambuf_iterator<char>{codecPatchSourceFile},
+        std::istreambuf_iterator<char>{}};
+    CHECK(!codecPatchSourceText.empty());
+    CHECK(codecPatchSourceText.find(
+        "\"codec.g1-bounded-writer\", 0x37F174")
+        != std::string::npos);
+    CHECK(codecPatchSourceText.find("BuildLiteralMutations<37>")
+        != std::string::npos);
+    CHECK(codecPatchSourceText.find("codec.g1-snapshot-copy-body")
+        != std::string::npos);
+    CHECK(codecPatchSourceText.find("codec.g1-compound-write-56")
+        != std::string::npos);
+    CHECK(codecPatchSourceText.find("codec.g1-writer-id")
+        == std::string::npos);
+    CHECK(codecPatchSourceText.find("GenericItemWriterIdMutations")
+        == std::string::npos);
+
+    std::ifstream nativeSitesSourceFile(
+        isc12SourceDirectory / "isc12_native_sites.hpp", std::ios::binary);
+    const std::string nativeSitesSourceText{
+        std::istreambuf_iterator<char>{nativeSitesSourceFile},
+        std::istreambuf_iterator<char>{}};
+    CHECK(!nativeSitesSourceText.empty());
+    CHECK(nativeSitesSourceText.find(
+        "0x81,0xFF,0xFF,0x01,0x00,0x00,0x73,0x0A")
+        != std::string::npos);
+    CHECK(nativeSitesSourceText.find(
+        "0x00,0x00,0xBA,0xFF,0x0F,0x00,0x00,0x3B")
+        != std::string::npos);
+    CHECK(nativeSitesSourceText.find(
+        "0xFA,0x0F,0x42,0xD7,0x41,0xB8,0x0C,0x00")
+        != std::string::npos);
+    CHECK(nativeSitesSourceText.find("GenericItemWriterIdBytes")
+        == std::string::npos);
 
     return Failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
