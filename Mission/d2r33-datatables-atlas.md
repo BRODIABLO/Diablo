@@ -2,10 +2,10 @@
 
 ## Statut
 
-Gates **A0+A1 livrés** le 31 août 2026 après le `GO` de Vincent. L’atlas reste
-un workstream en pause et ne remplace pas la priorité active ISC12. Aucune
-sortie A2, analyse A3, hook runtime, DLL, mutation du jeu ni matrice runtime
-n’a été produit.
+Gates **A0+A1+A2 livrés** le 31 août 2026 après les `GO` de Vincent. L’atlas
+reste un workstream en pause et ne remplace pas la priorité active ISC12. Aucune
+analyse A3, hook runtime, DLL, mutation du jeu ni matrice runtime n’a été
+produit.
 
 ## Résultat A0+A1
 
@@ -23,6 +23,22 @@ n’a été produit.
   justification byte-exact des builds couverts.
 - La suite négative passe `9/9`; aucun nouveau RE, RVA, type complet, hook,
   plugin, runtime ou fichier TXT n’a été ajouté.
+
+## Résultat A2
+
+- Le générateur déterministe produit quatre fichiers gouvernés : le header C++,
+  le header C importable dans Ghidra, le témoin de compilation et leur
+  manifeste SHA-256.
+- Les sorties couvrent sept vues de records partiels, 21 fields admis et 15
+  slots du préfixe connu de `DataTables`. Les 45 `static_assert` ferment chaque
+  offset et stride sans prétendre connaître les octets de padding.
+- `Objects.Parm0` et `Shrines.LevelMin` restent explicitement `candidate` dans
+  les deux formats; A2 n’a promu aucune preuve.
+- Deux générations indépendantes ont produit quatre paires byte-identiques. Le
+  header C++ porte `CE4FA09F…B1631BBA`; le header Ghidra porte
+  `59934CF1…AD885F`.
+- Le témoin compile avec MSVC 14.44 en C++20, `/W4 /WX`; la suite A2 passe
+  `8/8`. Aucun nouveau reverse engineering ni accès runtime n’a été nécessaire.
 
 ## Objectif
 
@@ -155,18 +171,23 @@ dans l’atlas.
   `{records, count, stride}`, le nombre de champs à haute confiance et la
   réduction des offsets dupliqués dans les futurs travaux.
 
-## Validation A0+A1
+## Validation A0+A1+A2
 
 1. `npm.cmd run re:d2r33 -- status` : workbench, image, index et Ghidra prêts.
 2. `node scripts/reverse-engineering/d2r33-datatables-atlas.mjs` : `VALID`,
    `7/7` triplets, 28 preuves, builds 92777 et 93847 couverts.
 3. `node --test scripts/reverse-engineering/d2r33-datatables-atlas.test.mjs` :
    `9/9` tests réussis.
-4. Validation du cadastre, `git diff --check` et examen du diff dédié avant le
+4. `node scripts/reverse-engineering/d2r33-datatables-generate.mjs --check` :
+   quatre sorties courantes et byte-exactes.
+5. `node --test scripts/reverse-engineering/d2r33-datatables-generate.test.mjs` :
+   `8/8` tests réussis.
+6. Deux exécutions vers des répertoires distincts sous `analysis-cache/` :
+   quatre paires SHA-256 identiques.
+7. `scripts/reverse-engineering/d2r33-datatables-compile.ps1` : témoin C++20
+   compilé avec Visual Studio Build Tools 17.14 / MSVC 14.44 et `/W4 /WX`.
+8. Validation du cadastre, `git diff --check` et examen du diff dédié avant le
    handoff.
-
-La génération déterministe et la compilation des `static_assert` appartiennent
-à A2 et n’entrent pas dans le résultat A0+A1.
 
 Aucune matrice runtime n’est requise pour le catalogue documentaire seul. Une
 future action qui lirait ou modifierait réellement le processus devra ouvrir un
@@ -187,7 +208,7 @@ Le futur lot possède `Mission/d2r33-datatables-atlas.md`, le répertoire dédi�
 `Mission/WORKSTREAMS.json` et le cadastre restent des registres partagés à
 modifier chirurgicalement. `Mission/CURRENT.md` demeure sur ISC12.
 
-**Prochain gate : A2.** Après un nouveau `GO`, générer depuis le catalogue les
-vues C++ partielles et le format Ghidra reproductible, exécuter deux générations
-byte-identiques et compiler un témoin couvrant tous les `static_assert`. A3 et
-le runtime restent exclus.
+**Prochain gate : A3.** Après un nouveau `GO`, inventorier statiquement les
+descriptors et callsites de compilation dans l’image canonique, sans hook
+runtime, et ne produire que des candidats tant que les preuves indépendantes ne
+ferment pas leurs contrats. Le runtime et A4 restent exclus.

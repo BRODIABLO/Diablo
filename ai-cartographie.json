@@ -40130,11 +40130,48 @@
                                                                                              "agentAccess":  "read-write",
                                                                                              "status":  "active",
                                                                                              "policy":  {
-                                                                                                             "canonical":  true,
-                                                                                                             "generated":  false
-                                                                                                         }
+                                                                                                            "canonical":  true,
+                                                                                                            "generated":  false
+                                                                                                        }
                                                                                          },
                                                                                 "children":  [
+                                                                                                 {
+                                                                                                     "name":  "generated",
+                                                                                                     "path":  "reverse-engineering/d2r-3.2.92777/datatables-atlas/generated",
+                                                                                                     "kind":  "directory",
+                                                                                                     "meta":  {
+                                                                                                                  "role":  "x-d2r33-datatables-generated",
+                                                                                                                  "summary":  "Vues C++ partielles, header C importable dans Ghidra, témoin de compilation et manifeste reproductibles générés exclusivement depuis le catalogue gouverné DataTables.",
+                                                                                                                  "agentAccess":  "read-write",
+                                                                                                                  "status":  "active",
+                                                                                                                  "policy":  {
+                                                                                                                                 "canonical":  false,
+                                                                                                                                 "generated":  true
+                                                                                                                             }
+                                                                                                              },
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "d2r33_datatables_atlas.hpp",
+                                                                                                                          "path":  "reverse-engineering/d2r-3.2.92777/datatables-atlas/generated/d2r33_datatables_atlas.hpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "d2r33_datatables_atlas_witness.cpp",
+                                                                                                                          "path":  "reverse-engineering/d2r-3.2.92777/datatables-atlas/generated/d2r33_datatables_atlas_witness.cpp",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "d2r33_datatables_ghidra.h",
+                                                                                                                          "path":  "reverse-engineering/d2r-3.2.92777/datatables-atlas/generated/d2r33_datatables_ghidra.h",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "manifest.json",
+                                                                                                                          "path":  "reverse-engineering/d2r-3.2.92777/datatables-atlas/generated/manifest.json",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
                                                                                                  {
                                                                                                      "name":  "atlas.schema.json",
                                                                                                      "path":  "reverse-engineering/d2r-3.2.92777/datatables-atlas/atlas.schema.json",
@@ -41051,6 +41088,21 @@
                                                                             {
                                                                                 "name":  "d2r33-datatables-atlas.test.mjs",
                                                                                 "path":  "scripts/reverse-engineering/d2r33-datatables-atlas.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "d2r33-datatables-compile.ps1",
+                                                                                "path":  "scripts/reverse-engineering/d2r33-datatables-compile.ps1",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "d2r33-datatables-generate.mjs",
+                                                                                "path":  "scripts/reverse-engineering/d2r33-datatables-generate.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "d2r33-datatables-generate.test.mjs",
+                                                                                "path":  "scripts/reverse-engineering/d2r33-datatables-generate.test.mjs",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

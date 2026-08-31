@@ -37,6 +37,25 @@ zéro, inutilisé ou inexistant : il est simplement hors de la preuve consolidé
 Les zones `postProcessing` séparent explicitement le layout brut des linkers,
 LUT et index construits après la compilation.
 
+## Sorties A2
+
+Le dossier `generated/` est entièrement dérivé de `catalog.json` :
+
+- `d2r33_datatables_atlas.hpp` fournit sept vues de records partiels et
+  `DataTablesKnownPrefixView`; ses 45 `static_assert` ferment les strides,
+  les 21 fields admis et les 15 slots connus;
+- `d2r33_datatables_ghidra.h` fournit les mêmes vues sous forme de header C
+  importable avec **Parse C Source** dans Ghidra, plus les constantes d'offset;
+- `d2r33_datatables_atlas_witness.cpp` force la compilation de toutes les
+  assertions;
+- `manifest.json` lie le catalogue et les trois sorties de code par SHA-256,
+  taille et runtime couvert.
+
+Les octets non établis restent des tableaux `unknownXXXX`. Le type
+`DataTablesKnownPrefixView` s'arrête au dernier slot gouverné et ne prétend pas
+décrire la fin réelle du conteneur. Les commentaires `candidate` de
+`Objects.Parm0` et `Shrines.LevelMin` sont conservés dans les deux formats.
+
 ## Validation
 
 Depuis la racine du dépôt :
@@ -44,6 +63,9 @@ Depuis la racine du dépôt :
 ```powershell
 node scripts/reverse-engineering/d2r33-datatables-atlas.mjs
 node --test scripts/reverse-engineering/d2r33-datatables-atlas.test.mjs
+node scripts/reverse-engineering/d2r33-datatables-generate.mjs --check
+node --test scripts/reverse-engineering/d2r33-datatables-generate.test.mjs
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/reverse-engineering/d2r33-datatables-compile.ps1
 ```
 
 Le validateur refuse notamment :
@@ -59,6 +81,8 @@ Le validateur refuse notamment :
 
 ## Limites de la gate
 
-A0+A1 ne génèrent aucun header C++, type Ghidra, extracteur statique, hook, DLL,
-patch mémoire ou test runtime. Ces sorties appartiennent aux gates ultérieurs et
-ne pourront consommer que les facts admis par ce catalogue.
+A2 génère les deux formats documentaires, mais aucun extracteur statique, hook,
+DLL, patch mémoire ou test runtime. Les headers ne deviennent pas une ABI SDK
+complète : ils consomment seulement les facts admis par le catalogue et
+conservent le reste inconnu. L'inventaire statique de nouveaux descriptors
+appartient à A3 et exige un gate séparé.
