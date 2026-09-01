@@ -1,7 +1,6 @@
 #include <D2RLPlugin/api.h>
 
 #include "isc12_contract.hpp"
-#include "isc12_atomic_file.hpp"
 #include "isc12_codec_patch.hpp"
 #include "isc12_item_packet_budget.hpp"
 #include "isc12_loader.hpp"
@@ -329,10 +328,24 @@ bool CapPatchInstalled{};
 bool PersistenceReaderPatchInstalled{};
 bool PersistenceWriterPatchInstalled{};
 bool ColdRestartRequired{};
+bool DiagnosticsEnabled{};
 PublicationAdapterSet PreparedPublicationAdapters{};
 std::atomic_uint64_t BuildCalls{};
 std::atomic_uint64_t LastRowCount{};
 std::atomic_uint64_t LastDescriptionCount{};
+std::atomic_uint64_t FullItemRoot9C{};
+std::atomic_uint64_t FullItemRoot9D{};
+std::atomic_uint64_t FullItemTransactionsAccepted{};
+std::atomic_uint64_t FullItemTransactionsRejected{};
+std::atomic_uint64_t FullItemPacketsCaptured9C{};
+std::atomic_uint64_t FullItemPacketsCaptured9D{};
+std::atomic_uint64_t FullItemPacketsQueued{};
+std::atomic_uint64_t PersistenceReadsAccepted{};
+std::atomic_uint64_t PersistenceReadsRejected{};
+std::atomic_uint64_t PlayerPreviewsAcceptedBeforeSchema{};
+std::atomic_uint64_t PersistenceWritesDelegated{};
+std::atomic_uint64_t PersistenceWritesRejected{};
+std::atomic_uint64_t FullItemDiagnosticLines{};
 std::atomic_bool SchemaReady{};
 SRWLOCK SchemaSnapshotLock = SRWLOCK_INIT;
 NativeItemStatCostSchemaSnapshot PublishedSchemaSnapshot;
@@ -359,7 +372,7 @@ public:
         Release();
     }
 
-    [[nodiscard]] auto TryAcquire(Sha256Digest& output) noexcept -> bool {
+    [[nodiscard]] auto TryAcquire() noexcept -> bool {
         if (held_ || !TryAcquireSRWLockShared(&SchemaSnapshotLock)) {
             return false;
         }
@@ -370,7 +383,6 @@ public:
             Release();
             return false;
         }
-        output = PublishedSchemaSnapshot.schemaHash;
         return true;
     }
 
@@ -2197,33 +2209,6 @@ auto SnapshotNativeObjectBuffer(
     }
 }
 
-auto ReplaceNativeReadBuffer(
-        void* context,
-        std::span<const std::uint8_t> bytes) noexcept -> bool {
-    if (!context) return false;
-    const auto address = reinterpret_cast<std::uintptr_t>(context);
-    if (address > std::numeric_limits<std::uintptr_t>::max()
-            - SaveObjectBufferSizeOffset - sizeof(std::uint64_t)) {
-        return false;
-    }
-    if (!InvokeNativeByteBufferResize(context, bytes.size())) return false;
-    std::uint8_t* destination{};
-    std::uint64_t observedSize{};
-    if (!SafeRead(
-            reinterpret_cast<const void*>(
-                address + SaveObjectBufferPointerOffset),
-            destination)
-            || !SafeRead(
-                reinterpret_cast<const void*>(
-                    address + SaveObjectBufferSizeOffset),
-                observedSize)
-            || observedSize != bytes.size()
-            || (!bytes.empty() && !destination)) {
-        return false;
-    }
-    return SafeWrite(destination, bytes.data(), bytes.size());
-}
-
 auto ClearRejectedNativeRead(void* context) noexcept -> bool {
     return InvokeNativeByteBufferResize(context, 0)
         && InvokeNativeSetObjectAux(context, 0)
@@ -2233,40 +2218,6 @@ auto ClearRejectedNativeRead(void* context) noexcept -> bool {
 [[noreturn]] auto FailClosed(
     const char* reason,
     std::uint64_t rowCount) noexcept -> void;
-
-auto CommitNativeStoreAtomically(
-        void*,
-        std::wstring_view path,
-        std::span<const std::uint8_t> bytes) noexcept -> bool {
-    const auto result = WriteFileAtomically(path, bytes);
-    if (!result.committed) {
-        if (LoaderContext) {
-            char message[256]{};
-            std::snprintf(
-                message,
-                sizeof(message),
-                "ISC12: atomic save commit failed (stage=%u; win32=%lu; "
-                "rollback=%s).",
-                static_cast<unsigned>(result.stage),
-                static_cast<unsigned long>(result.windowsError),
-                result.rollbackAttempted
-                    ? result.rollbackSucceeded ? "restored" : "failed"
-                    : "not-needed");
-            LoaderContext->LogError(message);
-        }
-        if (!AtomicFailurePreservedDestination(result)) {
-            FailClosed(
-                "atomic save rollback failed after a destination transition",
-                0);
-        }
-        return false;
-    }
-    if (result.cleanupWarning && LoaderContext) {
-        LoaderContext->LogWarn(
-            "ISC12: atomic save committed with a backup-cleanup warning.");
-    }
-    return true;
-}
 
 [[noreturn]] auto FailClosed(
         const char* reason,
@@ -2404,7 +2355,35 @@ auto CopyPlayerPreviewWithPreflight(
         return 0;
     }
 
+    const std::span<const std::uint8_t> previewBytes{
+        PlayerPreviewPreflightBuffer.data(), copied};
+    std::uint8_t dataContext{};
+    if (PreflightPlayerPreviewContainer(previewBytes, dataContext)
+            != PlayerPreviewPreflightError::None) {
+        return 0;
+    }
+
     AcquireSRWLockShared(&SchemaSnapshotLock);
+    if (!SchemaReady.load(std::memory_order_acquire)
+            && !HasPublishedSchemaSnapshot
+            && !SchemaUpdateInProgress) {
+        ReleaseSRWLockShared(&SchemaSnapshotLock);
+        const auto accepted = PlayerPreviewsAcceptedBeforeSchema.fetch_add(
+            1, std::memory_order_relaxed) + 1;
+        if (DiagnosticsEnabled && LoaderContext && accepted <= 4) {
+            char message[256]{};
+            std::snprintf(
+                message,
+                sizeof(message),
+                "ISC12 diagnostics: frontend preview accepted before schema "
+                "publication; bytes=%u; data-context=%u; ordinal=%llu.",
+                copied,
+                static_cast<unsigned>(dataContext),
+                static_cast<unsigned long long>(accepted));
+            LoaderContext->LogInfo(message);
+        }
+        return copied;
+    }
     if (!SchemaReady.load(std::memory_order_acquire)
             || !HasPublishedSchemaSnapshot
             || SchemaUpdateInProgress) {
@@ -2413,8 +2392,7 @@ auto CopyPlayerPreviewWithPreflight(
     }
     PlayerPreviewPreflightResult preflight;
     const auto status = PreflightPlayerPreviewD2S(
-        std::span<const std::uint8_t>{
-            PlayerPreviewPreflightBuffer.data(), copied},
+        previewBytes,
         std::span<const ItemStatSemanticRow>{
             PublishedSchemaSnapshot.rows.data(),
             PublishedSchemaSnapshot.rows.size()},
@@ -3383,6 +3361,228 @@ auto QueueCapturedFullItemPacket(
     }
 }
 
+struct FullItemRuntimeSelfProbe {
+    FullItemPacketStagingContext* transaction{};
+    std::size_t callbackCount{};
+    bool reenterOnFirstCallback{};
+    FullItemProducerDisposition reentryDisposition{
+        FullItemProducerDisposition::InvokeOriginal};
+};
+
+auto ObserveFullItemRuntimeSelfProbe(
+        void* context,
+        void*,
+        const std::uint8_t*,
+        std::size_t) noexcept -> void {
+    auto& probe = *static_cast<FullItemRuntimeSelfProbe*>(context);
+    ++probe.callbackCount;
+    if (!probe.reenterOnFirstCallback || probe.callbackCount != 1U
+            || !probe.transaction) {
+        return;
+    }
+    const auto reentry = BeginFullItemPacketProducer(
+        *probe.transaction,
+        FullItemProducerDescriptor{
+            .kind = FullItemPacketKind::ItemAction9C,
+            .client = &probe,
+            .item = &probe,
+        });
+    probe.reentryDisposition = reentry.disposition;
+}
+
+auto CaptureRuntimeSelfProbePacket(
+        FullItemPacketStagingContext& transaction,
+        FullItemPacketKind kind,
+        void* client,
+        std::uint8_t action,
+        std::uint8_t fill) noexcept -> bool {
+    std::array<std::uint8_t, 32> packet{};
+    packet.fill(fill);
+    packet[0] = kind == FullItemPacketKind::ItemAction9C ? 0x9C : 0x9D;
+    packet[1] = action;
+    packet[2] = static_cast<std::uint8_t>(packet.size());
+    return CaptureFullItemPacketQueueCall(
+        transaction,
+        kind,
+        client,
+        packet.data(),
+        packet.size()) == FullItemPacketStagingError::None;
+}
+
+auto RunFullItemPacketStagingRuntimeSelfTest(std::string& error) -> bool {
+    error.clear();
+    int client{};
+    std::array<int, 5> items{};
+    const auto root = FullItemProducerDescriptor{
+        .kind = FullItemPacketKind::ItemAction9D,
+        .client = &client,
+        .parentItem = &items[4],
+        .item = &items[0],
+        .action = 0x22,
+        .temporaryFlags = 0,
+        .gamble = 0,
+    };
+    const auto child = [&](std::size_t itemIndex) {
+        return FullItemProducerDescriptor{
+            .kind = FullItemPacketKind::ItemAction9D,
+            .client = &client,
+            .parentItem = &items[0],
+            .item = &items[itemIndex],
+            .action = 0x12,
+            .temporaryFlags = NestedFullItemTemporaryFlagsMask,
+            .gamble = 0,
+        };
+    };
+
+    FullItemPacketStagingContext acceptedTransaction{};
+    const auto acceptedRoot = BeginFullItemPacketProducer(
+        acceptedTransaction, root);
+    if (acceptedRoot.disposition
+            != FullItemProducerDisposition::InvokeOriginal
+            || !CaptureRuntimeSelfProbePacket(
+                acceptedTransaction,
+                root.kind,
+                &client,
+                root.action,
+                0x31)) {
+        error = "runtime G9 self-test could not stage its accepted root";
+        return false;
+    }
+    for (std::size_t itemIndex = 1; itemIndex <= 2; ++itemIndex) {
+        const auto admitted = BeginFullItemPacketProducer(
+            acceptedTransaction, child(itemIndex));
+        if (admitted.disposition
+                != FullItemProducerDisposition::InvokeOriginal
+                || !CaptureRuntimeSelfProbePacket(
+                    acceptedTransaction,
+                    FullItemPacketKind::ItemAction9D,
+                    &client,
+                    0x12,
+                    static_cast<std::uint8_t>(0x31 + itemIndex))
+                || EndFullItemPacketProducer(
+                    acceptedTransaction, admitted.token)
+                    != FullItemProducerCompletion::NestedComplete) {
+            error = "runtime G9 self-test could not stage a descendant";
+            return false;
+        }
+    }
+    if (EndFullItemPacketProducer(
+            acceptedTransaction, acceptedRoot.token)
+            != FullItemProducerCompletion::RootReady) {
+        error = "runtime G9 self-test did not make the accepted tree ready";
+        return false;
+    }
+    FullItemRuntimeSelfProbe acceptedProbe{
+        .transaction = &acceptedTransaction,
+    };
+    const auto acceptedFlush = FlushOrDiscardFullItemPacketTransaction(
+        acceptedTransaction,
+        &ObserveFullItemRuntimeSelfProbe,
+        &acceptedProbe);
+    if (!acceptedFlush.completed
+            || acceptedFlush.error != FullItemPacketStagingError::None
+            || acceptedFlush.queuedPacketCount != 3
+            || acceptedProbe.callbackCount != 3) {
+        error = "runtime G9 self-test did not flush the accepted tree exactly";
+        return false;
+    }
+
+    FullItemPacketStagingContext overflowTransaction{};
+    const auto overflowRoot = BeginFullItemPacketProducer(
+        overflowTransaction, root);
+    if (!CaptureRuntimeSelfProbePacket(
+            overflowTransaction,
+            root.kind,
+            &client,
+            root.action,
+            0x41)) {
+        error = "runtime G9 self-test could not stage its overflow root";
+        return false;
+    }
+    overflowTransaction.nodeCount = MaximumStagedItemPacketCount;
+    const auto overflowAdmission = BeginFullItemPacketProducer(
+        overflowTransaction, child(1));
+    if (overflowAdmission.error
+            != FullItemPacketStagingError::NodeLimitExceeded
+            || EndFullItemPacketProducer(
+                overflowTransaction, overflowRoot.token)
+                != FullItemProducerCompletion::RootRejected) {
+        error = "runtime G9 self-test did not reject the node overflow";
+        return false;
+    }
+    FullItemRuntimeSelfProbe overflowProbe{
+        .transaction = &overflowTransaction,
+    };
+    const auto overflowFlush = FlushOrDiscardFullItemPacketTransaction(
+        overflowTransaction,
+        &ObserveFullItemRuntimeSelfProbe,
+        &overflowProbe);
+    if (overflowFlush.error
+            != FullItemPacketStagingError::NodeLimitExceeded
+            || overflowFlush.queuedPacketCount != 0
+            || overflowProbe.callbackCount != 0) {
+        error = "runtime G9 self-test exposed a rejected overflow packet";
+        return false;
+    }
+
+    FullItemPacketStagingContext reentryTransaction{};
+    const auto reentryRoot = BeginFullItemPacketProducer(
+        reentryTransaction, root);
+    if (!CaptureRuntimeSelfProbePacket(
+            reentryTransaction,
+            root.kind,
+            &client,
+            root.action,
+            0x51)) {
+        error = "runtime G9 self-test could not stage its reentry root";
+        return false;
+    }
+    const auto reentryChild = BeginFullItemPacketProducer(
+        reentryTransaction, child(1));
+    if (!CaptureRuntimeSelfProbePacket(
+            reentryTransaction,
+            FullItemPacketKind::ItemAction9D,
+            &client,
+            0x12,
+            0x52)
+            || EndFullItemPacketProducer(
+                reentryTransaction, reentryChild.token)
+                != FullItemProducerCompletion::NestedComplete
+            || EndFullItemPacketProducer(
+                reentryTransaction, reentryRoot.token)
+                != FullItemProducerCompletion::RootReady) {
+        error = "runtime G9 self-test could not prepare the reentry batch";
+        return false;
+    }
+    FullItemRuntimeSelfProbe reentryProbe{
+        .transaction = &reentryTransaction,
+        .reenterOnFirstCallback = true,
+    };
+    const auto reentryFlush = FlushOrDiscardFullItemPacketTransaction(
+        reentryTransaction,
+        &ObserveFullItemRuntimeSelfProbe,
+        &reentryProbe);
+    if (reentryFlush.error
+            != FullItemPacketStagingError::ReenteredDuringFlush
+            || reentryFlush.queuedPacketCount != 1
+            || reentryProbe.callbackCount != 1
+            || reentryProbe.reentryDisposition
+                != FullItemProducerDisposition::SkipOriginal
+            || reentryTransaction.state
+                != FullItemPacketStagingState::Fatal) {
+        error = "runtime G9 self-test did not contain flush reentry";
+        return false;
+    }
+
+    if (LoaderContext) {
+        LoaderContext->LogInfo(
+            "ISC12 diagnostics: G9 runtime self-test passed; "
+            "accepted-tree=3/3; overflow=zero-callback; "
+            "flush-reentry=one-callback-then-fatal.");
+    }
+    return true;
+}
+
 auto CompleteFullItemProducer(
         const FullItemProducerToken& token,
         bool aborted) noexcept -> void {
@@ -3398,6 +3598,19 @@ auto CompleteFullItemProducer(
             && completion != FullItemProducerCompletion::RootRejected) {
         return;
     }
+    const auto rootKind = FullItemPacketTransaction.rootKind;
+    const auto nodeCount = FullItemPacketTransaction.nodeCount;
+    const auto packetCount = FullItemPacketTransaction.packetCount;
+    const auto totalBytes = FullItemPacketTransaction.totalBytes;
+    const auto stagingError = FullItemPacketTransaction.error;
+    const auto rejectedProducerTemporaryFlags =
+        FullItemPacketTransaction.rejectedProducerTemporaryFlags;
+    const auto rejectedParentTemporaryFlags =
+        FullItemPacketTransaction.rejectedParentTemporaryFlags;
+    auto& rootCounter = rootKind == FullItemPacketKind::ItemAction9C
+        ? FullItemRoot9C : FullItemRoot9D;
+    const auto rootOrdinal = rootCounter.fetch_add(
+        1, std::memory_order_relaxed) + 1U;
     const auto flush = FlushOrDiscardFullItemPacketTransaction(
         FullItemPacketTransaction,
         &QueueCapturedFullItemPacket,
@@ -3407,6 +3620,60 @@ auto CompleteFullItemProducer(
             || (!flush.completed && flush.queuedPacketCount != 0)) {
         FailClosed(
             "full-item queue reentered after staged publication began", 0);
+    }
+    const bool accepted = completion == FullItemProducerCompletion::RootReady
+        && flush.completed
+        && flush.error == FullItemPacketStagingError::None;
+    if (accepted) {
+        FullItemTransactionsAccepted.fetch_add(1, std::memory_order_relaxed);
+        FullItemPacketsQueued.fetch_add(
+            flush.queuedPacketCount, std::memory_order_relaxed);
+    } else {
+        FullItemTransactionsRejected.fetch_add(1, std::memory_order_relaxed);
+    }
+    const auto diagnosticOrdinal = FullItemDiagnosticLines.fetch_add(
+        1, std::memory_order_relaxed);
+    if (DiagnosticsEnabled && LoaderContext
+            && (!accepted || diagnosticOrdinal < 32U)) {
+        char message[384]{};
+        if (stagingError
+                == FullItemPacketStagingError::NestedFlagsMismatch) {
+            std::snprintf(
+                message,
+                sizeof(message),
+                "ISC12 diagnostics: G9 transaction rejected; root=0x%02X; "
+                "root-ordinal=%llu; nodes=%zu; captured=%zu; bytes=%zu; "
+                "queued=%zu; staging-error=%u; flush-error=%u; "
+                "nested-flags=0x%08X; parent-flags=0x%08X.",
+                rootKind == FullItemPacketKind::ItemAction9C ? 0x9C : 0x9D,
+                static_cast<unsigned long long>(rootOrdinal),
+                nodeCount,
+                packetCount,
+                totalBytes,
+                flush.queuedPacketCount,
+                static_cast<unsigned>(stagingError),
+                static_cast<unsigned>(flush.error),
+                rejectedProducerTemporaryFlags,
+                rejectedParentTemporaryFlags);
+        } else {
+            std::snprintf(
+                message,
+                sizeof(message),
+                "ISC12 diagnostics: G9 transaction %s; root=0x%02X; "
+                "root-ordinal=%llu; nodes=%zu; captured=%zu; bytes=%zu; "
+                "queued=%zu; staging-error=%u; flush-error=%u.",
+                accepted ? "accepted" : "rejected",
+                rootKind == FullItemPacketKind::ItemAction9C ? 0x9C : 0x9D,
+                static_cast<unsigned long long>(rootOrdinal),
+                nodeCount,
+                packetCount,
+                totalBytes,
+                flush.queuedPacketCount,
+                static_cast<unsigned>(stagingError),
+                static_cast<unsigned>(flush.error));
+        }
+        if (accepted) LoaderContext->LogInfo(message);
+        else LoaderContext->LogWarn(message);
     }
 }
 
@@ -4330,12 +4597,15 @@ extern "C" auto ISC12CaptureItemAction9CQueue(
         void* client,
         const std::uint8_t* bytes,
         std::size_t length) noexcept -> void {
-    (void)CaptureFullItemPacketQueueCall(
+    const auto result = CaptureFullItemPacketQueueCall(
         FullItemPacketTransaction,
         FullItemPacketKind::ItemAction9C,
         client,
         bytes,
         length);
+    if (result == FullItemPacketStagingError::None) {
+        FullItemPacketsCaptured9C.fetch_add(1, std::memory_order_relaxed);
+    }
     if (FullItemPacketTransaction.state
             == FullItemPacketStagingState::Fatal) {
         FailClosed("full-item 0x9C queue relay was reached out of contract", 0);
@@ -4346,12 +4616,15 @@ extern "C" auto ISC12CaptureItemAction9DQueue(
         void* client,
         const std::uint8_t* bytes,
         std::size_t length) noexcept -> void {
-    (void)CaptureFullItemPacketQueueCall(
+    const auto result = CaptureFullItemPacketQueueCall(
         FullItemPacketTransaction,
         FullItemPacketKind::ItemAction9D,
         client,
         bytes,
         length);
+    if (result == FullItemPacketStagingError::None) {
+        FullItemPacketsCaptured9D.fetch_add(1, std::memory_order_relaxed);
+    }
     if (FullItemPacketTransaction.state
             == FullItemPacketStagingState::Fatal) {
         FailClosed("full-item 0x9D queue relay was reached out of contract", 0);
@@ -4428,7 +4701,7 @@ extern "C" auto ISC12PrepareNativeStoreRead(
         std::uint32_t nativeStatus) noexcept -> std::uint32_t {
     static_assert(
         static_cast<std::uint32_t>(
-            NativePersistenceDisposition::Vanilla) == 0);
+            NativePersistenceDisposition::ProceedNative) == 0);
     static_assert(
         static_cast<std::uint32_t>(
             NativePersistenceDisposition::Success) == 1);
@@ -4450,7 +4723,7 @@ extern "C" auto ISC12PrepareNativeStoreRead(
     }
     if (ClassifyStoreName(storeName) == StoreKind::Other) {
         return static_cast<std::uint32_t>(
-            NativePersistenceDisposition::Vanilla);
+            NativePersistenceDisposition::ProceedNative);
     }
 
     std::uint32_t nativeIoSuccessCode{};
@@ -4464,11 +4737,8 @@ extern "C" auto ISC12PrepareNativeStoreRead(
     const bool codecReady = PersistenceState
         && InterlockedCompareExchange(
             &PersistenceState->codecReady, 0, 0) != 0;
-    Sha256Digest schemaHash{};
-    PublishedSchemaReadLease schemaLease;
-    const bool schemaReady = codecReady && schemaLease.TryAcquire(schemaHash);
     std::vector<std::uint8_t> physicalBytes;
-    if (codecReady && schemaReady
+    if (codecReady
             && !NativeReadMaySnapshot(
                 nativeStatus,
                 nativeIoSuccessCode,
@@ -4481,7 +4751,7 @@ extern "C" auto ISC12PrepareNativeStoreRead(
             NativePersistenceDisposition::Reject);
     }
     const std::uint64_t expectedLength = actualLength;
-    if (codecReady && schemaReady
+    if (codecReady
             && !SnapshotNativeObjectBuffer(
                 object,
                 &expectedLength,
@@ -4497,7 +4767,6 @@ extern "C" auto ISC12PrepareNativeStoreRead(
     const NativeReadRequest request{
         .storeName = storeName,
         .codecReady = codecReady,
-        .schemaHash = schemaReady ? &schemaHash : nullptr,
         .readStatus = nativeStatus == nativeIoSuccessCode ? 0U : 1U,
         .announcedLength = announcedLength,
         .actualLength = actualLength,
@@ -4507,11 +4776,34 @@ extern "C" auto ISC12PrepareNativeStoreRead(
         request,
         NativeReadCallbacks{
             .context = object,
-            .replaceBuffer = &ReplaceNativeReadBuffer,
             .clearRejectedRead = &ClearRejectedNativeRead,
         });
     if (result.disposition == NativePersistenceDisposition::Fatal) {
         FailClosed("native reader adapter entered a fatal state", 0);
+    }
+    const bool accepted =
+        result.disposition == NativePersistenceDisposition::Success;
+    if (accepted) {
+        PersistenceReadsAccepted.fetch_add(1, std::memory_order_relaxed);
+    } else if (result.disposition == NativePersistenceDisposition::Reject) {
+        PersistenceReadsRejected.fetch_add(1, std::memory_order_relaxed);
+    }
+    if (DiagnosticsEnabled && LoaderContext
+            && result.storeKind != StoreKind::Other) {
+        char message[320]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "ISC12 diagnostics: standard-container read %s; store=%.*s; "
+            "physical-bytes=%u; error=%u/%u.",
+            accepted ? "accepted" : "rejected",
+            static_cast<int>(storeName.size()),
+            storeName.data(),
+            actualLength,
+            static_cast<unsigned>(result.error),
+            static_cast<unsigned>(result.persistenceError));
+        if (accepted) LoaderContext->LogInfo(message);
+        else LoaderContext->LogWarn(message);
     }
     return static_cast<std::uint32_t>(result.disposition);
 }
@@ -4527,7 +4819,7 @@ extern "C" auto ISC12PrepareNativeStoreWrite(
     }
     if (ClassifyStoreName(storeName) == StoreKind::Other) {
         return static_cast<std::uint32_t>(
-            NativePersistenceDisposition::Vanilla);
+            NativePersistenceDisposition::ProceedNative);
     }
 
     const bool codecReady = PersistenceState
@@ -4541,16 +4833,15 @@ extern "C" auto ISC12PrepareNativeStoreWrite(
             NativePersistenceDisposition::Reject);
     }
 
-    Sha256Digest schemaHash{};
     PublishedSchemaReadLease schemaLease;
-    const bool schemaReady = codecReady && schemaLease.TryAcquire(schemaHash);
-    std::vector<std::uint8_t> innerBytes;
+    const bool schemaReady = codecReady && schemaLease.TryAcquire();
+    std::vector<std::uint8_t> physicalBytes;
     if (codecReady && schemaReady
             && !SnapshotNativeObjectBuffer(
                 object,
                 nullptr,
                 MaximumNativeInnerStoreLength,
-                innerBytes)) {
+                physicalBytes)) {
         return static_cast<std::uint32_t>(
             NativePersistenceDisposition::Reject);
     }
@@ -4560,15 +4851,35 @@ extern "C" auto ISC12PrepareNativeStoreWrite(
             .storeName = storeName,
             .nativePathUtf8 = pathStorage,
             .codecReady = codecReady,
-            .schemaHash = schemaReady ? &schemaHash : nullptr,
-            .innerBytes = innerBytes,
-        },
-        NativeWriteCallbacks{
-            .context = object,
-            .atomicCommit = &CommitNativeStoreAtomically,
+            .schemaReady = schemaReady,
+            .physicalBytes = physicalBytes,
         });
     if (result.disposition == NativePersistenceDisposition::Fatal) {
         FailClosed("native writer adapter entered a fatal state", 0);
+    }
+    const bool delegated = result.storeKind != StoreKind::Other
+        && result.disposition == NativePersistenceDisposition::ProceedNative;
+    if (delegated) {
+        PersistenceWritesDelegated.fetch_add(1, std::memory_order_relaxed);
+    } else if (result.disposition == NativePersistenceDisposition::Reject) {
+        PersistenceWritesRejected.fetch_add(1, std::memory_order_relaxed);
+    }
+    if (DiagnosticsEnabled && LoaderContext
+            && result.storeKind != StoreKind::Other) {
+        char message[320]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "ISC12 diagnostics: standard-container write %s; store=%.*s; "
+            "physical-bytes=%zu; error=%u/%u.",
+            delegated ? "delegated" : "rejected",
+            static_cast<int>(storeName.size()),
+            storeName.data(),
+            physicalBytes.size(),
+            static_cast<unsigned>(result.error),
+            static_cast<unsigned>(result.persistenceError));
+        if (delegated) LoaderContext->LogInfo(message);
+        else LoaderContext->LogWarn(message);
     }
     return static_cast<std::uint32_t>(result.disposition);
 }
@@ -4577,7 +4888,7 @@ auto PrepareLoaderExtension(
         const D2RL::PluginContext* context,
         std::uint8_t* base,
         std::size_t imageSize,
-        bool,
+        bool diagnostics,
         std::string& error) noexcept -> bool {
     error.clear();
     if (!context || !base || imageSize == 0
@@ -4609,7 +4920,26 @@ auto PrepareLoaderExtension(
     BuildCalls.store(0, std::memory_order_release);
     LastRowCount.store(0, std::memory_order_release);
     LastDescriptionCount.store(0, std::memory_order_release);
+    DiagnosticsEnabled = diagnostics;
+    FullItemRoot9C.store(0, std::memory_order_release);
+    FullItemRoot9D.store(0, std::memory_order_release);
+    FullItemTransactionsAccepted.store(0, std::memory_order_release);
+    FullItemTransactionsRejected.store(0, std::memory_order_release);
+    FullItemPacketsCaptured9C.store(0, std::memory_order_release);
+    FullItemPacketsCaptured9D.store(0, std::memory_order_release);
+    FullItemPacketsQueued.store(0, std::memory_order_release);
+    PersistenceReadsAccepted.store(0, std::memory_order_release);
+    PersistenceReadsRejected.store(0, std::memory_order_release);
+    PlayerPreviewsAcceptedBeforeSchema.store(0, std::memory_order_release);
+    PersistenceWritesDelegated.store(0, std::memory_order_release);
+    PersistenceWritesRejected.store(0, std::memory_order_release);
+    FullItemDiagnosticLines.store(0, std::memory_order_release);
     ResetPublishedSchemaSnapshot();
+
+    if (DiagnosticsEnabled
+            && !RunFullItemPacketStagingRuntimeSelfTest(error)) {
+        return false;
+    }
 
     if (!ValidateImageTarget(TailPatchRva, TailExpected.size(), true)
             || !ValidateImageTarget(
@@ -5100,6 +5430,26 @@ auto GetLoaderRuntimeStatus() noexcept -> LoaderRuntimeStatus {
         .lastRowCount = LastRowCount.load(std::memory_order_acquire),
         .lastDescriptionCount =
             LastDescriptionCount.load(std::memory_order_acquire),
+        .fullItemRoot9C = FullItemRoot9C.load(std::memory_order_acquire),
+        .fullItemRoot9D = FullItemRoot9D.load(std::memory_order_acquire),
+        .fullItemTransactionsAccepted = FullItemTransactionsAccepted.load(
+            std::memory_order_acquire),
+        .fullItemTransactionsRejected = FullItemTransactionsRejected.load(
+            std::memory_order_acquire),
+        .fullItemPacketsCaptured9C = FullItemPacketsCaptured9C.load(
+            std::memory_order_acquire),
+        .fullItemPacketsCaptured9D = FullItemPacketsCaptured9D.load(
+            std::memory_order_acquire),
+        .fullItemPacketsQueued = FullItemPacketsQueued.load(
+            std::memory_order_acquire),
+        .persistenceReadsAccepted = PersistenceReadsAccepted.load(
+            std::memory_order_acquire),
+        .persistenceReadsRejected = PersistenceReadsRejected.load(
+            std::memory_order_acquire),
+        .persistenceWritesDelegated = PersistenceWritesDelegated.load(
+            std::memory_order_acquire),
+        .persistenceWritesRejected = PersistenceWritesRejected.load(
+            std::memory_order_acquire),
     };
     return status;
 }

@@ -19,36 +19,32 @@ enum class PersistenceError : std::uint8_t {
     None,
     ReadFailure,
     ReadLength,
-    Allocation,
-    Envelope,
+    InnerStore,
 };
 
 struct StorePreparationResult {
     StorePreparation disposition{StorePreparation::Rejected};
     StoreKind storeKind{StoreKind::Other};
-    PersistenceError error{PersistenceError::Envelope};
-    EnvelopeError envelopeError{EnvelopeError::None};
+    PersistenceError error{PersistenceError::InnerStore};
 };
 
 // Non-target manager objects remain byte-exact vanilla pass-through. A target
-// is released only after complete-read, envelope, schema, hash and inner-store
-// validation. On pass-through or rejection, innerOutput is unchanged.
+// is released only after a complete read and standard D2S/D2I container
+// validation. The physical bytes remain untouched so D2RLoader can inspect the
+// same standard container and maintain its environment sidecar.
 auto PrepareStoreRead(
     std::string_view storeName,
     std::uint32_t readStatus,
     std::uint64_t announcedLength,
     std::uint64_t actualLength,
-    std::span<const std::uint8_t> physicalBytes,
-    const Sha256Digest& schemaHash,
-    std::vector<std::uint8_t>& innerOutput) noexcept
+    std::span<const std::uint8_t> physicalBytes) noexcept
     -> StorePreparationResult;
 
-// On pass-through or rejection, physicalOutput is unchanged.
+// Valid target stores keep their standard physical representation and are
+// delegated to the native D2RCore writer after validation.
 auto PrepareStoreWrite(
     std::string_view storeName,
-    std::span<const std::uint8_t> innerBytes,
-    const Sha256Digest& schemaHash,
-    std::vector<std::uint8_t>& physicalOutput) noexcept
+    std::span<const std::uint8_t> physicalBytes) noexcept
     -> StorePreparationResult;
 
 } // namespace ruffneckk::isc12

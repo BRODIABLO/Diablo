@@ -32,7 +32,6 @@ endif()
 
 add_library(ISC12 SHARED
     plugin.cpp
-    isc12_atomic_file.cpp
     isc12_codec_patch.cpp
     isc12_envelope.cpp
     isc12_item_packet_budget.cpp

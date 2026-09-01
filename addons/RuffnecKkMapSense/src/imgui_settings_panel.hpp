@@ -7,7 +7,10 @@
 namespace RuffnecKk::MapSense {
 
 enum class ImGuiSettingsAction : std::uint8_t {
-    ToggleRevealMap,
+    RevealLevel,
+    RevealAct,
+    ArmRevealAll,
+    RevealAllOff,
 };
 
 using ImGuiSettingsActionCallback = void (*)(ImGuiSettingsAction) noexcept;
@@ -38,7 +41,6 @@ struct ImGuiSettingsBounds {
 [[nodiscard]] auto DrawImGuiSettingsPanel(
     Config& config,
     bool& expanded,
-    bool revealMapEnabled,
     ImGuiSettingsActionCallback actionCallback) noexcept
     -> ImGuiSettingsBounds;
 

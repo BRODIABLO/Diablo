@@ -503,6 +503,7 @@ auto RunFullItemPacketStagingTests() -> void {
     static_assert(MaximumStagedItemPacketCount == 64);
     static_assert(MaximumStagedItemTreeDepth == 16);
     static_assert(MaximumStagedItemTransactionBytes == 0x4000);
+    static_assert(NestedFullItemTemporaryFlagsMask == 0x08);
     static_assert(noexcept(BeginFullItemPacketProducer(
         std::declval<FullItemPacketStagingContext&>(),
         std::declval<const FullItemProducerDescriptor&>())));
@@ -533,7 +534,8 @@ auto RunFullItemPacketStagingTests() -> void {
             .parentItem = &items[parent],
             .item = &items[item],
             .action = 0x12,
-            .temporaryFlags = 0xA5A5,
+            .temporaryFlags =
+                root9C.temporaryFlags | NestedFullItemTemporaryFlagsMask,
             .gamble = 0,
         };
     };
@@ -703,7 +705,8 @@ auto RunFullItemPacketStagingTests() -> void {
             .parentItem = &items[0],
             .item = &items[2],
             .action = 0x12,
-            .temporaryFlags = root9D.temporaryFlags,
+            .temporaryFlags = root9D.temporaryFlags
+                | NestedFullItemTemporaryFlagsMask,
         });
     auto root9DTreeChildPacket = MakeStagedFullItemPacket(
         FullItemPacketKind::ItemAction9D,
@@ -1078,6 +1081,12 @@ auto RunFullItemPacketStagingTests() -> void {
         const auto rejected = BeginFullItemPacketProducer(transaction, nested);
         CHECK(rejected.disposition == FullItemProducerDisposition::SkipOriginal);
         CHECK(rejected.error == expected);
+        if (expected == FullItemPacketStagingError::NestedFlagsMismatch) {
+            CHECK(transaction.rejectedProducerTemporaryFlags
+                == nested.temporaryFlags);
+            CHECK(transaction.rejectedParentTemporaryFlags
+                == root9C.temporaryFlags);
+        }
         CHECK(EndFullItemPacketProducer(transaction, root.token)
             == FullItemProducerCompletion::RootRejected);
         FullItemStagingQueueProbe probe{.rootReturned = true};
@@ -3286,6 +3295,19 @@ int main() {
     previewD2S[PlayerPreviewDataContextOffset] = 3;
     finalizePreviewD2S(previewD2S);
     CHECK(ValidateInnerStore(StoreKind::D2S, previewD2S));
+    std::uint8_t structuralDataContext{0xFF};
+    CHECK(PreflightPlayerPreviewContainer(
+        previewD2S, structuralDataContext)
+        == PlayerPreviewPreflightError::None);
+    CHECK(structuralDataContext == 3);
+    auto structurallyRejectedPreview = previewD2S;
+    structurallyRejectedPreview[0] ^= 0xFF;
+    refreshPreviewChecksum(structurallyRejectedPreview);
+    structuralDataContext = 0xEE;
+    CHECK(PreflightPlayerPreviewContainer(
+        structurallyRejectedPreview, structuralDataContext)
+        == PlayerPreviewPreflightError::InvalidContainer);
+    CHECK(structuralDataContext == 0xEE);
     PlayerPreviewPreflightResult previewResult{
         .playerStats = {0xAAAA, 0xBBBB},
         .dataContext = 0xCC,
@@ -3298,6 +3320,27 @@ int main() {
     CHECK(previewResult.playerStats.entryCount == PreflightIds.size());
     CHECK(previewResult.playerStats.consumedBits
         == 16U + 12U + 5U + 17U + 12U + 16U + 32U + 12U);
+
+    std::vector<std::uint8_t> headerOnlyPreview(
+        PlayerPreviewHeaderOnlyLength, 0);
+    headerOnlyPreview[PlayerPreviewDataContextOffset] = 3;
+    finalizePreviewD2S(headerOnlyPreview);
+    structuralDataContext = 0xFF;
+    CHECK(PreflightPlayerPreviewContainer(
+        headerOnlyPreview, structuralDataContext)
+        == PlayerPreviewPreflightError::None);
+    CHECK(structuralDataContext == 3);
+    previewResult = {
+        .playerStats = {0xAAAA, 0xBBBB},
+        .dataContext = 0xCC,
+    };
+    CHECK(PreflightPlayerPreviewD2S(
+        headerOnlyPreview,
+        preflightSchema,
+        previewResult) == PlayerPreviewPreflightError::None);
+    CHECK(previewResult.dataContext == 3);
+    CHECK(previewResult.playerStats.entryCount == 0);
+    CHECK(previewResult.playerStats.consumedBits == 0);
 
     const PlayerPreviewPreflightResult unchangedPreviewResult{
         .playerStats = {0x1234, 0x5678},
@@ -3726,41 +3769,39 @@ int main() {
     CHECK(ValidateEnvelope(
         StoreKind::D2S, secondEnvelope, schemaHash));
 
-    std::vector<std::uint8_t> preparedStore{0xA5, 0x5A};
-    const auto preparedStoreBefore = preparedStore;
     auto preparation = PrepareStoreRead(
         "opaque.manager.object", 99, envelope.size(), envelope.size(),
-        envelope, schemaHash, preparedStore);
+        envelope);
     CHECK(preparation.disposition == StorePreparation::PassThrough);
-    CHECK(preparedStore == preparedStoreBefore);
     preparation = PrepareStoreRead(
         "Hero.d2s", 1, envelope.size(), envelope.size(),
-        envelope, schemaHash, preparedStore);
+        envelope);
     CHECK(preparation.disposition == StorePreparation::Rejected);
     CHECK(preparation.error == PersistenceError::ReadFailure);
-    CHECK(preparedStore == preparedStoreBefore);
     preparation = PrepareStoreRead(
         "Hero.d2s", 0, envelope.size(), envelope.size() - 1,
-        envelope, schemaHash, preparedStore);
+        envelope);
     CHECK(preparation.disposition == StorePreparation::Rejected);
     CHECK(preparation.error == PersistenceError::ReadLength);
-    CHECK(preparedStore == preparedStoreBefore);
     preparation = PrepareStoreRead(
-        "Hero.d2s", 0, envelope.size(), envelope.size(),
-        envelope, schemaHash, preparedStore);
+        "Hero.d2s", 0, innerD2S.size(), innerD2S.size(), innerD2S);
     CHECK(preparation.disposition == StorePreparation::Prepared);
-    CHECK(preparedStore == std::vector<std::uint8_t>(
-        innerD2S.begin(), innerD2S.end()));
+    CHECK(preparation.error == PersistenceError::None);
+    preparation = PrepareStoreRead(
+        "Hero.d2s", 0, envelope.size(), envelope.size(), envelope);
+    CHECK(preparation.disposition == StorePreparation::Rejected);
+    CHECK(preparation.error == PersistenceError::InnerStore);
 
-    preparedStore = preparedStoreBefore;
     preparation = PrepareStoreWrite(
-        "opaque.manager.object", innerD2S, schemaHash, preparedStore);
+        "opaque.manager.object", innerD2S);
     CHECK(preparation.disposition == StorePreparation::PassThrough);
-    CHECK(preparedStore == preparedStoreBefore);
     preparation = PrepareStoreWrite(
-        "Hero.d2s", innerD2S, schemaHash, preparedStore);
+        "Hero.d2s", innerD2S);
     CHECK(preparation.disposition == StorePreparation::Prepared);
-    CHECK(preparedStore == envelope);
+    CHECK(preparation.error == PersistenceError::None);
+    preparation = PrepareStoreWrite("Hero.d2s", envelope);
+    CHECK(preparation.disposition == StorePreparation::Rejected);
+    CHECK(preparation.error == PersistenceError::InnerStore);
 
     auto legacyInnerD2S = innerD2S;
     WriteU32ForTest(legacyInnerD2S, 4, 91);
@@ -4407,12 +4448,6 @@ enabled = false
         "TryAcquireSRWLockShared(&SchemaSnapshotLock)", schemaLeaseClass);
     const auto readPersistenceHook = loaderText.find(
         "ISC12PrepareNativeStoreRead(");
-    const auto readSchemaLease = loaderText.find(
-        "PublishedSchemaReadLease schemaLease", readPersistenceHook);
-    const auto readPhysicalSnapshot = loaderText.find(
-        "SnapshotNativeObjectBuffer(", readSchemaLease);
-    const auto readAdapter = loaderText.find(
-        "AdaptNativeStoreRead(", readPhysicalSnapshot);
     const auto writePersistenceHook = loaderText.find(
         "ISC12PrepareNativeStoreWrite(");
     const auto writePathCopy = loaderText.find(
@@ -4425,13 +4460,28 @@ enabled = false
         "AdaptNativeStoreWrite(", writePhysicalSnapshot);
     CHECK(schemaLeaseClass != std::string::npos);
     CHECK(nonBlockingSchemaLease != std::string::npos);
-    CHECK(readPersistenceHook < readSchemaLease);
-    CHECK(readSchemaLease < readPhysicalSnapshot);
-    CHECK(readPhysicalSnapshot < readAdapter);
+    CHECK(readPersistenceHook < writePersistenceHook);
+    if (readPersistenceHook < writePersistenceHook) {
+        const auto readHookBody = std::string_view{loaderText}.substr(
+            readPersistenceHook,
+            writePersistenceHook - readPersistenceHook);
+        const auto readPhysicalSnapshot = readHookBody.find(
+            "SnapshotNativeObjectBuffer(");
+        const auto readAdapter = readHookBody.find("AdaptNativeStoreRead(");
+        CHECK(readHookBody.find("PublishedSchemaReadLease schemaLease")
+            == std::string_view::npos);
+        CHECK(readPhysicalSnapshot < readAdapter);
+    }
     CHECK(writePersistenceHook < writePathCopy);
     CHECK(writePathCopy < writeSchemaLease);
     CHECK(writeSchemaLease < writePhysicalSnapshot);
     CHECK(writePhysicalSnapshot < writeAdapter);
+    CHECK(loaderText.find("standard-container read") != std::string::npos);
+    CHECK(loaderText.find("standard-container write") != std::string::npos);
+    CHECK(loaderText.find("NativePersistenceDisposition::ProceedNative")
+        != std::string::npos);
+    CHECK(loaderText.find("WriteFileAtomically(") == std::string::npos);
+    CHECK(loaderText.find("BuildEnvelope(") == std::string::npos);
 
     const auto legacyInstall = loaderText.find(
         "auto InstallLoaderExtension(");
@@ -4715,6 +4765,18 @@ enabled = false
         != std::string::npos);
     CHECK(loaderText.find("CopyPlayerPreviewWithPreflight")
         != std::string::npos);
+    const auto previewFunction = loaderText.find(
+        "auto CopyPlayerPreviewWithPreflight(");
+    const auto previewStructuralPreflight = loaderText.find(
+        "PreflightPlayerPreviewContainer(", previewFunction);
+    const auto previewSchemaLock = loaderText.find(
+        "AcquireSRWLockShared(&SchemaSnapshotLock)", previewFunction);
+    CHECK(previewFunction < previewStructuralPreflight);
+    CHECK(previewStructuralPreflight < previewSchemaLock);
+    CHECK(loaderText.find(
+        "frontend preview accepted before schema ")
+        != std::string::npos);
+    CHECK(loaderText.find("publication; bytes=%u") != std::string::npos);
     CHECK(loaderText.find("version != InnerFormatVersion")
         != std::string::npos);
     CHECK(loaderText.find("AcquireSRWLockShared(&SchemaSnapshotLock)")

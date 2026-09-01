@@ -2295,7 +2295,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-standalone-d2rloader-addon",
-                                                                        "summary":  "Plugin hybride expérimental RuffnecKk MapSense pour révéler la carte native, configurer ses ajouts in-frame et afficher un premier marqueur de monstre normal borné sans dépendance LoD classique.",
+                                                                        "summary":  "Plugin hybride expÃ©rimental RuffnecKk MapSense pour rÃ©vÃ©ler la carte native, configurer ses ajouts in-frame et afficher un premier marqueur de monstre normal bornÃ© sans dÃ©pendance LoD classique.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -2309,16 +2309,6 @@
                                                                                                      "name":  "ruffneckk-mapsense.toml",
                                                                                                      "path":  "addons/RuffnecKkMapSense/package/ruffneckk-mapsense.toml",
                                                                                                      "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "RuffnecKkMapSenseAutomapSprites.msp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/package/RuffnecKkMapSenseAutomapSprites.msp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "RuffnecKkMapSenseMapgen.exe",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/package/RuffnecKkMapSenseMapgen.exe",
-                                                                                                     "kind":  "file"
                                                                                                  }
                                                                                              ]
                                                                             },
@@ -2327,26 +2317,6 @@
                                                                                 "path":  "addons/RuffnecKkMapSense/src",
                                                                                 "kind":  "directory",
                                                                                 "children":  [
-                                                                                                 {
-                                                                                                     "name":  "atlas_projection.hpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/atlas_projection.hpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "automap_sprite_package.cpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/automap_sprite_package.cpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "automap_sprite_package.hpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/automap_sprite_package.hpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "automap_sprite_projection.hpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/automap_sprite_projection.hpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
                                                                                                  {
                                                                                                      "name":  "automap_visibility.cpp",
                                                                                                      "path":  "addons/RuffnecKkMapSense/src/automap_visibility.cpp",
@@ -2373,36 +2343,6 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
-                                                                                                     "name":  "external_atlas_cache.cpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/external_atlas_cache.cpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "external_atlas_cache.hpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/external_atlas_cache.hpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "external_atlas_geometry.cpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/external_atlas_geometry.cpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "external_atlas_geometry.hpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/external_atlas_geometry.hpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "external_label_provider.cpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/external_label_provider.cpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "external_label_provider.hpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/external_label_provider.hpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
                                                                                                      "name":  "imgui_settings_panel.cpp",
                                                                                                      "path":  "addons/RuffnecKkMapSense/src/imgui_settings_panel.cpp",
                                                                                                      "kind":  "file"
@@ -2415,16 +2355,6 @@
                                                                                                  {
                                                                                                      "name":  "mapsense_config.hpp",
                                                                                                      "path":  "addons/RuffnecKkMapSense/src/mapsense_config.hpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "mapsense_data_catalog.cpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/mapsense_data_catalog.cpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "mapsense_data_catalog.hpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/mapsense_data_catalog.hpp",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -2453,16 +2383,6 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
-                                                                                                     "name":  "native_automap_poi.cpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/native_automap_poi.cpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "native_automap_poi.hpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/native_automap_poi.hpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
                                                                                                      "name":  "native_settings_layout.hpp",
                                                                                                      "path":  "addons/RuffnecKkMapSense/src/native_settings_layout.hpp",
                                                                                                      "kind":  "file"
@@ -2480,16 +2400,6 @@
                                                                                                  {
                                                                                                      "name":  "native_settings_policy.hpp",
                                                                                                      "path":  "addons/RuffnecKkMapSense/src/native_settings_policy.hpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "native_ui_state.cpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/native_ui_state.cpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "native_ui_state.hpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/native_ui_state.hpp",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -2578,16 +2488,6 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
-                                                                                                     "name":  "settings_menu.cpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/settings_menu.cpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "settings_menu.hpp",
-                                                                                                     "path":  "addons/RuffnecKkMapSense/src/settings_menu.hpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
                                                                                                      "name":  "sfilllocation_diagnostic.cpp",
                                                                                                      "path":  "addons/RuffnecKkMapSense/src/sfilllocation_diagnostic.cpp",
                                                                                                      "kind":  "file"
@@ -2595,6 +2495,16 @@
                                                                                                  {
                                                                                                      "name":  "sfilllocation_diagnostic.hpp",
                                                                                                      "path":  "addons/RuffnecKkMapSense/src/sfilllocation_diagnostic.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "settings_menu.cpp",
+                                                                                                     "path":  "addons/RuffnecKkMapSense/src/settings_menu.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "settings_menu.hpp",
+                                                                                                     "path":  "addons/RuffnecKkMapSense/src/settings_menu.hpp",
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]

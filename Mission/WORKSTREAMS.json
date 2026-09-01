@@ -734,7 +734,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/isc12-3.3.md",
-      "nextGate": "Exécuter les cas fonctionnels jetables 0x9C/0x9D, overflow, réentrance, backpressure, coexistence et save/reload sur le candidat exact EFCA4EBA…25F3DB, puis qualifier la portée globale. Le census réseau G5–G8 et des éventuels champs uint8 statId doit fermer avant une revendication réseau complète. Le kit NativePublication V1 reste un durcissement loader général optionnel et ne bloque pas ces gates.",
+      "nextGate": "Le cœur runtime ISC12 est fermé sur le candidat exact 1311F1C4…EC11B5 : IDs sérialisés 512/4094, deux cold round-trips D2S, D2I contrôlé, arbres réels 0x9C/0x9D, overflow/réentrance bornés, coexistence complète et portées mod-locale/globale. Prochain gate : qualifier host/joiner et mismatch multijoueur, puis fermer G5–G8 et le census des champs uint8 statId avant toute revendication réseau complète ou release publique.",
       "include": [
         "Mission/isc12-3.3.md",
         "addons/ISC12/**",

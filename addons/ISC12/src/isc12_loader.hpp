@@ -81,6 +81,17 @@ struct LoaderRuntimeStatus {
     std::uint64_t buildCalls{};
     std::uint64_t lastRowCount{};
     std::uint64_t lastDescriptionCount{};
+    std::uint64_t fullItemRoot9C{};
+    std::uint64_t fullItemRoot9D{};
+    std::uint64_t fullItemTransactionsAccepted{};
+    std::uint64_t fullItemTransactionsRejected{};
+    std::uint64_t fullItemPacketsCaptured9C{};
+    std::uint64_t fullItemPacketsCaptured9D{};
+    std::uint64_t fullItemPacketsQueued{};
+    std::uint64_t persistenceReadsAccepted{};
+    std::uint64_t persistenceReadsRejected{};
+    std::uint64_t persistenceWritesDelegated{};
+    std::uint64_t persistenceWritesRejected{};
 };
 
 inline constexpr std::uintptr_t LoaderCompileCallRva = 0x31EC7B;

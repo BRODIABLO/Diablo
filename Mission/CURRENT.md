@@ -1,20 +1,26 @@
 # Mission courante
 
-Dernière mise à jour : 31 août 2026
+Dernière mise à jour : 1er septembre 2026
 
 ## Priorité active
 
 [ISC12 — ItemStatCost 12-bit clean-sheet format](isc12-3.3.md)
 
-État : **ISC12 0.2.0 : publication native mod-locale attestée sur D2R
-3.3.93847 / D2RLoader 1.2.0-beta**. Deux builds Release reproductibles passent
-`/W4 /WX` et CTest `5/5`; la DLL byte-identique de 445 952 octets vaut
-`EFCA4EBAECDC7E0EF7BE70D2BE741FD7D73DED0ACA85873507CCA2D2B625F3DB`.
-L'unicité des signatures et le ledger `VALID 211/15` passent aussi. Le cold
-start a publié G0, G10, G9 et G1–G4 avec 24 sites codec et 102 mutations, puis
-a atteint `D2R startup complete`. Le provider dynamique D2S, ses relais et son
-unwind vivant ont donc franchi le gate qui était auparavant seulement prouvé
-statiquement.
+État : **ISC12 0.2.0 : verticale native persistante qualifiée en portée
+mod-locale et globale sur D2R 3.3.93847 / D2RLoader 1.2.0-beta**. Le candidat
+exact mesure 446 464 octets et vaut SHA-256
+`1311F1C4BE44B0918F34C32007C3A19D35D240D8B72DCAD8C1853EEE53EC11B5`;
+deux builds Release reproductibles `/W4 /WX`, CTest `5/5` et le ledger
+`VALID 211/15` le soutiennent. Les fixtures sérialisées D2S d'IDs 512 et 4094
+ont conservé leurs valeurs 12 et 94 pendant deux cycles froids. Le D2I contrôlé
+de shared stash a été écrit, relu après arrêt complet et réaffiché avec un arbre
+socketé 3/3. G9 a exercé les payloads réels `0x9C` et `0x9D`, l'overflow à zéro
+callback, la réentrance fatale après un callback, la backpressure et l'invariant
+natif exact `childTemporaryFlags = parentTemporaryFlags | 0x08`. Le même
+binaire a passé un cold start global puis le retour mod-local, sans désactiver
+aucun composant : 36 plugins chargés, les cinq eezstreet et 17 patches; Stash
+Search et Revive Overhaul restent les deux échecs préexistants. Les sauvegardes
+et tables de test ont ensuite été restaurées byte-exact et le jeu a été arrêté.
 
 Le cycle de schéma G0 suit maintenant deux phases. `LoadExcelTable` capture les
 candidats sans publier prématurément; le callback autoritaire
@@ -28,11 +34,32 @@ le pointeur seul ne peut plus valider un snapshot périmé. Le token de révisio
 est traité selon le vrai contrat SDK, et l'unload concurrent passe par un état
 atomique `Stopping` bénin.
 
-Les hooks de persistance gardent aussi un lease schéma partagé non bloquant du
-snapshot natif jusqu'au remplacement reader ou au commit atomique writer. Le
-reload qui gagne le lock provoque donc un rejet sans commit. La provenance du
-buffer natif déjà sérialisé avant le hook physique reste toutefois à prouver ou
-à lier à une génération pendant le gate save/reload.
+La première écriture persistante a produit un fichier jetable de 499 octets,
+soit l'enveloppe ISC12 attendue de 96 octets suivie d'un D2S valide de 403
+octets. D2RLoader l'a néanmoins refusé au frontend comme `invalid-character`.
+Vincent a donc retiré l'enveloppe du contrat runtime : les hooks valident
+maintenant les conteneurs D2S/D2I standards sans remplacer le buffer reader, et
+le writer délègue ensuite au couple D2RCore afin de préserver `.d2rl`, backups
+et capture d'environnement. Le clean-sheet devient une obligation documentée
+— nouveau personnage ou future migration externe, backups obligatoires — sans
+promesse de blocage physique de toute mauvaise utilisation. Le lease schéma
+partagé non bloquant couvre les écritures; la lecture physique structurelle est
+désormais indépendante de `SchemaReady`, car le frontend énumère les D2S avant
+`DataTablesLoaded`.
+
+Le personnage jetable `Iiscxiirawtest` ferme la première verticale réelle. D2R
+interdit les chiffres du nom demandé `ISC12RawTest`; le témoin roman exact est
+une Amazon niveau 1. Son D2S natif header-only de 403 octets a révélé que G4
+doit accepter exactement `0x193` avant l'existence du marker de stats, tout en
+refusant chaque longueur intermédiaire. Après correction, le personnage
+apparaît, entre au Camp des Rogues, puis `Save and Exit` produit un D2S standard
+de 1 297 octets `3752FD52…222FB` et un sidecar `.d2rl` de 6 261 octets
+`3F68DBFC…EB718`. Les écritures ISC12 sont `error=0/0`, le marker `0x6667` est
+présent à `0x341` et le personnage recharge ensuite en jeu avec la pile complète
+active. Cela prouve la surface capable de 4 095 définitions; la table actuelle
+reste à 400 lignes, tandis que les fixtures sérialisées dédiées exercent
+désormais les IDs 512 et 4094 sans prétendre qu'ils appartiennent à cette table
+gameplay.
 
 La pile mod-locale complète est restée active : 36 plugins chargés, les cinq
 plugins eezstreet chargés, 17 memory patches et 190 tables compilées. Les deux
@@ -106,20 +133,22 @@ désallocation, pops et `RET`. Le loader exige au corps et au `RET` des résulta
 `RtlLookupFunctionEntry` identiques (Begin/End/UnwindData), avec End dans l'image
 et couverture de l'épilogue. Ce check live, les relais et la publication
 canonique ont maintenant passé sur le runtime officiel. Les sorties anormales
-passent par un `finally` SEH qui abort/discard. Aucun payload fonctionnel D2S,
-D2I, preview, save/reload, gameplay ou multijoueur ISC12 n'a encore été
-exécuté. G5 `0x3E`, G6 `0xA8` et G7 `0xAA` restent ledger-only, G8 `0xAC`
+passent par un `finally` SEH qui abort/discard. Le writer d'enveloppe a été
+exécuté une fois et retiré. Le create/save/reload standard, le preview
+header-only, le second round-trip D2S, le D2I contrôlé, les IDs élevés, les
+payloads `0x9C`/`0x9D`, les scénarios de pression G9 et les portées
+mod-locale/globale sont maintenant qualifiés. Le multijoueur ISC12 ne l'est pas
+encore. G5 `0x3E`, G6 `0xA8` et G7 `0xAA` restent ledger-only, G8 `0xAC`
 reste bloqué, et aucun census des éventuels paquets `uint8 statId` mentionnés
 par Necrolis n'est encore fermé.
 
 ## Prochain gate
 
-Exécuter les cas fonctionnels jetables 0x9C/0x9D, overflow, réentrance,
-backpressure, coexistence et save/reload sur le candidat exact
-`EFCA4EBA…25F3DB`, puis qualifier la portée globale. Le census réseau G5–G8 et
-des éventuels champs `uint8 statId` doit fermer avant une revendication réseau
-complète. Le kit NativePublication V1 reste un durcissement loader général
-optionnel et ne bloque pas ces gates.
+Qualifier un host/joiner ISC12 identique et le refus fail-closed d'un mismatch,
+puis fermer G5 `0x3E`, G6 `0xA8`, G7 `0xAA`, G8 `0xAC` et le census des champs
+`uint8 statId` avant toute revendication réseau complète ou release publique.
+Le kit NativePublication V1 reste un durcissement loader général optionnel et
+ne bloque pas ces gates.
 
 ## Frontière Git active
 

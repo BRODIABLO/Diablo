@@ -877,7 +877,6 @@ namespace {
         return false;
     }
     const auto displayNameColumn = reader.FindColumn("*StringName");
-    const auto waypointColumn = reader.FindColumn("Waypoint");
     std::vector<DataCatalogLevel> records;
     std::map<std::int32_t, std::size_t> index;
     std::vector<std::string_view> row;
@@ -912,16 +911,6 @@ namespace {
             return false;
         }
         record.name = localization.Resolve(key, displayFallback);
-        if (waypointColumn != (std::numeric_limits<std::size_t>::max)()) {
-            std::int32_t waypointOrdinal{};
-            if (!ParseSignedId(row[waypointColumn], waypointOrdinal)
-                    || waypointOrdinal < 0 || waypointOrdinal > 255) {
-                error = "Levels.txt has an invalid Waypoint at line "
-                    + std::to_string(reader.LineNumber());
-                return false;
-            }
-            record.hasWaypoint = waypointOrdinal < 255;
-        }
         if (!record.name.utf8.empty()) {
             record.waypointLabelUtf8.reserve(
                 record.name.utf8.size() + sizeof(" Waypoint") - 1U);

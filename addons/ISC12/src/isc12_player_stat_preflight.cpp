@@ -116,22 +116,45 @@ auto PreflightPlayerStatStream(
     }
 }
 
-auto PreflightPlayerPreviewD2S(
+auto PreflightPlayerPreviewContainer(
         std::span<const std::uint8_t> d2s,
-        std::span<const ItemStatSemanticRow> schema,
-        PlayerPreviewPreflightResult& output) noexcept
+        std::uint8_t& dataContext) noexcept
         -> PlayerPreviewPreflightError {
     if (d2s.size() > PlayerPreviewBufferCapacity
             || d2s.size() <= PlayerPreviewDataContextOffset
-            || d2s.size() <= PlayerPreviewRegularStatOffset) {
+            || (d2s.size() != PlayerPreviewHeaderOnlyLength
+                && d2s.size() <= PlayerPreviewRegularStatOffset)) {
         return PlayerPreviewPreflightError::InvalidArgument;
     }
     if (!ValidateInnerStore(StoreKind::D2S, d2s)) {
         return PlayerPreviewPreflightError::InvalidContainer;
     }
-    const auto dataContext = d2s[PlayerPreviewDataContextOffset];
-    if (dataContext >= PlayerPreviewDataContextCount) {
+    const auto observedDataContext = d2s[PlayerPreviewDataContextOffset];
+    if (observedDataContext >= PlayerPreviewDataContextCount) {
         return PlayerPreviewPreflightError::InvalidDataContext;
+    }
+    dataContext = observedDataContext;
+    return PlayerPreviewPreflightError::None;
+}
+
+auto PreflightPlayerPreviewD2S(
+        std::span<const std::uint8_t> d2s,
+        std::span<const ItemStatSemanticRow> schema,
+        PlayerPreviewPreflightResult& output) noexcept
+        -> PlayerPreviewPreflightError {
+    std::uint8_t dataContext{};
+    const auto containerStatus = PreflightPlayerPreviewContainer(
+        d2s, dataContext);
+    if (containerStatus != PlayerPreviewPreflightError::None) {
+        return containerStatus;
+    }
+
+    if (d2s.size() == PlayerPreviewHeaderOnlyLength) {
+        output = {
+            .playerStats = {},
+            .dataContext = dataContext,
+        };
+        return PlayerPreviewPreflightError::None;
     }
 
     PlayerStatPreflightResult playerStats;

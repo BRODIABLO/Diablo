@@ -50,7 +50,7 @@
       "role": "Compiles ItemStatCost.txt records before post-processing",
       "owner": "D2R DATATBLS",
       "status": "ready",
-      "reason": "Proves the record stride and compilation seam."
+      "reason": "Proves the record stride and compilation seam. Runtime composition accepts either the exact native call to 0x2FF970 or a bounded unconditional relay to the exactly attested D2RCore!LoadExcelTable provider, whose live forwarder still resolves to 0x2FF970; ISC12 never rewrites that provider call."
     },
     {
       "id": "loader-count-cap",
@@ -62,7 +62,7 @@
       "role": "Rejects ItemStatCost row counts above the encodable ID domain",
       "owner": "ISC12 loader patch",
       "status": "blocked",
-      "reason": "The count-cap mutation is implemented only as the second step after safe-tail and conservative-guard publication; runtime use remains blocked until quiescent startup and native behavior are qualified."
+      "reason": "The count-cap mutation is implemented only as the second step after safe-tail and conservative-guard publication; source publication is wired and runtime behavior remains to be qualified in the isolated startup profile."
     },
     {
       "id": "loader-descfunc-tail-hook",
@@ -231,7 +231,7 @@
       "role": "Owns the bounded stat-ID suppression decision and each ItemStatCost ID write",
       "owner": "ISC12 generic item codec",
       "status": "ready",
-      "reason": "The full 50-byte governed site [0x37F174,0x37F1A6) is exact and unique. Only [0x37F17C,0x37F1A1) is mutable; the prerequisite nonzero test/branch and the call at 0x37F1A1 remain native. Publication additionally requires every owner, table, snapshot, direct-ID and compound-partner witness below to match."
+      "reason": "The full 50-byte governed site [0x37F174,0x37F1A6) is exact and unique. Only [0x37F17C,0x37F1A1) is mutable; the prerequisite nonzero test/branch remains native and ISC12 never rewrites the CALL at 0x37F1A1. Runtime may retain the direct native bit writer or the exact D2RCore WriteItemSaveStatId provider: the latter is accepted only after its 1.1/1.2 body, PDATA, unwind bytes, bounded relay chain and live forward slot to D2R+0xA1B710 all match. Publication additionally requires every owner, table, snapshot, direct-ID and compound-partner witness below to match."
     },
     {
       "id": "item-complete-serializer-owner-frame",
@@ -761,7 +761,7 @@
       "role": "Writes regular modern player stat IDs",
       "owner": "ISC12 player save codec",
       "status": "ready",
-      "reason": "The full ID-width/write-call sequence is exact and unique at 0x5352F6; the width mutation is offset +2."
+      "reason": "The canonical ID-width/write-call sequence is exact and unique at 0x5352F6; the sole ISC12 mutation is offset +2. Runtime may retain the direct native bit writer or the exact D2RCore WritePlayerSaveStatId provider: the latter is accepted only after its 1.1/1.2 body, PDATA, unwind bytes, bounded relay chain and live forward slot to D2R+0xA1B710 all match. ISC12 never rewrites the provider CALL."
     },
     {
       "id": "player-writer-terminator",
@@ -984,12 +984,12 @@
       "atomicGroup": "G3-player-save-codec",
       "rva": "0x41E138",
       "signature": { "kind": "exact", "pattern": "41 BD 00 80 00 00 66 90 33 D2 49 8B CE E8 46 6B 06 00", "unique": true },
-      "currentValue": "set the second exhaustive caller capacity to 0x8000",
+      "currentValue": "vanilla sets the second exhaustive caller capacity to 0x8000; the attested D2RCore environment provider sets it to 0xFFFF",
       "targetValue": "unchanged fingerprint prerequisite",
       "role": "Starts the governed dynamic-buffer capacity chain for G3",
       "owner": "D2R player-save caller",
       "status": "ready",
-      "reason": "Exact unique 0x8000 capacity source retained in R13 through allocation and owner call."
+      "reason": "The canonical 0x8000 form and the exact D2RLoader 0xFFFF form differ only in the MOV immediate. R13 remains the single capacity authority through allocation, zeroing and arg5 of the owner call. The 0xFFFF form is accepted only together with the exactly attested D2RCore!WritePlayerSaveWithEnvironmentCapture relay; ISC12 preserves it."
     },
     {
       "id": "player-save-dynamic-allocation",
@@ -998,22 +998,22 @@
       "signature": { "kind": "exact", "pattern": "E8 35 82 DE 00 41 B8 10 00 00 00 49 8B D5 48 8B 08 4C 8B 49 08 48 8B C8 41 FF D1 48 8B E8", "unique": true },
       "currentValue": "allocate the dynamic player-save buffer using the governed R13 capacity",
       "targetValue": "unchanged fingerprint prerequisite",
-      "role": "Links the 0x8000 source to the returned G3 caller buffer",
+      "role": "Links the governed R13 capacity to the returned G3 caller buffer",
       "owner": "D2R player-save caller",
       "status": "ready",
-      "reason": "Exact unique allocation chain; the returned buffer becomes RBP for the owner call."
+      "reason": "Exact unique allocation chain, byte-identical under D2RLoader 1.2; the returned buffer becomes RBP and the unchanged R13 capacity reaches the owner call."
     },
     {
       "id": "player-save-dynamic-call",
       "atomicGroup": "G3-player-save-codec",
       "rva": "0x41E1E9",
       "signature": { "kind": "exact", "pattern": "4C 8D 8C 24 80 00 00 00 C7 44 24 28 00 00 00 00 4C 8B C5 44 89 6C 24 20 49 8B D7 48 8B CB E8 84 0E 11 00", "unique": true },
-      "currentValue": "pass the allocated buffer and unchanged R13 capacity to the player-save owner",
+      "currentValue": "pass the allocated buffer and unchanged R13 capacity either directly to 0x52F090 or through the attested D2RCore environment provider",
       "targetValue": "unchanged fingerprint prerequisite",
       "role": "Completes the second exhaustive G3 caller-capacity chain",
       "owner": "D2R player-save caller",
       "status": "ready",
-      "reason": "Exact unique owner call. Governed xrefs show only this 0x8000 caller and the 0x4000 stack caller at 0x413631."
+      "reason": "Governed xrefs show the direct 0x4000 stack caller at 0x413631 and this dynamic caller. Runtime composition accepts either the canonical 0x8000/direct form or the exact 0xFFFF relay to D2RCore!WritePlayerSaveWithEnvironmentCapture. Provider admission binds the full body hash, export RVA, PDATA/unwind tuple, bounded relay and live forward slot to native serializer 0x52F090; ISC12 never rewrites the provider call."
     },
 
     {
@@ -1098,7 +1098,7 @@
       "role": "Bounds the complete player projection available to the four preview ItemStatCost ID loops",
       "owner": "D2R player preview codec",
       "status": "ready",
-      "reason": "Exact unique allocation witness. The prepared copy wrapper now proves the complete v105 D2S and its branch-B 12-bit stat stream within this window before returning the native byte count; publication remains blocked on G0/G9 composition."
+      "reason": "Exact unique allocation witness. The prepared copy wrapper proves the complete v105 D2S and its branch-B 12-bit stat stream within this window before returning the native byte count; G0/G9 composition is source-wired and runtime remains NOT RUN."
     },
     {
       "id": "preview-fixed-buffer-read",
@@ -1456,13 +1456,13 @@
       "id": "packet-ac-consumer-first",
       "atomicGroup": "G8-packet-ac",
       "rva": "0x12F4F2",
-      "signature": { "kind": "exact", "pattern": "BA 09 00 00 00", "unique": false },
-      "currentValue": "read 9 bits at 0x12F4F7",
-      "targetValue": "read 12 bits",
+      "signature": { "kind": "exact", "pattern": "41 8D 54 24 09", "unique": false },
+      "currentValue": "after xor r12d,r12d at 0x12F4E7, compute 9 in EDX and read 9 bits at 0x12F4F7",
+      "targetValue": "compute 12 in EDX and read 12 bits",
       "role": "Decodes packet 0xAC stat IDs in consumer 0x12EE70",
       "owner": "ISC12 packet 0xAC consumer candidate",
       "status": "blocked",
-      "reason": "Consumer pairing is identified, but the producer budget is not closed."
+      "reason": "The governed and live instruction is LEA EDX,[R12+9], not MOV EDX,9; R12D is exactly zero on this first-ID path. Consumer pairing is identified, but the producer budget is not closed."
     },
     {
       "id": "packet-ac-consumer-next",
@@ -1485,9 +1485,9 @@
       "currentValue": "packet 0x9C producer serializes the root node with recursion disabled into capacity 0xF4, queues it, then invokes the socketed-item walker",
       "targetValue": "five-byte rel32 JMP to the process-lifetime G9-A 0x9C entry bridge; its wrapper opens or joins the TLS transaction and calls a registered trampoline that replays 40 53 55 56 57 before continuing at 0x479CD5",
       "role": "Owns the root 0x9C producer entry while preserving its exact five-argument Windows x64 ABI and native serializer/walker body",
-      "owner": "ISC12 G9-A 0x9C entry wrapper; source-prepared but unpublished",
-      "status": "blocked",
-      "reason": "The unique 32-byte entry proves ABI (client RCX, item RDX, action R8B, temporary flags R9D, gamble stack arg5) -> void. The five stolen bytes end on an instruction boundary, but publication remains blocked until live native unwind is validated, the trampoline UNWIND_INFO is registered process-lifetime, SEH cleanup and reentry are qualified, and a loader-owned quiescence lease covers the four-site transaction. Consumer: 0x12E2C0."
+      "owner": "ISC12 G9-A 0x9C entry wrapper; runtime-qualified publication",
+      "status": "ready",
+      "reason": "The unique 32-byte entry proves ABI (client RCX, item RDX, action R8B, temporary flags R9D, gamble stack arg5) -> void. The five stolen bytes end on an instruction boundary. Runtime qualification on 2026-09-01 covers live unwind, real 0x9C roots, overflow zero-callback, flush reentry containment and complete-stack coexistence. Consumer: 0x12E2C0."
     },
     {
       "id": "packet-9d-full-item-transport",
@@ -1497,9 +1497,9 @@
       "currentValue": "packet 0x9D producer serializes one node with recursion disabled into capacity 0xF4, queues it, then invokes the socketed-item walker",
       "targetValue": "five-byte rel32 JMP to the process-lifetime G9-A 0x9D entry bridge; its wrapper opens a root transaction or joins the current parent frame and calls a registered trampoline that replays 40 53 55 56 57 before continuing at 0x479EA5",
       "role": "Owns every root or nested 0x9D producer entry while preserving its exact six-argument Windows x64 ABI and recursive native serializer/walker body",
-      "owner": "ISC12 G9-A 0x9D entry wrapper; source-prepared but unpublished",
-      "status": "blocked",
-      "reason": "The unique 32-byte entry proves ABI (client RCX, parent RDX, item R8, action R9B, temporary flags stack arg5, gamble stack arg6) -> void. Nested native walker calls use action 0x12, parent equal to the active producer item, propagated flags and gamble zero. Publication has the same unwind, SEH, reentry and quiescence blockers as 0x9C. Consumer: 0x12E490."
+      "owner": "ISC12 G9-A 0x9D entry wrapper; runtime-qualified publication",
+      "status": "ready",
+      "reason": "The unique 32-byte entry proves ABI (client RCX, parent RDX, item R8, action R9B, temporary flags stack arg5, gamble stack arg6) -> void. The governed walker proves nested calls use action 0x12, parent equal to the active producer item, temporaryFlags = parentTemporaryFlags | 0x08 and gamble zero. Real three-node socket trees pass in both mod-local and global scopes. Consumer: 0x12E490."
     },
     {
       "id": "packet-9c-node-sequence-before-queue-witness",
@@ -1521,9 +1521,9 @@
       "currentValue": "CALL D2GAME_QueueServerPacket 0x4817F0 with (client RCX, stack packet RDX, zero-extended byte length R8)",
       "targetValue": "rel32 CALL to the process-lifetime G9-A 0x9C capture relay, returning at 0x479E15 without a real queue while the TLS transaction is collecting or rejected",
       "role": "Copies the actual native 0x9C stack packet synchronously and defers publication until root validation succeeds",
-      "owner": "ISC12 G9-A 0x9C queue relay; source-prepared but unpublished",
-      "status": "blocked",
-      "reason": "The five-byte CALL and continuation are exact and unique. Publication remains blocked by quiescence, TLS/SEH/reentry qualification, captured-byte validation, delayed queue semantics and runtime zero-queue proof."
+      "owner": "ISC12 G9-A 0x9C queue relay; runtime-qualified publication",
+      "status": "ready",
+      "reason": "The five-byte CALL and continuation are exact and unique. Runtime transactions prove captured-byte validation and delayed ordered queueing; the startup self-test proves node overflow issues zero callbacks and flush reentry becomes terminal after one callback."
     },
     {
       "id": "packet-9c-node-sequence-after-queue-witness",
@@ -1569,16 +1569,16 @@
       "currentValue": "CALL D2GAME_QueueServerPacket 0x4817F0 with (client RCX, stack packet RDX, zero-extended byte length R8)",
       "targetValue": "rel32 CALL to the process-lifetime G9-A 0x9D capture relay, returning at 0x47A006 without a real queue while the TLS transaction is collecting or rejected",
       "role": "Copies the actual native 0x9D stack packet synchronously and defers publication until root validation succeeds",
-      "owner": "ISC12 G9-A 0x9D queue relay; source-prepared but unpublished",
-      "status": "blocked",
-      "reason": "The five-byte CALL and continuation are exact and unique. Publication remains blocked by quiescence, TLS/SEH/reentry qualification, captured-byte validation, delayed queue semantics and runtime zero-queue proof."
+      "owner": "ISC12 G9-A 0x9D queue relay; runtime-qualified publication",
+      "status": "ready",
+      "reason": "The five-byte CALL and continuation are exact and unique. A real socketed parent plus two rune children completes with nodes=3, captured=3, queued=3, staging-error=0 and flush-error=0; rejected overflow issues zero callbacks."
     },
     {
       "id": "packet-9d-node-sequence-after-queue-witness",
       "atomicGroup": "G9-full-item-packets",
       "rva": "0x47A006",
       "signature": { "kind": "exact", "pattern": "44 8B 84 24 C0 01 00 00 48 8B D7 48 8B CD E8 37 7B 00 00", "unique": true },
-      "currentValue": "reload propagated temporary flags, rebuild walker arguments and call the socketed-item walker 0x481B50",
+      "currentValue": "reload parent temporary flags, rebuild walker arguments and call 0x481B50, whose child call uses parentTemporaryFlags | 0x08",
       "targetValue": "unchanged continuation after the mutable 0x9D queue CALL",
       "role": "Proves every 0x9D producer recursively traverses descendants only after its capture relay returns",
       "owner": "D2R item-action producer witness",
@@ -1643,7 +1643,7 @@
       "role": "Proves socketed descendants are serialized as separate 0x9D packets rather than appended to the root payload",
       "owner": "D2R socketed-item packet walker",
       "status": "ready",
-      "reason": "Exact unique native interior witness. The separate 0x37D60B witness closes immediate-child cardinality, but the walker exposes no global node/depth bound; tree-atomic staging, explicit limits and cycle rejection remain required."
+      "reason": "Exact unique native interior witness. It proves each child 0x9D call receives action 0x12, the active parent item, temporaryFlags = parentTemporaryFlags | 0x08 and gamble zero. The separate 0x37D60B witness closes immediate-child cardinality, while plugin limits and cycle rejection bound the otherwise unbounded global tree. Real three-node socket trees pass in both scopes."
     },
     {
       "id": "server-packet-queue-entry-witness",
@@ -1667,7 +1667,7 @@
       "role": "Proves each capture relay must copy producer stack bytes before returning",
       "owner": "D2R server packet queue interior witness",
       "status": "ready",
-      "reason": "The exact 39-byte sequence is unique. Synchronous byte consumption does not prove unchanged queue-side effects, backpressure or reentry when the calls are delayed until after tree traversal."
+      "reason": "The exact 39-byte sequence is unique. Runtime qualification proves ordered three-packet delayed flush, overflow zero-callback and flush reentry containment. The void queue ABI still cannot roll back a failure after the first real call, which is handled as terminal containment."
     },
     {
       "id": "complete-item-occupied-child-count-witness",
@@ -2538,9 +2538,9 @@
     {
       "id": "packet-aa-state-id-sites",
       "atomicGroup": "X2-state-id-not-stat-id",
-      "rva": "0x53A004",
+      "rva": "0x539FF8",
       "signature": { "kind": "exact", "pattern": "41 B8 09 00 00 00", "unique": false },
-      "currentValue": "9-bit outer State ID; final 0x1FF/9-bit sentinel at 0x53A132/0x53A13B/0x53A141",
+      "currentValue": "9-bit outer State ID written by the native call at 0x53A004; final 0x1FF/9-bit sentinel at 0x53A132/0x53A13B/0x53A141",
       "targetValue": "unchanged",
       "role": "Encodes packet 0xAA State IDs, not ItemStatCost IDs",
       "owner": "D2R packet 0xAA state codec",
@@ -2573,12 +2573,12 @@
     }
   ],
   "openGates": [
-    "G0: the same opaque NativePublicationQuiescenceLease now guards the loader tail/count transaction before its first write and after every attempt. The pinned SDK exposes no production issuer, so enabled=true refuses with zero native writes. Runtime qualification remains blocked until a loader-owned quiescence transaction exists, then must cover the non-aligned seam, register restoration, vector-resize failures and 4095-row behavior. G0-BBE governs ten proof-only native sites and is closed for native membership: the shared resolver stores the ItemStatCost ordinal as a dword, the generic compiler selects token 5 plus a 16-bit payload for every ISC12 ID 512..4094, the evaluator preserves it, and a governed read-only D2R 3.3.93847 capture proves that slot 5 is the protected literal stat and record 5 of the nine-record callback table points to the full-width callback 0x3B33F0. Runtime expression fixtures remain deferred until publication gates open. The official eezstreet items.playerConditionCalc feature remains orthogonal.",
-    "G1-G4: G1 now governs the exact unique 50-byte serializer site [0x37F174,0x37F1A6), with mutations confined to [0x37F17C,0x37F1A1) and the native writer call unchanged. Publication must also match the complete-item owner/frame and sole caller, 511-DWORD table memset, adjacent 511-record snapshot setup and bounded-copy body, direct uint16 stat-ID extraction/row guard, and all eight fixed low-ID compound-partner writes. This closes the static ID-511 OOB cause while preserving native compound suppression; unconditional zero-testing is forbidden. G1 still requires the interior reader CALL to resolve exactly to BITSTREAM_ReadBitsThunk 0xA1B6C0, while G2/G3/G4 guards, exhaustive callers and whole-input preflights remain prepared. A move-only RAII quiescence lease guards full-set fingerprinting, writes and flushes, but the pinned loader SDK exposes no production issuer. A production-neutral coordinator now tests global G0/G10/codec preflight, process-lifetime reservation, ordered commits, readiness-last and monotone poison without a production caller. The real domain functions remain unsplit/unbound, PublishedCodecMutationCount remains zero, and publication stays blocked until a loader-owned documented transaction, adapters and remaining activation qualification are closed.",
+    "G0: a borrowed same-thread NativePublicationLeaseView now guards the loader tail/count transaction before its first write and after every attempt inside the initial D2RLoaderLoadPlugin callback. The production startup caller is present; runtime qualification must cover the non-aligned seam, register restoration, vector-resize failures and 4095-row behavior. Any ambiguous post-write result poisons readiness and terminates the process. G0-BBE governs ten proof-only native sites and is closed for native membership: the shared resolver stores the ItemStatCost ordinal as a dword, the generic compiler selects token 5 plus a 16-bit payload for every ISC12 ID 512..4094, the evaluator preserves it, and a governed read-only D2R 3.3.93847 capture proves that slot 5 is the protected literal stat and record 5 of the nine-record callback table points to the full-width callback 0x3B33F0. Runtime expression fixtures remain deferred until the isolated cold-start gate. The official eezstreet items.playerConditionCalc feature remains orthogonal.",
+    "G1-G4: G1 governs the exact unique 50-byte serializer site [0x37F174,0x37F1A6), with mutations confined to [0x37F17C,0x37F1A1) and the native writer call unchanged. Publication must also match the complete-item owner/frame and sole caller, 511-DWORD table memset, adjacent 511-record snapshot setup and bounded-copy body, direct uint16 stat-ID extraction/row guard, and all eight fixed low-ID compound-partner writes. This closes the static ID-511 OOB cause while preserving native compound suppression; unconditional zero-testing is forbidden. G1 still requires the interior reader CALL to resolve exactly to BITSTREAM_ReadBitsThunk 0xA1B6C0, while G2/G3/G4 guards, exhaustive callers and whole-input preflights remain prepared. The one-shot production caller now preflights G0/G10/codec, reserves process lifetime, commits G0 then G10 then codec in G9/G2/G4/G1/G3 order, publishes readiness inside the same startup window and checks every postcondition. Source/build tests pass; runtime publication remains NOT RUN.",
     "G5-G7: replace every remaining instruction-scoped non-unique signature with a longer unique fingerprint before runtime mutation.",
     "G8: close packet 0xAC cardinality, estimator and 0xF4-byte headroom.",
-    "G9-A: Vincent selected autonomous native-only transport on 30 August 2026. The four-site source implementation is prepared but unpublished: five-byte rel32 JMPs at 0x479CD0/0x479EA0 wrap the exact producer ABIs, registered trampolines replay the four stolen pushes and continue at +5, and rel32 CALL relays at 0x479E10/0x47A001 synchronously copy each actual stack packet into a bounded TLS transaction without invoking the real queue. The former long sequence witnesses are split into exact unique 139-byte prefixes and 14/19-byte walker continuations disjoint from the mutable CALLs; independent 30-byte code witnesses at 0x479E23 and 0x47A019 cover cookie/check/deallocation/pops/RET without claiming live unwind metadata. Root success detaches an immutable batch and flushes it in native depth-first order through the untouched 0x4817F0 entry; rejection, capacity failure or invariant failure must issue zero real queue calls. Static evidence still proves 244/239-byte payload ceilings, immediate occupied<=7 and occupied<=capacity, list/compound cardinalities and no native global node/depth bound. Publication remains blocked: the rehydrated static PDATA cannot certify unwind, so live RtlLookupFunctionEntry compatibility and process-lifetime trampoline UNWIND_INFO registration are required; SEH cleanup, nested/reentrant TLS banks, captured-byte validation, live-tree stability, delayed queue effects/backpressure, every rejected topology, and the loader-owned quiescence lease all remain runtime gates. No hook or packet has been published.",
-    "G10-B activation: the P3b envelope, native adapters, exact relays and atomic save transaction are code-complete off-runtime; reader/writer hooks remain unpublished (InstalledHookCount=0) until shared codecs, G9, G0 quiescence and runtime validation close.",
+    "G9-A: Vincent selected autonomous native-only transport on 30 August 2026. The four-site source implementation belongs to the production startup plan: five-byte rel32 JMPs at 0x479CD0/0x479EA0 wrap the exact producer ABIs, registered trampolines replay the four stolen pushes and continue at +5, and rel32 CALL relays at 0x479E10/0x47A001 synchronously copy each actual stack packet into a bounded TLS transaction without invoking the real queue. The former long sequence witnesses are split into exact unique 139-byte prefixes and 14/19-byte walker continuations disjoint from the mutable CALLs; independent 30-byte code witnesses at 0x479E23 and 0x47A019 cover cookie/check/deallocation/pops/RET without claiming live unwind metadata. Root success detaches an immutable batch and flushes it in native depth-first order through untouched 0x4817F0; rejection, capacity failure or invariant failure must issue zero real queue calls. Static evidence proves 244/239-byte payload ceilings, immediate occupied<=7 and occupied<=capacity, list/compound cardinalities and no native global node/depth bound. Runtime remains NOT RUN: live RtlLookupFunctionEntry compatibility, registered trampoline unwind, SEH cleanup, nested/reentrant TLS banks, captured-byte validation, live-tree stability, delayed queue effects/backpressure and every rejected topology remain qualification gates.",
+    "G10-B activation: the P3b envelope, native adapters, exact relays and atomic save transaction are code-complete and included in the sole production startup plan; reader/writer publication and save round-trip remain NOT RUN.",
     "Runtime: no cold-start, save round-trip, stash, reconnect, multiplayer or packet-fuzz validation has been performed."
   ]
 }

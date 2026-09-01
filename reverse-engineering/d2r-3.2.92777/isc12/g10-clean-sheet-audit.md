@@ -3,6 +3,22 @@
 Date: 2026-08-30
 Status: **G10-B P3a PROVEN — native transaction seams remain disconnected**
 
+## Runtime disposition — 2026-08-31
+
+This document preserves the evidence and design history that produced the
+96-byte envelope prototype. Its runtime recommendation is superseded. The first
+live persistence execution wrote an exact 499-byte disposable file — a valid
+96-byte ISC12 envelope followed by a valid 403-byte D2S — but D2RLoader 1.2
+rejected the character in its frontend as `invalid-character`.
+
+Vincent selected standard external D2S/D2I containers for the plugin. ISC12 now
+validates the native container unchanged and delegates physical writes to the
+D2RCore writer/closer pair so D2RLoader can generate `.d2rl`, backups and its
+environment record normally. Clean-sheet compatibility is a documented support
+boundary: create a new ISC12 character or use a future external migration tool,
+and back up saves. The envelope and atomic writer remain disconnected,
+unit-tested building blocks for that future tool, not runtime DLL behavior.
+
 ## Decision
 
 ISC12 needs a real outer file envelope, not a repurposed D2S version, padding

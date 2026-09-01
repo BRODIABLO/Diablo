@@ -19,15 +19,13 @@ auto Result(
         NativePersistenceDisposition disposition,
         StoreKind storeKind,
         NativePersistenceError error = NativePersistenceError::None,
-        PersistenceError persistenceError = PersistenceError::None,
-        EnvelopeError envelopeError = EnvelopeError::None) noexcept
+        PersistenceError persistenceError = PersistenceError::None) noexcept
         -> NativePersistenceResult {
     return {
         .disposition = disposition,
         .storeKind = storeKind,
         .error = error,
         .persistenceError = persistenceError,
-        .envelopeError = envelopeError,
     };
 }
 
@@ -35,7 +33,6 @@ auto RejectRead(
         StoreKind storeKind,
         NativePersistenceError error,
         PersistenceError persistenceError,
-        EnvelopeError envelopeError,
         const NativeReadCallbacks& callbacks) noexcept
         -> NativePersistenceResult {
     if (!callbacks.clearRejectedRead
@@ -44,15 +41,13 @@ auto RejectRead(
             NativePersistenceDisposition::Fatal,
             storeKind,
             NativePersistenceError::ClearRejectedRead,
-            persistenceError,
-            envelopeError);
+            persistenceError);
     }
     return Result(
         NativePersistenceDisposition::Reject,
         storeKind,
         error,
-        persistenceError,
-        envelopeError);
+        persistenceError);
 }
 
 auto HasTraversalComponent(std::string_view path) noexcept -> bool {
@@ -150,85 +145,57 @@ auto AdaptNativeStoreRead(
         -> NativePersistenceResult {
     const auto storeKind = ClassifyStoreName(request.storeName);
     if (storeKind == StoreKind::Other) {
-        return Result(NativePersistenceDisposition::Vanilla, storeKind);
+        return Result(NativePersistenceDisposition::ProceedNative, storeKind);
     }
     if (!request.codecReady) {
         return RejectRead(
             storeKind,
             NativePersistenceError::CodecNotReady,
             PersistenceError::None,
-            EnvelopeError::None,
             callbacks);
     }
-    if (!request.schemaHash) {
-        return RejectRead(
-            storeKind,
-            NativePersistenceError::SchemaUnavailable,
-            PersistenceError::None,
-            EnvelopeError::None,
-            callbacks);
-    }
-
-    std::vector<std::uint8_t> innerBytes;
     const auto preparation = PrepareStoreRead(
         request.storeName,
         request.readStatus,
         request.announcedLength,
         request.actualLength,
-        request.physicalBytes,
-        *request.schemaHash,
-        innerBytes);
+        request.physicalBytes);
     if (preparation.disposition != StorePreparation::Prepared) {
         return RejectRead(
             storeKind,
             NativePersistenceError::StorePreparation,
             preparation.error,
-            preparation.envelopeError,
-            callbacks);
-    }
-    if (!callbacks.replaceBuffer
-            || !callbacks.replaceBuffer(callbacks.context, innerBytes)) {
-        return RejectRead(
-            storeKind,
-            NativePersistenceError::ReplaceBuffer,
-            PersistenceError::None,
-            EnvelopeError::None,
             callbacks);
     }
     return Result(NativePersistenceDisposition::Success, storeKind);
 }
 
-auto AdaptNativeStoreWrite(
-        const NativeWriteRequest& request,
-        const NativeWriteCallbacks& callbacks) noexcept
+auto AdaptNativeStoreWrite(const NativeWriteRequest& request) noexcept
         -> NativePersistenceResult {
     const auto storeKind = ClassifyStoreName(request.storeName);
     if (storeKind == StoreKind::Other) {
-        return Result(NativePersistenceDisposition::Vanilla, storeKind);
+        return Result(NativePersistenceDisposition::ProceedNative, storeKind);
     }
     if (!request.codecReady) {
         return Result(
             NativePersistenceDisposition::Reject,
             storeKind,
             NativePersistenceError::CodecNotReady,
-            PersistenceError::None,
-            EnvelopeError::None);
+            PersistenceError::None);
     }
-    if (!request.schemaHash) {
+    if (!request.schemaReady) {
         return Result(
             NativePersistenceDisposition::Reject,
             storeKind,
             NativePersistenceError::SchemaUnavailable,
-            PersistenceError::None,
-            EnvelopeError::None);
+            PersistenceError::None);
     }
-    if (!NativeWriteLengthSupported(request.innerBytes.size())) {
+    if (!NativeWriteLengthSupported(request.physicalBytes.size())) {
         return Result(
             NativePersistenceDisposition::Reject,
             storeKind,
             NativePersistenceError::PhysicalLength,
-            PersistenceError::None,
-            EnvelopeError::PayloadLength);
+            PersistenceError::None);
     }
 
     std::wstring widePath;
@@ -242,36 +209,20 @@ auto AdaptNativeStoreWrite(
             NativePersistenceDisposition::Reject,
             storeKind,
             pathError,
-            PersistenceError::None,
-            EnvelopeError::None);
+            PersistenceError::None);
     }
 
-    std::vector<std::uint8_t> physicalBytes;
     const auto preparation = PrepareStoreWrite(
         request.storeName,
-        request.innerBytes,
-        *request.schemaHash,
-        physicalBytes);
+        request.physicalBytes);
     if (preparation.disposition != StorePreparation::Prepared) {
         return Result(
             NativePersistenceDisposition::Reject,
             storeKind,
             NativePersistenceError::StorePreparation,
-            preparation.error,
-            preparation.envelopeError);
+            preparation.error);
     }
-
-    if (!callbacks.atomicCommit
-            || !callbacks.atomicCommit(
-                callbacks.context, widePath, physicalBytes)) {
-        return Result(
-            NativePersistenceDisposition::Reject,
-            storeKind,
-            NativePersistenceError::AtomicCommit,
-            PersistenceError::None,
-            EnvelopeError::None);
-    }
-    return Result(NativePersistenceDisposition::Success, storeKind);
+    return Result(NativePersistenceDisposition::ProceedNative, storeKind);
 }
 
 } // namespace ruffneckk::isc12

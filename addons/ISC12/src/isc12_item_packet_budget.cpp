@@ -102,6 +102,8 @@ auto ResetTransactionToIdle(
     transaction.packetCount = 0;
     transaction.activeDepth = 0;
     transaction.totalBytes = 0;
+    transaction.rejectedProducerTemporaryFlags = 0;
+    transaction.rejectedParentTemporaryFlags = 0;
 }
 
 auto ValidateCopiedPacket(
@@ -148,6 +150,8 @@ auto StartTransaction(
     transaction.packetCount = 0;
     transaction.activeDepth = 0;
     transaction.totalBytes = 0;
+    transaction.rejectedProducerTemporaryFlags = 0;
+    transaction.rejectedParentTemporaryFlags = 0;
     return true;
 }
 
@@ -475,7 +479,13 @@ auto BeginFullItemPacketProducer(
         return rejectNested(
             FullItemPacketStagingError::NestedActionMismatch);
     }
-    if (producer.temporaryFlags != parentNode.temporaryFlags) {
+    const auto expectedNestedTemporaryFlags =
+        parentNode.temporaryFlags | NestedFullItemTemporaryFlagsMask;
+    if (producer.temporaryFlags != expectedNestedTemporaryFlags) {
+        transaction.rejectedProducerTemporaryFlags =
+            producer.temporaryFlags;
+        transaction.rejectedParentTemporaryFlags =
+            parentNode.temporaryFlags;
         return rejectNested(
             FullItemPacketStagingError::NestedFlagsMismatch);
     }
@@ -763,7 +773,8 @@ auto ValidateCapturedFullItemPacketTransaction(
             if (parentIndex >= index
                     || node.parentItem != transaction.nodes[parentIndex].item
                     || node.temporaryFlags
-                        != transaction.nodes[parentIndex].temporaryFlags
+                        != (transaction.nodes[parentIndex].temporaryFlags
+                            | NestedFullItemTemporaryFlagsMask)
                     || observedChildCounts[parentIndex]
                         >= MaximumStagedItemImmediateChildren) {
                 return FullItemPacketStagingError::FinalBatchInvalid;

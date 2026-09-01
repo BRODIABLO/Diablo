@@ -100,6 +100,9 @@ inline constexpr std::size_t MaximumStagedItemImmediateChildren = 7;
 inline constexpr std::size_t MaximumStagedItemPacketCount = 64;
 inline constexpr std::size_t MaximumStagedItemTreeDepth = 16;
 inline constexpr std::size_t MaximumStagedItemTransactionBytes = 0x4000;
+// The native socket walker copies the active producer's temporary flags,
+// explicitly ORs 0x08, then passes that value to each child 0x9D producer.
+inline constexpr std::uint32_t NestedFullItemTemporaryFlagsMask = 0x08;
 
 enum class FullItemPacketStagingState : std::uint8_t {
     Idle,
@@ -214,6 +217,8 @@ struct FullItemPacketStagingContext {
     std::size_t packetCount{};
     std::size_t activeDepth{};
     std::size_t totalBytes{};
+    std::uint32_t rejectedProducerTemporaryFlags{};
+    std::uint32_t rejectedParentTemporaryFlags{};
     std::array<std::size_t, MaximumStagedItemTreeDepth>
         activeNodeIndices{};
     std::array<FullItemStagedNode, MaximumStagedItemPacketCount> nodes{};

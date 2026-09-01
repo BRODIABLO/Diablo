@@ -623,7 +623,6 @@ struct ImmunityColorControl final {
 auto DrawImGuiSettingsPanel(
         Config& config,
         bool& expanded,
-        bool revealMapEnabled,
         const ImGuiSettingsActionCallback actionCallback) noexcept
         -> ImGuiSettingsBounds {
     const ScopedPanelStyle style{};
@@ -739,12 +738,22 @@ auto DrawImGuiSettingsPanel(
 
                 ImGui::BeginDisabled(!config.featuresEnabled);
                 DrawActionButton(
-                    revealMapEnabled
-                        ? "Reveal Map: ON (click to disable)"
-                        : "Reveal Map: OFF (click to enable)",
-                    ImGuiSettingsAction::ToggleRevealMap,
+                    "Reveal Level",
+                    ImGuiSettingsAction::RevealLevel,
+                    actionCallback);
+                DrawActionButton(
+                    "Reveal Act",
+                    ImGuiSettingsAction::RevealAct,
+                    actionCallback);
+                DrawActionButton(
+                    "Arm Reveal All",
+                    ImGuiSettingsAction::ArmRevealAll,
                     actionCallback);
                 ImGui::EndDisabled();
+                DrawActionButton(
+                    "Disarm Reveal All",
+                    ImGuiSettingsAction::RevealAllOff,
+                    actionCallback);
             }
 
             if (ImGui::CollapsingHeader(

@@ -135,7 +135,8 @@
 - [x] Confirm all 84 recomputed canonical G1–G4 slots remain owned by that
   transaction after source integration.
 - [x] Confirm all 102 slots in the G9 plus G1–G4 plan are reached only through
-  the one production startup caller; runtime publication remains NOT RUN.
+  the one production startup caller; later full-stack cold starts attest the
+  runtime publication in both supported scopes.
 - [x] A full-stack D2RLoader 1.2 cold start attests the exact
   `WritePlayerSaveStatId` G3 provider and its live forward slot to
   `D2R+0xA1B710` before the source transaction can publish.
@@ -197,7 +198,10 @@
   the governed buffer-free/false exit `0x61D87D`. Legacy branch A stays 9-bit.
 - [x] Unit-test G4 valid input plus bad magic/version/declared size/checksum,
   context, marker, ID, missing sentinel, native-underflow length 342 and
-  capacity overflow, with failure output unchanged.
+  capacity overflow, with failure output unchanged. The frontend preflight
+  also accepts the exact native 403-byte (`0x193`) header-only form emitted for
+  a newly created character, while rejecting every ambiguous intermediate
+  length before the full player-stat section.
 
 ## G5–G9 — network
 
@@ -270,19 +274,21 @@
 
 - [x] D2S outer-load, magic/version dispatch, modern decoder and first
   player-stat decode boundary have exact unique signatures.
-- [x] Version-only, padding/reserved-byte and sidecar marker designs are
-  rejected as non-fail-closed.
+- [x] Historical audit proved that version-only and padding/reserved-byte
+  markers cannot enforce a hard fail-closed namespace. Vincent later selected
+  a support-boundary contract instead of hard physical rejection.
 - [x] Prove D2S outer-load replacement-buffer lifetime, native record cleanup,
   output nulling and failure destruction.
 - [x] Identify the physical D2S/D2I state-1 writer and prove vanilla commit is
   direct, non-atomic and blind to failed or partial writes.
 - [x] Prove D2I physical whole-file ingress and upload splitting before either
   native sector reader can mutate an item.
-- [x] Implement an ISC12-owned sibling-temp, full-write, flush, atomic replace
-  and rollback transaction for both physical stores.
-- [x] Implement and unit-test the disconnected atomic-file primitive: existing
+- [x] Implement and unit-test the disconnected sibling-temp/full-write/flush/
+  atomic-replace primitive: existing
   and absent destinations, looping partial writes, flush, write and replace
   failures preserve the original and clean ordinary siblings.
+- [x] Retire that primitive from the runtime DLL while retaining it as a future
+  external migration-tool building block.
 - [x] Prove the `0x00B3` fragment format, client handler, collection terminator,
   whole-D2S validation and copy into object state `4`.
 - [x] Trace object state `4` and the secondary concatenated store to the shared
@@ -298,16 +304,18 @@
   publish the object.
 - [x] Govern exact unique five-byte reader `0x9FC654` and writer `0x9F95A2`
   mutation seams without claiming either hook is installed.
-- [x] Connect both seams off-runtime to process-lifetime RX relays and separate
-  RW rundown state; the reader unwraps only a complete accepted envelope and
-  the writer reaches the final path only through the atomic transaction.
+- [x] Connect both seams to process-lifetime RX relays and separate RW rundown
+  state. The current reader validates the unchanged native container; the
+  current writer validates then delegates to the native continuation before
+  `CREATE_ALWAYS`.
 - [x] Include both persistence seams only in the canonical startup transaction;
-  source/build validation is green and first runtime publication is NOT RUN.
+  source/build validation and first runtime publication are green.
 - [x] Preserve the tail-entered ABI contract without claiming general unwind:
   MASM metadata covers each stub's local allocation only; all callbacks are
   `noexcept`, expected faults are contained and unexpected failures fast-fail.
-- [x] Freeze the 96-byte envelope v1, exact length, store kind, codec/sentinel,
-  schema and payload SHA-256 fields plus deterministic D2S/D2I inner preflight.
+- [x] Historical prototype froze the 96-byte envelope v1, exact length, store
+  kind, codec/sentinel, schema and payload SHA-256 fields plus deterministic
+  D2S/D2I inner preflight.
 - [x] Freeze canonical schema descriptor v1 with strict UTF-8 `Stat`, physical
   ordinal, normalized semantic flags, current v105 save fields, resolved
   references and effective `stuff`; `*ID`, legacy and display-only fields are
@@ -318,9 +326,9 @@
   all three unreachable legacy fields leave the descriptor unchanged;
   wrong schema, truncation, trailing bytes, mixed D2I sectors and payload hash
   corruption; builders leave output unchanged on rejection.
-- [x] Disconnected whole-store policy passes every non-target object through,
-  rejects failed/short target reads and prepares valid target unwrap/wrap only
-  after the complete envelope contract passes.
+- [x] Current whole-store policy passes every non-target object through,
+  rejects failed/short target reads, validates complete standard D2S/D2I
+  targets, and rejects the retired outer envelope at the runtime boundary.
 - [x] Recover the exact runtime `Stat` sequence from `DataTables+0x1270` through
   governed count/name functions and copy every linker-owned name immediately.
   Stage the Classic/base and expansion captures with `SchemaReady=false`, then
@@ -331,14 +339,35 @@
 - [x] Treat a non-zero changed lifecycle revision as an opaque token rather
   than assuming numeric monotonicity, and make listener unregister race-safe
   with an atomic `Stopping` state plus a stable callback token.
-- [x] Hold a non-blocking shared schema lease from the targeted native buffer
-  snapshot through read replacement or atomic write commit; if reload owns the
-  exclusive lock, reject without waiting or committing.
+- [x] Hold a non-blocking shared schema lease across targeted native buffer
+  snapshot and validation; if reload owns the exclusive lock, reject without
+  waiting or delegating a write.
 - [x] Reject a divergent schema reload fail-closed; an identical reload reuses
   the immutable published snapshot without a sidecar or generated manifest.
-- [x] Pure policy and native-adapter fixtures reject vanilla, malformed and
-  schema-mismatched target stores before replacing the native payload buffer.
-- [ ] Disposable D2S and shared-stash fixtures round-trip twice.
+- [x] The first disposable write with the envelope candidate produced an exact
+  499-byte file: 96-byte ISC12 envelope plus a valid 403-byte D2S. D2RLoader
+  1.2 nevertheless rejected it at the frontend as `invalid-character`; this is
+  the runtime evidence that retired the outer envelope.
+- [x] Vincent selected standard native D2S/D2I containers, D2RLoader `.d2rl`
+  environment warnings, mandatory backups, new characters or future external
+  migration. ISC12 does not promise a hard block against deliberate misuse.
+- [x] Pure policy and native-adapter fixtures accept valid standard target
+  stores, reject malformed or retired-envelope targets, preserve native read
+  storage, and delegate valid writes through D2RCore's environment pair.
+- [x] Execute a standard-container disposable create/save/reload and confirm
+  the `.d2rl` sidecar plus accepted read/delegated-write diagnostics. The
+  `Iiscxiirawtest` Amazon was created as a native 403-byte D2S, appeared in the
+  frontend, entered the Rogue Encampment, saved to a 1,297-byte D2S plus a
+  6,261-byte `.d2rl`, then re-entered gameplay. The standard-container reader
+  and writer reported `error=0/0`; the full D2S carries marker bytes `67 66` at
+  `0x341`.
+- [x] Disposable D2S fixtures serialize IDs 512 and 4094 with values 12 and
+  94, preserve both through two cold save/reload cycles, and remain accepted by
+  the standard-container reader. A controlled shared-stash D2I grows from
+  68,216 to 68,307 bytes after moving a socketed Gothic Plate into it; SHA-256
+  `7375F2F7CB2DAC3178853397D5A7FCE6782F5B26220A0980995261C76E96507F`
+  remains unchanged through a full process restart, the armor reappears and
+  its real three-node socket tree is captured again.
 
 ## Runtime and gameplay
 
@@ -356,28 +385,62 @@
   governed ledger `VALID` at 193 sites / 14 groups and every added signature
   unique, with 20 mutable sites, 84 differing slots, 71 witnesses and zero
   native publication.
-- [x] Current G9-A plus startup-publication source/static gate: two full Release
-  `/W4 /WX` builds and CTest `5/5` pass; the byte-identical 445,952-byte
-  governed DLL SHA-256 is
+- [x] Historical outer-envelope G9-A plus startup-publication source/static
+  gate: two full Release `/W4 /WX` builds and CTest `5/5` passed; the
+  byte-identical 445,952-byte governed DLL SHA-256 was
   `EFCA4EBAECDC7E0EF7BE70D2BE741FD7D73DED0ACA85873507CCA2D2B625F3DB`; the
   ledger is `VALID` at 211 sites / 15 groups and the canonical codec transaction
   has 24 mutable sites, 102 mutations and 77 witnesses.
+- [x] Current standard-container source/static gate: two full Release `/W4 /WX`
+  builds and CTest `5/5` pass; both 435,712-byte DLLs have SHA-256
+  `E7167627F3577C4F2A7222BBD81D3D2343874A4BBFF94DE008AA86F6ACC4F568`;
+  the ledger remains `VALID` at 211 sites / 15 groups.
+- [x] Final G9-invariant candidate: two reproducible Release builds, the main
+  build and the deployed DLL are byte-identical at 446,464 bytes, SHA-256
+  `1311F1C4BE44B0918F34C32007C3A19D35D240D8B72DCAD8C1853EEE53EC11B5`;
+  CTest remains `5/5`. The invariant is exactly
+  `childTemporaryFlags = parentTemporaryFlags | 0x08`.
 - [x] Isolated full-stack mod-local cold start on D2R 3.3.93847 and D2RLoader
   1.2 admitted every D2RCore provider and live unwind contract; published
   G0/G10/G9/G1-G4; compiled 190 TXT tables; selected RotW ItemStatCost revision
   1 with `rows=400`, `G0-builds=2` and `SchemaReady=true`; and reached
   `D2R startup complete`. The stack reported 36 loaded plugins, all five
   eezstreet DLLs, 17 patches and only two known unrelated mod-local failures.
+- [x] Cold-start the current exact standard-container DLL
+  `E7167627…CC4F568` with the same full stack: 36 plugins loaded, all five
+  eezstreet DLLs, 17 patches, the two known unrelated mod-local failures,
+  authoritative 400-row schema published and `D2R startup complete`.
+- [x] Execute create/save/reload on that exact DLL. The initial native
+  header-only D2S was accepted before schema publication, Save & Exit produced
+  the full D2S and D2RLoader environment sidecar, and the same character
+  reloaded into the Rogue Encampment with ISC12 and the complete stack active.
+- [x] Leave the reloaded session active for a bounded soak: repeated 1,297-byte
+  D2S and 68,216-byte standard shared-stash D2I writes continue at the native
+  cadence with `error=0/0`. This is write-path evidence, not a controlled D2I
+  read/two-cycle fixture.
 - [x] Complete-stack mod-local cold start.
-- [ ] Complete-stack global cold start.
-- [ ] Live 0x9C/0x9D root/descendant, overflow, reentry, backpressure and
-  coexistence cases.
-- [ ] Disposable new-save gameplay and save/reload matrix.
+- [x] Complete-stack global cold start with the same DLL and TOML: `scope=global`,
+  standard D2S/D2I reads accepted, 36 plugins loaded, all five eezstreet DLLs,
+  17 patches and only the same two known unrelated failures. A real three-node
+  G9 tree passes before the pair is returned to mod-local scope.
+- [x] Live 0x9C/0x9D root/descendant, overflow, reentry, bounded backpressure
+  and coexistence cases. Real 0x9C and 0x9D transactions include a socketed
+  three-node tree with `captured=3`, `queued=3`, `staging-error=0` and
+  `flush-error=0`. The startup self-test reports `accepted-tree=3/3`,
+  `overflow=zero-callback` and `flush-reentry=one-callback-then-fatal`. The
+  native queue returns `void`; zero-call rejection is guaranteed before flush,
+  while a failure after the first real queue call is terminal and not
+  rollback-capable.
+- [x] Initial disposable new-save gameplay and one save/reload cycle.
+- [x] Second D2S round-trip, controlled shared-stash D2I fixture and serialized
+  extended-stat fixtures 512/4094.
 - [ ] Matching host/joiner passes; mismatches fail closed.
 
-Mod-local ISC12 publication and schema lifecycle validation have run. No
-persistence execution, real save, functional 0x9C/0x9D item case, gameplay,
-global-scope or multiplayer validation has run. The next gate is the disposable
-0x9C/0x9D/overflow/reentry/backpressure matrix followed by clean-sheet
-save/reload; G5–G8 and the fixed-byte packet census remain required before any
-complete-network claim.
+Mod-local and global publication, the schema lifecycle, native character
+creation, standard D2S/D2I persistence, two cold D2S cycles, serialized IDs 512
+and 4094, real 0x9C/0x9D socket-tree capture, overflow/reentry containment and
+complete-stack coexistence have run on disposable fixtures. The runtime profile,
+assert-dialog setting and original shared stash were restored byte-for-byte
+after evidence capture. Multiplayer host/joiner plus mismatch rejection remain
+open; G5-G8 and the fixed-byte packet census remain required before any
+complete-network claim or public release.

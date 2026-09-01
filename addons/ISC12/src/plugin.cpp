@@ -609,9 +609,9 @@ auto ValidateFoundationFingerprint() noexcept -> bool {
                     "WriteD2sFileWithEnvironment and "
                     "CloseD2sFileWithEnvironment providers, their complete "
                     "bodies, unwind contracts and native file-I/O "
-                    "forwarders. Non-managed stores retain the pair; ISC12 "
-                    "envelope saves use the atomic managed path and keep "
-                    "environment-sidecar composition as an open gate.");
+                    "forwarders. ISC12 standard-container saves retain the "
+                    "native pair so D2RLoader can compose environment "
+                    "sidecars normally.");
             }
             continue;
         }
@@ -867,6 +867,38 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
 }
 
 D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
+    if (Settings.diagnostics && Context) {
+        const auto runtimeStatus = GetLoaderRuntimeStatus();
+        char message[512]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "ISC12 diagnostics: final runtime counters; roots-9C=%llu; "
+            "roots-9D=%llu; transactions=%llu/%llu; captured-9C=%llu; "
+            "captured-9D=%llu; queued=%llu; reads=%llu/%llu; "
+            "writes-delegated=%llu; writes-rejected=%llu.",
+            static_cast<unsigned long long>(runtimeStatus.fullItemRoot9C),
+            static_cast<unsigned long long>(runtimeStatus.fullItemRoot9D),
+            static_cast<unsigned long long>(
+                runtimeStatus.fullItemTransactionsAccepted),
+            static_cast<unsigned long long>(
+                runtimeStatus.fullItemTransactionsRejected),
+            static_cast<unsigned long long>(
+                runtimeStatus.fullItemPacketsCaptured9C),
+            static_cast<unsigned long long>(
+                runtimeStatus.fullItemPacketsCaptured9D),
+            static_cast<unsigned long long>(
+                runtimeStatus.fullItemPacketsQueued),
+            static_cast<unsigned long long>(
+                runtimeStatus.persistenceReadsAccepted),
+            static_cast<unsigned long long>(
+                runtimeStatus.persistenceReadsRejected),
+            static_cast<unsigned long long>(
+                runtimeStatus.persistenceWritesDelegated),
+            static_cast<unsigned long long>(
+                runtimeStatus.persistenceWritesRejected));
+        Context->LogInfo(message);
+    }
     UnregisterSchemaLifecycleListener();
     ShutdownLoaderExtension();
     ReleaseProcessMutex();

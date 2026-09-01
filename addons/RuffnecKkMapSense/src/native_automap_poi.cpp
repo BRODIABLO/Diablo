@@ -1,7 +1,6 @@
 #include "native_automap_poi.hpp"
 
 #include "mapsense_data_catalog.hpp"
-#include "reveal_engine.hpp"
 
 #include <D2RLPlugin/api.h>
 
@@ -12,7 +11,6 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <limits>
 #include <memory>
 #include <span>
@@ -100,8 +98,6 @@ std::array<AutomapExitLabelDefinition, MaximumAutomapExitLabels>
 std::size_t ExitDefinitionCount{};
 Detail::AutomapWaypointDefinitionCatalog<MaximumAutomapWaypointLabels>
     WaypointDefinitions{};
-Detail::AutomapLevelDefinitionCatalog<MaximumAutomapLevelLabels>
-    LevelDefinitions{};
 std::array<TrackedSpecialChestPreset, MaximumAutomapSpecialChestPresets>
     SpecialChestPresets{};
 std::array<TrackedSpecialChestPreset, MaximumAutomapSpecialChestPresets>
@@ -136,20 +132,12 @@ std::atomic<std::uint64_t> Projected{};
 std::atomic<std::uint64_t> ProjectionRejected{};
 std::atomic<std::uint64_t> ContentionWaits{};
 std::atomic<std::uint64_t> AccessFaults{};
-const D2RL::PluginContext* DiagnosticContext{};
-bool DiagnosticsEnabled{};
-std::size_t LastDiagnosticExitCount{(std::numeric_limits<std::size_t>::max)()};
-std::size_t LastDiagnosticWaypointCount{(std::numeric_limits<std::size_t>::max)()};
-std::size_t LastDiagnosticLevelCount{(std::numeric_limits<std::size_t>::max)()};
-std::uint64_t LastProjectionDiagnosticTick{};
 
 static_assert(UnitHashTypeStride == 0x400U);
 static_assert(std::is_standard_layout_v<AutomapExitLabelDefinition>);
 static_assert(std::is_trivially_copyable_v<AutomapExitLabelDefinition>);
 static_assert(std::is_standard_layout_v<AutomapWaypointLabelDefinition>);
 static_assert(std::is_trivially_copyable_v<AutomapWaypointLabelDefinition>);
-static_assert(std::is_standard_layout_v<AutomapLevelLabelDefinition>);
-static_assert(std::is_trivially_copyable_v<AutomapLevelLabelDefinition>);
 static_assert(std::is_standard_layout_v<AutomapSpecialChestDefinition>);
 static_assert(std::is_trivially_copyable_v<AutomapSpecialChestDefinition>);
 static_assert(std::is_standard_layout_v<TrackedSpecialChestPreset>);
@@ -231,7 +219,6 @@ void ClearCurrentLevelLocked() noexcept {
 void ClearAllPoiLocked() noexcept {
     ExitDefinitionCount = 0U;
     WaypointDefinitions.Clear();
-    LevelDefinitions.Clear();
     SpecialChestPresetCount = 0U;
     ClearCurrentLevelLocked();
 }
@@ -243,8 +230,6 @@ void ClearAllPoiLocked() noexcept {
             return AutomapPoiCollection::ExitLabels;
         case AutomapPoiKind::WaypointLabel:
             return AutomapPoiCollection::WaypointLabels;
-        case AutomapPoiKind::LevelLabel:
-            return AutomapPoiCollection::ExitLabels;
         case AutomapPoiKind::ShrineIcon:
         case AutomapPoiKind::ShrineLabel:
             return AutomapPoiCollection::ShrineLabels;
@@ -694,10 +679,6 @@ void ProjectWaypointLabelsLocked(
     if (!HasCollection(mask, AutomapPoiCollection::WaypointLabels)) return;
     for (const auto& definition : WaypointDefinitions.Definitions()) {
         if (count >= ProjectedSnapshots.size()) return;
-        if (RevealActForLevelId(definition.levelId)
-                != RevealActForLevelId(pass.currentLevelId)) {
-            continue;
-        }
         NavigationNativePoint client{};
         if (!ConvertNavigationSubtileToClientCoordinates(
                 definition.subtileX,
@@ -722,72 +703,6 @@ void ProjectWaypointLabelsLocked(
             .nativeHeight = pass.nativeHeight,
             .sourceId = definition.levelId,
             .kind = AutomapPoiKind::WaypointLabel,
-        };
-    }
-}
-
-[[nodiscard]] auto HasExactWaypointLabelLocked(
-        std::int32_t levelId) noexcept -> bool {
-    for (const auto& definition : WaypointDefinitions.Definitions()) {
-        if (definition.levelId == levelId) return true;
-    }
-    return false;
-}
-
-[[nodiscard]] auto HasExactExitLabelLocked(
-        std::int32_t levelId) noexcept -> bool {
-    for (std::size_t index = 0U; index < ExitDefinitionCount; ++index) {
-        const auto& definition = ExitDefinitions[index];
-        if (definition.sourceLevelId == levelId
-            || definition.targetLevelId == levelId) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void ProjectLevelLabelsLocked(
-        const NativeAutomapPoiPass& pass,
-        std::uint32_t mask,
-        std::size_t& count) noexcept {
-    if (!HasCollection(mask, AutomapPoiCollection::ExitLabels)) return;
-    for (const auto& definition : LevelDefinitions.Definitions()) {
-        if (count >= ProjectedSnapshots.size()) return;
-        if (RevealActForLevelId(definition.levelId)
-                != RevealActForLevelId(pass.currentLevelId)) {
-            continue;
-        }
-        if (!ShouldProjectAutomapLevelLabel(
-                definition.levelId,
-                pass.currentLevelId,
-                HasExactWaypointLabelLocked(definition.levelId),
-                HasExactExitLabelLocked(definition.levelId))) {
-            continue;
-        }
-        NavigationNativePoint client{};
-        if (!ConvertNavigationSubtileToClientCoordinates(
-                definition.subtileX,
-                definition.subtileY,
-                client)) {
-            ProjectionRejected.fetch_add(1U, std::memory_order_relaxed);
-            continue;
-        }
-        NavigationNativePoint projected{};
-        if (!ProjectPoint(pass, client.x, client.y, projected)) {
-            ProjectionRejected.fetch_add(1U, std::memory_order_relaxed);
-            continue;
-        }
-        ProjectedSnapshots[count++] = {
-            .stableId = definition.stableId,
-            .sessionGeneration = SessionGeneration,
-            .revision = Revision,
-            .levelId = definition.levelId,
-            .x = projected.x,
-            .y = projected.y,
-            .nativeWidth = pass.nativeWidth,
-            .nativeHeight = pass.nativeHeight,
-            .sourceId = definition.levelId,
-            .kind = AutomapPoiKind::LevelLabel,
         };
     }
 }
@@ -1164,7 +1079,7 @@ void ResetCounters() noexcept {
 
 auto InitializeNativeAutomapPoi(
         const D2RL::PluginContext* context,
-        bool diagnostics) noexcept -> bool {
+        bool) noexcept -> bool {
     if (!D2RL::HasContext(context)
             || context->apiVersion != D2RL_PLUGIN_API_VERSION
             || context->exeBase == 0U) {
@@ -1191,12 +1106,6 @@ auto InitializeNativeAutomapPoi(
     GetUnitRoom = At<GetNativePointerFn>(GetUnitRoomRva);
     GetDrlgRoomLevelId = At<GetLevelIdFn>(GetDrlgRoomLevelIdRva);
     Catalog.reset();
-    DiagnosticContext = context;
-    DiagnosticsEnabled = diagnostics;
-    LastDiagnosticExitCount = (std::numeric_limits<std::size_t>::max)();
-    LastDiagnosticWaypointCount = (std::numeric_limits<std::size_t>::max)();
-    LastDiagnosticLevelCount = (std::numeric_limits<std::size_t>::max)();
-    LastProjectionDiagnosticTick = 0U;
     CollectionMask.store(0U, std::memory_order_release);
     SessionGeneration = 0U;
     LevelId = UnknownNavigationLevelId;
@@ -1238,8 +1147,6 @@ void ShutdownNativeAutomapPoi() noexcept {
     GetUnitClientY = nullptr;
     GetUnitRoom = nullptr;
     GetDrlgRoomLevelId = nullptr;
-    DiagnosticContext = nullptr;
-    DiagnosticsEnabled = false;
 }
 
 void ResetNativeAutomapPoiSession(
@@ -1341,114 +1248,6 @@ auto PublishNativeAutomapExitLabels(
     return true;
 }
 
-auto MergeNativeAutomapExitLabelFragments(
-        std::uint64_t sessionGeneration,
-        std::int32_t levelId,
-        const AutomapExitLabelDefinition* definitions,
-        std::size_t definitionCount) noexcept -> bool {
-    if (levelId <= 0 || definitionCount > ExitDefinitions.size()
-            || (definitionCount != 0U && definitions == nullptr)) {
-        return false;
-    }
-    for (std::size_t index = 0U; index < definitionCount; ++index) {
-        if (definitions[index].sourceLevelId != levelId
-                || definitions[index].targetLevelId <= 0) {
-            return false;
-        }
-    }
-    StateLockGuard lock(true);
-    if (SessionGeneration != sessionGeneration) return false;
-
-    std::size_t replacementCount{};
-    for (std::size_t existing = 0U;
-            existing < ExitDefinitionCount;
-            ++existing) {
-        if (ExitDefinitions[existing].sourceLevelId == levelId) continue;
-        if (replacementCount >= ExitDefinitionScratch.size()) return false;
-        ExitDefinitionScratch[replacementCount++] = ExitDefinitions[existing];
-    }
-
-    const auto mergeOwnerFragment = [&](
-            const AutomapExitLabelDefinition& incoming) noexcept -> bool {
-        for (std::size_t existing = 0U;
-                existing < replacementCount;
-                ++existing) {
-            auto& retained = ExitDefinitionScratch[existing];
-            if (retained.sourceLevelId != levelId
-                || !SameAutomapExitOwnerFragment(retained, incoming)) {
-                continue;
-            }
-            if (PreferAutomapExitOwnerFragment(incoming, retained)) {
-                retained = incoming;
-            }
-            return true;
-        }
-        if (replacementCount >= ExitDefinitionScratch.size()) return false;
-        ExitDefinitionScratch[replacementCount++] = incoming;
-        return true;
-    };
-
-    for (std::size_t existing = 0U;
-            existing < ExitDefinitionCount;
-            ++existing) {
-        if (ExitDefinitions[existing].sourceLevelId == levelId
-            && !mergeOwnerFragment(ExitDefinitions[existing])) {
-            return false;
-        }
-    }
-    for (std::size_t incoming = 0U;
-            incoming < definitionCount;
-            ++incoming) {
-        if (!mergeOwnerFragment(definitions[incoming])) return false;
-    }
-
-    // A canonical facade can arrive after several passive collision fragments.
-    // Once present, collapse every definition for that directed level pair to
-    // the canonical sample without affecting other targets or physical seams.
-    for (std::size_t canonical = 0U;
-            canonical < replacementCount;
-            ++canonical) {
-        const auto anchor = ExitDefinitionScratch[canonical];
-        if (anchor.sourceLevelId != levelId
-            || !anchor.canonicalLevelPairAnchor) {
-            continue;
-        }
-        std::size_t candidate{};
-        while (candidate < replacementCount) {
-            if (candidate == canonical
-                || ExitDefinitionScratch[candidate].sourceLevelId
-                    != anchor.sourceLevelId
-                || ExitDefinitionScratch[candidate].targetLevelId
-                    != anchor.targetLevelId) {
-                ++candidate;
-                continue;
-            }
-            for (std::size_t move = candidate + 1U;
-                    move < replacementCount;
-                    ++move) {
-                ExitDefinitionScratch[move - 1U] =
-                    ExitDefinitionScratch[move];
-            }
-            --replacementCount;
-            if (candidate < canonical) --canonical;
-        }
-    }
-
-    if (replacementCount != 0U) {
-        std::copy_n(
-            ExitDefinitionScratch.begin(),
-            replacementCount,
-            ExitDefinitions.begin());
-    }
-    ExitDefinitionCount = replacementCount;
-    ++Revision;
-    ClearProjectionLocked();
-    ExitDefinitionsPublished.fetch_add(
-        definitionCount,
-        std::memory_order_relaxed);
-    return true;
-}
-
 auto ReplaceNativeAutomapExitLabels(
         std::uint64_t sessionGeneration,
         const AutomapExitLabelDefinition* definitions,
@@ -1501,35 +1300,6 @@ auto PublishNativeAutomapWaypointLabels(
             definitions,
             definitionCount};
     if (!WaypointDefinitions.ReplaceOwner(levelId, incoming)) return false;
-    ++Revision;
-    ClearProjectionLocked();
-    return true;
-}
-
-auto PublishNativeAutomapLevelLabels(
-        std::uint64_t sessionGeneration,
-        std::int32_t levelId,
-        const AutomapLevelLabelDefinition* definitions,
-        std::size_t definitionCount) noexcept -> bool {
-    if (levelId <= 0 || definitionCount > 1U
-            || (definitionCount != 0U && definitions == nullptr)) {
-        return false;
-    }
-    for (std::size_t index = 0U; index < definitionCount; ++index) {
-        if (definitions[index].levelId != levelId
-                || definitions[index].subtileX < 0
-                || definitions[index].subtileY < 0) {
-            return false;
-        }
-    }
-    StateLockGuard lock(true);
-    if (SessionGeneration != sessionGeneration) return false;
-    const auto incoming = definitionCount == 0U
-        ? std::span<const AutomapLevelLabelDefinition>{}
-        : std::span<const AutomapLevelLabelDefinition>{
-            definitions,
-            definitionCount};
-    if (!LevelDefinitions.ReplaceOwner(levelId, incoming)) return false;
     ++Revision;
     ClearProjectionLocked();
     return true;
@@ -1750,7 +1520,6 @@ void ObserveNativeAutomapPoiPass(
     std::size_t count{};
     ProjectExitLabelsLocked(pass, mask, count);
     ProjectWaypointLabelsLocked(pass, mask, count);
-    ProjectLevelLabelsLocked(pass, mask, count);
     ProjectTrackedObjectsLocked(pass, mask, count);
     ProjectSpecialChestPresetsLocked(pass, mask, count);
     ProjectedSnapshotCount = count;
@@ -1758,55 +1527,6 @@ void ObserveNativeAutomapPoiPass(
     PublishedProjectionTick.store(now, std::memory_order_release);
     PublishedSnapshotCount.store(count, std::memory_order_release);
     Projected.fetch_add(count, std::memory_order_relaxed);
-    if (DiagnosticsEnabled && DiagnosticContext != nullptr) {
-        std::size_t visibleExits{};
-        std::size_t visibleWaypoints{};
-        std::size_t visibleLevels{};
-        for (std::size_t index = 0U; index < count; ++index) {
-            switch (ProjectedSnapshots[index].kind) {
-                case AutomapPoiKind::ExitLabel:
-                    ++visibleExits;
-                    break;
-                case AutomapPoiKind::WaypointLabel:
-                    ++visibleWaypoints;
-                    break;
-                case AutomapPoiKind::LevelLabel:
-                    ++visibleLevels;
-                    break;
-                default:
-                    break;
-            }
-        }
-        const auto changed = visibleExits != LastDiagnosticExitCount
-            || visibleWaypoints != LastDiagnosticWaypointCount
-            || visibleLevels != LastDiagnosticLevelCount;
-        if (changed && (LastProjectionDiagnosticTick == 0U
-                || now < LastProjectionDiagnosticTick
-                || now - LastProjectionDiagnosticTick >= 100U)) {
-            char message[384]{};
-            std::snprintf(
-                message,
-                sizeof(message),
-                "MapSense label projection: session=%llu level=%d definitions=exits/%zu-waypoints/%zu-levels/%zu visible=exits/%zu-waypoints/%zu-levels/%zu clip=%d,%d,%d,%d.",
-                static_cast<unsigned long long>(SessionGeneration),
-                pass.currentLevelId,
-                ExitDefinitionCount,
-                WaypointDefinitions.Definitions().size(),
-                LevelDefinitions.Definitions().size(),
-                visibleExits,
-                visibleWaypoints,
-                visibleLevels,
-                pass.clipLeft,
-                pass.clipTop,
-                pass.clipWidth,
-                pass.clipHeight);
-            DiagnosticContext->LogInfo(message);
-            LastDiagnosticExitCount = visibleExits;
-            LastDiagnosticWaypointCount = visibleWaypoints;
-            LastDiagnosticLevelCount = visibleLevels;
-            LastProjectionDiagnosticTick = now;
-        }
-    }
 }
 
 auto AcquireNativeAutomapPoiSnapshots(

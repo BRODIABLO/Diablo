@@ -1446,8 +1446,10 @@ confiance explicite.
   `0x37F983`. Elles passent les widths `9→12`, les sentinelles
   `0x1FF→0xFFF` et conservent le seed `previousStatId = -1`. Les entrées
   decoder/serializer restent une preuve statique d'identité et d'ownership au
-  ledger, jamais des témoins runtime du groupe, car `plugin-items` peut déjà
-  les hooker. Le CALL intérieur du lecteur suivant reste toutefois exact :
+  ledger, jamais des témoins runtime du groupe; le plan ISC12 ne les revendique
+  pas. Le prototype RuffnecKk ExtendedItemStats et son build de fork RuffDood
+  les ont historiquement hookées, sans que cela soit attribuable au PluginPack
+  officiel eezstreet. Le CALL intérieur du lecteur suivant reste toutefois exact :
   `0x37B7DC` résout le thunk gouverné `0xA1B6C0`; toute redirection est rejetée
   par le préflight avant la première écriture.
 
@@ -1475,7 +1477,7 @@ confiance explicite.
   Le troisième site mutable est le CALL de copie `0x61CF90`, gardé avant B.
 - Les seize signatures de mutation G2–G4 ont chacune exactement un match dans
   `.text`. Avec les quatre fenêtres G1, le plan canonique hors runtime contient
-  quatre groupes, 20 fenêtres mutables exactes, 49 slots gouvernés et 51 témoins
+  quatre groupes, 20 fenêtres mutables exactes, 49 slots gouvernés et 57 témoins
   runtime inchangés. Il préflight le set G1–G4 complet avant la première
   écriture et classe toute écriture ou flush incertain après ce point comme un
   commit exigeant un cold restart. Aucune de ces mutations n'est publiée.
@@ -1517,7 +1519,7 @@ confiance explicite.
   totales ne remplacent pas le guard du flag d'overflow. Avant publication, la
   façade devra réserver le relais pour la vie du processus avant le premier
   write codec. `CommitPreparedCodecPatchSet` exige maintenant un
-  `CodecPublicationQuiescenceLease` RAII opaque et vivant pendant chaque
+  `NativePublicationQuiescenceLease` RAII opaque et vivant pendant chaque
   fingerprint, write et flush. Le SDK loader épinglé ne fournit aucun issuer
   de production et aucun caller loader n'existe. Une perte du lease avant toute
   écriture refuse sans mutation; après la première tentative, elle impose un
@@ -1971,3 +1973,49 @@ confiance explicite.
   Son prochain cold start attend seulement que la session BKVince humaine
   active libère le runtime; aucune sauvegarde ni action gameplay ISC12 n'a
   encore été exécutée.
+
+## ISC12 — disposition runtime du conteneur persistant
+
+- Le premier write réel du candidat à enveloppe a produit exactement 499
+  octets : 96 octets d'enveloppe ISC12 suivis d'un D2S valide de 403 octets.
+  Le writer et la primitive atomique ont donc rempli leur contrat local.
+- D2RLoader 1.2 a néanmoins annulé le lancement au frontend avec
+  `route=prepare result=invalid-character`. Une enveloppe externe opaque est
+  incompatible avec ce trajet même lorsque son payload interne est valide.
+- La DLL runtime conserve désormais les conteneurs D2S/D2I standards. Le hook
+  reader valide le buffer inchangé; le hook writer valide puis retourne à la
+  continuation native avant `CREATE_ALWAYS`, afin que le couple D2RCore
+  writer/closer compose normalement `.d2rl`, backups et environnement.
+- Vincent accepte la persistance native non atomique et fixe le clean-sheet
+  comme contrat de support : nouveau personnage ou migration externe future,
+  backups obligatoires, aucun chargement direct d'une save vanilla/non-ISC12.
+  L'enveloppe et l'atomic writer restent des composants unit-testés réservés à
+  l'outillage de migration.
+
+## 2026-09-01 — ISC12 G9 : invariant du walker et qualification runtime finale
+
+- Le désassemblage gouverné du walker socketé `0x481B50` ferme l'invariant
+  exact des descendants : le producer enfant 0x9D reçoit les flags du parent
+  avec le bit `0x08` forcé, soit
+  `childTemporaryFlags = parentTemporaryFlags | 0x08`; l'action vaut `0x12`,
+  le parent est l'item actif et gamble vaut zéro. La validation précédente par
+  simple égalité de flags était donc trop stricte et a été corrigée.
+- Le candidat final ajoute un self-test runtime du transactionnel G9. Il
+  atteste un arbre accepté 3/3, un dépassement de 64 nœuds rejeté avant tout
+  callback de queue, et une réentrance pendant flush contenue après exactement
+  un callback avec passage terminal en `Fatal`. Le sink `0x4817F0` retourne
+  `void`; aucun rollback n'est revendiqué après le début d'un flush réel.
+- Des transactions gameplay réelles ferment les deux racines 0x9C et 0x9D.
+  Une Gothic Plate socketée avec deux runes produit un arbre de trois nœuds :
+  `nodes=3`, `captured=3`, `queued=3`, `staging-error=0`,
+  `flush-error=0`. Les mêmes preuves repassent en portée globale.
+- Le candidat final mesure 446 464 octets et vaut
+  `1311F1C4BE44B0918F34C32007C3A19D35D240D8B72DCAD8C1853EEE53EC11B5`.
+  Deux builds Release reproductibles, la DLL déployée et CTest `5/5`
+  concordent. Les cold starts mod-local, global puis mod-local conservent 36
+  plugins chargés, les cinq eezstreet et 17 patches.
+- Les fixtures D2S sérialisent les IDs 512/4094 avec les valeurs 12/94 et les
+  préservent sur deux cycles froids. Le D2I contrôlé de 68 307 octets conserve
+  le SHA-256 `7375F2F7…E96507F` après extinction complète, réaffiche l'armure et
+  rejoue son arbre 3/3. Ces preuves ferment le cœur D2S/D2I/G9; le multijoueur,
+  G5–G8 et le census fixed-byte restent hors de cette promotion.

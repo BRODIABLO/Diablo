@@ -178,32 +178,43 @@ G10-B P3b supplies exact reader `0x9FC654` and writer `0x9F95A2` mid-hooks to
 the canonical startup transaction. Both target objects are classified by their exact terminal
 name. A target reader must report the current native success value and an
 announced length equal to the actual DWORD byte count before ISC12 snapshots
-the buffer. It then validates and unwraps the complete versioned envelope,
-schema fingerprint and D2S/D2I inner payload before replacing native storage.
+the buffer. It then validates the complete standard D2S/D2I container without
+replacing native storage.
 Every target rejection clears the native buffer and state before reusing the
 governed close/unlock/status-6 continuation; uncertain cleanup fast-fails.
 
-The target writer converts the already-canonical native UTF-8 path exactly,
-builds the envelope, and reaches the final destination only through the
-ISC12-owned sibling-temp, full-write, flush, atomic replace and rollback
-transaction. Its native handle slot is initialized to `INVALID_HANDLE_VALUE`
-before ISC12 selects the existing committed or rejected continuation. A failed
-rollback that cannot prove preservation of the destination is terminal.
+The target writer converts the already-canonical native UTF-8 path exactly and
+validates the complete standard D2S/D2I buffer. Success returns to the native
+continuation before `CREATE_ALWAYS`; D2RCore therefore retains ownership of the
+physical write and of the paired environment close. This preserves D2RLoader's
+normal `.d2rl` sidecar, backup and environment-capture composition. Native
+persistence remains non-atomic; Vincent accepts that product tradeoff in favor
+of loader integration and mandatory user backups.
 
-For targeted stores, a non-blocking shared `PublishedSchemaReadLease` spans the
-native buffer snapshot and the entire adapter result: buffer replacement on
-read, and envelope construction plus atomic destination commit on write. A
-concurrent reload that already owns the exclusive schema lock therefore causes
-immediate rejection instead of a wait or a hash-to-commit TOCTOU. This lease
-does not yet prove that the pre-existing native `state-1` buffer was originally
-serialized under the same schema before the physical writer hook; that requires
-either native single-generation proof or a generation captured at buffer
-finalization and remains part of the save/reload gate.
+The physical reader runs during frontend enumeration and may precede
+`DataTablesLoaded`; it therefore performs only complete, schema-independent
+standard-container validation and does not require `SchemaReady`. Semantic
+player-stat validation remains in G2–G4 after authoritative schema publication.
+For targeted writes, a non-blocking shared `PublishedSchemaReadLease` spans the
+native buffer snapshot and validation result. A concurrent reload that already
+owns the exclusive schema lock therefore causes immediate rejection instead of
+a wait. The successful disposable save/reload proves this path for one native
+generation, but does not yet establish a general provenance invariant for every
+pre-existing `state-1` buffer.
+
+The 96-byte outer envelope and sibling-temp atomic writer remain disconnected,
+unit-tested migration-tool building blocks. They are intentionally absent from
+the runtime DLL: the first live envelope write was structurally correct, but
+D2RLoader 1.2 rejected the wrapped file in its frontend as `invalid-character`
+before the game could load it.
 
 The persistence relay is process-lifetime RX with separate RW state and bounded
 rundown. Its reader/writer seams are part of the startup transaction. The
 qualified mod-local cold start published both seams with the canonical set and
-reached complete startup; their first persistence execution remains NOT RUN.
+reached complete startup. The retired envelope writer executed once. The
+standard-container path then accepted a native 403-byte header-only D2S,
+delegated its 1,297-byte full save and D2RLoader's 6,261-byte `.d2rl` sidecar,
+and reloaded the character into gameplay with `error=0/0` diagnostics.
 The PE unwind records
 describe only each MASM
 stub's local `0x20`/`0x30` allocation. Because entry is a tail-jump from the
@@ -372,20 +383,33 @@ and governed `RET`. Both lookups must report identical BeginAddress, EndAddress
 and UnwindData, with EndAddress inside the image and the function range covering
 the complete epilogue. The rehydrated static `.pdata` is protected and
 non-authoritative; only a live lookup can attest this contract. The qualified
-cold start accepted the live PDATA/XDATA and published G9. Two Release
-`/W4 /WX` builds and CTest `5/5` pass, and the ledger remains `VALID` at 211
-sites / 15 groups. The byte-identical 445,952-byte governed DLL SHA-256 is
+cold start accepted the live PDATA/XDATA and published G9 in the previous
+445,952-byte outer-envelope candidate
 `EFCA4EBAECDC7E0EF7BE70D2BE741FD7D73DED0ACA85873507CCA2D2B625F3DB`.
-This is a publication/cold-start claim, not yet a functional item, save,
-gameplay or multiplayer claim.
+The standard-container pivot also passes two Release `/W4 /WX` builds, CTest
+`5/5`, and the unchanged `VALID` ledger at 211 sites / 15 groups. Its
+byte-identical 435,712-byte DLL SHA-256 is
+`E7167627F3577C4F2A7222BBD81D3D2343874A4BBFF94DE008AA86F6ACC4F568`.
+Its own full-stack mod-local cold start accepts the provider/unwind contracts,
+publishes the canonical surface, selects the authoritative 400-row schema and
+reaches `D2R startup complete`. Native create/save/reload and the first gameplay
+cycle are closed. The final G9-invariant candidate is 446,464 bytes with
+SHA-256
+`1311F1C4BE44B0918F34C32007C3A19D35D240D8B72DCAD8C1853EEE53EC11B5`;
+two reproducible Release builds, the deployed DLL and CTest `5/5` agree.
 
 The engineering dependency is explicit and satisfied: the bounded G1
 serializer body precedes G9 staging. The production startup caller invokes the
 prepared G0/G10/codec commit and performs the readiness step before the initial
 callback returns; the qualified cold start attests this path. Live 0x9C/0x9D,
-overflow, reentry, backpressure and coexistence validation are the next
-functional evidence gate; G5–G8 and
-the fixed-byte packet census remain separate network-completeness gates.
+overflow, reentry, bounded backpressure and coexistence now pass. The socket
+walker contract is exact: every child 0x9D producer receives
+`parentTemporaryFlags | 0x08`, action `0x12`, the active item as parent and
+gamble zero. Real 0x9C/0x9D transactions include a three-node socketed tree
+with three captures and three queue calls. The startup self-test proves an
+accepted 3/3 tree, overflow rejection with zero callback and flush reentry
+contained after one callback in `Fatal`. G5-G8, the fixed-byte packet census
+and multiplayer remain separate network-completeness gates.
 
 For historical provenance only, the six entry hooks previously audited belong
 to the RuffnecKk ExtendedItemStats prototype and an experimental RuffDood fork
@@ -437,10 +461,12 @@ G4 retargets only preview CALL `0x61CF90`; shared copy owner `0xA1E110` remains
 intact for its other callers. The no-throw wrapper calls that owner exactly
 once, after which the SaveObject is unlocked and EAX is the completed copy
 length. It then validates only `[temp,temp+N)`: D2S magic, exact v105, declared
-size, checksum, context byte at `+0xF8` below four, wrapper-required and
-validated marker `0x6667` at `+0x341`, each 12-bit ID below the immutable schema
-row count, every
-CsvParamBits/CsvBits payload, the 512-entry cap and `0xFFF`. Invalid data returns
+size, checksum and context byte at `+0xF8` below four. An exact native
+header-only length `0x193` succeeds with empty/default preview stats; every
+intermediate length through `0x341` is rejected. A full save additionally
+requires and validates marker `0x6667` at `+0x341`, each 12-bit ID below the
+immutable schema row count, every CsvParamBits/CsvBits payload, the 512-entry
+cap and `0xFFF`. Invalid data returns
 zero through the existing `cmp eax,8 / jb` edge to the exact buffer-free/false
 exit at `0x61D87D`. Native G4 never checks `0x6667` itself and may dereference a
 null ItemStatCost lookup, so neither marker nor ID validation is optional.
@@ -448,5 +474,12 @@ null ItemStatCost lookup, so neither marker nor ID validation is optional.
 All four reader/copy relays, the common RX rundown return and their RW handler
 slots are published only through the canonical coordinator; `codecReady`,
 `itemTransportReady` and persistence `operational` become true only in its
-final no-write readiness step. The qualified cold start reached that state. No
-real D2S/D2I read, write or preview payload has yet exercised those handlers.
+final no-write readiness step. The qualified cold starts reached that state in
+both mod-local and global scopes. Standard D2S fixtures containing IDs 512 and
+4094 preserve values 12 and 94 through two cold cycles. A controlled D2I
+fixture writes a socketed three-node Gothic Plate tree, remains byte-identical
+at 68,307 bytes across a full restart and is read back visibly and through G9.
+The complete stack remains 36 loaded plugins, all five eezstreet plugins and 17
+patches in both scopes. The native queue ABI returns `void`: rejection before
+flush is all-or-none, but queue-side failure after the first successful call
+cannot be rolled back and therefore forces terminal containment.

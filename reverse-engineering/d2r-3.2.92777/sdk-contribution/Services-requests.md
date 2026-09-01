@@ -9,7 +9,7 @@ have these governed statuses:
 
 | Request | v4 status | Workspace consequence |
 |---|---|---|
-| Loader-owned native publication transaction | **Open** | ISC12 remains unable to publish any native mutation. The former provisional id 16 is invalid because v4 assigns it to `Http`; only D2RLoader may reserve a replacement id. |
+| Loader-owned native publication transaction | **Open, optional hardening** | ISC12 now has an experimental same-thread startup caller using the official `D2RLoaderLoadPlugin` patching model. This request remains useful for a documented reusable cross-publisher contract, but no longer blocks the isolated ISC12 runtime spike. The former provisional id 16 remains invalid because v4 assigns it to `Http`. |
 | Typed item interaction events | **Delivered for the proven V1 surfaces** | `ItemInteractionServiceV1` provides semantic `Activate` events for inventory, Cube, personal stash and the current custom page. Shared stash and authoritative gameplay remain outside V1. |
 | Atomic edits and moves for existing items | **Delivered for the supported V1 operations** | `executeExistingItemTransaction` atomically debits, edits or moves up to 64 identity-preserving items, with the container restrictions documented below. |
 | Plugin-provided service discovery | **Open** | Inter-DLL providers still require an independently versioned and unload-safe discovery contract. |
@@ -18,6 +18,22 @@ have these governed statuses:
 metadata and duplicate-Unique creation are useful v4 additions but do not close
 either remaining request. No RuffnecKk plugin was migrated as part of this
 audit.
+
+### D2RLoader 1.2 baseline — 2026-08-31
+
+The official D2RLoader `1.2.0-beta` release dated 2026-08-30 adds official D2R
+3.3 support and is the runtime baseline associated with PluginSDK v4. The v4
+SDK explicitly preserves API-v2 and API-v3 plugin compatibility, so ISC12's
+current API-v3 pin remains supported. Public v3/v4 `PluginContext`, Patch, Hook,
+Lifecycle and low-level export headers are byte-identical.
+
+The 1.2 changelog announces no NativePublication, load-phase, Patch/Hook or
+unload contract. The public service registry still ends at
+`ItemInteraction = 17`; therefore 1.2 does not close this request. Absence from
+release notes is not binary proof of private Core internals. ISC12 nevertheless
+uses the synchronous initial-load patching boundary for its disposable-profile
+runtime spike and terminates on every post-write ambiguity. The SDK/conformance
+work below remains valid as optional hardening for a later loader release.
 
 
 
@@ -39,16 +55,31 @@ numeric ID must be officially reserved upstream. IDs 16 and 17 are already
 assigned to `Http` and `ItemInteraction`; no local consumer may assume a
 replacement value.
 
-```cpp
-namespace D2RL::NativePublication {
+The following is a compilable header shape, not an assigned service-registry
+entry. It deliberately contains no numeric `ServiceId` value:
 
-enum class CallbackOutcome : std::uint32_t {
+```cpp
+#pragma once
+
+#include <D2RLPlugin/services.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <type_traits>
+
+namespace D2RL {
+
+struct PluginContext;
+
+namespace NativePublication {
+
+enum class CallbackOutcome : uint32_t {
     Committed = 0,
     Rejected = 1,
     Poisoned = 2,
 };
 
-enum class Result : std::uint32_t {
+enum class Result : uint32_t {
     Committed = 0,
     Rejected = 1,
     Poisoned = 2,
@@ -60,72 +91,233 @@ enum class Result : std::uint32_t {
     CallbackFault = 8,
 };
 
-using ValidateLeaseFn = bool (__cdecl*)(
+using ValidateLeaseFn = bool(__cdecl*)(
     const PluginContext* context,
-    std::uint64_t epoch,
-    std::uintptr_t token) noexcept;
+    uint64_t epoch,
+    uintptr_t token) noexcept;
 
-struct LeaseV1 {
-    std::uint32_t structSize;
-    std::uint32_t flags;
-    std::uint64_t epoch;
-    std::uintptr_t token;
+// Borrowed from Core. The pointer and every field expire when CallbackFn
+// returns. A plugin never releases, destroys, persists, or transfers it.
+struct LeaseViewV1 {
+    uint32_t structSize;
+    uint32_t flags;
+    uint64_t epoch;
+    uintptr_t token;
     ValidateLeaseFn validate;
 };
 
-using Callback = CallbackOutcome (__cdecl*)(
+using CallbackFn = CallbackOutcome(__cdecl*)(
     const PluginContext* context,
-    const LeaseV1* lease,
+    const LeaseViewV1* lease,
     void* userData) noexcept;
 
 struct RequestV1 {
-    std::uint32_t structSize;
-    std::uint32_t flags;
-    Callback callback;
+    uint32_t structSize;
+    uint32_t flags;
+    CallbackFn callback;
     void* userData;
 };
 
-using ExecuteFn = Result (__cdecl*)(
+inline constexpr uint32_t LeaseViewV1Size =
+    static_cast<uint32_t>(sizeof(LeaseViewV1));
+inline constexpr uint32_t LeaseViewV1RequiredSize = LeaseViewV1Size;
+inline constexpr uint32_t RequestV1Size =
+    static_cast<uint32_t>(sizeof(RequestV1));
+inline constexpr uint32_t RequestV1RequiredSize = RequestV1Size;
+
+inline auto HasLeaseViewV1Field(
+        const LeaseViewV1* lease,
+        uint32_t fieldEndOffset) noexcept -> bool {
+    return lease != nullptr && lease->structSize >= fieldEndOffset;
+}
+
+inline auto HasRequestV1Field(
+        const RequestV1* request,
+        uint32_t fieldEndOffset) noexcept -> bool {
+    return request != nullptr && request->structSize >= fieldEndOffset;
+}
+
+using ExecuteFn = Result(__cdecl*)(
     const PluginContext* context,
     const RequestV1* request) noexcept;
 
-} // namespace D2RL::NativePublication
+static_assert(sizeof(CallbackOutcome) == sizeof(uint32_t));
+static_assert(sizeof(Result) == sizeof(uint32_t));
+static_assert(sizeof(void*) == 8);
+static_assert(sizeof(uintptr_t) == 8);
+static_assert(std::is_standard_layout_v<LeaseViewV1>);
+static_assert(std::is_trivially_copyable_v<LeaseViewV1>);
+static_assert(std::is_standard_layout_v<RequestV1>);
+static_assert(std::is_trivially_copyable_v<RequestV1>);
+static_assert(offsetof(LeaseViewV1, structSize) == 0);
+static_assert(offsetof(LeaseViewV1, flags) == 4);
+static_assert(offsetof(LeaseViewV1, epoch) == 8);
+static_assert(offsetof(LeaseViewV1, token) == 16);
+static_assert(offsetof(LeaseViewV1, validate) == 24);
+static_assert(LeaseViewV1RequiredSize == 32);
+static_assert(sizeof(LeaseViewV1) == 32);
+static_assert(offsetof(RequestV1, structSize) == 0);
+static_assert(offsetof(RequestV1, flags) == 4);
+static_assert(offsetof(RequestV1, callback) == 8);
+static_assert(offsetof(RequestV1, userData) == 16);
+static_assert(RequestV1RequiredSize == 24);
+static_assert(sizeof(RequestV1) == 24);
+
+} // namespace NativePublication
 
 struct NativePublicationServiceV1 {
-    std::uint32_t serviceSize;
-    std::uint32_t serviceVersion;
+    uint32_t serviceSize;
+    uint32_t serviceVersion;
     NativePublication::ExecuteFn executeStartupTransaction;
 };
+
+inline constexpr uint32_t NativePublicationServiceV1Version = 1;
+inline constexpr uint32_t NativePublicationServiceV1Size =
+    static_cast<uint32_t>(sizeof(NativePublicationServiceV1));
+inline constexpr uint32_t NativePublicationServiceV1RequiredSize =
+    NativePublicationServiceV1Size;
+
+inline auto HasNativePublicationServiceV1Field(
+        const NativePublicationServiceV1* service,
+        uint32_t fieldEndOffset) noexcept -> bool {
+    return service != nullptr
+        && service->serviceSize >= fieldEndOffset
+        && service->serviceSize
+            >= offsetof(NativePublicationServiceV1, serviceVersion)
+                + sizeof(service->serviceVersion)
+        && service->serviceVersion == NativePublicationServiceV1Version;
+}
+
+static_assert(std::is_standard_layout_v<NativePublicationServiceV1>);
+static_assert(std::is_trivially_copyable_v<NativePublicationServiceV1>);
+static_assert(offsetof(NativePublicationServiceV1, serviceSize) == 0);
+static_assert(offsetof(NativePublicationServiceV1, serviceVersion) == 4);
+static_assert(offsetof(
+    NativePublicationServiceV1,
+    executeStartupTransaction) == 8);
+static_assert(NativePublicationServiceV1RequiredSize == 16);
+static_assert(sizeof(NativePublicationServiceV1) == 16);
+
+} // namespace D2RL
 ```
 
-On x64 the proposed V1 sizes are 32 bytes for `LeaseV1`, 24 bytes for
-`RequestV1`, and 16 bytes for `NativePublicationServiceV1`. The public header
-must enforce fixed enum widths, standard layout, trivial copyability, size
-gating and exact ABI tests.
+`RequestV1::flags` and `LeaseViewV1::flags` must both be zero in V1. The
+consumer must size-gate every field before reading it and reject unknown flags.
+Core accepts a request only when `HasRequestV1Field` covers
+`RequestV1RequiredSize` and `callback` is non-null. A plugin reads
+`executeStartupTransaction` only when `HasNativePublicationServiceV1Field`
+covers `NativePublicationServiceV1RequiredSize`, and its callback proceeds only
+when `HasLeaseViewV1Field` covers `LeaseViewV1RequiredSize` and `validate` is
+non-null.
+`token` is opaque: a plugin may only pass the unchanged value, with `epoch`, to
+`validate`. It must not dereference, compare, log, serialize or manufacture the
+token. The lease view is callback-scoped borrowed data. Core revokes it on
+callback return; the plugin neither owns it nor calls any release operation.
 
 ### Normative Core behavior
 
-- `executeStartupTransaction` invokes the callback synchronously during one
-  documented startup phase in which no D2R consumer can execute.
-- A single loader-owned gate serializes Patch, Hook, DLL-less JSON patches and
-  every loader-internal executable publisher. Nested publication returns
-  `Busy`.
-- The lease is bound to the active plugin owner generation, callback thread and
-  monotonic epoch. It validates only inside that invocation; copied fields are
-  harmless after callback return.
-- The callback may prepare private unpublished resources beforehand, then use
-  transaction-aware Patch/Hook paths without reacquiring and deadlocking on the
-  outer publication gate.
-- `Rejected` is legal only while the loader can prove that no native write was
-  attempted. A rejection after an attempted write is promoted to `Poisoned`.
-- Every uncertain Patch/Hook result after an attempted write, callback fault or
-  lost authority after the first write is `Poisoned`.
-- `Poisoned` must log and terminate/fail-fast while quiescence remains held.
-  D2R consumers must never resume. The enum remains observable for ABI and
-  injected-fatal-handler tests.
-- Only `Committed` and a demonstrably pre-write `Rejected` may release
-  quiescence. No hot rollback or unload restoration is promised after a native
-  publication has begun; process-lifetime relays remain owned until exit.
+#### Exact startup boundary and order
+
+V1 is startup-only and synchronous. The sole legal caller is the active
+owner's initial `D2RLoaderLoadPlugin` invocation, on the loader's startup
+publisher thread, after the service query succeeds and before that export
+returns. A call from a lifecycle/game callback, another thread, unload, reload,
+or a second startup invocation returns `WrongPhase` without invoking the
+callback.
+
+Core must close one global startup barrier before its first executable
+publisher and keep it closed until its last publisher completes. It must fix a
+deterministic total publisher order before the first write, then run each Core
+publisher, DLL-less JSON publisher, Patch/Hook publisher and plugin transaction
+in that resolved order without interleaving. A transaction callback occupies
+the active owner's position in that order and completes before
+`executeStartupTransaction` returns. Only after every publisher has completed
+successfully may Core publish global readiness and allow the first D2R consumer
+to run. The barrier must remain closed through callback return, terminal-result
+classification and any required owner pin. A plugin publishes its private
+readiness only after `executeStartupTransaction` returns `Committed` and before
+its initial `D2RLoaderLoadPlugin` export returns. Core retains the barrier
+through that export and every later publisher, so a non-committed service result
+never requires a plugin-private readiness rollback. The current PluginSDK v4
+does not provide or prove this phase; these are requirements for the proposed
+Core implementation.
+
+Nested publication or a second concurrent publisher returns `Busy`. The active
+callback may prepare private unpublished resources before its call, then use
+only transaction-aware loader Patch/Hook paths. Those paths must recognize the
+already-held gate and must not reacquire it. The callback must not defer work,
+hand the lease to another thread, or return while a write or instruction-cache
+flush is pending.
+
+Each transaction-aware operation linearizes against Core's atomic
+`Open -> Finalizing` transition. An operation admitted while `Open` completes
+before result classification. Once finalization wins, a deferred or
+wrong-thread call fails without touching target memory. This containment does
+not relax the callback's obligation to join all work before returning.
+
+#### Lease and mutation boundary
+
+The lease is bound to the active plugin owner generation, callback thread and a
+monotonic epoch. Core validates all three independently inside every
+transaction-aware Patch/Hook path. A copied `LeaseViewV1` has no authority after
+the callback returns.
+
+Direct executable writes are outside the cooperative contract and forbidden to
+participating publishers. This includes plugin `memcpy`/stores into executable
+ranges, `WriteProcessMemory`, direct page protection plus stores, private Core
+ordinals, third-party detour installers and any Patch/Hook entry point that
+bypasses the active transaction. Core can refuse bypasses through its own
+internal, DLL-less and Patch/Hook paths, but cannot honestly prevent an
+arbitrary same-privilege native DLL from using `NtProtectVirtualMemory`, a
+direct system call or another private writer. Such a DLL is outside the V1
+threat model and must be excluded by compatibility policy unless a separate
+enforcement mechanism is specified.
+
+Core owns a sticky TLS transaction bit named here `mutationAttempted`.
+Preflight, fingerprint reads, lease validation, allocations, process-lifetime
+reservation and construction of unpublished private relay bytes leave it
+false. Core sets it to true **immediately before** the first underlying
+transaction-aware operation that can actually modify a governed executable
+byte or publish a hook target—not when that operation returns. It remains true
+until the transaction reaches a terminal result. A no-op slot whose live bytes
+already equal the requested bytes does not set it; the first real write does.
+
+`Rejected` is legal only while Core proves `mutationAttempted == false`. A
+rejection, false/ambiguous Patch or Hook result, lost lease or any other
+uncertain result after the bit becomes true is promoted to `Poisoned`.
+
+| Core observation | Before `mutationAttempted` | After `mutationAttempted` |
+|---|---|---|
+| Owner generation is inactive or becomes invalid | Return `OwnerInactive`; no executable mutation occurred. | Return/record `Poisoned`, retain quiescence and fail fast before any D2R consumer can resume. |
+| A callback boundary fault is caught | Return `CallbackFault`; no executable mutation occurred. | Return/record `Poisoned`, retain quiescence and fail fast before any D2R consumer can resume. |
+
+The callback type is `noexcept`: plugin code must not let a C++ exception cross
+the ABI boundary. `noexcept` does not catch Windows structured exceptions. Core
+must add and test its own SEH boundary for faults it can safely classify, such
+as an access violation, and apply the table above. `std::terminate`, explicit
+fail-fast, stack corruption and other non-recoverable process failures cannot
+honestly be reported as `CallbackFault`; the process is already terminal.
+
+`Poisoned` must log and terminate/fail-fast while quiescence remains held. The
+enum remains observable for ABI tests and an injected fatal-handler test, but
+production must never resume D2R consumers from that state. Only `Committed`
+and a demonstrably pre-write `Rejected`, `OwnerInactive` or `CallbackFault` may
+release transaction quiescence.
+
+A committed executable publication is process-lifetime. Once
+`mutationAttempted` is true and the callback returns `Committed`, Core must pin
+the plugin module and loader-owned installed targets until process exit. It
+must not call `D2RLoaderUnloadPlugin`, unmap the DLL, restore bytes or offer hot
+reload; replacing that owner requires a cold restart. The plugin is responsible
+for reserving its private relay/state allocations for process lifetime before
+the first potentially modifying loader call. Private relays may be allocated,
+populated, made executable and registered for unwind before the callback only
+while no live D2R code can reach them; publishing a D2R call, pointer or
+dispatch edge to them is a transaction mutation. Retaining an unpublished
+private reservation after a clean pre-write rejection is an acceptable V1
+tradeoff. The same module/resources remain pinned on `Poisoned` until fail-fast.
+A callback that commits a true no-op without setting `mutationAttempted`
+creates no executable lifetime dependency.
 
 This is deliberately not a generic plugin-minted token or a thread-suspension
 helper. The local D2RCore 1.1.0-beta binary contains thread suspend/resume and
@@ -142,19 +334,50 @@ headers, and add ABI tests and normative documentation. Existing API-v2,
 API-v3 and API-v4 binaries remain compatible; an older loader returns
 `UnknownService`, and the requesting plugin must refuse before any write.
 
-The D2RLoader/Core implementation must add the service registry entry, startup
-barrier, global publisher coordinator, owner/thread/epoch validation, TLS
-`mutationAttempted`/poison state, transaction-aware Patch/Hook paths, callback
-fault containment, no-resume poison handling and tests for wrong phase,
-reentry, serialization, clean rejection, mutate-then-reject and uncertain
-writes. SDK declarations must not ship as supported until that Core behavior is
-implemented and tested.
+The D2RLoader/Core implementation must add the service registry entry, exact
+startup barrier and deterministic publisher order, owner/thread/epoch
+validation, TLS `mutationAttempted`/poison state, transaction-aware Patch/Hook
+paths, callback SEH containment, process-lifetime owner pinning and no-resume
+poison handling. Tests must cover size gating, nonzero flags, wrong phase,
+reentry, cross-owner serialization, lease expiry, wrong-thread handoff, clean
+rejection, owner loss and callback faults on both sides of the mutation
+boundary, mutate-then-reject, uncertain writes, cooperative-path enforcement,
+transient unload refusal during the callback and permanent unload refusal after
+a modifying commit. SDK declarations must not ship as supported until that Core
+behavior is implemented and tested.
 
-ISC12 will consume this service through one full-set coordinator: preflight G0,
-G10 and G9/G2/G4/G1/G3 before the first write; reserve all relays/state once for
-process lifetime; commit those groups in that order; then publish readiness and
-operational flags last. Until a real Core implementation exists, ISC12 keeps
-its production lease unconstructible and refuses with zero native writes.
+### Executable contribution kit
+
+A separate PluginSDK worktree now carries an uncommitted review branch
+`proposal/native-publication-v1`, based exactly on v4 commit
+`6eb8f8b6192868214706bd6d528c5294f2f551b7`. It deliberately assigns no service
+ID, is not included by `api.h`, and is not installed or exported by root CMake.
+The draft ABI fixes `LeaseViewV1`, `RequestV1` and service sizes at 32/24/16
+bytes and includes a portable authority model plus a Core-only conformance
+matrix.
+
+Release MSVC `/W4 /WX`, the focused contract CTest, 100 repeated executions and
+the untouched root PluginSDK v4 contract CTest pass. An install smoke contains
+36 normal SDK files and no `native_publication.h`. This proves only the public
+ABI and portable state transitions. An independent final review reports no
+remaining ABI/conformance blocker; the matrix also makes null service execute
+and null lease validate rejection explicit. No numeric registry assignment,
+private Core implementation, upstream commit, pull request or runtime authority
+is claimed.
+
+If ISC12 later adopts this optional service, it will consume it through one
+full-set callback with this exact
+order: preflight G0, G10 and the complete codec plan before the first write;
+reserve every relay/state allocation once for process lifetime; commit G0, then
+G10, then the codec groups G9, G2, G4, G1 and G3; revalidate the borrowed lease
+at every required boundary; then return `Committed` without publishing
+readiness. Only after the service itself returns `Committed` does the initial
+plugin-load caller publish all readiness and operational flags, still under the
+Core startup barrier. The current experimental candidate instead performs this
+same transaction synchronously inside its same-thread initial
+`D2RLoaderLoadPlugin` window and fail-fasts on every post-write ambiguity. That
+local startup path is source-built but runtime publication remains untested;
+the proposed service is therefore optional hardening, not an ISC12 prerequisite.
 
 ## 2. Typed item interaction events
 

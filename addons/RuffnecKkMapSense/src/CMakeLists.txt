@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(RuffnecKkMapSense VERSION 0.13.22 LANGUAGES C CXX RC)
+project(RuffnecKkMapSense VERSION 0.13.11 LANGUAGES C CXX RC)
 
 include(FetchContent)
 
@@ -69,10 +69,6 @@ endif()
 
 add_library(RuffnecKkMapSense SHARED
     d3d12_imgui_host.cpp
-    external_atlas_cache.cpp
-    external_atlas_geometry.cpp
-    automap_sprite_package.cpp
-    external_label_provider.cpp
     imgui_settings_panel.cpp
     mapsense_data_catalog.cpp
     navigation_engine.cpp
@@ -111,15 +107,6 @@ target_link_libraries(RuffnecKkMapSense PRIVATE
 set_target_properties(RuffnecKkMapSense PROPERTIES
     OUTPUT_NAME "RuffnecKkMapSense"
 )
-add_custom_command(TARGET RuffnecKkMapSense POST_BUILD
-    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "${CMAKE_CURRENT_SOURCE_DIR}/../package/RuffnecKkMapSenseAutomapSprites.msp"
-        "$<TARGET_FILE_DIR:RuffnecKkMapSense>/RuffnecKkMapSenseAutomapSprites.msp"
-    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "${CMAKE_CURRENT_SOURCE_DIR}/../package/RuffnecKkMapSenseMapgen.exe"
-        "$<TARGET_FILE_DIR:RuffnecKkMapSense>/RuffnecKkMapSenseMapgen.exe"
-    VERBATIM
-)
 
 d2rlplugin_embed_config(
     TARGET RuffnecKkMapSense
@@ -127,9 +114,6 @@ d2rlplugin_embed_config(
 )
 
 add_executable(RuffnecKkMapSenseTests
-    external_atlas_cache.cpp
-    external_atlas_geometry.cpp
-    automap_sprite_package.cpp
     mapsense_data_catalog.cpp
     mapsense_tests.cpp
     navigation_engine.cpp
@@ -165,5 +149,4 @@ add_test(
     NAME ruffneckk-mapsense-policy
     COMMAND RuffnecKkMapSenseTests
         "${CMAKE_CURRENT_SOURCE_DIR}/../package/ruffneckk-mapsense.toml"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../package/RuffnecKkMapSenseAutomapSprites.msp"
 )

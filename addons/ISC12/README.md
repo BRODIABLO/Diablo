@@ -23,14 +23,24 @@ TOML and embedded fallback remain disabled because runtime qualification has not
 completed. Do not create, load, save or transmit ISC12 data outside an isolated
 test profile with disposable saves.
 
-The current source also includes the G10-B persistence boundary:
-exact D2S/D2I objects can be unwrapped only after the 96-byte envelope, schema
-hash and complete inner payload pass validation, while writes use an ISC12-owned
-sibling-temp/full-write/flush/atomic-replace transaction. Persistent RX relays,
-native cleanup continuations and rundown state now participate in the canonical
-startup publication. The isolated D2RLoader 1.2 cold start published G0, G10,
-G9 and G1-G4 together and reached complete frontend startup; their first
-persistence execution is still NOT RUN.
+The current source also includes the G10-B persistence boundary. ISC12 keeps the
+standard external D2S/D2I containers: target reads validate the complete native
+container without replacing its buffer, and target writes validate the complete
+buffer before delegating the final write to D2RCore. Retaining the native
+`WriteD2sFileWithEnvironment` / `CloseD2sFileWithEnvironment` pair lets
+D2RLoader compose its `.d2rl` environment sidecar and backups normally. The
+earlier 96-byte outer-envelope prototype is retired from the runtime DLL after
+its first live write produced a structurally valid wrapped D2S that D2RLoader's
+frontend nevertheless rejected as `invalid-character`. Its envelope and atomic
+file primitives remain unit-tested only as possible building blocks for the
+future external migration tool.
+
+> **Save warning:** ISC12 changes the serialized stat-ID width. Do not load an
+> existing vanilla or non-ISC12 save directly. Create a new character under
+> ISC12 or migrate the save with a compatible external tool when one becomes
+> available. Back up every character and stash before installing, removing,
+> updating or migrating ISC12. Forcing an incompatible save, or removing ISC12
+> from a save that depends on it, is unsupported.
 
 G0 no longer treats the first compiled ItemStatCost table as globally
 authoritative. D2R compiles both the 368-row Classic/base table and the 400-row
@@ -80,8 +90,17 @@ The complete prepared source plan now contains 24 mutable sites, 102
 differing-byte mutations and 77 witnesses. G1–G4 retain 20 sites and 84 slots;
 G9 adds four transport sites and brings its governed surface to twelve
 witnesses. Two Release `/W4 /WX` builds, CTest `5/5`, unique signatures and the
-expanded `211/15` native ledger pass. The byte-identical cold-started DLL is
-445,952 bytes with SHA-256
+expanded `211/15` native ledger pass. The first byte-identical
+standard-container candidate was 435,712 bytes with SHA-256
+`E7167627F3577C4F2A7222BBD81D3D2343874A4BBFF94DE008AA86F6ACC4F568`;
+the later G9-invariant candidate supersedes it.
+Its full-stack mod-local cold start reaches `D2R startup complete` with
+`SchemaReady=true`. A disposable Amazon then completed native creation,
+frontend preview, Save & Exit to a 1,297-byte D2S plus 6,261-byte `.d2rl`, and
+gameplay reload with standard-container `error=0/0`. This proved the first
+end-to-end runtime vertical. The later final qualification closes IDs 512/4094,
+G9 stress, the controlled D2I and global scope; multiplayer remains open. The previous cold-started
+outer-envelope candidate was 445,952 bytes with SHA-256
 `EFCA4EBAECDC7E0EF7BE70D2BE741FD7D73DED0ACA85873507CCA2D2B625F3DB`.
 
 Twelve exact native witnesses govern G9: the 0x9C/0x9D producers serialize one
@@ -132,8 +151,9 @@ transaction on abnormal producer exit. The source loader also requires
 producer body and its `RET`: identical Begin/End/UnwindData, an End within the
 image and a range covering the governed epilogue. The statically rehydrated
 `.pdata` is protected and non-authoritative. The isolated cold start attested
-the live PDATA/XDATA contract and published all four G9 sites; functional
-0x9C/0x9D item cases remain open.
+the live PDATA/XDATA contract and published all four G9 sites. The final
+qualification executes real 0x9C/0x9D roots, descendants and bounded failure
+cases.
 
 The specialized network groups are a separate open gate. Packet `0x3E` (G5),
 `0xA8` (G6) and `0xAA` (G7) are present only in the reverse-engineering ledger;
@@ -200,16 +220,42 @@ and both startup-readiness paths.
 An already-equal byte is a confirmed no-op; an actual attempted write makes any
 ambiguity terminal. The optional upstream `NativePublication V1` proposal is
 retained as future hardening rather than a prerequisite for this experiment.
-An isolated full-stack cold start executed the exact DLL above on D2R
+An isolated full-stack cold start executed the previous outer-envelope DLL on D2R
 3.3.93847 with D2RLoader 1.2, the active RuffnecKk Suite and all five eezstreet
 plugins. It accepted every D2RCore provider and live unwind contract, published
 G0/G10/G9/G1-G4, compiled 190 TXT tables, selected the RotW ItemStatCost table
 at revision 1 (`rows=400`, `G0-builds=2`, `SchemaReady=true`) and reached
 `D2R startup complete`. D2RLoader reported 36 plugins loaded, two known
 unrelated mod-local failures (Stash Search and Revive Overhaul) and 17 patches.
-This closes mod-local publication
-and cold-start only: persistence execution, functional 0x9C/0x9D cases,
-save/reload, gameplay and multiplayer remain NOT RUN.
+This closes mod-local publication and cold-start for that native surface. Its
+first write later proved the outer envelope incompatible with the loader
+frontend. The corrected standard-container candidate then closed native
+create/save/reload and the first gameplay cycle.
+
+The final internal candidate adds the exact native socket-walker invariant
+`childTemporaryFlags = parentTemporaryFlags | 0x08` and a startup G9 runtime
+self-test. Two reproducible Release builds and the deployed DLL are identical:
+446,464 bytes, SHA-256
+`1311F1C4BE44B0918F34C32007C3A19D35D240D8B72DCAD8C1853EEE53EC11B5`,
+with CTest `5/5`. Disposable D2S fixtures serialize stat IDs 512 and 4094 with
+values 12 and 94 and preserve both values through two cold save/reload cycles.
+Real 0x9C and 0x9D roots and a socketed three-node Gothic Plate tree complete
+with `captured=3`, `queued=3`, `staging-error=0`, and `flush-error=0`. The
+runtime self-test proves an accepted 3/3 tree, node overflow with zero queue
+callbacks, and flush reentry contained after one callback in terminal state.
+
+A controlled standard shared-stash D2I grew from 68,216 to 68,307 bytes after
+the socketed armor was moved into it. Its SHA-256
+`7375F2F7CB2DAC3178853397D5A7FCE6782F5B26220A0980995261C76E96507F`
+remained identical across a full process restart; the armor reappeared and its
+three-node tree was captured again. The same DLL/config pair also passed a
+complete-stack global cold start, D2S/D2I reads, gameplay and real G9 tree,
+then a final mod-local cold start. Both scopes kept 36 plugins loaded, the five
+eezstreet plugins and 17 memory patches; the two known unrelated failures
+remained unchanged. Multiplayer host/joiner and mismatch rejection, G5-G8 and
+the fixed-byte stat-ID packet census remain separate open gates. The queue ABI
+is `void`, so validation guarantees zero calls before flush but cannot roll
+back a queue failure after a successful flush has begun.
 
 ## Planned release installation contract
 
@@ -230,14 +276,16 @@ Mod-local:
 <D2R>/mods/<mod>/d2rloader/config/ruffneckk-isc12.toml
 ```
 
-ISC12 saves will require a versioned marker and an `ItemStatCost` schema
-fingerprint. Vanilla saves and mismatched schemas will be rejected before any
-payload decode. Migration is intentionally delegated to a separate external
-tool.
+The clean-sheet contract is a product and support boundary, not an outer-file
+marker: create new characters under ISC12 or use a compatible external migration
+tool once one exists. Direct loading of existing vanilla/non-ISC12 saves is
+unsupported. D2RLoader's native `.d2rl` environment record provides the visible
+plugin/mod compatibility warning; it is not a cryptographic schema marker and
+ISC12 does not promise to hard-block every misuse. Backups remain mandatory.
 
 The 0.2.0 binary is an internal incubation artifact, not an installable
-release. Runtime qualification will use disposable profiles and saves only
-after the clean-sheet and network gates are implemented.
+release. Runtime qualification uses disposable profiles and saves only; no
+external migration tool is included in this artifact.
 
 ## Credits
 

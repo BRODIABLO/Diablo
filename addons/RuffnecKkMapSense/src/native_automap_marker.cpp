@@ -43,7 +43,6 @@ constexpr std::uintptr_t GetUnitClientXRva = 0x34AF60;
 constexpr std::uintptr_t GetUnitClientYRva = 0x34AFB0;
 constexpr std::uintptr_t PathGetXRva = 0x341A20;
 constexpr std::uintptr_t PathGetYRva = 0x341A30;
-constexpr std::uintptr_t GetDataTablesForContextRva = 0x300A90;
 constexpr std::uintptr_t GetMonStatsRecordRva = 0x0976E0;
 constexpr std::uintptr_t GetSuperUniqueIndexRva = 0x38E3D0;
 constexpr std::uintptr_t MonsterRankWitnessRva = 0x51F280;
@@ -63,12 +62,10 @@ constexpr std::size_t UnitHashNextOffset = 0x158;
 constexpr std::size_t ActiveRoomDrlgRoomOffset = 0x18;
 constexpr std::size_t MonsterRankFlagsOffset = 0x1A;
 constexpr std::size_t MonStatsFlagsOffset = 0x3C;
-constexpr std::size_t DataTablesMonStatsCountOffset = 0xF60;
 constexpr std::size_t AutomapClipLeftOffset = 0x18;
 constexpr std::size_t AutomapClipTopOffset = 0x1C;
 constexpr std::size_t AutomapClipWidthOffset = 0x20;
 constexpr std::size_t AutomapClipHeightOffset = 0x24;
-constexpr std::int32_t AtlasProjectionBasisClientUnits = 256;
 
 constexpr std::uint32_t UnitMonster = 1;
 constexpr std::int32_t MaximumSupportedLevelId = 65'535;
@@ -127,10 +124,8 @@ struct TrackedMonster final {
 
 struct MonsterScanContext final {
     void* automapContext{};
-    std::uint64_t monStatsRecordCount{};
     std::uint16_t playerSubtileX{};
     std::uint16_t playerSubtileY{};
-    std::uint8_t dataContext{};
     std::int32_t nativeWidth{};
     std::int32_t nativeHeight{};
     std::int32_t clipLeft{};
@@ -193,8 +188,6 @@ using GetUnitCoordinateFn = std::int32_t(__fastcall*)(void*) noexcept;
 using GetNativePointerFn = void*(__fastcall*)(void*) noexcept;
 using GetLevelIdFn = std::int32_t(__fastcall*)(void*) noexcept;
 using IsRoomInTownFn = std::int32_t(__fastcall*)(void*) noexcept;
-using GetDataTablesForContextFn = std::uint8_t*(__fastcall*)(
-    std::uint8_t dataContext) noexcept;
 using GetMonStatsRecordFn = const std::uint8_t*(__fastcall*)(
     std::uint8_t dataContext,
     std::int32_t classId) noexcept;
@@ -229,7 +222,6 @@ GetUnitCoordinateFn PathGetY{};
 GetNativePointerFn GetUnitRoom{};
 GetLevelIdFn GetDrlgRoomLevelId{};
 IsRoomInTownFn IsRoomInTown{};
-GetDataTablesForContextFn GetDataTablesForContext{};
 GetMonStatsRecordFn GetMonStatsRecord{};
 GetSuperUniqueIndexFn GetSuperUniqueIndex{};
 GetUnitByIdAndTypeFn GetUnitByIdAndType{};
@@ -255,8 +247,6 @@ std::uint64_t LastPurgeTick{};
 std::unordered_map<std::uint32_t, Candidate> MarkerCache;
 std::atomic_flag NativeAutomapViewportLock = ATOMIC_FLAG_INIT;
 NativeAutomapViewportSnapshot PublishedNativeAutomapViewport{};
-std::atomic_bool AtlasProjectionWitnessReported{};
-std::atomic_bool AtlasProjectionWitnessRejectedReported{};
 std::vector<TrackedMonster> TrackedMonsters;
 std::vector<TrackedMonster> DiscoveryScratch;
 std::uint64_t TrackedMonsterEpoch{};
@@ -430,73 +420,6 @@ auto ProjectNavigationClient(
     }
 }
 
-struct AtlasProjectionCaptureDiagnostic final {
-    const char* stage{"not-run"};
-    NavigationNativePoint anchor{};
-    NavigationNativePoint clientXBasis{};
-    NavigationNativePoint clientYBasis{};
-    NavigationNativePoint diagonal{};
-};
-
-[[nodiscard]] auto CaptureAtlasProjectionWitness(
-        void* borrowedAutomapContext,
-        std::int32_t anchorClientX,
-        std::int32_t anchorClientY,
-        AtlasProjectionWitness& output,
-        AtlasProjectionCaptureDiagnostic& diagnostic) noexcept -> bool {
-    output = {};
-    diagnostic = {};
-    constexpr auto maximum = (std::numeric_limits<std::int32_t>::max)();
-    if (anchorClientX > maximum - AtlasProjectionBasisClientUnits
-        || anchorClientY > maximum - AtlasProjectionBasisClientUnits) {
-        diagnostic.stage = "input-overflow";
-        return false;
-    }
-    if (!ProjectNavigationClient(
-            borrowedAutomapContext,
-            anchorClientX,
-            anchorClientY,
-            diagnostic.anchor)) {
-        diagnostic.stage = "anchor-project";
-        return false;
-    }
-    if (!ProjectNavigationClient(
-            borrowedAutomapContext,
-            anchorClientX + AtlasProjectionBasisClientUnits,
-            anchorClientY,
-            diagnostic.clientXBasis)) {
-        diagnostic.stage = "x-basis-project";
-        return false;
-    }
-    if (!ProjectNavigationClient(
-            borrowedAutomapContext,
-            anchorClientX,
-            anchorClientY + AtlasProjectionBasisClientUnits,
-            diagnostic.clientYBasis)) {
-        diagnostic.stage = "y-basis-project";
-        return false;
-    }
-    if (!ProjectNavigationClient(
-            borrowedAutomapContext,
-            anchorClientX + AtlasProjectionBasisClientUnits,
-            anchorClientY + AtlasProjectionBasisClientUnits,
-            diagnostic.diagonal)) {
-        diagnostic.stage = "diagonal-project";
-        return false;
-    }
-    const auto valid = BuildAtlasProjectionWitness(
-        anchorClientX,
-        anchorClientY,
-        {diagnostic.anchor.x, diagnostic.anchor.y},
-        {diagnostic.clientXBasis.x, diagnostic.clientXBasis.y},
-        {diagnostic.clientYBasis.x, diagnostic.clientYBasis.y},
-        {diagnostic.diagonal.x, diagnostic.diagonal.y},
-        AtlasProjectionBasisClientUnits,
-        output);
-    diagnostic.stage = valid ? "ready" : "non-affine-or-degenerate";
-    return valid;
-}
-
 void MixNavigationDiagnosticValue(
         std::uint64_t& hash,
         std::uint64_t value) noexcept {
@@ -656,52 +579,11 @@ void ObserveNavigationPlayerPass(
         const auto* const contextBytes = static_cast<const std::uint8_t*>(
             automapContext);
         const auto* const diagnosticContext = DiagnosticContext;
-        const auto playerClientX = GetUnitClientX(player);
-        const auto playerClientY = GetUnitClientY(player);
-        AtlasProjectionWitness atlasProjection{};
-        AtlasProjectionCaptureDiagnostic atlasProjectionDiagnostic{};
-        const auto atlasProjectionValid = CaptureAtlasProjectionWitness(
-            automapContext,
-            playerClientX,
-            playerClientY,
-            atlasProjection,
-            atlasProjectionDiagnostic);
-        if (atlasProjectionValid
-            && !AtlasProjectionWitnessReported.exchange(
-                true,
-                std::memory_order_acq_rel)
-            && diagnosticContext != nullptr) {
-            diagnosticContext->LogInfo(
-                "MapSense external atlas: native pan/zoom projection witness is affine and ready.");
-        }
-        if (!atlasProjectionValid
-            && !AtlasProjectionWitnessRejectedReported.exchange(
-                true,
-                std::memory_order_acq_rel)
-            && diagnosticContext != nullptr) {
-            char message[512]{};
-            std::snprintf(
-                message,
-                sizeof(message),
-                "MapSense external atlas: projection witness rejected stage=%s client=(%d,%d) anchor=(%d,%d) x-basis=(%d,%d) y-basis=(%d,%d) diagonal=(%d,%d).",
-                atlasProjectionDiagnostic.stage,
-                playerClientX,
-                playerClientY,
-                atlasProjectionDiagnostic.anchor.x,
-                atlasProjectionDiagnostic.anchor.y,
-                atlasProjectionDiagnostic.clientXBasis.x,
-                atlasProjectionDiagnostic.clientXBasis.y,
-                atlasProjectionDiagnostic.clientYBasis.x,
-                atlasProjectionDiagnostic.clientYBasis.y,
-                atlasProjectionDiagnostic.diagonal.x,
-                atlasProjectionDiagnostic.diagonal.y);
-            diagnosticContext->LogWarn(message);
-        }
         const NavigationAutomapPass pass{
             .currentLevelId = currentLevelId,
             .inTown = inTown,
-            .playerClientX = playerClientX,
-            .playerClientY = playerClientY,
+            .playerClientX = GetUnitClientX(player),
+            .playerClientY = GetUnitClientY(player),
             .nativeWidth = nativeWidth,
             .nativeHeight = nativeHeight,
             .clipLeft = *reinterpret_cast<const std::int32_t*>(
@@ -729,7 +611,6 @@ void ObserveNavigationPlayerPass(
             .clipHeight = pass.clipHeight,
             .observedTick = static_cast<std::uint64_t>(GetTickCount64()),
             .epoch = Epoch.load(std::memory_order_acquire),
-            .atlasProjection = atlasProjection,
         };
         NativeAutomapClipBounds clipBounds{};
         if (TryResolveNativeAutomapClipBounds(viewport, clipBounds)
@@ -775,8 +656,6 @@ void ResetPublishedMarkers(bool resetCounters) noexcept {
     TrackedMarkerCount.store(0U, std::memory_order_release);
     TrackedMonsterCount.store(0U, std::memory_order_release);
     PublishedSequence.fetch_add(1U, std::memory_order_acq_rel);
-    AtlasProjectionWitnessReported.store(false, std::memory_order_release);
-    AtlasProjectionWitnessRejectedReported.store(false, std::memory_order_release);
 
     if (!resetCounters) return;
     AutomapPulses.store(0U, std::memory_order_relaxed);
@@ -880,21 +759,7 @@ constexpr auto NextObservationState(std::uint64_t state) noexcept
         if (!IsAlignedPointer(player) || automapContext == nullptr
             || GetNativeHeight == nullptr || GetNativeWidth == nullptr
             || GetDynamicPath == nullptr || PathGetX == nullptr
-            || PathGetY == nullptr || GetUnitDataContext == nullptr
-            || GetDataTablesForContext == nullptr) {
-            return false;
-        }
-
-        const auto dataContext = GetUnitDataContext(player);
-        if (dataContext >= Detail::NativeDataContextCount) return false;
-        const auto* const dataTables = GetDataTablesForContext(dataContext);
-        if (!IsAlignedPointer(dataTables)) return false;
-        const auto monStatsRecordCount =
-            *reinterpret_cast<const std::uint64_t*>(
-                dataTables + DataTablesMonStatsCountOffset);
-        if (monStatsRecordCount == 0U
-            || monStatsRecordCount
-                > Detail::MaximumMonStatsRecordCount) {
+            || PathGetY == nullptr) {
             return false;
         }
 
@@ -930,10 +795,8 @@ constexpr auto NextObservationState(std::uint64_t state) noexcept
 
         output = {
             .automapContext = automapContext,
-            .monStatsRecordCount = monStatsRecordCount,
             .playerSubtileX = static_cast<std::uint16_t>(playerSubtileX),
             .playerSubtileY = static_cast<std::uint16_t>(playerSubtileY),
-            .dataContext = dataContext,
             .nativeWidth = nativeWidth,
             .nativeHeight = nativeHeight,
             .clipLeft = clipLeft,
@@ -1017,17 +880,12 @@ auto DiscoverTrackedMonster(
         }
 
         const auto classId = GetUnitClassId(unit);
-        const auto unitDataContext = GetUnitDataContext(unit);
-        if (!Detail::IsMonStatsLookupSafe(
-                scan.dataContext,
-                unitDataContext,
-                classId,
-                scan.monStatsRecordCount)) {
+        if (classId < 0) {
             MetadataFaults.fetch_add(1U, std::memory_order_relaxed);
             return false;
         }
         const auto* const monStats = GetMonStatsRecord(
-            scan.dataContext,
+            GetUnitDataContext(unit),
             classId);
         if (monStats == nullptr) {
             MetadataFaults.fetch_add(1U, std::memory_order_relaxed);
@@ -1541,24 +1399,11 @@ auto ValidateRuntime(const D2RL::PluginContext* context) noexcept -> bool {
         0x83, 0xF8, 0x01, 0x75, 0x06, 0x48, 0x8B, 0x43,
         0x10, 0xEB, 0x02, 0x33, 0xC0, 0xF6, 0x40, 0x1A,
         0x0E, 0x75, 0x30};
-    constexpr std::array<std::uint8_t, 42> getMonStatsRecordExpected{
+    constexpr std::array<std::uint8_t, 32> getMonStatsRecordExpected{
         0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74,
         0x24, 0x20, 0x57, 0x48, 0x83, 0xEC, 0x30, 0x48,
         0x63, 0xF2, 0xE8, 0x99, 0x93, 0x26, 0x00, 0x48,
-        0x8B, 0xF8, 0x48, 0x8B, 0xDE, 0x85, 0xF6, 0x78,
-        0x09, 0x48, 0x3B, 0x98, 0x60, 0x0F, 0x00, 0x00,
-        0x72, 0x18};
-    constexpr std::array<std::uint8_t, 67>
-        getDataTablesForContextExpected{
-            0x48, 0x83, 0xEC, 0x28, 0x0F, 0xB6, 0xC1, 0x48,
-            0x89, 0x44, 0x24, 0x38, 0x48, 0x83, 0xF8, 0x04,
-            0x72, 0x19, 0x48, 0x8D, 0x44, 0x24, 0x38, 0x48,
-            0x8D, 0x4C, 0x24, 0x40, 0x48, 0x89, 0x44, 0x24,
-            0x40, 0xE8, 0x7A, 0xD3, 0xFF, 0xFF, 0x84, 0xC0,
-            0x74, 0x01, 0xCC, 0x48, 0x8B, 0x44, 0x24, 0x38,
-            0x48, 0x8D, 0x0D, 0xB9, 0x9A, 0x79, 0x02, 0x48,
-            0x03, 0xC0, 0x48, 0x8B, 0x04, 0xC1, 0x48, 0x83,
-            0xC4, 0x28, 0xC3};
+        0x8B, 0xF8, 0x48, 0x8B, 0xDE, 0x85, 0xF6, 0x78};
     constexpr std::array<std::uint8_t, 92> getSuperUniqueIndexExpected{
         0x40, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B,
         0xD9, 0x48, 0x85, 0xC9, 0x74, 0x0A, 0xE8, 0xED,
@@ -1633,9 +1478,6 @@ auto ValidateRuntime(const D2RL::PluginContext* context) noexcept -> bool {
         && check(GetUnitClientYRva, getYExpected)
         && check(PathGetXRva, pathGetXExpected)
         && check(PathGetYRva, pathGetYExpected)
-        && check(
-            GetDataTablesForContextRva,
-            getDataTablesForContextExpected)
         && check(GetMonStatsRecordRva, getMonStatsRecordExpected)
         && check(GetSuperUniqueIndexRva, getSuperUniqueIndexExpected)
         && check(MonsterRankWitnessRva, monsterRankWitnessExpected)
@@ -1736,8 +1578,6 @@ auto InitializeNativeAutomapMarker(
     GetUnitRoom = At<GetNativePointerFn>(GetUnitRoomRva);
     GetDrlgRoomLevelId = At<GetLevelIdFn>(GetDrlgRoomLevelIdRva);
     IsRoomInTown = At<IsRoomInTownFn>(IsRoomInTownRva);
-    GetDataTablesForContext = At<GetDataTablesForContextFn>(
-        GetDataTablesForContextRva);
     GetMonStatsRecord = At<GetMonStatsRecordFn>(GetMonStatsRecordRva);
     GetSuperUniqueIndex = At<GetSuperUniqueIndexFn>(
         GetSuperUniqueIndexRva);
@@ -1786,7 +1626,6 @@ auto InitializeNativeAutomapMarker(
         GetUnitRoom = nullptr;
         GetDrlgRoomLevelId = nullptr;
         IsRoomInTown = nullptr;
-        GetDataTablesForContext = nullptr;
         GetMonStatsRecord = nullptr;
         GetSuperUniqueIndex = nullptr;
         GetUnitByIdAndType = nullptr;

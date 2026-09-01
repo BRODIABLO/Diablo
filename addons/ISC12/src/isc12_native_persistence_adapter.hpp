@@ -14,10 +14,10 @@ inline constexpr std::size_t NativePersistencePathCapacity = 0x30C;
 inline constexpr std::uint64_t MaximumNativePhysicalStoreLength =
     (std::numeric_limits<std::uint32_t>::max)();
 inline constexpr std::uint64_t MaximumNativeInnerStoreLength =
-    MaximumNativePhysicalStoreLength - EnvelopeHeaderSize;
+    MaximumNativePhysicalStoreLength;
 
 enum class NativePersistenceDisposition : std::uint8_t {
-    Vanilla,
+    ProceedNative,
     Success,
     Reject,
     Fatal,
@@ -32,9 +32,7 @@ enum class NativePersistenceError : std::uint8_t {
     PathTraversal,
     PathMismatch,
     PathConversion,
-    ReplaceBuffer,
     ClearRejectedRead,
-    AtomicCommit,
     PhysicalLength,
 };
 
@@ -44,24 +42,18 @@ struct NativePersistenceResult {
     StoreKind storeKind{StoreKind::Other};
     NativePersistenceError error{NativePersistenceError::None};
     PersistenceError persistenceError{PersistenceError::None};
-    EnvelopeError envelopeError{EnvelopeError::None};
 };
 
-using ReplaceNativeReadBufferCallback = bool (*)(
-    void* context,
-    std::span<const std::uint8_t> innerBytes) noexcept;
 using ClearRejectedNativeReadCallback = bool (*)(void* context) noexcept;
 
 struct NativeReadCallbacks {
     void* context{};
-    ReplaceNativeReadBufferCallback replaceBuffer{};
     ClearRejectedNativeReadCallback clearRejectedRead{};
 };
 
 struct NativeReadRequest {
     std::string_view storeName;
     bool codecReady{};
-    const Sha256Digest* schemaHash{};
     std::uint32_t readStatus{};
     std::uint64_t announcedLength{};
     std::uint64_t actualLength{};
@@ -82,16 +74,6 @@ inline auto NativeWriteLengthSupported(
     return innerLength <= MaximumNativeInnerStoreLength;
 }
 
-using AtomicNativeCommitCallback = bool (*)(
-    void* context,
-    std::wstring_view widePath,
-    std::span<const std::uint8_t> physicalBytes) noexcept;
-
-struct NativeWriteCallbacks {
-    void* context{};
-    AtomicNativeCommitCallback atomicCommit{};
-};
-
 struct NativeWriteRequest {
     std::string_view storeName;
     // The span models the complete bounded native char buffer. A terminal NUL
@@ -100,25 +82,23 @@ struct NativeWriteRequest {
     // them.
     std::span<const char> nativePathUtf8;
     bool codecReady{};
-    const Sha256Digest* schemaHash{};
-    std::span<const std::uint8_t> innerBytes;
+    bool schemaReady{};
+    std::span<const std::uint8_t> physicalBytes;
 };
 
-// Non-target manager objects are returned as Vanilla before any callback is
-// inspected or invoked. Target rejection always clears the native read state;
-// a successful replacement callback must consume/copy the staged span before
-// returning. A failed replacement is followed by the same rejection cleanup.
+// Non-target manager objects proceed natively before any callback is inspected.
+// Target reads are deliberately schema-independent because D2RLoader enumerates
+// character D2S files before DataTablesLoaded publishes the authoritative
+// ItemStatCost snapshot. Target rejection always clears the native read state.
+// Successful reads retain their byte-exact standard container in the buffer.
 auto AdaptNativeStoreRead(
     const NativeReadRequest& request,
     const NativeReadCallbacks& callbacks) noexcept -> NativePersistenceResult;
 
-// The owned UTF-16 path and staged physical bytes remain valid only during the
-// atomicCommit callback. atomicCommit must return false without committing any
-// destination mutation. A true return is Success; every target failure before
-// that certain commit is Reject. The selected native continuations, not this
-// pure adapter, own timestamp/state/close/unlock/status processing.
-auto AdaptNativeStoreWrite(
-    const NativeWriteRequest& request,
-    const NativeWriteCallbacks& callbacks) noexcept -> NativePersistenceResult;
+// Successful target writes return ProceedNative so D2RCore owns the actual
+// file write, close, backup integration and .d2rl environment sidecar. Every
+// validation failure returns Reject before CREATE_ALWAYS runs.
+auto AdaptNativeStoreWrite(const NativeWriteRequest& request) noexcept
+    -> NativePersistenceResult;
 
 } // namespace ruffneckk::isc12

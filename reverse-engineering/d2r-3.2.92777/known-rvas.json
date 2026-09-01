@@ -89,7 +89,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/extended-item-stats-3.2.md",
-      "notes": "Common client dispatcher for the 8-byte 0x9C item-action envelope. It validates length-8 against the 0xF4 payload ceiling, copies the packet into a bounded local buffer, reads the action selector at +0x01 and dispatches through a 23-entry switch. Its strict 32-byte entry signature is unique in build 92777. ExtendedItemStats consumes EIT1 fragments here, before any action-specific handler can treat them as a native item bitstream."
+      "notes": "Common client dispatcher for the 8-byte 0x9C item-action envelope. It validates length-8 against the 0xF4 payload ceiling, copies the packet into a bounded local buffer, reads the action selector at +0x01 and dispatches through a 23-entry switch. Its strict 32-byte entry signature is unique in build 92777. For historical provenance only, the RuffnecKk ExtendedItemStats prototype consumed EIT1 fragments here and was later exercised in an experimental RuffDood fork build; this hook was never part of upstream eezstreet and is not an ISC12 dependency."
     },
     {
       "rva": "0x12E490",
@@ -97,7 +97,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/extended-item-stats-3.2.md",
-      "notes": "Common client dispatcher for the 13-byte 0x9D item-action envelope. It rejects packets shorter than 13 bytes, copies the packet into a bounded local buffer, reads the action selector at +0x01 and dispatches through a 26-entry switch. Its strict 32-byte entry signature is unique in build 92777. ExtendedItemStats consumes EIT1 fragments here, before any action-specific handler can treat them as a native item bitstream."
+      "notes": "Common client dispatcher for the 13-byte 0x9D item-action envelope. It rejects packets shorter than 13 bytes, copies the packet into a bounded local buffer, reads the action selector at +0x01 and dispatches through a 26-entry switch. Its strict 32-byte entry signature is unique in build 92777. For historical provenance only, the RuffnecKk ExtendedItemStats prototype consumed EIT1 fragments here and was later exercised in an experimental RuffDood fork build; this hook was never part of upstream eezstreet and is not an ISC12 dependency."
     },
     {
       "rva": "0x214220",
@@ -441,7 +441,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/extended-item-stats-3.2.md",
-      "notes": "Full item decoder reached by 36 direct callers. Item-action handlers pass the destination item, bitstream pointer, byte length, version 105 and a failure output. The unique 14-byte entry signature begins 40 55 53 41 55 41 57 48 8B EC 48 83 EC 68. ExtendedItemStats will override only the byte length during a thread-local validated EIT1 replay."
+      "notes": "Full item decoder reached by 36 direct callers. Item-action handlers pass the destination item, bitstream pointer, byte length, version 105 and a failure output. The unique 14-byte entry signature begins 40 55 53 41 55 41 57 48 8B EC 48 83 EC 68. For historical provenance only, the RuffnecKk ExtendedItemStats prototype overrode the byte length during a thread-local validated EIT1 replay; this is not upstream eezstreet or an ISC12 product dependency."
     },
     {
       "rva": "0x374FF0",
@@ -777,7 +777,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/extended-item-stats-3.2.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Builds server item-action packet 0x9C with ABI (client RCX, item RDX, action R8B, temporary item-flags mask R9D, gamble uint32 stack arg5) -> void; all 11 direct callers ignore RAX. It serializes exactly one node through 0x375EE0 with recursion disabled and capacity 0xF4, adds the 8-byte header and stores the total in one byte. Payload 244 is the last native-safe size. The producer temporarily changes ItemData+0x18 before serialization, restores it before the queue CALL, then walks socketed children through 0x481B50. G9-A source-prepares a five-byte rel32 entry detour over the complete pushes 40 53 55 56 57, a process-lifetime trampoline that replays them and continues at 0x479CD5, and an entry wrapper that opens or joins the TLS transaction. It remains unpublished pending live unwind, SEH, reentry, delayed-queue and quiescence gates."
+      "notes": "Builds server item-action packet 0x9C with ABI (client RCX, item RDX, action R8B, temporary item-flags mask R9D, gamble uint32 stack arg5) -> void; all 11 direct callers ignore RAX. It serializes exactly one node through 0x375EE0 with recursion disabled and capacity 0xF4, adds the 8-byte header and stores the total in one byte. Payload 244 is the last native-safe size. The producer temporarily changes ItemData+0x18 before serialization, restores it before the queue CALL, then walks socketed children through 0x481B50. G9-A publishes a five-byte rel32 entry detour over the complete pushes 40 53 55 56 57, a process-lifetime registered-unwind trampoline that replays them and continues at 0x479CD5, and an entry wrapper that opens or joins the TLS transaction. Runtime qualification on 2026-09-01 covers live unwind, real 0x9C roots, delayed queue, overflow zero-callback, flush reentry containment and complete-stack coexistence."
     },
     {
       "rva": "0x479EA0",
@@ -785,7 +785,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/extended-item-stats-3.2.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Builds server item-action packet 0x9D with ABI (client RCX, parent unit RDX, item R8, action R9B, temporary item-flags uint32 stack arg5, gamble uint32 stack arg6) -> void; all 12 direct callers ignore RAX. It serializes exactly one node through 0x375EE0 with recursion disabled and capacity 0xF4, adds the 13-byte parent-unit header and stores the total in one byte. Payload 239 is the last native-safe size; 240..242 produce totals 253..255, 243..244 wrap the byte length, and serializer overflow returns zero for a header-only send. The producer temporarily changes ItemData+0x18 and conditionally ItemData+0x54, restores them before the queue CALL, then invokes 0x481B50. G9-A source-prepares the same five-byte entry detour and a trampoline continuing at 0x479EA5; nested walker calls are (same client, active item as parent, child item, action 0x12, propagated flags, gamble zero). It remains unpublished."
+      "notes": "Builds server item-action packet 0x9D with ABI (client RCX, parent unit RDX, item R8, action R9B, temporary item-flags uint32 stack arg5, gamble uint32 stack arg6) -> void; all 12 direct callers ignore RAX. It serializes exactly one node through 0x375EE0 with recursion disabled and capacity 0xF4, adds the 13-byte parent-unit header and stores the total in one byte. Payload 239 is the last native-safe size; 240..242 produce totals 253..255, 243..244 wrap the byte length, and serializer overflow returns zero for a header-only send. The producer temporarily changes ItemData+0x18 and conditionally ItemData+0x54, restores them before the queue CALL, then invokes 0x481B50. G9-A publishes the same five-byte entry detour and a registered-unwind trampoline continuing at 0x479EA5. The governed walker proves each child call is (same client, active item as parent, child item, action 0x12, temporaryFlags = parentTemporaryFlags | 0x08, gamble zero). Real three-node socket trees complete 3/3 in mod-local and global scopes."
     },
     {
       "rva": "0x4817F0",
@@ -793,7 +793,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/extended-item-stats-3.2.md",
-      "notes": "Queues a server packet with ABI (client, packetBytes, packetLength). The 0x9D producer calls it at 0x47A001 after placing the computed packet length in R8. Thirty-eight indexed references and the unique 22-byte entry signature beginning 40 55 56 57 48 83 EC 40 prove this shared queue. ExtendedItemStats will replace only a synchronous header-only 0x9C/0x9D send paired with its thread-local oversized serialization."
+      "notes": "Queues a server packet with ABI (client RCX, packetBytes RDX, size_t packetLength R8) -> void. The item producers zero-extend their one-byte length into R8 before the calls at 0x479E10/0x47A001. Thirty-eight indexed references and the exact unique 22-byte entry signature 40 55 56 57 48 83 EC 40 49 8B E8 48 8B F2 48 8B F9 48 85 C9 75 1F prove this shared queue; the interior witness at 0x4818B6 proves synchronous consumption of [packet, packet+length]. G9-A leaves this entry untouched and calls it directly, in captured order, only after a root transaction succeeds. The void return cannot support rollback after a partial flush. For historical provenance only, the RuffnecKk ExtendedItemStats prototype is not upstream eezstreet or an ISC12 dependency."
     },
     {
       "rva": "0x486AE0",
@@ -2345,7 +2345,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/mass-id-3.2.md",
-      "notes": "Returns the next auxiliary-unit record from record+0x10. Native caller 0x425010 proves the linked-list ABI together with INVENTORY_GetFirstCorpse and INVENTORY_GetUnitGUIDFromCorpse."
+      "notes": "Returns the qword at structure+0x10. Native caller 0x425010 gives that generic accessor linked-list meaning in the inventory context, while the exact ISC12 witness at 0x9F95C6 independently gives it save-object byte-length meaning. Treat the body as a shared structural accessor, not as inventory-only semantics."
     },
     {
       "rva": "0x15F660",
@@ -4489,7 +4489,7 @@
       "kind": "call-site",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/findings.md",
-      "notes": "Exact unique five-byte CALL E8 DB 79 00 00 from the 0x9C producer to D2GAME_QueueServerPacket 0x4817F0, with continuation 0x479E15 and ABI (client RCX, stack packet RDX, zero-extended byte length R8) -> void. G9-A source-prepares a rel32 capture relay that copies the span synchronously and suppresses the real queue during collection or rejection. The mutation remains unpublished."
+      "notes": "Exact unique five-byte CALL E8 DB 79 00 00 from the 0x9C producer to D2GAME_QueueServerPacket 0x4817F0, with continuation 0x479E15 and ABI (client RCX, stack packet RDX, zero-extended byte length R8) -> void. G9-A publishes a rel32 capture relay that copies the span synchronously and suppresses the real queue during collection or rejection. Real 0x9C runtime transactions complete with staging-error=0 and flush-error=0; rejected overflow issues zero callbacks."
     },
     {
       "rva": "0x47A001",
@@ -4497,7 +4497,7 @@
       "kind": "call-site",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/findings.md",
-      "notes": "Exact unique five-byte CALL E8 EA 77 00 00 from the 0x9D producer to D2GAME_QueueServerPacket 0x4817F0, with continuation 0x47A006 and ABI (client RCX, stack packet RDX, zero-extended byte length R8) -> void. G9-A source-prepares a rel32 capture relay that copies the span synchronously and suppresses the real queue during collection or rejection. The mutation remains unpublished."
+      "notes": "Exact unique five-byte CALL E8 EA 77 00 00 from the 0x9D producer to D2GAME_QueueServerPacket 0x4817F0, with continuation 0x47A006 and ABI (client RCX, stack packet RDX, zero-extended byte length R8) -> void. G9-A publishes a rel32 capture relay that copies the span synchronously and suppresses the real queue during collection or rejection. A real socketed parent plus two rune children completes with nodes=3, captured=3, queued=3, staging-error=0 and flush-error=0."
     },
     {
       "rva": "0x479D4D",
@@ -4553,7 +4553,7 @@
       "kind": "layout-witness",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Exact unique 19-byte continuation reloads propagated temporary flags, item and client and calls the socketed-item walker 0x481B50. It is disjoint from the mutable 0x9D queue CALL."
+      "notes": "Exact unique 19-byte continuation reloads the parent temporary flags, item and client and calls the socketed-item walker 0x481B50. The walker derives each child value as parentTemporaryFlags | 0x08 before invoking 0x9D. This continuation is disjoint from the mutable 0x9D queue CALL."
     },
     {
       "rva": "0x47A019",
@@ -4593,7 +4593,7 @@
       "kind": "layout-witness",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/findings.md",
-      "notes": "Exact unique 39-byte interior sequence builds packet+length and synchronously dispatches the [packet, packet+length] span through the client sink. This proves each source-prepared G9-A relay must copy producer stack packets before returning. A later flush through the untouched queue entry preserves packet order but delays queue-side effects and therefore still requires semantic, reentry and backpressure qualification."
+      "notes": "Exact unique 39-byte interior sequence builds packet+length and synchronously dispatches the [packet, packet+length] span through the client sink. This proves each G9-A relay must copy producer stack packets before returning. Runtime qualification proves ordered three-packet flush, overflow zero-callback and flush reentry containment. Because the queue ABI returns void, failure after the first real call cannot be rolled back and is terminal rather than transactionally recoverable."
     },
     {
       "rva": "0x481BAD",
@@ -4601,7 +4601,7 @@
       "kind": "layout-witness",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-      "notes": "Exact unique 102-byte inventory-walk window calls INVENTORY_GetFirstItem, checks the result, sends it through D2GAME_SendItemAction9D at 0x481BFE, calls INVENTORY_GetNextItem and branches back to the same send path while one remains. Because each 0x9D producer captures its node then recursively invokes this walker before returning to the parent's GetNextItem, the native sequence is depth-first preorder. The G9-A source transaction now models this order, parent/item nesting and same-thread recursion, but runtime all-or-none proof remains blocked."
+      "notes": "Exact unique 102-byte inventory-walk window calls INVENTORY_GetFirstItem, checks the result, derives child temporary flags as parentTemporaryFlags | 0x08, sends the child through D2GAME_SendItemAction9D at 0x481BFE with action 0x12 and gamble zero, calls INVENTORY_GetNextItem and branches back to the same send path while one remains. Because each 0x9D producer captures its node then recursively invokes this walker before returning to the parent's GetNextItem, the native sequence is depth-first preorder. The G9-A transaction models and now runtime-qualifies this order and nesting on a real three-node socket tree; pre-flush rejection is all-or-none."
     },
     {
       "rva": "0x3B5307",
@@ -4690,6 +4690,14 @@
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
       "notes": "Exact unique callsite passes callback table 0x1D09C50 with count 9 to generic evaluator 0xA234B0. Seven D2R table-wired evaluator xrefs use the same table/count; an eighth generic call passes no callback table. A governed read-only D2R 3.3.93847 capture proves the table is nine 16-byte records and that record 5 contains callback RVA 0x3B33F0 with arity 2."
+    },
+    {
+      "rva": "0x3A85A2",
+      "name": "TreasureClassEx_CompileTxtCall",
+      "kind": "patch-site",
+      "confidence": "high",
+      "source": "ROADMAP.html#i7-d2rloader-110-sdk-v3-community-pack",
+      "notes": "Unique five-byte CALL rel32 E8 C9 73 F5 FF to DATATBLS_CompileTxt 0x2FF970 inside the TreasureClassEx compiler loop for build 92777. The official eezstreet D2RL-Plugins feature items.playerConditionCalc extends the TXT descriptor at this site; it is separate from ISC12 G0-BBE's native stat() ordinal-width proof. Three isolated Loader 1.1.0-beta runs prove D2RCore changes the call before the first plugin loads, including with item_stat_ranges/maximum_sockets disabled and plugin-items ordered first; the exact v2 plugin therefore refuses fail-closed before applying any item operation. Treat this range as loader-owned under 1.1 and do not overwrite or dynamically chain it without an explicit compiler-extension contract."
     }
   ]
 }
