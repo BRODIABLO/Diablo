@@ -2019,3 +2019,110 @@ confiance explicite.
   le SHA-256 `7375F2F7…E96507F` après extinction complète, réaffiche l'armure et
   rejoue son arbre 3/3. Ces preuves ferment le cœur D2S/D2I/G9; le multijoueur,
   G5–G8 et le census fixed-byte restent hors de cette promotion.
+
+## 2026-09-01 — Scripted Domains RE-AI-1 : dispatch normal et impossibilité de l’append in-place
+
+- `npm run re:d2r33 -- status` vérifie l’image canonique, l’image d’analyse,
+  l’index et le projet Ghidra du corpus commun 92777/93847. Le runtime final à
+  tester demeure D2R 3.3.93847; aucune matrice runtime n’est revendiquée ici.
+- `AITHINK_GetAiTableRecord 0x4A36C0` possède trois callers directs :
+  `0x4A276A`, `0x4A27B7` et `0x4A2BD1`. Son entrée stricte de 17 octets est
+  unique. Les deux premiers callers gouvernent l’initialisation et les
+  transitions du callback; le troisième sélectionne le profil de ciblage du
+  think courant.
+- Le chemin normal lit le WORD signé `MonStatsTxt+0x52`, puis la séquence
+  unique `B9 9B 00 00 00 66 3B C1 73 19` à `0x4A3791` exige
+  `0 <= AI < 155`. L’index accepté est multiplié par `0x20` et ajouté à la base
+  `0x2396E90`, référencée uniquement à `0x4A379F` et par le fallback à
+  `0x4A37B9`.
+- Le special state non nul admissible utilise la même stride `0x20` et la base
+  `0x23981F0`, référencée à `0x4A376E`. L’égalité
+  `0x2396E90 + 155*0x20 == 0x23981F0` prouve que la table normale et la table
+  des special states sont contiguës. Sur D2R, élargir seulement la borne à 156
+  ferait donc lire la première special state comme nouvelle AI; écrire cette
+  entrée la corromprait. Le patch Harvest 1.10f n’est pas transposable tel quel.
+- Le dispatch x64 lit la catégorie à `record+0x00`. Le chemin
+  d’initialisation compare le callback principal à `record+0x10`, teste le
+  callback d’entrée à `record+0x08` et le callback de transition à
+  `record+0x18`. La taille x64 `0x20` est ainsi prouvée directement; la
+  structure legacy D2MOO n’est utilisée que comme sémantique.
+- Le callback principal reçoit `Game*`, `Unit*` et `D2AiTickParam*` selon l’ABI
+  Windows x64. Le stockage local construit par le caller prouve le sous-ensemble
+  minimal suivant : `D2AiControl* +0x00`, cible `+0x10`, distance `+0x20`,
+  témoin de combat `+0x24`, `MonStatsTxt* +0x28` et `MonStats2Txt* +0x30`.
+  Cette preuve ferme le contexte minimal du bridge sans prétendre connaître la
+  structure complète.
+- `AITACTICS_IdleInNeutralMode 0x4A6D10` est le premier helper de fallback
+  fermé. Il normalise zéro à un frame, place le monstre en mode neutre, appelle
+  `0x48B890(game, unit, eventType=2, customId=0)`, puis
+  `EVENT_SetEvent 0x48B720(game, unit, eventType=2,
+  Game+0x170+frames, 0, 0, ...)`. Sa séquence interne unique à `0x4A6D71`
+  commence par `45 8D 41 02 E8 16 4B FE FF 44 8B 8F 70 01 00 00`.
+- La référence sémantique est
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`,
+  `source/D2Game/src/AI/AiThink.cpp:17051-17408`,
+  `source/D2Game/src/AI/AiTactics.cpp:243-266` et
+  `source/D2Game/include/AI/AiGeneral.h:19-29,80-86`. Aucune adresse, structure
+  ou ABI 32 bits n’est transposée.
+- La direction D2R retenue pour instruction est un hook unique et fail-closed
+  du résolveur : déléguer tout special state et toute unité non liée à
+  l’original, puis retourner un record bridge possédé par la DLL uniquement
+  pour une classe présente dans une table custom `aiscript`. Les inconnues
+  restantes sont la catégorie bridge, les helpers attaque/chase/retraite/
+  errance/cast, leur contrat de rescheduling, le cycle de vie GUID et
+  l’ownership runtime. Aucune DLL ni injection n’est encore créée.
+
+## 2026-09-01 — Scripted Domains RE-AI-2 : catégorie bridge, actions et continuation
+
+- Le switch à `0x4A2BD6` est borné à `0..6`; son témoin strict de 28 octets est
+  unique. La table de saut donne exactement `0→0x4A2CF1`, `1→0x4A2BF2`,
+  `2→0x4A2C7A`, `3→0x4A2BF2`, `4→0x4A2C31`, `5→0x4A2CA0` et
+  `6→0x4A2CC9`.
+- Les catégories `1/3` appellent le wrapper `0x4A69A0` et ne dispatchent le
+  callback qu’avec une cible. La catégorie `2` appelle directement le
+  sélecteur nullable `0x595750`, puis rejoint le callback sans test de nullité.
+  La catégorie `4` saute le callback principal. Les catégories `5/6` appellent
+  `0x4A6760`; `5` exige ensuite une cible tandis que `6` continue même après le
+  fallback exécuté par ce wrapper. Le premier record bridge retient donc la
+  **catégorie 2** : ciblage natif, callback garanti et aucune action automatique
+  avant Lua.
+- `AIUTIL_SelectTargetForAiThink 0x595750` suit l’ABI x64
+  `Unit*(Game*, Unit*, D2AiControl*, int32_t* distance, int32_t* combat,
+  uint8_t context)`. Son corps se termine à `0x595F7F`; le census de ses appels
+  directs ne contient ni `EVENT_SetEvent 0x48B720` ni `0x48B890`. Sa signature
+  stricte de 32 octets est unique.
+- Les primitives terminales V1 sont maintenant fermées dans l’image :
+  `AITACTICS_ChangeModeAndTargetUnit 0x4A78E0` pour l’attaque,
+  `AITACTICS_UseSkill 0x4A7BC0` pour le cast,
+  `AITACTICS_WalkToTargetUnitWithFlags 0x4A8740` pour le chase,
+  `D2GAME_AICORE_Escape 0x4A7DF0` pour la retraite et
+  `AITACTICS_WalkCloseToUnit 0x4A8320` pour l’errance. Leurs signatures
+  strictes étendues sont uniques. Les deux feuilles de marche convergent vers
+  `AITACTICS_MoveToTarget 0x4A8A10`, lui aussi identifié par une entrée unique.
+- Les ABI utiles sont respectivement `(game, unit, mode, target)`,
+  `(game, unit, mode, skillId, target, x, y, flag)`,
+  `(game, unit, target, flags16)`,
+  `(game, unit, target, distance8, deleteAiEvent32)` et
+  `(game, unit, radius8)`. Aucune structure legacy n’est utilisée pour fixer
+  ces largeurs ou l’ordre x64.
+- `UseSkill` appelle lui-même `AITACTICS_IdleInNeutralMode` pour 10 frames si
+  le pipeline de mode refuse le cast. Les quatre autres primitives remontent
+  leur rejet sans idle. Le contrat V1 est donc asymétrique mais fermé : une
+  action acceptée laisse exclusivement le pipeline de modes natif poursuivre;
+  un rejet attaque/chase/retraite/errance, une absence de leaf ou une erreur
+  Lua appelle une fois l’idle natif; un rejet de cast n’ajoute aucun second
+  idle. On ne sonde ni ne force un `AITHINK` immédiatement après un succès,
+  parce qu’un mode/une animation accepté possède alors légitimement la suite.
+- Le `monai.txt` officiel 3.3 et sa copie `base/monai.txt` sont byte-identiques,
+  contiennent les 155 records attendus et valent
+  `7c7c7b8866c46078356bcc6118789699351004f39edea92922425699d6aa86a8`.
+  Le round-trip TSV est byte-exact. La table native vit toutefois dans une zone
+  virtuelle non adossée au PE brut; aucune extraction live n’est nécessaire
+  pour fermer la catégorie bridge par le dispatch lui-même.
+- Référence sémantique seulement :
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`, notamment
+  `AiThink.cpp:17363-17407`, `AiTactics.cpp:31-88,172-178,214-265,305-369,
+  454-565` et `AiUtil.cpp:671-864`. Le prochain gate n’est plus le choix des
+  actions : il porte sur le lifecycle GUID, l’ownership du hook, les budgets et
+  l’empreinte fail-closed complète. Aucune DLL ni injection n’est créée par ce
+  lot statique.

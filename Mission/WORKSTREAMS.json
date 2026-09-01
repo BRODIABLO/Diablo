@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-31",
+  "updatedAt": "2026-09-01",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -744,6 +744,20 @@
       ]
     },
     {
+      "id": "ruffneckk-scripted-domains",
+      "name": "RuffnecKk Scripted Domains — Lua AI first",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/ruffneckk-scripted-domains.md",
+      "nextGate": "Bridge category 2, the native attack/chase/retreat/wander/cast helpers and the static continuation/fallback contract are proved. Close GUID death/despawn/session/reuse lifecycle, real ownership of 0x4A36C0, execution budgets, host authority and the complete fail-closed fingerprint. Only then start d2rloader-plugin-incubation for a new autonomous RuffnecKk Suite DLL; ISC12 remains the current mission in parallel.",
+      "include": [
+        "Mission/ruffneckk-scripted-domains.md",
+        "addons/RuffnecKkScriptedAI/**",
+        "reverse-engineering/d2r-3.2.92777/scripted-domains/**",
+        "scripts/reverse-engineering/d2r33-scripted-domains*"
+      ]
+    },
+    {
       "id": "d2r33-datatables-atlas",
       "name": "D2R 3.3 DataTables Atlas",
       "status": "paused",
@@ -921,7 +935,8 @@
         "base-mod-features",
         "pd2-inspiration-bkvince",
         "player-sequence-tables",
-        "isc12"
+        "isc12",
+        "ruffneckk-scripted-domains"
       ],
       "reason": "Governed native evidence registry shared by native plugin missions."
     },
@@ -951,7 +966,8 @@
         "base-mod-features",
         "pd2-inspiration-bkvince",
         "player-sequence-tables",
-        "isc12"
+        "isc12",
+        "ruffneckk-scripted-domains"
       ],
       "reason": "Persistent reverse-engineering conclusions shared by native plugin missions."
     },

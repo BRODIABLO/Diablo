@@ -824,16 +824,32 @@
       "name": "AiSpecialStateDispatchRead",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "ROADMAP.html#i9-bkvince-revive-ai-32",
-      "notes": "Direct 92777 ABI proof for the AI special state: the AI tick object begins with D2AiControl*, and D2AiControl begins with the signed 32-bit nAiSpecialState. The unique sequence at 0x4A2BC8 loads the tick's first pointer, reads dword [control+0x00] into EDX, calls AITHINK_GetAiTableRecord at 0x4A36C0, then dispatches on the returned record. AISPECIALSTATE_REVIVED remains value 7."
+      "source": "ROADMAP.html#i9-bkvince-revive-ai-32; Mission/ruffneckk-scripted-domains.md; direct 92777 dispatcher analysis; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316 semantic reference only",
+      "notes": "Direct 92777 ABI proof for the AI dispatch. The callback is invoked as void(Game*, Unit*, D2AiTickParam*) under the Windows x64 ABI. The minimal tick layout directly observed in the caller is D2AiControl* at +0x00, target Unit* at +0x10, target distance at +0x20, combat flag at +0x24, MonStatsTxt* at +0x28, and MonStats2Txt* at +0x30. D2AiControl begins with signed nAiSpecialState at +0x00. The unique sequence at 0x4A2BC8 loads the tick's first pointer, reads that state into EDX, calls AITHINK_GetAiTableRecord at 0x4A36C0, then dispatches on the returned record. AISPECIALSTATE_REVIVED remains value 7. No complete tick layout is claimed."
+    },
+    {
+      "rva": "0x4A2BD6",
+      "name": "AITHINK_TargetCategoryDispatch",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-scripted-domains.md; reverse-engineering/d2r-3.2.92777/findings.md; direct 92777 dispatcher analysis; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316 semantic reference only",
+      "notes": "Unique 28-byte switch witness 48 63 10 83 FA 06 77 53 4C 8D 05 1B D4 B5 FF 41 8B 8C 90 08 2F 4A 00 49 03 C8 FF E1. The seven jump-table destinations are category 0 -> 0x4A2CF1, 1 -> 0x4A2BF2, 2 -> 0x4A2C7A, 3 -> 0x4A2BF2, 4 -> 0x4A2C31, 5 -> 0x4A2CA0 and 6 -> 0x4A2CC9. Categories 1/3 use 0x4A69A0 and require a target; category 2 directly calls nullable selector 0x595750 and always reaches the main callback; category 4 skips the main callback; categories 5/6 use 0x4A6760, with 5 requiring a target and 6 continuing after the wrapper's own no-target fallback. Category 2 is the minimal Scripted AI bridge profile because it preserves native targeting without a pre-callback action."
     },
     {
       "rva": "0x4A36C0",
       "name": "AITHINK_GetAiTableRecord",
       "kind": "function",
       "confidence": "high",
-      "source": "ROADMAP.html#i9-bkvince-revive-ai-32",
-      "notes": "Resolves a unit's active AI table record from nAiSpecialState. Nonzero accepted states index the special-state table at RVA 0x23981F0 with 0x20-byte records; state 7 therefore selects the Revive/NecroPet record at RVA 0x23982D0. Its strict 17-byte prologue is unique in 92777."
+      "source": "ROADMAP.html#i9-bkvince-revive-ai-32; Mission/ruffneckk-scripted-domains.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/AI/AiThink.cpp:17051-17250",
+      "notes": "Resolves a unit's active 0x20-byte AI table record. Nonzero accepted states index the special-state table at RVA 0x23981F0; state 7 therefore selects the Revive/NecroPet record at RVA 0x23982D0. The normal path reads signed WORD MonStatsTxt+0x52, requires 0 <= AI < 155, and indexes the normal table at RVA 0x2396E90. The two tables are exactly adjacent because 0x2396E90 + 155*0x20 = 0x23981F0, so widening the bound alone cannot append an in-place record. Direct xrefs are 0x4A276A, 0x4A27B7 and 0x4A2BD1. Its strict 17-byte prologue is unique in 92777."
+    },
+    {
+      "rva": "0x4A3791",
+      "name": "AITHINK_NormalAiBoundWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-scripted-domains.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique nine-byte normal-AI bound sequence B9 9B 00 00 00 66 3B C1 73 19. The resolver has loaded the signed WORD MonStatsTxt+0x52 into AX, rejects values greater than or equal to 155, shifts accepted values by 5 and indexes the normal AI table at RVA 0x2396E90. This is a read-only layout witness, not a safe one-byte append patch."
     },
     {
       "rva": "0x4A3A20",
@@ -860,6 +876,14 @@
       "notes": "Unique 92777 catch-up sequence matching legacy MinionLeash: compares distance with 20, calls AITACTICS_SetVelocity at 0x4A7270 with mode 7, velocity 0 and bonus 40, then calls the owner-follow helper at 0x4A8090 with distance 19. The exact signature begins 83 F8 14 0F 8E 5A FF FF FF 45 33 C0 41 B1 28."
     },
     {
+      "rva": "0x4A6D10",
+      "name": "AITACTICS_IdleInNeutralMode",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-scripted-domains.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/AI/AiTactics.cpp:243-266",
+      "notes": "Observed Windows x64 ABI void (game, monster, frames). The D2R routine normalizes zero frames to one, changes the unit to neutral mode when required, calls 0x48B890 with event type 2 and custom id 0, then schedules event type 2 through EVENT_SetEvent 0x48B720 at Game+0x170+frames. The internal 16-byte sequence at 0x4A6D71 is unique: 45 8D 41 02 E8 16 4B FE FF 44 8B 8F 70 01 00 00. It is the first proven fail-safe rescheduling leaf for Scripted AI."
+    },
+    {
       "rva": "0x4A7270",
       "name": "AITACTICS_SetVelocity",
       "kind": "function",
@@ -868,12 +892,52 @@
       "notes": "Exact 3.2 equivalent of the legacy helper: normalizes mode 1 to 7, validates a monster unit, obtains MonsterData AI velocity parameters and tail-calls the low-level setter with (mode, velocity, byte bonus). MinionLeash calls it at 0x4A3C4A with (monster, 7, 0, 40), returning at 0x4A3C4F; ReviveOverhaul 1.1 uses that exact return address plus the signed call sequence 41 B1 28 48 8B CB 41 8D 50 07 E8 21 36 00 00 to confine velocity configuration to the Revive catch-up path."
     },
     {
+      "rva": "0x4A78E0",
+      "name": "AITACTICS_ChangeModeAndTargetUnit",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-scripted-domains.md; reverse-engineering/d2r-3.2.92777/findings.md; direct 92777 analysis; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316 semantic reference only",
+      "notes": "Windows x64 ABI int32(Game*, Unit*, int32 mode, Unit* target). It builds the mode-change descriptor through 0x4471E0, writes the target at descriptor+0x10, calls the native mode pipeline 0x4475C0 and returns that result without adding an idle fallback. Its strict 31-byte entry witness ending in 49 8B D9 is unique. Scripted AI may use an allowlisted attack mode and must call AITACTICS_IdleInNeutralMode only when this helper rejects the action."
+    },
+    {
+      "rva": "0x4A7BC0",
+      "name": "AITACTICS_UseSkill",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-scripted-domains.md; Mission/d2r33-hardcoded-skill-references.md; reverse-engineering/d2r-3.2.92777/findings.md; direct 92777 analysis; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316 semantic reference only",
+      "notes": "Windows x64 ABI int32(Game*, Unit*, uint8 mode, int32 skillId, Unit* target, int32 x, int32 y, uint8 flag). It prepares the skill and native mode descriptor, returns 1 when 0x4475C0 accepts the action, and otherwise calls AITACTICS_IdleInNeutralMode at 0x4A7CCE for 10 frames before returning 0. The strict 26-byte entry witness through cmp r8b,0x10 is unique. Scripted AI must not schedule a second fallback after this helper returns false because the helper already owns it."
+    },
+    {
       "rva": "0x4A7DF0",
       "name": "D2GAME_AICORE_Escape",
       "kind": "function",
       "confidence": "high",
-      "source": "ROADMAP.html#i9-bkvince-revive-ai-32",
-      "notes": "Escape helper used by the close-owner MinionLeash branch. The call at 0x4A3C29 passes game, minion, owner, distance 19 and flag 1, matching the legacy D2GAME_AICORE_Escape_6FCD0560 invocation."
+      "source": "ROADMAP.html#i9-bkvince-revive-ai-32; Mission/ruffneckk-scripted-domains.md; reverse-engineering/d2r-3.2.92777/findings.md; direct 92777 analysis; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316 semantic reference only",
+      "notes": "Windows x64 ABI int32(Game*, Unit*, Unit* target, uint8 distance, int32 deleteAiEvent). The call at 0x4A3C29 passes game, minion, owner, distance 19 and flag 1, matching the legacy escape invocation. The helper derives coordinates away from the target and returns the result of native movement helper 0x4A7540; it does not install an idle fallback on rejection. Its strict 27-byte entry witness is unique. Scripted AI must therefore idle natively when retreat is rejected."
+    },
+    {
+      "rva": "0x4A8320",
+      "name": "AITACTICS_WalkCloseToUnit",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-scripted-domains.md; reverse-engineering/d2r-3.2.92777/findings.md; direct 92777 analysis; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316 semantic reference only",
+      "notes": "Windows x64 ABI int32(Game*, Unit*, uint8 radius). It selects randomized coordinates near the unit and calls AITACTICS_MoveToTarget 0x4A8A10 in walk mode with no target, step 1 and flags 0, returning the native acceptance result without an idle fallback. Its strict 32-byte entry witness is unique. This is the bounded Scripted AI wander primitive; a false result requires the native idle guard."
+    },
+    {
+      "rva": "0x4A8740",
+      "name": "AITACTICS_WalkToTargetUnitWithFlags",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-scripted-domains.md; reverse-engineering/d2r-3.2.92777/findings.md; direct 92777 analysis; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316 semantic reference only",
+      "notes": "Windows x64 ABI int32(Game*, Unit*, Unit* target, uint16 flags). It calls AITACTICS_MoveToTarget 0x4A8A10 in walk mode with zero coordinates and step 1. With the Scripted AI V1 flags fixed to zero, a rejected move returns 0 without hidden wander or idle behavior, so the wrapper must install the native idle guard. Its strict 28-byte entry witness is unique."
+    },
+    {
+      "rva": "0x4A8A10",
+      "name": "AITACTICS_MoveToTarget",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-scripted-domains.md; reverse-engineering/d2r-3.2.92777/findings.md; direct 92777 analysis; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316 semantic reference only",
+      "notes": "Windows x64 ABI int32(Game*, Unit*, Unit* target, int32 mode, int32 x, int32 y, uint8 step, uint16 flags). It constructs the native movement mode and returns the acceptance result. Failure flags can request stock cleanup, wander or idle behavior; with flags 0, failure returns 0 without a fallback. The strict 22-byte entry witness is unique. Scripted AI uses this core only through the narrower walk wrappers."
     },
     {
       "rva": "0x4A8090",
@@ -1018,6 +1082,14 @@
       "confidence": "high",
       "source": "data-BKVince/d2rloader/patches/infinite-item-quantity-and-tomes.json",
       "notes": "Loads -1 into r9d after the Book type check and before the central quantity synchronization call."
+    },
+    {
+      "rva": "0x595750",
+      "name": "AIUTIL_SelectTargetForAiThink",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-scripted-domains.md; reverse-engineering/d2r-3.2.92777/findings.md; direct 92777 analysis; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316 semantic reference only",
+      "notes": "Windows x64 ABI Unit* (Game*, Unit*, D2AiControl*, int32* targetDistance, int32* combatFlag, uint8 context). The category-2 branch calls it directly at 0x4A2C99 and reaches the main AI callback even when it returns null. The routine enumerates and filters native candidates, populates distance/combat outputs and ends at 0x595F7F. Its direct-call set contains neither EVENT_SetEvent 0x48B720 nor event deletion 0x48B890. The strict 32-byte entry witness including the stack-cookie load is unique."
     },
     {
       "rva": "0x596720",
@@ -2986,6 +3058,14 @@
       "confidence": "high",
       "source": "Mission/monster-decisions.md; reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Runtime-initialized table of 43 absolute x64 callback pointers. Its non-null mask exactly matches MonUMod indices 1,2,4,5,6,8,9,16,17,18,23,25,26,27,28,30,36,37,38,39,41; index 30 resolves to RVA 0x495CD0. The mapping was recovered independently from a full-stack build-92777 process; D2MOO supplies semantic names only."
+    },
+    {
+      "rva": "0x2396E90",
+      "name": "AITHINK_NormalAiTable",
+      "kind": "data-table",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-scripted-domains.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/AI/AiThink.cpp:17056-17250",
+      "notes": "Static normal monster-AI table selected only by AITHINK_GetAiTableRecord. The resolver has two RIP-relative references to this base at 0x4A379F and fallback 0x4A37B9, accepts exactly 155 indices and uses 0x20-byte x64 records. Its occupied range [0x2396E90,0x23981F0) ends exactly where the special-state AI table begins; no in-place append slot exists."
     },
     {
       "rva": "0x1D1DE70",
