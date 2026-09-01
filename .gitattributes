@@ -9,6 +9,7 @@
 *.ps1  text eol=lf
 *.yml  text eol=lf
 *.yaml text eol=lf
+*.msp  -text -diff
 
 # Tables de donnees D2R lues par le launcher D2RLAN — CRLF IMPERATIF (integrite du mod)
 data-BK/**/*.txt        text eol=crlf
