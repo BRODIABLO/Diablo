@@ -1900,6 +1900,93 @@ octets et vaut SHA-256
 Elle n'a été ni déployée ni chargée dans D2R; les compteurs live, le coût réel
 en scène dense et la stabilité de la pile complète restent donc `not run`.
 
+### Consommateur renderer neutre — lot du 31 août 2026
+
+Vincent autorise la poursuite après le checkpoint de la source native. Le
+premier consommateur copie le frame publié dans le vecteur renderer existant et
+dessine une petite ellipse grise sous les marqueurs de monstres et sous tous les
+libellés protégés. Il réutilise le clip natif/panneaux déjà gouverné et ne lit
+aucun pointeur D2R depuis `Present`.
+
+Ce rendu est volontairement non sémantique : toutes les classes actives sont
+identiques, sans couleur élémentaire, sans ownership hostile, sans direction et
+sans accentuation `incoming`. Il ferme uniquement le raccord technique
+source→snapshot→projection→ImGui. La taxonomie mod-active par `Missiles.txt`,
+la configuration utilisateur et l'historique temporel de trajectoire restent
+des gates séparés. Aucun verdict visuel ou de performance gameplay ne sera
+déduit du build statique de ce lot.
+
+Le raccord compile en Release x64 sous `/W4 /WX`; CTest rapporte `1/1`, le
+self-test du workbench D2R 3.3 rapporte `PASS`, le cadastre demeure `VALID` et
+`git diff --check` ne signale aucune erreur. La DLL de travail mesure 3 175 424
+octets et vaut SHA-256
+`6ACEDCEC01C3803791D851D49DF56170188A39280DF870E14ABD9A67AD6878C1`.
+Elle n'a été ni déployée ni chargée : présence visuelle, densité, clip réel et
+coût de rendu restent `not run`.
+
+### Nouvelle ère Reveal Map — atlas externe seed-driven 0.13.22
+
+Le 1er septembre 2026, après le rejet en jeu des méthodes qui matérialisaient
+les rooms distantes et provoquaient une chute de 30–40 % des FPS, Vincent
+retient l'atlas externe et donne explicitement **GO**. Le produit n'expose plus
+qu'une action et un hotkey `Reveal Map`. Le générateur est lancé
+automatiquement par la DLL en priorité processus inférieure; aucun exécutable
+séparé n'est lancé par l'utilisateur. Il reçoit uniquement le seed courant, la
+difficulté, l'acte et le niveau témoin, puis produit des valeurs de géométrie et
+de labels. Il ne matérialise aucune room D2R et ne peuple ni monstres, ni
+objets, ni missiles.
+
+La DLL charge un MSP1 déterministe contenant les 1 499 frames MaxiMap 16×32 et
+les cinq palettes d'acte, puis dessine la topologie seed-exacte dans l'hôte
+D3D12/ImGui existant. Cet atlas est strictement la couche MapSense la plus
+basse. Les pipelines existants demeurent au-dessus et ne sont ni remplacés ni
+redessinés : lignes vertes/rouges/mauves, POI et coffres live, missiles,
+marqueurs de monstres par rang, immunités, noms de boss et labels protégés des
+niveaux/waypoints/shrines. La projection réutilise le témoin affine natif
+client→automap, ainsi que le pan, le zoom et le clip des panneaux gouvernés;
+aucun nouveau hook automap natif n'est ajouté.
+
+La publication est immuable et liée à la session, au seed, à la difficulté, à
+l'acte et au niveau courant. La composante topologique continue seulement est
+dessinée, de sorte qu'un donjon distant ne puisse pas être importé dans les
+coordonnées d'une surface sans lien physique. Le cache est validé sous
+`%LOCALAPPDATA%\RuffnecKk\MapSense\atlas-cache\v1`. Une intention MSI1 de 16
+octets, exactement liée au seed et à la difficulté, restaure `Reveal Map` après
+un cold start du même seed et refuse un seed rerollé. L'acceptation du reveal
+natif est maintenant indépendante de l'arrivée asynchrone de l'atlas : ni une
+génération lente ni un échec helper ne peuvent soumettre le même reveal d'acte
+une deuxième fois. Les autres actes sont préchauffés en arrière-plan.
+
+Le seed de spike `1395822899`, Hell, Acte III produit 28 niveaux et 30 276
+cellules en environ 511 ms hors processus; la composante extérieure Kurast
+75–83 contient 19 202 cellules. Le rendu lie sa texture une seule fois pour la
+passe entière puis remplit directement un lot ImGui commun, au lieu de pousser
+et retirer la texture pour chaque cellule. Ce changement ferme un coût CPU
+évitable mais ne constitue pas une mesure FPS gameplay.
+
+La qualification statique est **PASS** : build Release x64 `/W4 /WX`, CTest
+`1/1`, `git diff --check`, cadastre régénéré et `VALID`, parseurs MSA1/MSP1
+bornés, régénération MSP byte-identique, deux générations MSA1 byte-identiques
+pour chacun des cinq actes et deux previews exactes vérifiées hors jeu —
+composante extérieure Acte III cohérente et niveau 92 isolé sans fuite de
+surface. Les artefacts courants sont :
+
+- DLL 3 343 872 octets, SHA-256
+  `3819A29C3FDFBDE7053BA03DEB6F8AD3928E0AD4481819C16E84AE3492BC2160`;
+- helper 11 322 368 octets, SHA-256
+  `FCC41FCDE3971B2B084CD556BD6B3D33241EEA16AEE0CD7A6918D9EBC5C5BF73`;
+- MSP 790 320 octets, SHA-256
+  `AD86C7651D896461902B08A8C0933901BDB95F8830499D581FF958482EDE85C0`.
+
+Le runtime reste **NOT RUN** pendant que la tâche ISC12 possède l'instance D2R.
+Les gates encore ouverts sont le cold start avec la pile complète, la présence
+et l'alignement de l'atlas/labels/waypoints dans les cinq actes, la conservation
+visuelle des couches live, le même-seed/new-seed, les changements de niveau et
+de difficulté, puis les mesures FPS avant/après Reveal Map. Aucun ZIP public
+n'est produit. `libd2` et D2MOO sont crédités; la provenance et l'autorisation
+de redistribution de chaque payload dérivé restent à consigner formellement
+avant une release publique.
+
 ## Validation future
 
 - configurations absente, valide et invalide;

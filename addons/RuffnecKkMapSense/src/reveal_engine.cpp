@@ -9,7 +9,6 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 
 namespace RuffnecKk::MapSense {
 namespace {
@@ -19,10 +18,19 @@ constexpr std::uintptr_t GetLocalPlayerRva = 0x09A480;
 constexpr std::uintptr_t InitLevelRva = 0x3271C0;
 constexpr std::uintptr_t GetLevelRva = 0x3267C0;
 constexpr std::uintptr_t CreateActiveRoomRva = 0x3289A0;
+constexpr std::uintptr_t PrepareRoomWitnessRva = 0x3289B3;
+constexpr std::uintptr_t BuildRoomPipelineWitnessRva = 0x328FDF;
+constexpr std::uintptr_t BuildNearRoomLinksRva = 0x3608A0;
+constexpr std::uintptr_t AddPresetUnitsRva = 0x3DE0E0;
+constexpr std::uintptr_t InitializeStaticRoomRva = 0x3F38D0;
+constexpr std::uintptr_t AddStaticRoomTilesRva = 0x3F3930;
+constexpr std::uintptr_t LoadRoomTileLibrariesRva = 0x3F3970;
+constexpr std::uintptr_t ReleaseStaticRoomRva = 0x3F3AA0;
+constexpr std::uintptr_t ReleaseStaticRoomWitnessRva = 0x3F3ADC;
 constexpr std::uintptr_t PathGetRoomRva = 0x341C30;
 constexpr std::uintptr_t StandardAutomapCallbackRva = 0x0D2240;
 constexpr std::uintptr_t ClientDrlgDifficultyWitnessRva = 0x32766A;
-constexpr char SupportedCoreVersion[] = "1.1.0-beta";
+constexpr std::uintptr_t DrlgSeedInitializationWitnessRva = 0x326E89;
 
 constexpr std::size_t UnitTypeOffset = 0x00;
 constexpr std::size_t UnitDynamicPathOffset = 0x38;
@@ -32,8 +40,15 @@ constexpr std::size_t LevelFirstRoomOffset = 0x10;
 constexpr std::size_t LevelDrlgOffset = 0x1C8;
 constexpr std::size_t LevelIdOffset = 0x1F8;
 constexpr std::size_t RoomNextOffset = 0x48;
+constexpr std::size_t RoomNearCountOffset = 0x18;
+constexpr std::size_t RoomFlagsOffset = 0x50;
+constexpr std::size_t RoomActiveRoomOffset = 0x58;
+constexpr std::size_t RoomTypeOffset = 0x74;
+constexpr std::size_t RoomPresetUnitOffset = 0x98;
 constexpr std::size_t DrlgDifficultyOffset = 0x830;
 constexpr std::size_t DrlgAutomapCallbackOffset = 0x838;
+constexpr std::size_t DrlgMapSeedOffset = 0x840;
+constexpr std::size_t DrlgStartSeedOffset = 0x860;
 constexpr std::uint32_t MaximumRoomsPerLevel = 4096;
 
 using GetLocalDataContextFn = std::int32_t(__fastcall*)() noexcept;
@@ -41,6 +56,8 @@ using GetLocalPlayerFn = void*(__fastcall*)(std::int32_t) noexcept;
 using InitLevelFn = void(__fastcall*)(std::uint8_t, void*);
 using GetLevelFn = void*(__fastcall*)(std::uint8_t, void*, std::uint32_t);
 using CreateActiveRoomFn = void*(__fastcall*)(std::uint8_t, void*);
+using PrepareStaticRoomFn = void(__fastcall*)(std::uint8_t, void*);
+using ReleaseStaticRoomFn = void(__fastcall*)(void*, std::int32_t);
 using PathGetRoomFn = void*(__fastcall*)(void*) noexcept;
 using RevealActiveRoomFn = void(__fastcall*)(void*);
 
@@ -52,6 +69,12 @@ InitLevelFn InitLevel{};
 InitLevelFn OriginalInitLevel{};
 GetLevelFn GetLevel{};
 CreateActiveRoomFn CreateActiveRoom{};
+PrepareStaticRoomFn BuildNearRoomLinks{};
+PrepareStaticRoomFn AddPresetUnits{};
+PrepareStaticRoomFn InitializeStaticRoom{};
+PrepareStaticRoomFn AddStaticRoomTiles{};
+PrepareStaticRoomFn LoadRoomTileLibraries{};
+ReleaseStaticRoomFn ReleaseStaticRoom{};
 PathGetRoomFn PathGetRoom{};
 D2RL::CoreExports::IsInGameFn IsInGame{};
 D2RL::CoreExports::ExecuteConsoleCommandFn ExecuteConsoleCommand{};
@@ -65,25 +88,24 @@ std::atomic_uint64_t LevelsRevealed{};
 std::atomic_uint64_t RoomsRevealed{};
 std::atomic_uint64_t RevealFailures{};
 std::atomic_uint64_t TraversalLimits{};
+std::atomic_uint64_t StaticRoomCandidates{};
+std::atomic_uint64_t StaticRoomsMaterialized{};
+std::atomic_uint64_t StaticRoomsReleased{};
+std::atomic_uint64_t StaticRoomFailures{};
 std::atomic<RevealLevelInitializedCallback> LevelInitializedCallback{};
 std::atomic<void*> LevelInitializedUserData{};
 
 auto ResolveCoreBridge() noexcept -> bool {
     const HMODULE core = GetModuleHandleA(D2RL::CoreExports::CoreDllName);
     if (core == nullptr) return false;
-    const auto version = reinterpret_cast<D2RL::CoreExports::VersionFn>(
-        GetProcAddress(core, D2RL::CoreExports::VersionInfo.name));
     IsInGame = reinterpret_cast<D2RL::CoreExports::IsInGameFn>(
         GetProcAddress(core, D2RL::CoreExports::IsInGameInfo.name));
     ExecuteConsoleCommand =
         reinterpret_cast<D2RL::CoreExports::ExecuteConsoleCommandFn>(
-            GetProcAddress(core,
+            GetProcAddress(
+                core,
                 D2RL::CoreExports::ExecuteConsoleCommandInfo.name));
-    if (version == nullptr || IsInGame == nullptr
-        || ExecuteConsoleCommand == nullptr) return false;
-    const char* const activeVersion = version();
-    return activeVersion != nullptr
-        && std::strcmp(activeVersion, SupportedCoreVersion) == 0;
+    return IsInGame != nullptr && ExecuteConsoleCommand != nullptr;
 }
 
 auto SubmitNativeActReveal() noexcept -> bool {
@@ -218,6 +240,11 @@ auto ResolveClientLevel(ClientLevelView& output) noexcept -> bool {
         const auto difficulty = *reinterpret_cast<const std::uint8_t*>(
             clientDrlg + DrlgDifficultyOffset);
         if (difficulty > 2U) return false;
+        const auto mapSeed = *reinterpret_cast<const std::uint32_t*>(
+            clientDrlg + DrlgMapSeedOffset);
+        const auto drlgStartSeed = *reinterpret_cast<const std::uint32_t*>(
+            clientDrlg + DrlgStartSeedOffset);
+        if (DeriveDrlgStartSeed(mapSeed) != drlgStartSeed) return false;
 
         auto* const currentLevel = static_cast<std::uint8_t*>(GetLevel(
             clientDataContext, clientDrlg, currentLevelId));
@@ -230,6 +257,8 @@ auto ResolveClientLevel(ClientLevelView& output) noexcept -> bool {
             .dataContext = clientDataContext,
             .difficulty = difficulty,
             .levelId = static_cast<std::int32_t>(currentLevelId),
+            .mapSeed = mapSeed,
+            .drlgStartSeed = drlgStartSeed,
             .activeRoom = activeRoom,
             .drlg = clientDrlg,
             .level = currentLevel,
@@ -342,6 +371,69 @@ auto ValidateRuntime() noexcept -> bool {
         0xEC, 0x20, 0x8B, 0x42, 0x50, 0x48, 0x8B, 0xDA,
         0x0F, 0xB6, 0xF9, 0x0F, 0xBA, 0xE0, 0x18, 0x72,
         0x08, 0xE8, 0xB2, 0xAF, 0x0C, 0x00, 0x8B, 0x43};
+    // The native wrapper proves the exact static preconditions: tile-library
+    // bit 24, preset-descriptor bit 25 for preset rooms, then HAS_ROOM bit 20.
+    constexpr std::array<std::uint8_t, 59> prepareRoomExpected{
+        0x0F, 0xBA, 0xE0, 0x18, 0x72, 0x08, 0xE8, 0xB2,
+        0xAF, 0x0C, 0x00, 0x8B, 0x43, 0x50, 0x0F, 0xBA,
+        0xE0, 0x19, 0x72, 0x15, 0x83, 0x7B, 0x74, 0x02,
+        0x75, 0x0F, 0x48, 0x8B, 0xD3, 0x40, 0x0F, 0xB6,
+        0xCF, 0xE8, 0x07, 0x57, 0x0B, 0x00, 0x8B, 0x43,
+        0x50, 0x0F, 0xBA, 0xE0, 0x14, 0x72, 0x0C, 0x48,
+        0x8B, 0xD3, 0x40, 0x0F, 0xB6, 0xCF, 0xE8, 0xE2,
+        0x05, 0x00, 0x00};
+    // This witness is the safety boundary: near-room/static-grid/static-tile
+    // calls occur before the separate ActiveRoom allocator at 0x326480.
+    constexpr std::array<std::uint8_t, 76> buildRoomPipelineExpected{
+        0x48, 0x83, 0x7A, 0x18, 0x00, 0x48, 0x8B, 0xDA,
+        0x48, 0x8B, 0x82, 0x90, 0x00, 0x00, 0x00, 0x0F,
+        0xB6, 0xF1, 0x48, 0x8B, 0xB8, 0xC8, 0x01, 0x00,
+        0x00, 0x75, 0x05, 0xE8, 0xA1, 0x78, 0x03, 0x00,
+        0x48, 0x8B, 0xD3, 0x40, 0x0F, 0xB6, 0xCE, 0xE8,
+        0xC5, 0xA8, 0x0C, 0x00, 0x48, 0x8B, 0xD3, 0x40,
+        0x0F, 0xB6, 0xCE, 0xE8, 0x19, 0xA9, 0x0C, 0x00,
+        0x48, 0x8B, 0xD3, 0x48, 0x8B, 0xCF, 0xE8, 0x5E,
+        0xD4, 0xFF, 0xFF, 0xFE, 0x87, 0x24, 0x01, 0x00,
+        0x00, 0xFF, 0x47, 0x08};
+    constexpr std::array<std::uint8_t, 31> buildNearRoomLinksExpected{
+        0x88, 0x4C, 0x24, 0x08, 0x53, 0x56, 0x41, 0x55,
+        0x48, 0x83, 0xEC, 0x70, 0x48, 0x89, 0x7C, 0x24,
+        0x60, 0x48, 0x8B, 0xF2, 0x0F, 0xB6, 0xF9, 0x48,
+        0x8B, 0xCA, 0xE8, 0x01, 0x0C, 0x00, 0x00};
+    constexpr std::array<std::uint8_t, 30> addPresetUnitsExpected{
+        0x40, 0x55, 0x56, 0x57, 0x41, 0x56, 0x41, 0x57,
+        0x48, 0x8D, 0xAC, 0x24, 0x60, 0xFC, 0xFF, 0xFF,
+        0x48, 0x81, 0xEC, 0xA0, 0x04, 0x00, 0x00, 0x48,
+        0x8B, 0x05, 0xCA, 0xD1, 0x5E, 0x02};
+    constexpr std::array<std::uint8_t, 31> initializeStaticRoomExpected{
+        0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83,
+        0xEC, 0x20, 0x0F, 0xB6, 0xF9, 0x48, 0x8B, 0xDA,
+        0x48, 0x8D, 0x4A, 0x30, 0x8B, 0x52, 0x08, 0xE8,
+        0x24, 0x38, 0xF7, 0xFF, 0x8B, 0x53, 0x74};
+    constexpr std::array<std::uint8_t, 43> addStaticRoomTilesExpected{
+        0x40, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B,
+        0xDA, 0x8B, 0x52, 0x74, 0x83, 0xEA, 0x01, 0x74,
+        0x1A, 0x83, 0xFA, 0x01, 0x75, 0x1D, 0x48, 0x8B,
+        0xD3, 0xE8, 0x92, 0xAD, 0xFE, 0xFF, 0x81, 0x4B,
+        0x50, 0x00, 0x00, 0x10, 0x00, 0x48, 0x83, 0xC4,
+        0x20, 0x5B, 0xC3};
+    constexpr std::array<std::uint8_t, 32> loadRoomTileLibrariesExpected{
+        0x48, 0x89, 0x5C, 0x24, 0x18, 0x55, 0x56, 0x57,
+        0x48, 0x81, 0xEC, 0x40, 0x01, 0x00, 0x00, 0x48,
+        0x8B, 0x05, 0x42, 0x79, 0x5D, 0x02, 0x48, 0x33,
+        0xC4, 0x48, 0x89, 0x84, 0x24, 0x30, 0x01, 0x00};
+    constexpr std::array<std::uint8_t, 32> releaseStaticRoomExpected{
+        0x48, 0x89, 0x5C, 0x24, 0x20, 0x55, 0x57, 0x41,
+        0x54, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0x81,
+        0x90, 0x00, 0x00, 0x00, 0x8B, 0xEA, 0x48, 0x8B,
+        0xF9, 0x48, 0x8B, 0x98, 0xC8, 0x01, 0x00, 0x00};
+    constexpr std::array<std::uint8_t, 43> releaseStaticRoomWitnessExpected{
+        0x48, 0x8B, 0xCF, 0x4C, 0x89, 0x67, 0x58, 0xE8,
+        0x88, 0xDB, 0xFE, 0xFF, 0x8B, 0x47, 0x50, 0x0F,
+        0xBA, 0xE0, 0x14, 0x0F, 0x83, 0x47, 0x01, 0x00,
+        0x00, 0x0F, 0xBA, 0xF8, 0x14, 0x4C, 0x89, 0x7C,
+        0x24, 0x50, 0x89, 0x47, 0x50, 0xFF, 0x83, 0x50,
+        0x08, 0x00, 0x00};
     constexpr std::array<std::uint8_t, 32> callbackExpected{
         0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74,
         0x24, 0x10, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48,
@@ -358,6 +450,26 @@ auto ValidateRuntime() noexcept -> bool {
         0x8B, 0x40, 0x2C, 0x46, 0x8B, 0x54, 0x88, 0x0C,
         0x44, 0x89, 0x53, 0x2C, 0x0F, 0xB6, 0x8D, 0x30,
         0x08, 0x00, 0x00};
+    // DRLG allocation initializes {seed, 0x29A}, advances the native LCG once,
+    // stores the original seed at +0x840 and its low result at +0x860.
+    constexpr std::array<std::uint8_t, 129> seedInitializationExpected{
+        0x8B, 0xD3, 0x48, 0x89, 0x87, 0x58, 0x08, 0x00,
+        0x00, 0x44, 0x88, 0xAF, 0x70, 0x08, 0x00, 0x00,
+        0xE8, 0x72, 0x02, 0x04, 0x00, 0x8B, 0x07, 0x4C,
+        0x69, 0xC8, 0xC5, 0x90, 0xC6, 0x6A, 0x8B, 0x47,
+        0x04, 0x4C, 0x03, 0xC8, 0x89, 0x9F, 0x40, 0x08,
+        0x00, 0x00, 0x8B, 0x85, 0x28, 0x08, 0x00, 0x00,
+        0x49, 0x8B, 0xD1, 0x89, 0x87, 0x10, 0x01, 0x00,
+        0x00, 0x48, 0x8B, 0x85, 0x30, 0x08, 0x00, 0x00,
+        0x48, 0x89, 0x87, 0x28, 0x01, 0x00, 0x00, 0x0F,
+        0xB6, 0x85, 0x38, 0x08, 0x00, 0x00, 0x88, 0x87,
+        0x30, 0x08, 0x00, 0x00, 0x48, 0x8B, 0x85, 0x40,
+        0x08, 0x00, 0x00, 0x48, 0xC1, 0xEA, 0x20, 0x48,
+        0x89, 0x87, 0x38, 0x08, 0x00, 0x00, 0x48, 0x8B,
+        0x85, 0x48, 0x08, 0x00, 0x00, 0x48, 0x89, 0x87,
+        0x78, 0x08, 0x00, 0x00, 0x89, 0x57, 0x04, 0x44,
+        0x89, 0x0F, 0x44, 0x89, 0x8F, 0x60, 0x08, 0x00,
+        0x00};
     const auto check = [](std::uintptr_t rva, const auto& expected) noexcept {
         return Context->CheckExpectedBytes(
             rva,
@@ -370,10 +482,24 @@ auto ValidateRuntime() noexcept -> bool {
         && check(PathGetRoomRva, pathGetRoomExpected)
         && check(InitLevelRva, initLevelExpected)
         && check(CreateActiveRoomRva, createRoomExpected)
+        && check(PrepareRoomWitnessRva, prepareRoomExpected)
+        && check(BuildRoomPipelineWitnessRva, buildRoomPipelineExpected)
+        && check(BuildNearRoomLinksRva, buildNearRoomLinksExpected)
+        && check(AddPresetUnitsRva, addPresetUnitsExpected)
+        && check(InitializeStaticRoomRva, initializeStaticRoomExpected)
+        && check(AddStaticRoomTilesRva, addStaticRoomTilesExpected)
+        && check(LoadRoomTileLibrariesRva, loadRoomTileLibrariesExpected)
+        && check(ReleaseStaticRoomRva, releaseStaticRoomExpected)
+        && check(
+            ReleaseStaticRoomWitnessRva,
+            releaseStaticRoomWitnessExpected)
         && check(StandardAutomapCallbackRva, callbackExpected)
         && check(
             ClientDrlgDifficultyWitnessRva,
-            clientDifficultyExpected);
+            clientDifficultyExpected)
+        && check(
+            DrlgSeedInitializationWitnessRva,
+            seedInitializationExpected);
 }
 
 } // namespace
@@ -389,7 +515,7 @@ auto InitializeRevealEngine(
     ResetRevealSession();
     if (!ResolveCoreBridge()) {
         Context->LogError(
-            "MapSense: D2RCore 1.1.0-beta reveal command bridge is unavailable.");
+            "MapSense: D2RCore public reveal command bridge is unavailable.");
         Context = nullptr;
         Base = nullptr;
         return false;
@@ -407,6 +533,13 @@ auto InitializeRevealEngine(
     InitLevel = At<InitLevelFn>(InitLevelRva);
     GetLevel = At<GetLevelFn>(GetLevelRva);
     CreateActiveRoom = At<CreateActiveRoomFn>(CreateActiveRoomRva);
+    BuildNearRoomLinks = At<PrepareStaticRoomFn>(BuildNearRoomLinksRva);
+    AddPresetUnits = At<PrepareStaticRoomFn>(AddPresetUnitsRva);
+    InitializeStaticRoom = At<PrepareStaticRoomFn>(InitializeStaticRoomRva);
+    AddStaticRoomTiles = At<PrepareStaticRoomFn>(AddStaticRoomTilesRva);
+    LoadRoomTileLibraries = At<PrepareStaticRoomFn>(
+        LoadRoomTileLibrariesRva);
+    ReleaseStaticRoom = At<ReleaseStaticRoomFn>(ReleaseStaticRoomRva);
     PathGetRoom = At<PathGetRoomFn>(PathGetRoomRva);
 
     constexpr std::array<std::uint8_t, 14> hookExpected{
@@ -455,6 +588,10 @@ void BeginRevealSession() noexcept {
     RoomsRevealed.store(0, std::memory_order_relaxed);
     RevealFailures.store(0, std::memory_order_relaxed);
     TraversalLimits.store(0, std::memory_order_relaxed);
+    StaticRoomCandidates.store(0U, std::memory_order_relaxed);
+    StaticRoomsMaterialized.store(0U, std::memory_order_relaxed);
+    StaticRoomsReleased.store(0U, std::memory_order_relaxed);
+    StaticRoomFailures.store(0U, std::memory_order_relaxed);
 }
 
 void ResetRevealSession() noexcept {
@@ -507,12 +644,123 @@ auto MaterializeClientRoom(
     }
 }
 
+auto PrepareStaticClientRoom(
+        std::uint8_t dataContext,
+        void* drlgRoom,
+        StaticClientRoomLease& lease) noexcept -> bool {
+    lease = {};
+    if (!Active.load(std::memory_order_acquire)
+        || dataContext >= 8U || drlgRoom == nullptr
+        || BuildNearRoomLinks == nullptr || AddPresetUnits == nullptr
+        || InitializeStaticRoom == nullptr || AddStaticRoomTiles == nullptr
+        || LoadRoomTileLibraries == nullptr || ReleaseStaticRoom == nullptr) {
+        StaticRoomFailures.fetch_add(1U, std::memory_order_relaxed);
+        return false;
+    }
+    StaticRoomCandidates.fetch_add(1U, std::memory_order_relaxed);
+    __try {
+        auto* const room = static_cast<std::uint8_t*>(drlgRoom);
+        auto flags = *reinterpret_cast<std::uint32_t*>(
+            room + RoomFlagsOffset);
+        if ((flags & (StaticPoiRoomWarpMask | StaticPoiRoomWaypointMask))
+                == 0U) {
+            StaticRoomFailures.fetch_add(1U, std::memory_order_relaxed);
+            return false;
+        }
+        if (*reinterpret_cast<void**>(room + RoomActiveRoomOffset) != nullptr
+            || (flags & StaticPoiRoomHasRoomMask) != 0U) {
+            return true;
+        }
+
+        if ((flags & 0x01000000U) == 0U) {
+            LoadRoomTileLibraries(dataContext, room);
+        }
+        flags = *reinterpret_cast<std::uint32_t*>(room + RoomFlagsOffset);
+        if ((flags & 0x02000000U) == 0U
+            && *reinterpret_cast<std::int32_t*>(room + RoomTypeOffset) == 2) {
+            AddPresetUnits(dataContext, room);
+        }
+        flags = *reinterpret_cast<std::uint32_t*>(room + RoomFlagsOffset);
+        if ((flags & StaticPoiRoomWarpMask) == 0U) {
+            if ((flags & StaticPoiRoomWaypointMask) == 0U
+                || (flags & StaticPoiRoomPresetUnitsAddedMask) == 0U
+                || *reinterpret_cast<void**>(
+                    room + RoomPresetUnitOffset) == nullptr) {
+                StaticRoomFailures.fetch_add(1U, std::memory_order_relaxed);
+                return false;
+            }
+            return true;
+        }
+        if (*reinterpret_cast<void**>(room + RoomActiveRoomOffset) != nullptr
+            || (flags & StaticPoiRoomHasRoomMask) != 0U) {
+            StaticRoomFailures.fetch_add(1U, std::memory_order_relaxed);
+            return false;
+        }
+
+        if (*reinterpret_cast<std::uint64_t*>(
+                room + RoomNearCountOffset) == 0U) {
+            BuildNearRoomLinks(dataContext, room);
+        }
+        InitializeStaticRoom(dataContext, room);
+        AddStaticRoomTiles(dataContext, room);
+        flags = *reinterpret_cast<std::uint32_t*>(room + RoomFlagsOffset);
+        if (*reinterpret_cast<void**>(room + RoomActiveRoomOffset) != nullptr
+            || (flags & StaticPoiRoomHasRoomMask) == 0U) {
+            if (*reinterpret_cast<void**>(room + RoomActiveRoomOffset)
+                    == nullptr
+                && (flags & StaticPoiRoomHasRoomMask) != 0U) {
+                ReleaseStaticRoom(room, 0);
+            }
+            StaticRoomFailures.fetch_add(1U, std::memory_order_relaxed);
+            return false;
+        }
+        lease = {.room = room, .owned = true};
+        StaticRoomsMaterialized.fetch_add(1U, std::memory_order_relaxed);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        StaticRoomFailures.fetch_add(1U, std::memory_order_relaxed);
+        lease = {};
+        return false;
+    }
+}
+
+auto ReleaseStaticClientRoom(
+        StaticClientRoomLease& lease) noexcept -> bool {
+    if (!lease.owned || lease.room == nullptr || ReleaseStaticRoom == nullptr) {
+        lease = {};
+        return false;
+    }
+    auto* const room = static_cast<std::uint8_t*>(lease.room);
+    lease = {};
+    __try {
+        const auto flags = *reinterpret_cast<std::uint32_t*>(
+            room + RoomFlagsOffset);
+        if (*reinterpret_cast<void**>(room + RoomActiveRoomOffset) != nullptr
+            || (flags & StaticPoiRoomHasRoomMask) == 0U) {
+            StaticRoomFailures.fetch_add(1U, std::memory_order_relaxed);
+            return false;
+        }
+        ReleaseStaticRoom(room, 0);
+        if (*reinterpret_cast<void**>(room + RoomActiveRoomOffset) != nullptr
+            || (*reinterpret_cast<std::uint32_t*>(room + RoomFlagsOffset)
+                & StaticPoiRoomHasRoomMask) != 0U) {
+            StaticRoomFailures.fetch_add(1U, std::memory_order_relaxed);
+            return false;
+        }
+        StaticRoomsReleased.fetch_add(1U, std::memory_order_relaxed);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        StaticRoomFailures.fetch_add(1U, std::memory_order_relaxed);
+        return false;
+    }
+}
+
 auto RevealCurrentAct() noexcept -> RevealOutcome {
     if (!Active.load(std::memory_order_acquire)) {
         return RevealOutcome::Unavailable;
     }
     if (SubmitNativeActReveal()) return RevealOutcome::Complete;
-    RevealFailures.fetch_add(1, std::memory_order_relaxed);
+    RevealFailures.fetch_add(1U, std::memory_order_relaxed);
     return RevealOutcome::Unavailable;
 }
 
@@ -564,6 +812,14 @@ auto GetRevealCounters() noexcept -> RevealCounters {
         .rooms = RoomsRevealed.load(std::memory_order_relaxed),
         .failures = RevealFailures.load(std::memory_order_relaxed),
         .traversalLimits = TraversalLimits.load(std::memory_order_relaxed),
+        .staticRoomCandidates = StaticRoomCandidates.load(
+            std::memory_order_relaxed),
+        .staticRoomsMaterialized = StaticRoomsMaterialized.load(
+            std::memory_order_relaxed),
+        .staticRoomsReleased = StaticRoomsReleased.load(
+            std::memory_order_relaxed),
+        .staticRoomFailures = StaticRoomFailures.load(
+            std::memory_order_relaxed),
     };
 }
 

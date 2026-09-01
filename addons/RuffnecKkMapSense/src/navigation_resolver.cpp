@@ -303,8 +303,8 @@ struct RevealedWaypointResolution final {
 // InitLevel is reentrant: resolving an outdoor boundary can initialize a
 // neighbouring Level before the outer observer has finished. Keep those
 // pointers only for the duration of the outer hook invocation, then drain the
-// complete bounded queue before returning control to D2R. This is the only
-// window in which transient revealmap Levels are guaranteed to remain valid.
+// complete bounded queue before returning control to D2R. The progressive
+// scheduler stores LevelIds only between callbacks.
 thread_local std::array<
     InitializedLevelCaptureRequest,
     MaximumLevelsPerDrlg> InitializedLevelCaptureQueue{};
@@ -914,21 +914,25 @@ void AppendSpecialChestPreset(
 }
 
 [[nodiscard]] auto ResolveNativeMonasteryAnchorUnchecked(
+        std::uint8_t* sourceLevel,
         std::uint8_t* targetLevel,
         std::int32_t currentLevelId,
         std::int32_t targetLevelId,
         CandidateBatch& batch) noexcept -> bool {
-    if (!IsAlignedPointer(targetLevel)
-        || currentLevelId != TamoeHighlandLevelId
-        || targetLevelId != MonasteryGateLevelId
+    const auto forward = currentLevelId == TamoeHighlandLevelId
+        && targetLevelId == MonasteryGateLevelId;
+    const auto reverse = currentLevelId == MonasteryGateLevelId
+        && targetLevelId == TamoeHighlandLevelId;
+    auto* const monasteryLevel = forward ? targetLevel : sourceLevel;
+    if ((!forward && !reverse) || !IsAlignedPointer(monasteryLevel)
         || *reinterpret_cast<const std::int32_t*>(
-            targetLevel + LevelIdOffset) != targetLevelId) {
+            monasteryLevel + LevelIdOffset) != MonasteryGateLevelId) {
         return false;
     }
     const auto levelTileX = *reinterpret_cast<const std::int32_t*>(
-        targetLevel + LevelPositionXOffset);
+        monasteryLevel + LevelPositionXOffset);
     const auto levelTileY = *reinterpret_cast<const std::int32_t*>(
-        targetLevel + LevelPositionYOffset);
+        monasteryLevel + LevelPositionYOffset);
     Detail::NavigationOutdoorOpening anchor{};
     if (!Detail::TryMakeNavigationLevelTileAnchor(
             levelTileX,
@@ -1181,9 +1185,12 @@ void AppendSpecialChestPreset(
         std::uint8_t reciprocalSlot,
         RoomMaterializationPolicy materialization,
         CandidateBatch& batch) noexcept -> bool {
-    if (currentLevelId == TamoeHighlandLevelId
-        && targetLevelId == MonasteryGateLevelId) {
+    if ((currentLevelId == TamoeHighlandLevelId
+            && targetLevelId == MonasteryGateLevelId)
+        || (currentLevelId == MonasteryGateLevelId
+            && targetLevelId == TamoeHighlandLevelId)) {
         return ResolveNativeMonasteryAnchorUnchecked(
+            sourceLevel,
             targetLevel,
             currentLevelId,
             targetLevelId,
@@ -1436,6 +1443,126 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
         if (slow != nullptr && slow == fast) return true;
     }
     return fast != nullptr;
+}
+
+struct StaticPoiRoomLeaseSet final {
+    std::array<StaticClientRoomLease, MaximumRoomsPerLevel> leases{};
+    std::size_t count{};
+};
+
+[[nodiscard]] auto PrepareStaticPoiRoomsUnchecked(
+        std::uint8_t dataContext,
+        void* level,
+        StaticPoiRoomLeaseSet& leases) noexcept -> bool {
+    leases = {};
+    __try {
+        if (dataContext >= 8U || !IsAlignedPointer(level)) return false;
+        auto* const sourceLevel = static_cast<std::uint8_t*>(level);
+        auto* room = *reinterpret_cast<std::uint8_t**>(
+            sourceLevel + LevelFirstRoomOffset);
+        if (room == nullptr
+            || HasCycleOrExceedsLimitUnchecked(
+                room,
+                DrlgRoomNextOffset,
+                MaximumRoomsPerLevel)) {
+            return false;
+        }
+
+        bool complete = true;
+        std::size_t roomCount{};
+        while (room != nullptr && roomCount < MaximumRoomsPerLevel) {
+            if (!IsAlignedPointer(room)
+                || *reinterpret_cast<std::uint8_t**>(
+                    room + DrlgRoomLevelOffset) != sourceLevel) {
+                return false;
+            }
+            const auto flags = *reinterpret_cast<const std::uint32_t*>(
+                room + DrlgRoomVisibilityFlagsOffset);
+            auto selectionFlags = flags;
+            const auto levelId = *reinterpret_cast<const std::int32_t*>(
+                sourceLevel + LevelIdOffset);
+            if (!Detail::AllowsWaypointLabelForLevel(levelId)) {
+                selectionFlags &= ~StaticPoiRoomWaypointMask;
+            }
+            const auto action = SelectStaticPoiRoomAction(
+                selectionFlags,
+                *reinterpret_cast<void**>(
+                    room + DrlgRoomRoomTileOffset) != nullptr,
+                (flags & StaticPoiRoomPresetUnitsAddedMask) != 0U
+                    && *reinterpret_cast<void**>(
+                        room + DrlgRoomPresetUnitOffset) != nullptr,
+                *reinterpret_cast<void**>(
+                    room + DrlgRoomActiveRoomOffset) != nullptr);
+            if (action == StaticPoiRoomAction::Materialize) {
+                StaticClientRoomLease lease{};
+                if (!PrepareStaticClientRoom(dataContext, room, lease)) {
+                    complete = false;
+                } else if (lease.owned) {
+                    if (leases.count >= leases.leases.size()) return false;
+                    leases.leases[leases.count++] = lease;
+                }
+            } else if (action == StaticPoiRoomAction::Wait) {
+                complete = false;
+            }
+            room = *reinterpret_cast<std::uint8_t**>(
+                room + DrlgRoomNextOffset);
+            ++roomCount;
+        }
+        return room == nullptr && complete;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+[[nodiscard]] auto ReleaseStaticPoiRooms(
+        StaticPoiRoomLeaseSet& leases) noexcept -> bool {
+    bool complete = true;
+    while (leases.count != 0U) {
+        --leases.count;
+        if (!ReleaseStaticClientRoom(leases.leases[leases.count])) {
+            complete = false;
+        }
+    }
+    return complete;
+}
+
+enum class VisibilityTargetResolution : std::uint8_t {
+    Initialize,
+    LinkedOnly,
+};
+
+[[nodiscard]] auto FindLinkedClientLevelByIdUnchecked(
+        const ClientLevelView& current,
+        std::int32_t levelId,
+        void*& outputLevel) noexcept -> bool {
+    outputLevel = nullptr;
+    if (!IsAlignedPointer(current.drlg) || levelId <= 0) return false;
+    auto* const drlg = static_cast<std::uint8_t*>(current.drlg);
+    auto* level = *reinterpret_cast<std::uint8_t**>(
+        drlg + DrlgFirstLevelOffset);
+    if (HasCycleOrExceedsLimitUnchecked(
+            level,
+            LevelNextOffset,
+            MaximumLevelsPerDrlg)) {
+        return false;
+    }
+    std::size_t count{};
+    while (level != nullptr && count < MaximumLevelsPerDrlg) {
+        if (!IsAlignedPointer(level)
+            || *reinterpret_cast<std::uint8_t**>(
+                level + LevelDrlgOffset) != drlg) {
+            return false;
+        }
+        if (*reinterpret_cast<const std::int32_t*>(
+                level + LevelIdOffset) == levelId) {
+            outputLevel = level;
+            return true;
+        }
+        level = *reinterpret_cast<std::uint8_t**>(
+            level + LevelNextOffset);
+        ++count;
+    }
+    return false;
 }
 
 [[nodiscard]] auto ResolveExactWaypointUnchecked(
@@ -2103,6 +2230,7 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
         const ClientLevelView& current,
         std::int32_t currentLevelId,
         RoomMaterializationPolicy materialization,
+        VisibilityTargetResolution targetResolution,
         CandidateBatch& batch) noexcept -> bool {
     const auto dataContext = current.dataContext;
     auto* const level = static_cast<std::uint8_t*>(current.level);
@@ -2131,15 +2259,23 @@ void FinalizeExitCandidates(CandidateBatch& batch) noexcept {
         ++batch.visibilitySlotCount;
 
         void* targetLevelPointer{};
-        if (!ResolveClientLevelById(
-                current,
-                targetLevelId,
-                targetLevelPointer)) {
+        const bool targetResolved = targetResolution
+                == VisibilityTargetResolution::Initialize
+            ? ResolveClientLevelById(
+                current, targetLevelId, targetLevelPointer)
+            : FindLinkedClientLevelByIdUnchecked(
+                current, targetLevelId, targetLevelPointer);
+        if (!targetResolved || targetLevelPointer == nullptr) {
             ++batch.pendingVisibilityTargetCount;
             continue;
         }
         auto* const targetLevel = static_cast<std::uint8_t*>(
             targetLevelPointer);
+        if (*reinterpret_cast<void**>(
+                targetLevel + LevelFirstRoomOffset) == nullptr) {
+            ++batch.pendingVisibilityTargetCount;
+            continue;
+        }
         auto* const targetVis = GetLevelVis(dataContext, targetLevel);
         if (targetVis == nullptr) return false;
         std::array<std::int32_t, VisibilitySlotCount> targetLinks{};
@@ -2366,6 +2502,7 @@ void FinalizeCanyonCorrectTomb(CandidateBatch& batch) noexcept {
                 current,
                 levelId,
                 RoomMaterializationPolicy::CurrentLevel,
+                VisibilityTargetResolution::Initialize,
                 batch)) {
             return false;
         }
@@ -2544,6 +2681,7 @@ void FinalizeCanyonCorrectTomb(CandidateBatch& batch) noexcept {
                     source,
                     sourceLevelId,
                     RoomMaterializationPolicy::Passive,
+                    VisibilityTargetResolution::LinkedOnly,
                     batch)) {
                 return false;
             }
@@ -2675,6 +2813,7 @@ void FinalizeCanyonCorrectTomb(CandidateBatch& batch) noexcept {
                 source,
                 sourceLevelId,
                 RoomMaterializationPolicy::Passive,
+                VisibilityTargetResolution::LinkedOnly,
                 batch)) {
             return false;
         }
@@ -3677,8 +3816,8 @@ auto ObserveInitializedClientLevelPoiDefinitions(
     }
     // A nested InitLevel belongs to the same synchronous reveal traversal.
     // Queue it for the outer observer instead of dropping it behind the shared
-    // scratch lease. The outer call drains every queued pointer before D2R can
-    // release any transient revealmap Level.
+    // scratch lease. The outer call drains every queued pointer before control
+    // returns to D2R.
     if (InitializedLevelCaptureActive) {
         return QueueInitializedLevelCapture(dataContext, level);
     }
@@ -3690,8 +3829,7 @@ auto ObserveInitializedClientLevelPoiDefinitions(
 
     // First walk is discovery-only. Resolving one source can synchronously
     // initialize and enqueue its neighbouring Levels; publishing that source
-    // immediately records an incomplete, mostly reverse-only graph (for
-    // example several Spider Forest labels but no Great Marsh/Flayer Jungle).
+    // immediately records an incomplete, mostly reverse-only graph.
     std::size_t cursor{};
     while (cursor < InitializedLevelCaptureQueueCount) {
         const auto request = InitializedLevelCaptureQueue[cursor++];
@@ -3723,6 +3861,9 @@ auto ObserveInitializedClientLevelPoiDefinitions(
     std::uint64_t capturedLevels{};
     std::uint64_t capturedLabels{};
     std::uint64_t capturedWaypoints{};
+    std::uint64_t completeExitOwners{};
+    std::uint64_t partialExitOwners{};
+    std::uint64_t mergedExitFragments{};
     constexpr std::size_t MaximumSettlementPasses = 3U;
     for (std::size_t pass = 0U;
             pass < MaximumSettlementPasses && !settled;
@@ -3732,6 +3873,9 @@ auto ObserveInitializedClientLevelPoiDefinitions(
         std::uint64_t passCapturedLevels{};
         std::uint64_t passCapturedLabels{};
         std::uint64_t passCapturedWaypoints{};
+        std::uint64_t passCompleteExitOwners{};
+        std::uint64_t passPartialExitOwners{};
+        std::uint64_t passMergedExitFragments{};
         for (std::size_t index = 0U; index < passLevelCount; ++index) {
             const auto request = InitializedLevelCaptureQueue[index];
             std::array<AutomapExitLabelDefinition, MaximumAutomapExitLabels>
@@ -3759,31 +3903,44 @@ auto ObserveInitializedClientLevelPoiDefinitions(
                 pendingExits,
                 pendingWaypoint);
             if (!publication.publishExitLabels) {
-                // Preserve only the incomplete exit owner. A verified passive
-                // waypoint below remains independently publishable.
                 passComplete = false;
+                ++passPartialExitOwners;
+                // Every emitted definition already owns physical native
+                // evidence. Retain that proven subset while unresolved rooms
+                // remain pending; a later complete capture still replaces the
+                // source owner atomically.
+                if (publication.mergeProvenExitFragments
+                    && labelCount != 0U) {
+                    if (!MergeNativeAutomapExitLabelFragments(
+                            sessionGeneration,
+                            sourceLevelId,
+                            labels.data(),
+                            labelCount)) {
+                        passComplete = false;
+                    } else {
+                        passMergedExitFragments += labelCount;
+                    }
+                }
             } else if (!PublishNativeAutomapExitLabels(
                            sessionGeneration,
                            sourceLevelId,
                            labels.data(),
                            labelCount)) {
                 passComplete = false;
+            } else {
+                ++passCompleteExitOwners;
             }
             if (!publication.publishWaypoint) {
                 // A missing or ambiguous preset chain cannot erase an exact
                 // waypoint retained from an earlier proven collection.
                 passComplete = false;
-                continue;
-            }
-            if (!PublishNativeAutomapWaypointLabels(
+            } else if (!PublishNativeAutomapWaypointLabels(
                     sessionGeneration,
                     sourceLevelId,
                     hasWaypoint ? &waypoint : nullptr,
                     hasWaypoint ? 1U : 0U)) {
                 passComplete = false;
-                continue;
-            }
-            if (hasWaypoint) {
+            } else if (hasWaypoint) {
                 ++passCapturedWaypoints;
             }
             ++passCapturedLevels;
@@ -3794,6 +3951,9 @@ auto ObserveInitializedClientLevelPoiDefinitions(
         capturedLevels = passCapturedLevels;
         capturedLabels = passCapturedLabels;
         capturedWaypoints = passCapturedWaypoints;
+        completeExitOwners = passCompleteExitOwners;
+        partialExitOwners = passPartialExitOwners;
+        mergedExitFragments = passMergedExitFragments;
     }
     RevealedLevelsCaptured.fetch_add(
         capturedLevels,
@@ -3804,7 +3964,128 @@ auto ObserveInitializedClientLevelPoiDefinitions(
     RevealedWaypointsCaptured.fetch_add(
         capturedWaypoints,
         std::memory_order_relaxed);
+    if (Context != nullptr) {
+        char message[384]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "MapSense reveal capture: session=%llu queued-levels=%zu captured-levels=%llu labels=%llu complete-exit-owners=%llu partial-exit-owners=%llu merged-fragments=%llu waypoints=%llu settled=%d overflow=%d.",
+            static_cast<unsigned long long>(sessionGeneration),
+            InitializedLevelCaptureQueueCount,
+            static_cast<unsigned long long>(capturedLevels),
+            static_cast<unsigned long long>(capturedLabels),
+            static_cast<unsigned long long>(completeExitOwners),
+            static_cast<unsigned long long>(partialExitOwners),
+            static_cast<unsigned long long>(mergedExitFragments),
+            static_cast<unsigned long long>(capturedWaypoints),
+            settled ? 1 : 0,
+            InitializedLevelCaptureQueueOverflow ? 1 : 0);
+        Context->LogInfo(message);
+    }
     return complete && !InitializedLevelCaptureQueueOverflow;
+}
+
+auto DiscoverProgressiveRevealLevelTargets(
+        const ClientLevelView& current,
+        std::int32_t levelId,
+        std::array<std::int32_t, ProgressiveRevealVisCapacity>& targets,
+        std::size_t& targetCount) noexcept -> bool {
+    targets.fill(UnknownRevealLevelId);
+    targetCount = 0U;
+    if (!Active.load(std::memory_order_acquire)
+        || current.dataContext >= 8U
+        || !IsAlignedPointer(current.drlg)
+        || levelId <= 0 || levelId > MaximumSupportedLevelId
+        || GetLevelVis == nullptr) {
+        return false;
+    }
+    __try {
+        void* levelPointer{};
+        if (!ResolveClientLevelById(current, levelId, levelPointer)
+            || !IsAlignedPointer(levelPointer)) {
+            return false;
+        }
+        auto* const level = static_cast<std::uint8_t*>(levelPointer);
+        if (*reinterpret_cast<std::uint8_t**>(
+                level + LevelDrlgOffset) != current.drlg
+            || *reinterpret_cast<const std::int32_t*>(
+                level + LevelIdOffset) != levelId) {
+            return false;
+        }
+        auto* const vis = GetLevelVis(current.dataContext, level);
+        if (vis == nullptr) return false;
+        for (std::size_t slot = 0U;
+                slot < ProgressiveRevealVisCapacity;
+                ++slot) {
+            const auto targetLevelId = vis[slot];
+            if (targetLevelId <= 0
+                || targetLevelId > MaximumSupportedLevelId
+                || targetLevelId == levelId) {
+                continue;
+            }
+            bool duplicate{};
+            for (std::size_t index = 0U; index < targetCount; ++index) {
+                if (targets[index] == targetLevelId) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (duplicate) continue;
+            if (targetCount >= targets.size()) return false;
+            targets[targetCount++] = targetLevelId;
+        }
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+auto CaptureProgressiveRevealLevelPoiDefinitions(
+        std::uint64_t sessionGeneration,
+        const ClientLevelView& current,
+        std::int32_t levelId) noexcept -> bool {
+    if (!Active.load(std::memory_order_acquire)
+        || sessionGeneration == 0U || levelId <= 0) {
+        return false;
+    }
+    void* levelPointer{};
+    if (!ResolveClientLevelById(current, levelId, levelPointer)
+        || levelPointer == nullptr) {
+        return false;
+    }
+    const auto before = GetRevealCounters();
+    StaticPoiRoomLeaseSet leases{};
+    const bool prepared = PrepareStaticPoiRoomsUnchecked(
+        current.dataContext,
+        levelPointer,
+        leases);
+    const bool captured = ObserveInitializedClientLevelPoiDefinitions(
+        sessionGeneration,
+        current.dataContext,
+        levelPointer);
+    const bool released = ReleaseStaticPoiRooms(leases);
+    const auto after = GetRevealCounters();
+    if (Context != nullptr
+        && (after.staticRoomsMaterialized != before.staticRoomsMaterialized
+            || after.staticRoomFailures != before.staticRoomFailures)) {
+        char message[320]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "MapSense static POI capture: level=%d candidates=%llu materialized=%llu released=%llu failures=%llu active-room-calls=0.",
+            levelId,
+            static_cast<unsigned long long>(
+                after.staticRoomCandidates - before.staticRoomCandidates),
+            static_cast<unsigned long long>(
+                after.staticRoomsMaterialized
+                    - before.staticRoomsMaterialized),
+            static_cast<unsigned long long>(
+                after.staticRoomsReleased - before.staticRoomsReleased),
+            static_cast<unsigned long long>(
+                after.staticRoomFailures - before.staticRoomFailures));
+        Context->LogInfo(message);
+    }
+    return prepared && captured && released;
 }
 
 auto RefreshRevealedActPoiDefinitions(
@@ -3841,12 +4122,11 @@ auto RefreshRevealedActPoiDefinitions(
         return NavigationRefreshResult::Failed;
     }
 
-    // D2R unlinks transient revealmap Levels before this deferred refresh can
-    // run. Therefore pendingCount == 0 does not prove that the linked list is
-    // the complete act; replacing the whole catalog here erased the labels
-    // retained by the InitLevel observer. The session/act reset is the sole
-    // full-catalog invalidation. Every later scan updates only source Levels it
-    // can actually prove and leaves the transient captures intact.
+    // During progressive generation, pendingCount == 0 for one scan does not
+    // by itself prove that every Vis-connected Level has already joined the
+    // list. The session/act reset is therefore the sole full-catalog
+    // invalidation. Every scan updates only source Levels it can prove and
+    // preserves earlier copied captures until the scheduler settles.
     bool published = true;
     std::size_t first{};
     while (first < labelCount) {

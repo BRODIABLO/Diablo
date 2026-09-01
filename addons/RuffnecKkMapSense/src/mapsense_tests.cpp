@@ -1,4 +1,9 @@
 #include "d3d12_imgui_host.hpp"
+#include "automap_sprite_package.hpp"
+#include "automap_sprite_projection.hpp"
+#include "external_atlas_cache.hpp"
+#include "external_atlas_geometry.hpp"
+#include "external_label_provider.hpp"
 #include "mapsense_config.hpp"
 #include "mapsense_data_catalog.hpp"
 #include "navigation_engine.hpp"
@@ -70,6 +75,98 @@ auto ReadFile(const char* path) -> std::string {
     std::ostringstream text;
     text << input.rdbuf();
     return text.str();
+}
+
+void AppendAtlasU16(
+        std::vector<std::uint8_t>& output,
+        std::uint16_t value) {
+    output.push_back(static_cast<std::uint8_t>(value));
+    output.push_back(static_cast<std::uint8_t>(value >> 8U));
+}
+
+void AppendAtlasU32(
+        std::vector<std::uint8_t>& output,
+        std::uint32_t value) {
+    for (std::uint32_t shift = 0U; shift < 32U; shift += 8U) {
+        output.push_back(static_cast<std::uint8_t>(value >> shift));
+    }
+}
+
+void AppendAtlasI32(
+        std::vector<std::uint8_t>& output,
+        std::int32_t value) {
+    AppendAtlasU32(output, static_cast<std::uint32_t>(value));
+}
+
+void StoreAtlasU64(
+        std::vector<std::uint8_t>& output,
+        std::size_t offset,
+        std::uint64_t value) {
+    for (std::size_t index = 0U; index < 8U; ++index) {
+        output[offset + index] = static_cast<std::uint8_t>(
+            value >> (index * 8U));
+    }
+}
+
+void MixAtlasByte(std::uint64_t& digest, std::uint8_t value) {
+    digest ^= value;
+    digest *= UINT64_C(1099511628211);
+}
+
+void MixAtlasU32(std::uint64_t& digest, std::uint32_t value) {
+    for (std::uint32_t shift = 0U; shift < 32U; shift += 8U) {
+        MixAtlasByte(digest, static_cast<std::uint8_t>(value >> shift));
+    }
+}
+
+auto BuildExternalAtlasGeometryFixture() -> std::vector<std::uint8_t> {
+    auto output = std::vector<std::uint8_t>{'M', 'S', 'A', '1'};
+    AppendAtlasU16(output, 1U);
+    AppendAtlasU16(output, 1U);
+    AppendAtlasU32(output, 1'395'822'899U);
+    output.push_back(2U);
+    output.push_back(2U);
+    AppendAtlasU16(output, 0U);
+    AppendAtlasU32(output, 2U);
+    AppendAtlasU32(output, 3U);
+    for (std::size_t index = 0U; index < 8U; ++index) {
+        output.push_back(0U);
+    }
+
+    auto digest = UINT64_C(14695981039346656037);
+    const auto appendLevel = [&output, &digest](
+            std::int32_t levelId,
+            std::uint8_t layer,
+            std::uint32_t cellCount) {
+        AppendAtlasI32(output, levelId);
+        output.push_back(layer);
+        output.insert(output.end(), 3U, 0U);
+        AppendAtlasU32(output, cellCount);
+        MixAtlasU32(digest, static_cast<std::uint32_t>(levelId));
+        MixAtlasByte(digest, layer);
+    };
+    const auto appendCell = [&output, &digest](
+            std::int32_t frame,
+            std::int32_t tileX,
+            std::int32_t tileY,
+            bool wall) {
+        AppendAtlasI32(output, frame);
+        AppendAtlasI32(output, tileX);
+        AppendAtlasI32(output, tileY);
+        output.push_back(wall ? 1U : 0U);
+        output.insert(output.end(), 3U, 0U);
+        MixAtlasU32(digest, static_cast<std::uint32_t>(frame));
+        MixAtlasU32(digest, static_cast<std::uint32_t>(tileX));
+        MixAtlasU32(digest, static_cast<std::uint32_t>(tileY));
+        MixAtlasByte(digest, wall ? 1U : 0U);
+    };
+    appendLevel(75, 0U, 2U);
+    appendCell(101, 4'000, 5'000, false);
+    appendCell(102, 4'001, 5'000, true);
+    appendLevel(76, 0U, 1U);
+    appendCell(103, 4'002, 5'001, false);
+    StoreAtlasU64(output, 24U, digest);
+    return output;
 }
 
 class ScopedCatalogTestDirectory final {
@@ -218,11 +315,11 @@ void WriteCompleteCatalog(
         std::string_view levelKey = "LevelKey") {
     WriteCatalogFixture(
         excel / "levels.txt",
-        "Name\t*StringName\tId\tLevelName\r\n"
-        "Null\tNull\t0\t\r\n"
-        "Expansion\t\t\t\r\n"
+        "Name\t*StringName\tId\tLevelName\tWaypoint\r\n"
+        "Null\tNull\t0\t\t255\r\n"
+        "Expansion\t\t\t\t\r\n"
         "Act 1 - Town\tPlayer Level\t12\t"
-            + std::string(levelKey) + "\r\n");
+            + std::string(levelKey) + "\t0\r\n");
     WriteCatalogFixture(
         excel / "shrines.txt",
         "Name\tCode\tStringName\r\n"
@@ -378,6 +475,7 @@ void CheckMapSenseDataCatalogContract() {
             CHECK(level != nullptr
                 && level->waypointLabelUtf8
                     == "Sortie \xC3\x89preuve Waypoint");
+            CHECK(level != nullptr && level->hasWaypoint);
             CHECK(result.catalog->FindLevel(13) == nullptr);
 
             const auto* const noneShrine =
@@ -750,12 +848,6 @@ void CheckRevealReplayRequestPolicy() {
     CHECK(MergePendingRevealAutomapObservation(pending, 40, true));
     CHECK(pending.automapObserved);
 
-    pending.targetLevelId = UnknownRevealLevelId;
-    pending.automapObserved = false;
-    CHECK(MergePendingRevealAutomapObservation(pending, 40, true));
-    CHECK(pending.targetLevelId == 40);
-    CHECK(pending.automapObserved);
-
     pending.automapObserved = false;
     CHECK(MergePendingRevealAutomapObservation(
         pending,
@@ -767,19 +859,475 @@ void CheckRevealReplayRequestPolicy() {
 
     pending.reconcilePending = false;
     CHECK(!MergePendingRevealAutomapObservation(pending, 40, true));
-    CHECK(!CanConfirmWholeActReveal(
-        RevealOutcome::Unavailable,
-        RevealOutcome::Complete));
-    CHECK(!CanConfirmWholeActReveal(
-        RevealOutcome::Complete,
-        RevealOutcome::Unavailable));
-    CHECK(CanConfirmWholeActReveal(
-        RevealOutcome::Complete,
+    CHECK(!CanConfirmReplayedLevelReveal(
+        false,
         RevealOutcome::Complete));
     CHECK(!CanConfirmReplayedLevelReveal(
+        true,
         RevealOutcome::Unavailable));
     CHECK(CanConfirmReplayedLevelReveal(
+        true,
         RevealOutcome::Complete));
+
+    const auto waiting = MakeRevealReplaySubmissionPolicy(
+        false,
+        true,
+        false,
+        false);
+    CHECK(waiting.waitForAutomap);
+    CHECK(!waiting.submitWholeAct);
+    CHECK(!waiting.submitCurrentLevel);
+
+    const auto wholeAct = MakeRevealReplaySubmissionPolicy(
+        true,
+        true,
+        false,
+        false);
+    CHECK(!wholeAct.waitForAutomap);
+    CHECK(wholeAct.submitWholeAct);
+    CHECK(!wholeAct.submitCurrentLevel);
+
+    const auto oneLevel = MakeRevealReplaySubmissionPolicy(
+        true,
+        false,
+        false,
+        false);
+    CHECK(!oneLevel.waitForAutomap);
+    CHECK(!oneLevel.submitWholeAct);
+    CHECK(oneLevel.submitCurrentLevel);
+
+    const auto alreadyAccepted = MakeRevealReplaySubmissionPolicy(
+        true,
+        true,
+        true,
+        true);
+    CHECK(!alreadyAccepted.waitForAutomap);
+    CHECK(!alreadyAccepted.submitWholeAct);
+    CHECK(!alreadyAccepted.submitCurrentLevel);
+
+    // A completed act traversal cannot suppress the local fallback for a
+    // LevelId that the generated Vis graph did not reach. This is the
+    // Lower Kurast/Kurast Bazaar disappearance regression guard.
+    const auto acceptedActNewLevel = MakeRevealReplaySubmissionPolicy(
+        true,
+        true,
+        true,
+        false);
+    CHECK(!acceptedActNewLevel.waitForAutomap);
+    CHECK(!acceptedActNewLevel.submitWholeAct);
+    CHECK(acceptedActNewLevel.submitCurrentLevel);
+}
+
+void CheckProgressiveRevealGraphContract() {
+    using namespace RuffnecKk::MapSense;
+
+    ProgressiveRevealGraphState graph;
+    CHECK(graph.Begin(76));
+    CHECK(graph.HasCurrent());
+    CHECK(graph.Current() == 76);
+    CHECK(graph.LevelCount() == 1U);
+    CHECK(graph.Cursor() == 0U);
+
+    CHECK(graph.Add(84));
+    CHECK(graph.Add(85));
+    CHECK(graph.Add(84));
+    CHECK(graph.LevelCount() == 3U);
+    CHECK(graph.LevelAt(0U) == 76);
+    CHECK(graph.LevelAt(1U) == 84);
+    CHECK(graph.LevelAt(2U) == 85);
+    CHECK(graph.LevelAt(3U) == UnknownRevealLevelId);
+    CHECK(graph.Contains(76));
+    CHECK(graph.Contains(84));
+    CHECK(graph.Contains(85));
+    CHECK(!graph.Contains(83));
+    CHECK(!graph.Add(UnknownRevealLevelId));
+    CHECK(!graph.Add(0));
+
+    CHECK(graph.Advance());
+    CHECK(graph.Current() == 84);
+    CHECK(graph.Advance());
+    CHECK(graph.Current() == 85);
+    CHECK(graph.Advance());
+    CHECK(!graph.HasCurrent());
+    CHECK(graph.Current() == UnknownRevealLevelId);
+    CHECK(!graph.Advance());
+
+    graph.Reset();
+    CHECK(!graph.HasCurrent());
+    CHECK(graph.LevelCount() == 0U);
+    CHECK(graph.Begin(1));
+    for (std::int32_t levelId = 2;
+            levelId <= static_cast<std::int32_t>(
+                ProgressiveRevealLevelCapacity);
+            ++levelId) {
+        CHECK(graph.Add(levelId));
+    }
+    CHECK(graph.LevelCount() == ProgressiveRevealLevelCapacity);
+    CHECK(graph.LevelAt(ProgressiveRevealLevelCapacity - 1U)
+        == static_cast<std::int32_t>(ProgressiveRevealLevelCapacity));
+    CHECK(graph.LevelAt(ProgressiveRevealLevelCapacity)
+        == UnknownRevealLevelId);
+    CHECK(!graph.Add(static_cast<std::int32_t>(
+        ProgressiveRevealLevelCapacity + 1U)));
+}
+
+void CheckExternalAtlasTopologyContract() {
+    using namespace RuffnecKk::MapSense;
+
+    // Act III exterior levels share one coordinate space through seam edges.
+    // The dungeon interiors and their reciprocal links use warp edges and must
+    // never enter the visible geometry component.
+    const std::array edges{
+        ExternalAtlasTopologyEdge{75, 76, 1},
+        ExternalAtlasTopologyEdge{76, 77, 1},
+        ExternalAtlasTopologyEdge{77, 78, 1},
+        ExternalAtlasTopologyEdge{78, 79, 1},
+        ExternalAtlasTopologyEdge{79, 80, 1},
+        ExternalAtlasTopologyEdge{80, 81, 1},
+        ExternalAtlasTopologyEdge{81, 82, 1},
+        ExternalAtlasTopologyEdge{82, 83, 1},
+        ExternalAtlasTopologyEdge{76, 84, 0},
+        ExternalAtlasTopologyEdge{84, 76, 0},
+        ExternalAtlasTopologyEdge{80, 92, 0},
+        ExternalAtlasTopologyEdge{92, 80, 0},
+    };
+    std::vector<std::int32_t> visible;
+    CHECK(CollectExternalAtlasVisibleLevels(
+        75,
+        edges.data(),
+        edges.size(),
+        visible));
+    const std::vector<std::int32_t> expected{
+        75, 76, 77, 78, 79, 80, 81, 82, 83,
+    };
+    CHECK(visible == expected);
+    CHECK(std::find(visible.begin(), visible.end(), 84) == visible.end());
+    CHECK(std::find(visible.begin(), visible.end(), 92) == visible.end());
+
+    // Starting inside a dungeon does not import the exterior through its warp.
+    CHECK(CollectExternalAtlasVisibleLevels(
+        84,
+        edges.data(),
+        edges.size(),
+        visible));
+    CHECK(visible == std::vector<std::int32_t>{84});
+    CHECK(!CollectExternalAtlasVisibleLevels(0, nullptr, 0U, visible));
+    CHECK(visible.empty());
+}
+
+void CheckExternalAtlasGeometryContract() {
+    using namespace RuffnecKk::MapSense;
+
+    const auto fixture = BuildExternalAtlasGeometryFixture();
+    ExternalAtlasGeometry atlas;
+    ExternalAtlasGeometryParseError error{};
+    CHECK(ParseExternalAtlasGeometry(
+        fixture,
+        1'395'822'899U,
+        2U,
+        2U,
+        atlas,
+        &error));
+    CHECK(error == ExternalAtlasGeometryParseError::None);
+    CHECK(atlas.seed == 1'395'822'899U);
+    CHECK(atlas.difficulty == 2U);
+    CHECK(atlas.act == 2U);
+    CHECK(atlas.levels.size() == 2U);
+    CHECK(atlas.cells.size() == 3U);
+    CHECK(atlas.levels[0].levelId == 75);
+    CHECK(atlas.levels[0].firstCell == 0U);
+    CHECK(atlas.levels[0].cellCount == 2U);
+    CHECK(atlas.levels[1].levelId == 76);
+    CHECK(atlas.levels[1].firstCell == 2U);
+    CHECK(atlas.cells[0].frame == 101);
+    CHECK(atlas.cells[0].tileX == 4'000);
+    CHECK(!atlas.cells[0].wall);
+    CHECK(atlas.cells[1].wall);
+
+    CHECK(!ParseExternalAtlasGeometry(
+        fixture,
+        1'395'822'898U,
+        2U,
+        2U,
+        atlas,
+        &error));
+    CHECK(error == ExternalAtlasGeometryParseError::IdentityMismatch);
+    CHECK(atlas.levels.empty());
+    CHECK(atlas.cells.empty());
+
+    auto corrupt = fixture;
+    corrupt[44U] ^= 1U;
+    CHECK(!ParseExternalAtlasGeometry(
+        corrupt,
+        1'395'822'899U,
+        2U,
+        2U,
+        atlas,
+        &error));
+    CHECK(error == ExternalAtlasGeometryParseError::DigestMismatch);
+
+    corrupt = fixture;
+    corrupt[14U] = 1U;
+    CHECK(!ParseExternalAtlasGeometry(
+        corrupt,
+        1'395'822'899U,
+        2U,
+        2U,
+        atlas,
+        &error));
+    CHECK(error == ExternalAtlasGeometryParseError::InvalidReservedBytes);
+
+    corrupt = fixture;
+    corrupt.pop_back();
+    CHECK(!ParseExternalAtlasGeometry(
+        corrupt,
+        1'395'822'899U,
+        2U,
+        2U,
+        atlas,
+        &error));
+    CHECK(error == ExternalAtlasGeometryParseError::InvalidLength);
+}
+
+void CheckAtlasProjectionContract() {
+    using namespace RuffnecKk::MapSense;
+
+    AtlasProjectionWitness witness;
+    CHECK(BuildAtlasProjectionWitness(
+        10'000,
+        20'000,
+        {500, 400},
+        {564, 432},
+        {436, 432},
+        {500, 464},
+        256,
+        witness));
+    CHECK(witness.valid);
+    AtlasProjectedPoint projected{};
+    CHECK(ProjectAtlasClientPoint(
+        witness,
+        10'256,
+        20'256,
+        projected));
+    CHECK(std::abs(projected.x - 500.0) < 0.001);
+    CHECK(std::abs(projected.y - 464.0) < 0.001);
+    CHECK(ProjectAtlasClientPoint(
+        witness,
+        10'160,
+        20'080,
+        projected));
+    CHECK(std::abs(projected.x - 520.0) < 0.001);
+    CHECK(std::abs(projected.y - 430.0) < 0.001);
+
+    AutomapSpriteProjectedQuad sprite{};
+    CHECK(ProjectAutomapSpriteQuad(witness, 100, 80, sprite));
+    // The test witness maps client X to (+0.25,+0.125) and client Y to
+    // (-0.25,+0.125) native pixels per client unit.
+    CHECK(std::abs(sprite.topRight.x - sprite.topLeft.x - 40.0) < 0.001);
+    CHECK(std::abs(sprite.topRight.y - sprite.topLeft.y - 20.0) < 0.001);
+    CHECK(std::abs(sprite.bottomLeft.x - sprite.topLeft.x + 80.0) < 0.001);
+    CHECK(std::abs(sprite.bottomLeft.y - sprite.topLeft.y - 40.0) < 0.001);
+
+    CHECK(!BuildAtlasProjectionWitness(
+        10'000,
+        20'000,
+        {500, 400},
+        {564, 432},
+        {436, 432},
+        {510, 464},
+        256,
+        witness));
+    CHECK(!witness.valid);
+    CHECK(!ProjectAtlasClientPoint(
+        witness,
+        10'000,
+        20'000,
+        projected));
+
+    CHECK(!BuildAtlasProjectionWitness(
+        10'000,
+        20'000,
+        {500, 400},
+        {564, 432},
+        {564, 432},
+        {628, 464},
+        256,
+        witness));
+}
+
+void CheckAutomapSpritePackageContract(const char* path) {
+    using namespace RuffnecKk::MapSense;
+
+    std::ifstream input(path, std::ios::binary | std::ios::ate);
+    CHECK(input.is_open());
+    if (!input.is_open()) return;
+    const auto length = input.tellg();
+    CHECK(length == static_cast<std::streamoff>(
+        AutomapSpritePackageBytes));
+    if (length <= 0) return;
+    std::vector<std::uint8_t> bytes(static_cast<std::size_t>(length));
+    input.seekg(0, std::ios::beg);
+    input.read(
+        reinterpret_cast<char*>(bytes.data()),
+        static_cast<std::streamsize>(bytes.size()));
+    CHECK(static_cast<bool>(input));
+
+    AutomapSpriteRgbaAtlas atlas;
+    AutomapSpritePackageParseError error{};
+    CHECK(ParseAutomapSpritePackage(bytes, atlas, &error));
+    CHECK(error == AutomapSpritePackageParseError::None);
+    CHECK(atlas.width == AutomapSpriteIndexAtlasWidth);
+    CHECK(atlas.height == AutomapSpriteRgbaAtlasHeight);
+    CHECK(atlas.pixels.size()
+        == static_cast<std::size_t>(atlas.width) * atlas.height * 4U);
+    CHECK(std::any_of(
+        atlas.pixels.begin() + 3,
+        atlas.pixels.end(),
+        [position = std::size_t{3}](std::uint8_t value) mutable {
+            const auto alpha = (position++ % 4U) == 3U;
+            return alpha && value != 0U;
+        }));
+
+    bytes.back() ^= 1U;
+    CHECK(!ParseAutomapSpritePackage(bytes, atlas, &error));
+    CHECK(error == AutomapSpritePackageParseError::DigestMismatch);
+    CHECK(atlas.pixels.empty());
+}
+
+void CheckExternalAtlasCacheContract() {
+    using namespace RuffnecKk::MapSense;
+
+    ScopedCatalogTestDirectory directory("atlas-cache");
+    const ExternalAtlasCacheKey key{
+        .seed = 1'395'822'899U,
+        .difficulty = 2U,
+        .act = 2U,
+    };
+    std::filesystem::path path;
+    CHECK(BuildExternalAtlasCachePath(directory.Path(), key, path));
+    CHECK(path.filename() == L"act-2.msa");
+    CHECK(path.parent_path().filename() == L"difficulty-2");
+
+    ExternalAtlasGeometry atlas;
+    CHECK(LoadExternalAtlasGeometryCache(directory.Path(), key, atlas)
+        == ExternalAtlasCacheResult::Miss);
+    const auto fixture = BuildExternalAtlasGeometryFixture();
+    CHECK(StoreExternalAtlasGeometryCache(directory.Path(), key, fixture));
+    CHECK(LoadExternalAtlasGeometryCache(directory.Path(), key, atlas)
+        == ExternalAtlasCacheResult::Hit);
+    CHECK(atlas.levels.size() == 2U);
+    CHECK(atlas.cells.size() == 3U);
+
+    auto corrupt = fixture;
+    corrupt[44U] ^= 1U;
+    CHECK(!StoreExternalAtlasGeometryCache(
+        directory.Path(), key, corrupt));
+    CHECK(LoadExternalAtlasGeometryCache(directory.Path(), key, atlas)
+        == ExternalAtlasCacheResult::Hit);
+
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output.write(
+            reinterpret_cast<const char*>(corrupt.data()),
+            static_cast<std::streamsize>(corrupt.size()));
+    }
+    ExternalAtlasGeometryParseError parseError{};
+    CHECK(LoadExternalAtlasGeometryCache(
+            directory.Path(), key, atlas, &parseError)
+        == ExternalAtlasCacheResult::Invalid);
+    CHECK(parseError == ExternalAtlasGeometryParseError::DigestMismatch);
+    CHECK(atlas.levels.empty());
+    CHECK(atlas.cells.empty());
+
+    CHECK(!HasExternalAtlasRevealMapIntent(
+        directory.Path(), key.seed, key.difficulty));
+    CHECK(StoreExternalAtlasRevealMapIntent(
+        directory.Path(), key.seed, key.difficulty, true));
+    CHECK(HasExternalAtlasRevealMapIntent(
+        directory.Path(), key.seed, key.difficulty));
+    CHECK(!HasExternalAtlasRevealMapIntent(
+        directory.Path(), key.seed + 1U, key.difficulty));
+    CHECK(!HasExternalAtlasRevealMapIntent(
+        directory.Path(), key.seed, 1U));
+    const auto intentPath = path.parent_path() / L"reveal-map.intent";
+    {
+        std::fstream intent(
+            intentPath,
+            std::ios::binary | std::ios::in | std::ios::out);
+        CHECK(static_cast<bool>(intent));
+        intent.seekp(12, std::ios::beg);
+        intent.put(static_cast<char>(1));
+    }
+    CHECK(!HasExternalAtlasRevealMapIntent(
+        directory.Path(), key.seed, key.difficulty));
+    CHECK(StoreExternalAtlasRevealMapIntent(
+        directory.Path(), key.seed, key.difficulty, true));
+    {
+        std::ofstream intent(intentPath, std::ios::binary | std::ios::app);
+        CHECK(static_cast<bool>(intent));
+        intent.put(static_cast<char>(0));
+    }
+    CHECK(!HasExternalAtlasRevealMapIntent(
+        directory.Path(), key.seed, key.difficulty));
+    CHECK(StoreExternalAtlasRevealMapIntent(
+        directory.Path(), key.seed, key.difficulty, true));
+    CHECK(StoreExternalAtlasRevealMapIntent(
+        directory.Path(), key.seed, key.difficulty, false));
+    CHECK(!HasExternalAtlasRevealMapIntent(
+        directory.Path(), key.seed, key.difficulty));
+}
+
+void CheckStaticPoiRoomSelectionContract() {
+    using namespace RuffnecKk::MapSense;
+
+    CHECK(SelectStaticPoiRoomAction(0U, false, false, false)
+        == StaticPoiRoomAction::Ignore);
+    CHECK(SelectStaticPoiRoomAction(
+            StaticPoiRoomWarpMask,
+            false,
+            false,
+            false)
+        == StaticPoiRoomAction::Materialize);
+    CHECK(SelectStaticPoiRoomAction(
+            StaticPoiRoomWarpMask,
+            true,
+            false,
+            false)
+        == StaticPoiRoomAction::Reuse);
+    CHECK(SelectStaticPoiRoomAction(
+            StaticPoiRoomWaypointMask,
+            false,
+            false,
+            false)
+        == StaticPoiRoomAction::Materialize);
+    CHECK(SelectStaticPoiRoomAction(
+            StaticPoiRoomWaypointMask
+                | StaticPoiRoomPresetUnitsAddedMask,
+            false,
+            true,
+            false)
+        == StaticPoiRoomAction::Reuse);
+    CHECK(SelectStaticPoiRoomAction(
+            StaticPoiRoomWarpMask | StaticPoiRoomWaypointMask,
+            true,
+            false,
+            false)
+        == StaticPoiRoomAction::Materialize);
+
+    // Existing native room state is never taken over or cleaned by the
+    // distant-name path, even when an expected descriptor is not ready yet.
+    CHECK(SelectStaticPoiRoomAction(
+            StaticPoiRoomWarpMask,
+            false,
+            false,
+            true)
+        == StaticPoiRoomAction::Wait);
+    CHECK(SelectStaticPoiRoomAction(
+            StaticPoiRoomWaypointMask | StaticPoiRoomHasRoomMask,
+            false,
+            false,
+            false)
+        == StaticPoiRoomAction::Wait);
 }
 
 void CheckNativeUiPanelPolicy() {
@@ -2096,9 +2644,11 @@ void CheckNavigationResolverHelpers() {
 
     const auto exitOnly = Detail::MakePassivePoiPublicationPolicy(true, false);
     CHECK(!exitOnly.publishExitLabels);
+    CHECK(exitOnly.mergeProvenExitFragments);
     CHECK(exitOnly.publishWaypoint);
     const auto waypointOnly = Detail::MakePassivePoiPublicationPolicy(false, true);
     CHECK(waypointOnly.publishExitLabels);
+    CHECK(!waypointOnly.mergeProvenExitFragments);
     CHECK(!waypointOnly.publishWaypoint);
 
     const std::array roomTileLinks{
@@ -3250,6 +3800,40 @@ void CheckNavigationResolverHelpers() {
         separateDefinition,
         false));
 
+    const AutomapExitLabelDefinition reverseCanonicalMonastery{
+        .stableId = 210U,
+        .sourceLevelId = 26,
+        .targetLevelId = 7,
+        .subtileX = 1'100,
+        .subtileY = 1'200,
+        .canonicalLevelPairAnchor = true,
+    };
+    const AutomapExitLabelDefinition reverseMonasteryFragment{
+        .stableId = 211U,
+        .sourceLevelId = 26,
+        .targetLevelId = 7,
+        .subtileX = 1'240,
+        .subtileY = 1'310,
+        .boundaryIdentity = nearbyDistinctBoundary,
+    };
+    CHECK(SameAutomapExitOwnerFragment(
+        reverseCanonicalMonastery,
+        reverseMonasteryFragment));
+    CHECK(PreferAutomapExitOwnerFragment(
+        reverseCanonicalMonastery,
+        reverseMonasteryFragment));
+    const AutomapExitLabelDefinition separateForwardFragment{
+        .stableId = 212U,
+        .sourceLevelId = 7,
+        .targetLevelId = 26,
+        .subtileX = 1'008,
+        .subtileY = 1'000,
+        .boundaryIdentity = nearbyDistinctBoundary,
+    };
+    CHECK(!SameAutomapExitOwnerFragment(
+        forwardDefinition,
+        separateForwardFragment));
+
     const std::array canonicalPairDefinitions{
         forwardDefinition,
         reverseDefinition,
@@ -3560,6 +4144,45 @@ void CheckAutomapWaypointCatalogContract() {
     CHECK(catalog.Definitions()[0].subtileY == 420);
 }
 
+void CheckAutomapLevelCatalogContract() {
+    using RuffnecKk::MapSense::AutomapLevelLabelDefinition;
+    using RuffnecKk::MapSense::Detail::AutomapLevelDefinitionCatalog;
+
+    const AutomapLevelLabelDefinition first{
+        .stableId = 701U,
+        .levelId = 79,
+        .subtileX = 110,
+        .subtileY = 120,
+    };
+    const AutomapLevelLabelDefinition replacement{
+        .stableId = 702U,
+        .levelId = 79,
+        .subtileX = 130,
+        .subtileY = 140,
+    };
+    const AutomapLevelLabelDefinition second{
+        .stableId = 801U,
+        .levelId = 80,
+        .subtileX = 210,
+        .subtileY = 220,
+    };
+    const auto one = [](const AutomapLevelLabelDefinition& definition) {
+        return std::span<const AutomapLevelLabelDefinition>{&definition, 1U};
+    };
+
+    AutomapLevelDefinitionCatalog<2U> catalog;
+    CHECK(catalog.ReplaceOwner(79, one(first)));
+    CHECK(catalog.ReplaceOwner(80, one(second)));
+    CHECK(catalog.Definitions().size() == 2U);
+    CHECK(catalog.ReplaceOwner(79, one(replacement)));
+    CHECK(catalog.Definitions().size() == 2U);
+    CHECK(catalog.Definitions()[0].levelId == 80);
+    CHECK(catalog.Definitions()[1].stableId == replacement.stableId);
+    CHECK(catalog.Definitions()[1].subtileX == 130);
+    catalog.Clear();
+    CHECK(catalog.Definitions().empty());
+}
+
 void CheckTownWaypointLabelPolicy() {
     using RuffnecKk::MapSense::Detail::AllowsWaypointLabelForLevel;
 
@@ -3591,18 +4214,30 @@ int main(int argc, char** argv) {
     CheckMapSenseDataCatalogContract();
     CheckRevealPersistenceContract();
     CheckRevealReplayRequestPolicy();
+    CheckProgressiveRevealGraphContract();
+    CheckExternalAtlasTopologyContract();
+    CheckExternalAtlasGeometryContract();
+    CheckAtlasProjectionContract();
+    if (argc >= 3) CheckAutomapSpritePackageContract(argv[2]);
+    CheckExternalAtlasCacheContract();
+    CheckStaticPoiRoomSelectionContract();
     CheckNativeUiPanelPolicy();
     CheckNavigationEngineContract();
     CheckNavigationLevelCatalogContract();
     CheckNavigationPolicyContract();
     CheckNavigationResolverHelpers();
     CheckAutomapWaypointCatalogContract();
+    CheckAutomapLevelCatalogContract();
     CheckTownWaypointLabelPolicy();
 
     static_assert(CurrentConfigSchemaVersion == 14);
+    static_assert(DeriveDrlgStartSeed(1U) == 1'791'398'751U);
+    static_assert(DeriveDrlgStartSeed(1'337U) == 2'802'456'439U);
+    static_assert(DeriveDrlgStartSeed(0x12345678U) == 62'524'658U);
     static_assert(MaximumAutomapPoiSnapshots
         == MaximumAutomapExitLabels
             + MaximumAutomapWaypointLabels
+            + MaximumAutomapLevelLabels
             + MaximumAutomapSpecialChestPresets
             + MaximumTrackedAutomapObjects * 2U);
     static_assert(OrientedAutomapExitLevel(1, 1, 2, 0U, 1U) == 2);
@@ -3613,6 +4248,10 @@ int main(int argc, char** argv) {
         == 3);
     static_assert(OrientedAutomapExitLevel(3, 2, 3, 0xFFFFU, 0xFFFFU)
         == 2);
+    static_assert(ShouldProjectAutomapLevelLabel(80, 75, false, false));
+    static_assert(!ShouldProjectAutomapLevelLabel(75, 75, false, false));
+    static_assert(!ShouldProjectAutomapLevelLabel(80, 75, true, false));
+    static_assert(!ShouldProjectAutomapLevelLabel(80, 75, false, true));
     static_assert(NativeAutomapLabelGap == 12.0F);
     static_assert(
         AutomapPoiCollectionBit(AutomapPoiCollection::WaypointLabels)
@@ -3621,12 +4260,22 @@ int main(int argc, char** argv) {
         100.0F,
         20.0F,
         NativeWaypointIconTopExtent,
-        NativeWaypointLabelGap) == 26.0F);
+        NativeWaypointLabelGap) == 54.0F);
     static_assert(AutomapLabelTopAboveIcon(
         100.0F,
         20.0F,
         NativeShrineIconTopExtent,
         NativeAutomapLabelGap) == 24.0F);
+    static_assert(Detail::IsMonStatsLookupSafe(0U, 0U, 801, 802U));
+    static_assert(!Detail::IsMonStatsLookupSafe(4U, 4U, 1, 802U));
+    static_assert(!Detail::IsMonStatsLookupSafe(0U, 1U, 1, 802U));
+    static_assert(!Detail::IsMonStatsLookupSafe(0U, 0U, -1, 802U));
+    static_assert(!Detail::IsMonStatsLookupSafe(0U, 0U, 802, 802U));
+    static_assert(!Detail::IsMonStatsLookupSafe(
+        0U,
+        0U,
+        1,
+        Detail::MaximumMonStatsRecordCount + 1U));
     static_assert(Detail::SquaredWorldSubtileDistance(0U, 0U, 3U, 4U)
         == 25U);
     static_assert(NativeMissileUnitType == 3U);

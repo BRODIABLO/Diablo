@@ -4,6 +4,9 @@
 #include <shellapi.h>
 
 #include "d3d12_imgui_host.hpp"
+#include "automap_sprite_package.hpp"
+#include "automap_sprite_projection.hpp"
+#include "external_label_provider.hpp"
 #include "imgui_settings_panel.hpp"
 #include "mapsense_config.hpp"
 #include "mapsense_data_catalog.hpp"
@@ -39,6 +42,8 @@
 #include <utility>
 #include <vector>
 
+extern "C" IMAGE_DOS_HEADER __ImageBase;
+
 namespace RuffnecKk::MapSense {
 namespace {
 
@@ -46,6 +51,10 @@ constexpr std::size_t MaximumConfigBytes = 65'536;
 constexpr std::uint32_t RevealReplayRetryLimit = 8U;
 constexpr std::uint32_t RevealReplayRetryDelayMilliseconds = 250U;
 constexpr std::uint32_t RevealReplayInitialDelayMilliseconds = 750U;
+constexpr std::uint32_t ProgressiveRevealStepDelayMilliseconds = 8U;
+constexpr std::uint32_t ProgressiveRevealSettlementDelayMilliseconds = 50U;
+constexpr std::uint32_t ProgressiveRevealSettlementRetryLimit = 8U;
+constexpr std::uint32_t ProgressiveRevealUiQueueRetryLimit = 8U;
 constexpr std::uint32_t NavigationRefreshRetryLimit = 8U;
 constexpr std::uint32_t NavigationRefreshRetryDelayMilliseconds = 250U;
 constexpr std::uint64_t DynamicNavigationRefreshIntervalMilliseconds = 1'000U;
@@ -61,8 +70,6 @@ enum class Action {
 };
 
 std::array ActionTokens{
-    Action::RevealZone,
-    Action::RevealAct,
     Action::ToggleRevealAll,
     Action::ToggleMenu,
 };
@@ -82,11 +89,14 @@ std::atomic_bool PoiRuntimeAvailable{};
 std::atomic_bool PoiAvailable{};
 std::atomic_uint64_t SessionEpoch{1};
 std::atomic_uint64_t CurrentSessionGeneration{};
+std::atomic_uint32_t ActiveRevealMapSeed{};
+std::atomic_int32_t ActiveRevealMapDifficulty{UnknownRevealDifficulty};
 std::atomic_uint64_t LastDynamicNavigationRefreshTick{};
 std::atomic_uint64_t LastNativeUiPanelRefreshRequestTick{};
 std::atomic_bool NativeUiPanelRefreshQueued{};
 std::vector<NavigationLineSnapshot> NavigationLineSnapshots;
 std::vector<NativeAutomapMarkerSnapshot> MarkerSnapshots;
+std::vector<NativeAutomapMissileSnapshot> MissileSnapshots;
 std::vector<NativeAutomapPoiSnapshot> PoiSnapshots;
 std::atomic<std::shared_ptr<const MapSenseDataCatalog>> DataCatalog{};
 std::array<D2RL::Input::ActionHandle, ActionTokens.size()> ActionHandles{};
@@ -131,6 +141,43 @@ std::mutex RevealReplayMutex;
 RevealPersistenceState RevealPersistence{};
 RevealReplayRequestState PendingRevealReplay{};
 PTP_TIMER RevealReplayTimer{};
+
+enum class ProgressiveRevealPhase : std::uint8_t {
+    Discover,
+    Capture,
+    Settle,
+};
+
+struct ProgressiveRevealState final {
+    std::uint64_t sessionGeneration{};
+    std::int32_t difficulty{UnknownRevealDifficulty};
+    std::int32_t act{-1};
+    ProgressiveRevealGraphState graph{};
+    ProgressiveRevealPhase phase{ProgressiveRevealPhase::Discover};
+    std::uint32_t settlementRetriesRemaining{};
+    std::uint32_t uiQueueRetriesRemaining{};
+    bool active{};
+    bool callbackQueued{};
+    bool failed{};
+    std::uint64_t startedAt{};
+    std::uint64_t maximumStepMilliseconds{};
+    std::uint64_t maximumDiscoveryStepMilliseconds{};
+    std::uint64_t maximumCaptureStepMilliseconds{};
+    std::uint64_t namesReadyElapsedMilliseconds{};
+    std::uint64_t capturedLevels{};
+};
+
+ProgressiveRevealState ProgressiveReveal{};
+PTP_TIMER ProgressiveRevealTimer{};
+
+[[nodiscard]] auto ProgressiveRevealLevelIdLocked() noexcept
+        -> std::int32_t {
+    if (ProgressiveReveal.phase == ProgressiveRevealPhase::Discover
+        || ProgressiveReveal.phase == ProgressiveRevealPhase::Capture) {
+        return ProgressiveReveal.graph.Current();
+    }
+    return UnknownRevealLevelId;
+}
 std::atomic_uint64_t AutomaticLevelRevealRequests{};
 std::atomic_uint64_t AutomaticLevelRevealAccepted{};
 std::atomic_uint64_t AutomaticLevelRevealRejected{};
@@ -413,18 +460,18 @@ void WriteOutcome(
     switch (outcome) {
         case RevealOutcome::Complete:
             if (action == Action::RevealAct) {
-                message = "MapSense: current-act reveal submitted and remembered; it will be verified and reapplied when the automap is ready.";
+                message = "MapSense: current act revealed; distant names are being collected passively.";
             } else {
                 message = "MapSense: current level revealed and remembered for new games at this difficulty.";
             }
             kind = D2RL::ConsoleMessageKind::Output;
             break;
         case RevealOutcome::Armed:
-            message = "MapSense: Reveal All armed; the current act was submitted now and will be verified and reapplied as each act map becomes ready.";
+            message = "MapSense: Reveal Map enabled for this seed and difficulty.";
             kind = D2RL::ConsoleMessageKind::Output;
             break;
         case RevealOutcome::Disarmed:
-            message = "MapSense: Reveal All disarmed; already revealed automap data remains visible.";
+            message = "MapSense: Reveal Map disabled; D2R keeps any native cells already revealed.";
             kind = D2RL::ConsoleMessageKind::Output;
             break;
         case RevealOutcome::Unavailable:
@@ -456,6 +503,19 @@ auto ExecuteAction(Action action) noexcept -> RevealOutcome {
         || action == Action::ToggleRevealAll;
 }
 
+[[nodiscard]] constexpr auto RevealActionName(Action action) noexcept
+        -> const char* {
+    switch (action) {
+        case Action::RevealZone: return "reveal-zone";
+        case Action::RevealAct: return "reveal-act";
+        case Action::ArmRevealAll: return "arm-reveal-all";
+        case Action::ToggleRevealAll: return "toggle-reveal-all";
+        case Action::DisableRevealAll: return "disable-reveal-all";
+        case Action::ToggleMenu: return "toggle-menu";
+    }
+    return "unknown";
+}
+
 constexpr auto IsIdempotent(Action action) noexcept -> bool {
     return action == Action::RevealZone
         || action == Action::RevealAct
@@ -473,7 +533,6 @@ auto RequestRememberedRevealForCurrentSession(
     bool automapObserved = false) noexcept -> bool;
 auto HasPendingRevealWorkForLevel(
     std::int32_t levelId) noexcept -> bool;
-auto HasPendingRevealReconciliation() noexcept -> bool;
 
 void __cdecl DrainActionsOnUi(
         const D2RL::PluginContext* context,
@@ -521,19 +580,10 @@ void __cdecl DrainActionsOnUi(
         }
         const auto outcome = ExecuteTrackedRevealAction(request.action);
         WriteOutcome(context, outcome, request.action);
-        const auto revealed = request.action == Action::RevealZone
-            || request.action == Action::RevealAct
-            || (IsRevealAllArmAction(request.action)
-                && outcome == RevealOutcome::Armed);
+        const auto revealed = request.action == Action::RevealZone;
         const auto accepted = outcome == RevealOutcome::Complete
             || outcome == RevealOutcome::Armed;
-        const auto revealedWholeAct =
-            (request.action == Action::RevealAct
-                && outcome == RevealOutcome::Complete)
-            || (IsRevealAllArmAction(request.action)
-                && outcome == RevealOutcome::Armed);
         if (revealed && accepted
-            && !HasPendingRevealReconciliation()
             && GameplayReady.load(std::memory_order_acquire)) {
             const auto sessionGeneration = CurrentSessionGeneration.load(
                 std::memory_order_acquire);
@@ -541,7 +591,7 @@ void __cdecl DrainActionsOnUi(
                 && !RequestNavigationRefresh(
                     sessionGeneration,
                     UnknownNavigationLevelId,
-                    revealedWholeAct)
+                    false)
                 && Settings.diagnostics) {
                 context->LogWarn(
                     "MapSense navigation: the post-reveal exact-endpoint refresh could not be queued.");
@@ -748,13 +798,15 @@ auto RequestNavigationRefresh(
         CancelPendingNavigationRefresh();
         return false;
     }
+    const auto startedAt = GetTickCount64();
     const auto navigationResult = RefreshNavigationDestinations(
         sessionGeneration,
         levelId,
         Settings.navigation.customLevels.targets);
     auto result = navigationResult;
+    auto labelResult = NavigationRefreshResult::Complete;
     if (refreshRevealedActPoiDefinitions) {
-        const auto labelResult = RefreshRevealedActPoiDefinitions(
+        labelResult = RefreshRevealedActPoiDefinitions(
             sessionGeneration);
         if (navigationResult == NavigationRefreshResult::Failed
                 || labelResult == NavigationRefreshResult::Failed) {
@@ -767,6 +819,19 @@ auto RequestNavigationRefresh(
         } else {
             result = NavigationRefreshResult::Complete;
         }
+    }
+    if (refreshRevealedActPoiDefinitions && Context != nullptr) {
+        char timingMessage[256]{};
+        std::snprintf(
+            timingMessage,
+            sizeof(timingMessage),
+            "MapSense reveal timing: phase=navigation-initial session=%llu level=%d elapsed-ms=%llu navigation-result=%u labels-result=%u.",
+            static_cast<unsigned long long>(sessionGeneration),
+            levelId,
+            static_cast<unsigned long long>(GetTickCount64() - startedAt),
+            static_cast<unsigned>(navigationResult),
+            static_cast<unsigned>(labelResult));
+        Context->LogInfo(timingMessage);
     }
     if (result == NavigationRefreshResult::Complete) {
         CancelPendingNavigationRefresh();
@@ -804,13 +869,15 @@ void __cdecl RetryNavigationOnUi(
         return;
     }
 
+    const auto startedAt = GetTickCount64();
     const auto navigationResult = RefreshNavigationDestinations(
         attempt.sessionGeneration,
         attempt.levelId,
         Settings.navigation.customLevels.targets);
     auto result = navigationResult;
+    auto labelResult = NavigationRefreshResult::Complete;
     if (attempt.refreshRevealedActPoiDefinitions) {
-        const auto labelResult = RefreshRevealedActPoiDefinitions(
+        labelResult = RefreshRevealedActPoiDefinitions(
             attempt.sessionGeneration);
         if (navigationResult == NavigationRefreshResult::Failed
                 || labelResult == NavigationRefreshResult::Failed) {
@@ -823,6 +890,20 @@ void __cdecl RetryNavigationOnUi(
         } else {
             result = NavigationRefreshResult::Complete;
         }
+    }
+    if (attempt.refreshRevealedActPoiDefinitions && Context != nullptr) {
+        char timingMessage[256]{};
+        std::snprintf(
+            timingMessage,
+            sizeof(timingMessage),
+            "MapSense reveal timing: phase=navigation-retry session=%llu level=%d elapsed-ms=%llu navigation-result=%u labels-result=%u retries-before=%u.",
+            static_cast<unsigned long long>(attempt.sessionGeneration),
+            attempt.levelId,
+            static_cast<unsigned long long>(GetTickCount64() - startedAt),
+            static_cast<unsigned>(navigationResult),
+            static_cast<unsigned>(labelResult),
+            attempt.retriesRemaining);
+        Context->LogInfo(timingMessage);
     }
     if (result == NavigationRefreshResult::Complete) {
         std::scoped_lock lock(NavigationRefreshMutex);
@@ -890,20 +971,16 @@ void OnNativeAutomapLevelObserved(
     const auto sessionGeneration = CurrentSessionGeneration.load(
         std::memory_order_acquire);
     if (sessionGeneration == 0U) return;
-    const bool revealPending = HasPendingRevealWorkForLevel(currentLevelId);
-    const bool revealQueued = revealPending
-        && RequestRememberedRevealForCurrentSession(
+    if (HasPendingRevealWorkForLevel(currentLevelId)) {
+        (void)RequestRememberedRevealForCurrentSession(
             currentLevelId,
             0U,
             true);
+    }
     if (levelChanged) {
         LastDynamicNavigationRefreshTick.store(
             GetTickCount64(),
             std::memory_order_release);
-        // The successful reveal reconciliation performs the one authoritative
-        // full navigation refresh. Do not race it with a second topology scan
-        // from the same native automap observation.
-        if (revealQueued) return;
         ArmPendingNavigationRefresh(
             sessionGeneration,
             currentLevelId,
@@ -1012,6 +1089,322 @@ void ScheduleRevealReplayRetryTimer(
     SetThreadpoolTimer(RevealReplayTimer, &due, 0U, 0U);
 }
 
+void ResetProgressiveRevealLocked() noexcept {
+    ProgressiveReveal = {};
+    if (ProgressiveRevealTimer != nullptr) {
+        SetThreadpoolTimer(ProgressiveRevealTimer, nullptr, 0U, 0U);
+    }
+}
+
+void CancelProgressiveReveal() noexcept {
+    std::scoped_lock lock(RevealReplayMutex);
+    ResetProgressiveRevealLocked();
+}
+
+void ScheduleProgressiveRevealTimer(
+        std::uint32_t delayMilliseconds) noexcept {
+    std::scoped_lock lock(RevealReplayMutex);
+    if (!ProgressiveReveal.active || ProgressiveRevealTimer == nullptr) {
+        return;
+    }
+    const auto boundedDelay = std::max(delayMilliseconds, 1U);
+    ULARGE_INTEGER dueTime{};
+    dueTime.QuadPart = static_cast<ULONGLONG>(
+        -static_cast<LONGLONG>(boundedDelay) * 10'000LL);
+    FILETIME due{
+        .dwLowDateTime = dueTime.LowPart,
+        .dwHighDateTime = dueTime.HighPart,
+    };
+    SetThreadpoolTimer(ProgressiveRevealTimer, &due, 0U, 0U);
+}
+
+[[nodiscard]] auto StartProgressiveReveal(
+        std::uint64_t sessionGeneration,
+        const ClientLevelView& current,
+        std::int32_t act) noexcept -> bool {
+    if (sessionGeneration == 0U || current.levelId <= 0
+        || current.difficulty >= RevealDifficultyCount
+        || act < 0
+        || act >= static_cast<std::int32_t>(RevealPersistenceActCount)) {
+        return false;
+    }
+    if (RevealActForLevelId(current.levelId) != act) return false;
+    CancelProgressiveReveal();
+    if (RequestExternalLabelAtlas(sessionGeneration, current)) return true;
+    if (Context != nullptr) {
+        Context->LogWarn(
+            "MapSense external labels: atlas request unavailable; legacy distant-room loading is deliberately disabled.");
+    }
+    return false;
+}
+
+void OnExternalLabelAtlasResult(
+        std::uint64_t sessionGeneration,
+        std::uint8_t difficulty,
+        std::int32_t act,
+        std::int32_t currentLevelId,
+        bool published,
+        void*) noexcept {
+    if (!published || sessionGeneration == 0U
+        || sessionGeneration
+            != CurrentSessionGeneration.load(std::memory_order_acquire)) {
+        return;
+    }
+    std::scoped_lock lock(RevealReplayMutex);
+    if (RevealPersistence.Difficulty()
+            != static_cast<std::int32_t>(difficulty)) {
+        return;
+    }
+    (void)RevealPersistence.MarkActAccepted(difficulty, act);
+    (void)RevealPersistence.MarkLevelAccepted(difficulty, currentLevelId);
+}
+
+void __cdecl RunProgressiveRevealStepOnUi(
+        const D2RL::PluginContext*,
+        void*) noexcept {
+    std::uint64_t sessionGeneration{};
+    std::int32_t difficulty{UnknownRevealDifficulty};
+    std::int32_t act{-1};
+    std::int32_t levelId{UnknownRevealLevelId};
+    ProgressiveRevealPhase phase{ProgressiveRevealPhase::Discover};
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        ProgressiveReveal.callbackQueued = false;
+        if (!ProgressiveReveal.active) return;
+        sessionGeneration = ProgressiveReveal.sessionGeneration;
+        difficulty = ProgressiveReveal.difficulty;
+        act = ProgressiveReveal.act;
+        phase = ProgressiveReveal.phase;
+        levelId = ProgressiveRevealLevelIdLocked();
+    }
+
+    if (!Operational.load(std::memory_order_acquire)
+        || !FeaturesEnabled.load(std::memory_order_acquire)
+        || !GameplayReady.load(std::memory_order_acquire)
+        || sessionGeneration == 0U
+        || sessionGeneration
+            != CurrentSessionGeneration.load(std::memory_order_acquire)) {
+        CancelProgressiveReveal();
+        return;
+    }
+
+    ClientLevelView current{};
+    if (!ResolveCurrentClientLevelView(current)
+        || current.difficulty != difficulty
+        || RevealActForLevelId(current.levelId) != act) {
+        CancelProgressiveReveal();
+        return;
+    }
+
+    const auto stepStartedAt = GetTickCount64();
+    std::array<std::int32_t, ProgressiveRevealVisCapacity> targets{};
+    std::size_t targetCount{};
+    bool discoveryComplete{};
+    bool captureComplete{};
+    auto settlement = NavigationRefreshResult::PartialRetryable;
+    if (phase == ProgressiveRevealPhase::Discover) {
+        if (levelId > 0) {
+            discoveryComplete = DiscoverProgressiveRevealLevelTargets(
+                current,
+                levelId,
+                targets,
+                targetCount);
+        }
+    } else if (phase == ProgressiveRevealPhase::Capture) {
+        captureComplete = CaptureProgressiveRevealLevelPoiDefinitions(
+            sessionGeneration,
+            current,
+            levelId);
+    } else {
+        settlement = RefreshRevealedActPoiDefinitions(sessionGeneration);
+    }
+    const auto stepElapsed = GetTickCount64() - stepStartedAt;
+
+    bool finished{};
+    bool failed{};
+    std::uint64_t totalElapsed{};
+    std::uint64_t maximumStep{};
+    std::size_t discoveredLevels{};
+    bool namesReady{};
+    std::uint64_t namesReadyElapsed{};
+    std::uint64_t maximumDiscoveryStep{};
+    std::uint64_t maximumCaptureStep{};
+    std::uint64_t capturedLevels{};
+    std::uint32_t nextDelay{ProgressiveRevealStepDelayMilliseconds};
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        if (!ProgressiveReveal.active
+            || ProgressiveReveal.sessionGeneration != sessionGeneration
+            || ProgressiveReveal.difficulty != difficulty
+            || ProgressiveReveal.act != act
+            || ProgressiveReveal.phase != phase
+            || ProgressiveRevealLevelIdLocked() != levelId) {
+            return;
+        }
+        ProgressiveReveal.maximumStepMilliseconds = std::max(
+            ProgressiveReveal.maximumStepMilliseconds,
+            stepElapsed);
+        if (phase == ProgressiveRevealPhase::Discover) {
+            ProgressiveReveal.maximumDiscoveryStepMilliseconds = std::max(
+                ProgressiveReveal.maximumDiscoveryStepMilliseconds,
+                stepElapsed);
+        } else if (phase == ProgressiveRevealPhase::Capture) {
+            ProgressiveReveal.maximumCaptureStepMilliseconds = std::max(
+                ProgressiveReveal.maximumCaptureStepMilliseconds,
+                stepElapsed);
+        }
+        const auto finishDiscovery = [&]() noexcept {
+            ProgressiveReveal.namesReadyElapsedMilliseconds =
+                GetTickCount64() - ProgressiveReveal.startedAt;
+            ProgressiveReveal.phase = ProgressiveRevealPhase::Settle;
+            namesReady = true;
+        };
+        if (phase == ProgressiveRevealPhase::Discover) {
+            if (!discoveryComplete) {
+                ProgressiveReveal.failed = true;
+                (void)ProgressiveReveal.graph.Advance();
+                if (ProgressiveReveal.graph.HasCurrent()) {
+                    ProgressiveReveal.phase = ProgressiveRevealPhase::Discover;
+                } else {
+                    finishDiscovery();
+                }
+            }
+            if (ProgressiveReveal.graph.Current() == levelId
+                && ProgressiveReveal.phase
+                    == ProgressiveRevealPhase::Discover) {
+                for (std::size_t index = 0U; index < targetCount; ++index) {
+                    if (RevealActForLevelId(targets[index]) != act) continue;
+                    if (!ProgressiveReveal.graph.Add(targets[index])) {
+                        ProgressiveReveal.failed = true;
+                    }
+                }
+                ProgressiveReveal.phase = ProgressiveRevealPhase::Capture;
+            }
+        } else if (phase == ProgressiveRevealPhase::Capture) {
+            if (captureComplete) {
+                ++ProgressiveReveal.capturedLevels;
+            }
+            (void)ProgressiveReveal.graph.Advance();
+            if (ProgressiveReveal.graph.HasCurrent()) {
+                ProgressiveReveal.phase = ProgressiveRevealPhase::Discover;
+            } else {
+                finishDiscovery();
+            }
+        } else if (settlement == NavigationRefreshResult::Complete
+            || ProgressiveReveal.settlementRetriesRemaining == 0U) {
+            if (settlement != NavigationRefreshResult::Complete) {
+                ProgressiveReveal.failed = true;
+            }
+            for (std::size_t index = 0U;
+                    index < ProgressiveReveal.graph.LevelCount();
+                    ++index) {
+                (void)RevealPersistence.MarkLevelAccepted(
+                    difficulty,
+                    ProgressiveReveal.graph.LevelAt(index));
+            }
+            (void)RevealPersistence.MarkActAccepted(difficulty, act);
+            ProgressiveReveal.active = false;
+            finished = true;
+        } else {
+            --ProgressiveReveal.settlementRetriesRemaining;
+            nextDelay = ProgressiveRevealSettlementDelayMilliseconds;
+        }
+        failed = ProgressiveReveal.failed;
+        totalElapsed = GetTickCount64() - ProgressiveReveal.startedAt;
+        maximumStep = ProgressiveReveal.maximumStepMilliseconds;
+        discoveredLevels = ProgressiveReveal.graph.LevelCount();
+        namesReadyElapsed =
+            ProgressiveReveal.namesReadyElapsedMilliseconds;
+        maximumDiscoveryStep =
+            ProgressiveReveal.maximumDiscoveryStepMilliseconds;
+        maximumCaptureStep =
+            ProgressiveReveal.maximumCaptureStepMilliseconds;
+        capturedLevels = ProgressiveReveal.capturedLevels;
+    }
+
+    if (namesReady && Context != nullptr) {
+        char message[320]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "MapSense passive distant names: names-ready session=%llu act=%d discovered-levels=%zu captured-levels=%llu elapsed-ms=%llu max-discover-step-ms=%llu max-capture-step-ms=%llu.",
+            static_cast<unsigned long long>(sessionGeneration),
+            act,
+            discoveredLevels,
+            static_cast<unsigned long long>(
+                capturedLevels),
+            static_cast<unsigned long long>(namesReadyElapsed),
+            static_cast<unsigned long long>(maximumDiscoveryStep),
+            static_cast<unsigned long long>(maximumCaptureStep));
+        Context->LogInfo(message);
+    }
+    if (finished) {
+        if (Context != nullptr) {
+            char message[384]{};
+            std::snprintf(
+                message,
+                sizeof(message),
+                "MapSense passive distant names: finished session=%llu act=%d discovered-levels=%zu captured-levels=%llu names-ready-ms=%llu elapsed-ms=%llu max-step-ms=%llu status=%s.",
+                static_cast<unsigned long long>(sessionGeneration),
+                act,
+                discoveredLevels,
+                static_cast<unsigned long long>(capturedLevels),
+                static_cast<unsigned long long>(namesReadyElapsed),
+                static_cast<unsigned long long>(totalElapsed),
+                static_cast<unsigned long long>(maximumStep),
+                failed ? "partial" : "complete");
+            Context->LogInfo(message);
+        }
+        ArmPendingNavigationRefresh(
+            sessionGeneration,
+            current.levelId,
+            0U,
+            false);
+        return;
+    }
+    ScheduleProgressiveRevealTimer(nextDelay);
+}
+
+[[nodiscard]] auto ScheduleProgressiveRevealStep() noexcept -> bool {
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        if (!ProgressiveReveal.active
+            || ProgressiveReveal.callbackQueued) {
+            return true;
+        }
+        ProgressiveReveal.callbackQueued = true;
+    }
+    if (!Operational.load(std::memory_order_acquire)
+        || Context == nullptr || ThreadService == nullptr
+        || ThreadService->runOnUiThread == nullptr
+        || ThreadService->runOnUiThread(
+            Context,
+            RunProgressiveRevealStepOnUi,
+            nullptr) != D2RL::Threads::Result::Success) {
+        std::scoped_lock lock(RevealReplayMutex);
+        ProgressiveReveal.callbackQueued = false;
+        ProgressiveReveal.failed = true;
+        if (ProgressiveReveal.uiQueueRetriesRemaining > 1U) {
+            --ProgressiveReveal.uiQueueRetriesRemaining;
+        } else {
+            ProgressiveReveal.active = false;
+        }
+        return false;
+    }
+    return true;
+}
+
+void CALLBACK ProgressiveRevealTimerCallback(
+        PTP_CALLBACK_INSTANCE,
+        void*,
+        PTP_TIMER) noexcept {
+    if (!Operational.load(std::memory_order_acquire)) return;
+    if (!ScheduleProgressiveRevealStep()) {
+        ScheduleProgressiveRevealTimer(
+            ProgressiveRevealSettlementDelayMilliseconds);
+    }
+}
+
 void CancelPendingRevealReplay() noexcept {
     std::scoped_lock lock(RevealReplayMutex);
     PendingRevealReplay.targetLevelId = UnknownRevealLevelId;
@@ -1030,6 +1423,7 @@ void ResetRevealReplayGameplaySession(
     RevealPersistence.BeginSession(sessionGeneration);
     PendingRevealReplay = {};
     PendingRevealReplay.sessionGeneration = sessionGeneration;
+    ResetProgressiveRevealLocked();
     if (sessionGeneration != 0U) {
         ResetAutomaticLevelRevealCounters();
     }
@@ -1042,6 +1436,7 @@ void ResetRevealReplayProcessState() noexcept {
     std::scoped_lock lock(RevealReplayMutex);
     RevealPersistence.ResetProcess();
     PendingRevealReplay = {};
+    ResetProgressiveRevealLocked();
     ResetAutomaticLevelRevealCounters();
     if (RevealReplayTimer != nullptr) {
         SetThreadpoolTimer(RevealReplayTimer, nullptr, 0U, 0U);
@@ -1063,6 +1458,7 @@ auto ObserveValidatedRevealDifficulty(
             if (RevealReplayTimer != nullptr) {
                 SetThreadpoolTimer(RevealReplayTimer, nullptr, 0U, 0U);
             }
+            ResetProgressiveRevealLocked();
         }
     }
     if (observation == RevealDifficultyObservation::Invalid) return false;
@@ -1070,15 +1466,10 @@ auto ObserveValidatedRevealDifficulty(
         (void)DisableRevealAll();
         if (Context != nullptr) {
             Context->LogInfo(
-                "MapSense: game difficulty changed; remembered Reveal Level, Reveal Act, and Reveal All intents were cleared.");
+                "MapSense: the difficulty changed; Reveal Map will remain off until enabled for the rerolled seed.");
         }
     }
     return true;
-}
-
-auto HasRememberedRevealIntent() noexcept -> bool {
-    std::scoped_lock lock(RevealReplayMutex);
-    return RevealPersistence.HasAnyIntent();
 }
 
 auto ArmRevealReplayRequest(
@@ -1097,8 +1488,14 @@ auto ArmRevealReplayRequest(
         if (PendingRevealReplay.sessionGeneration != sessionGeneration) {
             return false;
         }
-        if (!PendingRevealReplay.playerReady
-            || !RevealPersistence.HasAnyIntent()) {
+        if (ProgressiveReveal.active
+            && ProgressiveReveal.sessionGeneration == sessionGeneration
+            && (targetLevelId <= 0
+                || RevealActForLevelId(targetLevelId)
+                    == ProgressiveReveal.act)) {
+            return true;
+        }
+        if (!PendingRevealReplay.playerReady) {
             return true;
         }
         if (PendingRevealReplay.reconcilePending) {
@@ -1143,7 +1540,6 @@ auto RequestRememberedRevealForCurrentSession(
         std::uint32_t delayMilliseconds,
         bool automapObserved) noexcept -> bool {
     if (!FeaturesEnabled.load(std::memory_order_acquire)) return true;
-    if (!HasRememberedRevealIntent()) return true;
     if (!GameplayReady.load(std::memory_order_acquire)) {
         // The process-lifetime ids remain remembered. LocalPlayerReady will
         // reconcile them against the new game's generated client DRLG.
@@ -1163,16 +1559,18 @@ auto HasPendingRevealWorkForLevel(
         std::int32_t levelId) noexcept -> bool {
     if (levelId <= 0) return false;
     std::scoped_lock lock(RevealReplayMutex);
+    const auto sessionGeneration = CurrentSessionGeneration.load(
+        std::memory_order_acquire);
+    if (ProgressiveReveal.active
+        && ProgressiveReveal.sessionGeneration == sessionGeneration
+        && ProgressiveReveal.act == RevealActForLevelId(levelId)) {
+        return false;
+    }
     const auto difficulty = RevealPersistence.Difficulty();
     return RevealPersistence.ShouldReplayCurrentLevel(
         difficulty,
         RevealActForLevelId(levelId),
         levelId);
-}
-
-auto HasPendingRevealReconciliation() noexcept -> bool {
-    std::scoped_lock lock(RevealReplayMutex);
-    return PendingRevealReplay.reconcilePending;
 }
 
 void SetRevealReplayPlayerReady(
@@ -1183,21 +1581,6 @@ void SetRevealReplayPlayerReady(
     }
 }
 
-auto ObserveRevealReplayAct(
-        std::uint64_t sessionGeneration,
-        std::int32_t,
-        std::int32_t) noexcept -> bool {
-    std::scoped_lock lock(RevealReplayMutex);
-    if (PendingRevealReplay.sessionGeneration != sessionGeneration) {
-        return false;
-    }
-    // ActChanged deliberately carries no authoritative LevelId. LevelChanged
-    // or the first native automap observation will queue one precise request;
-    // submitting here can still target the previous act and doubles the
-    // expensive revealmap work during cross-act waypoint travel.
-    return true;
-}
-
 void CompletePendingRevealReplay(
         std::uint64_t sessionGeneration) noexcept {
     std::scoped_lock lock(RevealReplayMutex);
@@ -1206,22 +1589,6 @@ void CompletePendingRevealReplay(
     PendingRevealReplay.retriesRemaining = 0U;
     PendingRevealReplay.automapObserved = false;
     PendingRevealReplay.reconcilePending = false;
-}
-
-void RequestNavigationRefreshAfterRevealReconciliation(
-        std::uint64_t sessionGeneration,
-        std::int32_t levelId,
-        bool refreshRevealedActPoiDefinitions) noexcept {
-    if (RequestNavigationRefresh(
-            sessionGeneration,
-            levelId,
-            refreshRevealedActPoiDefinitions)) {
-        return;
-    }
-    if (Context != nullptr && Settings.diagnostics) {
-        Context->LogWarn(
-            "MapSense navigation: the single post-reveal refresh could not be queued.");
-    }
 }
 
 auto RetryPendingRevealReplay(
@@ -1276,15 +1643,10 @@ void __cdecl RetryRememberedRevealOnUi(
     const bool clientReady = ResolveCurrentClientLevelView(current);
     if (!clientReady
         || !ObserveValidatedRevealDifficulty(current.difficulty)) {
-        if (!RetryPendingRevealReplay(attempt.sessionGeneration)) {
-            if (Context != nullptr) {
-                Context->LogWarn(
-                    "MapSense: remembered reveal intent expired before the new client map became ready.");
-            }
-            RequestNavigationRefreshAfterRevealReconciliation(
-                attempt.sessionGeneration,
-                attempt.targetLevelId,
-                false);
+        if (!RetryPendingRevealReplay(attempt.sessionGeneration)
+            && Context != nullptr) {
+            Context->LogWarn(
+                "MapSense: remembered reveal intent expired before the new client map became ready.");
         }
         return;
     }
@@ -1305,22 +1667,59 @@ void __cdecl RetryRememberedRevealOnUi(
     // consuming or crediting the wrong generated level.
     if (attempt.targetLevelId > 0
         && current.levelId != attempt.targetLevelId) {
-        if (!RetryPendingRevealReplay(attempt.sessionGeneration)) {
-            if (Context != nullptr) {
-                Context->LogWarn(
-                    "MapSense: remembered reveal target did not become the active client level before its bounded retries expired.");
-            }
-            RequestNavigationRefreshAfterRevealReconciliation(
-                attempt.sessionGeneration,
-                attempt.targetLevelId,
-                false);
+        if (!RetryPendingRevealReplay(attempt.sessionGeneration)
+            && Context != nullptr) {
+            Context->LogWarn(
+                "MapSense: remembered reveal target did not become the active client level before its bounded retries expired.");
         }
         return;
     }
 
+    const auto activeRevealMapSeed = ActiveRevealMapSeed.load(
+        std::memory_order_acquire);
+    if (activeRevealMapSeed != 0U
+        && activeRevealMapSeed != current.mapSeed) {
+        {
+            std::scoped_lock lock(RevealReplayMutex);
+            RevealPersistence.ClearRevealAll();
+        }
+        (void)DisableRevealAll();
+        ActiveRevealMapSeed.store(0U, std::memory_order_release);
+        ActiveRevealMapDifficulty.store(
+            UnknownRevealDifficulty, std::memory_order_release);
+    }
+
+    const auto currentAct = RevealActForLevelId(current.levelId);
+    bool hasAnyIntent{};
+    {
+        std::scoped_lock lock(RevealReplayMutex);
+        hasAnyIntent = RevealPersistence.HasAnyIntent();
+    }
+    if (!hasAnyIntent
+        && HasPersistedExternalRevealMapIntent(
+            current.mapSeed, current.difficulty)
+        && ArmRevealAll() == RevealOutcome::Armed) {
+        std::scoped_lock lock(RevealReplayMutex);
+        (void)RevealPersistence.SetRevealAll(current.difficulty, true);
+        // ArmRevealAll already completed the native current-act reveal. Keep
+        // that acceptance independent from the asynchronous external atlas so
+        // a slow or failed helper cannot submit the native act a second time.
+        (void)RevealPersistence.MarkActAccepted(
+            current.difficulty, currentAct);
+        (void)RevealPersistence.MarkLevelAccepted(
+            current.difficulty, current.levelId);
+        ActiveRevealMapSeed.store(
+            current.mapSeed, std::memory_order_release);
+        ActiveRevealMapDifficulty.store(
+            current.difficulty, std::memory_order_release);
+        if (Context != nullptr) {
+            Context->LogInfo(
+                "MapSense: Reveal Map restored for the unchanged map seed.");
+        }
+    }
+
     bool hasIntent{};
     bool shouldReveal{};
-    const auto currentAct = RevealActForLevelId(current.levelId);
     {
         std::scoped_lock lock(RevealReplayMutex);
         if (PendingRevealReplay.sessionGeneration
@@ -1343,55 +1742,123 @@ void __cdecl RetryRememberedRevealOnUi(
 
     if (!hasIntent) {
         CompletePendingRevealReplay(attempt.sessionGeneration);
-        RequestNavigationRefreshAfterRevealReconciliation(
-            attempt.sessionGeneration,
-            current.levelId,
-            false);
         return;
     }
     if (!shouldReveal) {
         AutomaticLevelRevealDuplicateRefusals.fetch_add(
             1U,
             std::memory_order_relaxed);
+        // The native reveal intent is already satisfied for this act, but a
+        // same-act level transition may enter a different automap coordinate
+        // space (for example an outdoor entrance into a dungeon). Refresh the
+        // immutable external snapshot without replaying native room loading.
+        if (IsRevealAllArmed()) {
+            (void)StartProgressiveReveal(
+                attempt.sessionGeneration,
+                current,
+                currentAct);
+        }
         CompletePendingRevealReplay(attempt.sessionGeneration);
-        RequestNavigationRefreshAfterRevealReconciliation(
-            attempt.sessionGeneration,
-            current.levelId,
-            false);
         return;
     }
 
     AutomaticLevelRevealRequests.fetch_add(1U, std::memory_order_relaxed);
+    bool automapObserved{};
     bool revealWholeAct{};
-    bool submitWholeAct{};
-    bool revealCurrentLevel{};
+    bool actAlreadyAccepted{};
+    bool levelAlreadyAccepted{};
     {
         std::scoped_lock lock(RevealReplayMutex);
         revealWholeAct = RevealPersistence.ShouldRevealWholeAct(
             current.difficulty,
             currentAct);
-        submitWholeAct = revealWholeAct
-            && !RevealPersistence.IsActAccepted(
-                current.difficulty,
-                currentAct);
-        revealCurrentLevel = !RevealPersistence.IsLevelAccepted(
+        automapObserved = PendingRevealReplay.automapObserved;
+        actAlreadyAccepted = RevealPersistence.IsActAccepted(
+            current.difficulty,
+            currentAct);
+        levelAlreadyAccepted = RevealPersistence.IsLevelAccepted(
             current.difficulty,
             current.levelId);
     }
-    const auto actOutcome = submitWholeAct
-        ? RevealCurrentAct()
-        : RevealOutcome::Complete;
+    const auto submission = MakeRevealReplaySubmissionPolicy(
+        automapObserved,
+        revealWholeAct,
+        actAlreadyAccepted,
+        levelAlreadyAccepted);
+    if (submission.waitForAutomap) {
+        if (!RetryPendingRevealReplay(attempt.sessionGeneration)
+            && Context != nullptr) {
+            Context->LogInfo(
+                "MapSense: remembered reveal remains armed and will resume on the next real automap observation.");
+        }
+        return;
+    }
+    const auto submitWholeAct = submission.submitWholeAct;
+    const auto revealCurrentLevel = submission.submitCurrentLevel;
+    if (submitWholeAct) {
+        const auto nativeStartedAt = GetTickCount64();
+        const auto nativeOutcome = RevealCurrentAct();
+        const auto nativeElapsed = GetTickCount64() - nativeStartedAt;
+        const auto captureStartedAt = GetTickCount64();
+        const bool scheduled = nativeOutcome == RevealOutcome::Complete
+            && StartProgressiveReveal(
+                attempt.sessionGeneration,
+                current,
+                currentAct);
+        const auto captureElapsed = GetTickCount64() - captureStartedAt;
+        (scheduled
+                ? AutomaticLevelRevealAccepted
+                : AutomaticLevelRevealRejected)
+            .fetch_add(1U, std::memory_order_relaxed);
+        if (Context != nullptr) {
+            char message[352]{};
+            std::snprintf(
+                message,
+                sizeof(message),
+                "MapSense reveal timing: phase=act-replay session=%llu level=%d act=%d automap-observed=%d native-ms=%llu passive-name-schedule-ms=%llu accepted=%d.",
+                static_cast<unsigned long long>(attempt.sessionGeneration),
+                current.levelId,
+                currentAct,
+                automapObserved ? 1 : 0,
+                static_cast<unsigned long long>(nativeElapsed),
+                static_cast<unsigned long long>(captureElapsed),
+                scheduled ? 1 : 0);
+            Context->LogInfo(message);
+        }
+        if (scheduled) {
+            CompletePendingRevealReplay(attempt.sessionGeneration);
+            return;
+        }
+        if (!RetryPendingRevealReplay(attempt.sessionGeneration)
+            && Context != nullptr) {
+            Context->LogWarn(
+                "MapSense: the native act reveal or passive distant-name capture could not be scheduled before its bounded readiness retries expired.");
+        }
+        return;
+    }
+    const auto levelStartedAt = GetTickCount64();
     const auto levelOutcome = revealCurrentLevel
         ? RevealCurrentZone()
         : RevealOutcome::Complete;
-    const bool actAccepted = actOutcome == RevealOutcome::Complete;
+    const auto levelElapsed = revealCurrentLevel
+        ? GetTickCount64() - levelStartedAt
+        : 0U;
+    if (Context != nullptr && revealCurrentLevel) {
+        char timingMessage[320]{};
+        std::snprintf(
+            timingMessage,
+            sizeof(timingMessage),
+            "MapSense reveal timing: phase=local-fallback session=%llu level=%d automap-observed=%d reveal-level=%d level-ms=%llu retries-before=%u.",
+            static_cast<unsigned long long>(attempt.sessionGeneration),
+            current.levelId,
+            automapObserved ? 1 : 0,
+            revealCurrentLevel ? 1 : 0,
+            static_cast<unsigned long long>(levelElapsed),
+            attempt.retriesRemaining);
+        Context->LogInfo(timingMessage);
+    }
     const bool levelAccepted = levelOutcome == RevealOutcome::Complete;
-    // Submit whole-act work as soon as the client level is ready, including
-    // after Save & Exit. The governed direct current-level traversal proves
-    // that the generated DRLG is ready, so a later automap callback is not
-    // required to repeat and credit the same work.
-    const bool accepted = levelAccepted
-        && (!submitWholeAct || actAccepted);
+    const bool accepted = levelAccepted;
     (accepted
             ? AutomaticLevelRevealAccepted
             : AutomaticLevelRevealRejected)
@@ -1404,14 +1871,8 @@ void __cdecl RetryRememberedRevealOnUi(
                 || !PendingRevealReplay.reconcilePending) {
                 return;
             }
-            if (submitWholeAct && CanConfirmWholeActReveal(
-                    actOutcome,
-                    levelOutcome)) {
-                (void)RevealPersistence.MarkActAccepted(
-                    current.difficulty,
-                    currentAct);
-            }
             if (revealCurrentLevel && CanConfirmReplayedLevelReveal(
+                    automapObserved,
                     levelOutcome)) {
                 (void)RevealPersistence.MarkLevelAccepted(
                     current.difficulty,
@@ -1427,39 +1888,33 @@ void __cdecl RetryRememberedRevealOnUi(
             std::snprintf(
                 message,
                 sizeof(message),
-                "MapSense native reveal replay: current level %d submission=%s and complete-act submission=%s for session %llu.",
+                "MapSense native local fallback: current level %d submission=%s for session %llu.",
                 current.levelId,
-                levelAccepted ? "confirmed-at-ready-drlg" : "rejected",
-                submitWholeAct
-                    ? (actAccepted
-                        ? "confirmed-at-ready-drlg"
-                        : "rejected")
-                    : "not-required",
+                automapObserved
+                    ? "confirmed-at-automap"
+                    : "accepted-awaiting-automap",
                 static_cast<unsigned long long>(attempt.sessionGeneration));
             Context->LogInfo(message);
         }
-        // Reveal replay materializes every room in the current generated
-        // level. Rebuild the static exit-label catalog now; otherwise a new
-        // game keeps only the room links that happened to be ready before the
-        // delayed replay and distant exit names appear proximity-dependent.
-        if (GameplayReady.load(std::memory_order_acquire)) {
-            RequestNavigationRefreshAfterRevealReconciliation(
+        // The single-level fallback is local-only. Rebuild the static label
+        // catalog so its exit names do not depend on the render proximity at
+        // the instant this remembered level was replayed.
+        if (GameplayReady.load(std::memory_order_acquire)
+            && !RequestNavigationRefresh(
                 attempt.sessionGeneration,
                 current.levelId,
-                submitWholeAct);
+                false)
+            && Context != nullptr && Settings.diagnostics) {
+            Context->LogWarn(
+                "MapSense navigation: the post-replay all-exit label refresh could not be queued.");
         }
         return;
     }
 
-    if (!RetryPendingRevealReplay(attempt.sessionGeneration)) {
-        if (Context != nullptr) {
-            Context->LogWarn(
-                "MapSense: remembered reveal intent remained unavailable after its bounded native current-level retries; it stays remembered for the next matching level event.");
-        }
-        RequestNavigationRefreshAfterRevealReconciliation(
-            attempt.sessionGeneration,
-            current.levelId,
-            false);
+    if (!RetryPendingRevealReplay(attempt.sessionGeneration)
+        && Context != nullptr) {
+        Context->LogWarn(
+            "MapSense: remembered reveal intent remained unavailable after its bounded native current-level retries; it stays remembered for the next matching level event.");
     }
 }
 
@@ -1516,37 +1971,79 @@ void CALLBACK RevealReplayTimerCallback(
 
 [[nodiscard]] auto InitializeRevealReplayTimer() noexcept -> bool {
     std::scoped_lock lock(RevealReplayMutex);
-    if (RevealReplayTimer != nullptr) return true;
-    RevealReplayTimer = CreateThreadpoolTimer(
-        RevealReplayTimerCallback,
-        nullptr,
-        nullptr);
-    return RevealReplayTimer != nullptr;
+    if (RevealReplayTimer != nullptr
+        && ProgressiveRevealTimer != nullptr) return true;
+    if (RevealReplayTimer == nullptr) {
+        RevealReplayTimer = CreateThreadpoolTimer(
+            RevealReplayTimerCallback,
+            nullptr,
+            nullptr);
+    }
+    if (ProgressiveRevealTimer == nullptr) {
+        ProgressiveRevealTimer = CreateThreadpoolTimer(
+            ProgressiveRevealTimerCallback,
+            nullptr,
+            nullptr);
+    }
+    if (RevealReplayTimer != nullptr
+        && ProgressiveRevealTimer != nullptr) return true;
+    if (RevealReplayTimer != nullptr) {
+        CloseThreadpoolTimer(RevealReplayTimer);
+        RevealReplayTimer = nullptr;
+    }
+    if (ProgressiveRevealTimer != nullptr) {
+        CloseThreadpoolTimer(ProgressiveRevealTimer);
+        ProgressiveRevealTimer = nullptr;
+    }
+    return false;
 }
 
 void ShutdownRevealReplayTimer() noexcept {
     PTP_TIMER timer{};
+    PTP_TIMER progressiveTimer{};
     {
         std::scoped_lock lock(RevealReplayMutex);
         timer = RevealReplayTimer;
+        progressiveTimer = ProgressiveRevealTimer;
         RevealReplayTimer = nullptr;
+        ProgressiveRevealTimer = nullptr;
         RevealPersistence.ResetProcess();
         PendingRevealReplay = {};
+        ProgressiveReveal = {};
     }
-    if (timer == nullptr) return;
-    SetThreadpoolTimer(timer, nullptr, 0U, 0U);
-    WaitForThreadpoolTimerCallbacks(timer, TRUE);
-    CloseThreadpoolTimer(timer);
+    if (timer != nullptr) {
+        SetThreadpoolTimer(timer, nullptr, 0U, 0U);
+        WaitForThreadpoolTimerCallbacks(timer, TRUE);
+        CloseThreadpoolTimer(timer);
+    }
+    if (progressiveTimer != nullptr) {
+        SetThreadpoolTimer(progressiveTimer, nullptr, 0U, 0U);
+        WaitForThreadpoolTimerCallbacks(progressiveTimer, TRUE);
+        CloseThreadpoolTimer(progressiveTimer);
+    }
 }
 
 auto ExecuteTrackedRevealAction(Action action) noexcept -> RevealOutcome {
     if (action == Action::DisableRevealAll) {
         const auto outcome = ExecuteAction(action);
+        const auto seed = ActiveRevealMapSeed.exchange(
+            0U, std::memory_order_acq_rel);
+        const auto difficulty = ActiveRevealMapDifficulty.exchange(
+            UnknownRevealDifficulty, std::memory_order_acq_rel);
+        if (seed != 0U && difficulty >= 0
+            && difficulty < static_cast<std::int32_t>(
+                RevealDifficultyCount)) {
+            (void)SetPersistedExternalRevealMapIntent(
+                seed, static_cast<std::uint8_t>(difficulty), false);
+        }
         {
             std::scoped_lock lock(RevealReplayMutex);
             RevealPersistence.ClearRevealAll();
         }
         CancelPendingRevealReplay();
+        CancelProgressiveReveal();
+        ResetExternalLabelProviderSession(
+            CurrentSessionGeneration.load(std::memory_order_acquire));
         (void)RequestRememberedRevealForCurrentSession();
         return outcome;
     }
@@ -1561,22 +2058,13 @@ auto ExecuteTrackedRevealAction(Action action) noexcept -> RevealOutcome {
         return RevealOutcome::Unavailable;
     }
 
+    const auto totalStartedAt = GetTickCount64();
     const auto currentAct = RevealActForLevelId(current.levelId);
+    const auto primaryStartedAt = GetTickCount64();
     const auto outcome = ExecuteAction(action);
-    bool currentLevelRevealed = action == Action::RevealZone
-        && outcome == RevealOutcome::Complete;
-    if ((action == Action::RevealAct
-            && outcome == RevealOutcome::Complete)
-        || (IsRevealAllArmAction(action)
-            && outcome == RevealOutcome::Armed)) {
-        // D2RCore reports only that revealmap was accepted. Confirm the
-        // current level synchronously with MapSense's governed room callback
-        // before crediting any persistent current-level work.
-        currentLevelRevealed =
-            RevealCurrentZone() == RevealOutcome::Complete;
-    }
+    const auto primaryElapsed = GetTickCount64() - primaryStartedAt;
     bool remembered{true};
-    bool currentActConfirmed{};
+    bool startPassiveNames{};
     {
         std::scoped_lock lock(RevealReplayMutex);
         if (action == Action::RevealZone
@@ -1593,20 +2081,15 @@ auto ExecuteTrackedRevealAction(Action action) noexcept -> RevealOutcome {
                 remembered = RevealPersistence.RememberAct(
                     current.difficulty,
                     currentAct);
+                (void)RevealPersistence.MarkActAccepted(
+                    current.difficulty, currentAct);
+                (void)RevealPersistence.MarkLevelAccepted(
+                    current.difficulty, current.levelId);
+                startPassiveNames = true;
             } else {
                 // The action succeeded, but an unknown Levels.txt id cannot be
                 // persisted safely as an Act intent.
                 remembered = false;
-            }
-            if (currentLevelRevealed) {
-                (void)RevealPersistence.MarkLevelAccepted(
-                    current.difficulty,
-                    current.levelId);
-                if (IsKnownRevealAct(currentAct)) {
-                    currentActConfirmed = RevealPersistence.MarkActAccepted(
-                        current.difficulty,
-                        currentAct);
-                }
             }
         } else if (IsRevealAllArmAction(action)
             && (outcome == RevealOutcome::Armed
@@ -1615,46 +2098,93 @@ auto ExecuteTrackedRevealAction(Action action) noexcept -> RevealOutcome {
                 current.difficulty,
                 outcome == RevealOutcome::Armed);
             if (outcome == RevealOutcome::Armed
-                && currentLevelRevealed) {
+                && IsKnownRevealAct(currentAct)) {
+                // ArmRevealAll/ToggleRevealAll only return Armed after the
+                // native current-act reveal has completed successfully.
+                (void)RevealPersistence.MarkActAccepted(
+                    current.difficulty, currentAct);
                 (void)RevealPersistence.MarkLevelAccepted(
-                    current.difficulty,
-                    current.levelId);
-                if (IsKnownRevealAct(currentAct)) {
-                    currentActConfirmed = RevealPersistence.MarkActAccepted(
-                        current.difficulty,
-                        currentAct);
-                }
+                    current.difficulty, current.levelId);
+                startPassiveNames = true;
             }
         }
     }
     if (!remembered && Context != nullptr) {
         Context->LogWarn(
-            "MapSense: a successful reveal could not be added to the bounded process-lifetime intent set.");
+            "MapSense: a successful reveal could not be added to the bounded runtime intent set.");
+    }
+
+    if (IsRevealAllArmAction(action)
+        && outcome == RevealOutcome::Armed) {
+        ActiveRevealMapSeed.store(
+            current.mapSeed, std::memory_order_release);
+        ActiveRevealMapDifficulty.store(
+            current.difficulty, std::memory_order_release);
+        if (!SetPersistedExternalRevealMapIntent(
+                current.mapSeed, current.difficulty, true)
+            && Context != nullptr) {
+            Context->LogWarn(
+                "MapSense: Reveal Map is active, but its seed-scoped cold-start intent could not be saved.");
+        }
+    } else if (IsRevealAllArmAction(action)
+        && outcome == RevealOutcome::Disarmed) {
+        (void)SetPersistedExternalRevealMapIntent(
+            current.mapSeed, current.difficulty, false);
+        ActiveRevealMapSeed.store(0U, std::memory_order_release);
+        ActiveRevealMapDifficulty.store(
+            UnknownRevealDifficulty, std::memory_order_release);
     }
 
     if (IsRevealAllArmAction(action)) {
         CancelPendingRevealReplay();
-        const bool shouldReplay = outcome == RevealOutcome::Armed
-            && !currentActConfirmed;
-        if (shouldReplay
+        if (outcome == RevealOutcome::Disarmed) {
+            CancelProgressiveReveal();
+            ResetExternalLabelProviderSession(
+                CurrentSessionGeneration.load(
+                    std::memory_order_acquire));
+        }
+        if (startPassiveNames
+            && !StartProgressiveReveal(
+                CurrentSessionGeneration.load(std::memory_order_acquire),
+                current,
+                currentAct)
             && !RequestRememberedRevealForCurrentSession(
                 current.levelId,
                 RevealReplayRetryDelayMilliseconds,
                 false)
             && Context != nullptr) {
             Context->LogWarn(
-                "MapSense: remembered reveal intent could not be scheduled for the current session.");
+                "MapSense: passive distant-name capture could not be scheduled for the current session.");
         }
     } else if (action == Action::RevealAct
         && outcome == RevealOutcome::Complete
-        && !currentActConfirmed
+        && startPassiveNames
+        && !StartProgressiveReveal(
+            CurrentSessionGeneration.load(std::memory_order_acquire),
+            current,
+            currentAct)
         && !RequestRememberedRevealForCurrentSession(
             current.levelId,
             RevealReplayRetryDelayMilliseconds,
             false)
         && Context != nullptr) {
         Context->LogWarn(
-            "MapSense: the verification replay for remembered Reveal Act could not be scheduled.");
+            "MapSense: passive distant-name capture for Reveal Act could not be scheduled.");
+    }
+    if (Context != nullptr) {
+        char timingMessage[320]{};
+        std::snprintf(
+            timingMessage,
+            sizeof(timingMessage),
+            "MapSense reveal timing: phase=action action=%s session=%llu level=%d primary-ms=%llu total-ms=%llu outcome=%u.",
+            RevealActionName(action),
+            static_cast<unsigned long long>(
+                CurrentSessionGeneration.load(std::memory_order_acquire)),
+            current.levelId,
+            static_cast<unsigned long long>(primaryElapsed),
+            static_cast<unsigned long long>(GetTickCount64() - totalStartedAt),
+            static_cast<unsigned>(outcome));
+        Context->LogInfo(timingMessage);
     }
     return outcome;
 }
@@ -1680,6 +2210,7 @@ void __cdecl OnGameplayEvent(
         ResetNavigationSession(event->sessionGeneration);
         ResetNativeAutomapMarker();
         ResetNativeAutomapPoiSession(event->sessionGeneration);
+        ResetExternalLabelProviderSession(event->sessionGeneration);
         GameplayReady.store(false, std::memory_order_release);
         MenuExpanded.store(false, std::memory_order_release);
         SetD3D12ImGuiMenuOpen(false);
@@ -1704,18 +2235,15 @@ void __cdecl OnGameplayEvent(
             std::memory_order_release);
         SetD3D12ImGuiMenuOpen(true);
         SetRevealReplayPlayerReady(event->sessionGeneration);
-        const bool revealPending = HasRememberedRevealIntent();
-        const bool revealQueued = !revealPending
-            || RequestRememberedRevealForCurrentSession(
+        if (!RequestRememberedRevealForCurrentSession(
                 UnknownRevealLevelId,
                 RevealReplayInitialDelayMilliseconds,
-                false);
-        if (!revealQueued && Context != nullptr) {
+                false)
+            && Context != nullptr) {
             Context->LogWarn(
                 "MapSense: remembered reveals for the new game could not be scheduled.");
         }
-        if ((!revealPending || !revealQueued)
-            && IsNavigationResolverActive()
+        if (IsNavigationResolverActive()
             && !RequestNavigationRefresh(
                 event->sessionGeneration,
                 UnknownNavigationLevelId)
@@ -1730,6 +2258,7 @@ void __cdecl OnGameplayEvent(
         ResetNavigationSession(event->sessionGeneration);
         ResetNativeAutomapMarker();
         ResetNativeAutomapPoiSession(0U);
+        ResetExternalLabelProviderSession(0U);
         GameplayReady.store(false, std::memory_order_release);
         CurrentSessionGeneration.store(0U, std::memory_order_release);
         LastDynamicNavigationRefreshTick.store(
@@ -1741,27 +2270,23 @@ void __cdecl OnGameplayEvent(
         ResetRevealReplayGameplaySession(0U);
         ResetRevealSession();
     } else if (event->kind == D2RL::Lifecycle::GameplayEventKind::ActChanged) {
+        CancelProgressiveReveal();
         ResetNativeAutomapMarker();
         ResetNativeAutomapPoiSession(event->sessionGeneration);
-        const auto actObservationAccepted = ObserveRevealReplayAct(
-            event->sessionGeneration,
-            event->previousValue,
-            event->currentValue);
-        if (!actObservationAccepted && Context != nullptr) {
-            Context->LogWarn(
-                "MapSense: the act transition could not be associated with the current reveal session.");
-        }
+        ResetExternalLabelProviderSession(event->sessionGeneration);
+        // ActChanged has no authoritative level id. LevelChanged will arm the
+        // exact target; queuing here could spend readiness retries against the
+        // previous client DRLG during an act transition.
         if (Settings.diagnostics && Context != nullptr) {
             char message[256]{};
             std::snprintf(
                 message,
                 sizeof(message),
-                "MapSense reveal persistence diagnostic: act-change session=%llu previous=%d current=%d armed=%d deferred-to-level=%d.",
+                "MapSense reveal persistence diagnostic: act-change session=%llu previous=%d current=%d armed=%d deferred-to-level-change=1.",
                 static_cast<unsigned long long>(event->sessionGeneration),
                 static_cast<std::int32_t>(event->previousValue),
                 static_cast<std::int32_t>(event->currentValue),
-                IsRevealAllArmed() ? 1 : 0,
-                actObservationAccepted ? 1 : 0);
+                IsRevealAllArmed() ? 1 : 0);
             Context->LogInfo(message);
         }
     } else if (event->kind
@@ -1783,16 +2308,12 @@ void __cdecl OnGameplayEvent(
         ResetNativeAutomapPoiLevel(
             event->sessionGeneration,
             event->currentValue);
-        const bool revealPending = HasPendingRevealWorkForLevel(
-            event->currentValue);
-        const bool revealQueued = !revealPending
-            || RequestRememberedRevealForCurrentSession(event->currentValue);
-        if (!revealQueued && Context != nullptr) {
+        if (!RequestRememberedRevealForCurrentSession(event->currentValue)
+            && Context != nullptr) {
             Context->LogWarn(
                 "MapSense: remembered reveals for the changed level could not be scheduled.");
         }
-        if ((!revealPending || !revealQueued)
-            && IsNavigationResolverActive()
+        if (IsNavigationResolverActive()
             && !RequestNavigationRefresh(
                 event->sessionGeneration,
                 event->currentValue)
@@ -1812,7 +2333,7 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
     std::snprintf(
         message,
         sizeof(message),
-            "RuffnecKk MapSense 0.13.11 candidate: active=%s; gameplay=%s; reveal-all=%s; markers=%s; immunity-scan=%s; renderer-hooks=%s; renderer=%s; chest-textures=%s; input=%s; menu=%s; presents=%llu; rendered=%llu; level traversals=%llu; rooms=%llu; failures=%llu; traversal limits=%llu; automap-pulses=%llu; table-scans=%llu; buckets=%llu; table-limits=%llu; automap units=%llu; monsters=%llu; enemy-rejects=dead/unit/class/alignment:%llu/%llu/%llu/%llu; filter-faults=%llu; hostiles=%llu; hostile-bands=0-80/81-140/141-220/>220:%llu/%llu/%llu/%llu; projection-rejects=%llu; clip-rejects=%llu; max-hostile-subtiles=%u; max-accepted-subtiles=%u; max-published-subtiles=%u; accepted=%llu; inserted=%llu; refreshed=%llu; fresh=%llu; expired=%llu; marker waits=%llu; storage faults=%llu; marker faults=%llu.",
+            "RuffnecKk MapSense 0.13.22 candidate: active=%s; gameplay=%s; reveal-all=%s; markers=%s; immunity-scan=%s; renderer-hooks=%s; renderer=%s; chest-textures=%s; input=%s; menu=%s; presents=%llu; rendered=%llu; level traversals=%llu; rooms=%llu; failures=%llu; traversal limits=%llu; static-poi=candidates/materialized/released/failures:%llu/%llu/%llu/%llu; static-active-room-calls=0; automap-pulses=%llu; table-scans=%llu; buckets=%llu; table-limits=%llu; automap units=%llu; monsters=%llu; enemy-rejects=dead/unit/class/alignment:%llu/%llu/%llu/%llu; filter-faults=%llu; hostiles=%llu; hostile-bands=0-80/81-140/141-220/>220:%llu/%llu/%llu/%llu; projection-rejects=%llu; clip-rejects=%llu; max-hostile-subtiles=%u; max-accepted-subtiles=%u; max-published-subtiles=%u; accepted=%llu; inserted=%llu; refreshed=%llu; fresh=%llu; expired=%llu; marker waits=%llu; storage faults=%llu; marker faults=%llu.",
         IsRevealEngineActive() ? "true" : "false",
         GameplayReady.load(std::memory_order_acquire) ? "ready" : "inactive",
         IsRevealAllArmed() ? "armed" : "off",
@@ -1837,6 +2358,10 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
         static_cast<unsigned long long>(counters.rooms),
         static_cast<unsigned long long>(counters.failures),
         static_cast<unsigned long long>(counters.traversalLimits),
+        static_cast<unsigned long long>(counters.staticRoomCandidates),
+        static_cast<unsigned long long>(counters.staticRoomsMaterialized),
+        static_cast<unsigned long long>(counters.staticRoomsReleased),
+        static_cast<unsigned long long>(counters.staticRoomFailures),
         static_cast<unsigned long long>(marker.automapPulses),
         static_cast<unsigned long long>(marker.monsterTableScans),
         static_cast<unsigned long long>(marker.monsterBucketsVisited),
@@ -1867,6 +2392,28 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
         static_cast<unsigned long long>(marker.storageFailures),
         static_cast<unsigned long long>(marker.accessFaults));
     context->WriteConsoleMessage(message);
+    const auto externalAtlas = GetExternalLabelProviderCounters();
+    char externalAtlasMessage[512]{};
+    std::snprintf(
+        externalAtlasMessage,
+        sizeof(externalAtlasMessage),
+        "MapSense external atlas: texture=%s; requests=%llu; processes=%llu; label-atlases=%llu; stale=%llu; failures=%llu; timeouts=%llu; geometry-cache-hits=%llu; geometry-generated=%llu; geometry-failures=%llu; snapshots=%llu; current-cells=%llu.",
+        renderer.automapSpriteAtlasReady ? "ready" : "unavailable",
+        static_cast<unsigned long long>(externalAtlas.requests),
+        static_cast<unsigned long long>(externalAtlas.processesStarted),
+        static_cast<unsigned long long>(externalAtlas.atlasesPublished),
+        static_cast<unsigned long long>(externalAtlas.staleResponses),
+        static_cast<unsigned long long>(externalAtlas.failedResponses),
+        static_cast<unsigned long long>(externalAtlas.timeouts),
+        static_cast<unsigned long long>(externalAtlas.geometryCacheHits),
+        static_cast<unsigned long long>(
+            externalAtlas.geometryAtlasesGenerated),
+        static_cast<unsigned long long>(externalAtlas.geometryFailures),
+        static_cast<unsigned long long>(
+            externalAtlas.geometrySnapshotsPublished),
+        static_cast<unsigned long long>(
+            externalAtlas.publishedGeometryCells));
+    context->WriteConsoleMessage(externalAtlasMessage);
     RevealReplayRequestState pendingReveal{};
     std::int32_t revealDifficulty{UnknownRevealDifficulty};
     {
@@ -1957,7 +2504,7 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
     std::snprintf(
         missileMessage,
         sizeof(missileMessage),
-        "MapSense native missile source: client-only=true; automap-pulses=%llu; table-scans=%llu; buckets=%llu; observed=%llu; current=%llu; published-frames/missiles=%llu/%llu; traversal-limits=%llu; cycles=%llu; rejects=type/id/class/path/projection/clip:%llu/%llu/%llu/%llu/%llu/%llu; contention=writer/reader:%llu/%llu; access-faults=%llu; timing avg/max=%llu/%llu us (%llu samples); renderer-consumer=not-connected.",
+        "MapSense native missile source: client-only=true; automap-pulses=%llu; table-scans=%llu; buckets=%llu; observed=%llu; current=%llu; published-frames/missiles=%llu/%llu; traversal-limits=%llu; cycles=%llu; rejects=type/id/class/path/projection/clip:%llu/%llu/%llu/%llu/%llu/%llu; contention=writer/reader:%llu/%llu; access-faults=%llu; timing avg/max=%llu/%llu us (%llu samples); renderer-consumer=neutral-ellipse.",
         static_cast<unsigned long long>(missile.automapPulses),
         static_cast<unsigned long long>(missile.clientTableScans),
         static_cast<unsigned long long>(missile.bucketsVisited),
@@ -2150,9 +2697,7 @@ auto RegisterInputActions() noexcept -> bool {
         const char* displayName;
     };
     constexpr std::array definitions{
-        Definition{"reveal-zone", "Reveal Current Level"},
-        Definition{"reveal-act", "Reveal Current Act"},
-        Definition{"toggle-reveal-all", "Toggle Reveal All Acts"},
+        Definition{"toggle-reveal-all", "Toggle Reveal Map"},
         Definition{"toggle-settings", "Toggle MapSense Settings"},
     };
 
@@ -2221,19 +2766,10 @@ auto RegisterLifecycleListeners() noexcept -> bool {
 }
 
 void OnImGuiSettingsAction(ImGuiSettingsAction action) noexcept {
-    auto requested = Action::RevealZone;
+    auto requested = Action::ToggleRevealAll;
     switch (action) {
-        case ImGuiSettingsAction::RevealLevel:
-            requested = Action::RevealZone;
-            break;
-        case ImGuiSettingsAction::RevealAct:
-            requested = Action::RevealAct;
-            break;
-        case ImGuiSettingsAction::ArmRevealAll:
-            requested = Action::ArmRevealAll;
-            break;
-        case ImGuiSettingsAction::RevealAllOff:
-            requested = Action::DisableRevealAll;
+        case ImGuiSettingsAction::ToggleRevealMap:
+            requested = Action::ToggleRevealAll;
             break;
     }
     if (!QueueAction(requested) && Context != nullptr) {
@@ -2360,6 +2896,7 @@ void ApplyMapSenseFeatureState(bool enabled) noexcept {
     if (!enabled) {
         CancelPendingNavigationRefresh();
         CancelPendingRevealReplay();
+        CancelProgressiveReveal();
         InvalidateNavigationProjection();
         InvalidateNativeAutomapMarkerFrame();
         InvalidateNativeAutomapPoiFrame();
@@ -2373,19 +2910,15 @@ void ApplyMapSenseFeatureState(bool enabled) noexcept {
     // The settings panel runs from Present, not D2R's UI/game thread. Queue
     // native DRLG work through the existing refresh coordinator instead of
     // resolving it synchronously from the renderer thread.
-    const bool revealPending = HasRememberedRevealIntent();
-    const bool revealQueued = revealPending
-        && RequestRememberedRevealForCurrentSession(
-            UnknownRevealLevelId,
-            0U,
-            false);
-    if (!revealQueued) {
-        ArmPendingNavigationRefresh(
-            sessionGeneration,
-            UnknownNavigationLevelId,
-            0U,
-            IsRevealAllArmed());
-    }
+    ArmPendingNavigationRefresh(
+        sessionGeneration,
+        UnknownNavigationLevelId,
+        0U,
+        IsRevealAllArmed());
+    (void)RequestRememberedRevealForCurrentSession(
+        UnknownRevealLevelId,
+        0U,
+        false);
 }
 
 auto DrawMapSensePanel(bool* open, void*) noexcept
@@ -2404,6 +2937,7 @@ auto DrawMapSensePanel(bool* open, void*) noexcept
     const auto bounds = DrawImGuiSettingsPanel(
         Settings,
         expanded,
+        IsRevealAllArmed(),
         OnImGuiSettingsAction);
     if (featuresBefore != Settings.featuresEnabled) {
         ApplyMapSenseFeatureState(Settings.featuresEnabled);
@@ -2438,15 +2972,160 @@ auto WantsMapSenseOwnedOverlay(void*) noexcept -> bool {
         || Settings.navigation.customLevels.enabled
         || Settings.navigation.quests.enabled;
     const auto gameplayReady = GameplayReady.load(std::memory_order_acquire);
+    const auto atlasEnabled = GetD3D12ImGuiHostStatus()
+            .automapSpriteAtlasReady
+        && IsRevealAllArmed()
+        && WantsExternalAtlasGeometryFrame();
     return Operational.load(std::memory_order_acquire)
         && ShouldDrawMapSenseOwnedMapOverlay(
             gameplayReady,
             false)
         && Settings.overlay.enabled
-        && ((navigationEnabled
+        && (atlasEnabled
+            || (navigationEnabled
                 && WantsNavigationLineFrame(retainCurrentProjection))
             || WantsNativeAutomapMarkerFrame(retainCurrentProjection)
             || WantsNativeAutomapPoiFrame(retainCurrentProjection));
+}
+
+void DrawExternalAutomapAtlas(
+        ImDrawList* drawList,
+        float viewportScale,
+        const ImVec2& clipMinimum,
+        const ImVec2& clipMaximum,
+        const AtlasProjectionWitness& projection,
+        float opacity) noexcept {
+    if (drawList == nullptr || !projection.valid) return;
+    const auto snapshot = AcquireExternalAtlasGeometrySnapshot();
+    if (snapshot == nullptr || snapshot->geometry == nullptr
+        || snapshot->sessionGeneration == 0U
+        || snapshot->sessionGeneration
+            != CurrentSessionGeneration.load(std::memory_order_acquire)
+        || snapshot->act >= AutomapSpritePaletteCount) {
+        return;
+    }
+    const auto texture = GetD3D12ImGuiAutomapSpriteTexture();
+    if (!texture
+        || texture.width != AutomapSpriteIndexAtlasWidth
+        || texture.height != AutomapSpriteRgbaAtlasHeight) {
+        return;
+    }
+    AutomapSpriteProjectionTransform spriteProjection{};
+    if (!BuildAutomapSpriteProjectionTransform(
+            projection, spriteProjection)) {
+        return;
+    }
+    const auto visible = [&snapshot](std::int32_t levelId) noexcept {
+        return std::binary_search(
+            snapshot->visibleLevelIds.begin(),
+            snapshot->visibleLevelIds.end(),
+            levelId);
+    };
+    const auto toScreen = [viewportScale](
+            const AtlasProjectedPoint& point) noexcept {
+        return ImVec2{
+            static_cast<float>(point.x) * viewportScale,
+            static_cast<float>(point.y) * viewportScale,
+        };
+    };
+    const auto tint = IM_COL32(
+        255,
+        255,
+        255,
+        static_cast<int>(std::lround(
+            std::clamp(opacity, 0.0F, 1.0F) * 255.0F)));
+    const auto textureId = static_cast<ImTextureID>(texture.textureId);
+    const auto inverseTextureWidth = 1.0F
+        / static_cast<float>(texture.width);
+    const auto inverseTextureHeight = 1.0F
+        / static_cast<float>(texture.height);
+    const auto actTextureY = static_cast<std::uint32_t>(snapshot->act)
+        * AutomapSpriteIndexAtlasHeight;
+
+    // Keep the atlas bound for the complete pass. AddImageQuad pushes and
+    // pops its texture whenever it differs from the current ImGui texture;
+    // doing that once per automap cell would create avoidable command churn
+    // on the exact high-density views this renderer is designed to handle.
+    drawList->PushTextureID(textureId);
+    for (const auto& level : snapshot->geometry->levels) {
+        if (!visible(level.levelId)) continue;
+        const auto first = static_cast<std::size_t>(level.firstCell);
+        const auto count = static_cast<std::size_t>(level.cellCount);
+        if (first > snapshot->geometry->cells.size()
+            || count > snapshot->geometry->cells.size() - first) {
+            drawList->PopTextureID();
+            return;
+        }
+        for (std::size_t index = first; index < first + count; ++index) {
+            const auto& cell = snapshot->geometry->cells[index];
+            if (cell.frame < 0
+                || static_cast<std::uint32_t>(cell.frame)
+                    >= AutomapSpriteFrameCount) {
+                continue;
+            }
+            AutomapSpriteProjectedQuad projected{};
+            if (!ProjectAutomapSpriteQuad(
+                    spriteProjection,
+                    cell.tileX,
+                    cell.tileY,
+                    projected)) {
+                continue;
+            }
+            const auto topLeft = toScreen(projected.topLeft);
+            const auto topRight = toScreen(projected.topRight);
+            const auto bottomRight = toScreen(projected.bottomRight);
+            const auto bottomLeft = toScreen(projected.bottomLeft);
+            const auto minimumX = std::min(
+                std::min(topLeft.x, topRight.x),
+                std::min(bottomRight.x, bottomLeft.x));
+            const auto maximumX = std::max(
+                std::max(topLeft.x, topRight.x),
+                std::max(bottomRight.x, bottomLeft.x));
+            const auto minimumY = std::min(
+                std::min(topLeft.y, topRight.y),
+                std::min(bottomRight.y, bottomLeft.y));
+            const auto maximumY = std::max(
+                std::max(topLeft.y, topRight.y),
+                std::max(bottomRight.y, bottomLeft.y));
+            if (maximumX < clipMinimum.x || minimumX > clipMaximum.x
+                || maximumY < clipMinimum.y || minimumY > clipMaximum.y) {
+                continue;
+            }
+            const auto frame = static_cast<std::uint32_t>(cell.frame);
+            const auto sourceX = (frame % AutomapSpriteAtlasColumns)
+                * AutomapSpriteFrameWidth;
+            const auto sourceY = actTextureY
+                + (frame / AutomapSpriteAtlasColumns)
+                    * AutomapSpriteFrameHeight;
+            const ImVec2 uvTopLeft{
+                static_cast<float>(sourceX) * inverseTextureWidth,
+                static_cast<float>(sourceY) * inverseTextureHeight,
+            };
+            const ImVec2 uvTopRight{
+                static_cast<float>(sourceX + AutomapSpriteFrameWidth)
+                    * inverseTextureWidth,
+                uvTopLeft.y,
+            };
+            const ImVec2 uvBottomRight{
+                uvTopRight.x,
+                static_cast<float>(sourceY + AutomapSpriteFrameHeight)
+                    * inverseTextureHeight,
+            };
+            const ImVec2 uvBottomLeft{uvTopLeft.x, uvBottomRight.y};
+            drawList->PrimReserve(6, 4);
+            drawList->PrimQuadUV(
+                topLeft,
+                topRight,
+                bottomRight,
+                bottomLeft,
+                uvTopLeft,
+                uvTopRight,
+                uvBottomRight,
+                uvBottomLeft,
+                tint);
+        }
+    }
+    drawList->PopTextureID();
 }
 
 auto MarkerStyleFor(MonsterRank rank) noexcept
@@ -2838,6 +3517,7 @@ void DrawMonsterImmunities(
 
 enum class AutomapTextPlacement : std::uint8_t {
     Top,
+    Centered,
     AboveIcon,
 };
 
@@ -2866,7 +3546,9 @@ enum class AutomapTextPlacement : std::uint8_t {
             bounds.y,
             iconTopExtent,
             gap)
-        : anchor.y;
+        : placement == AutomapTextPlacement::Centered
+            ? anchor.y - bounds.y * 0.5F
+            : anchor.y;
     const auto position = ImVec2{
         std::clamp(anchor.x - bounds.x * 0.5F,
             0.0F,
@@ -3345,6 +4027,7 @@ void DrawAutomapPoiSnapshots(
     for (const auto& poi : PoiSnapshots) {
         const bool isLabel = poi.kind == AutomapPoiKind::ExitLabel
             || poi.kind == AutomapPoiKind::WaypointLabel
+            || poi.kind == AutomapPoiKind::LevelLabel
             || poi.kind == AutomapPoiKind::ShrineLabel;
         if (isLabel != labelPass) continue;
             ImVec2 center{};
@@ -3604,6 +4287,136 @@ void DrawAutomapPoiSnapshots(
                     AutomapTextPlacement::AboveIcon,
                     NativeWaypointIconTopExtent * Settings.overlay.scale,
                     NativeWaypointLabelGap * Settings.overlay.scale);
+                break;
+            }
+            case AutomapPoiKind::LevelLabel: {
+                if (poi.sourceId <= 0) break;
+                const auto* const level = dataCatalog->FindLevel(poi.sourceId);
+                if (level == nullptr || !level->name.localized
+                        || level->name.utf8.empty()) {
+                    break;
+                }
+                const bool waypointStyle = level->hasWaypoint
+                    && Detail::AllowsWaypointLabelForLevel(level->id)
+                    && Settings.objects.waypointLabels.enabled
+                    && !level->waypointLabelUtf8.empty();
+                if (!waypointStyle
+                        && !Settings.objects.exitLabels.enabled) {
+                    break;
+                }
+                const auto& text = waypointStyle
+                    ? level->waypointLabelUtf8
+                    : level->name.utf8;
+                const auto configuredSize = waypointStyle
+                    ? Settings.objects.waypointLabels.size
+                    : Settings.objects.exitLabels.size;
+                const auto configuredColor = waypointStyle
+                    ? Settings.objects.waypointLabels.color
+                    : Settings.objects.exitLabels.color;
+                const auto fontSize = std::clamp(
+                    configuredSize * Settings.overlay.scale,
+                    MinimumAutomapLabelSize,
+                    MaximumAutomapLabelSize);
+                auto* const font = SelectAutomapLabelFont(text.c_str());
+                if (font == nullptr) break;
+                const auto textBounds = font->CalcTextSizeA(
+                    fontSize,
+                    std::max(1.0F, io.DisplaySize.x),
+                    0.0F,
+                    text.c_str());
+                const auto centeredTop = center.y - textBounds.y * 0.5F;
+                const auto textPosition = ImVec2{
+                    std::clamp(
+                        center.x - textBounds.x * 0.5F,
+                        0.0F,
+                        std::max(0.0F, io.DisplaySize.x - textBounds.x)),
+                    std::clamp(
+                        centeredTop,
+                        0.0F,
+                        std::max(0.0F, io.DisplaySize.y - textBounds.y)),
+                };
+                const AutomapLabelRectangle anchorRectangle{
+                    .left = textPosition.x,
+                    .top = textPosition.y,
+                    .right = textPosition.x + textBounds.x,
+                    .bottom = textPosition.y + textBounds.y,
+                };
+                bool duplicate{};
+                for (std::size_t drawnIndex = 0U;
+                        drawnIndex < drawnExitLabelCount;
+                        ++drawnIndex) {
+                    if (drawnExitLabels[drawnIndex].targetLevelId
+                            == poi.sourceId) {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (duplicate) break;
+                auto placedRectangle = anchorRectangle;
+                bool placed{};
+                const auto separation = textBounds.y
+                    + std::max(4.0F, 5.0F * Settings.overlay.scale);
+                constexpr std::size_t MaximumSeparationSlots = 16U;
+                for (std::size_t slot = 0U;
+                        slot < MaximumSeparationSlots;
+                        ++slot) {
+                    const auto offset = slot == 0U
+                        ? 0.0F
+                        : slot <= MaximumSeparationSlots / 2U
+                            ? -static_cast<float>(slot) * separation
+                            : static_cast<float>(
+                                slot - MaximumSeparationSlots / 2U)
+                                * separation;
+                    const auto candidateTop = std::clamp(
+                        anchorRectangle.top + offset,
+                        0.0F,
+                        std::max(0.0F, io.DisplaySize.y - textBounds.y));
+                    const AutomapLabelRectangle candidate{
+                        .left = anchorRectangle.left,
+                        .top = candidateTop,
+                        .right = anchorRectangle.right,
+                        .bottom = candidateTop + textBounds.y,
+                    };
+                    bool collision{};
+                    for (std::size_t drawnIndex = 0U;
+                            drawnIndex < drawnExitLabelCount;
+                            ++drawnIndex) {
+                        if (AutomapLabelRectanglesOverlap(
+                                drawnExitLabels[drawnIndex].placedRectangle,
+                                candidate,
+                                std::max(
+                                    2.0F,
+                                    3.0F * Settings.overlay.scale))) {
+                            collision = true;
+                            break;
+                        }
+                    }
+                    if (collision) continue;
+                    placedRectangle = candidate;
+                    placed = true;
+                    break;
+                }
+                if (!placed) break;
+                if (drawnExitLabelCount < drawnExitLabels.size()) {
+                    drawnExitLabels[drawnExitLabelCount++] = {
+                        .targetLevelId = poi.sourceId,
+                        .anchorRectangle = anchorRectangle,
+                        .placedRectangle = placedRectangle,
+                    };
+                }
+                const ImVec2 placedCenter{
+                    center.x,
+                    center.y + placedRectangle.top - anchorRectangle.top,
+                };
+                (void)DrawCenteredShadowedText(
+                    drawList,
+                    io,
+                    text.c_str(),
+                    placedCenter,
+                    fontSize,
+                    ToImGuiColor(configuredColor, opacity),
+                    opacity,
+                    AutomapTextPlacement::Centered);
                 break;
             }
             case AutomapPoiKind::ShrineIcon: {
@@ -3929,6 +4742,76 @@ struct MonsterMarkerScreenGeometry final {
     return true;
 }
 
+[[nodiscard]] auto TryResolveMissileScreenCenter(
+        const NativeAutomapMissileSnapshot& missile,
+        const ImGuiIO& io,
+        ImVec2& center) noexcept -> bool {
+    if (missile.nativeWidth <= 0 || missile.nativeHeight <= 0) return false;
+    const auto scaleX = io.DisplaySize.x
+        / static_cast<float>(missile.nativeWidth);
+    const auto scaleY = io.DisplaySize.y
+        / static_cast<float>(missile.nativeHeight);
+    if (!std::isfinite(scaleX) || !std::isfinite(scaleY)
+            || scaleX <= 0.0F || scaleY <= 0.0F) {
+        return false;
+    }
+    const auto scaleTolerance = std::max(
+        0.01F,
+        std::max(scaleX, scaleY) * 0.01F);
+    if (std::abs(scaleX - scaleY) > scaleTolerance) return false;
+
+    center = ImVec2{
+        static_cast<float>(missile.x) * scaleX,
+        static_cast<float>(missile.y) * scaleY,
+    };
+    return std::isfinite(center.x) && std::isfinite(center.y)
+        && center.x >= 0.0F && center.y >= 0.0F
+        && center.x < io.DisplaySize.x && center.y < io.DisplaySize.y;
+}
+
+void DrawNativeMissileSnapshots(
+        ImDrawList* drawList,
+        const ImGuiIO& io,
+        float opacity) noexcept {
+    if (drawList == nullptr || MissileSnapshots.empty()) return;
+    const auto radiusX = std::clamp(
+        3.0F * Settings.overlay.scale,
+        2.0F,
+        7.0F);
+    const auto radiusY = std::clamp(
+        2.0F * Settings.overlay.scale,
+        1.5F,
+        5.0F);
+    const auto thickness = std::clamp(
+        1.0F * Settings.overlay.scale,
+        1.0F,
+        2.5F);
+    const auto fill = ToImGuiColor(
+        RgbaColor{0.78F, 0.78F, 0.78F, 0.28F},
+        opacity);
+    const auto outline = ToImGuiColor(
+        RgbaColor{0.90F, 0.90F, 0.90F, 0.92F},
+        opacity);
+    for (const auto& missile : MissileSnapshots) {
+        ImVec2 center{};
+        if (!TryResolveMissileScreenCenter(missile, io, center)) continue;
+        // Raw active-table class ids do not yet prove element, ownership or
+        // trajectory. A neutral ellipse makes the source observable without
+        // claiming that the projectile is hostile or incoming.
+        drawList->AddEllipseFilled(
+            center,
+            ImVec2{radiusX, radiusY},
+            fill);
+        drawList->AddEllipse(
+            center,
+            ImVec2{radiusX, radiusY},
+            outline,
+            0.0F,
+            0,
+            thickness);
+    }
+}
+
 void DrawMapSenseOwnedOverlay(void*) noexcept {
     if (!WantsMapSenseOwnedOverlay(nullptr)) return;
 
@@ -3942,10 +4825,16 @@ void DrawMapSenseOwnedOverlay(void*) noexcept {
     const auto markerCount = AcquireNativeAutomapMarkers(
         MarkerSnapshots,
         retainCurrentProjection);
+    const auto missileCount = AcquireNativeAutomapMissiles(MissileSnapshots);
     const auto poiCount = AcquireNativeAutomapPoiSnapshots(
         PoiSnapshots,
         retainCurrentProjection);
-    if (navigationLineCount == 0U && markerCount == 0U && poiCount == 0U) {
+    const auto atlasReady = GetD3D12ImGuiHostStatus()
+            .automapSpriteAtlasReady
+        && IsRevealAllArmed()
+        && WantsExternalAtlasGeometryFrame();
+    if (navigationLineCount == 0U && markerCount == 0U
+        && missileCount == 0U && poiCount == 0U && !atlasReady) {
         return;
     }
 
@@ -4010,8 +4899,20 @@ void DrawMapSenseOwnedOverlay(void*) noexcept {
     // so every MapSense map primitive follows the same visible region. The
     // MapSense launcher/settings menu is drawn independently.
     drawList->PushClipRect(clipMinimum, clipMaximum, true);
-    // Navigation and translucent POIs are the map underlay. Monster ranks are
-    // then submitted from
+    // The generated terrain is the bottom-most extension of D2R's automap.
+    // Existing navigation, POI, missile, monster, immunity, boss-name and
+    // protected-label code remains unchanged and is submitted above it.
+    if (atlasReady) {
+        DrawExternalAutomapAtlas(
+            drawList,
+            viewportScaleX,
+            clipMinimum,
+            clipMaximum,
+            viewport.atlasProjection,
+            opacity);
+    }
+    // Navigation and translucent POIs remain below live monster identity.
+    // Monster ranks are then submitted from
     // weakest to strongest so dense packs cannot bury minions, uniques,
     // superuniques, or native MonStats bosses.
     DrawNavigationLines(drawList, io, opacity);
@@ -4021,6 +4922,9 @@ void DrawMapSenseOwnedOverlay(void*) noexcept {
         dataCatalog,
         opacity,
         AutomapPoiRenderPass::Objects);
+    // Missiles remain below monster identity and protected text. This first
+    // consumer intentionally renders every valid raw missile identically.
+    DrawNativeMissileSnapshots(drawList, io, opacity);
     for (std::uint8_t layer = 0U;
             layer <= MaximumMonsterMarkerRenderLayer;
             ++layer) {
@@ -4283,6 +5187,34 @@ void ConfigureD2RAutomapFont(
             "MapSense: D2R Exocet font was not exposed by the active mod; localized system font fallback remains active.");
 }
 
+void ConfigureAutomapSpriteAtlas() noexcept {
+    SetD3D12ImGuiAutomapSpritePath(nullptr);
+    try {
+        std::array<wchar_t, 32'768U> modulePath{};
+        const auto length = GetModuleFileNameW(
+            reinterpret_cast<HMODULE>(&__ImageBase),
+            modulePath.data(),
+            static_cast<DWORD>(modulePath.size()));
+        if (length == 0U
+            || length >= static_cast<DWORD>(modulePath.size())) {
+            return;
+        }
+        const auto candidate = std::filesystem::path(
+            std::wstring_view(modulePath.data(), length)).parent_path()
+            / L"RuffnecKkMapSenseAutomapSprites.msp";
+        std::error_code error;
+        if (!std::filesystem::is_regular_file(candidate, error) || error) {
+            if (Context != nullptr) {
+                Context->LogWarn(
+                    "MapSense: exact automap sprite package is missing; the generated map underlay remains disabled.");
+            }
+            return;
+        }
+        SetD3D12ImGuiAutomapSpritePath(candidate.c_str());
+    } catch (...) {
+    }
+}
+
 DWORD WINAPI HostRetryWorkerMain(void*) noexcept {
     while (HostRetryStopEvent != nullptr
         && WaitForSingleObject(HostRetryStopEvent, 500U) == WAIT_TIMEOUT) {
@@ -4389,7 +5321,7 @@ constexpr D2RL::PluginInfo PluginInfo{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "ruffneckk-mapsense",
     .name = "RuffnecKk MapSense",
-    .version = "0.13.11",
+    .version = "0.13.22-candidate",
     .author = "RuffnecKk",
     .description = "Reveals maps, marks monsters, and draws direct navigation lines.",
     .flags = D2RL::PluginFlags::Client | D2RL::PluginFlags::NativeHooks,
@@ -4449,13 +5381,15 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         std::memory_order_release);
     if (!Settings.enabled) {
         context->LogInfo(
-            "RuffnecKk MapSense 0.13.11 candidate is disabled; no hook or Controls action was installed.");
+            "RuffnecKk MapSense 0.13.22 candidate is disabled; no hook or Controls action was installed.");
         return true;
     }
 
     try {
         MarkerSnapshots.clear();
         MarkerSnapshots.reserve(MaximumRecentNativeAutomapMarkers);
+        MissileSnapshots.clear();
+        MissileSnapshots.reserve(MaximumNativeAutomapMissiles);
         PoiSnapshots.clear();
         PoiSnapshots.reserve(MaximumAutomapPoiSnapshots);
     } catch (...) {
@@ -4606,6 +5540,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         return false;
     }
     ConfigureD2RAutomapFont(context);
+    ConfigureAutomapSpriteAtlas();
     if (!StartImGuiHost()) {
         HostApiAvailable.store(false, std::memory_order_release);
         SetNativeAutomapLevelObservedCallback(nullptr, nullptr);
@@ -4646,6 +5581,17 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         return false;
     }
 
+    const auto externalLabelsAvailable = poiRuntimeAvailable
+        && InitializeExternalLabelProvider(
+            context,
+            Settings.diagnostics,
+            OnExternalLabelAtlasResult,
+            nullptr);
+    if (!externalLabelsAvailable) {
+        context->LogWarn(
+            "MapSense: seed-scoped distant labels are unavailable; native Reveal remains active without loading distant rooms.");
+    }
+
     auto registration = D2RL::MakeConsoleCommand(
         "mapsense",
         MapSenseCommand,
@@ -4661,8 +5607,9 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     std::snprintf(
         loadedMessage,
         sizeof(loadedMessage),
-        "RuffnecKk MapSense 0.13.11 candidate loaded; labels/objects=%s; monster-markers=%s; Direct-navigation=%s; Reveal/settings=active; native-panel-occlusion=%s.",
+        "RuffnecKk MapSense 0.13.22 candidate loaded; labels/objects=%s; distant-label-atlas=%s; monster-markers=%s; Direct-navigation=%s; Reveal/settings=active; native-panel-occlusion=%s.",
         poiRuntimeAvailable ? "pending-localization" : "unavailable",
+        externalLabelsAvailable ? "active" : "unavailable",
         markerAvailable ? "active" : "unavailable",
         IsNavigationResolverActive() ? "active" : "unavailable",
         nativeUiTelemetryAvailable ? "active" : "fail-closed");
@@ -4690,6 +5637,7 @@ D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
     CancelPendingRevealReplay();
     ShutdownRevealReplayTimer();
     ShutdownNavigationRefreshTimer();
+    ShutdownExternalLabelProvider();
     ShutdownNativeAutomapMarker();
     ShutdownNativeAutomapPoi();
     ShutdownNavigationResolver();

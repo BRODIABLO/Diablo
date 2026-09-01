@@ -177,6 +177,7 @@ struct D3D12ImGuiHostStatus {
     bool rendererInitialized{};
     bool inputSubclassInstalled{};
     bool primeMhChestTexturesReady{};
+    bool automapSpriteAtlasReady{};
     bool menuOpen{};
     HWND gameWindow{};
 };
@@ -186,7 +187,12 @@ struct D3D12ImGuiHostStatus {
 // Passing nullptr clears the optional font and preserves the localized system
 // fallback used by the menu and unsupported scripts.
 void SetD3D12ImGuiAutomapFontPath(const wchar_t* path) noexcept;
+// Configures the strict MSP1 companion package before renderer startup.
+// Missing or invalid data disables only the atlas underlay.
+void SetD3D12ImGuiAutomapSpritePath(const wchar_t* path) noexcept;
 [[nodiscard]] auto GetD3D12ImGuiAutomapFont() noexcept -> ImFont*;
+[[nodiscard]] auto GetD3D12ImGuiAutomapSpriteTexture() noexcept
+    -> D3D12ImGuiTextureView;
 [[nodiscard]] auto GetD3D12ImGuiPrimeMhChestTexture(
     bool specialChest) noexcept -> D3D12ImGuiTextureView;
 

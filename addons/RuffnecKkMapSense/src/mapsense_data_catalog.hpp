@@ -50,6 +50,10 @@ struct DataCatalogLocalizedText final {
 struct DataCatalogLevel final {
     std::int32_t id{};
     DataCatalogLocalizedText name{};
+    // Levels.txt uses 255 for "no waypoint" and a smaller ordinal for every
+    // data-defined waypoint. This lets passive level labels preserve waypoint
+    // wording even when the exact PresetUnit chain has not materialized.
+    bool hasWaypoint{};
     // Precomposed at catalog load so the render thread performs no string
     // allocation. D2R exposes localized level names but no standalone
     // localized "Waypoint" token in the active language catalog.

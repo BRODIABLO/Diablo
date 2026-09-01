@@ -2,6 +2,7 @@
 
 #include "mapsense_config.hpp"
 #include "navigation_policy.hpp"
+#include "reveal_engine.hpp"
 
 #include <algorithm>
 #include <array>
@@ -232,6 +233,7 @@ struct PassiveWaypointPresetSelection final {
 
 struct PassivePoiPublicationPolicy final {
     bool publishExitLabels{};
+    bool mergeProvenExitFragments{};
     bool publishWaypoint{};
 };
 
@@ -240,6 +242,7 @@ struct PassivePoiPublicationPolicy final {
         bool pendingWaypoint) noexcept -> PassivePoiPublicationPolicy {
     return {
         .publishExitLabels = !pendingExits,
+        .mergeProvenExitFragments = pendingExits,
         .publishWaypoint = !pendingWaypoint,
     };
 }
@@ -1182,18 +1185,32 @@ void ShutdownNavigationResolver() noexcept;
     -> NavigationRefreshResult;
 
 // Called synchronously from MapSense's already-owned DRLG_InitLevel hook,
-// immediately after D2R has materialized a generated level. D2RCore may unload
-// those rooms again before revealmap returns, so this is the authoritative
-// window for retaining every revealed exit and waypoint definition.
+// immediately after D2R has materialized a generated level. The callback keeps
+// every native pointer inside that hook window and publishes copied POI data.
 [[nodiscard]] auto ObserveInitializedClientLevelPoiDefinitions(
     std::uint64_t sessionGeneration,
     std::uint8_t dataContext,
     void* level) noexcept -> bool;
 
+// Initializes one seed-valid LevelId and copies its dynamic Vis[8] targets.
+// The output contains stable ids only and is used by passive distant-name
+// discovery; no borrowed Level pointer escapes the call.
+[[nodiscard]] auto DiscoverProgressiveRevealLevelTargets(
+    const ClientLevelView& current,
+    std::int32_t levelId,
+    std::array<std::int32_t, ProgressiveRevealVisCapacity>& targets,
+    std::size_t& targetCount) noexcept -> bool;
+
+// Captures lightweight generated exit and waypoint definitions for one level.
+// It never creates an ActiveRoom or traverses gameplay units.
+[[nodiscard]] auto CaptureProgressiveRevealLevelPoiDefinitions(
+    std::uint64_t sessionGeneration,
+    const ClientLevelView& current,
+    std::int32_t levelId) noexcept -> bool;
+
 // Enumerates every generated Level currently linked into the active client
-// DRLG after D2RCore's revealmap operation. It publishes only static POI
-// definitions; navigation lines remain owned by RefreshNavigationDestinations and
-// stay scoped to the player's current level.
+// DRLG. It publishes only static POI definitions; navigation lines remain
+// scoped to the player's current level.
 [[nodiscard]] auto RefreshRevealedActPoiDefinitions(
     std::uint64_t sessionGeneration) noexcept -> NavigationRefreshResult;
 

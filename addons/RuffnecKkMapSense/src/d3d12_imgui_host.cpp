@@ -1,4 +1,5 @@
 #include "d3d12_imgui_host.hpp"
+#include "automap_sprite_package.hpp"
 
 // The D3D12 interception and ImGui submission path is an adapted derivative
 // of locbones/D2RHUD-2.4 at b9373f8508282948ceb3e2b56f892d9eba475744,
@@ -94,9 +95,10 @@ constexpr std::size_t CreateSwapChainForCompositionMethod = 24;
 constexpr DWORD FenceWaitMilliseconds = 5'000;
 constexpr std::size_t MaximumExternalClients = 8;
 constexpr std::size_t MaximumSwapChainQueueBindings = 16;
-constexpr UINT MapSenseSrvDescriptorCount = 3U;
+constexpr UINT MapSenseSrvDescriptorCount = 4U;
 constexpr UINT PrimeMhChestSrvDescriptorIndex = 1U;
 constexpr UINT PrimeMhSuperChestSrvDescriptorIndex = 2U;
+constexpr UINT AutomapSpriteSrvDescriptorIndex = 3U;
 
 [[nodiscard]] auto WaitForFenceValueLocked(
     std::uint64_t value) noexcept -> bool;
@@ -412,6 +414,8 @@ struct RendererStorage {
     ComPtr<ID3D12Resource> primeMhChestTexture;
     ComPtr<ID3D12Resource> primeMhSuperChestTexture;
     std::vector<ComPtr<ID3D12Resource>> primeMhTextureUploads;
+    ComPtr<ID3D12Resource> automapSpriteTexture;
+    ComPtr<ID3D12Resource> automapSpriteUpload;
     ComPtr<ID3D12Fence> fence;
     HANDLE fenceEvent{};
     std::vector<FrameContext> frames;
@@ -427,6 +431,10 @@ auto& PrimeMhSuperChestTexture =
     ProcessRendererStorage->primeMhSuperChestTexture;
 auto& PrimeMhTextureUploads =
     ProcessRendererStorage->primeMhTextureUploads;
+auto& AutomapSpriteTexture =
+    ProcessRendererStorage->automapSpriteTexture;
+auto& AutomapSpriteUpload =
+    ProcessRendererStorage->automapSpriteUpload;
 auto& Fence = ProcessRendererStorage->fence;
 auto& FenceEvent = ProcessRendererStorage->fenceEvent;
 auto& Frames = ProcessRendererStorage->frames;
@@ -468,6 +476,7 @@ std::atomic<bool> HooksInstalledPublished{};
 std::atomic<bool> RendererInitializedPublished{};
 std::atomic<bool> InputSubclassInstalledPublished{};
 std::atomic<bool> PrimeMhTexturesReadyPublished{};
+std::atomic<bool> AutomapSpriteAtlasReadyPublished{};
 std::atomic<bool> ConfiguredPublished{};
 std::atomic<D3D12ImGuiLogCallback> InfoLogger{};
 std::atomic<D3D12ImGuiLogCallback> WarningLogger{};
@@ -481,10 +490,12 @@ std::vector<std::uint8_t> MapSenseKoreanFontBytes;
 std::vector<std::uint8_t> MapSenseSimplifiedChineseFontBytes;
 std::vector<std::uint8_t> MapSenseTraditionalChineseFontBytes;
 std::wstring MapSenseAutomapFontPath;
+std::wstring MapSenseAutomapSpritePath;
 std::vector<std::uint8_t> MapSenseAutomapFontBytes;
 ImFont* MapSenseAutomapFont{};
 D3D12ImGuiTextureView PrimeMhChestTextureView{};
 D3D12ImGuiTextureView PrimeMhSuperChestTextureView{};
+D3D12ImGuiTextureView AutomapSpriteTextureView{};
 
 [[nodiscard]] auto IsRegularFontFile(const char* path) noexcept -> bool {
     if (path == nullptr || path[0] == '\0') return false;
@@ -1101,6 +1112,102 @@ private:
     return true;
 }
 
+[[nodiscard]] auto LoadAutomapSpriteImage(
+        DecodedRgbaImage& image) noexcept -> bool {
+    image = {};
+    if (MapSenseAutomapSpritePath.empty()) return false;
+    try {
+        std::ifstream input(
+            MapSenseAutomapSpritePath,
+            std::ios::binary | std::ios::ate);
+        if (!input) return false;
+        const auto size = input.tellg();
+        if (size != static_cast<std::streamoff>(
+                AutomapSpritePackageBytes)) {
+            return false;
+        }
+        std::vector<std::uint8_t> bytes(
+            static_cast<std::size_t>(size));
+        input.seekg(0, std::ios::beg);
+        input.read(
+            reinterpret_cast<char*>(bytes.data()),
+            static_cast<std::streamsize>(bytes.size()));
+        if (!input || input.peek() != std::char_traits<char>::eof()) {
+            return false;
+        }
+        AutomapSpriteRgbaAtlas atlas;
+        if (!ParseAutomapSpritePackage(bytes, atlas)) return false;
+        if (atlas.width > (std::numeric_limits<UINT>::max)()
+            || atlas.height > (std::numeric_limits<UINT>::max)()) {
+            return false;
+        }
+        image.width = static_cast<UINT>(atlas.width);
+        image.height = static_cast<UINT>(atlas.height);
+        image.pixels = std::move(atlas.pixels);
+        return true;
+    } catch (...) {
+        image = {};
+        return false;
+    }
+}
+
+[[nodiscard]] auto InitializeAutomapSpriteTextureLocked(
+        ID3D12Device* device) noexcept -> bool {
+    AutomapSpriteTextureView = {};
+    AutomapSpriteTexture.Reset();
+    AutomapSpriteUpload.Reset();
+    if (device == nullptr
+        || !CommandQueue
+        || !CommandList
+        || Frames.empty()
+        || !Frames[0].allocator
+        || !Fence
+        || !FenceEvent) {
+        return false;
+    }
+    DecodedRgbaImage image;
+    if (!LoadAutomapSpriteImage(image)
+        || image.width != AutomapSpriteIndexAtlasWidth
+        || image.height != AutomapSpriteRgbaAtlasHeight) {
+        return false;
+    }
+    if (FAILED(Frames[0].allocator->Reset())
+        || FAILED(CommandList->Reset(Frames[0].allocator.Get(), nullptr))) {
+        return false;
+    }
+    if (!RecordPrimeMhTextureUpload(
+            device,
+            CommandList.Get(),
+            image,
+            AutomapSpriteSrvDescriptorIndex,
+            AutomapSpriteTexture,
+            AutomapSpriteUpload,
+            AutomapSpriteTextureView)) {
+        static_cast<void>(CommandList->Close());
+        AutomapSpriteTextureView = {};
+        AutomapSpriteTexture.Reset();
+        AutomapSpriteUpload.Reset();
+        return false;
+    }
+    if (FAILED(CommandList->Close())) {
+        AutomapSpriteTextureView = {};
+        AutomapSpriteTexture.Reset();
+        AutomapSpriteUpload.Reset();
+        return false;
+    }
+    ID3D12CommandList* const commandLists[]{CommandList.Get()};
+    CommandQueue->ExecuteCommandLists(1U, commandLists);
+    const std::uint64_t fenceValue = NextFenceValue++;
+    if (FAILED(CommandQueue->Signal(Fence.Get(), fenceValue))
+        || !WaitForFenceValueLocked(fenceValue)) {
+        // Retain both resources until reset if the GPU completion is late.
+        AutomapSpriteTextureView = {};
+        return false;
+    }
+    AutomapSpriteUpload.Reset();
+    return true;
+}
+
 struct ExternalClientEntry {
     std::array<char, 64> owner{};
     RuffnecKk::OverlayHost::ContextCallbackV2 contextCreated{};
@@ -1664,6 +1771,8 @@ void ResetRendererStateLocked(bool clearInputSubclassState = true) noexcept {
     RendererInitialized = false;
     RendererInitializedPublished.store(false, std::memory_order_release);
     PrimeMhTexturesReadyPublished.store(false, std::memory_order_release);
+    AutomapSpriteAtlasReadyPublished.store(
+        false, std::memory_order_release);
     const bool gpuIdle = WaitForGpuIdleLocked();
     if (!gpuIdle)
         LogWarning("MapSense: timed out while waiting for submitted GPU work.");
@@ -1687,6 +1796,9 @@ void ResetRendererStateLocked(bool clearInputSubclassState = true) noexcept {
     PrimeMhChestTexture.Reset();
     PrimeMhSuperChestTexture.Reset();
     PrimeMhTextureUploads.clear();
+    AutomapSpriteTextureView = {};
+    AutomapSpriteTexture.Reset();
+    AutomapSpriteUpload.Reset();
 
     ContextCallbacksActive = false;
     RequestedSubclassWindow.store(nullptr, std::memory_order_release);
@@ -2089,6 +2201,17 @@ auto InitializeRenderer(
                 false, std::memory_order_release);
             LogWarning(
                 "MapSense: PrimeMH chest textures could not be initialized; chest markers use the procedural fallback.");
+        }
+        if (InitializeAutomapSpriteTextureLocked(device.Get())) {
+            AutomapSpriteAtlasReadyPublished.store(
+                true, std::memory_order_release);
+            LogInfo(
+                "MapSense: exact automap sprite atlas is ready for the generated map underlay.");
+        } else {
+            AutomapSpriteAtlasReadyPublished.store(
+                false, std::memory_order_release);
+            LogWarning(
+                "MapSense: automap sprite atlas is unavailable or invalid; the generated map underlay remains fail-closed.");
         }
 
         LastFrameTime = std::chrono::steady_clock::now();
@@ -2584,10 +2707,33 @@ void SetD3D12ImGuiAutomapFontPath(const wchar_t* path) noexcept {
     }
 }
 
+void SetD3D12ImGuiAutomapSpritePath(const wchar_t* path) noexcept {
+    std::scoped_lock lock(HostMutex);
+    if (Configured || HooksInstalled || RendererInitialized) return;
+    MapSenseAutomapSpritePath.clear();
+    if (path == nullptr) return;
+    constexpr std::size_t MaximumPathCharacters = 32'767U;
+    std::size_t length{};
+    while (length < MaximumPathCharacters && path[length] != L'\0')
+        ++length;
+    if (length == MaximumPathCharacters) return;
+    try {
+        MapSenseAutomapSpritePath.assign(path, length);
+    } catch (...) {
+        MapSenseAutomapSpritePath.clear();
+    }
+}
+
 auto GetD3D12ImGuiAutomapFont() noexcept -> ImFont* {
     // Called only from callbacks serialized by HostMutex on Present. Reset
     // clears the pointer before destroying the atlas.
     return MapSenseAutomapFont;
+}
+
+auto GetD3D12ImGuiAutomapSpriteTexture() noexcept
+        -> D3D12ImGuiTextureView {
+    std::scoped_lock lock(HostMutex);
+    return AutomapSpriteTextureView;
 }
 
 auto GetD3D12ImGuiPrimeMhChestTexture(
@@ -2884,6 +3030,8 @@ auto GetD3D12ImGuiHostStatus() noexcept -> D3D12ImGuiHostStatus {
         .inputSubclassInstalled = InputSubclassInstalledPublished.load(
             std::memory_order_acquire),
         .primeMhChestTexturesReady = PrimeMhTexturesReadyPublished.load(
+            std::memory_order_acquire),
+        .automapSpriteAtlasReady = AutomapSpriteAtlasReadyPublished.load(
             std::memory_order_acquire),
         .menuOpen = MenuOpen.load(std::memory_order_acquire),
         .gameWindow = PublishedGameWindow.load(std::memory_order_acquire),

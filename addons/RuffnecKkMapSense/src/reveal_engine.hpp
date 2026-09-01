@@ -22,6 +22,52 @@ struct RevealCounters {
     std::uint64_t rooms{};
     std::uint64_t failures{};
     std::uint64_t traversalLimits{};
+    std::uint64_t staticRoomCandidates{};
+    std::uint64_t staticRoomsMaterialized{};
+    std::uint64_t staticRoomsReleased{};
+    std::uint64_t staticRoomFailures{};
+};
+
+inline constexpr std::uint32_t StaticPoiRoomWarpMask = 0x00000FF0U;
+inline constexpr std::uint32_t StaticPoiRoomWaypointMask = 0x00030000U;
+inline constexpr std::uint32_t StaticPoiRoomHasRoomMask = 0x00100000U;
+inline constexpr std::uint32_t StaticPoiRoomPresetUnitsAddedMask =
+    0x02000000U;
+
+enum class StaticPoiRoomAction : std::uint8_t {
+    Ignore,
+    Reuse,
+    Materialize,
+    Wait,
+};
+
+// Selects only rooms that can own an exact native exit or waypoint. The
+// distant-name path never asks D2R to create an ActiveRoom.
+[[nodiscard]] constexpr auto SelectStaticPoiRoomAction(
+        std::uint32_t roomFlags,
+        bool hasRoomTile,
+        bool hasCompletePresetUnits,
+        bool hasActiveRoom) noexcept -> StaticPoiRoomAction {
+    const bool needsRoomTile =
+        (roomFlags & StaticPoiRoomWarpMask) != 0U && !hasRoomTile;
+    const bool needsPresetUnit =
+        (roomFlags & StaticPoiRoomWaypointMask) != 0U
+            && !hasCompletePresetUnits;
+    if (!needsRoomTile && !needsPresetUnit) {
+        return (roomFlags
+                & (StaticPoiRoomWarpMask | StaticPoiRoomWaypointMask)) != 0U
+            ? StaticPoiRoomAction::Reuse
+            : StaticPoiRoomAction::Ignore;
+    }
+    if (hasActiveRoom || (roomFlags & StaticPoiRoomHasRoomMask) != 0U) {
+        return StaticPoiRoomAction::Wait;
+    }
+    return StaticPoiRoomAction::Materialize;
+}
+
+struct StaticClientRoomLease final {
+    void* room{};
+    bool owned{};
 };
 
 inline constexpr std::int32_t UnknownRevealDifficulty = -1;
@@ -29,6 +75,8 @@ inline constexpr std::int32_t UnknownRevealLevelId = -1;
 inline constexpr std::size_t RevealDifficultyCount = 3U;
 inline constexpr std::size_t RevealPersistenceActCount = 5U;
 inline constexpr std::size_t RevealPersistenceLevelCapacity = 256U;
+inline constexpr std::size_t ProgressiveRevealVisCapacity = 8U;
+inline constexpr std::size_t ProgressiveRevealLevelCapacity = 256U;
 
 // Pure coordinator state shared with policy tests. A native automap
 // observation may arrive while a readiness retry for the same level is
@@ -49,35 +97,116 @@ struct RevealReplayRequestState final {
         std::int32_t targetLevelId,
         bool automapObserved) noexcept -> bool {
     if (!pending.reconcilePending) return false;
-    if (targetLevelId > 0) {
-        if (pending.targetLevelId > 0
-            && pending.targetLevelId != targetLevelId) {
-            return false;
-        }
-        // ActChanged has no LevelId and may arm an unknown request just before
-        // LevelChanged supplies the authoritative generated level. Upgrade the
-        // existing request instead of allowing the unknown act request to race
-        // and reveal the previous client DRLG.
-        pending.targetLevelId = targetLevelId;
+    if (targetLevelId > 0 && pending.targetLevelId != targetLevelId) {
+        return false;
     }
     pending.automapObserved = pending.automapObserved || automapObserved;
     return true;
 }
 
-[[nodiscard]] constexpr auto CanConfirmWholeActReveal(
-        RevealOutcome actOutcome,
-        RevealOutcome currentLevelOutcome) noexcept -> bool {
-    // A successful direct current-level traversal proves that the generated
-    // client DRLG is ready. Requiring a later automap callback after that proof
-    // only resubmits the same whole-act command and stalls D2R's UI thread.
-    return actOutcome == RevealOutcome::Complete
-        && currentLevelOutcome == RevealOutcome::Complete;
+[[nodiscard]] constexpr auto CanConfirmReplayedLevelReveal(
+        bool automapObserved,
+        RevealOutcome outcome) noexcept -> bool {
+    return automapObserved && outcome == RevealOutcome::Complete;
 }
 
-[[nodiscard]] constexpr auto CanConfirmReplayedLevelReveal(
-        RevealOutcome outcome) noexcept -> bool {
-    return outcome == RevealOutcome::Complete;
+struct RevealReplaySubmissionPolicy final {
+    bool waitForAutomap{};
+    bool submitWholeAct{};
+    bool submitCurrentLevel{};
+};
+
+// Native reveal calls are UI-thread only and expensive. A real automap pass is
+// the readiness witness. Whole-act work is scheduled once; after that work is
+// accepted, a newly entered level still needs its own local fallback if it was
+// not reached by the generated Vis graph.
+[[nodiscard]] constexpr auto MakeRevealReplaySubmissionPolicy(
+        bool automapObserved,
+        bool revealWholeAct,
+        bool actAccepted,
+        bool levelAccepted) noexcept -> RevealReplaySubmissionPolicy {
+    if (!automapObserved) {
+        return {.waitForAutomap = true};
+    }
+    if (revealWholeAct) {
+        return {
+            .waitForAutomap = false,
+            .submitWholeAct = !actAccepted,
+            .submitCurrentLevel = actAccepted && !levelAccepted,
+        };
+    }
+    return {
+        .waitForAutomap = false,
+        .submitWholeAct = false,
+        .submitCurrentLevel = !levelAccepted,
+    };
 }
+
+// Pure bounded breadth-first queue used by passive distant-name discovery.
+// It stores stable LevelIds only. Native Level/Room pointers never survive an
+// individual UI-thread callback.
+class ProgressiveRevealGraphState final {
+public:
+    void Reset() noexcept {
+        levels_.fill(UnknownRevealLevelId);
+        levelCount_ = 0U;
+        cursor_ = 0U;
+    }
+
+    [[nodiscard]] auto Begin(std::int32_t rootLevelId) noexcept -> bool {
+        Reset();
+        return Add(rootLevelId);
+    }
+
+    [[nodiscard]] auto Add(std::int32_t levelId) noexcept -> bool {
+        if (levelId <= 0) return false;
+        if (Contains(levelId)) return true;
+        if (levelCount_ >= levels_.size()) return false;
+        levels_[levelCount_++] = levelId;
+        return true;
+    }
+
+    [[nodiscard]] auto Contains(std::int32_t levelId) const noexcept -> bool {
+        for (std::size_t index = 0U; index < levelCount_; ++index) {
+            if (levels_[index] == levelId) return true;
+        }
+        return false;
+    }
+
+    [[nodiscard]] auto HasCurrent() const noexcept -> bool {
+        return cursor_ < levelCount_;
+    }
+
+    [[nodiscard]] auto Current() const noexcept -> std::int32_t {
+        return HasCurrent() ? levels_[cursor_] : UnknownRevealLevelId;
+    }
+
+    [[nodiscard]] auto Advance() noexcept -> bool {
+        if (!HasCurrent()) return false;
+        ++cursor_;
+        return true;
+    }
+
+    [[nodiscard]] auto LevelCount() const noexcept -> std::size_t {
+        return levelCount_;
+    }
+
+    [[nodiscard]] auto LevelAt(std::size_t index) const noexcept
+            -> std::int32_t {
+        return index < levelCount_
+            ? levels_[index]
+            : UnknownRevealLevelId;
+    }
+
+    [[nodiscard]] auto Cursor() const noexcept -> std::size_t {
+        return cursor_;
+    }
+
+private:
+    std::array<std::int32_t, ProgressiveRevealLevelCapacity> levels_{};
+    std::size_t levelCount_{};
+    std::size_t cursor_{};
+};
 
 // Authoritative contiguous act boundaries from the shipped D2R 3.3 Levels.txt
 // catalog (level ids 1..137). This lets reveal persistence bind an accepted
@@ -359,10 +488,25 @@ struct ClientLevelView final {
     // Validated client DRLG difficulty: 0 Normal, 1 Nightmare, 2 Hell.
     std::uint8_t difficulty{};
     std::int32_t levelId{};
+    // The original game seed stored by DRLG allocation, and the one-step LCG
+    // value D2R uses as the base for each generated Level. Resolve succeeds
+    // only when this pair matches the governed native seed contract.
+    std::uint32_t mapSeed{};
+    std::uint32_t drlgStartSeed{};
     void* activeRoom{};
     void* drlg{};
     void* level{};
 };
+
+inline constexpr std::uint64_t DrlgSeedMultiplier = UINT64_C(0x6AC690C5);
+inline constexpr std::uint32_t DrlgSeedHighWord = 0x29AU;
+
+[[nodiscard]] constexpr auto DeriveDrlgStartSeed(
+        std::uint32_t mapSeed) noexcept -> std::uint32_t {
+    return static_cast<std::uint32_t>(
+        static_cast<std::uint64_t>(mapSeed) * DrlgSeedMultiplier
+        + DrlgSeedHighWord);
+}
 
 using RevealLevelInitializedCallback = void(*)(
     std::uint8_t dataContext,
@@ -385,6 +529,8 @@ void BeginRevealSession() noexcept;
 void ResetRevealSession() noexcept;
 
 auto RevealCurrentZone() noexcept -> RevealOutcome;
+// Uses D2RCore's public revealmap command for the normal act-wide automap
+// reveal. Distant-name discovery is a separate passive plugin operation.
 auto RevealCurrentAct() noexcept -> RevealOutcome;
 auto ArmRevealAll() noexcept -> RevealOutcome;
 auto ToggleRevealAll() noexcept -> RevealOutcome;
@@ -402,7 +548,15 @@ auto DisableRevealAll() noexcept -> RevealOutcome;
 [[nodiscard]] auto MaterializeClientRoom(
     std::uint8_t dataContext,
     void* drlgRoom) noexcept -> void*;
-
+// Builds only DrlgRoom static tile/preset descriptors. It deliberately stops
+// before D2R's ActiveRoom allocator and returns an owned lease that must be
+// released immediately after the descriptors have been copied.
+[[nodiscard]] auto PrepareStaticClientRoom(
+    std::uint8_t dataContext,
+    void* drlgRoom,
+    StaticClientRoomLease& lease) noexcept -> bool;
+[[nodiscard]] auto ReleaseStaticClientRoom(
+    StaticClientRoomLease& lease) noexcept -> bool;
 auto IsRevealEngineActive() noexcept -> bool;
 auto IsRevealAllArmed() noexcept -> bool;
 auto GetRevealCounters() noexcept -> RevealCounters;

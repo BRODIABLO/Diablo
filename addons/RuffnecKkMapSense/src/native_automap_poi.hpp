@@ -20,17 +20,20 @@ class MapSenseDataCatalog;
 
 inline constexpr std::size_t MaximumAutomapExitLabels = 256U;
 inline constexpr std::size_t MaximumAutomapWaypointLabels = 512U;
+inline constexpr std::size_t MaximumAutomapLevelLabels = 512U;
 inline constexpr std::size_t MaximumAutomapSpecialChestPresets = 1'024U;
 inline constexpr std::size_t MaximumTrackedAutomapObjects = 4'096U;
 inline constexpr std::size_t MaximumAutomapPoiSnapshots =
     MaximumAutomapExitLabels
     + MaximumAutomapWaypointLabels
+    + MaximumAutomapLevelLabels
     + MaximumAutomapSpecialChestPresets
     + MaximumTrackedAutomapObjects * 2U;
 
 enum class AutomapPoiKind : std::uint8_t {
     ExitLabel,
     WaypointLabel,
+    LevelLabel,
     ShrineIcon,
     ShrineLabel,
     Chest,
@@ -62,10 +65,10 @@ inline constexpr std::uint8_t AutomapPoiStateTrapped = 1U << 1U;
 // D2R's automap cell. Reserve the complete visible cell before placing text;
 // this keeps the label's bottom edge above the icon at every overlay scale.
 inline constexpr float NativeExitIconTopExtent = 26.0F;
-inline constexpr float NativeWaypointIconTopExtent = 40.0F;
+inline constexpr float NativeWaypointIconTopExtent = 24.0F;
 inline constexpr float NativeShrineIconTopExtent = 44.0F;
 inline constexpr float NativeAutomapLabelGap = 12.0F;
-inline constexpr float NativeWaypointLabelGap = 14.0F;
+inline constexpr float NativeWaypointLabelGap = 2.0F;
 inline constexpr float NativeShrineLabelGap = 18.0F;
 inline constexpr std::int32_t NativeShrineLabelProximitySubtiles = 56;
 
@@ -170,6 +173,25 @@ struct AutomapWaypointLabelDefinition final {
     std::int32_t subtileY{};
 };
 
+// One allocation-free fallback label per generated Level. Its anchor comes
+// only from the already-linked DrlgRoom rectangles; it never requires an
+// ActiveRoom, collision grid, preset chain, unit table, or monster data.
+struct AutomapLevelLabelDefinition final {
+    std::uint64_t stableId{};
+    std::int32_t levelId{UnknownNavigationLevelId};
+    std::int32_t subtileX{};
+    std::int32_t subtileY{};
+};
+
+[[nodiscard]] constexpr auto ShouldProjectAutomapLevelLabel(
+        std::int32_t levelId,
+        std::int32_t currentLevelId,
+        bool hasExactWaypoint,
+        bool hasExactCurrentExit) noexcept -> bool {
+    return levelId > 0 && levelId != currentLevelId
+        && !hasExactWaypoint && !hasExactCurrentExit;
+}
+
 namespace Detail {
 
 // Fixed-capacity owner-replacement store used behind the native POI lock.
@@ -228,6 +250,45 @@ private:
     std::size_t count_{};
 };
 
+template <std::size_t Capacity>
+class AutomapLevelDefinitionCatalog final {
+public:
+    [[nodiscard]] constexpr auto ReplaceOwner(
+            std::int32_t levelId,
+            std::span<const AutomapLevelLabelDefinition> incoming) noexcept
+            -> bool {
+        std::size_t replacementCount{};
+        for (std::size_t index = 0U; index < count_; ++index) {
+            if (definitions_[index].levelId == levelId) continue;
+            if (replacementCount >= scratch_.size()) return false;
+            scratch_[replacementCount++] = definitions_[index];
+        }
+        for (const auto& definition : incoming) {
+            if (replacementCount >= scratch_.size()) return false;
+            scratch_[replacementCount++] = definition;
+        }
+        for (std::size_t index = 0U; index < replacementCount; ++index) {
+            definitions_[index] = scratch_[index];
+        }
+        count_ = replacementCount;
+        return true;
+    }
+
+    constexpr void Clear() noexcept {
+        count_ = 0U;
+    }
+
+    [[nodiscard]] constexpr auto Definitions() const noexcept
+            -> std::span<const AutomapLevelLabelDefinition> {
+        return {definitions_.data(), count_};
+    }
+
+private:
+    std::array<AutomapLevelLabelDefinition, Capacity> definitions_{};
+    std::array<AutomapLevelLabelDefinition, Capacity> scratch_{};
+    std::size_t count_{};
+};
+
 } // namespace Detail
 
 [[nodiscard]] constexpr auto SameAutomapExitLevelPair(
@@ -246,6 +307,53 @@ private:
         && left.boundaryIdentity.Valid()
         && right.boundaryIdentity.Valid()
         && left.boundaryIdentity == right.boundaryIdentity;
+}
+
+// Partial InitLevel captures may revisit one source owner before all of its
+// rooms exist. Merge only definitions with a stable physical identity. A
+// canonical level-pair anchor is authoritative for generated facades such as
+// Tamoe Highland <-> Monastery Gate; ordinary outdoor pairs retain separate
+// proven seams even when their projected labels happen to be close together.
+[[nodiscard]] constexpr auto SameAutomapExitOwnerFragment(
+        const AutomapExitLabelDefinition& left,
+        const AutomapExitLabelDefinition& right) noexcept -> bool {
+    if (left.sourceLevelId != right.sourceLevelId
+        || left.targetLevelId != right.targetLevelId) {
+        return false;
+    }
+    if (left.canonicalLevelPairAnchor
+        || right.canonicalLevelPairAnchor) {
+        return true;
+    }
+    if (left.stableId != 0U && left.stableId == right.stableId) return true;
+    if (left.boundaryIdentity.Valid() && right.boundaryIdentity.Valid()) {
+        return left.boundaryIdentity == right.boundaryIdentity;
+    }
+    if (left.subtileX == right.subtileX
+        && left.subtileY == right.subtileY) {
+        return true;
+    }
+    return left.useExactClientCoordinates
+        && right.useExactClientCoordinates
+        && left.exactClientX == right.exactClientX
+        && left.exactClientY == right.exactClientY;
+}
+
+[[nodiscard]] constexpr auto PreferAutomapExitOwnerFragment(
+        const AutomapExitLabelDefinition& incoming,
+        const AutomapExitLabelDefinition& existing) noexcept -> bool {
+    if (incoming.canonicalLevelPairAnchor
+            != existing.canonicalLevelPairAnchor) {
+        return incoming.canonicalLevelPairAnchor;
+    }
+    const auto incomingIdentity = incoming.boundaryIdentity.Valid();
+    const auto existingIdentity = existing.boundaryIdentity.Valid();
+    if (incomingIdentity != existingIdentity) return incomingIdentity;
+    if (incoming.useExactClientCoordinates
+            != existing.useExactClientCoordinates) {
+        return incoming.useExactClientCoordinates;
+    }
+    return false;
 }
 
 [[nodiscard]] constexpr auto IsAutomapExitPhysicalGroupMember(
@@ -393,7 +501,7 @@ struct NativeAutomapPoiPass final {
 };
 
 // Renderer-facing value snapshot. sourceId is a destination level id for an
-// exit, the owning level id for a waypoint label, a shrines.txt row for a
+// exit, the owning level id for a waypoint or level label, a shrines.txt row for a
 // shrine, or an objects.txt class id otherwise.
 struct NativeAutomapPoiSnapshot final {
     std::uint64_t stableId{};
@@ -448,6 +556,11 @@ void SetNativeAutomapPoiCollectionMask(std::uint32_t mask) noexcept;
     std::int32_t levelId,
     const AutomapExitLabelDefinition* definitions,
     std::size_t definitionCount) noexcept -> bool;
+[[nodiscard]] auto MergeNativeAutomapExitLabelFragments(
+    std::uint64_t sessionGeneration,
+    std::int32_t levelId,
+    const AutomapExitLabelDefinition* definitions,
+    std::size_t definitionCount) noexcept -> bool;
 [[nodiscard]] auto ReplaceNativeAutomapExitLabels(
     std::uint64_t sessionGeneration,
     const AutomapExitLabelDefinition* definitions,
@@ -456,6 +569,11 @@ void SetNativeAutomapPoiCollectionMask(std::uint32_t mask) noexcept;
     std::uint64_t sessionGeneration,
     std::int32_t levelId,
     const AutomapWaypointLabelDefinition* definitions,
+    std::size_t definitionCount) noexcept -> bool;
+[[nodiscard]] auto PublishNativeAutomapLevelLabels(
+    std::uint64_t sessionGeneration,
+    std::int32_t levelId,
+    const AutomapLevelLabelDefinition* definitions,
     std::size_t definitionCount) noexcept -> bool;
 [[nodiscard]] auto ReplaceNativeAutomapWaypointLabels(
     std::uint64_t sessionGeneration,

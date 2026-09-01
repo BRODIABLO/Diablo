@@ -1,5 +1,7 @@
 #pragma once
 
+#include "atlas_projection.hpp"
+
 #include "overlay_scene.hpp"
 
 #include <array>
@@ -30,6 +32,25 @@ enum class MonsterImmunity : std::uint8_t {
 }
 
 namespace Detail {
+
+inline constexpr std::uint8_t NativeDataContextCount = 4U;
+inline constexpr std::uint64_t MaximumMonStatsRecordCount = 65'536U;
+
+// D2R's MonStats getter asserts before it can return null for an invalid
+// context or class id. Keep the complete preflight pure so every native call
+// is demonstrably inside the compiled table selected by the local player.
+[[nodiscard]] constexpr auto IsMonStatsLookupSafe(
+        std::uint8_t localDataContext,
+        std::uint8_t unitDataContext,
+        std::int32_t classId,
+        std::uint64_t recordCount) noexcept -> bool {
+    return localDataContext < NativeDataContextCount
+        && unitDataContext == localDataContext
+        && classId >= 0
+        && recordCount > 0U
+        && recordCount <= MaximumMonStatsRecordCount
+        && static_cast<std::uint64_t>(classId) < recordCount;
+}
 
 inline constexpr std::uint8_t SuperUniqueRankFlag = 0x02;
 inline constexpr std::uint8_t ChampionRankFlag = 0x04;
@@ -199,6 +220,7 @@ struct NativeAutomapViewportSnapshot final {
     std::int32_t clipHeight{};
     std::uint64_t observedTick{};
     std::uint64_t epoch{};
+    AtlasProjectionWitness atlasProjection{};
 };
 
 struct NativeAutomapClipBounds final {
