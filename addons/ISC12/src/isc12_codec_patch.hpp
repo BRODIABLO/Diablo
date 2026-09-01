@@ -13,6 +13,10 @@ namespace ruffneckk::isc12 {
 
 enum class CodecPatchGroupId : std::uint8_t {
     FullItemTransport,
+    Packet3E,
+    PacketA8,
+    PacketAA,
+    PacketAC,
     GenericItem,
     AuxiliaryPlayer,
     PlayerSave,
@@ -209,9 +213,9 @@ struct CodecPatchCommitCallbacks {
 
 struct CodecPatchPreflightResult;
 
-static_assert(PreparedCodecMutationCount == 102U);
-static_assert(PreparedCodecMutableSiteCount == 24U);
-static_assert(PreparedCodecWitnessCount == 77U);
+static_assert(PreparedCodecMutationCount == 129U);
+static_assert(PreparedCodecMutableSiteCount == 43U);
+static_assert(PreparedCodecWitnessCount == 85U);
 
 // Heap-free immutable publication input produced only by the complete codec
 // preflight. It owns all 102 resolved replacement bytes and every mutation/

@@ -205,11 +205,20 @@
 
 ## G5–G9 — network
 
-- [ ] `0x3E`, `0xA8` and `0xAA` pairs pass boundary tests.
-- [ ] `0xAC` headroom and fallback are resolved.
-- [ ] Census any additional fixed-byte `uint8 statId` packets mentioned by
-  Necrolis; either widen both producer and consumer or prove that ISC12 IDs
-  above the vanilla range cannot reach them.
+- [x] Govern and atomically publish the `0x3E`, `0xA8` and inner `0xAA`
+  producer/consumer width and sentinel pairs. The `0xAA` estimator changes both
+  +9 contributions to +12 before its unchanged 0xF4 guard; outer State IDs stay
+  9-bit.
+- [x] Close `0xAC` cardinality and headroom: at most 16 copied records, 1,289
+  worst-case bits = 162 bytes, 175 bytes including its 13-byte header and 69
+  bytes remaining below the unchanged 244-byte guard.
+- [x] Census the suspected fixed-byte packet paths. `0x1D..0x1F`,
+  `0x9E..0xA2` and `0x20` use WORD stat-ID fields in producer and consumer; the
+  mercenary/private dispatcher also loads the queued stat ID as WORD. Nine exact
+  unique proof-only windows require no packet-layout mutation.
+- [x] Build the canonical G5-G8 transaction with 19 additional mutable sites,
+  27 mutations and eight capacity witnesses. All 27 mutation/capacity windows
+  match exactly once in the governed native corpus.
 - [x] Govern twelve exact G9 witnesses proving that 0x9C/0x9D serialize one node
   with recursion disabled, the root cap is 244 bytes for 0x9C, every 0x9D cap
   is 239 bytes, socketed descendants are separate 0x9D packets, and the
@@ -434,13 +443,54 @@
 - [x] Initial disposable new-save gameplay and one save/reload cycle.
 - [x] Second D2S round-trip, controlled shared-stash D2I fixture and serialized
   extended-stat fixtures 512/4094.
+- [x] Reproducible G5-G8 publication candidate: two byte-identical 451,072-byte
+  Release `/W4 /WX` builds, SHA-256
+  `6089619DE3B01FD474669096A8AEC8A470559FAD993DCB939AC976709A7D2D52`,
+  CTest `5/5`, ledger `VALID` at 228 sites / 15 required groups.
+- [x] Full-stack mod-local and global cold starts of that exact candidate on D2R
+  3.3.93847 / D2RLoader 1.2: each published 43 codec sites / 129 mutations,
+  loaded 36 plugins with all five eezstreet DLLs, applied 17 patches, compiled
+  190 TXT tables, selected the authoritative 400-row schema and reached
+  `D2R startup complete`; only the two known unrelated Stash Search and Revive
+  Overhaul failures remained. Final state is mod-local, hashes restored, no
+  global duplicate and no running D2R process.
 - [ ] Matching host/joiner passes; mismatches fail closed.
+
+### External two-client handoff
+
+One human may operate both sides, but the proof requires two independent D2R
+clients active at the same time. A single process/account instance cannot close
+host and joiner behavior. Each matching peer must use:
+
+- the exact 451,072-byte ISC12 DLL SHA-256
+  `6089619DE3B01FD474669096A8AEC8A470559FAD993DCB939AC976709A7D2D52`;
+- byte-identical TOML, mod data, high-ID ItemStatCost schema and test fixtures;
+- the same D2RLoader scope and a matching generated environment fingerprint;
+- a schema and saved/item fixture that actually reaches IDs above 510. The
+  restored 400-row ISC12Lab/BKVince table cannot by itself exercise 12-bit
+  network IDs.
+
+The community matrix has three required sessions:
+
+1. Matching ISC12 host and joiner: connect, materialize the high-ID fixtures on
+   both peers, exercise shared item/stat transitions, change area, save, fully
+   reconnect and reload with identical observed values.
+2. ISC12 host with an absent/vanilla ISC12 joiner: reject fail-closed before
+   shared state can diverge.
+3. Absent/vanilla ISC12 host with an ISC12 joiner: reject fail-closed before
+   shared state can diverge.
+
+Collect fresh D2RLoader and ISC12 logs from both peers, DLL/TOML/data hashes,
+scope, environment fingerprint, the visible before/after stat values and the
+post-reconnect save evidence. A successful connection using only IDs below 511
+does not close G5-G8 functional multiplayer behavior.
 
 Mod-local and global publication, the schema lifecycle, native character
 creation, standard D2S/D2I persistence, two cold D2S cycles, serialized IDs 512
 and 4094, real 0x9C/0x9D socket-tree capture, overflow/reentry containment and
 complete-stack coexistence have run on disposable fixtures. The runtime profile,
 assert-dialog setting and original shared stash were restored byte-for-byte
-after evidence capture. Multiplayer host/joiner plus mismatch rejection remain
-open; G5-G8 and the fixed-byte packet census remain required before any
-complete-network claim or public release.
+after evidence capture. G5-G8, their native budgets and the fixed-width packet
+census are closed in source/static proof and both hybrid startup scopes.
+Multiplayer host/joiner plus mismatch rejection remain open before any complete
+network claim or public release.

@@ -6,12 +6,14 @@ Dernière mise à jour : 1er septembre 2026
 
 [ISC12 — ItemStatCost 12-bit clean-sheet format](isc12-3.3.md)
 
-État : **ISC12 0.2.0 : verticale native persistante qualifiée en portée
-mod-locale et globale sur D2R 3.3.93847 / D2RLoader 1.2.0-beta**. Le candidat
-exact mesure 446 464 octets et vaut SHA-256
-`1311F1C4BE44B0918F34C32007C3A19D35D240D8B72DCAD8C1853EEE53EC11B5`;
-deux builds Release reproductibles `/W4 /WX`, CTest `5/5` et le ledger
-`VALID 211/15` le soutiennent. Les fixtures sérialisées D2S d'IDs 512 et 4094
+État : **ISC12 0.2.0 : tous les gates solo qualifiés en portée mod-locale et
+globale sur D2R 3.3.93847 / D2RLoader 1.2.0-beta**. Le candidat G5–G8 exact
+mesure 451 072 octets et vaut SHA-256
+`6089619DE3B01FD474669096A8AEC8A470559FAD993DCB939AC976709A7D2D52`;
+deux builds Release reproductibles `/W4 /WX`, CTest `5/5`, 27/27 nouvelles
+fenêtres natives exactes uniques et le ledger `VALID 228/15` le soutiennent.
+La transaction canonique porte désormais 43 sites mutables, 129 mutations et
+85 témoins. Les fixtures sérialisées D2S d'IDs 512 et 4094
 ont conservé leurs valeurs 12 et 94 pendant deux cycles froids. Le D2I contrôlé
 de shared stash a été écrit, relu après arrêt complet et réaffiché avec un arbre
 socketé 3/3. G9 a exercé les payloads réels `0x9C` et `0x9D`, l'overflow à zéro
@@ -21,6 +23,9 @@ binaire a passé un cold start global puis le retour mod-local, sans désactiver
 aucun composant : 36 plugins chargés, les cinq eezstreet et 17 patches; Stash
 Search et Revive Overhaul restent les deux échecs préexistants. Les sauvegardes
 et tables de test ont ensuite été restaurées byte-exact et le jeu a été arrêté.
+G5 élargit `0x3E`, G6 `0xA8`, G7 les ItemStatCost internes de `0xAA` avec son
+estimateur, et G8 `0xAC`; ce dernier conserve 69 octets de marge. Le census
+ferme sans patch `0x1D..0x1F`, `0x9E..0xA2` et `0x20`, déjà WORD des deux côtés.
 
 Le cycle de schéma G0 suit maintenant deux phases. `LoadExcelTable` capture les
 candidats sans publier prématurément; le callback autoritaire
@@ -109,7 +114,8 @@ services fournis par les plugins demeure absent.
 Le coordinateur global one-shot et ses adapters réels G0/G10/codec sont liés,
 testés et appelés exactement une fois en production depuis le callback initial.
 Les trois preflights produisent des plans immuables avant la réservation; les
-commits suivent G0 puis G10 puis codec, avec l'ordre interne G9/G2/G4/G1/G3. Leur
+commits suivent G0 puis G10 puis codec, avec l'ordre interne
+G9/G5/G6/G7/G8/G2/G4/G1/G3. Leur
 succès s'arrête à `CommittedPendingReadiness`, tous les flags privés encore faux;
 la même fenêtre startup publie alors la readiness sans autre write et vérifie
 G0/G10/codec/transport avant de rendre le plugin opérationnel. Le CTest dédié
@@ -137,16 +143,15 @@ passent par un `finally` SEH qui abort/discard. Le writer d'enveloppe a été
 exécuté une fois et retiré. Le create/save/reload standard, le preview
 header-only, le second round-trip D2S, le D2I contrôlé, les IDs élevés, les
 payloads `0x9C`/`0x9D`, les scénarios de pression G9 et les portées
-mod-locale/globale sont maintenant qualifiés. Le multijoueur ISC12 ne l'est pas
-encore. G5 `0x3E`, G6 `0xA8` et G7 `0xAA` restent ledger-only, G8 `0xAC`
-reste bloqué, et aucun census des éventuels paquets `uint8 statId` mentionnés
-par Necrolis n'est encore fermé.
+mod-locale/globale sont maintenant qualifiés. G5–G8 et le census fixed-width
+sont fermés statiquement et publiés avec succès dans les deux portées. Le
+multijoueur ISC12 réel ne l'est pas encore.
 
 ## Prochain gate
 
-Qualifier un host/joiner ISC12 identique et le refus fail-closed d'un mismatch,
-puis fermer G5 `0x3E`, G6 `0xA8`, G7 `0xAA`, G8 `0xAC` et le census des champs
-`uint8 statId` avant toute revendication réseau complète ou release publique.
+Qualifier un host/joiner ISC12 identique, puis les deux mismatches asymétriques
+(host ISC12/joiner absent et host absent/joiner ISC12) avec refus fail-closed
+avant toute revendication réseau complète ou release publique.
 Le kit NativePublication V1 reste un durcissement loader général optionnel et
 ne bloque pas ces gates.
 

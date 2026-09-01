@@ -734,7 +734,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/isc12-3.3.md",
-      "nextGate": "Le cœur runtime ISC12 est fermé sur le candidat exact 1311F1C4…EC11B5 : IDs sérialisés 512/4094, deux cold round-trips D2S, D2I contrôlé, arbres réels 0x9C/0x9D, overflow/réentrance bornés, coexistence complète et portées mod-locale/globale. Prochain gate : qualifier host/joiner et mismatch multijoueur, puis fermer G5–G8 et le census des champs uint8 statId avant toute revendication réseau complète ou release publique.",
+      "nextGate": "Tous les gates solo ISC12 sont fermés sur le candidat exact 451072 octets 6089619D…D2D52 : G0/G10/G1–G9, 43 sites, 129 mutations, 85 témoins, ledger VALID 228/15, CTest 5/5, census fixed-width et cold starts mod-local/global avec pile complète. Prochain gate unique : qualifier un matching host/joiner réel, puis les deux mismatches asymétriques fail-closed avant toute revendication réseau complète ou release publique.",
       "include": [
         "Mission/isc12-3.3.md",
         "addons/ISC12/**",

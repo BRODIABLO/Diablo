@@ -8,7 +8,7 @@
     "imageBase": "0x140000000",
     "canonicalSha256": "CC59119DC2A6C7D43D088098FC162EAFA4AE1299B2079126AEF43C1ACA914715",
     "textSha256": "35AA4478F59B766189F79C14E26A1A49CEFF1666126AB0CB496276485D398E37",
-    "runtimeValidated": false
+    "runtimeValidated": true
   },
   "formatContract": {
     "field": "ItemStatCost ID",
@@ -1281,200 +1281,405 @@
       "status": "ready",
       "reason": "Exact consumer sequence paired atomically with the producer."
     },
+    {
+      "id": "packet-3e-buffer-budget",
+      "atomicGroup": "G5-packet-3e",
+      "rva": "0x47A2A9",
+      "signature": { "kind": "exact", "pattern": "48 8D 58 02 48 83 FB 20 72 14 48 8D 4C 24 20 C6 44 24 20 00", "unique": true },
+      "currentValue": "packet bytes plus two-byte trailer must remain below 0x20",
+      "targetValue": "unchanged",
+      "role": "Proves the single widened stat ID cannot exhaust packet 0x3E storage",
+      "owner": "D2R packet 0x3E producer",
+      "status": "ready",
+      "reason": "Exact unique capacity witness. Packet 0x3E contains one stat ID, so widening 9 to 12 bits adds only three bits."
+    },
 
     {
       "id": "packet-a8-copy-cap",
       "atomicGroup": "G6-packet-a8",
       "rva": "0x53A4CE",
-      "signature": { "kind": "exact", "pattern": "41 B8 10 00 00 00", "unique": false },
+      "signature": { "kind": "exact", "pattern": "41 B8 10 00 00 00 48 8D 95 D0 00 00 00 48 8B C8 E8 FD BF DB FF", "unique": true },
       "currentValue": "maximum 16 copied stat entries",
       "targetValue": "unchanged",
       "role": "Bounds packet 0xA8 stat-list cardinality",
       "owner": "D2R packet 0xA8 producer",
-      "status": "identified",
-      "reason": "Verification-only capacity witness; +3 bits per ID remains below the 0xF4 bitstream capacity checked at 0x53A4EE and byte-size check at 0x53A6AD."
+      "status": "ready",
+      "reason": "Exact unique verification-only capacity witness; at most 16 copied entries reach the widened producer."
+    },
+    {
+      "id": "packet-a8-bitstream-capacity",
+      "atomicGroup": "G6-packet-a8",
+      "rva": "0x53A4EE",
+      "signature": { "kind": "exact", "pattern": "41 B8 F4 00 00 00 C6 45 90 A8 48 8D 55 99", "unique": true },
+      "currentValue": "0xF4-byte native bitstream buffer",
+      "targetValue": "unchanged",
+      "role": "Bounds packet 0xA8 serialization storage",
+      "owner": "D2R packet 0xA8 producer",
+      "status": "ready",
+      "reason": "Exact unique verification-only capacity witness paired with the 16-entry copy cap and final packet-size guard."
     },
     {
       "id": "packet-a8-producer-id",
       "atomicGroup": "G6-packet-a8",
       "rva": "0x53A615",
-      "signature": { "kind": "exact", "pattern": "41 B8 09 00 00 00", "unique": false },
+      "signature": { "kind": "exact", "pattern": "41 B8 09 00 00 00 48 8D 4C 24 68 8B D6 E8 E9 10 4E 00", "unique": true },
       "currentValue": "write stat ID using 9 bits at 0x53A622",
       "targetValue": "write stat ID using 12 bits",
       "role": "Encodes packet 0xA8 stat entries",
       "owner": "ISC12 packet 0xA8 producer",
-      "status": "identified",
-      "reason": "Scoped exact width instruction."
+      "status": "ready",
+      "reason": "Exact unique producer sequence; published atomically with both consumers and terminator."
     },
     {
       "id": "packet-a8-producer-terminator",
       "atomicGroup": "G6-packet-a8",
       "rva": "0x53A68A",
-      "signature": { "kind": "masked", "pattern": "BA FF 01 00 00 ?? ?? ?? ?? ?? 41 B8 09 00 00 00 E8 ?? ?? ?? ??", "unique": null },
+      "signature": { "kind": "exact", "pattern": "BA FF 01 00 00 48 8D 4C 24 68 41 B8 09 00 00 00 E8 71 10 4E 00", "unique": true },
       "currentValue": "write 0x1FF using 9 bits at 0x53A69A",
       "targetValue": "write 0xFFF using 12 bits",
       "role": "Terminates packet 0xA8 stat entries",
       "owner": "ISC12 packet 0xA8 producer",
-      "status": "identified",
-      "reason": "Exact value at 0x53A68A and width at 0x53A694; combined uniqueness is a pre-install assertion."
+      "status": "ready",
+      "reason": "Exact unique value/width pair; both sentinel bytes and width publish in the canonical transaction."
     },
     {
-      "id": "packet-a8-consumer-first",
+      "id": "packet-a8-consumer-first-width",
       "atomicGroup": "G6-packet-a8",
       "rva": "0x12E7DA",
-      "signature": { "kind": "exact", "pattern": "41 8D 55 09", "unique": false },
-      "currentValue": "derive 9-bit read width; compare 0x1FF at 0x12E823",
-      "targetValue": "derive 12-bit read width; compare 0xFFF",
+      "signature": { "kind": "exact", "pattern": "41 8D 55 09 E8 DD CE 8E 00 8B F8 E8 E6 CA F5 FF", "unique": true },
+      "currentValue": "derive 9-bit read width",
+      "targetValue": "derive 12-bit read width",
       "role": "Decodes the first packet 0xA8 stat ID at 0x12E7DE",
       "owner": "ISC12 packet 0xA8 consumer",
-      "status": "identified",
-      "reason": "Width is an LEA displacement, not a mov-immediate; paired sentinel is mandatory."
+      "status": "ready",
+      "reason": "Exact unique width sequence. Width is an LEA displacement, not a mov-immediate."
+    },
+    {
+      "id": "packet-a8-consumer-first-sentinel",
+      "atomicGroup": "G6-packet-a8",
+      "rva": "0x12E823",
+      "signature": { "kind": "exact", "pattern": "81 FF FF 01 00 00 0F 8D 29 01 00 00 90 40 0F B6 CD", "unique": true },
+      "currentValue": "compare first decoded ID with 0x1FF",
+      "targetValue": "compare first decoded ID with 0xFFF",
+      "role": "Terminates the first packet 0xA8 stat-list branch",
+      "owner": "ISC12 packet 0xA8 consumer",
+      "status": "ready",
+      "reason": "Exact unique first-ID sentinel sequence, mandatory with the separate LEA width mutation."
     },
     {
       "id": "packet-a8-consumer-next",
       "atomicGroup": "G6-packet-a8",
       "rva": "0x12E939",
-      "signature": { "kind": "exact", "pattern": "BA 09 00 00 00", "unique": false },
+      "signature": { "kind": "exact", "pattern": "BA 09 00 00 00 48 8D 4C 24 40 4C 8B E0 E8 75 CD 8E 00 8B F8 3D FF 01 00 00 0F 8C D8 FE FF FF", "unique": true },
       "currentValue": "read 9 bits at 0x12E946; compare 0x1FF at 0x12E94D",
       "targetValue": "read 12 bits; compare 0xFFF",
       "role": "Decodes subsequent packet 0xA8 stat IDs",
       "owner": "ISC12 packet 0xA8 consumer",
-      "status": "identified",
-      "reason": "Scoped exact width and sentinel instructions."
+      "status": "ready",
+      "reason": "Exact unique subsequent-ID width/sentinel sequence."
+    },
+    {
+      "id": "packet-a8-size-guard",
+      "atomicGroup": "G6-packet-a8",
+      "rva": "0x53A6A9",
+      "signature": { "kind": "exact", "pattern": "48 8D 58 09 48 81 FB FF 00 00 00 72 14", "unique": true },
+      "currentValue": "encoded bytes plus nine-byte header must remain below 0xFF",
+      "targetValue": "unchanged",
+      "role": "Final packet 0xA8 byte-size guard",
+      "owner": "D2R packet 0xA8 producer",
+      "status": "ready",
+      "reason": "Exact unique final budget witness; widened payload remains bounded by the unchanged 16-entry cap."
     },
 
     {
       "id": "packet-aa-itemstat-count-cap",
       "atomicGroup": "G7-packet-aa",
       "rva": "0x53994B",
-      "signature": { "kind": "exact", "pattern": "81 FB FF 01 00 00", "unique": false },
+      "signature": { "kind": "exact", "pattern": "81 FB FF 01 00 00 7E 14 48 8D 4C 24 25 C6 44 24 25 00", "unique": true },
       "currentValue": "ItemStatCost count <= 0x1FF",
       "targetValue": "ItemStatCost count <= 0xFFF",
       "role": "Caps the ItemStatCost domain used by packet 0xAA enumeration",
       "owner": "ISC12 packet 0xAA producer",
-      "status": "identified",
-      "reason": "The count comes from DataTables+0x1260 at 0x539924; the nearby 0x5398F8 bound is States count and is excluded."
+      "status": "ready",
+      "reason": "Exact unique ItemStatCost admission bound. The count comes from DataTables+0x1260; the nearby States count remains excluded."
     },
     {
       "id": "packet-aa-producer-inner-id",
       "atomicGroup": "G7-packet-aa",
       "rva": "0x53A057",
-      "signature": { "kind": "exact", "pattern": "41 B8 09 00 00 00", "unique": false },
+      "signature": { "kind": "exact", "pattern": "41 B8 09 00 00 00 E8 AE 16 4E 00 48 8B 03 0F B6 48 09", "unique": true },
       "currentValue": "write inner ItemStatCost ID using 9 bits at 0x53A05D",
       "targetValue": "write inner ItemStatCost ID using 12 bits",
       "role": "Encodes packet 0xAA inner stat IDs",
       "owner": "ISC12 packet 0xAA producer",
-      "status": "identified",
-      "reason": "Scoped exact width instruction; outer State IDs remain 9 bits."
+      "status": "ready",
+      "reason": "Exact unique inner-ID producer sequence; outer State IDs remain 9 bits."
     },
     {
       "id": "packet-aa-producer-inner-terminator",
       "atomicGroup": "G7-packet-aa",
       "rva": "0x53A09E",
-      "signature": { "kind": "exact", "pattern": "BA FF 01 00 00 41 B8 09 00 00 00", "unique": null },
+      "signature": { "kind": "exact", "pattern": "BA FF 01 00 00 41 B8 09 00 00 00 48 8D 4D 88 E8 5E 16 4E 00", "unique": true },
       "currentValue": "write inner 0x1FF terminator using 9 bits at 0x53A0AD",
       "targetValue": "write inner 0xFFF terminator using 12 bits",
       "role": "Terminates each packet 0xAA inner stat list",
       "owner": "ISC12 packet 0xAA producer",
-      "status": "identified",
-      "reason": "Exact adjacent value and width instructions."
+      "status": "ready",
+      "reason": "Exact unique adjacent value/width sequence."
     },
     {
       "id": "packet-aa-estimator-id",
       "atomicGroup": "G7-packet-aa",
       "rva": "0x539EE7",
-      "signature": { "kind": "exact", "pattern": "49 83 C7 09", "unique": false },
+      "signature": { "kind": "exact", "pattern": "49 83 C7 09 48 8D 1C 40 33 C0 0F 11 04 DE", "unique": true },
       "currentValue": "+9 bits per inner ItemStatCost ID",
       "targetValue": "+12 bits per inner ItemStatCost ID",
       "role": "Estimates packet 0xAA inner stat payload size",
       "owner": "ISC12 packet 0xAA estimator",
-      "status": "identified",
-      "reason": "Must change atomically with producer/consumer widths."
+      "status": "ready",
+      "reason": "Exact unique estimator increment; publishes before the widened ItemStatCost admission bound."
     },
     {
       "id": "packet-aa-estimator-terminator",
       "atomicGroup": "G7-packet-aa",
       "rva": "0x539F78",
-      "signature": { "kind": "exact", "pattern": "49 83 C7 09", "unique": false },
+      "signature": { "kind": "exact", "pattern": "49 83 C7 09 EB 06 41 BF 13 00 00 00", "unique": true },
       "currentValue": "+9 bits per inner terminator",
       "targetValue": "+12 bits per inner terminator",
       "role": "Estimates packet 0xAA inner-list terminator size",
       "owner": "ISC12 packet 0xAA estimator",
-      "status": "identified",
-      "reason": "The separate 19-bit outer-state base remains unchanged; final preflight is below 0xF4 at 0x539FEC."
+      "status": "ready",
+      "reason": "Exact unique terminator increment. The separate 19-bit outer-state base remains unchanged."
     },
     {
       "id": "packet-aa-consumer-inner-first",
       "atomicGroup": "G7-packet-aa",
       "rva": "0x12EAD1",
-      "signature": { "kind": "exact", "pattern": "BA 09 00 00 00", "unique": false },
+      "signature": { "kind": "exact", "pattern": "BA 09 00 00 00 48 8D 4C 24 40 4D 8B E5 E8 DD CB 8E 00 8B F8 3D FF 01 00 00 0F 8D 28 01 00 00", "unique": true },
       "currentValue": "read 9 bits at 0x12EADE; compare 0x1FF at 0x12EAE5",
       "targetValue": "read 12 bits; compare 0xFFF",
       "role": "Decodes the first packet 0xAA inner ItemStatCost ID",
       "owner": "ISC12 packet 0xAA consumer",
-      "status": "identified",
-      "reason": "Scoped exact width/sentinel pair."
+      "status": "ready",
+      "reason": "Exact unique first inner-ID width/sentinel sequence."
     },
     {
       "id": "packet-aa-consumer-inner-next",
       "atomicGroup": "G7-packet-aa",
       "rva": "0x12EBF9",
-      "signature": { "kind": "exact", "pattern": "BA 09 00 00 00", "unique": false },
+      "signature": { "kind": "exact", "pattern": "BA 09 00 00 00 48 8D 4C 24 40 4C 8B E0 E8 B5 CA 8E 00 8B F8 3D FF 01 00 00 0F 8C D8 FE FF FF", "unique": true },
       "currentValue": "read 9 bits at 0x12EC06; compare 0x1FF at 0x12EC0D",
       "targetValue": "read 12 bits; compare 0xFFF",
       "role": "Decodes subsequent packet 0xAA inner ItemStatCost IDs",
       "owner": "ISC12 packet 0xAA consumer",
-      "status": "identified",
-      "reason": "Scoped exact width/sentinel pair."
+      "status": "ready",
+      "reason": "Exact unique subsequent inner-ID width/sentinel sequence."
+    },
+    {
+      "id": "packet-aa-budget-guard",
+      "atomicGroup": "G7-packet-aa",
+      "rva": "0x539FE2",
+      "signature": { "kind": "exact", "pattern": "48 83 C0 07 48 03 C1 48 03 C3 48 3D F4 00 00 00 0F 83 2A 01 00 00", "unique": true },
+      "currentValue": "estimated packet 0xAA payload must remain below 0xF4 bytes",
+      "targetValue": "unchanged",
+      "role": "Final native packet 0xAA estimator and capacity guard",
+      "owner": "D2R packet 0xAA estimator",
+      "status": "ready",
+      "reason": "Exact unique guard. Both +9 inner-ID contributions become +12 before the 0xF4 comparison, so the native estimator remains authoritative."
     },
 
     {
       "id": "packet-ac-producer-id",
       "atomicGroup": "G8-packet-ac",
       "rva": "0x47CC1C",
-      "signature": { "kind": "exact", "pattern": "41 B8 09 00 00 00", "unique": false },
+      "signature": { "kind": "exact", "pattern": "41 B8 09 00 00 00 48 8D 4C 24 30 8B D6 E8 E2 EA 59 00 0F B6 4B 09", "unique": true },
       "currentValue": "write 9-bit stat ID at 0x47CC29",
       "targetValue": "write 12-bit stat ID",
       "role": "Encodes packet 0xAC stat IDs",
-      "owner": "ISC12 packet 0xAC producer candidate",
-      "status": "blocked",
-      "reason": "Producer capacity is 0xF4 at 0x47C6BE, but no closed count bound/estimator proves +3 bits per entry safe."
+      "owner": "ISC12 packet 0xAC producer",
+      "status": "ready",
+      "reason": "Exact unique producer sequence. The separate 16-entry copy cap and 175-byte worst-case proof close capacity."
     },
     {
       "id": "packet-ac-producer-terminator",
       "atomicGroup": "G8-packet-ac",
       "rva": "0x47CCA1",
-      "signature": { "kind": "exact", "pattern": "41 B8 09 00 00 00", "unique": false },
+      "signature": { "kind": "exact", "pattern": "41 B8 09 00 00 00 4D 0F 44 C7 F7 D8 1B D2 81 E2 FF 01 00 00 E8 56 EA 59 00", "unique": true },
       "currentValue": "9-bit terminator path; sentinel mask/value at 0x47CCAF; write 0x47CCB5",
       "targetValue": "12-bit 0xFFF terminator path",
       "role": "Terminates packet 0xAC stat IDs",
-      "owner": "ISC12 packet 0xAC producer candidate",
-      "status": "blocked",
-      "reason": "Sentinel instruction bytes and headroom proof are not yet fully closed."
+      "owner": "ISC12 packet 0xAC producer",
+      "status": "ready",
+      "reason": "Exact unique width/sentinel sequence; both sentinel bytes and width publish atomically."
     },
     {
       "id": "packet-ac-consumer-first",
       "atomicGroup": "G8-packet-ac",
       "rva": "0x12F4F2",
-      "signature": { "kind": "exact", "pattern": "41 8D 54 24 09", "unique": false },
+      "signature": { "kind": "exact", "pattern": "41 8D 54 24 09 E8 C4 C1 8E 00 8B F8 3D FF 01 00 00 0F 8D 88 01 00 00", "unique": true },
       "currentValue": "after xor r12d,r12d at 0x12F4E7, compute 9 in EDX and read 9 bits at 0x12F4F7",
       "targetValue": "compute 12 in EDX and read 12 bits",
       "role": "Decodes packet 0xAC stat IDs in consumer 0x12EE70",
-      "owner": "ISC12 packet 0xAC consumer candidate",
-      "status": "blocked",
-      "reason": "The governed and live instruction is LEA EDX,[R12+9], not MOV EDX,9; R12D is exactly zero on this first-ID path. Consumer pairing is identified, but the producer budget is not closed."
+      "owner": "ISC12 packet 0xAC consumer",
+      "status": "ready",
+      "reason": "Exact unique first-ID width/sentinel sequence. R12D is exactly zero on this path, so LEA EDX,[R12+12] supplies width 12."
     },
     {
       "id": "packet-ac-consumer-next",
       "atomicGroup": "G8-packet-ac",
       "rva": "0x12F66F",
-      "signature": { "kind": "exact", "pattern": "BA 09 00 00 00", "unique": false },
+      "signature": { "kind": "exact", "pattern": "BA 09 00 00 00 48 8D 4C 24 58 E8 42 C0 8E 00 8B F8 41 BC 00 00 00 00 3D FF 01 00 00 0F 8C 7F FE FF FF", "unique": true },
       "currentValue": "read 9 bits at 0x12F679; compare 0x1FF at 0x12F686",
       "targetValue": "read 12 bits; compare 0xFFF",
       "role": "Decodes subsequent packet 0xAC stat IDs",
-      "owner": "ISC12 packet 0xAC consumer candidate",
-      "status": "blocked",
-      "reason": "Consumer pairing is identified, but the producer budget is not closed."
+      "owner": "ISC12 packet 0xAC consumer",
+      "status": "ready",
+      "reason": "Exact unique subsequent-ID width/sentinel sequence."
+    },
+    {
+      "id": "packet-ac-copy-cap",
+      "atomicGroup": "G8-packet-ac",
+      "rva": "0x47CB2E",
+      "signature": { "kind": "exact", "pattern": "41 B8 10 00 00 00 48 8D 95 C0 00 00 00 48 8B C8 E8 9D 99 E7 FF 89 44 24 24", "unique": true },
+      "currentValue": "maximum 16 copied stat entries",
+      "targetValue": "unchanged",
+      "role": "Bounds packet 0xAC stat-list cardinality",
+      "owner": "D2R packet 0xAC producer",
+      "status": "ready",
+      "reason": "Exact unique cardinality witness. It bounds the widened stat section to 973 bits including presence and terminator."
+    },
+    {
+      "id": "packet-ac-bitstream-capacity",
+      "atomicGroup": "G8-packet-ac",
+      "rva": "0x47C6BE",
+      "signature": { "kind": "exact", "pattern": "41 B8 F4 00 00 00 88 45 BB 48 8D 55 BD 48 8D 4C 24 30 E8 4B EF 59 00", "unique": true },
+      "currentValue": "0xF4-byte native bitstream buffer",
+      "targetValue": "unchanged",
+      "role": "Bounds packet 0xAC serialization storage",
+      "owner": "D2R packet 0xAC producer",
+      "status": "ready",
+      "reason": "Exact unique capacity witness. Governed maximum is 1289 bits = 162 bytes."
+    },
+    {
+      "id": "packet-ac-size-guard",
+      "atomicGroup": "G8-packet-ac",
+      "rva": "0x47CD08",
+      "signature": { "kind": "exact", "pattern": "48 8D 78 0D 48 81 FF F4 00 00 00 72 14", "unique": true },
+      "currentValue": "encoded bytes plus 13-byte header must remain below 0xF4",
+      "targetValue": "unchanged",
+      "role": "Final packet 0xAC byte-size guard",
+      "owner": "D2R packet 0xAC producer",
+      "status": "ready",
+      "reason": "Exact unique guard. Worst case is 162 encoded bytes plus 13 header bytes = 175, leaving 69 bytes below 244."
+    },
+
+    {
+      "id": "fixed-packets-1d-1f-producer-word-stat",
+      "atomicGroup": "V1-fixed-width-packet-census",
+      "rva": "0x4782C3",
+      "signature": { "kind": "exact", "pattern": "41 81 F8 FF 00 00 00 73 22 66 89 54 24 22 48 8D 54 24 20 44 88 44 24 21 41 B8 06 00 00 00 C6 44 24 20 1D 66 44 89 4C 24 24", "unique": true },
+      "currentValue": "packet family 0x1D/0x1E/0x1F writes stat identifiers as uint16 fields",
+      "targetValue": "unchanged",
+      "role": "Rules out a fixed-byte stat-ID ceiling in producers 0x1D through 0x1F",
+      "owner": "D2R fixed-width packet producer",
+      "status": "ready",
+      "reason": "Exact unique family branch. Every stat-ID field is stored with a WORD write; only the value width selects the opcode."
+    },
+    {
+      "id": "fixed-packets-1d-1f-consumer-word-stat",
+      "atomicGroup": "V1-fixed-width-packet-census",
+      "rva": "0x12B521",
+      "signature": { "kind": "exact", "pattern": "0F B7 6F 02 0F B6 77 01 44 0F B7 77 04 EB 17 0F B7 77 03 44 0F B7 77 05 EB 08 8B 77 05 44 0F B7 77 03 0F B7 6F 01 45 0F B7 CE 44 8B C6 8B D5", "unique": true },
+      "currentValue": "packet family 0x1D/0x1E/0x1F reads stat identifiers as uint16 fields",
+      "targetValue": "unchanged",
+      "role": "Pairs every fixed-width 0x1D through 0x1F producer layout with WORD consumers",
+      "owner": "D2R fixed-width packet consumer",
+      "status": "ready",
+      "reason": "Exact unique switch tail covers all three layouts and zero-extends their WORD identifier fields."
+    },
+    {
+      "id": "fixed-packets-9e-a0-producer-word-stat",
+      "atomicGroup": "V1-fixed-width-packet-census",
+      "rva": "0x47BE29",
+      "signature": { "kind": "exact", "pattern": "41 81 F9 FF 00 00 00 73 2B 66 44 89 44 24 22 41 B8 55 04 00 00 C6 44 24 20 9E E8 E8 E4 EC FF 89 44 24 24 48 8D 54 24 20 41 B8 08 00 00 00 88 5C 24 21 EB 53 66 44 89 44 24 21", "unique": true },
+      "currentValue": "packet family 0x9E/0x9F/0xA0 writes the stat identifier from R8W",
+      "targetValue": "unchanged",
+      "role": "Rules out a fixed-byte stat-ID ceiling in the first private-stat producer family",
+      "owner": "D2R fixed-width packet producer",
+      "status": "ready",
+      "reason": "Exact unique small/medium branch pair stores the identifier with WORD writes."
+    },
+    {
+      "id": "fixed-packets-a1-a2-producer-word-stat",
+      "atomicGroup": "V1-fixed-width-packet-census",
+      "rva": "0x47BF04",
+      "signature": { "kind": "exact", "pattern": "81 FB FF 00 00 00 73 2B 66 44 89 44 24 22 41 B8 89 04 00 00 C6 44 24 20 A1 E8 0E E4 EC FF 89 44 24 24 48 8D 54 24 20 41 B8 08 00 00 00 88 5C 24 21 EB 53 66 44 89 44 24 21", "unique": true },
+      "currentValue": "packet family 0xA1/0xA2 writes the stat identifier from R8W",
+      "targetValue": "unchanged",
+      "role": "Rules out a fixed-byte stat-ID ceiling in the second private-stat producer family",
+      "owner": "D2R fixed-width packet producer",
+      "status": "ready",
+      "reason": "Exact unique small/medium branch pair stores the identifier with WORD writes."
+    },
+    {
+      "id": "fixed-packet-9e-consumer-word-stat",
+      "atomicGroup": "V1-fixed-width-packet-census",
+      "rva": "0x12B0B2",
+      "signature": { "kind": "exact", "pattern": "BE 01 00 00 00 0F B7 51 02 8B 41 04 0F B6 59 01", "unique": true },
+      "currentValue": "packet 0x9E reads its stat identifier with MOVZX WORD",
+      "targetValue": "unchanged",
+      "role": "Pairs the 0x9E producer with a uint16 consumer field",
+      "owner": "D2R fixed-width packet consumer",
+      "status": "ready",
+      "reason": "Exact unique 0x9E switch branch."
+    },
+    {
+      "id": "fixed-packets-9f-a2-consumer-word-stat",
+      "atomicGroup": "V1-fixed-width-packet-census",
+      "rva": "0x12B106",
+      "signature": { "kind": "exact", "pattern": "8B 59 07 8B 41 03 0F B7 51 01 EB B0 0F B7 59 07 8B 41 03 0F B7 51 01 EB A3", "unique": true },
+      "currentValue": "packet switch branches 0x9F through 0xA2 read stat identifiers with MOVZX WORD",
+      "targetValue": "unchanged",
+      "role": "Pairs the remaining 0x9F through 0xA2 producer layouts with uint16 consumers",
+      "owner": "D2R fixed-width packet consumer",
+      "status": "ready",
+      "reason": "Exact unique switch tail covers the two remaining layouts; opcode branches share the WORD identifier reads."
+    },
+    {
+      "id": "fixed-packet-20-producer-word-stat",
+      "atomicGroup": "V1-fixed-width-packet-census",
+      "rva": "0x47E000",
+      "signature": { "kind": "exact", "pattern": "88 54 24 50 44 89 44 24 55 66 44 89 4C 24 51", "unique": true },
+      "currentValue": "13-byte packet 0x20 stores opcode byte, unit GUID dword and stat identifier word",
+      "targetValue": "unchanged",
+      "role": "Proves packet 0x20 has a native uint16 stat-ID field",
+      "owner": "D2R packet 0x20 producer",
+      "status": "ready",
+      "reason": "Exact unique layout witness: stat ID is written from R9W at packet+1."
+    },
+    {
+      "id": "fixed-packet-20-consumer-word-stat",
+      "atomicGroup": "V1-fixed-width-packet-census",
+      "rva": "0x12B5C7",
+      "signature": { "kind": "exact", "pattern": "44 0F B7 4F 03 44 8B C5 48 89 5C 24 30 48 8B C8 0F B7 5F 01", "unique": true },
+      "currentValue": "packet 0x20 reads layer at +3 and stat identifier at +1 as words",
+      "targetValue": "unchanged",
+      "role": "Pairs packet 0x20 producer and consumer layouts",
+      "owner": "D2R packet 0x20 consumer",
+      "status": "ready",
+      "reason": "Exact unique consumer witness; MOVZX WORD at packet+1 preserves all ISC12 IDs."
+    },
+    {
+      "id": "mercenary-private-update-word-stat",
+      "atomicGroup": "V1-fixed-width-packet-census",
+      "rva": "0x53A9FA",
+      "signature": { "kind": "exact", "pattern": "44 0F B7 43 14 49 8B CC E8 F9 13 F4 FF", "unique": true },
+      "currentValue": "mercenary/private update dispatcher loads the queued stat identifier as uint16 before packet 0x9E",
+      "targetValue": "unchanged",
+      "role": "Closes the upstream fixed-byte suspicion for mercenary/private stat updates",
+      "owner": "D2R mercenary/private update dispatcher",
+      "status": "ready",
+      "reason": "Exact unique dispatcher witness. The sibling 0xA2 branch repeats MOVZX WORD at 0x53AA19; no byte-width stat boundary remains before the governed fixed-width producers."
     },
 
     {
@@ -2573,12 +2778,7 @@
     }
   ],
   "openGates": [
-    "G0: a borrowed same-thread NativePublicationLeaseView now guards the loader tail/count transaction before its first write and after every attempt inside the initial D2RLoaderLoadPlugin callback. The production startup caller is present; runtime qualification must cover the non-aligned seam, register restoration, vector-resize failures and 4095-row behavior. Any ambiguous post-write result poisons readiness and terminates the process. G0-BBE governs ten proof-only native sites and is closed for native membership: the shared resolver stores the ItemStatCost ordinal as a dword, the generic compiler selects token 5 plus a 16-bit payload for every ISC12 ID 512..4094, the evaluator preserves it, and a governed read-only D2R 3.3.93847 capture proves that slot 5 is the protected literal stat and record 5 of the nine-record callback table points to the full-width callback 0x3B33F0. Runtime expression fixtures remain deferred until the isolated cold-start gate. The official eezstreet items.playerConditionCalc feature remains orthogonal.",
-    "G1-G4: G1 governs the exact unique 50-byte serializer site [0x37F174,0x37F1A6), with mutations confined to [0x37F17C,0x37F1A1) and the native writer call unchanged. Publication must also match the complete-item owner/frame and sole caller, 511-DWORD table memset, adjacent 511-record snapshot setup and bounded-copy body, direct uint16 stat-ID extraction/row guard, and all eight fixed low-ID compound-partner writes. This closes the static ID-511 OOB cause while preserving native compound suppression; unconditional zero-testing is forbidden. G1 still requires the interior reader CALL to resolve exactly to BITSTREAM_ReadBitsThunk 0xA1B6C0, while G2/G3/G4 guards, exhaustive callers and whole-input preflights remain prepared. The one-shot production caller now preflights G0/G10/codec, reserves process lifetime, commits G0 then G10 then codec in G9/G2/G4/G1/G3 order, publishes readiness inside the same startup window and checks every postcondition. Source/build tests pass; runtime publication remains NOT RUN.",
-    "G5-G7: replace every remaining instruction-scoped non-unique signature with a longer unique fingerprint before runtime mutation.",
-    "G8: close packet 0xAC cardinality, estimator and 0xF4-byte headroom.",
-    "G9-A: Vincent selected autonomous native-only transport on 30 August 2026. The four-site source implementation belongs to the production startup plan: five-byte rel32 JMPs at 0x479CD0/0x479EA0 wrap the exact producer ABIs, registered trampolines replay the four stolen pushes and continue at +5, and rel32 CALL relays at 0x479E10/0x47A001 synchronously copy each actual stack packet into a bounded TLS transaction without invoking the real queue. The former long sequence witnesses are split into exact unique 139-byte prefixes and 14/19-byte walker continuations disjoint from the mutable CALLs; independent 30-byte code witnesses at 0x479E23 and 0x47A019 cover cookie/check/deallocation/pops/RET without claiming live unwind metadata. Root success detaches an immutable batch and flushes it in native depth-first order through untouched 0x4817F0; rejection, capacity failure or invariant failure must issue zero real queue calls. Static evidence proves 244/239-byte payload ceilings, immediate occupied<=7 and occupied<=capacity, list/compound cardinalities and no native global node/depth bound. Runtime remains NOT RUN: live RtlLookupFunctionEntry compatibility, registered trampoline unwind, SEH cleanup, nested/reentrant TLS banks, captured-byte validation, live-tree stability, delayed queue effects/backpressure and every rejected topology remain qualification gates.",
-    "G10-B activation: the P3b envelope, native adapters, exact relays and atomic save transaction are code-complete and included in the sole production startup plan; reader/writer publication and save round-trip remain NOT RUN.",
-    "Runtime: no cold-start, save round-trip, stash, reconnect, multiplayer or packet-fuzz validation has been performed."
+    "Multiplayer: run a real two-client matching host/joiner session with the same exact ISC12 DLL, TOML, mod data and environment fingerprint, exercise the widened G5-G8 packet paths, reconnect and save/reload, then repeat both asymmetric mismatches (ISC12 host with vanilla/absent joiner and vanilla/absent host with ISC12 joiner) and require fail-closed rejection before shared state can diverge.",
+    "Release: source/static proof, mod-local and global cold starts, persistence, stash and G9 transport are closed for the 451072-byte candidate SHA-256 6089619DE3B01FD474669096A8AEC8A470559FAD993DCB939AC976709A7D2D52. Do not claim complete network compatibility or publish a public release until the external multiplayer matrix passes."
   ]
 }

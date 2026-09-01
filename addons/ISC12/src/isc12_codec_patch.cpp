@@ -164,6 +164,192 @@ inline constexpr std::array Packet9DEntryRelayJumpMutations{
     CodecByteMutation{4, 0x57, 0x00,
         CodecByteMutation::ReplacementSource::Packet9DEntryRelayRel32, 3},
 };
+inline constexpr std::array Packet3EProducerBoundMutations{
+    CodecByteMutation{4, 0x01, 0x0F},
+};
+inline constexpr std::array Packet3EProducerWidthMutations{
+    CodecByteMutation{2, 0x09, 0x0C},
+};
+inline constexpr std::array Packet3EConsumerWidthMutations{
+    CodecByteMutation{1, 0x09, 0x0C},
+};
+inline constexpr std::array PacketA8ProducerIdMutations{
+    CodecByteMutation{2, 0x09, 0x0C},
+};
+inline constexpr std::array PacketA8ProducerTerminatorMutations{
+    CodecByteMutation{2, 0x01, 0x0F},
+    CodecByteMutation{12, 0x09, 0x0C},
+};
+inline constexpr std::array PacketA8ConsumerFirstWidthMutations{
+    CodecByteMutation{3, 0x09, 0x0C},
+};
+inline constexpr std::array PacketA8ConsumerFirstSentinelMutations{
+    CodecByteMutation{3, 0x01, 0x0F},
+};
+inline constexpr std::array PacketA8ConsumerNextMutations{
+    CodecByteMutation{1, 0x09, 0x0C},
+    CodecByteMutation{22, 0x01, 0x0F},
+};
+inline constexpr std::array PacketAACountCapMutations{
+    CodecByteMutation{3, 0x01, 0x0F},
+};
+inline constexpr std::array PacketAAEstimatorIdMutations{
+    CodecByteMutation{3, 0x09, 0x0C},
+};
+inline constexpr std::array PacketAAEstimatorTerminatorMutations{
+    CodecByteMutation{3, 0x09, 0x0C},
+};
+inline constexpr std::array PacketAAProducerIdMutations{
+    CodecByteMutation{2, 0x09, 0x0C},
+};
+inline constexpr std::array PacketAAProducerTerminatorMutations{
+    CodecByteMutation{2, 0x01, 0x0F},
+    CodecByteMutation{7, 0x09, 0x0C},
+};
+inline constexpr std::array PacketAAConsumerFirstMutations{
+    CodecByteMutation{1, 0x09, 0x0C},
+    CodecByteMutation{22, 0x01, 0x0F},
+};
+inline constexpr std::array PacketAAConsumerNextMutations{
+    CodecByteMutation{1, 0x09, 0x0C},
+    CodecByteMutation{22, 0x01, 0x0F},
+};
+inline constexpr std::array PacketACProducerIdMutations{
+    CodecByteMutation{2, 0x09, 0x0C},
+};
+inline constexpr std::array PacketACProducerTerminatorMutations{
+    CodecByteMutation{2, 0x09, 0x0C},
+    CodecByteMutation{17, 0x01, 0x0F},
+};
+inline constexpr std::array PacketACConsumerFirstMutations{
+    CodecByteMutation{4, 0x09, 0x0C},
+    CodecByteMutation{14, 0x01, 0x0F},
+};
+inline constexpr std::array PacketACConsumerNextMutations{
+    CodecByteMutation{1, 0x09, 0x0C},
+    CodecByteMutation{25, 0x01, 0x0F},
+};
+
+inline constexpr std::array G5Sites{
+    // Consumer first, then producer width, then the producer admission bound.
+    CodecPatchSite{
+        NativePattern{"packet.g5-3e-consumer-width", 0x12C955,
+            Packet3EConsumerWidthBytes, Packet3EConsumerWidthMask},
+        Packet3EConsumerWidthMutations},
+    CodecPatchSite{
+        NativePattern{"packet.g5-3e-producer-width", 0x47A237,
+            Packet3EProducerWidthBytes, Packet3EProducerWidthMask},
+        Packet3EProducerWidthMutations},
+    CodecPatchSite{
+        NativePattern{"packet.g5-3e-producer-bound", 0x47A21F,
+            Packet3EProducerBoundBytes, Packet3EProducerBoundMask},
+        Packet3EProducerBoundMutations},
+};
+inline constexpr std::array G5Witnesses{
+    NativePattern{"packet.g5-3e-budget", 0x47A2A9,
+        Packet3EBudgetBytes, Packet3EBudgetMask},
+};
+
+inline constexpr std::array G6Sites{
+    CodecPatchSite{
+        NativePattern{"packet.g6-a8-consumer-first-width", 0x12E7DA,
+            PacketA8ConsumerFirstWidthBytes,
+            PacketA8ConsumerFirstWidthMask},
+        PacketA8ConsumerFirstWidthMutations},
+    CodecPatchSite{
+        NativePattern{"packet.g6-a8-consumer-first-sentinel", 0x12E823,
+            PacketA8ConsumerFirstSentinelBytes,
+            PacketA8ConsumerFirstSentinelMask},
+        PacketA8ConsumerFirstSentinelMutations},
+    CodecPatchSite{
+        NativePattern{"packet.g6-a8-consumer-next", 0x12E939,
+            PacketA8ConsumerNextBytes, PacketA8ConsumerNextMask},
+        PacketA8ConsumerNextMutations},
+    CodecPatchSite{
+        NativePattern{"packet.g6-a8-producer-id", 0x53A615,
+            PacketA8ProducerIdBytes, PacketA8ProducerIdMask},
+        PacketA8ProducerIdMutations},
+    CodecPatchSite{
+        NativePattern{"packet.g6-a8-producer-terminator", 0x53A68A,
+            PacketA8ProducerTerminatorBytes,
+            PacketA8ProducerTerminatorMask},
+        PacketA8ProducerTerminatorMutations},
+};
+inline constexpr std::array G6Witnesses{
+    NativePattern{"packet.g6-a8-copy-cap", 0x53A4CE,
+        PacketA8CopyCapBytes, PacketA8CopyCapMask},
+    NativePattern{"packet.g6-a8-bitstream-capacity", 0x53A4EE,
+        PacketA8BitstreamCapacityBytes, PacketA8BitstreamCapacityMask},
+    NativePattern{"packet.g6-a8-size-guard", 0x53A6A9,
+        PacketA8PacketSizeGuardBytes, PacketA8PacketSizeGuardMask},
+};
+
+inline constexpr std::array G7Sites{
+    CodecPatchSite{
+        NativePattern{"packet.g7-aa-consumer-first", 0x12EAD1,
+            PacketAAConsumerFirstBytes, PacketAAConsumerFirstMask},
+        PacketAAConsumerFirstMutations},
+    CodecPatchSite{
+        NativePattern{"packet.g7-aa-consumer-next", 0x12EBF9,
+            PacketAAConsumerNextBytes, PacketAAConsumerNextMask},
+        PacketAAConsumerNextMutations},
+    CodecPatchSite{
+        NativePattern{"packet.g7-aa-estimator-id", 0x539EE7,
+            PacketAAEstimatorIdBytes, PacketAAEstimatorIdMask},
+        PacketAAEstimatorIdMutations},
+    CodecPatchSite{
+        NativePattern{"packet.g7-aa-estimator-terminator", 0x539F78,
+            PacketAAEstimatorTerminatorBytes,
+            PacketAAEstimatorTerminatorMask},
+        PacketAAEstimatorTerminatorMutations},
+    CodecPatchSite{
+        NativePattern{"packet.g7-aa-producer-id", 0x53A057,
+            PacketAAProducerIdBytes, PacketAAProducerIdMask},
+        PacketAAProducerIdMutations},
+    CodecPatchSite{
+        NativePattern{"packet.g7-aa-producer-terminator", 0x53A09E,
+            PacketAAProducerTerminatorBytes,
+            PacketAAProducerTerminatorMask},
+        PacketAAProducerTerminatorMutations},
+    // The widened ItemStatCost domain becomes reachable only after every
+    // estimator, consumer and producer width above is published.
+    CodecPatchSite{
+        NativePattern{"packet.g7-aa-count-cap", 0x53994B,
+            PacketAACountCapBytes, PacketAACountCapMask},
+        PacketAACountCapMutations},
+};
+inline constexpr std::array G7Witnesses{
+    NativePattern{"packet.g7-aa-budget-guard", 0x539FE2,
+        PacketAABudgetGuardBytes, PacketAABudgetGuardMask},
+};
+
+inline constexpr std::array G8Sites{
+    CodecPatchSite{
+        NativePattern{"packet.g8-ac-consumer-first", 0x12F4F2,
+            PacketACConsumerFirstBytes, PacketACConsumerFirstMask},
+        PacketACConsumerFirstMutations},
+    CodecPatchSite{
+        NativePattern{"packet.g8-ac-consumer-next", 0x12F66F,
+            PacketACConsumerNextBytes, PacketACConsumerNextMask},
+        PacketACConsumerNextMutations},
+    CodecPatchSite{
+        NativePattern{"packet.g8-ac-producer-id", 0x47CC1C,
+            PacketACProducerIdBytes, PacketACProducerIdMask},
+        PacketACProducerIdMutations},
+    CodecPatchSite{
+        NativePattern{"packet.g8-ac-producer-terminator", 0x47CCA1,
+            PacketACProducerTerminatorBytes,
+            PacketACProducerTerminatorMask},
+        PacketACProducerTerminatorMutations},
+};
+inline constexpr std::array G8Witnesses{
+    NativePattern{"packet.g8-ac-copy-cap", 0x47CB2E,
+        PacketACCopyCapBytes, PacketACCopyCapMask},
+    NativePattern{"packet.g8-ac-bitstream-capacity", 0x47C6BE,
+        PacketACBitstreamCapacityBytes, PacketACBitstreamCapacityMask},
+    NativePattern{"packet.g8-ac-size-guard", 0x47CD08,
+        PacketACPacketSizeGuardBytes, PacketACPacketSizeGuardMask},
+};
 
 inline constexpr std::array G9Sites{
     // The two queue calls suppress native dispatch before either producer
@@ -507,6 +693,26 @@ inline constexpr std::array CodecGroups{
         "G9-full-item-transport",
         G9Sites,
         G9Witnesses},
+    CodecPatchGroup{
+        CodecPatchGroupId::Packet3E,
+        "G5-packet-3e",
+        G5Sites,
+        G5Witnesses},
+    CodecPatchGroup{
+        CodecPatchGroupId::PacketA8,
+        "G6-packet-a8",
+        G6Sites,
+        G6Witnesses},
+    CodecPatchGroup{
+        CodecPatchGroupId::PacketAA,
+        "G7-packet-aa",
+        G7Sites,
+        G7Witnesses},
+    CodecPatchGroup{
+        CodecPatchGroupId::PacketAC,
+        "G8-packet-ac",
+        G8Sites,
+        G8Witnesses},
     CodecPatchGroup{
         CodecPatchGroupId::AuxiliaryPlayer,
         "G2-aux-player-codec",
@@ -1254,15 +1460,36 @@ static_assert(
         + Packet9DQueueRelayCallMutations.size()
         + Packet9CEntryRelayJumpMutations.size()
         + Packet9DEntryRelayJumpMutations.size()
+        + Packet3EConsumerWidthMutations.size()
+        + Packet3EProducerWidthMutations.size()
+        + Packet3EProducerBoundMutations.size()
+        + PacketA8ConsumerFirstWidthMutations.size()
+        + PacketA8ConsumerFirstSentinelMutations.size()
+        + PacketA8ConsumerNextMutations.size()
+        + PacketA8ProducerIdMutations.size()
+        + PacketA8ProducerTerminatorMutations.size()
+        + PacketAAConsumerFirstMutations.size()
+        + PacketAAConsumerNextMutations.size()
+        + PacketAAEstimatorIdMutations.size()
+        + PacketAAEstimatorTerminatorMutations.size()
+        + PacketAAProducerIdMutations.size()
+        + PacketAAProducerTerminatorMutations.size()
+        + PacketAACountCapMutations.size()
+        + PacketACConsumerFirstMutations.size()
+        + PacketACConsumerNextMutations.size()
+        + PacketACProducerIdMutations.size()
+        + PacketACProducerTerminatorMutations.size()
     == PreparedCodecMutationCount);
 static_assert(
     G9Sites.size() + G1Sites.size() + G2Sites.size() + G3Sites.size()
-        + G4Sites.size()
+        + G4Sites.size() + G5Sites.size() + G6Sites.size()
+        + G7Sites.size() + G8Sites.size()
     == PreparedCodecMutableSiteCount);
 static_assert(
     G9Witnesses.size() + G1Witnesses.size() + G2Witnesses.size()
         + G3Witnesses.size()
-        + G4Witnesses.size()
+        + G4Witnesses.size() + G5Witnesses.size() + G6Witnesses.size()
+        + G7Witnesses.size() + G8Witnesses.size()
     == PreparedCodecWitnessCount);
 
 } // namespace ruffneckk::isc12

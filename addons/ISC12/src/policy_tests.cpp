@@ -145,9 +145,12 @@ struct CodecPatchFixture {
     std::size_t flushCalls{};
     std::size_t failWriteAttempt{(std::numeric_limits<std::size_t>::max)()};
     std::size_t failFlushAttempt{(std::numeric_limits<std::size_t>::max)()};
-    std::array<std::size_t, 32> writesAtFlush{};
-    std::array<std::uintptr_t, 32> flushFirstRvas{};
-    std::array<std::size_t, 32> flushSizes{};
+    std::array<std::size_t,
+        ruffneckk::isc12::PreparedCodecMutableSiteCount> writesAtFlush{};
+    std::array<std::uintptr_t,
+        ruffneckk::isc12::PreparedCodecMutableSiteCount> flushFirstRvas{};
+    std::array<std::size_t,
+        ruffneckk::isc12::PreparedCodecMutableSiteCount> flushSizes{};
 };
 
 struct CodecQuiescenceFixture {
@@ -1707,10 +1710,14 @@ int main() {
     static_assert(CanonicalSchemaDescriptorVersion == 1);
     static_assert(MaximumSerializedCsvBits == 32);
     static_assert(MaximumSerializedCsvParamBits == 16);
-    static_assert(PreparedCodecMutableSiteCount == 24);
-    static_assert(PreparedCodecMutationCount == 102);
-    static_assert(PreparedCodecWitnessCount == 77);
+    static_assert(PreparedCodecMutableSiteCount == 43);
+    static_assert(PreparedCodecMutationCount == 129);
+    static_assert(PreparedCodecWitnessCount == 85);
     static_assert(MaximumPlayerStatSectionBytes == 3844);
+    static_assert(PacketACMaximumBitstreamBits == 1289);
+    static_assert(PacketACMaximumBitstreamBytes == 162);
+    static_assert(PacketACMaximumPacketBytes == 175);
+    static_assert(PacketACPacketHeadroomBytes == 69);
 
     constexpr auto packet9CBudget =
         FullItemPacketBudgetFor(FullItemPacketKind::ItemAction9C);
@@ -2300,7 +2307,8 @@ int main() {
     RunFullItemPacketStagingTests();
 
     const auto codecGroups = PreparedCodecPatchGroups();
-    CHECK(codecGroups.size() == 5);
+    CHECK(codecGroups.size() == 9);
+    constexpr std::size_t G1GroupIndex = 7;
     std::size_t observedCodecMutationCount{};
     std::size_t observedCodecSiteCount{};
     for (const auto& group : codecGroups) {
@@ -2319,18 +2327,30 @@ int main() {
     CHECK(codecGroups[0].sites[1].pattern.rva == 0x47A001);
     CHECK(codecGroups[0].sites[2].pattern.rva == 0x479CD0);
     CHECK(codecGroups[0].sites[3].pattern.rva == 0x479EA0);
-    CHECK(codecGroups[3].id == CodecPatchGroupId::GenericItem);
-    CHECK(codecGroups[3].sites.size() == 4);
+    CHECK(codecGroups[1].id == CodecPatchGroupId::Packet3E);
+    CHECK(codecGroups[1].sites.size() == 3);
+    CHECK(codecGroups[1].witnesses.size() == 1);
+    CHECK(codecGroups[2].id == CodecPatchGroupId::PacketA8);
+    CHECK(codecGroups[2].sites.size() == 5);
+    CHECK(codecGroups[2].witnesses.size() == 3);
+    CHECK(codecGroups[3].id == CodecPatchGroupId::PacketAA);
+    CHECK(codecGroups[3].sites.size() == 7);
+    CHECK(codecGroups[3].witnesses.size() == 1);
+    CHECK(codecGroups[4].id == CodecPatchGroupId::PacketAC);
+    CHECK(codecGroups[4].sites.size() == 4);
+    CHECK(codecGroups[4].witnesses.size() == 3);
+    CHECK(codecGroups[G1GroupIndex].id == CodecPatchGroupId::GenericItem);
+    CHECK(codecGroups[G1GroupIndex].sites.size() == 4);
     std::size_t observedG1Mutations{};
-    for (const auto& site : codecGroups[3].sites) {
+    for (const auto& site : codecGroups[G1GroupIndex].sites) {
         observedG1Mutations += site.mutations.size();
     }
     CHECK(observedG1Mutations == 44);
-    CHECK(codecGroups[3].sites[0].pattern.rva == 0x37F174);
-    CHECK(codecGroups[3].sites[1].pattern.rva == 0x37AB2B);
-    CHECK(codecGroups[3].sites[2].pattern.rva == 0x37B7D4);
-    CHECK(codecGroups[3].sites[3].pattern.rva == 0x37F983);
-    const auto& boundedWriterSite = codecGroups[3].sites[0];
+    CHECK(codecGroups[G1GroupIndex].sites[0].pattern.rva == 0x37F174);
+    CHECK(codecGroups[G1GroupIndex].sites[1].pattern.rva == 0x37AB2B);
+    CHECK(codecGroups[G1GroupIndex].sites[2].pattern.rva == 0x37B7D4);
+    CHECK(codecGroups[G1GroupIndex].sites[3].pattern.rva == 0x37F983);
+    const auto& boundedWriterSite = codecGroups[G1GroupIndex].sites[0];
     CHECK(boundedWriterSite.pattern.bytes.size() == 50);
     CHECK(boundedWriterSite.mutations.size() == 37);
     for (std::size_t index{};
@@ -2374,7 +2394,7 @@ int main() {
         CodecPatchGroupId::GenericItem,
         "duplicate-bounded-writer",
         duplicateBoundedSites,
-        codecGroups[3].witnesses.first(1),
+        codecGroups[G1GroupIndex].witnesses.first(1),
     };
     CHECK(ValidateCodecPatchGroup(duplicateBoundedGroup)
         == CodecPatchPlanError::DuplicateMutation);
@@ -2403,12 +2423,13 @@ int main() {
         0x37F295, 0x37F36D, 0x37F445, 0x37F51D, 0x37F685,
         0x37F754, 0x37F832, 0x37F901,
     });
-    CHECK(codecGroups[3].witnesses.size()
+    CHECK(codecGroups[G1GroupIndex].witnesses.size()
         == expectedG1WitnessRvas.size());
     for (std::size_t index{}; index < expectedG1WitnessRvas.size(); ++index) {
-        CHECK(codecGroups[3].witnesses[index].rva
+        CHECK(codecGroups[G1GroupIndex].witnesses[index].rva
             == expectedG1WitnessRvas[index]);
-        for (const auto mask : codecGroups[3].witnesses[index].mask) {
+        for (const auto mask :
+                codecGroups[G1GroupIndex].witnesses[index].mask) {
             CHECK(mask == 0xFF);
         }
     }
@@ -2713,12 +2734,15 @@ int main() {
     CHECK(CodecFixtureHasRel32(
         codecSetFixture, 0x479EA0, 1, Packet9DEntryRelayRva));
 
-    const auto g1FirstFlush = codecGroups[0].sites.size()
-        + codecGroups[1].sites.size() + codecGroups[2].sites.size();
+    std::size_t g1FirstFlush{};
+    for (std::size_t index{}; index < G1GroupIndex; ++index) {
+        g1FirstFlush += codecGroups[index].sites.size();
+    }
     CHECK(codecSetFixture.flushFirstRvas[g1FirstFlush] == 0x37F17C);
     CHECK(codecSetFixture.flushSizes[g1FirstFlush] == 37);
 
-    const auto& g1NextPattern = codecGroups[3].sites[2].pattern;
+    const auto& g1NextPattern =
+        codecGroups[G1GroupIndex].sites[2].pattern;
     for (std::size_t index{}; index < g1NextPattern.mask.size(); ++index) {
         CHECK(g1NextPattern.mask[index] == 0xFF);
     }
@@ -2768,7 +2792,8 @@ int main() {
     for (std::size_t index{}; index < 14U; ++index) {
         auto corruptG1SafetyWitnessFixture =
             MakeCodecPatchSetFixture(codecGroups);
-        const auto witnessRva = codecGroups[3].witnesses[index].rva;
+        const auto witnessRva =
+            codecGroups[G1GroupIndex].witnesses[index].rva;
         auto corruptG1SafetyWitness = FindCodecFixtureSite(
             corruptG1SafetyWitnessFixture, witnessRva);
         CHECK(corruptG1SafetyWitness != nullptr);

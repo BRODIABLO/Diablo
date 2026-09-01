@@ -155,12 +155,20 @@ the live PDATA/XDATA contract and published all four G9 sites. The final
 qualification executes real 0x9C/0x9D roots, descendants and bounded failure
 cases.
 
-The specialized network groups are a separate open gate. Packet `0x3E` (G5),
-`0xA8` (G6) and `0xAA` (G7) are present only in the reverse-engineering ledger;
-`0xAC` (G8) is still blocked on cardinality, estimator and headroom proof. ISC12
-has not implemented any fixed-byte `uint8 statId` to `uint16` packet expansion.
-Therefore this build does not claim complete network coverage for IDs above the
-vanilla range even if the initial `0x9C`/`0x9D` tests pass.
+The specialized network groups are now part of the same fail-closed publication
+transaction. G5 widens packet `0x3E`; G6 widens `0xA8`; G7 widens only the inner
+ItemStatCost fields and estimator of `0xAA`, leaving outer State IDs unchanged;
+and G8 widens `0xAC`. Every producer, consumer, sentinel, estimator and admission
+window has an exact unique signature. Packet `0xAC` admits at most 16 copied stat
+entries: its governed 12-bit worst case is 1,289 bits = 162 bytes, or 175 bytes
+with the 13-byte header, leaving 69 bytes below the native 244-byte guard.
+
+The remaining fixed-width packet census requires no expansion. Families
+`0x1D..0x1F`, `0x9E..0xA2` and packet `0x20` already store and read stat IDs as
+native WORD fields; the mercenary/private dispatcher also zero-extends its
+queued stat field from WORD before dispatch. These verification-only sites are
+exact, unique and unchanged. Complete multiplayer coverage still requires a
+real matching host/joiner and mismatch-rejection matrix.
 
 For provenance only, the earlier Extended Item Transport prototype belongs to
 RuffnecKk ExtendedItemStats and was exercised in an experimental RuffDood fork
@@ -210,7 +218,7 @@ The one-shot coordinator is connected to real local G0, G10 and codec adapters
 and has exactly one production caller in `D2RLoaderLoadPlugin`. Their immutable
 plans are all preflighted under the same borrowed view before reservation or
 write. The coordinator then reserves process lifetime once, commits G0, G10
-and codec, and keeps codec order G9/G2/G4/G1/G3. It then stops in
+and codec, and keeps codec order G9/G5/G6/G7/G8/G2/G4/G1/G3. It then stops in
 `CommittedPendingReadiness` with all private readiness flags false. While the
 same initial-load window remains active, a separate no-write step publishes
 readiness exactly once and a postcondition check requires every G0/G10/codec
@@ -252,10 +260,23 @@ three-node tree was captured again. The same DLL/config pair also passed a
 complete-stack global cold start, D2S/D2I reads, gameplay and real G9 tree,
 then a final mod-local cold start. Both scopes kept 36 plugins loaded, the five
 eezstreet plugins and 17 memory patches; the two known unrelated failures
-remained unchanged. Multiplayer host/joiner and mismatch rejection, G5-G8 and
-the fixed-byte stat-ID packet census remain separate open gates. The queue ABI
-is `void`, so validation guarantees zero calls before flush but cannot roll
-back a queue failure after a successful flush has begun.
+remained unchanged. The queue ABI is `void`, so validation guarantees zero
+calls before flush but cannot roll back a queue failure after a successful
+flush has begun.
+
+The current G5-G8 candidate is byte-identical across two Release `/W4 /WX`
+builds: 451,072 bytes, SHA-256
+`6089619DE3B01FD474669096A8AEC8A470559FAD993DCB939AC976709A7D2D52`.
+CTest passes `5/5`; all 27 new mutation/capacity windows match exactly once in
+the governed native corpus; and the ledger is `VALID` at 228 sites / 15 required
+groups. Full-stack mod-local and global cold starts on D2R 3.3.93847 and
+D2RLoader 1.2 published 43 codec sites and 129 mutations, loaded 36 plugins
+including all five eezstreet DLLs, applied 17 patches, compiled 190 TXT tables,
+selected the authoritative 400-row schema and reached `D2R startup complete`.
+Only the two known unrelated Stash Search and Revive Overhaul failures remained.
+The exact DLL/TOML pair was restored mod-local with no global duplicate and the
+game stopped. This closes source/static publication and both hybrid cold-start
+scopes for G5-G8; it does not replace the external two-client multiplayer matrix.
 
 ## Planned release installation contract
 

@@ -119,13 +119,17 @@ The production-callable startup transaction contains these current domains:
 2. G10 persistence reader and writer;
 3. G9 full-item transport: queue `0x9C`, queue `0x9D`, producer entry `0x9C`,
    then producer entry `0x9D`;
-4. G1 generic item reader, writer and sentinels;
-5. G2–G4 player/save reader-writer pairs and preview readers.
+4. G5 packet `0x3E`, G6 packet `0xA8`, G7 inner packet `0xAA` stat lists and
+   estimator, then G8 packet `0xAC`;
+5. G1 generic item reader, writer and sentinels;
+6. G2–G4 player/save reader-writer pairs and preview readers.
 
-The specialized network groups are not in the compiled patch plan. Packet
-`0x3E` (G5), `0xA8` (G6) and `0xAA` (G7) remain ledger-only; packet `0xAC` (G8)
-remains blocked. Quantity and outer State-ID fields remain 9-bit exclusions.
-No fixed-byte `uint8 statId` to `uint16` packet expansion has been implemented.
+The specialized network groups are in the compiled canonical plan. Quantity
+and outer State-ID fields remain intentional 9-bit exclusions. The exhaustive
+fixed-width census proves packet families `0x1D..0x1F`, `0x9E..0xA2` and `0x20`
+already use uint16 stat-ID fields on both sides; no byte-to-word layout change is
+needed. Packet `0xAC` is bounded to 16 copied entries and a worst-case 175-byte
+packet, leaving 69 bytes below its unchanged 0xF4 guard.
 ISC12 claims no decoder, serializer, dispatcher or native queue-entry mutation:
 `0x4817F0` remains unchanged as a governed witness and the replay target.
 
@@ -408,8 +412,20 @@ walker contract is exact: every child 0x9D producer receives
 gamble zero. Real 0x9C/0x9D transactions include a three-node socketed tree
 with three captures and three queue calls. The startup self-test proves an
 accepted 3/3 tree, overflow rejection with zero callback and flush reentry
-contained after one callback in `Fatal`. G5-G8, the fixed-byte packet census
-and multiplayer remain separate network-completeness gates.
+contained after one callback in `Fatal`. G5-G8 and the fixed-width packet census
+are now governed and published; matching host/joiner plus mismatch rejection is
+the remaining network-completeness gate.
+
+The G5-G8 publication candidate is reproducible at 451,072 bytes and SHA-256
+`6089619DE3B01FD474669096A8AEC8A470559FAD993DCB939AC976709A7D2D52`.
+Release `/W4 /WX`, CTest `5/5`, 27/27 exact unique native windows and the
+`VALID` 228-site / 15-group ledger pass. On D2R 3.3.93847 / D2RLoader 1.2, the
+full stack published 43 mutable codec sites and 129 mutations in both mod-local
+and global scopes, loaded 36 plugins including all five eezstreet DLLs, applied
+17 patches and reached `D2R startup complete` in each scope; only the two
+pre-existing unrelated plugin failures remained. The pair was restored
+mod-local without a global duplicate. This attests startup publication, not
+two-client packet behavior.
 
 For historical provenance only, the six entry hooks previously audited belong
 to the RuffnecKk ExtendedItemStats prototype and an experimental RuffDood fork

@@ -248,6 +248,33 @@ inline constexpr std::size_t NativeItemPacketLimitBytes = 0xFC;
 inline constexpr std::size_t Packet9CHeaderBytes = 8;
 inline constexpr std::size_t Packet9DHeaderBytes = 13;
 
+// Packet 0xAC serializes one bounded item-stat list into a 0xF4-byte native
+// bit buffer before the 13-byte packet header is accounted for. The current
+// native producer admits at most 16 copied ItemStatCost records. Widening each
+// stat-ID token from 9 to 12 bits therefore remains below both native guards,
+// even when every optional field uses its largest governed width.
+inline constexpr std::size_t PacketACNativeCapacityBytes = 0xF4;
+inline constexpr std::size_t PacketACHeaderBytes = 13;
+inline constexpr std::size_t PacketACMaximumAnimationBits = 4;
+inline constexpr std::size_t PacketACMaximumComponentBits = 1 + (16 * 8);
+inline constexpr std::size_t PacketACMaximumUniqueMercenaryBits =
+    1 + 5 + 16 + (9 * 8) + 8 + 16 + 1 + 32;
+inline constexpr std::size_t PacketACMaximumOwnerBits = 1 + 31;
+inline constexpr std::size_t PacketACMaximumStatBits =
+    1 + (16 * (12 + 16 + 32)) + 12;
+inline constexpr std::size_t PacketACMaximumBitstreamBits =
+    PacketACMaximumAnimationBits
+    + PacketACMaximumComponentBits
+    + PacketACMaximumUniqueMercenaryBits
+    + PacketACMaximumOwnerBits
+    + PacketACMaximumStatBits;
+inline constexpr std::size_t PacketACMaximumBitstreamBytes =
+    (PacketACMaximumBitstreamBits + 7) / 8;
+inline constexpr std::size_t PacketACMaximumPacketBytes =
+    PacketACHeaderBytes + PacketACMaximumBitstreamBytes;
+inline constexpr std::size_t PacketACPacketHeadroomBytes =
+    PacketACNativeCapacityBytes - PacketACMaximumPacketBytes;
+
 [[nodiscard]] constexpr auto FullItemPacketBudgetFor(
         FullItemPacketKind kind) noexcept -> FullItemPacketBudget {
     std::size_t header{};
@@ -348,6 +375,11 @@ static_assert(
 static_assert(
     FullItemPacketBudgetFor(FullItemPacketKind::ItemAction9D)
         .payloadCapacityBytes == 239);
+static_assert(PacketACMaximumBitstreamBits == 1289);
+static_assert(PacketACMaximumBitstreamBytes == 162);
+static_assert(PacketACMaximumPacketBytes == 175);
+static_assert(PacketACPacketHeadroomBytes == 69);
+static_assert(PacketACMaximumPacketBytes < PacketACNativeCapacityBytes);
 static_assert(
     MaximumStagedItemPacketCount * MaximumStagedItemPacketBytes
         <= MaximumStagedItemTransactionBytes);

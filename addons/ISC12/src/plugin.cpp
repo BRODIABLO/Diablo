@@ -861,7 +861,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     context->LogInfo(message);
     if (Settings.diagnostics) {
         context->LogInfo(
-            "ISC12 diagnostics: G0/G10/G9/G1-G4 are active; specialized stat packets G5-G8 remain outside this publication.");
+            "ISC12 diagnostics: G0/G10 and codec groups G1-G9 are active; multiplayer host/joiner qualification remains external.");
     }
     return true;
 }
