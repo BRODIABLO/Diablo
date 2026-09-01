@@ -4378,7 +4378,7 @@ enabled = false
     CHECK(pluginText.find("GetCurrentProcessId()") != std::string::npos);
     CHECK(pluginText.find("RuffnecKk.ISC12.%lu") != std::string::npos);
     constexpr std::string_view publicDescription =
-        "Supports up to 4,095 item stat definitions for overhaul mods.";
+        "Extends ItemStatCost.txt capacity to 4,095 rows. Requires ISC12-compatible save files.";
     CHECK(pluginText.find(publicDescription) != std::string::npos);
 
     std::ifstream resourceFile(

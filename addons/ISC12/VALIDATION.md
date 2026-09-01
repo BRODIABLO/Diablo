@@ -454,6 +454,14 @@
   `D2R startup complete`; only the two known unrelated Stash Search and Revive
   Overhaul failures remained. Final state is mod-local, hashes restored, no
   global duplicate and no running D2R process.
+- [x] Public-description-only source rebuild: two byte-identical 451,072-byte
+  Release `/W4 /WX` builds, SHA-256
+  `AFB4B2D1F779A368C3139BB5AF9EDC59CFD4B83042C88AD2EE7991C9E62DFF00`,
+  CTest `5/5`, exact PluginInfo/Windows description and full-stack mod-local and
+  global cold starts with 36 plugins, all five eezstreet DLLs and 17 patches.
+  Final state is the new DLL mod-local, no global duplicate and no running D2R
+  process. Gameplay and TCP/IP were not rerun; their exact-binary evidence
+  remains attached to `6089619D...D2D52`.
 - [ ] Matching host/joiner passes; mismatches fail closed.
 
 ### External two-client handoff

@@ -7,19 +7,25 @@ Dernière mise à jour : 1er septembre 2026
 [ISC12 — ItemStatCost 12-bit clean-sheet format](isc12-3.3.md)
 
 État : **ISC12 0.2.0 : tous les gates solo qualifiés en portée mod-locale et
-globale sur D2R 3.3.93847 / D2RLoader 1.2.0-beta**. Le candidat G5–G8 exact
-mesure 451 072 octets et vaut SHA-256
+globale sur D2R 3.3.93847 / D2RLoader 1.2.0-beta**. Le candidat comportemental
+G5–G8 exact mesure 451 072 octets et vaut SHA-256
 `6089619DE3B01FD474669096A8AEC8A470559FAD993DCB939AC976709A7D2D52`;
-deux builds Release reproductibles `/W4 /WX`, CTest `5/5`, 27/27 nouvelles
-fenêtres natives exactes uniques et le ledger `VALID 228/15` le soutiennent.
+27/27 nouvelles fenêtres natives exactes uniques et le ledger `VALID 228/15`
+le soutiennent. Le rebuild courant au libellé public corrigé mesure aussi
+451 072 octets et vaut
+`AFB4B2D1F779A368C3139BB5AF9EDC59CFD4B83042C88AD2EE7991C9E62DFF00`.
+Deux builds Release reproductibles `/W4 /WX`, CTest `5/5` et les cold starts
+pile complète mod-local/global sont verts sur ce hash. Gameplay et TCP/IP n'ont
+pas été rejoués pour ce changement de description seulement; leurs preuves
+exactes restent attachées au candidat comportemental précédent.
 La transaction canonique porte désormais 43 sites mutables, 129 mutations et
 85 témoins. Les fixtures sérialisées D2S d'IDs 512 et 4094
 ont conservé leurs valeurs 12 et 94 pendant deux cycles froids. Le D2I contrôlé
 de shared stash a été écrit, relu après arrêt complet et réaffiché avec un arbre
 socketé 3/3. G9 a exercé les payloads réels `0x9C` et `0x9D`, l'overflow à zéro
 callback, la réentrance fatale après un callback, la backpressure et l'invariant
-natif exact `childTemporaryFlags = parentTemporaryFlags | 0x08`. Le même
-binaire a passé un cold start global puis le retour mod-local, sans désactiver
+natif exact `childTemporaryFlags = parentTemporaryFlags | 0x08`. Le binaire
+comportemental a passé un cold start global puis le retour mod-local, sans désactiver
 aucun composant : 36 plugins chargés, les cinq eezstreet et 17 patches; Stash
 Search et Revive Overhaul restent les deux échecs préexistants. Les sauvegardes
 et tables de test ont ensuite été restaurées byte-exact et le jeu a été arrêté.
@@ -158,25 +164,36 @@ et oppose `1e602a9f…c872` à `42bbaffc…9c50`; les deux logs nomment
 `environment fingerprint mismatch`. Le runtime, les tables, sauvegardes,
 ignore-lists et DLL sont restaurés byte-exact, sans processus restant.
 
+ISC12 Save Converter ferme maintenant son gate technique. La suite passe
+`34/34`; l'EXE autonome de 93 401 088 octets vaut
+`9B1E4873…B2D10`. Un D2S réellement écrit par D2R 9-bit passe
+1 284 → 1 297 → 1 284 octets byte-exact (`4A50BC58…0F994`). Le personnage
+charge et se sauvegarde deux fois sous BKVince sans ISC12, puis la sortie ISC12
+charge et se sauvegarde deux fois sous ISC12Lab avec ISC12 0.2.0, 36 plugins,
+les cinq eezstreet et 17 patches. Le D2S ISC12 final reste à 1 297 octets
+(`47AE70FB…983BB`). Les deux échecs connus Stash Search/Revive Overhaul et
+l'assertion TACT récurrente sont encore visibles, sans empêcher les quatre
+cycles observés. Aucun processus de test ne demeure.
+
 ## Prochain gate
 
-Vincent retient le 1er septembre 2026 la séquence A : qualifier d'abord ISC12
-Save Converter, puis préparer et publier ensemble le convertisseur et ISC12.
-Le prochain gate est la preuve hors ligne `9 → 12 → 9`, avec copies sans
-écrasement, round-trip byte-exact lorsque tous les IDs réels sont inférieurs à
-511, downgrade fail-closed sinon et couverture D2S/D2I complète. Le kit
-NativePublication V1 reste un durcissement loader général optionnel et ne bloque
-pas ces gates. Aucun commit, push, tag ni asset GitHub n'est encore autorisé.
+Préparer la livraison publique conjointe d'ISC12 et d'ISC12 Save Converter :
+figer l'allowlist des archives, placer chaque README à côté de son ZIP pour la
+relecture humaine de Vincent, établir le catalogue de hashes, puis publier les
+deux produits ensemble. Le kit NativePublication V1 reste un durcissement
+loader général optionnel et ne bloque pas cette livraison. Vincent autorise le
+commit et le push ciblés de ce checkpoint; aucun tag ni asset GitHub n'est
+encore autorisé.
 
 ## Frontière Git active
 
-Le lot couvre `Mission/isc12-3.3.md`, `addons/ISC12/**`, les preuves et scripts
-ISC12, la proposition `sdk-contribution/Services-requests.md` et les registres
-partagés strictement nécessaires. Les changements
-MapSense existants restent hors propriété ISC12 et doivent être préservés. Le
-Le présent GO autorise uniquement l'inscription et le séquencement du
-convertisseur dans la ROADMAP; son implantation exige un GO distinct. Il
-n'autorise aucun commit, push, tag ni asset GitHub.
+Le lot couvre `Mission/isc12-3.3.md`, `addons/ISC12/**`,
+`addons/ISC12SaveConverter/**`, le patch ciblé `@d2runewizard/d2s`, les preuves
+et scripts ISC12, la proposition `sdk-contribution/Services-requests.md` et les
+registres partagés strictement nécessaires. Les changements MapSense et les
+autres travaux concurrents restent hors propriété ISC12 et doivent être
+préservés. Vincent autorise maintenant le commit et le push ciblés du plugin,
+du convertisseur et de leurs registres; aucun tag ni asset GitHub n'est inclus.
 
 ## Priorité précédente conservée — Softcoded Player Sequence Tables
 

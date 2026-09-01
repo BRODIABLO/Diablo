@@ -12,7 +12,7 @@ BEGIN
     BLOCK "040904B0"
     BEGIN
       VALUE "CompanyName", "RuffnecKk"
-      VALUE "FileDescription", "Supports up to 4,095 item stat definitions for overhaul mods."
+      VALUE "FileDescription", "Extends ItemStatCost.txt capacity to 4,095 rows. Requires ISC12-compatible save files."
       VALUE "FileVersion", "0.2.0"
       VALUE "InternalName", "ruffneckk-isc12"
       VALUE "OriginalFilename", "d2rl-ruffneckk-isc12.dll"

@@ -1294,6 +1294,16 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "isc12_item_packet_budget.cpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_item_packet_budget.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_item_packet_budget.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_item_packet_budget.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "isc12_loader.cpp",
                                                                                                      "path":  "addons/ISC12/src/isc12_loader.cpp",
                                                                                                      "kind":  "file"
@@ -1359,6 +1369,31 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "isc12_publication_adapters.cpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_publication_adapters.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_publication_adapters.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_publication_adapters.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_publication_coordinator.cpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_publication_coordinator.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_publication_coordinator.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_publication_coordinator.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "isc12_publication_lease.hpp",
+                                                                                                     "path":  "addons/ISC12/src/isc12_publication_lease.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "isc12_schema.cpp",
                                                                                                      "path":  "addons/ISC12/src/isc12_schema.cpp",
                                                                                                      "kind":  "file"
@@ -1397,6 +1432,16 @@
                                                                                                      "name":  "policy_tests.cpp",
                                                                                                      "path":  "addons/ISC12/src/policy_tests.cpp",
                                                                                                      "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "publication_adapter_tests.cpp",
+                                                                                                     "path":  "addons/ISC12/src/publication_adapter_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "publication_coordinator_tests.cpp",
+                                                                                                     "path":  "addons/ISC12/src/publication_coordinator_tests.cpp",
+                                                                                                     "kind":  "file"
                                                                                                  }
                                                                                              ]
                                                                             },
@@ -1418,6 +1463,143 @@
                                                                             {
                                                                                 "name":  "VALIDATION.md",
                                                                                 "path":  "addons/ISC12/VALIDATION.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+{
+                                                           "name":  "ISC12SaveConverter",
+                                                           "path":  "addons/ISC12SaveConverter",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-public-save-conversion-tool",
+                                                                        "summary":  "Outil public autonome et hors ligne de conversion lossless des flux ItemStatCost entre les formats D2R 9 bits et ISC12 12 bits.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "experimental"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "scripts",
+                                                                                "path":  "addons/ISC12SaveConverter/scripts",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "build-standalone.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/scripts/build-standalone.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "create-runtime-fixture.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/scripts/create-runtime-fixture.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/ISC12SaveConverter/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "batch-converter.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/batch-converter.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "batch-converter.test.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/batch-converter.test.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "cli.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/cli.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "cli.test.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/cli.test.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "cli-entry.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/cli-entry.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "default-schema.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/default-schema.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "default-schema.test.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/default-schema.test.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "mod-schema.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/mod-schema.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "mod-schema.test.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/mod-schema.test.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "runewizard-bridge.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/runewizard-bridge.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "runewizard-bridge.test.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/runewizard-bridge.test.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "shared-stash.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/shared-stash.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "shared-stash.test.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/shared-stash.test.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "stat-stream.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/stat-stream.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "stat-stream.test.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/stat-stream.test.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  ".gitignore",
+                                                                                "path":  "addons/ISC12SaveConverter/.gitignore",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "Launch-ISC12-Save-Converter.cmd",
+                                                                                "path":  "addons/ISC12SaveConverter/Launch-ISC12-Save-Converter.cmd",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "package.json",
+                                                                                "path":  "addons/ISC12SaveConverter/package.json",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "package-lock.json",
+                                                                                "path":  "addons/ISC12SaveConverter/package-lock.json",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/ISC12SaveConverter/README.md",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]

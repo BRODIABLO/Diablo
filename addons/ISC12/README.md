@@ -264,8 +264,7 @@ remained unchanged. The queue ABI is `void`, so validation guarantees zero
 calls before flush but cannot roll back a queue failure after a successful
 flush has begun.
 
-The current G5-G8 candidate is byte-identical across two Release `/W4 /WX`
-builds: 451,072 bytes, SHA-256
+The gameplay and TCP/IP-qualified G5-G8 candidate is 451,072 bytes, SHA-256
 `6089619DE3B01FD474669096A8AEC8A470559FAD993DCB939AC976709A7D2D52`.
 CTest passes `5/5`; all 27 new mutation/capacity windows match exactly once in
 the governed native corpus; and the ledger is `VALID` at 228 sites / 15 required
@@ -274,9 +273,17 @@ D2RLoader 1.2 published 43 codec sites and 129 mutations, loaded 36 plugins
 including all five eezstreet DLLs, applied 17 patches, compiled 190 TXT tables,
 selected the authoritative 400-row schema and reached `D2R startup complete`.
 Only the two known unrelated Stash Search and Revive Overhaul failures remained.
-The exact DLL/TOML pair was restored mod-local with no global duplicate and the
-game stopped. This closes source/static publication and both hybrid cold-start
-scopes for G5-G8; it does not replace the external two-client multiplayer matrix.
+
+The current public-metadata build changes only the PluginInfo and Windows
+resource description in source to `Extends ItemStatCost.txt capacity to 4,095
+rows. Requires ISC12-compatible save files.` Two byte-identical Release `/W4
+/WX` builds remain 451,072 bytes and have SHA-256
+`AFB4B2D1F779A368C3139BB5AF9EDC59CFD4B83042C88AD2EE7991C9E62DFF00`.
+CTest passes `5/5`, and the exact DLL completes the full-stack mod-local and
+global cold starts with 36 plugins, all five eezstreet DLLs and 17 patches. It
+is restored mod-local with no global duplicate and no running game process.
+Gameplay and TCP/IP were not rerun for this description-only source change;
+those behavioral proofs remain attached to the preceding candidate.
 
 ## Planned release installation contract
 

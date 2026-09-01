@@ -107,7 +107,7 @@ constexpr D2RL::PluginInfo Info{
     .name = "ISC12",
     .version = "0.2.0",
     .author = "RuffnecKk",
-    .description = "Supports up to 4,095 item stat definitions for overhaul mods.",
+    .description = "Extends ItemStatCost.txt capacity to 4,095 rows. Requires ISC12-compatible save files.",
     .flags = D2RL::PluginFlags::Shared | D2RL::PluginFlags::NativeHooks,
 };
 

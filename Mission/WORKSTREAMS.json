@@ -734,10 +734,12 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/isc12-3.3.md",
-      "nextGate": "Tous les gates techniques ISC12 sont fermés sur le candidat exact 451072 octets 6089619D…D2D52 et la matrice TCP/IP réelle est qualifiée. Séquence A retenue par Vincent le 1er septembre 2026 : qualifier d'abord ISC12 Save Converter avec preuve hors ligne 9→12→9, copies sans écrasement, downgrade fail-closed pour tout ID réel >=511 et couverture D2S/D2I complète; préparer et publier ensuite ensemble le convertisseur et ISC12. Aucun commit, push, tag ni asset GitHub n'est encore autorisé.",
+      "nextGate": "Tous les gates techniques ISC12 et ISC12 Save Converter sont fermés. Le convertisseur passe 34/34, produit un EXE autonome 9B1E4873…B2D10 et réalise sur un D2S réellement sauvegardé un round-trip D2R 9-bit 1284 → ISC12 1297 → D2R 9-bit 1284 byte-exact. Vincent confirme deux load/save/reload sous BKVince sans ISC12 puis deux sous ISC12Lab avec la pile complète. Le checkpoint ciblé du plugin, du convertisseur et de leurs registres est autorisé; le prochain gate prépare leurs archives, README hors ZIP, catalogue de hashes et publication. Aucun tag ni asset GitHub n'est encore autorisé.",
       "include": [
         "Mission/isc12-3.3.md",
         "addons/ISC12/**",
+        "addons/ISC12SaveConverter/**",
+        "patches/@d2runewizard+d2s+2.0.132.patch",
         "reverse-engineering/d2r-3.2.92777/isc12/**",
         "reverse-engineering/d2r-3.2.92777/sdk-contribution/Services-requests.md",
         "scripts/reverse-engineering/isc12*"
