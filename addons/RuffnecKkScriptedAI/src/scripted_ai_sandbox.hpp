@@ -26,6 +26,9 @@ struct TreeSummary {
 
 class Sandbox final {
 public:
+    using ScriptHandle = int;
+    inline static constexpr ScriptHandle InvalidScriptHandle = -1;
+
     [[nodiscard]] static auto Create(
         const SandboxLimits& limits,
         std::string& error) noexcept -> std::unique_ptr<Sandbox>;
@@ -41,6 +44,14 @@ public:
         std::string_view source,
         TreeSummary& summary,
         std::string& error) -> bool;
+
+    [[nodiscard]] auto CompileBehaviorTree(
+        std::string_view source,
+        ScriptHandle& handle,
+        TreeSummary& summary,
+        std::string& error) -> bool;
+
+    void ReleaseBehaviorTree(ScriptHandle handle) noexcept;
 
     [[nodiscard]] auto ExecuteForTesting(
         std::string_view source,

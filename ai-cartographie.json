@@ -2799,7 +2799,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-standalone-d2rloader-addon",
-                                                                        "summary":  "Incubation default-off du plugin autonome RuffnecKk Scripted AI 0.1.0, avec Lua 5.4.9 sandboxé, empreinte native de 22 fenêtres et aucun hook gameplay avant le gate bridge.",
+                                                                        "summary":  "Plugin autonome RuffnecKk Scripted AI 0.2.0 default-off : table aiscript Base/RotW, génération Lua session-scoped atomique, rollback et autorité hôte, sans hook ni gameplay.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -2822,6 +2822,16 @@
                                                                                                  {
                                                                                                      "name":  "plugin.rc",
                                                                                                      "path":  "addons/RuffnecKkScriptedAI/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_bridge.cpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_bridge.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_bridge.hpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_bridge.hpp",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

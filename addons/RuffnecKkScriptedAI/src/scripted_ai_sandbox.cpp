@@ -45,6 +45,58 @@ void RemoveTableField(lua_State* state, const char* table, const char* field) {
     });
 }
 
+void CopyGlobal(lua_State* state, int environment, const char* name) {
+    environment = lua_absindex(state, environment);
+    lua_getglobal(state, name);
+    lua_setfield(state, environment, name);
+}
+
+void CloneGlobalTable(lua_State* state, int environment, const char* name) {
+    environment = lua_absindex(state, environment);
+    lua_getglobal(state, name);
+    if (!lua_istable(state, -1)) {
+        lua_pop(state, 1);
+        return;
+    }
+    const auto source = lua_absindex(state, -1);
+    lua_newtable(state);
+    const auto clone = lua_absindex(state, -1);
+    lua_pushnil(state);
+    while (lua_next(state, source) != 0) {
+        lua_pushvalue(state, -2);
+        lua_insert(state, -2);
+        lua_settable(state, clone);
+    }
+    lua_setfield(state, environment, name);
+    lua_pop(state, 1);
+}
+
+void InstallChunkEnvironment(lua_State* state, int chunk) {
+    chunk = lua_absindex(state, chunk);
+    lua_newtable(state);
+    const auto environment = lua_absindex(state, -1);
+    for (const auto* name : {
+            "assert", "error", "ipairs", "next", "pairs", "rawequal",
+            "rawget", "rawlen", "select", "tonumber", "tostring", "type"}) {
+        CopyGlobal(state, environment, name);
+    }
+    CloneGlobalTable(state, environment, LUA_MATHLIBNAME);
+    CloneGlobalTable(state, environment, LUA_TABLIBNAME);
+    lua_pushvalue(state, environment);
+    lua_setfield(state, environment, "_G");
+    lua_pushvalue(state, environment);
+    (void)lua_setupvalue(state, chunk, 1);
+    lua_pop(state, 1);
+}
+
+int RetainBehaviorTree(lua_State* state) {
+    luaL_checktype(state, 1, LUA_TTABLE);
+    lua_pushvalue(state, 1);
+    const auto reference = luaL_ref(state, LUA_REGISTRYINDEX);
+    lua_pushinteger(state, static_cast<lua_Integer>(reference));
+    return 1;
+}
+
 } // namespace
 
 Sandbox::Sandbox(const SandboxLimits& limits) noexcept
@@ -196,6 +248,7 @@ auto Sandbox::ExecuteChunk(
         allocator_.inThink = false;
         return false;
     }
+    InstallChunkEnvironment(state_, -1);
 
     remainingInstructions_ = phase == ExecutionPhase::Think
         ? limits_.maxInstructionsPerThink
@@ -359,6 +412,18 @@ auto Sandbox::LoadBehaviorTree(
         std::string_view source,
         TreeSummary& summary,
         std::string& error) -> bool {
+    ScriptHandle handle = InvalidScriptHandle;
+    if (!CompileBehaviorTree(source, handle, summary, error)) return false;
+    ReleaseBehaviorTree(handle);
+    return true;
+}
+
+auto Sandbox::CompileBehaviorTree(
+        std::string_view source,
+        ScriptHandle& handle,
+        TreeSummary& summary,
+        std::string& error) -> bool {
+    handle = InvalidScriptHandle;
     summary = {};
     if (!ExecuteChunk(source, ExecutionPhase::Load, true, error)) return false;
     if (lua_gettop(state_) != 1 || !lua_istable(state_, 1)) {
@@ -367,8 +432,24 @@ auto Sandbox::LoadBehaviorTree(
         return false;
     }
     const auto accepted = ValidateTree(1, summary, error);
+    if (accepted) {
+        lua_pushcfunction(state_, RetainBehaviorTree);
+        lua_pushvalue(state_, 1);
+        if (lua_pcall(state_, 1, 1, 0) != LUA_OK) {
+            error = StackError(state_);
+            lua_settop(state_, 0);
+            return false;
+        }
+        handle = static_cast<ScriptHandle>(lua_tointeger(state_, -1));
+    }
     lua_settop(state_, 0);
     return accepted;
+}
+
+void Sandbox::ReleaseBehaviorTree(ScriptHandle handle) noexcept {
+    if (state_ != nullptr && handle >= 0) {
+        luaL_unref(state_, LUA_REGISTRYINDEX, handle);
+    }
 }
 
 auto Sandbox::HasGlobal(std::string_view name) const -> bool {

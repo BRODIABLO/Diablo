@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(RuffnecKkScriptedAI VERSION 0.1.0 LANGUAGES C CXX RC)
+project(RuffnecKkScriptedAI VERSION 0.2.0 LANGUAGES C CXX RC)
 
 include(CTest)
 include(FetchContent)
@@ -61,6 +61,7 @@ if(MSVC)
 endif()
 
 add_library(RuffnecKkScriptedAICore STATIC
+    scripted_ai_bridge.cpp
     scripted_ai_config.cpp
     scripted_ai_fingerprint.cpp
     scripted_ai_sandbox.cpp
@@ -105,6 +106,7 @@ if(BUILD_TESTING)
     target_compile_definitions(RuffnecKkScriptedAITests PRIVATE
         SCRIPTED_AI_CONFIG_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../ruffneckk-scripted-ai.toml"
         SCRIPTED_AI_PLUGIN_SOURCE_FILE="${CMAKE_CURRENT_SOURCE_DIR}/plugin.cpp"
+        SCRIPTED_AI_BRIDGE_SOURCE_FILE="${CMAKE_CURRENT_SOURCE_DIR}/scripted_ai_bridge.cpp"
     )
     if(MSVC)
         target_compile_options(RuffnecKkScriptedAITests PRIVATE
@@ -121,12 +123,12 @@ if(BUILD_TESTING)
     )
     if(EXISTS "${SCRIPTED_AI_CANONICAL_IMAGE}")
         add_test(
-            NAME ruffneckk-scripted-ai-incubation
+            NAME ruffneckk-scripted-ai-bridge-ai-1
             COMMAND RuffnecKkScriptedAITests "${SCRIPTED_AI_CANONICAL_IMAGE}"
         )
     else()
         add_test(
-            NAME ruffneckk-scripted-ai-incubation
+            NAME ruffneckk-scripted-ai-bridge-ai-1
             COMMAND RuffnecKkScriptedAITests
         )
     endif()

@@ -1,22 +1,27 @@
 #include "scripted_ai_config.hpp"
+#include "scripted_ai_bridge.hpp"
 #include "scripted_ai_fingerprint.hpp"
 #include "scripted_ai_ownership.hpp"
 #include "scripted_ai_sandbox.hpp"
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <set>
 #include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 namespace {
@@ -369,6 +374,29 @@ void TestSandbox() {
         sandbox->MemoryUsed() <= HardSandboxLimits.sessionHeapBytes,
         "session allocator must remain inside its hard cap");
 
+    Sandbox::ScriptHandle isolatedFirst = Sandbox::InvalidScriptHandle;
+    Sandbox::ScriptHandle isolatedSecond = Sandbox::InvalidScriptHandle;
+    Expect(
+        sandbox->CompileBehaviorTree(
+            "_G.poison=17; math.abs=nil; return {kind='first'}",
+            isolatedFirst,
+            summary,
+            error),
+        "first isolated tree must compile and remain retained");
+    Expect(
+        sandbox->CompileBehaviorTree(
+            "assert(poison==nil and type(math.abs)=='function'); return {kind='second'}",
+            isolatedSecond,
+            summary,
+            error),
+        "one script must not mutate the next script environment");
+    Expect(
+        isolatedFirst >= 0 && isolatedSecond >= 0
+            && isolatedFirst != isolatedSecond,
+        "retained behavior trees must receive distinct handles");
+    sandbox->ReleaseBehaviorTree(isolatedFirst);
+    sandbox->ReleaseBehaviorTree(isolatedSecond);
+
     Expect(
         !sandbox->LoadBehaviorTree(
             "local t={kind='selector'}; t.children={t}; return t",
@@ -462,6 +490,261 @@ void TestSandbox() {
     }
 }
 
+struct TemporaryScriptTree {
+    std::filesystem::path root;
+
+    TemporaryScriptTree() {
+        const auto nonce = std::chrono::steady_clock::now()
+            .time_since_epoch().count();
+        root = std::filesystem::temp_directory_path()
+            / ("ruffneckk-scripted-ai-tests-" + std::to_string(nonce));
+        std::filesystem::create_directories(root / "nested");
+    }
+
+    ~TemporaryScriptTree() {
+        std::error_code error;
+        std::filesystem::remove_all(root, error);
+    }
+};
+
+void WriteTestScript(
+        const std::filesystem::path& path,
+        std::string_view source) {
+    std::ofstream output(path, std::ios::binary | std::ios::trunc);
+    if (!output.is_open()) {
+        throw std::runtime_error("cannot create test script " + path.string());
+    }
+    output.write(source.data(), static_cast<std::streamsize>(source.size()));
+    if (!output) {
+        throw std::runtime_error("cannot write test script " + path.string());
+    }
+}
+
+[[nodiscard]] auto MakeAiScriptRow(
+        std::uint32_t monStatsId,
+        std::string_view script,
+        std::uint16_t fallbackAi = 0U,
+        std::uint8_t targetProfile = ResolverTargetProfile,
+        std::uint8_t enabled = 1U) -> AiScriptTableRow {
+    if (script.size() >= AiScriptNameCapacity) {
+        throw std::runtime_error("test script name exceeds the row capacity");
+    }
+    AiScriptTableRow row{
+        .monStatsId = monStatsId,
+        .fallbackAi = fallbackAi,
+        .targetProfile = targetProfile,
+        .enabled = enabled,
+    };
+    std::memcpy(row.script, script.data(), script.size());
+    row.script[script.size()] = '\0';
+    return row;
+}
+
+[[nodiscard]] auto StageTestBundle(
+        std::uint64_t revision,
+        std::span<const AiScriptTableRow> base,
+        std::span<const AiScriptTableRow> rotw,
+        const std::filesystem::path& root,
+        std::string& error) -> std::shared_ptr<const PreparedBundle> {
+    return StagePreparedBundle(
+        revision,
+        {.revision = revision * 10U + 1U, .rows = base},
+        {.revision = revision * 10U + 2U, .rows = rotw},
+        root,
+        HardSandboxLimits,
+        ReadScriptSource,
+        error);
+}
+
+void TestAiScriptTransaction() {
+    Expect(sizeof(AiScriptTableRow) == 76U, "AIScript row ABI must remain 76 bytes");
+    Expect(
+        offsetof(AiScriptTableRow, fallbackAi) == 70U,
+        "AIScript fallback offset must remain frozen");
+
+    TemporaryScriptTree scripts;
+    WriteTestScript(
+        scripts.root / "nested" / "beast.lua",
+        "return {kind='selector', children={{kind='attack'}, {kind='wander'}}}");
+
+    const std::array base{
+        MakeAiScriptRow(1U, "nested/beast.lua", 7U),
+        MakeAiScriptRow(2U, "nested/beast.lua", 8U),
+    };
+    const std::array rotw{
+        MakeAiScriptRow(3U, "nested/beast.lua", 9U),
+    };
+    std::string error;
+    const auto prepared = StageTestBundle(
+        1U,
+        base,
+        rotw,
+        scripts.root,
+        error);
+    Expect(prepared != nullptr, "a valid Base+RotW AIScript batch must stage");
+    if (prepared) {
+        Expect(prepared->scripts.size() == 1U, "shared scripts must be copied once");
+        Expect(
+            prepared->banks[BankIndex(ScriptBank::Base)].bindings.size() == 2U,
+            "Base bindings must be copied");
+        Expect(
+            prepared->banks[BankIndex(ScriptBank::Rotw)].bindings.size() == 1U,
+            "RotW bindings must be copied");
+        const auto generation = CompileSessionGeneration(
+            *prepared,
+            44U,
+            HardSandboxLimits,
+            error);
+        Expect(generation != nullptr, "a valid staged batch must compile atomically");
+        if (generation) {
+            Expect(generation->SessionId() == 44U, "generation must retain session id");
+            Expect(generation->HasLuaVm(), "nonempty generation must own one Lua VM");
+            Expect(generation->ScriptCount() == 1U, "generation must retain one tree");
+        }
+    }
+
+    const std::array duplicate{
+        MakeAiScriptRow(9U, "nested/beast.lua"),
+        MakeAiScriptRow(9U, "nested/beast.lua"),
+    };
+    Expect(
+        !StageTestBundle(2U, duplicate, {}, scripts.root, error),
+        "duplicate enabled MonStats rows must reject the whole batch");
+
+    const std::array badFallback{
+        MakeAiScriptRow(10U, "nested/beast.lua", StockAiCount),
+    };
+    Expect(
+        !StageTestBundle(3U, badFallback, {}, scripts.root, error),
+        "non-stock fallback AI values must reject the whole batch");
+
+    const std::array escaped{
+        MakeAiScriptRow(11U, "../escape.lua"),
+    };
+    Expect(
+        !StageTestBundle(4U, escaped, {}, scripts.root, error),
+        "script parent traversal must reject the whole batch");
+
+    const std::array disabled{
+        MakeAiScriptRow(12U, "", 0U, 0U, 0U),
+    };
+    const auto empty = StageTestBundle(
+        5U,
+        disabled,
+        {},
+        scripts.root / "missing-root-is-safe-when-empty",
+        error);
+    Expect(empty != nullptr, "disabled rows must not require a script directory");
+    if (empty) {
+        const auto generation = CompileSessionGeneration(
+            *empty,
+            45U,
+            HardSandboxLimits,
+            error);
+        Expect(generation != nullptr, "an empty generation must publish");
+        Expect(
+            generation && !generation->HasLuaVm(),
+            "an empty generation must not allocate a Lua VM");
+    }
+}
+
+void TestBridgeLifecycle() {
+    TemporaryScriptTree scripts;
+    WriteTestScript(
+        scripts.root / "good.lua",
+        "return {kind='selector', children={{kind='attack'}, {kind='wander'}}}");
+    WriteTestScript(
+        scripts.root / "replacement.lua",
+        "return {kind='sequence', children={{kind='chase'}, {kind='attack'}}}");
+    WriteTestScript(
+        scripts.root / "invalid.lua",
+        "return {kind='selector', children={42}}");
+
+    const std::array goodRows{MakeAiScriptRow(20U, "good.lua", 4U)};
+    const std::array replacementRows{
+        MakeAiScriptRow(20U, "replacement.lua", 4U),
+    };
+    const std::array invalidRows{
+        MakeAiScriptRow(20U, "invalid.lua", 4U),
+    };
+    std::string error;
+    auto good = StageTestBundle(10U, goodRows, goodRows, scripts.root, error);
+    auto replacement = StageTestBundle(
+        12U,
+        replacementRows,
+        replacementRows,
+        scripts.root,
+        error);
+    auto invalid = StageTestBundle(
+        11U,
+        invalidRows,
+        invalidRows,
+        scripts.root,
+        error);
+    Expect(good && replacement && invalid, "lifecycle fixtures must stage as source snapshots");
+    if (!good || !replacement || !invalid) return;
+
+    BridgeCoordinator bridge(HardSandboxLimits);
+    Expect(bridge.PublishPrepared(good, error), "source snapshot must enter pending state");
+    Expect(!bridge.Prepared(), "pending source must not publish before compilation");
+
+    // A remote client announces the session, but runOnGameThread returns
+    // Unavailable, so this test deliberately never calls reconciliation.
+    bridge.AnnounceGameJoined(100U);
+    Expect(!bridge.ActiveFor(100U), "remote client path must never publish a VM");
+    Expect(!bridge.Prepared(), "remote client path must not publish uncompiled data");
+
+    // A late queued host callback sees the matching GameLeft cancellation and
+    // cannot resurrect the abandoned session.
+    bridge.AnnounceGameLeft(100U);
+    Expect(
+        bridge.ReconcileAuthoritativeSession(error),
+        "late cancellation callback must reconcile to no session");
+    Expect(!bridge.ActiveFor(100U), "cancelled session must remain unpublished");
+
+    bridge.AnnounceGameJoined(200U);
+    Expect(
+        bridge.ReconcileAuthoritativeSession(error),
+        "host game-thread callback must compile the pending generation");
+    auto first = bridge.ActiveFor(200U);
+    Expect(first != nullptr, "host must publish its session generation");
+    Expect(
+        bridge.Prepared() && bridge.Prepared()->lifecycleRevision == 10U,
+        "successful compile must publish its source revision");
+
+    Expect(bridge.PublishPrepared(invalid, error), "invalid tree source must stage first");
+    Expect(
+        !bridge.ReconcileAuthoritativeSession(error),
+        "invalid tree must reject the full publication transaction");
+    Expect(
+        bridge.ActiveFor(200U) == first,
+        "invalid replacement must preserve the prior same-session generation");
+    Expect(
+        bridge.Prepared() && bridge.Prepared()->lifecycleRevision == 10U,
+        "invalid replacement must preserve the prior prepared revision");
+
+    std::weak_ptr<const SessionGeneration> oldGeneration = first;
+    Expect(
+        bridge.PublishPrepared(replacement, error)
+            && bridge.ReconcileAuthoritativeSession(error),
+        "valid replacement must publish atomically");
+    const auto second = bridge.ActiveFor(200U);
+    Expect(
+        second && second->LifecycleRevision() == 12U,
+        "replacement generation must expose the new revision");
+    first.reset();
+    Expect(
+        oldGeneration.expired(),
+        "replaced generation and its Lua VM must be destroyed after readers release it");
+
+    bridge.AnnounceGameJoined(201U);
+    bridge.AnnounceGameLeft(201U);
+    Expect(
+        bridge.ReconcileAuthoritativeSession(error),
+        "join followed by leave must cancel before compilation");
+    Expect(!bridge.ActiveFor(201U), "cancelled newer session must have no generation");
+}
+
 void TestPluginPolicy() {
     const auto source = ReadText(SCRIPTED_AI_PLUGIN_SOURCE_FILE);
     Expect(
@@ -480,7 +763,26 @@ void TestPluginPolicy() {
         "plugin source must not contain a build allowlist");
     Expect(
         source.find("InstallInlineHook") == source.npos,
-        "incubation build must not install its future hook");
+        "bridge build must not install its future hook");
+    Expect(
+        source.find("CustomTableServiceV1") != source.npos
+            && source.find("AiScriptTableName") != source.npos,
+        "bridge build must own a private AIScript custom table");
+    Expect(
+        source.find("runOnGameThread") != source.npos
+            && source.find("GameJoined") != source.npos
+            && source.find("GameLeft") != source.npos,
+        "bridge build must route lifecycle publication through the game thread");
+    Expect(
+        source.find("D2_AI_Attack") == source.npos
+            && source.find("D2MonUseSkill") == source.npos,
+        "bridge gate must not contain gameplay action helpers");
+
+    const auto bridgeSource = ReadText(SCRIPTED_AI_BRIDGE_SOURCE_FILE);
+    Expect(
+        bridgeSource.find("CompileSessionGeneration") != bridgeSource.npos
+            && bridgeSource.find("pending_") != bridgeSource.npos,
+        "bridge core must compile pending snapshots before publication");
 }
 
 } // namespace
@@ -491,6 +793,8 @@ int main(int argc, char** argv) {
         TestFingerprintDefinitions();
         TestOwnership();
         TestSandbox();
+        TestAiScriptTransaction();
+        TestBridgeLifecycle();
         TestPluginPolicy();
         if (argc > 1) {
             TestCanonicalImage(argv[1]);
@@ -503,9 +807,9 @@ int main(int argc, char** argv) {
     }
 
     if (Failures != 0) {
-        std::cerr << Failures << " Scripted AI incubation assertion(s) failed\n";
+        std::cerr << Failures << " Scripted AI bridge assertion(s) failed\n";
         return 1;
     }
-    std::cout << "Scripted AI incubation tests PASS\n";
+    std::cout << "Scripted AI bridge tests PASS\n";
     return 0;
 }

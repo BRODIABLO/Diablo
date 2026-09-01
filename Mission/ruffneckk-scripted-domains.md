@@ -7,13 +7,13 @@ Chantier **actif en parallèle d’ISC12** depuis le `GO` de Vincent du
 sa priorité de livraison; ce chantier ouvre seulement une seconde ligne de
 travail gouvernée.
 
-La première verticale est `Scripted AI`. Aucun hook runtime ni table gameplay
-n’est encore implanté. Les gates de conception natifs, de lifecycle V1,
-d’ownership, d’autorité et de budgets sont fermés. Vincent a autorisé le
-1er septembre 2026 l’incubation formelle du nouveau plugin autonome de la
-RuffnecKk D2RLoader Suite; cette incubation est maintenant fermée sur deux
-builds Release reproductibles, leurs tests et leur audit PE. Le bridge gameplay
-reste volontairement absent jusqu’au gate `BRIDGE-AI-1`.
+La première verticale est `Scripted AI`. Aucun hook runtime ni chemin gameplay
+n’est encore implanté. Les gates de conception natifs, d’incubation et de
+transaction données/lifecycle sont fermés. RuffnecKk Scripted AI `0.2.0`
+enregistre maintenant sa table privée `aiscript`, confine et copie les sources,
+puis publie une génération Lua seulement après attestation du thread hôte. Le
+tick de l’arbre et toute capacité d’action restent volontairement absents
+jusqu’au gate `EXEC-AI-1`.
 
 ## Objectif
 
@@ -41,7 +41,8 @@ Vincent retient un séquencement parallèle :
 
 ## Décision d’incubation — 1er septembre 2026
 
-- Produit public : **RuffnecKk Scripted AI** `0.1.0`, plugin ID
+- Identité produit figée au jalon d’incubation `0.1.0` : **RuffnecKk Scripted
+  AI**, plugin ID
   `ruffneckk-scripted-ai`, DLL `d2rl-ruffneckk-scripted-ai.dll` et configuration
   indépendante `ruffneckk-scripted-ai.toml`.
 - Description publique : `Lets configured monsters run bounded Lua behavior
@@ -90,9 +91,9 @@ Vincent retient un séquencement parallèle :
   debug, coroutine, chaînes, UTF-8, RNG et les mécanismes permettant de capturer
   une erreur de budget. Les scripts sont texte seulement et l’arbre déclaratif
   refuse métatables, cycles, partage de nodes et dépassements de plafonds.
-- `enabled = false` ne vérifie aucune surface native, n’instancie aucune VM et
-  n’installe aucun hook. `enabled = true` effectue seulement le preflight
-  service/ownership/empreinte et sandbox, puis refuse proprement l’activation
+- Dans ce jalon `0.1.0`, `enabled = false` ne vérifie aucune surface native,
+  n’instancie aucune VM et n’installe aucun hook. `enabled = true` effectue le
+  preflight service/ownership/empreinte et sandbox, puis refuse proprement l’activation
   tant que le bridge n’existe pas. Il n’y a donc encore aucun chemin gameplay.
 - Aucun déploiement, lancement D2R, test gameplay, ZIP, tag, commit ou push ne
   fait partie de cette fermeture. L’attestation post-installation d’ownership
@@ -524,22 +525,47 @@ service inter-plugin tiers. Une DLL Lua globale omnipotente n’est pas prévue.
 
 ### BRIDGE-AI-1 — Transaction données et lifecycle, sans hook
 
-- [ ] enregistrer le schéma plugin-owned `aiscript` via
+- [x] enregistrer le schéma plugin-owned `aiscript` via
   `CustomTableServiceV1`, dans les banks Base et RotW, sans toucher
   `monai.txt` ni `MonStats.AI`;
-- [ ] copier et valider strictement chaque row, résoudre un script uniquement
+- [x] copier et valider strictement chaque row, résoudre un script uniquement
   sous la racine configurée et compiler tout le lot dans une génération
   immuable avant publication;
-- [ ] rejeter atomiquement le lot complet si une row, un chemin, une source ou
+- [x] rejeter atomiquement le lot complet si une row, un chemin, une source ou
   un arbre est invalide; conserver la génération précédente si elle existe;
-- [ ] relier `GameJoined`, `GameLeft`, `sessionGeneration` et
+- [x] relier `GameJoined`, `GameLeft`, `sessionGeneration` et
   `runOnGameThread` sans appeler Lua depuis le thread UI ni créer de VM sur un
   client TCP/IP distant;
-- [ ] prouver par tests les transitions de génération, l’annulation tardive,
+- [x] prouver par tests les transitions de génération, l’annulation tardive,
   le rollback de publication, les configurations hôte/client asymétriques et
   la destruction de toute VM périmée;
-- [ ] conserver l’appel au résolveur, l’installation du hook, les actions
+- [x] conserver l’appel au résolveur, l’installation du hook, les actions
   natives et tout déploiement hors de ce gate.
+
+Gate fermé le 1er septembre 2026 par RuffnecKk Scripted AI `0.2.0` : deux
+builds Release x64 indépendants produisent la même DLL de `416256` octets,
+SHA-256 `55AACEB372991F022F9F2CC0BA50CA6DD80BF0753BC5949D904D63FEDFB7FB00`,
+et les deux suites CTest passent `1/1`. Le schéma `aiscript` mesure `76` octets,
+les ressources Base/RotW par défaut sont header-only, les copies sont liées à
+leur révision et la compilation Lua n’arrive qu’après attestation locale par
+`runOnGameThread`. Les tests couvrent lot invalide, rollback, remplacement et
+réclamation de VM, annulation tardive et client distant sans VM. La DLL contient
+toujours exactement trois exports et aucun appel `InstallInlineHook`; aucun
+déploiement ni démarrage D2R n’a eu lieu.
+
+### EXEC-AI-1 — Évaluateur Lua et intentions simulées, sans hook
+
+- [ ] figer la sémantique V1 des nodes `selector`, `sequence` et des leaves
+  déclaratives ainsi que le résultat explicite `action` ou `fallback`;
+- [ ] exécuter l’arbre retenu par la génération via un handle de think
+  éphémère simulé, avec exactement une intention terminale au maximum;
+- [ ] faire converger absence d’action, leaf refusée, erreur Lua, budget
+  d’instructions ou d’allocation et handle périmé vers une unique intention de
+  fallback, sans appeler D2R;
+- [ ] prouver les budgets par think, l’invalidation de handle et la quarantaine
+  bornée par tests déterministes avec capacités natives mockées;
+- [ ] conserver le résolveur, son hook, les helpers natifs, le déploiement et
+  tout gameplay hors de ce gate.
 
 ### RUN-AI — Qualification
 
@@ -580,10 +606,10 @@ répertoire de preuves `reverse-engineering/d2r-3.2.92777/scripted-domains/**`.
 `ROADMAP.html`, `Mission/WORKSTREAMS.json`, `known-rvas.json`, `findings.md` et
 le cadastre restent des registres partagés.
 
-**Prochain gate : `BRIDGE-AI-1`.** Implanter et tester la transaction complète
-qui transforme `aiscript` et les sources Lua validées en une génération de
-session immuable, publiée uniquement sur le thread gameplay autoritaire. Le
-résolveur `0x4A36C0`, les actions natives et le gameplay restent absents jusqu’à
-ce que données, lifecycle, rollback et asymétrie hôte/client soient prouvés.
+**Prochain gate : `EXEC-AI-1`.** Implanter et tester l’évaluateur de l’arbre
+retenu avec un handle de think éphémère et des capacités entièrement mockées.
+Chaque chemin doit produire au plus une intention terminale ou une intention de
+fallback, sans appeler D2R. Le résolveur `0x4A36C0`, son hook, les helpers natifs,
+le gameplay et le déploiement restent absents jusqu’au gate d’intégration natif.
 Aucun commit, push, déploiement ou test runtime n’est autorisé implicitement par
 ce document.

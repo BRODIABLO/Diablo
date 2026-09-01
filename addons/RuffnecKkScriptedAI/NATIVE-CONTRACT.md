@@ -10,7 +10,17 @@
 - Any missing diagnostics service, unknown mutation, second owner, mismatched owner, or changed fingerprint refuses Lua before the first scripted think.
 - Version and build labels are diagnostic only and never decide activation.
 
-The `0.1.0` incubation DLL does not install the hook. It compiles the pre-install policy and positive/negative post-install ownership policy for the next implementation gate.
+The `0.2.0` bridge DLL does not install the hook. It compiles the pre-install policy and positive/negative post-install ownership policy for a later native integration gate.
+
+## Data and lifecycle bridge
+
+- `CustomTableServiceV1` owns one 76-byte `aiscript` row schema in both Base and RotW; stock `monai.txt` and `MonStats.AI` remain untouched.
+- `ResourceServiceV1` supplies header-only defaults, so an absent mod override is a valid empty table.
+- `copyRows` is revision-checked and the complete Base+RotW snapshot is rejected on any metadata, row, path, source, or tree failure.
+- Script files are canonicalized beneath the configured active-mod or D2RLoader-scope root before their bytes are copied.
+- `DataTablesLoaded` stages bytes without Lua. Only a successful `ThreadServiceV1::runOnGameThread` callback may compile and publish a session generation.
+- `GameJoined`, `GameLeft`, and `sessionGeneration` invalidate late work. `Unavailable` on a remote TCP/IP client means no Lua VM is created there.
+- Publication swaps one immutable generation. A failed replacement preserves the prior same-session generation until readers release it.
 
 ## Fail-closed fingerprint
 
@@ -52,4 +62,4 @@ Each compiled entry includes its exact expected bytes and SHA-256 witness. The i
 - PluginPack integration reference: D2RL-Plugins `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`.
 - D2MOO semantic reference: `19019806df7f3e877fa105b05395d1e3597e2316`.
 
-The installed-stack snapshot observed 36 plugins, all five eezstreet plugins, and 17 memory patches while leaving the resolver and inspected helper prefixes vanilla. Runtime post-install ownership, load orders, global scope, mod-local scope, TCP/IP authority, performance, and gameplay are not claimed by incubation.
+The installed-stack snapshot observed 36 plugins, all five eezstreet plugins, and 17 memory patches while leaving the resolver and inspected helper prefixes vanilla. Runtime post-install ownership, load orders, global scope, mod-local scope, TCP/IP authority, performance, and gameplay are not claimed by this source gate.
