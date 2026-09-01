@@ -734,7 +734,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/isc12-3.3.md",
-      "nextGate": "Tous les gates techniques ISC12 sont fermés sur le candidat exact 451072 octets 6089619D…D2D52. La matrice TCP/IP réelle passe : matching baseline d47b2fa2…a590, matching 4095 lignes db5b6b25…47c6 avec item high-ID diffusé au peer, puis mismatches asymétriques d47b2fa2…a590/17fe0612…c05 et cleanroom 1e602a9f…c872/42bbaffc…9c50 refusés fail-closed avant création du joueur. Runtime restauré byte-exact. Prochain gate, sur demande explicite de Vincent : préparer README hors ZIP, archive autonome, catalogue de hashes et contrôles de release publique RuffnecKk Suite; aucun commit, push, tag ni asset GitHub n'est encore autorisé.",
+      "nextGate": "Tous les gates techniques ISC12 sont fermés sur le candidat exact 451072 octets 6089619D…D2D52 et la matrice TCP/IP réelle est qualifiée. Séquence A retenue par Vincent le 1er septembre 2026 : qualifier d'abord ISC12 Save Converter avec preuve hors ligne 9→12→9, copies sans écrasement, downgrade fail-closed pour tout ID réel >=511 et couverture D2S/D2I complète; préparer et publier ensuite ensemble le convertisseur et ISC12. Aucun commit, push, tag ni asset GitHub n'est encore autorisé.",
       "include": [
         "Mission/isc12-3.3.md",
         "addons/ISC12/**",

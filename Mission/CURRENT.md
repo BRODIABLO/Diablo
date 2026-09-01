@@ -160,12 +160,13 @@ ignore-lists et DLL sont restaurés byte-exact, sans processus restant.
 
 ## Prochain gate
 
-Sur demande explicite de Vincent, préparer la release publique ISC12 : README
-révisable hors ZIP, archive autonome, catalogue de hashes et contrôles de
-livraison de la RuffnecKk D2RLoader Suite. Le gate réseau est fermé; aucun
-commit, push, tag ni asset GitHub n'est encore autorisé.
-Le kit NativePublication V1 reste un durcissement loader général optionnel et
-ne bloque pas ces gates.
+Vincent retient le 1er septembre 2026 la séquence A : qualifier d'abord ISC12
+Save Converter, puis préparer et publier ensemble le convertisseur et ISC12.
+Le prochain gate est la preuve hors ligne `9 → 12 → 9`, avec copies sans
+écrasement, round-trip byte-exact lorsque tous les IDs réels sont inférieurs à
+511, downgrade fail-closed sinon et couverture D2S/D2I complète. Le kit
+NativePublication V1 reste un durcissement loader général optionnel et ne bloque
+pas ces gates. Aucun commit, push, tag ni asset GitHub n'est encore autorisé.
 
 ## Frontière Git active
 
@@ -173,8 +174,9 @@ Le lot couvre `Mission/isc12-3.3.md`, `addons/ISC12/**`, les preuves et scripts
 ISC12, la proposition `sdk-contribution/Services-requests.md` et les registres
 partagés strictement nécessaires. Les changements
 MapSense existants restent hors propriété ISC12 et doivent être préservés. Le
-GO autorise l'implantation et ses validations; il n'autorise aucun commit, push,
-tag, asset GitHub ni outil externe de migration.
+Le présent GO autorise uniquement l'inscription et le séquencement du
+convertisseur dans la ROADMAP; son implantation exige un GO distinct. Il
+n'autorise aucun commit, push, tag ni asset GitHub.
 
 ## Priorité précédente conservée — Softcoded Player Sequence Tables
 
