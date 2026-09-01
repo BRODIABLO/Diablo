@@ -2792,6 +2792,111 @@
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
+                                                       },
+                                                       {
+                                                           "name":  "RuffnecKkScriptedAI",
+                                                           "path":  "addons/RuffnecKkScriptedAI",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-standalone-d2rloader-addon",
+                                                                        "summary":  "Incubation default-off du plugin autonome RuffnecKk Scripted AI 0.1.0, avec Lua 5.4.9 sandboxé, empreinte native de 22 fenêtres et aucun hook gameplay avant le gate bridge.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "experimental"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/RuffnecKkScriptedAI/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_config.cpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_config.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_config.hpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_config.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_fingerprint.cpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_fingerprint.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_fingerprint.hpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_fingerprint.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_limits.hpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_limits.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_ownership.hpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_ownership.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_sandbox.cpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_sandbox.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_sandbox.hpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_sandbox.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_tests.cpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "NATIVE-CONTRACT.md",
+                                                                                "path":  "addons/RuffnecKkScriptedAI/NATIVE-CONTRACT.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/RuffnecKkScriptedAI/README.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "ruffneckk-scripted-ai.toml",
+                                                                                "path":  "addons/RuffnecKkScriptedAI/ruffneckk-scripted-ai.toml",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "THIRD-PARTY-NOTICES.md",
+                                                                                "path":  "addons/RuffnecKkScriptedAI/THIRD-PARTY-NOTICES.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "VALIDATION.md",
+                                                                                "path":  "addons/RuffnecKkScriptedAI/VALIDATION.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
                                                        }
                                                    ]
                                   },

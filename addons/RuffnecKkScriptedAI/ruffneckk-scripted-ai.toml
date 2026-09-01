@@ -1,0 +1,32 @@
+# RuffnecKk Scripted AI
+# Lets configured monsters run bounded Lua behavior trees.
+
+schema_version = 1
+
+# Master switch. false loads the plugin without validating native surfaces,
+# creating a Lua VM, or installing a hook.
+enabled = false
+
+# Relative to the active mod support directory when a mod is active, otherwise
+# relative to the selected D2RLoader scope. Backslashes and parent traversal are
+# rejected.
+script_directory = "scripts/ruffneckk-scripted-ai"
+
+# Adds bounded diagnostic details. Repeated script errors remain rate-limited.
+diagnostics = false
+
+[sandbox]
+# These values may be lowered, but never raised above the compiled hard limits.
+max_source_bytes = 262144
+max_tree_nodes = 256
+max_tree_depth = 32
+max_children_per_node = 32
+session_heap_bytes = 16777216
+per_think_heap_growth_bytes = 65536
+max_instructions_per_think = 25000
+instruction_hook_interval = 500
+max_load_instructions = 250000
+max_script_errors_per_session = 3
+max_slow_strikes_per_session = 3
+slow_think_microseconds = 2000
+detailed_log_interval_milliseconds = 5000

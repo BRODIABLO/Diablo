@@ -751,7 +751,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/ruffneckk-scripted-domains.md",
-      "nextGate": "Bridge category 2, the native attack/chase/retreat/wander/cast helpers and the static continuation/fallback contract are proved. Close GUID death/despawn/session/reuse lifecycle, real ownership of 0x4A36C0, execution budgets, host authority and the complete fail-closed fingerprint. Only then start d2rloader-plugin-incubation for a new autonomous RuffnecKk Suite DLL; ISC12 remains the current mission in parallel.",
+      "nextGate": "INC-AI is closed: RuffnecKk Scripted AI 0.1.0 builds twice to the same 356352-byte DLL (SHA-256 E0E0CBD5CE5B1776E65FDD7F15B01FC8C8D38142559D0CAB59ECF4233DCCB6CC), both CTest runs pass 1/1, all 22 governed PE windows are exact and unique, and the API v3 metadata, three exports, embedded TOML, strict config, ownership policy and bounded PUC Lua 5.4.9 sandbox are proved. The DLL remains default-off and contains no hook or gameplay bridge. Next, open BRIDGE-AI-1: register and validate aiscript, batch-compile immutable script generations, and prove LifecycleServiceV1/runOnGameThread publication, rollback and host/client asymmetry without installing the resolver hook or deploying D2R. ISC12 remains current in parallel.",
       "include": [
         "Mission/ruffneckk-scripted-domains.md",
         "addons/RuffnecKkScriptedAI/**",
