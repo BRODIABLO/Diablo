@@ -24,6 +24,23 @@ const NATIVE_MAGIC_D2I_FIXTURE = Buffer.from(
   'base64',
 );
 
+// Yupgoolg deliberately makes Healing Potion inherit from Gold in ItemTypes.txt.
+// D2R therefore serializes the compact gold payload even though the item code is
+// hp1. This record comes from a fresh, runtime-validated v105 character.
+const MODDED_COMPACT_GOLD_TYPED_ITEM_FIXTURE = Buffer.from(
+  '1020a200150000cf4f008000',
+  'hex',
+);
+
+// The same mod also makes Weapon inherit from Gold. D2R still skips the gold
+// payload for complete weapons because the native codec handles Armor and
+// Weapon before its Gold branch. This runtime-validated javelin catches that
+// ordering distinction.
+const MODDED_GOLD_ANCESTOR_WEAPON_FIXTURE = Buffer.from(
+  '102082000d1100dddb05b37f02928040000420fdff00',
+  'hex',
+);
+
 const { readAttributes, writeAttributes } = attributesModule;
 const { BitReader } = bitreaderModule;
 
@@ -42,6 +59,65 @@ test('keeps the default RuneWizard item codec byte-exact in legacy mode', async 
     { disableItemEnhancements: true, sortProperties: false },
   ));
   assert.deepEqual(rewritten, new Uint8Array(NATIVE_MAGIC_D2I_FIXTURE));
+});
+
+test('preserves compact gold payloads selected through a modded ItemTypes hierarchy', async () => {
+  const { readItem, writeItem } = await import('@d2runewizard/d2s');
+  const constants = structuredClone(bkvinceConstants);
+  constants.other_items.hp1.c = [
+    ...constants.other_items.hp1.c.filter((category) => category !== 'Gold'),
+    'Gold',
+  ];
+
+  const item = await readItem(
+    MODDED_COMPACT_GOLD_TYPED_ITEM_FIXTURE,
+    0x69,
+    constants,
+    { disableItemEnhancements: true, sortProperties: false },
+  );
+  assert.equal(item.type, 'hp1');
+  assert.equal(item.simple_item, 1);
+  assert.equal(item.gold_amount, 0);
+  assert.equal(item._unknown_data.player_gold, 0);
+  assert.equal(item._unknown_data.chest_stackable, 1);
+  assert.equal(item.amount_in_shared_stash, 0);
+
+  const rewritten = new Uint8Array(await writeItem(
+    item,
+    0x69,
+    constants,
+    { disableItemEnhancements: true, sortProperties: false },
+  ));
+  assert.deepEqual(rewritten, new Uint8Array(MODDED_COMPACT_GOLD_TYPED_ITEM_FIXTURE));
+});
+
+test('does not read a gold payload from a complete weapon with a Gold ancestor', async () => {
+  const { readItem, writeItem } = await import('@d2runewizard/d2s');
+  const constants = structuredClone(bkvinceConstants);
+  constants.weapon_items.jav.c = [...constants.weapon_items.jav.c, 'Gold'];
+  constants.magical_properties[72].sB = 12;
+  constants.magical_properties[73].sB = 12;
+
+  const item = await readItem(
+    MODDED_GOLD_ANCESTOR_WEAPON_FIXTURE,
+    0x69,
+    constants,
+    { disableItemEnhancements: true, sortProperties: false },
+  );
+  assert.equal(item.type, 'jav');
+  assert.equal(item.type_id, 3);
+  assert.equal(item.quantity, 500);
+  assert.equal(item.gold_amount, undefined);
+  assert.equal(item.max_durability, 2);
+  assert.equal(item.current_durability, 2);
+
+  const rewritten = new Uint8Array(await writeItem(
+    item,
+    0x69,
+    constants,
+    { disableItemEnhancements: true, sortProperties: false },
+  ));
+  assert.deepEqual(rewritten, new Uint8Array(MODDED_GOLD_ANCESTOR_WEAPON_FIXTURE));
 });
 
 test('transcodes a native v105 item 9 to 12 to 9 byte-exact', async () => {

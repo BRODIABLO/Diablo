@@ -3,6 +3,9 @@ import path from 'node:path';
 
 import { readConstantData } from '@d2runewizard/d2s';
 
+import { readMpqTextFiles } from './mpq-reader.mjs';
+import { VANILLA_EXCEL_TABLES } from './vanilla-excel.generated.mjs';
+
 export const SAVE_SCHEMA_FORMAT = 'ruffneckk-isc12-save-schema';
 export const SAVE_SCHEMA_VERSION = 1;
 export const MAX_SCHEMA_BYTES = 64 * 1024 * 1024;
@@ -38,23 +41,53 @@ const STRING_FILES = Object.freeze([
 ]);
 
 export async function loadConstantsFromMod(modPath) {
-  const dataRoot = await resolveModDataRoot(modPath);
-  const excelRoot = path.join(dataRoot, 'global', 'excel');
-  const stringsRoot = path.join(dataRoot, 'local', 'lng', 'strings');
-  const buffers = {};
+  const source = await resolveModDataSource(modPath);
+  const buffers = { ...VANILLA_EXCEL_TABLES };
 
-  await loadRequiredFiles(buffers, excelRoot, EXCEL_FILES, 'Excel table');
-  await loadRequiredFiles(buffers, stringsRoot, STRING_FILES, 'string table');
+  const overlaidExcelFiles = [];
+  const overlaidStringFiles = [];
+  if (source.archivePath) {
+    const requested = [
+      ...EXCEL_FILES.map((name) => `data/global/excel/${name}`),
+      ...STRING_FILES.map((name) => `data/local/lng/strings/${name}`),
+    ];
+    const extracted = await readMpqTextFiles(source.archivePath, requested);
+    for (const [memberPath, content] of extracted.files) {
+      const name = path.basename(memberPath);
+      buffers[name] = content;
+      if (EXCEL_FILES.includes(name)) overlaidExcelFiles.push(name);
+      else overlaidStringFiles.push(name);
+    }
+  }
+  if (source.dataRoot) {
+    overlaidExcelFiles.push(...await overlayFiles(
+      buffers,
+      path.join(source.dataRoot, 'global', 'excel'),
+      EXCEL_FILES,
+    ));
+    overlaidStringFiles.push(...await overlayFiles(
+      buffers,
+      path.join(source.dataRoot, 'local', 'lng', 'strings'),
+      STRING_FILES,
+    ));
+  }
+  for (const name of STRING_FILES) buffers[name] ??= '[]';
   let constants;
   try {
     constants = readConstantData(buffers);
   } catch (error) {
-    throw new Error(`Could not build the save schema from ${dataRoot}: ${error.message}`, {
+    throw new Error(`Could not build the save schema from ${source.displayPath}: ${error.message}`, {
       cause: error,
     });
   }
   validateConstants(constants);
-  return Object.freeze({ constants, dataRoot });
+  return Object.freeze({
+    constants,
+    dataRoot: source.dataRoot,
+    archivePath: source.archivePath,
+    overlaidExcelFiles: Object.freeze([...new Set(overlaidExcelFiles)]),
+    overlaidStringFiles: Object.freeze([...new Set(overlaidStringFiles)]),
+  });
 }
 
 export async function loadConstantsFromSchemaFile(schemaPath) {
@@ -106,46 +139,87 @@ export async function resolveModDataRoot(modPath) {
     }
   }
   for (const candidate of candidates) {
-    if (await isFile(path.join(candidate, 'global', 'excel', 'ItemStatCost.txt'))) {
+    if (await isDirectory(path.join(candidate, 'global', 'excel'))
+      || await isDirectory(path.join(candidate, 'local', 'lng', 'strings'))) {
       return candidate;
     }
   }
   throw new Error(
-    `No unpacked mod data was found under ${root}. Expected data/global/excel/ItemStatCost.txt.`,
+    `No unpacked mod data was found under ${root}. Expected a data/global/excel or data/local/lng/strings directory.`,
   );
 }
 
-async function loadRequiredFiles(target, directory, requiredNames, kind) {
-  if (!await isDirectory(directory)) throw new Error(`Missing ${kind} directory: ${directory}`);
+export async function resolveModDataSource(modPath) {
+  if (typeof modPath !== 'string' || modPath.trim() === '') {
+    throw new TypeError('A mod, data, or MPQ path is required.');
+  }
+  const root = path.resolve(modPath);
+  let metadata;
+  try {
+    metadata = await stat(root);
+  } catch {
+    throw new Error(`Mod path does not exist: ${root}`);
+  }
+
+  if (metadata.isFile()) {
+    if (path.extname(root).toLowerCase() !== '.mpq') {
+      throw new Error(`Mod file is not an MPQ archive: ${root}`);
+    }
+    return Object.freeze({ dataRoot: null, archivePath: root, displayPath: root });
+  }
+  if (!metadata.isDirectory()) throw new Error(`Mod path is not a directory or MPQ archive: ${root}`);
+
+  const dataRoot = await findUnpackedDataRoot(root);
+  const archivePaths = (await readdir(root, { withFileTypes: true }))
+    .filter((entry) => entry.isFile() && path.extname(entry.name).toLowerCase() === '.mpq')
+    .map((entry) => path.join(root, entry.name));
+  if (archivePaths.length > 1) {
+    throw new Error(`Multiple MPQ archives were found under ${root}. Select the intended .mpq file directly.`);
+  }
+  const archivePath = archivePaths[0] ?? null;
+  if (!dataRoot && !archivePath) {
+    throw new Error(
+      `No unpacked mod data or MPQ archive was found under ${root}.`,
+    );
+  }
+  return Object.freeze({ dataRoot, archivePath, displayPath: root });
+}
+
+async function findUnpackedDataRoot(root) {
+  const candidates = [root, path.join(root, 'data')];
+  for (const entry of await readdir(root, { withFileTypes: true })) {
+    if (entry.isDirectory() && entry.name.toLowerCase().endsWith('.mpq')) {
+      candidates.push(path.join(root, entry.name, 'data'));
+    }
+  }
+  for (const candidate of candidates) {
+    if (await isDirectory(path.join(candidate, 'global', 'excel'))
+      || await isDirectory(path.join(candidate, 'local', 'lng', 'strings'))) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+async function overlayFiles(target, directory, supportedNames) {
+  if (!await isDirectory(directory)) return [];
   const entries = await readdir(directory, { withFileTypes: true });
   const names = new Map(entries
     .filter((entry) => entry.isFile())
     .map((entry) => [entry.name.toLowerCase(), entry.name]));
-  const missing = [];
-  for (const requiredName of requiredNames) {
-    const actualName = names.get(requiredName.toLowerCase());
-    if (!actualName) {
-      missing.push(requiredName);
-      continue;
-    }
-    target[requiredName] = await readFile(path.join(directory, actualName), 'utf8');
+  const overlaid = [];
+  for (const supportedName of supportedNames) {
+    const actualName = names.get(supportedName.toLowerCase());
+    if (!actualName) continue;
+    target[supportedName] = await readFile(path.join(directory, actualName), 'utf8');
+    overlaid.push(supportedName);
   }
-  if (missing.length > 0) {
-    throw new Error(`Missing required ${kind}${missing.length === 1 ? '' : 's'}: ${missing.join(', ')}`);
-  }
+  return overlaid;
 }
 
 async function isDirectory(filePath) {
   try {
     return (await stat(filePath)).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
-async function isFile(filePath) {
-  try {
-    return (await stat(filePath)).isFile();
   } catch {
     return false;
   }

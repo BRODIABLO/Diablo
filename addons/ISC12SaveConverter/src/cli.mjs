@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 import { createInterface } from 'node:readline/promises';
+import { readdir, stat } from 'node:fs/promises';
+import path from 'node:path';
+import { spawn } from 'node:child_process';
 
 import {
   BatchConversionError,
@@ -18,7 +21,7 @@ export async function runCli(argv, io = console) {
   const options = parseArguments(argv);
   if (options.help) {
     io.log(USAGE);
-    return 0;
+    return Object.freeze({ exitCode: 0 });
   }
   const direction = parseDirection(options.to);
   const schema = await loadSelectedSchema(options);
@@ -40,7 +43,12 @@ export async function runCli(argv, io = console) {
     io.log(`  ${file.file}  ${file.inputBytes} -> ${file.outputBytes} bytes  [${file.kind}]`);
   });
   io.log('Original files were not modified.');
-  return 0;
+  runtimeInstructionsForTargetWidth(direction.targetWidth).forEach((line) => io.log(line));
+  return Object.freeze({
+    exitCode: 0,
+    outputDirectory: result.outputDirectory,
+    files: result.files,
+  });
 }
 
 export async function promptForArguments(input = process.stdin, output = process.stdout) {
@@ -53,13 +61,37 @@ export async function promptForArguments(input = process.stdin, output = process
     if (direction !== '1' && direction !== '2') throw new Error('Direction must be 1 or 2.');
     const source = unquote(await prompt.question('Save file or folder (you can drag it here): '));
     if (!source) throw new Error('A save file or folder is required.');
-    const schema = unquote(await prompt.question(
-      'Custom mod schema pack (press Enter for built-in D2R v105): ',
-    ));
+    const inputs = [source];
+    const sharedStashes = await findCompanionSharedStashes(source);
+    if (sharedStashes.length > 0) {
+      output.write('\nShared stash files found beside this character:\n');
+      sharedStashes.forEach((file) => output.write(`  ${file}\n`));
+      const includeShared = (await prompt.question(
+        'Convert these shared stash files in the same atomic batch? [Y/n]: ',
+      )).trim().toLowerCase();
+      if (includeShared === '' || includeShared === 'y' || includeShared === 'yes') {
+        inputs.push(...sharedStashes);
+      }
+    }
+    output.write('\nWhich game data was used to create these saves?\n');
+    output.write('1. Clean, unmodded D2R v105 (vanilla)\n');
+    output.write('2. Installed mod folder or MPQ archive\n');
+    const schemaChoice = (await prompt.question('Choose 1 or 2: ')).trim();
+    if (!['1', '2'].includes(schemaChoice)) {
+      throw new Error('Game data choice must be 1 or 2.');
+    }
+    let schemaArguments = [];
+    if (schemaChoice === '2') {
+      const mod = unquote(await prompt.question(
+        'Installed mod folder or .mpq file (you can drag it here): ',
+      ));
+      if (!mod) throw new Error('An installed mod folder is required.');
+      schemaArguments = ['--mod', mod];
+    }
     return [
       '--to', direction === '1' ? 'isc12' : 'd2r9',
-      ...(schema ? ['--schema', schema] : []),
-      source,
+      ...schemaArguments,
+      ...inputs,
     ];
   } finally {
     prompt.close();
@@ -93,13 +125,34 @@ export function parseArguments(argv) {
   return Object.freeze(options);
 }
 
+export async function findCompanionSharedStashes(sourcePath) {
+  const absoluteSource = path.resolve(sourcePath);
+  let metadata;
+  try {
+    metadata = await stat(absoluteSource);
+  } catch {
+    return Object.freeze([]);
+  }
+  if (!metadata.isFile() || path.extname(absoluteSource).toLowerCase() !== '.d2s') {
+    return Object.freeze([]);
+  }
+  const directory = path.dirname(absoluteSource);
+  const entries = await readdir(directory, { withFileTypes: true });
+  return Object.freeze(entries
+    .filter((entry) => entry.isFile() && path.extname(entry.name).toLowerCase() === '.d2i')
+    .map((entry) => path.join(directory, entry.name))
+    .sort((left, right) => left.localeCompare(right)));
+}
+
 async function loadSelectedSchema(options) {
   if (options.schema) return loadConstantsFromSchemaFile(options.schema);
   if (options.mod) {
     const result = await loadConstantsFromMod(options.mod);
     return Object.freeze({
       constants: result.constants,
-      name: `Unpacked mod data: ${result.dataRoot}`,
+      name: result.archivePath
+        ? `Installed mod data: ${result.archivePath}`
+        : `Installed mod data: ${result.dataRoot}`,
     });
   }
   return Object.freeze({
@@ -125,10 +178,23 @@ function unquote(value) {
   return trimmed;
 }
 
+export function runtimeInstructionsForTargetWidth(targetWidth) {
+  if (targetWidth === 12) {
+    return Object.freeze([
+      'Runtime: load these saves with ISC12 enabled.',
+      'If the mod includes a D2R 9-bit ItemStatCost extension plugin, replace it with ISC12; do not load both codecs together.',
+    ]);
+  }
+  return Object.freeze([
+    'Runtime: load these saves only after restoring the mod\'s D2R 9-bit ItemStatCost codec and disabling ISC12.',
+  ]);
+}
+
 export const USAGE = `ISC12 Save Converter
 
-Converts copies of D2R v105 .d2s and .d2i files between D2R 9-bit and
-ISC12 12-bit ItemStatCost streams. Original files are never overwritten.
+Converts standard (v105) D2R 9-bit .d2s files and compatible .d2i shared
+stashes to and from ISC12 12-bit format. Supports clean vanilla saves and
+modded saves using matching mod data. Original files are never overwritten.
 
 Usage:
   isc12-save-converter --to isc12 [options] <file-or-directory> [...]
@@ -136,22 +202,34 @@ Usage:
 
 Options:
   --to isc12|d2r9         Required explicit conversion direction.
-  --schema <file>         Versioned JSON schema pack supplied by the mod author.
-  --mod <directory>       Complete unpacked D2R mod data directory.
+  --schema <file>         Advanced converter-specific schema integration.
+  --mod <path>            Installed mod folder, unpacked data, or MPQ archive.
   --output, -o <dir>      New output directory. It must not already exist.
   --help, -h              Show this help.
 
-Without --schema or --mod, the built-in D2R v105 schema is used. Custom mods
-should distribute a matching schema pack so their custom item bases and stat
-payload widths can be decoded safely.`;
+Without --schema or --mod, the clean, unmodded D2R v105 schema is used. Modded
+saves require the installed mod data that defines their item bases and stat
+payload widths.
+
+Interactive mode calls this option "Clean, unmodded D2R v105 (vanilla)" and
+offers an installed mod folder or MPQ archive as the public alternative. \`--schema\`
+remains an advanced command-line integration point, not an interactive choice.
+
+When loading converted saves, ISC12 replaces any mod-supplied D2R 9-bit
+ItemStatCost extension. The old 9-bit codec and ISC12 must not be loaded
+together. Restore the 9-bit codec and disable ISC12 after a downgrade.`;
 
 export async function main(argv = process.argv.slice(2), io = console) {
+  const interactive = argv.length === 0;
   try {
     const argumentsToRun = argv.length > 0
       ? argv
       : await promptForArguments();
-    return await runCli(argumentsToRun, io);
+    const result = await runCli(argumentsToRun, io);
+    if (interactive) await finishInteractiveSuccess(result.outputDirectory);
+    return result.exitCode;
   } catch (error) {
+    io.error('\n=== FAILED ===');
     if (error instanceof BatchConversionError) {
       io.error(error.message);
       error.failures.forEach((failure) => {
@@ -163,6 +241,33 @@ export async function main(argv = process.argv.slice(2), io = console) {
     } else {
       io.error(error.message);
     }
+    io.error('No converted save files were written.');
+    if (interactive) await waitForEnter('Press Enter to close...');
     return 1;
+  }
+}
+
+async function finishInteractiveSuccess(outputDirectory) {
+  process.stdout.write('\n=== SUCCESS ===\n');
+  process.stdout.write(`Converted saves are in:\n${outputDirectory}\n\n`);
+  const answer = (await waitForEnter(
+    'Type O and press Enter to open the output folder, or press Enter to close: ',
+  )).trim().toLowerCase();
+  if (answer === 'o' && process.platform === 'win32') {
+    const child = spawn('explorer.exe', [outputDirectory], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: false,
+    });
+    child.unref();
+  }
+}
+
+async function waitForEnter(message) {
+  const prompt = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    return await prompt.question(message);
+  } finally {
+    prompt.close();
   }
 }

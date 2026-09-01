@@ -231,7 +231,7 @@ index 1c401cd..5beffe1 100644
 +export declare function _readMagicProperties(reader: BitReader, constants: types.IConstantData, skipMagicProps?: boolean, config?: types.IConfig): types.IMagicProperty[];
 +export declare function _writeMagicProperties(writer: BitWriter, properties: types.IMagicProperty[], constants: types.IConstantData, config?: types.IConfig): void;
 diff --git a/node_modules/@d2runewizard/d2s/lib/d2/items.js b/node_modules/@d2runewizard/d2s/lib/d2/items.js
-index 7a56f26..daf478b 100644
+index 7a56f26..7c30cd1 100644
 --- a/node_modules/@d2runewizard/d2s/lib/d2/items.js
 +++ b/node_modules/@d2runewizard/d2s/lib/d2/items.js
 @@ -336,8 +336,16 @@ async function readItem(reader, version, originalConstants, config, parent) {
@@ -252,10 +252,17 @@ index 7a56f26..daf478b 100644
          if (item.type_id === ItemType.Armor) {
              item.defense_rating = reader.ReadUInt16(constants.magical_properties[31].sB) - constants.magical_properties[31].sA;
          }
-@@ -347,10 +355,11 @@ async function readItem(reader, version, originalConstants, config, parent) {
+@@ -347,10 +355,18 @@ async function readItem(reader, version, originalConstants, config, parent) {
                  item.current_durability = reader.ReadUInt16(constants.magical_properties[72].sB) - constants.magical_properties[72].sA;
              }
          }
++        if (item.type_id === ItemType.Other && Array.isArray(item.categories) && item.categories.includes("Gold")) {
++            const largeGoldPile = reader.ReadBit();
++            item.gold_amount = largeGoldPile ? reader.ReadUInt32() : reader.ReadUInt16(12);
++            if (version > 0x60) {
++                item._unknown_data.player_gold = reader.ReadBit();
++            }
++        }
 +        let hasQuantity = constants.stackables[item.type] ? 1 : 0;
          if (version === 0x69) {
 -            reader.SkipBits(1); //unknown bit in RotW
@@ -266,7 +273,7 @@ index 7a56f26..daf478b 100644
              item.quantity = reader.ReadUInt16(9);
          }
          if (item.socketed === 1) {
-@@ -368,12 +377,12 @@ async function readItem(reader, version, originalConstants, config, parent) {
+@@ -368,12 +384,12 @@ async function readItem(reader, version, originalConstants, config, parent) {
          }
          //magical properties
          const skipMagicPeroperties = ["qll", "spe", "sol", "fng", "jaw", "scz", "flg", "tal"].includes(item.type);
@@ -281,7 +288,7 @@ index 7a56f26..daf478b 100644
                  if (item.set_attributes) {
                      item.set_attributes.push(magic_attributes);
                  }
-@@ -384,12 +393,22 @@ async function readItem(reader, version, originalConstants, config, parent) {
+@@ -384,12 +400,22 @@ async function readItem(reader, version, originalConstants, config, parent) {
              plist_flag >>>= 1;
          }
          if (item.given_runeword === 1) {
@@ -305,7 +312,7 @@ index 7a56f26..daf478b 100644
      /*if (item._unknown_data.b27_31 && item._unknown_data.b27_31?.some((b) => b === 1)) {
        reader.SkipBits(53); // skip 50 - 53
        reader.Align();
-@@ -507,7 +526,15 @@ async function writeItem(item, version, constants, config) {
+@@ -507,7 +533,15 @@ async function writeItem(item, version, constants, config) {
          else if (item.type === "ibk") {
              writer.WriteUInt8(1, 5);
          }
@@ -322,10 +329,24 @@ index 7a56f26..daf478b 100644
          if (item.type_id === ItemType.Armor || item.type_id === ItemType.Shield) {
              writer.WriteUInt16(item.defense_rating + constants.magical_properties[31].sA, constants.magical_properties[31].sB);
          }
-@@ -517,10 +544,11 @@ async function writeItem(item, version, constants, config) {
+@@ -517,10 +551,25 @@ async function writeItem(item, version, constants, config) {
                  writer.WriteUInt16(item.current_durability, constants.magical_properties[72].sB);
              }
          }
++        if (item.type_id === ItemType.Other && Array.isArray(item.categories) && item.categories.includes("Gold")) {
++            const goldAmount = Math.max(0, Number.isFinite(item.gold_amount) ? Math.trunc(item.gold_amount) : 0);
++            const largeGoldPile = goldAmount >= 0x1000;
++            writer.WriteBit(largeGoldPile ? 1 : 0);
++            if (largeGoldPile) {
++                writer.WriteUInt32(Math.min(goldAmount, 0xffffffff));
++            }
++            else {
++                writer.WriteUInt16(Math.min(goldAmount, 0xfff), 12);
++            }
++            if (version > 0x60) {
++                writer.WriteBit(item._unknown_data.player_gold || 0);
++            }
++        }
 +        const hasQuantity = item.quantity !== undefined && item.quantity !== null;
          if (version === 0x69) {
 -            writer.WriteUInt8(constants.stackables[item.type] ? 1 : 0, 1); //unknown bit in RotW
@@ -336,7 +357,7 @@ index 7a56f26..daf478b 100644
              writer.WriteUInt16(item.quantity, 9);
          }
          if (item.socketed === 1) {
-@@ -532,14 +560,25 @@ async function writeItem(item, version, constants, config) {
+@@ -532,14 +581,25 @@ async function writeItem(item, version, constants, config) {
              const plist_flag = (1 << set_attribute_count) - 1;
              writer.WriteUInt8(item._unknown_data.plist_flag || plist_flag, 5);
          }
@@ -365,11 +386,18 @@ index 7a56f26..daf478b 100644
          }
      }
      if (version === 0x69) {
-@@ -644,12 +683,12 @@ function _readSimpleBits(item, reader, version, constants, config) {
+@@ -644,12 +704,19 @@ function _readSimpleBits(item, reader, version, constants, config) {
          else {
              item.type_id = ItemType.Other;
          }
 -        let bits = item.simple_item ? 1 : 3;
++        if (item.simple_item && ((_c = item.categories) === null || _c === void 0 ? void 0 : _c.includes("Gold"))) {
++            const largeGoldPile = reader.ReadBit();
++            item.gold_amount = largeGoldPile ? reader.ReadUInt32() : reader.ReadUInt16(12);
++            if (version > 0x60) {
++                item._unknown_data.player_gold = reader.ReadBit();
++            }
++        }
 +        let bits = item.simple_item ? (version === 0x69 ? 0 : 1) : 3;
          if ((_c = item.categories) === null || _c === void 0 ? void 0 : _c.includes("Quest")) {
              item.quest_difficulty = reader.ReadUInt16(constants.magical_properties[356].sB) - constants.magical_properties[356].sA;
@@ -381,13 +409,37 @@ index 7a56f26..daf478b 100644
      }
  }
  function _lookupRareId(name, constants) {
-@@ -708,34 +747,38 @@ function _writeSimpleBits(writer, version, item, constants, config) {
+@@ -657,7 +724,7 @@ function _lookupRareId(name, constants) {
+     return constants.rare_names.findIndex((k) => k && (k.n.toLowerCase().startsWith(name.toLowerCase()) || name.toLowerCase().startsWith(k.n.toLowerCase())));
+ }
+ function _writeSimpleBits(writer, version, item, constants, config) {
+-    var _a;
++    var _a, _b;
+     writer.WriteBits(item._unknown_data.b0_3 || new Uint8Array(4), 4);
+     writer.WriteBit(item.identified);
+     writer.WriteBits(item._unknown_data.b5_10 || new Uint8Array(6), 6);
+@@ -708,34 +775,52 @@ function _writeSimpleBits(writer, version, item, constants, config) {
                  writer.WriteUInt16(n.v, n.l);
              }
          }
 -        let bits = item.simple_item ? 1 : 3;
+-        if ((_a = item.categories) === null || _a === void 0 ? void 0 : _a.includes("Quest")) {
++        if (item.simple_item && ((_a = item.categories) === null || _a === void 0 ? void 0 : _a.includes("Gold"))) {
++            const goldAmount = Math.max(0, Number.isFinite(item.gold_amount) ? Math.trunc(item.gold_amount) : 0);
++            const largeGoldPile = goldAmount >= 0x1000;
++            writer.WriteBit(largeGoldPile ? 1 : 0);
++            if (largeGoldPile) {
++                writer.WriteUInt32(Math.min(goldAmount, 0xffffffff));
++            }
++            else {
++                writer.WriteUInt16(Math.min(goldAmount, 0xfff), 12);
++            }
++            if (version > 0x60) {
++                writer.WriteBit(item._unknown_data.player_gold || 0);
++            }
++        }
 +        let bits = item.simple_item ? (version === 0x69 ? 0 : 1) : 3;
-         if ((_a = item.categories) === null || _a === void 0 ? void 0 : _a.includes("Quest")) {
++        if ((_b = item.categories) === null || _b === void 0 ? void 0 : _b.includes("Quest")) {
              const difficulty = item.quest_difficulty || 0;
              writer.WriteUInt16(difficulty + constants.magical_properties[356].sA, constants.magical_properties[356].sB);
 -            bits = 1;
@@ -430,7 +482,7 @@ index 7a56f26..daf478b 100644
          if (id === 0) {
              zeroCounter++;
          }
-@@ -743,8 +786,8 @@ function _readMagicProperties(reader, constants, skipMagicProps) {
+@@ -743,8 +828,8 @@ function _readMagicProperties(reader, constants, skipMagicProps) {
              throw new Error(`Possible malformed data at position ${reader.offset - 9}`);
          }
          const values = [];
@@ -441,7 +493,7 @@ index 7a56f26..daf478b 100644
          }
          const num_of_properties = constants.magical_properties[id].np || 1;
          for (let i = 0; i < num_of_properties; i++) {
-@@ -799,17 +842,22 @@ function _readMagicProperties(reader, constants, skipMagicProps) {
+@@ -799,17 +884,22 @@ function _readMagicProperties(reader, constants, skipMagicProps) {
              values: values,
              name: constants.magical_properties[id].s,
          });
@@ -467,7 +519,7 @@ index 7a56f26..daf478b 100644
              const num_of_properties = constants.magical_properties[property.id].np || 1;
              for (let j = 0; j < num_of_properties; j++) {
                  const prop = constants.magical_properties[property.id + j];
-@@ -857,9 +905,16 @@ function _writeMagicProperties(writer, properties, constants) {
+@@ -857,9 +947,16 @@ function _writeMagicProperties(writer, properties, constants) {
              }
          }
      }
@@ -566,7 +618,7 @@ index fdeca72..ca2c66b 100644
      if (!constants) {
          constants = constants_1.getConstantData(version);
 diff --git a/node_modules/@d2runewizard/d2s/lib/d2/types.d.ts b/node_modules/@d2runewizard/d2s/lib/d2/types.d.ts
-index 5b71ab5..551d70b 100644
+index 5b71ab5..ec673d2 100644
 --- a/node_modules/@d2runewizard/d2s/lib/d2/types.d.ts
 +++ b/node_modules/@d2runewizard/d2s/lib/d2/types.d.ts
 @@ -2,6 +2,9 @@ export interface IConfig {
@@ -593,6 +645,22 @@ index 5b71ab5..551d70b 100644
  }
  export interface IAttributes {
      [key: string]: number;
+@@ -295,6 +305,7 @@ export interface IItem {
+     type_id: number;
+     type_name: string;
+     quest_difficulty: number;
++    gold_amount?: number;
+     nr_of_items_in_sockets: number;
+     id: number;
+     level: number;
+@@ -354,6 +365,7 @@ export interface IItem {
+         b27_31?: Uint8Array;
+         plist_flag?: number;
+         chest_stackable?: number;
++        player_gold?: number;
+     };
+     rare_name_id: number;
+     rare_name_id2: number;
 diff --git a/node_modules/@d2runewizard/d2s/lib/d2/versions/default_header.js b/node_modules/@d2runewizard/d2s/lib/d2/versions/default_header.js
 index 11b3d51..cac9d24 100644
 --- a/node_modules/@d2runewizard/d2s/lib/d2/versions/default_header.js

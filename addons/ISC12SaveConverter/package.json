@@ -7,6 +7,7 @@
     "isc12-save-converter": "src/cli-entry.mjs"
   },
   "scripts": {
+    "generate:vanilla-excel": "node scripts/generate-vanilla-excel.mjs",
     "build:standalone": "node scripts/build-standalone.mjs",
     "convert": "node src/cli-entry.mjs",
     "fixture:runtime": "node scripts/create-runtime-fixture.mjs",
@@ -15,5 +16,8 @@
   "devDependencies": {
     "esbuild": "0.28.2",
     "postject": "1.0.0-alpha.6"
+  },
+  "dependencies": {
+    "stormlib-js": "^0.1.1"
   }
 }
