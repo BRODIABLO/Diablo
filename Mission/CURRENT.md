@@ -144,14 +144,26 @@ exécuté une fois et retiré. Le create/save/reload standard, le preview
 header-only, le second round-trip D2S, le D2I contrôlé, les IDs élevés, les
 payloads `0x9C`/`0x9D`, les scénarios de pression G9 et les portées
 mod-locale/globale sont maintenant qualifiés. G5–G8 et le census fixed-width
-sont fermés statiquement et publiés avec succès dans les deux portées. Le
-multijoueur ISC12 réel ne l'est pas encore.
+sont fermés statiquement et publiés avec succès dans les deux portées.
+
+Le multijoueur ISC12 réel est maintenant qualifié sur deux instances locales
+indépendantes. Le matching baseline passe avec l'empreinte commune
+`d47b2fa2…a590`; le matching à exactement 4 095 lignes passe avec
+`db5b6b25…47c6`, et l'item portant les IDs élevés est déplacé du shared stash au
+personnage puis au sol sans déconnexion du peer. Les deux mismatches sont
+refusés fail-closed avant création du joueur. Le sens host ISC12/joiner absent
+oppose `d47b2fa2…a590` à `17fe0612…c05`. Le sens inverse est isolé dans un
+cleanroom où la seule différence est ISC12 — 17 contre 18 plugins partagés —
+et oppose `1e602a9f…c872` à `42bbaffc…9c50`; les deux logs nomment
+`environment fingerprint mismatch`. Le runtime, les tables, sauvegardes,
+ignore-lists et DLL sont restaurés byte-exact, sans processus restant.
 
 ## Prochain gate
 
-Qualifier un host/joiner ISC12 identique, puis les deux mismatches asymétriques
-(host ISC12/joiner absent et host absent/joiner ISC12) avec refus fail-closed
-avant toute revendication réseau complète ou release publique.
+Sur demande explicite de Vincent, préparer la release publique ISC12 : README
+révisable hors ZIP, archive autonome, catalogue de hashes et contrôles de
+livraison de la RuffnecKk D2RLoader Suite. Le gate réseau est fermé; aucun
+commit, push, tag ni asset GitHub n'est encore autorisé.
 Le kit NativePublication V1 reste un durcissement loader général optionnel et
 ne bloque pas ces gates.
 
