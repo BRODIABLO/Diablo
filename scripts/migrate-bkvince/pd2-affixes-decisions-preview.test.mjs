@@ -454,6 +454,7 @@ test('the approved map rule excludes exactly 248 occurrences without changing Ma
   };
   const currentDecisions = {
     ...decisions,
+    comparisonHash: currentReport.comparisonHash,
     dependencyHashes: context.dependencyHashes,
     targetBaselineHashes: currentTargetHashes,
   };
@@ -483,12 +484,12 @@ test('the approved map rule excludes exactly 248 occurrences without changing Ma
   });
   const preview = compilePreview(currentReport, updated, { catalog, context });
   assert.deepEqual(preview.proposedManifest, {
-    changedCells: 1368,
+    changedCells: 1292,
     appendedRows: 7,
     rejectedRows: 249,
-    auditedOccurrences: 655,
+    auditedOccurrences: 621,
     conflicts: 5,
-    incomplete: 296,
+    incomplete: 330,
   });
   assert.deepEqual(preview.rows.map((row) => row.id).sort(), [
     'magicprefix.txt:784',

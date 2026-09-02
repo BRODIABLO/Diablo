@@ -1,8 +1,8 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-08-31T14:14:34.1273387+00:00",
+    "generatedAt":  "2026-09-02T11:19:34.8584178+00:00",
     "root":  {
-                 "name":  "Diablo",
+                 "name":  "ci-cadastre-head-b2f122a6de9c43ec85a936611a9afd43",
                  "path":  ".",
                  "kind":  "directory",
                  "meta":  {
@@ -808,6 +808,98 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "BulkCurrencyDeposit",
+                                                           "path":  "addons/BulkCurrencyDeposit",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-public-d2rloader-package",
+                                                                        "summary":  "Plugin public RuffnecKk 1.1.1 qui transfère les monnaies empilables vers leurs emplacements Advanced Stash, avec action Controls SDK v3, bouton Inventory facultatif et tooltip littéral sans identifiant global de chaîne.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "active"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "assets",
+                                                                                "path":  "addons/BulkCurrencyDeposit/assets",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "button-mold.lowend.sprite",
+                                                                                                     "path":  "addons/BulkCurrencyDeposit/assets/button-mold.lowend.sprite",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "button-mold.sprite",
+                                                                                                     "path":  "addons/BulkCurrencyDeposit/assets/button-mold.sprite",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "deposit-button.lowend.sprite",
+                                                                                                     "path":  "addons/BulkCurrencyDeposit/assets/deposit-button.lowend.sprite",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "deposit-button.sprite",
+                                                                                                     "path":  "addons/BulkCurrencyDeposit/assets/deposit-button.sprite",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/BulkCurrencyDeposit/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "bulk_currency_deposit_policy.hpp",
+                                                                                                     "path":  "addons/BulkCurrencyDeposit/src/bulk_currency_deposit_policy.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/BulkCurrencyDeposit/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/BulkCurrencyDeposit/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/BulkCurrencyDeposit/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "policy_tests.cpp",
+                                                                                                     "path":  "addons/BulkCurrencyDeposit/src/policy_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "resource_ids.h",
+                                                                                                     "path":  "addons/BulkCurrencyDeposit/src/resource_ids.h",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "d2rl-ruffneckk-bulk-currency-deposit.dll",
+                                                                                "path":  "addons/BulkCurrencyDeposit/d2rl-ruffneckk-bulk-currency-deposit.dll",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/BulkCurrencyDeposit/README.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "ruffneckk-bulk-currency-deposit.toml",
+                                                                                "path":  "addons/BulkCurrencyDeposit/ruffneckk-bulk-currency-deposit.toml",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "BurnDamageFix",
                                                            "path":  "addons/BurnDamageFix",
                                                            "kind":  "directory",
@@ -959,6 +1051,11 @@
                                                                             {
                                                                                 "name":  "INTERMOD-GUIDE.md",
                                                                                 "path":  "addons/CastTriggers/INTERMOD-GUIDE.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "LAB-GUIDE.md",
+                                                                                "path":  "addons/CastTriggers/LAB-GUIDE.md",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
@@ -1585,7 +1682,7 @@
                                                                             }
                                                                         ]
                                                        },
-{
+                                                       {
                                                            "name":  "ISC12SaveConverter",
                                                            "path":  "addons/ISC12SaveConverter",
                                                            "kind":  "directory",
@@ -1609,6 +1706,11 @@
                                                                                                  {
                                                                                                      "name":  "create-runtime-fixture.mjs",
                                                                                                      "path":  "addons/ISC12SaveConverter/scripts/create-runtime-fixture.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "generate-vanilla-excel.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/scripts/generate-vanilla-excel.mjs",
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
@@ -1664,6 +1766,11 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "mpq-reader.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/mpq-reader.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "runewizard-bridge.mjs",
                                                                                                      "path":  "addons/ISC12SaveConverter/src/runewizard-bridge.mjs",
                                                                                                      "kind":  "file"
@@ -1691,6 +1798,16 @@
                                                                                                  {
                                                                                                      "name":  "stat-stream.test.mjs",
                                                                                                      "path":  "addons/ISC12SaveConverter/src/stat-stream.test.mjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "stormlib-wrapper.cjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/stormlib-wrapper.cjs",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "vanilla-excel.generated.mjs",
+                                                                                                     "path":  "addons/ISC12SaveConverter/src/vanilla-excel.generated.mjs",
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
@@ -2523,73 +2640,6 @@
                                                                         ]
                                                        },
                                                        {
-                                                           "name":  "StaticFieldRework",
-                                                           "path":  "addons/StaticFieldRework",
-                                                           "kind":  "directory",
-                                                           "meta":  {
-                                                                        "role":  "x-standalone-d2rloader-addon",
-                                                                        "summary":  "Plugin hybride RuffnecKk pour D2RLoader 3.2.92777 qui ajoute au Static Field BKVince un debuff temporaire de rÃ©sistance Ã  la foudre via les fonctions serveur natives.",
-                                                                        "agentAccess":  "read-write",
-                                                                        "status":  "experimental"
-                                                                    },
-                                                           "children":  [
-                                                                            {
-                                                                                "name":  "package",
-                                                                                "path":  "addons/StaticFieldRework/package",
-                                                                                "kind":  "directory",
-                                                                                "children":  [
-                                                                                                 {
-                                                                                                     "name":  "StaticFieldRework.dll",
-                                                                                                     "path":  "addons/StaticFieldRework/package/StaticFieldRework.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "StaticFieldRework.toml",
-                                                                                                     "path":  "addons/StaticFieldRework/package/StaticFieldRework.toml",
-                                                                                                     "kind":  "file"
-                                                                                                 }
-                                                                                             ]
-                                                                            },
-                                                                            {
-                                                                                "name":  "src",
-                                                                                "path":  "addons/StaticFieldRework/src",
-                                                                                "kind":  "directory",
-                                                                                "children":  [
-                                                                                                 {
-                                                                                                     "name":  "CMakeLists.txt",
-                                                                                                     "path":  "addons/StaticFieldRework/src/CMakeLists.txt",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "plugin.cpp",
-                                                                                                     "path":  "addons/StaticFieldRework/src/plugin.cpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "plugin.rc",
-                                                                                                     "path":  "addons/StaticFieldRework/src/plugin.rc",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "static-field-rework-policy.hpp",
-                                                                                                     "path":  "addons/StaticFieldRework/src/static-field-rework-policy.hpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "static-field-rework-tests.cpp",
-                                                                                                     "path":  "addons/StaticFieldRework/src/static-field-rework-tests.cpp",
-                                                                                                     "kind":  "file"
-                                                                                                 }
-                                                                                             ]
-                                                                            },
-                                                                            {
-                                                                                "name":  "README.md",
-                                                                                "path":  "addons/StaticFieldRework/README.md",
-                                                                                "kind":  "file"
-                                                                            }
-                                                                        ]
-                                                       },
-                                                       {
                                                            "name":  "RuffnecKkMapSense",
                                                            "path":  "addons/RuffnecKkMapSense",
                                                            "kind":  "directory",
@@ -3042,6 +3092,73 @@
                                                                             {
                                                                                 "name":  "VALIDATION.md",
                                                                                 "path":  "addons/RuffnecKkScriptedAI/VALIDATION.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "StaticFieldRework",
+                                                           "path":  "addons/StaticFieldRework",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-standalone-d2rloader-addon",
+                                                                        "summary":  "Plugin hybride RuffnecKk pour D2RLoader 3.2.92777 qui ajoute au Static Field BKVince un debuff temporaire de rÃ©sistance Ã  la foudre via les fonctions serveur natives.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "experimental"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "package",
+                                                                                "path":  "addons/StaticFieldRework/package",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "StaticFieldRework.dll",
+                                                                                                     "path":  "addons/StaticFieldRework/package/StaticFieldRework.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "StaticFieldRework.toml",
+                                                                                                     "path":  "addons/StaticFieldRework/package/StaticFieldRework.toml",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/StaticFieldRework/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/StaticFieldRework/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/StaticFieldRework/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/StaticFieldRework/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "static-field-rework-policy.hpp",
+                                                                                                     "path":  "addons/StaticFieldRework/src/static-field-rework-policy.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "static-field-rework-tests.cpp",
+                                                                                                     "path":  "addons/StaticFieldRework/src/static-field-rework-tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/StaticFieldRework/README.md",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
@@ -11497,14 +11614,6 @@
                                                                                                                                                                                      }
                                                                                                                                                                                  ]
                                                                                                                                                                 }
-                                                                                                                                                            ]
-                                                                                                                                           },
-                                                                                                                                           {
-                                                                                                                                               "name":  "porory",
-                                                                                                                                               "path":  "data-BKVince/BKVince.mpq/data/hd/env/porory",
-                                                                                                                                               "kind":  "directory",
-                                                                                                                                               "children":  [
-
                                                                                                                                                             ]
                                                                                                                                            },
                                                                                                                                            {
@@ -21046,13 +21155,18 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
-                                                                                                     "name":  "StaticFieldRework.toml",
-                                                                                                     "path":  "data-BKVince/d2rloader/config/StaticFieldRework.toml",
+                                                                                                     "name":  "ruffneckk-bulk-currency-deposit.toml",
+                                                                                                     "path":  "data-BKVince/d2rloader/config/ruffneckk-bulk-currency-deposit.toml",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "ruffneckk-extended-act-level-ids.json",
                                                                                                      "path":  "data-BKVince/d2rloader/config/ruffneckk-extended-act-level-ids.json",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "StaticFieldRework.toml",
+                                                                                                     "path":  "data-BKVince/d2rloader/config/StaticFieldRework.toml",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -21153,11 +21267,6 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
-                                                                                                     "name":  "ruffneckk-normal-area-scaling.json",
-                                                                                                     "path":  "data-BKVince/d2rloader/patches/ruffneckk-normal-area-scaling.json",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
                                                                                                      "name":  "pd2-aura-enchanted-scaling.json",
                                                                                                      "path":  "data-BKVince/d2rloader/patches/pd2-aura-enchanted-scaling.json",
                                                                                                      "kind":  "file"
@@ -21175,6 +21284,16 @@
                                                                                                  {
                                                                                                      "name":  "README.txt",
                                                                                                      "path":  "data-BKVince/d2rloader/patches/README.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "ruffneckk-hit-chance-0-100.json",
+                                                                                                     "path":  "data-BKVince/d2rloader/patches/ruffneckk-hit-chance-0-100.json",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "ruffneckk-normal-area-scaling.json",
+                                                                                                     "path":  "data-BKVince/d2rloader/patches/ruffneckk-normal-area-scaling.json",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -22445,6 +22564,16 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "d2rl-ruffneckk-bulk-currency-deposit.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/d2rl-ruffneckk-bulk-currency-deposit.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "d2rl-ruffneckk-extended-act-level-ids.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/d2rl-ruffneckk-extended-act-level-ids.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "FloatingDamage.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/FloatingDamage.dll",
                                                                                                      "kind":  "file"
@@ -22452,11 +22581,6 @@
                                                                                                  {
                                                                                                      "name":  "MeleeSplash.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/MeleeSplash.dll",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
-                                                                                                     "name":  "d2rl-ruffneckk-extended-act-level-ids.dll",
-                                                                                                     "path":  "data-BKVince/d2rloader/plugins/d2rl-ruffneckk-extended-act-level-ids.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -40271,6 +40395,11 @@
                                                                     }
                                                        },
                                                        {
+                                                           "name":  "bulk-currency-deposit-3.3.md",
+                                                           "path":  "Mission/bulk-currency-deposit-3.3.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "bulk-skill-point-allocation-3.2.md",
                                                            "path":  "Mission/bulk-skill-point-allocation-3.2.md",
                                                            "kind":  "file",
@@ -40314,6 +40443,11 @@
                                                                         "summary":  "DÃ©cisions produit, pÃ©rimÃ¨tre configurable et gates du plugin de rÃ©compense Larzuk par difficultÃ© et qualitÃ©.",
                                                                         "agentAccess":  "read-write"
                                                                     }
+                                                       },
+                                                       {
+                                                           "name":  "configurable-resistance-floor-3.3.md",
+                                                           "path":  "Mission/configurable-resistance-floor-3.3.md",
+                                                           "kind":  "file"
                                                        },
                                                        {
                                                            "name":  "cube-quick-move-bottom-right-3.2.md",
@@ -40495,6 +40629,46 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "pd2-affixes-decisions-v3-round1.json",
+                                                           "path":  "Mission/pd2-affixes-decisions-v3-round1.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-affixes-decisions-v3-round1-preview.json",
+                                                           "path":  "Mission/pd2-affixes-decisions-v3-round1-preview.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-affixes-decisions-v3-round1-preview.md",
+                                                           "path":  "Mission/pd2-affixes-decisions-v3-round1-preview.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-affixes-decisions-v3-round1-ready-for-round2.json",
+                                                           "path":  "Mission/pd2-affixes-decisions-v3-round1-ready-for-round2.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-affixes-decisions-v3-round1-ready-for-round2.md",
+                                                           "path":  "Mission/pd2-affixes-decisions-v3-round1-ready-for-round2.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-affixes-decisions-v3-round1-ready-for-round2-preview.json",
+                                                           "path":  "Mission/pd2-affixes-decisions-v3-round1-ready-for-round2-preview.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-affixes-decisions-v3-round1-remediated-preview.json",
+                                                           "path":  "Mission/pd2-affixes-decisions-v3-round1-remediated-preview.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-affixes-decisions-v3-round1-remediated-proposed.json",
+                                                           "path":  "Mission/pd2-affixes-decisions-v3-round1-remediated-proposed.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "pd2-affixes-documentation-map.json",
                                                            "path":  "Mission/pd2-affixes-documentation-map.json",
                                                            "kind":  "file"
@@ -40532,6 +40706,16 @@
                                                        {
                                                            "name":  "pd2-affixes-review.json",
                                                            "path":  "Mission/pd2-affixes-review.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-affixes-round1-conflict-matrix.json",
+                                                           "path":  "Mission/pd2-affixes-round1-conflict-matrix.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "pd2-affixes-round1-conflict-remediation.md",
+                                                           "path":  "Mission/pd2-affixes-round1-conflict-remediation.md",
                                                            "kind":  "file"
                                                        },
                                                        {
@@ -40731,6 +40915,16 @@
                                                                     }
                                                        },
                                                        {
+                                                           "name":  "ruffneckk-mapsense.md",
+                                                           "path":  "Mission/ruffneckk-mapsense.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "ruffneckk-scripted-domains.md",
+                                                           "path":  "Mission/ruffneckk-scripted-domains.md",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "sounds-of-variation-bkvince.md",
                                                            "path":  "Mission/sounds-of-variation-bkvince.md",
                                                            "kind":  "file"
@@ -40783,16 +40977,6 @@
                                                        {
                                                            "name":  "yupgoolg-hd-assets-audit.md",
                                                            "path":  "Mission/yupgoolg-hd-assets-audit.md",
-                                                           "kind":  "file"
-                                                       },
-                                                       {
-                                                           "name":  "ruffneckk-mapsense.md",
-                                                           "path":  "Mission/ruffneckk-mapsense.md",
-                                                           "kind":  "file"
-                                                       },
-                                                       {
-                                                           "name":  "ruffneckk-scripted-domains.md",
-                                                           "path":  "Mission/ruffneckk-scripted-domains.md",
                                                            "kind":  "file"
                                                        }
                                                    ]
@@ -41028,6 +41212,11 @@
                                                                                                  {
                                                                                                      "name":  "sdk-candidates.json",
                                                                                                      "path":  "reverse-engineering/d2r-3.2.92777/sdk-contribution/sdk-candidates.json",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "Services-requests.md",
+                                                                                                     "path":  "reverse-engineering/d2r-3.2.92777/sdk-contribution/Services-requests.md",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
@@ -41844,6 +42033,11 @@
                                                                             {
                                                                                 "name":  "d2r32.py",
                                                                                 "path":  "scripts/reverse-engineering/d2r32.py",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "d2r33.ps1",
+                                                                                "path":  "scripts/reverse-engineering/d2r33.ps1",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

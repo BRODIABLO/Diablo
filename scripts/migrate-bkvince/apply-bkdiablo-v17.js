@@ -35,6 +35,26 @@ function headerIndex(table, header, occurrence = 1) {
   assert.fail(`Missing header ${header}#${occurrence}`);
 }
 
+function governedRowIndex(table, definition, change) {
+  const keyIndex = headerIndex(table, definition.keyHeader);
+  const acceptedKeys = new Set([change.rowKey, change.desiredRowKey]);
+  const matchingRows = [];
+  table.rows.forEach((row, index) => {
+    if (acceptedKeys.has(row[keyIndex])) matchingRows.push(index);
+  });
+  const occurrence = change.occurrence ?? 1;
+  assert.ok(
+    Number.isInteger(occurrence) && occurrence > 0,
+    `${definition.path}: invalid governed occurrence ${JSON.stringify(occurrence)}`,
+  );
+  const rowIndex = matchingRows[occurrence - 1];
+  assert.ok(
+    Number.isInteger(rowIndex),
+    `${definition.path}: missing governed row ${JSON.stringify(change.rowKey)} occurrence ${occurrence} (source ordinal ${change.targetOrdinal})`,
+  );
+  return { rowIndex, keyIndex };
+}
+
 function loadTsv(definition) {
   const filePath = absolute(definition.path);
   const before = fs.readFileSync(filePath);
@@ -49,13 +69,11 @@ function loadTsv(definition) {
 
   let changedCells = 0;
   for (const change of definition.changes) {
-    const rowIndex = change.targetOrdinal - 2;
+    const { rowIndex, keyIndex } = governedRowIndex(table, definition, change);
     const row = table.rows[rowIndex];
-    assert.ok(row, `${definition.path}: missing governed row at ordinal ${change.targetOrdinal}`);
-    const keyIndex = headerIndex(table, definition.keyHeader);
     assert.ok(
       [change.rowKey, change.desiredRowKey].includes(row[keyIndex]),
-      `${definition.path}: governed row ${change.targetOrdinal} is ${JSON.stringify(row[keyIndex])}`,
+      `${definition.path}: governed row ${JSON.stringify(change.rowKey)} is ${JSON.stringify(row[keyIndex])}`,
     );
     const columnIndex = headerIndex(table, change.header, change.headerOccurrence);
     const current = row[columnIndex] ?? '';
@@ -368,8 +386,8 @@ function validateExclusions(tsvDocuments, skillsJson) {
   const descriptionIndex = headerIndex(cube, 'description');
   assert.strictEqual(
     cube.rows.filter((row) => row[descriptionIndex] === 'Readable Items Test - Town Portal Scroll').length,
-    1,
-    'BKVince Readable Items Test recipe must be preserved',
+    0,
+    'Retired Town Portal Scroll Readable Items witness must stay absent',
   );
 }
 

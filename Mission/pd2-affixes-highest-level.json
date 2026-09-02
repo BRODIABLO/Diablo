@@ -1,7 +1,7 @@
 {
   "schemaVersion": 3,
   "reportId": "pd2-affixes-highest-level-v3",
-  "comparisonHash": "325EE7A768880E983601FE1CAFD3D21553C7EEAA9287AAA824D197548EF415EC",
+  "comparisonHash": "DF8721B04057234AB04B80EDF3A4D211706E2E4AD5EC6CAED4118BB4334C3B1D",
   "scope": "Affixes with alvl > 71; AutoMagic is reported but remains deferred.",
   "formula": {
     "normal": "Let i=max(ilvl,qlvl). If magic_lvl>0: alvl=min(99,i+magic_lvl). Otherwise if i<99-floor(qlvl/2): alvl=i-floor(qlvl/2), else alvl=2*i-99.",
