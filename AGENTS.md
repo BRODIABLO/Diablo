@@ -87,6 +87,7 @@ Les procédures répétables résident sous `.agents/skills/`. Utilise le skill 
 
 - `diablo-tsv` — cadastre, schémas, tables TXT, CRLF et round-trip byte-exact;
 - `plugin-architect` — revue d'architecture explicite, approfondie et strictement read-only avant le choix d'un mécanisme;
+- `d2rloader-service-governance` — gate automatique « no consumer, no service » pour auditer, prioriser, formuler et mesurer les demandes de services D2RLoader/PluginSDK;
 - `d2r33-reverse-engineering` — preuves natives du runtime courant D2R 3.3.93847, fonctions, xrefs, signatures, ABI et RVA;
 - `d2rloader-plugin-incubation` — implantation d'une DLL retenue, autonomie RuffnecKk Suite, audit SDK/ABI/hooks, coexistence complète, configuration indépendante, crédits et ZIP;
 - `d2r-runtime-validation` — arrêt/relance du jeu, synchronisation, hashes, logs et matrice de validation;

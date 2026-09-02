@@ -104,6 +104,35 @@
                                                                                              ]
                                                                             },
                                                                             {
+                                                                                "name":  "d2rloader-service-governance",
+                                                                                "path":  ".agents/skills/d2rloader-service-governance",
+                                                                                "kind":  "directory",
+                                                                                "meta":  {
+                                                                                             "role":  "x-d2rloader-service-governance",
+                                                                                             "summary":  "Gate automatique no-consumer-no-service qui exige une adoption réelle, une migration prête et un gain mesurable avant de recommander une évolution D2RLoader ou PluginSDK.",
+                                                                                             "agentAccess":  "read-write"
+                                                                                         },
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "agents",
+                                                                                                     "path":  ".agents/skills/d2rloader-service-governance/agents",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "openai.yaml",
+                                                                                                                          "path":  ".agents/skills/d2rloader-service-governance/agents/openai.yaml",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "SKILL.md",
+                                                                                                     "path":  ".agents/skills/d2rloader-service-governance/SKILL.md",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
                                                                                 "name":  "d2r-runtime-validation",
                                                                                 "path":  ".agents/skills/d2r-runtime-validation",
                                                                                 "kind":  "directory",

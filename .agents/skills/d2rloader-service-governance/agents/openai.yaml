@@ -1,0 +1,7 @@
+interface:
+  display_name: "D2RLoader Service Governance"
+  short_description: "Bloquer les demandes de services sans valeur prouvée"
+  default_prompt: "Utilise $d2rloader-service-governance pour auditer cette demande de service et décider si elle mérite réellement d'être transmise."
+
+policy:
+  allow_implicit_invocation: true
