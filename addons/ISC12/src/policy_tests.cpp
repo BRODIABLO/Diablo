@@ -1,4 +1,3 @@
-#include "isc12_config.hpp"
 #include "isc12_contract.hpp"
 #include "isc12_atomic_file.hpp"
 #include "isc12_codec_patch.hpp"
@@ -4230,40 +4229,6 @@ int main() {
     CHECK(!BuildDescriptionIndex(tooManyRows, untouched));
     CHECK((untouched == std::vector<std::uint16_t>{7, 8, 9}));
 
-    Config config{};
-    std::string error;
-    constexpr std::string_view validToml = R"toml(
-config_version = 1
-enabled = true
-[diagnostics]
-enabled = false
-)toml";
-    CHECK(ParseToml(validToml, config, error));
-    CHECK(config.enabled && !config.diagnostics);
-    CHECK(!ParseToml(
-        "config_version = 2\nenabled = true\n"
-        "[diagnostics]\nenabled = false\n",
-        config,
-        error));
-    CHECK(!ParseToml(
-        "config_version = 1\nenabled = true\nunknown = 1\n"
-        "[diagnostics]\nenabled = false\n",
-        config,
-        error));
-
-    const auto candidates = BuildConfigCandidates(
-        std::filesystem::path{L"mod"},
-        std::filesystem::path{L"scope"},
-        std::filesystem::path{L"global"},
-        std::filesystem::path{L"ruffneckk-isc12.toml"});
-    CHECK(candidates.size() == 3);
-    const auto deduplicated = BuildConfigCandidates(
-        std::filesystem::path{L"same"},
-        std::filesystem::path{L"same"},
-        std::filesystem::path{L"global"},
-        std::filesystem::path{L"ruffneckk-isc12.toml"});
-    CHECK(deduplicated.size() == 2);
-
     CHECK(!FoundationPatterns.empty());
     struct OwnedNativeRange {
         std::uintptr_t begin;
@@ -4306,14 +4271,6 @@ enabled = false
         }
         for (const auto mask : pattern.mask) CHECK(mask == 0xFF);
     }
-
-    std::ifstream configFile(
-        std::filesystem::path{ISC12_CONFIG_PATH}, std::ios::binary);
-    const std::string configText{
-        std::istreambuf_iterator<char>{configFile},
-        std::istreambuf_iterator<char>{}};
-    CHECK(!configText.empty());
-    CHECK(ParseToml(configText, config, error));
 
     std::ifstream pluginFile(
         std::filesystem::path{ISC12_PLUGIN_SOURCE_PATH}, std::ios::binary);
@@ -4419,7 +4376,6 @@ enabled = false
     CHECK(loaderText.find(".Publish(") == std::string::npos);
     CHECK(loaderText.find("->Publish(") == std::string::npos);
 
-    const auto disabledBranch = pluginText.find("if (!Settings.enabled)");
     const auto publicationWindow = pluginText.find(
         "InitialLoadPublicationWindow publicationWindow");
     const auto prepareLoader = pluginText.find("PrepareLoaderExtension(");
@@ -4433,7 +4389,10 @@ enabled = false
         "PublishReadinessAfterStartupCommit()");
     const auto operationalPublish = pluginText.find(
         "SchemaLifecycle.compare_exchange_strong(");
-    CHECK(disabledBranch != std::string::npos);
+    CHECK(pluginText.find("Settings.enabled") == std::string::npos);
+    CHECK(pluginText.find("LoadConfig(") == std::string::npos);
+    CHECK(pluginText.find("ruffneckk-isc12.toml") == std::string::npos);
+    CHECK(pluginText.find("activation=presence") != std::string::npos);
     CHECK(publicationWindow != std::string::npos);
     CHECK(prepareLoader != std::string::npos);
     CHECK(registerSchemaLifecycle != std::string::npos);
@@ -4441,7 +4400,6 @@ enabled = false
     CHECK(coordinatorPublishAgain == std::string::npos);
     CHECK(publishReadiness != std::string::npos);
     CHECK(operationalPublish != std::string::npos);
-    CHECK(disabledBranch < publicationWindow);
     CHECK(publicationWindow < prepareLoader);
     CHECK(prepareLoader < coordinatorPublish);
     CHECK(prepareLoader < registerSchemaLifecycle);
@@ -5056,6 +5014,9 @@ enabled = false
         != std::string::npos);
     CHECK(cmakeText.find("RUFFNECKK_PUBLIC_ARCHIVE_ELIGIBLE TRUE")
         == std::string::npos);
+    CHECK(cmakeText.find("tomlplusplus") == std::string::npos);
+    CHECK(cmakeText.find("d2rlplugin_embed_config") == std::string::npos);
+    CHECK(cmakeText.find("ruffneckk-isc12.toml") == std::string::npos);
     CHECK(cmakeText.find("isc12_persistence_relay.asm")
         != std::string::npos);
 

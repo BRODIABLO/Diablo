@@ -18,18 +18,6 @@ if(NOT TARGET D2RLPlugin::D2RLPlugin)
     )
     FetchContent_MakeAvailable(D2RLPlugin)
 endif()
-if(NOT TARGET tomlplusplus::tomlplusplus)
-    set(TOMLPLUSPLUS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(TOMLPLUSPLUS_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    FetchContent_Declare(
-        tomlplusplus
-        GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
-        GIT_TAG v3.4.0
-        GIT_SHALLOW TRUE
-    )
-    FetchContent_MakeAvailable(tomlplusplus)
-endif()
-
 add_library(ISC12 SHARED
     plugin.cpp
     isc12_codec_patch.cpp
@@ -57,18 +45,12 @@ target_compile_definitions(ISC12 PRIVATE
 target_link_libraries(ISC12 PRIVATE
     D2RLPlugin::D2RLPlugin
     bcrypt
-    tomlplusplus::tomlplusplus
 )
 set_target_properties(ISC12 PROPERTIES
     OUTPUT_NAME "d2rl-ruffneckk-isc12"
     PREFIX ""
     RUFFNECKK_PUBLIC_ARCHIVE_ELIGIBLE FALSE
 )
-d2rlplugin_embed_config(
-    TARGET ISC12
-    FILE "${CMAKE_CURRENT_SOURCE_DIR}/../ruffneckk-isc12.toml"
-)
-
 if(MSVC)
     target_compile_options(ISC12 PRIVATE
         $<$<COMPILE_LANGUAGE:CXX>:/W4>
@@ -94,7 +76,6 @@ if(BUILD_TESTING)
     target_compile_features(ISC12Tests PRIVATE cxx_std_20)
     target_compile_definitions(ISC12Tests PRIVATE
         ISC12_CODEC_PATCH_TESTING=1
-        ISC12_CONFIG_PATH="${CMAKE_CURRENT_SOURCE_DIR}/../ruffneckk-isc12.toml"
         ISC12_PLUGIN_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/plugin.cpp"
         ISC12_RESOURCE_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/plugin.rc"
         ISC12_LOADER_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/isc12_loader.cpp"
@@ -104,7 +85,6 @@ if(BUILD_TESTING)
     )
     target_link_libraries(ISC12Tests PRIVATE
         bcrypt
-        tomlplusplus::tomlplusplus
     )
     if(MSVC)
         target_compile_options(ISC12Tests PRIVATE

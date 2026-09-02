@@ -1,6 +1,5 @@
 #include <D2RLPlugin/api.h>
 
-#include "isc12_config.hpp"
 #include "isc12_contract.hpp"
 #include "isc12_loader.hpp"
 #include "isc12_native_sites.hpp"
@@ -14,11 +13,7 @@
 #include <cstdio>
 #include <cwchar>
 #include <cstring>
-#include <filesystem>
-#include <fstream>
-#include <iterator>
 #include <limits>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -27,9 +22,9 @@ namespace {
 
 using namespace ruffneckk::isc12;
 
-constexpr wchar_t ConfigFileName[] = L"ruffneckk-isc12.toml";
 constexpr wchar_t ProcessMutexNameFormat[] =
     L"Local\\RuffnecKk.ISC12.%lu";
+constexpr bool ReleaseDiagnosticsEnabled = true;
 
 const D2RL::PluginContext* Context{};
 const D2RL::DiagnosticsServiceV1* DiagnosticsService{};
@@ -39,8 +34,6 @@ std::atomic<D2RL::Lifecycle::ListenerHandle> DataTablesLoadedListenerHandle{
     D2RL::Lifecycle::InvalidHandle};
 std::uint8_t* Base{};
 std::size_t ImageSize{};
-Config Settings{};
-std::string LoadedConfigPath{"embedded defaults"};
 std::string RuntimeBuild{"<unavailable>"};
 HANDLE ProcessMutex{};
 
@@ -366,7 +359,7 @@ void __cdecl OnDataTablesLoaded(
         FailSchemaLifecycle(failure);
     }
 
-    if (Settings.diagnostics) {
+    if (ReleaseDiagnosticsEnabled) {
         const auto runtimeStatus = GetLoaderRuntimeStatus();
         char message[320]{};
         std::snprintf(
@@ -629,72 +622,6 @@ auto ValidateFoundationFingerprint() noexcept -> bool {
     return true;
 }
 
-auto ConfigCandidates() -> std::vector<std::filesystem::path> {
-    std::filesystem::path activeModConfigDirectory;
-    std::filesystem::path scopeConfigDirectory;
-    if (Context && Context->activeMod && Context->activeMod[0] != '\0'
-            && Context->modSupportDirectory
-            && Context->modSupportDirectory[0] != L'\0') {
-        activeModConfigDirectory =
-            std::filesystem::path(Context->modSupportDirectory) / L"config";
-    }
-    if (Context && Context->pluginConfigPath
-            && Context->pluginConfigPath[0] != L'\0') {
-        scopeConfigDirectory =
-            std::filesystem::path(Context->pluginConfigPath).parent_path();
-    }
-    std::error_code currentPathError;
-    const auto currentPath = std::filesystem::current_path(currentPathError);
-    const auto globalConfigDirectory = currentPathError
-        ? std::filesystem::path{}
-        : currentPath / L"d2rloader" / L"config";
-    return BuildConfigCandidates(
-        activeModConfigDirectory,
-        scopeConfigDirectory,
-        globalConfigDirectory,
-        ConfigFileName);
-}
-
-auto LoadConfig() noexcept -> bool {
-    Settings = {};
-    LoadedConfigPath = "embedded defaults";
-    for (const auto& path : ConfigCandidates()) {
-        std::error_code statusError;
-        const auto status = std::filesystem::status(path, statusError);
-        if (statusError || !std::filesystem::exists(status)) continue;
-        if (!std::filesystem::is_regular_file(status)) {
-            Context->LogError(
-                "ISC12: configuration path exists but is not a regular file; plugin refused.");
-            return false;
-        }
-        try {
-            std::ifstream input(path, std::ios::binary);
-            if (!input.is_open()) {
-                throw std::runtime_error("configuration file cannot be opened");
-            }
-            const std::string text{
-                std::istreambuf_iterator<char>(input),
-                std::istreambuf_iterator<char>()};
-            Config parsed{};
-            std::string error;
-            if (!ParseToml(text, parsed, error)) {
-                throw std::invalid_argument(error);
-            }
-            Settings = parsed;
-            LoadedConfigPath = path.string();
-            return true;
-        } catch (const std::exception& exception) {
-            const auto message = std::string("ISC12: invalid ")
-                + path.string() + " (" + exception.what() + ").";
-            Context->LogError(message.c_str());
-            return false;
-        }
-    }
-    Context->LogWarn(
-        "ISC12: no TOML was found; embedded defaults are active.");
-    return true;
-}
-
 } // namespace
 
 D2RL_PLUGIN_EXPORT auto D2RLoaderGetPluginInfo() noexcept
@@ -718,16 +645,11 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     DataTablesLoadedListenerHandle.store(
         D2RL::Lifecycle::InvalidHandle, std::memory_order_release);
     ImageSize = 0;
-    if (!Base || !LoadConfig()) return false;
+    if (!Base) return false;
 
     const auto* buildName = D2RL::GetBuildName(context);
     RuntimeBuild = buildName && buildName[0] != '\0'
         ? buildName : "<unavailable>";
-    if (!Settings.enabled) {
-        context->LogInfo(
-            "ISC12 0.2.0 by RuffnecKk loaded disabled; hooks=0; writes=0.");
-        return true;
-    }
     // D2RLoader's official patching model applies native changes directly
     // during this synchronous initial-load callback. Keep the authority
     // narrower than the export itself: same thread, active stack lifetime,
@@ -762,7 +684,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
             context,
             Base,
             ImageSize,
-            Settings.diagnostics,
+            ReleaseDiagnosticsEnabled,
             loaderError)) {
         const auto message = std::string("ISC12: loader preparation failed (")
             + loaderError + ").";
@@ -850,16 +772,15 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     std::snprintf(
         message,
         sizeof(message),
-        "ISC12 0.2.0 active for observed D2R %s; max-stat-id=%u; foundation-patterns=%zu; codec-sites=%zu; codec-mutations=%zu; scope=%s; TOML=%s.",
+        "ISC12 0.2.0 active for observed D2R %s; max-stat-id=%u; foundation-patterns=%zu; codec-sites=%zu; codec-mutations=%zu; scope=%s; activation=presence.",
         RuntimeBuild.c_str(),
         static_cast<unsigned>(MaximumStatId),
         FoundationPatterns.size(),
         PreparedCodecMutableSiteCount,
         PreparedCodecMutationCount,
-        context->loadScope == D2RL::LoadScope::Mod ? "mod-local" : "global",
-        LoadedConfigPath.c_str());
+        context->loadScope == D2RL::LoadScope::Mod ? "mod-local" : "global");
     context->LogInfo(message);
-    if (Settings.diagnostics) {
+    if (ReleaseDiagnosticsEnabled) {
         context->LogInfo(
             "ISC12 diagnostics: G0/G10 and codec groups G1-G9 are active; multiplayer host/joiner qualification remains external.");
     }
@@ -867,7 +788,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
 }
 
 D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
-    if (Settings.diagnostics && Context) {
+    if (ReleaseDiagnosticsEnabled && Context) {
         const auto runtimeStatus = GetLoaderRuntimeStatus();
         char message[512]{};
         std::snprintf(

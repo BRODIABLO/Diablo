@@ -14,8 +14,10 @@
 - [x] Admit D2RLoader 1.1/1.2 composition only through exact D2RCore
   providers: bounded relay, export/body, live PDATA/unwind, forward slot and
   exact native destination; retain every provider CALL.
-- [x] The 0.2.0 TOML and embedded fallback are disabled by default.
-- [x] The 0.2.0 target is not eligible for a public archive.
+- [x] The config-free 0.2.0 candidate is active by DLL presence and retains no
+  parser, path, dependency or configuration artifact.
+- [x] The 0.2.0 target is not eligible for a final release archive; the small
+  config-free archive is explicitly a public-test candidate.
 - [x] Duplicate-scope mutex is PID-qualified: one owner per D2R process without
   blocking a second local host/joiner process.
 

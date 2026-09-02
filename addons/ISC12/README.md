@@ -1,7 +1,7 @@
 # ISC12 0.2.0
 
-> Experimental loader stage: disabled by default. Do not distribute, deploy,
-> or use with real saves.
+> Config-free public-test candidate. Installing the DLL activates ISC12 after
+> its complete native fingerprint passes.
 
 ISC12 is a clean-sheet D2RLoader format for overhaul mods that need more than
 511 `ItemStatCost` rows. It reserves serialized IDs `0..4094` for stats and
@@ -19,9 +19,8 @@ storage before the row cap moves from `0x1FF` to `0xFFF`. G10 persistence and
 the G9/G2/G4/G1/G3 codec plan then commit before readiness is published. A false
 patch result may follow a real write, so every post-mutation ambiguity poisons
 readiness and terminates the process; hot rollback is forbidden. The shipped
-TOML and embedded fallback remain disabled because runtime qualification has not
-completed. Do not create, load, save or transmit ISC12 data outside an isolated
-test profile with disposable saves.
+DLL is active by presence and exposes no configuration file. Do not create,
+load, save or transmit ISC12 data without backups.
 
 The current source also includes the G10-B persistence boundary. ISC12 keeps the
 standard external D2S/D2I containers: target reads validate the complete native
@@ -287,33 +286,32 @@ those behavioral proofs remain attached to the preceding candidate.
 
 ## Planned release installation contract
 
-After a future release is fully qualified, install the DLL and TOML in exactly
+After the config-free candidate is fully qualified, install the DLL in exactly
 one D2RLoader scope.
 
 Global:
 
 ```text
 <D2R>/d2rloader/plugins/d2rl-ruffneckk-isc12.dll
-<D2R>/d2rloader/config/ruffneckk-isc12.toml
 ```
 
 Mod-local:
 
 ```text
 <D2R>/mods/<mod>/d2rloader/plugins/d2rl-ruffneckk-isc12.dll
-<D2R>/mods/<mod>/d2rloader/config/ruffneckk-isc12.toml
 ```
 
 The clean-sheet contract is a product and support boundary, not an outer-file
-marker: create new characters under ISC12 or use a compatible external migration
-tool once one exists. Direct loading of existing vanilla/non-ISC12 saves is
-unsupported. D2RLoader's native `.d2rl` environment record provides the visible
+marker: create new characters under ISC12 or migrate existing D2R 9-bit saves
+with ISC12 Save Converter. Direct loading of existing vanilla/non-ISC12 saves
+is unsupported. D2RLoader's native `.d2rl` environment record provides the visible
 plugin/mod compatibility warning; it is not a cryptographic schema marker and
 ISC12 does not promise to hard-block every misuse. Backups remain mandatory.
 
-The 0.2.0 binary is an internal incubation artifact, not an installable
-release. Runtime qualification uses disposable profiles and saves only; no
-external migration tool is included in this artifact.
+The config-free 0.2.0 candidate is being distributed first as a small public
+test for new characters and new shared stashes. ISC12 Save Converter remains a
+separate companion tool and will be published after its source-to-target schema
+migration gates are closed.
 
 ## Credits
 

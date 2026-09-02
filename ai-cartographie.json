@@ -1489,11 +1489,6 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
-                                                                                                     "name":  "isc12_config.hpp",
-                                                                                                     "path":  "addons/ISC12/src/isc12_config.hpp",
-                                                                                                     "kind":  "file"
-                                                                                                 },
-                                                                                                 {
                                                                                                      "name":  "isc12_contract.hpp",
                                                                                                      "path":  "addons/ISC12/src/isc12_contract.hpp",
                                                                                                      "kind":  "file"
@@ -1671,8 +1666,8 @@
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
-                                                                                "name":  "ruffneckk-isc12.toml",
-                                                                                "path":  "addons/ISC12/ruffneckk-isc12.toml",
+                                                                                "name":  "README-PUBLIC-TEST.md",
+                                                                                "path":  "addons/ISC12/README-PUBLIC-TEST.md",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

@@ -1,8 +1,0 @@
-config_version = 1
-# ISC12 0.2.0 is an experimental startup-publication candidate. Keep it
-# disabled outside isolated qualification profiles with disposable saves.
-enabled = false
-
-[diagnostics]
-# Enables additional guarded startup and publication diagnostics.
-enabled = false
