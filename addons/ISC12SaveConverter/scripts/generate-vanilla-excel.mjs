@@ -8,6 +8,7 @@ const sourceRoot = path.join(workspaceRoot, 'data-vanilla3.3', 'data', 'data', '
 const outputPath = path.join(projectRoot, 'src', 'vanilla-excel.generated.mjs');
 const names = [
   'Armor.txt',
+  'AutoMagic.txt',
   'CharStats.txt',
   'Gems.txt',
   'ItemStatCost.txt',

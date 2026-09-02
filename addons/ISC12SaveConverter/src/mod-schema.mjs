@@ -12,6 +12,7 @@ export const MAX_SCHEMA_BYTES = 64 * 1024 * 1024;
 
 const EXCEL_FILES = Object.freeze([
   'Armor.txt',
+  'AutoMagic.txt',
   'CharStats.txt',
   'Gems.txt',
   'ItemStatCost.txt',
@@ -71,10 +72,15 @@ export async function loadConstantsFromMod(modPath) {
       STRING_FILES,
     ));
   }
+  if (!overlaidExcelFiles.includes('ItemStatCost.txt')) {
+    throw new Error(
+      `The selected mod does not expose data/global/excel/ItemStatCost.txt in loose TXT form. BIN-only mod data is unsupported: supply the mod's matching TXT data.`,
+    );
+  }
   for (const name of STRING_FILES) buffers[name] ??= '[]';
   let constants;
   try {
-    constants = readConstantData(buffers);
+    constants = augmentSaveReferenceIdentities(readConstantData(buffers), buffers);
   } catch (error) {
     throw new Error(`Could not build the save schema from ${source.displayPath}: ${error.message}`, {
       cause: error,
@@ -123,6 +129,122 @@ export function createSaveSchema(constants, name = 'Custom D2R v105 mod') {
     name,
     constants,
   });
+}
+
+export function parseAutoMagicTable(content) {
+  if (typeof content !== 'string' || content.length === 0) {
+    throw new Error('AutoMagic.txt is missing from the save schema data.');
+  }
+  const lines = content.replace(/^\uFEFF/, '').split(/\r?\n/);
+  while (lines.at(-1) === '') lines.pop();
+  const headers = lines.shift()?.split('\t') ?? [];
+  const nameIndex = headers.findIndex((header) => header.toLowerCase() === 'name');
+  const groupIndex = headers.findIndex((header) => header.toLowerCase() === 'group');
+  if (nameIndex < 0) throw new Error('AutoMagic.txt does not contain a Name column.');
+  return Object.freeze(lines.map((line) => {
+    if (line === '') return null;
+    const cells = line.split('\t');
+    const name = cells[nameIndex] ?? '';
+    return name === '' ? null : Object.freeze({
+      n: name,
+      g: groupIndex >= 0 ? cells[groupIndex] ?? '' : '',
+    });
+  }));
+}
+
+export function augmentSaveReferenceIdentities(constants, buffers) {
+  return {
+    ...constants,
+    auto_affixes: parseAutoMagicTable(buffers['AutoMagic.txt']),
+    rare_names: mergeRawKeys(constants.rare_names, parseRareNameKeys(buffers)),
+    magic_prefixes: mergeRawKeys(
+      constants.magic_prefixes,
+      parseSequentialKeys(buffers['MagicPrefix.txt'], 'Name', 1, true),
+    ),
+    magic_suffixes: mergeRawKeys(
+      constants.magic_suffixes,
+      parseSequentialKeys(buffers['MagicSuffix.txt'], 'Name', 1, true),
+    ),
+    set_items: mergeRawKeys(
+      constants.set_items,
+      parseSequentialKeys(buffers['SetItems.txt'], 'index', 0, true, true),
+    ),
+    unq_items: mergeRawKeys(
+      constants.unq_items,
+      parseSequentialKeys(buffers['UniqueItems.txt'], 'index', 0, true, true),
+    ),
+    runewords: mergeRawKeys(constants.runewords, parseRunewordKeys(buffers['Runes.txt'])),
+  };
+}
+
+function parseRareNameKeys(buffers) {
+  const keys = new Map();
+  let id = 1;
+  for (const fileName of ['RareSuffix.txt', 'RarePrefix.txt']) {
+    const table = parseTextTable(buffers[fileName], fileName);
+    const nameIndex = requiredColumn(table.headers, 'name', fileName);
+    for (const cells of table.rows) {
+      const name = cells[nameIndex] ?? '';
+      if (name !== '') keys.set(id++, name);
+    }
+  }
+  return keys;
+}
+
+function parseSequentialKeys(content, column, firstId, skipExpansion, skipEmpty = false) {
+  const table = parseTextTable(content, column);
+  const keyIndex = requiredColumn(table.headers, column, column);
+  const keys = new Map();
+  let id = firstId;
+  for (const cells of table.rows) {
+    const key = cells[keyIndex] ?? '';
+    if (skipExpansion && key === 'Expansion') continue;
+    if (skipEmpty && key === '') continue;
+    if (key !== '') keys.set(id, key);
+    id += 1;
+  }
+  return keys;
+}
+
+function parseRunewordKeys(content) {
+  const table = parseTextTable(content, 'Runes.txt');
+  const nameIndex = requiredColumn(table.headers, 'Name', 'Runes.txt');
+  const keys = new Map();
+  for (const cells of table.rows) {
+    const name = cells[nameIndex] ?? '';
+    if (name === '') continue;
+    let id = Number.parseInt(name.substring(8), 10);
+    if (!Number.isInteger(id)) continue;
+    id += id > 75 ? 25 : 26;
+    keys.set(id, name);
+  }
+  return keys;
+}
+
+function mergeRawKeys(entries, keys) {
+  const result = Array.isArray(entries) ? [...entries] : [];
+  for (const [id, key] of keys) {
+    result[id] = Object.freeze({ ...(result[id] ?? {}), k: key });
+  }
+  return Object.freeze(result);
+}
+
+function parseTextTable(content, fileName) {
+  if (typeof content !== 'string' || content.length === 0) {
+    throw new Error(`${fileName} is missing from the save schema data.`);
+  }
+  const lines = content.replace(/^\uFEFF/, '').split(/\r?\n/);
+  while (lines.at(-1) === '') lines.pop();
+  return {
+    headers: lines.shift()?.split('\t') ?? [],
+    rows: lines.map((line) => line.split('\t')),
+  };
+}
+
+function requiredColumn(headers, expected, fileName) {
+  const index = headers.findIndex((header) => header.toLowerCase() === expected.toLowerCase());
+  if (index < 0) throw new Error(`${fileName} does not contain a ${expected} column.`);
+  return index;
 }
 
 export async function resolveModDataRoot(modPath) {

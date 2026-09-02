@@ -9,17 +9,23 @@ Author: RuffnecKk
 ## Current status
 
 The offline codec, interactive console and standalone Windows executable are
-implemented. The 43-test suite proves byte-exact 9-to-12-to-9 round trips for a
-real standalone v105 item, complete characters and shared stashes using vanilla,
-BKVince and Yupgoolg data. Runtime qualification on D2R 3.3.93847 also loaded and
-saved converted BKVince and Yupgoolg characters under ISC12. This is a qualified
-release candidate, not yet a public release and never a replacement for backups.
+implemented. The 60-test suite proves byte-exact 9-to-12-to-9 round trips for a
+real standalone v105 item, complete characters and shared stashes. It also
+proves source-to-target schema migration between vanilla and BKVince data,
+including changed stat IDs, `SaveBits`, `SaveParamBits`, `SaveAdd`, signed player
+attributes, auto-affixes and raw table references. Earlier runtime qualification
+on D2R 3.3.93847 loaded and saved same-schema BKVince and Yupgoolg conversions
+under ISC12. The new cross-schema path still requires its final runtime gate and
+is never a replacement for backups.
 
 The tool:
 
 - converts copies instead of overwriting original saves;
 - supports explicit 9-to-12 and 12-to-9 directions;
-- refuses a D2R 9-bit conversion when any real stat ID is 511 or greater;
+- maps serialized stats by exact `Stat` name instead of assuming stable row IDs;
+- converts values and params through the source and target save layouts;
+- accepts a source stat above ID 510 during downgrade when the same named target
+  stat has a valid D2R 9-bit ID and its value fits the target layout;
 - reports every blocking save location without deleting items;
 - covers player, item, socket, set, runeword, corpse, mercenary, Iron Golem and
   shared-stash stat streams.
@@ -47,16 +53,26 @@ clean, unmodded D2R v105 save from a save produced by an installed mod. This
 data is needed to locate variable-length stat payloads safely; it is not a code
 adaptation to ISC12.
 
-A custom mod that changes item bases, classes or serialized stat widths must be
-selected through its installed mod folder or MPQ archive. The same effective
-data must describe the source save and the target ISC12 environment. The tool
-starts from its bundled vanilla tables and overlays only the files supplied by
-the mod, matching D2R's normal inheritance behavior. It supports loose unpacked
-data, folder-form `.mpq` installations and binary MPQ archives. Binary archives
-are opened read-only and only the known save-schema tables are decompressed in
-memory; the complete archive is never extracted. The converter-specific
-`--schema` option remains available only as an advanced command-line integration
-point; it is not presented in the public interactive menu.
+A custom mod that changes item bases, classes or serialized stat layouts must be
+selected through its installed mod folder or MPQ archive. The converter first
+uses the source data to decode what the save means, then uses the target data to
+encode the same character for the destination game environment. Source and
+target may use the same data or two different table sets.
+
+The tool starts from its bundled vanilla tables and overlays only the TXT files
+supplied by each mod, matching D2R's normal inheritance behavior. It supports
+loose unpacked data, folder-form `.mpq` installations and binary MPQ archives.
+Binary archives are opened read-only and only the known save-schema TXT tables
+are decompressed in memory; the complete archive is never extracted. A mod that
+exposes only compiled BIN tables is unsupported and fails before output is
+created. The converter-specific JSON schema options remain advanced command-line
+integration points; they are not presented in the public interactive menu.
+
+Migration is fail-closed. Exact stat names are required, decoded values must fit
+the target widths, compound stat layouts must remain semantically compatible,
+and referenced bases, affixes, set items, unique items and runewords must exist
+unambiguously in the target data. A mismatch is reported with its save location;
+the converter never guesses, deletes the item or writes a partial batch.
 
 Matching mod data covers table-driven save layouts. A mod DLL that changes item
 serialization outside the TXT contract cannot be inferred from its MPQ; such a
@@ -84,7 +100,8 @@ command-line interface:
 
 ```text
 ISC12SaveConverter.exe --to isc12 <save-folder>
-ISC12SaveConverter.exe --to d2r9 --mod <installed-mod-or-mpq> <save-folder>
+ISC12SaveConverter.exe --to isc12 --source-mod <old-mod> --target-mod <isc12-mod> <save-folder>
+ISC12SaveConverter.exe --to d2r9 --source-mod <isc12-mod> --target-mod <old-mod> <save-folder>
 ```
 
 ## Run from source
@@ -93,16 +110,21 @@ On Windows, double-click `Launch-ISC12-Save-Converter.cmd`, or run:
 
 ```text
 npm run convert --prefix addons/ISC12SaveConverter -- --to isc12 <save-folder>
-npm run convert --prefix addons/ISC12SaveConverter -- --to d2r9 --schema <schema.json> <save-folder>
+npm run convert --prefix addons/ISC12SaveConverter -- --to d2r9 --source-mod <isc12-mod> --target-vanilla <save-folder>
 ```
 
 Use `--help` for all options. The remaining public-release work is packaging,
 human review of the release README and publication beside ISC12.
 
-## Third-party component
+## Third-party components and references
 
-Binary MPQ reading uses `stormlib-js` 0.1.1 by tmo-gg under the MIT license. It
-is bundled into the standalone executable and is used read-only.
+Save parsing and writing build on `@d2runewizard/d2s` 2.0.132 by prowner under
+the ISC license. Binary MPQ reading uses `stormlib-js` 0.1.1 by tmo-gg under the
+MIT license. Both are bundled into the standalone executable; MPQ access is
+read-only.
+
+D2MOO was used as a semantic reference for Diablo II save-value encoding,
+including `SaveAdd`. No D2MOO binary code, address or 32-bit ABI is reused.
 
 ## Development test
 

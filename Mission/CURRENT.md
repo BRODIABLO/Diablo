@@ -165,8 +165,11 @@ et oppose `1e602a9f…c872` à `42bbaffc…9c50`; les deux logs nomment
 ignore-lists et DLL sont restaurés byte-exact, sans processus restant.
 
 ISC12 Save Converter ferme maintenant son gate technique. La suite passe
-`34/34`; l'EXE autonome de 93 401 088 octets vaut
-`9B1E4873…B2D10`. Un D2S réellement écrit par D2R 9-bit passe
+`38/38`; l'EXE autonome UX avec overlay vanilla et lecture MPQ binaire de
+94 635 520 octets vaut `15697D98…59511E`. `HEBKCharm.d2s` se convertit avec le
+dossier BKVince partiel; le vrai `yupgoolg132.mpq` livre ses 22 tables connues
+directement en mémoire, mais `abc.d2s` refuse fail-closed sur un stat stream non
+décrit par ses TXT et ne produit aucune sortie. Un D2S réellement écrit par D2R 9-bit passe
 1 284 → 1 297 → 1 284 octets byte-exact (`4A50BC58…0F994`). Le personnage
 charge et se sauvegarde deux fois sous BKVince sans ISC12, puis la sortie ISC12
 charge et se sauvegarde deux fois sous ISC12Lab avec ISC12 0.2.0, 36 plugins,
@@ -175,15 +178,45 @@ les cinq eezstreet et 17 patches. Le D2S ISC12 final reste à 1 297 octets
 l'assertion TACT récurrente sont encore visibles, sans empêcher les quatre
 cycles observés. Aucun processus de test ne demeure.
 
+Le parcours public détecte maintenant les `.d2i` voisins d'un `.d2s`, affiche
+leurs chemins et propose leur inclusion dans le même batch atomique. Un `.d2i`
+reste sélectionnable directement et un dossier convertit tous ses D2S/D2I. Le
+menu interactif n'expose plus le JSON interne : il distingue seulement vanilla
+propre et dossier du mod installé. Les deux builds EXE sont byte-identiques.
+Les témoins console ferment `FAILED` sans sortie puis `SUCCESS` sur un lot
+D2S+D2I, avec dossier exact, option Explorer et attente avant fermeture.
+
+Le migrateur à deux schémas source → cible est maintenant implanté hors
+runtime. Il charge séparément vanilla, TXT loose, dossier-forme MPQ ou archive
+MPQ binaire pour la source et la cible, refuse les mods BIN-only, apparie les
+stats par nom exact et réencode `SaveBits`, `SaveParamBits`, `SaveAdd`,
+`CSvBits` et signedness. Les références de bases, affixes, uniques, sets et
+runewords sont validées ou remappées uniquement lorsqu'elles sont univoques.
+La suite passe `60/60`; le CLI public Vanilla → BKVince → Vanilla revient
+byte-exact. Le nouvel EXE de 94 676 992 octets vaut
+`D498D0FB…B392A40`. Son smoke réel BKVince convertit `HEBKCharm.d2s`
+1 226 → 1 239 → 1 226 octets et restaure le SHA-256 original
+`E50EEB41…87139`.
+
+Le preflight réel BKVince → Yupgoolg de `HEBKCharm.d2s` et
+`ModernSharedStashSoftCoreV2.d2i` refuse atomiquement 15 entrées d'items qui
+emploient 10 bases absentes de la cible : `mff`, `mfc`, `mfd`, `gay`, `cct`,
+`gav`, `mls`, `hsm`, `bct` et `fel`. Les AutoMagic, les identités TXT brutes,
+les payloads Gold incidents et la collecte de tous les blockers ont été corrigés
+avant ce verdict. Aucun output n'est écrit et le runtime BKVince reste intact.
+Aucune qualification runtime cross-schema n'est encore revendiquée.
+
 ## Prochain gate
 
-Préparer la livraison publique conjointe d'ISC12 et d'ISC12 Save Converter :
-figer l'allowlist des archives, placer chaque README à côté de son ZIP pour la
-relecture humaine de Vincent, établir le catalogue de hashes, puis publier les
-deux produits ensemble. Le kit NativePublication V1 reste un durcissement
-loader général optionnel et ne bloque pas cette livraison. Vincent autorise le
-commit et le push ciblés de ce checkpoint; aucun tag ni asset GitHub n'est
-encore autorisé.
+Fermer le gate fonctionnel du migrateur avec un témoin cross-mod compatible :
+sélectionner ou créer, sans modifier les originaux refusés, un personnage et un
+shared stash dont chaque base existe dans les deux mods — ou choisir un mod cible
+qui contient les bases BKVince concernées — puis convertir et confirmer
+load/save/reload sous ISC12. En parallèle, le petit ZIP Discord ISC12 seul peut
+être distribué aux testeurs qui utilisent de nouveaux personnages et shared
+stashes. Après ces preuves, préparer la release GitHub complète et publier le
+convertisseur comme asset séparé. Aucun tag ni asset GitHub n'est encore
+autorisé.
 
 ## Frontière Git active
 

@@ -24,7 +24,7 @@ export async function runCli(argv, io = console) {
     return Object.freeze({ exitCode: 0 });
   }
   const direction = parseDirection(options.to);
-  const schema = await loadSelectedSchema(options);
+  const schemas = await loadSelectedSchemas(options);
   const outputDirectory = options.output || await chooseUnusedOutputDirectory(
     options.inputs[0],
     direction.targetWidth,
@@ -32,12 +32,14 @@ export async function runCli(argv, io = console) {
   const result = await convertBatch({
     inputs: options.inputs,
     outputDirectory,
-    constants: schema.constants,
+    sourceConstants: schemas.source.constants,
+    targetConstants: schemas.target.constants,
     ...direction,
   });
 
   io.log(`Converted ${result.files.length} save file${result.files.length === 1 ? '' : 's'}.`);
-  io.log(`Schema: ${schema.name}`);
+  io.log(`Source game data: ${schemas.source.name}`);
+  io.log(`Target game data: ${schemas.target.name}`);
   io.log(`Output: ${result.outputDirectory}`);
   result.files.forEach((file) => {
     io.log(`  ${file.file}  ${file.inputBytes} -> ${file.outputBytes} bytes  [${file.kind}]`);
@@ -73,24 +75,30 @@ export async function promptForArguments(input = process.stdin, output = process
         inputs.push(...sharedStashes);
       }
     }
-    output.write('\nWhich game data was used to create these saves?\n');
-    output.write('1. Clean, unmodded D2R v105 (vanilla)\n');
-    output.write('2. Installed mod folder or MPQ archive\n');
-    const schemaChoice = (await prompt.question('Choose 1 or 2: ')).trim();
-    if (!['1', '2'].includes(schemaChoice)) {
-      throw new Error('Game data choice must be 1 or 2.');
-    }
-    let schemaArguments = [];
-    if (schemaChoice === '2') {
-      const mod = unquote(await prompt.question(
-        'Installed mod folder or .mpq file (you can drag it here): ',
-      ));
-      if (!mod) throw new Error('An installed mod folder is required.');
-      schemaArguments = ['--mod', mod];
+    const sourceSchema = await promptForGameData(
+      prompt,
+      output,
+      'Which game data was used to create these saves?',
+      '--source-mod',
+    );
+    const sameGameData = (await prompt.question(
+      '\nWill the converted saves be loaded by the same vanilla game or mod data? [Y/n]: ',
+    )).trim().toLowerCase();
+    let targetSchema = [];
+    if (!['', 'y', 'yes'].includes(sameGameData)) {
+      if (!['n', 'no'].includes(sameGameData)) throw new Error('Answer Y or N.');
+      targetSchema = await promptForGameData(
+        prompt,
+        output,
+        'Which game data will load the converted saves?',
+        '--target-mod',
+        '--target-vanilla',
+      );
     }
     return [
       '--to', direction === '1' ? 'isc12' : 'd2r9',
-      ...schemaArguments,
+      ...sourceSchema,
+      ...targetSchema,
       ...inputs,
     ];
   } finally {
@@ -110,6 +118,16 @@ export function parseArguments(argv) {
       options.schema = readOptionValue(argv, ++index, '--schema');
     } else if (argument === '--mod') {
       options.mod = readOptionValue(argv, ++index, '--mod');
+    } else if (argument === '--source-schema') {
+      options.sourceSchema = readOptionValue(argv, ++index, '--source-schema');
+    } else if (argument === '--target-schema') {
+      options.targetSchema = readOptionValue(argv, ++index, '--target-schema');
+    } else if (argument === '--source-mod') {
+      options.sourceMod = readOptionValue(argv, ++index, '--source-mod');
+    } else if (argument === '--target-mod') {
+      options.targetMod = readOptionValue(argv, ++index, '--target-mod');
+    } else if (argument === '--target-vanilla') {
+      options.targetVanilla = true;
     } else if (argument === '--output' || argument === '-o') {
       options.output = readOptionValue(argv, ++index, argument);
     } else if (argument.startsWith('-')) {
@@ -120,7 +138,7 @@ export function parseArguments(argv) {
   }
   if (options.help) return Object.freeze(options);
   if (!options.to) throw new Error('Missing required option: --to isc12|d2r9.');
-  if (options.schema && options.mod) throw new Error('Use either --schema or --mod, not both.');
+  validateSchemaArguments(options);
   if (options.inputs.length === 0) throw new Error('At least one .d2s/.d2i file or save directory is required.');
   return Object.freeze(options);
 }
@@ -144,10 +162,30 @@ export async function findCompanionSharedStashes(sourcePath) {
     .sort((left, right) => left.localeCompare(right)));
 }
 
-async function loadSelectedSchema(options) {
-  if (options.schema) return loadConstantsFromSchemaFile(options.schema);
-  if (options.mod) {
-    const result = await loadConstantsFromMod(options.mod);
+async function loadSelectedSchemas(options) {
+  if (options.schema || options.mod) {
+    const shared = await loadSchemaSelection({ schema: options.schema, mod: options.mod });
+    return Object.freeze({ source: shared, target: shared });
+  }
+  const source = await loadSchemaSelection({
+    schema: options.sourceSchema,
+    mod: options.sourceMod,
+  });
+  const target = options.targetVanilla
+    ? builtInVanillaSchema()
+    : options.targetSchema || options.targetMod
+      ? await loadSchemaSelection({
+        schema: options.targetSchema,
+        mod: options.targetMod,
+      })
+      : source;
+  return Object.freeze({ source, target });
+}
+
+async function loadSchemaSelection({ schema, mod }) {
+  if (schema) return loadConstantsFromSchemaFile(schema);
+  if (mod) {
+    const result = await loadConstantsFromMod(mod);
     return Object.freeze({
       constants: result.constants,
       name: result.archivePath
@@ -155,10 +193,46 @@ async function loadSelectedSchema(options) {
         : `Installed mod data: ${result.dataRoot}`,
     });
   }
+  return builtInVanillaSchema();
+}
+
+function builtInVanillaSchema() {
   return Object.freeze({
     constants: DEFAULT_D2R_V105_CONSTANTS,
-    name: 'Built-in Diablo II: Resurrected v105',
+    name: 'Built-in clean vanilla Diablo II: Resurrected v105',
   });
+}
+
+async function promptForGameData(prompt, output, heading, modOption, vanillaOption = null) {
+  output.write(`\n${heading}\n`);
+  output.write('1. Clean, unmodded D2R v105 (vanilla)\n');
+  output.write('2. Installed mod folder or MPQ archive containing loose TXT data\n');
+  const choice = (await prompt.question('Choose 1 or 2: ')).trim();
+  if (!['1', '2'].includes(choice)) throw new Error('Game data choice must be 1 or 2.');
+  if (choice === '1') return vanillaOption ? [vanillaOption] : [];
+  const mod = unquote(await prompt.question(
+    'Installed mod folder or .mpq file (you can drag it here): ',
+  ));
+  if (!mod) throw new Error('An installed mod folder or MPQ archive is required.');
+  return [modOption, mod];
+}
+
+function validateSchemaArguments(options) {
+  if (options.schema && options.mod) throw new Error('Use either --schema or --mod, not both.');
+  const shared = options.schema || options.mod;
+  const split = options.sourceSchema || options.sourceMod
+    || options.targetSchema || options.targetMod || options.targetVanilla;
+  if (shared && split) {
+    throw new Error('Do not combine --mod/--schema with separate source or target game-data options.');
+  }
+  if (options.sourceSchema && options.sourceMod) {
+    throw new Error('Use either --source-schema or --source-mod, not both.');
+  }
+  const targetChoices = [options.targetSchema, options.targetMod, options.targetVanilla]
+    .filter(Boolean).length;
+  if (targetChoices > 1) {
+    throw new Error('Choose only one target game-data option.');
+  }
 }
 
 function readOptionValue(argv, index, option) {
@@ -202,18 +276,26 @@ Usage:
 
 Options:
   --to isc12|d2r9         Required explicit conversion direction.
-  --schema <file>         Advanced converter-specific schema integration.
-  --mod <path>            Installed mod folder, unpacked data, or MPQ archive.
+  --mod <path>            Use one mod's TXT data for both source and target.
+  --source-mod <path>     Mod folder, unpacked TXT data, or MPQ for the source.
+  --target-mod <path>     Mod folder, unpacked TXT data, or MPQ for the target.
+  --target-vanilla        Use clean vanilla D2R data as the target.
+  --schema <file>         Advanced: one JSON schema for source and target.
+  --source-schema <file>  Advanced source JSON schema integration.
+  --target-schema <file>  Advanced target JSON schema integration.
   --output, -o <dir>      New output directory. It must not already exist.
   --help, -h              Show this help.
 
-Without --schema or --mod, the clean, unmodded D2R v105 schema is used. Modded
-saves require the installed mod data that defines their item bases and stat
-payload widths.
+Without game-data options, clean, unmodded D2R v105 is used for source and
+target. A lone --source-mod/--source-schema also becomes the target (same-game-
+data shortcut). Use an explicit target option only when migrating between two
+different table sets. Mod paths must expose the matching TXT data; BIN-only
+mods are unsupported.
 
 Interactive mode calls this option "Clean, unmodded D2R v105 (vanilla)" and
-offers an installed mod folder or MPQ archive as the public alternative. \`--schema\`
-remains an advanced command-line integration point, not an interactive choice.
+offers an installed mod folder or MPQ archive as the public alternative. It
+then asks whether the target uses the same game data. JSON schemas remain an
+advanced command-line integration point, not an interactive choice.
 
 When loading converted saves, ISC12 replaces any mod-supplied D2R 9-bit
 ItemStatCost extension. The old 9-bit codec and ISC12 must not be loaded
@@ -241,7 +323,20 @@ export async function main(argv = process.argv.slice(2), io = console) {
       error.failures.forEach((failure) => {
         io.error(`  ${failure.file}: ${failure.message}`);
         failure.blockers?.forEach((blocker) => {
-          io.error(`    stat ${blocker.id}: ${blocker.path}`);
+          const identity = blocker.statName
+            ? `stat ${blocker.statName}${Number.isInteger(blocker.id) ? ` (source ID ${blocker.id})` : ''}`
+            : Number.isInteger(blocker.referenceId)
+              ? `reference ID ${blocker.referenceId}`
+              : blocker.itemCode
+                ? `item base ${blocker.itemCode}`
+                : 'save field';
+          io.error(`    ${identity}: ${blocker.path}`);
+          if (blocker.message) {
+            const prefix = `${blocker.path}: `;
+            io.error(`      ${blocker.message.startsWith(prefix)
+              ? blocker.message.slice(prefix.length)
+              : blocker.message}`);
+          }
         });
       });
     } else {

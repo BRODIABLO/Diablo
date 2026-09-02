@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,6 +12,7 @@ import {
   createSaveSchema,
   loadConstantsFromMod,
   loadConstantsFromSchemaFile,
+  parseAutoMagicTable,
   resolveModDataRoot,
   resolveModDataSource,
 } from './mod-schema.mjs';
@@ -29,8 +30,11 @@ test('loads a partial mod as an overlay on the bundled vanilla tables', async ()
   assert.ok(loaded.constants.magical_properties.length > 300);
   assert.ok(Object.keys(loaded.constants.weapon_items).length > 100);
   assert.ok(loaded.overlaidExcelFiles.includes('ItemStatCost.txt'));
+  assert.ok(loaded.overlaidExcelFiles.includes('AutoMagic.txt'));
   assert.ok(!loaded.overlaidExcelFiles.includes('PlayerClass.txt'));
   assert.ok(loaded.overlaidStringFiles.includes('item-names.json'));
+  assert.equal(loaded.constants.auto_affixes[1]?.n, "Bowyer's");
+  assert.equal(loaded.constants.rare_names[184]?.k, 'Fiendra');
 });
 
 test('reads known schema tables directly from an installed binary MPQ', {
@@ -40,8 +44,19 @@ test('reads known schema tables directly from an installed binary MPQ', {
   assert.match(source.archivePath.replaceAll('\\', '/'), /yupgoolg132\/yupgoolg132\.mpq$/i);
   const loaded = await loadConstantsFromMod(INSTALLED_PACKED_MOD);
   assert.ok(loaded.overlaidExcelFiles.includes('ItemStatCost.txt'));
+  assert.ok(loaded.overlaidExcelFiles.includes('AutoMagic.txt'));
   assert.ok(loaded.overlaidStringFiles.includes('item-names.json'));
   assert.equal(loaded.constants.magical_properties.length, 511);
+  assert.ok(loaded.constants.auto_affixes.length > 40);
+});
+
+test('preserves AutoMagic row IDs while exposing stable names for remapping', () => {
+  const rows = parseAutoMagicTable('Name\tgroup\r\nFirst\t100\r\n\r\nThird\t300\r\n');
+  assert.deepEqual(rows, [
+    { n: 'First', g: '100' },
+    null,
+    { n: 'Third', g: '300' },
+  ]);
 });
 
 test('loads a generic versioned schema pack supplied by a mod author', async () => {
@@ -58,5 +73,16 @@ test('fails closed when no unpacked mod schema exists', async () => {
   await assert.rejects(
     () => resolveModDataRoot(fileURLToPath(new URL('.', import.meta.url))),
     /No unpacked mod data/,
+  );
+});
+
+test('rejects a mod folder that exposes only compiled BIN game data', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'isc12-bin-only-'));
+  const excel = path.join(root, 'data', 'global', 'excel');
+  await mkdir(excel, { recursive: true });
+  await writeFile(path.join(excel, 'ItemStatCost.bin'), new Uint8Array([1, 2, 3, 4]));
+  await assert.rejects(
+    () => loadConstantsFromMod(root),
+    /BIN-only mod data is unsupported.*matching TXT data/,
   );
 });

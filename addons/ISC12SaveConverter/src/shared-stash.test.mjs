@@ -114,11 +114,13 @@ test('reports a high-ID Shared Stash item instead of deleting it', async () => {
     }),
     (error) => {
       assert.ok(error instanceof SaveConversionBlockedError);
-      assert.deepEqual(error.blockers, [{
-        id: 2013,
-        path: 'Shared Stash > Page 1 > Item 1 > Magic',
-        propertyIndex: 2,
-      }]);
+      assert.equal(error.blockers.length, 1);
+      assert.equal(error.blockers[0].id, 2013);
+      assert.equal(error.blockers[0].targetId, 2013);
+      assert.equal(error.blockers[0].statName, 'isc12_test_2013');
+      assert.equal(error.blockers[0].path, 'Shared Stash > Page 1 > Item 1 > Magic');
+      assert.equal(error.blockers[0].propertyIndex, 2);
+      assert.equal(error.blockers[0].reason, 'target-id-range');
       return true;
     },
   );

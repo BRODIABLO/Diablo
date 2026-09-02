@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -21,7 +21,6 @@ import {
 test('converts a batch into a new directory and never overwrites its source', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'isc12-batch-'));
   const sourceDirectory = path.join(root, 'source');
-  const { mkdir } = await import('node:fs/promises');
   await mkdir(sourceDirectory);
   const document = await createBlankCharacter({ name: 'ISCBatch', className: 'Amazon' });
   const sourcePath = path.join(sourceDirectory, 'ISCBatch.d2s');
@@ -42,6 +41,34 @@ test('converts a batch into a new directory and never overwrites its source', as
   await assert.rejects(
     () => convertBatch({
       inputs: [sourceDirectory],
+      outputDirectory,
+      constants: bkvinceConstants,
+      sourceWidth: LEGACY_STAT_ID_BITS,
+      targetWidth: ISC12_STAT_ID_BITS,
+    }),
+    /EEXIST/,
+  );
+});
+
+test('creates missing parents for an explicit output directory without reusing it', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'isc12-output-parent-'));
+  const document = await createBlankCharacter({ name: 'ISCPath', className: 'Amazon' });
+  const sourcePath = path.join(root, 'ISCPath.d2s');
+  const outputDirectory = path.join(root, 'missing', 'parents', 'converted');
+  await writeFile(sourcePath, document.sourceBytes);
+
+  await convertBatch({
+    inputs: [sourcePath],
+    outputDirectory,
+    constants: bkvinceConstants,
+    sourceWidth: LEGACY_STAT_ID_BITS,
+    targetWidth: ISC12_STAT_ID_BITS,
+  });
+
+  assert.ok((await stat(path.join(outputDirectory, 'ISCPath.d2s'))).isFile());
+  await assert.rejects(
+    () => convertBatch({
+      inputs: [sourcePath],
       outputDirectory,
       constants: bkvinceConstants,
       sourceWidth: LEGACY_STAT_ID_BITS,

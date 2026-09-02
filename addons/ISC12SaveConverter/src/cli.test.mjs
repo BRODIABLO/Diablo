@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
+
+import { read, write } from '@d2runewizard/d2s';
+import bkvinceConstants from '../../../apps/hero-editor/src/data/bkvince-constants.generated.js';
+import { createBlankCharacter } from '../../../apps/hero-editor/src/lib/character-codec.js';
 
 import {
   findCompanionSharedStashes,
@@ -12,6 +17,9 @@ import {
   runtimeInstructionsForTargetWidth,
   shouldOpenOutputDirectory,
 } from './cli.mjs';
+import { DEFAULT_D2R_V105_CONSTANTS } from './default-schema.mjs';
+import { codecConfig } from './runewizard-bridge.mjs';
+import { LEGACY_STAT_ID_BITS } from './stat-stream.mjs';
 
 test('parses the minimal public CLI contract', () => {
   assert.deepEqual(parseArguments([
@@ -33,6 +41,29 @@ test('rejects ambiguous schema sources and implicit directions', () => {
     /either --schema or --mod/,
   );
   assert.throws(() => parseArguments(['save.d2s']), /Missing required option/);
+});
+
+test('parses separate source and target mod data without calling either ISC12-formatted', () => {
+  assert.deepEqual(parseArguments([
+    '--to', 'isc12',
+    '--source-mod', 'Source Mod',
+    '--target-mod', 'Target Mod',
+    'Hero.d2s',
+  ]), {
+    inputs: ['Hero.d2s'],
+    to: 'isc12',
+    sourceMod: 'Source Mod',
+    targetMod: 'Target Mod',
+  });
+  assert.throws(
+    () => parseArguments([
+      '--to', 'isc12',
+      '--target-mod', 'Target Mod',
+      '--target-vanilla',
+      'Hero.d2s',
+    ]),
+    /only one target game-data option/,
+  );
 });
 
 test('finds adjacent shared stashes for a selected character save', async () => {
@@ -65,6 +96,57 @@ test('help returns a structured successful result', async () => {
     exitCode: 0,
   });
   assert.match(lines.join('\n'), /Clean, unmodded D2R v105/);
+  assert.match(lines.join('\n'), /--source-mod/);
+  assert.match(lines.join('\n'), /--target-mod/);
+  assert.match(lines.join('\n'), /BIN-only/);
+});
+
+test('runs the public CLI across separate vanilla and BKVince schemas byte-exact', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'isc12-cli-schema-migration-'));
+  const document = await createBlankCharacter({ name: 'ISCCli', className: 'Amazon' });
+  const sourcePath = path.join(root, 'ISCCli.d2s');
+  const upgradedDirectory = path.join(root, 'outputs', 'isc12');
+  const restoredDirectory = path.join(root, 'outputs', 'd2r9');
+  const bkvinceMod = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '../../../data-BKVince',
+  );
+  const model = await read(
+    document.sourceBytes,
+    bkvinceConstants,
+    codecConfig(LEGACY_STAT_ID_BITS),
+  );
+  model.items = [];
+  const vanillaBytes = new Uint8Array(await write(
+    model,
+    DEFAULT_D2R_V105_CONSTANTS,
+    codecConfig(LEGACY_STAT_ID_BITS),
+  ));
+  await writeFile(sourcePath, vanillaBytes);
+  const logs = [];
+
+  await runCli([
+    '--to', 'isc12',
+    '--target-mod', bkvinceMod,
+    '--output', upgradedDirectory,
+    sourcePath,
+  ], { log: (line) => logs.push(line) });
+  const upgradedPath = path.join(upgradedDirectory, 'ISCCli.d2s');
+
+  await runCli([
+    '--to', 'd2r9',
+    '--source-mod', bkvinceMod,
+    '--target-vanilla',
+    '--output', restoredDirectory,
+    upgradedPath,
+  ], { log: (line) => logs.push(line) });
+
+  assert.deepEqual(new Uint8Array(await readFile(
+    path.join(restoredDirectory, 'ISCCli.d2s'),
+  )), vanillaBytes);
+  assert.match(logs.join('\n'), /Source game data: Built-in clean vanilla/);
+  assert.match(logs.join('\n'), /Target game data: Installed mod data/);
+  assert.match(logs.join('\n'), /Target game data: Built-in clean vanilla/);
 });
 
 test('interactive introduction keeps the complete wrapped description', () => {

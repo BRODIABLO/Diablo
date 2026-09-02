@@ -5,9 +5,9 @@ import {
   D2R_SAVE_VERSION,
   SaveConversionBlockedError,
   codecConfig,
-  collectItemDowngradeBlockers,
+  migrateItemForSchema,
 } from './runewizard-bridge.mjs';
-import { LEGACY_STAT_ID_BITS, statTerminator } from './stat-stream.mjs';
+import { statTerminator } from './stat-stream.mjs';
 
 const { readItem, writeItem } = itemsModule;
 const { BitReader } = bitReaderModule;
@@ -101,11 +101,14 @@ export function scanSharedStash(input) {
 export async function transcodeSharedStash({
   input,
   constants,
+  sourceConstants = constants,
+  targetConstants = constants,
   sourceWidth,
   targetWidth,
   scope = 'Shared Stash',
 }) {
-  validateConstants(constants);
+  validateConstants(sourceConstants);
+  validateConstants(targetConstants);
   statTerminator(sourceWidth);
   statTerminator(targetWidth);
   const sourceConfig = codecConfig(sourceWidth);
@@ -117,23 +120,30 @@ export async function transcodeSharedStash({
 
   for (const sector of scanned.sectors) {
     if (sector.kind !== 'page') continue;
-    const parsed = await parsePageItems(input, sector, constants, sourceConfig, scope);
-    parsedPages.push(parsed);
-    itemCount += parsed.items.length;
-    if (targetWidth === LEGACY_STAT_ID_BITS) {
-      parsed.items.forEach((item, itemIndex) => {
-        blockers.push(...collectItemDowngradeBlockers(
+    const parsed = await parsePageItems(input, sector, sourceConstants, sourceConfig, scope);
+    const items = parsed.items.map((item, itemIndex) => {
+      try {
+        return migrateItemForSchema({
           item,
-          `${scope} > Page ${sector.index + 1} > Item ${itemIndex + 1}`,
-        ));
-      });
-    }
+          sourceConstants,
+          targetConstants,
+          targetWidth,
+          scope: `${scope} > Page ${sector.index + 1} > Item ${itemIndex + 1}`,
+        });
+      } catch (error) {
+        if (!(error instanceof SaveConversionBlockedError)) throw error;
+        blockers.push(...error.blockers);
+        return item;
+      }
+    });
+    parsedPages.push(Object.freeze({ ...parsed, items: Object.freeze(items) }));
+    itemCount += parsed.items.length;
   }
   if (blockers.length > 0) throw new SaveConversionBlockedError(blockers);
 
   const encodedPages = new Map();
   for (const page of parsedPages) {
-    encodedPages.set(page.sector.index, await encodePage(page, constants, targetConfig));
+    encodedPages.set(page.sector.index, await encodePage(page, targetConstants, targetConfig));
   }
   const outputLength = scanned.sectors.reduce((total, sector) => (
     total + (sector.kind === 'page' ? encodedPages.get(sector.index).length : sector.size)
@@ -151,7 +161,7 @@ export async function transcodeSharedStash({
   const outputScan = scanSharedStash(bytes);
   for (const sector of outputScan.sectors) {
     if (sector.kind === 'page') {
-      await parsePageItems(bytes, sector, constants, targetConfig, scope);
+      await parsePageItems(bytes, sector, targetConstants, targetConfig, scope);
     }
   }
   return Object.freeze({

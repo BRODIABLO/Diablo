@@ -33,12 +33,21 @@ export class BatchConversionError extends Error {
   }
 }
 
-export async function convertSaveBytes({ input, fileName, constants, sourceWidth, targetWidth }) {
+export async function convertSaveBytes({
+  input,
+  fileName,
+  constants,
+  sourceConstants = constants,
+  targetConstants = constants,
+  sourceWidth,
+  targetWidth,
+}) {
   const extension = path.extname(fileName).toLowerCase();
   if (extension === '.d2s') {
     const result = await transcodeCharacterSave({
       input,
-      constants,
+      sourceConstants,
+      targetConstants,
       sourceWidth,
       targetWidth,
       scope: fileName,
@@ -51,7 +60,8 @@ export async function convertSaveBytes({ input, fileName, constants, sourceWidth
   if (isSharedStash(input)) {
     const result = await transcodeSharedStash({
       input,
-      constants,
+      sourceConstants,
+      targetConstants,
       sourceWidth,
       targetWidth,
       scope: fileName,
@@ -65,7 +75,8 @@ export async function convertSaveBytes({ input, fileName, constants, sourceWidth
   }
   const result = await transcodeItemRecord({
     input,
-    constants,
+    sourceConstants,
+    targetConstants,
     sourceWidth,
     targetWidth,
     scope: fileName,
@@ -77,6 +88,8 @@ export async function convertBatch({
   inputs,
   outputDirectory,
   constants = DEFAULT_D2R_V105_CONSTANTS,
+  sourceConstants = constants,
+  targetConstants = constants,
   sourceWidth,
   targetWidth,
 }) {
@@ -103,7 +116,8 @@ export async function convertBatch({
       const result = await convertSaveBytes({
         input,
         fileName: source.relativePath,
-        constants,
+        sourceConstants,
+        targetConstants,
         sourceWidth,
         targetWidth,
       });
@@ -119,6 +133,7 @@ export async function convertBatch({
   if (failures.length > 0) throw new BatchConversionError(failures);
 
   const destinationRoot = path.resolve(outputDirectory);
+  await mkdir(path.dirname(destinationRoot), { recursive: true });
   await mkdir(destinationRoot, { recursive: false });
   for (const entry of converted) {
     const destinationPath = path.join(destinationRoot, entry.source.relativePath);
