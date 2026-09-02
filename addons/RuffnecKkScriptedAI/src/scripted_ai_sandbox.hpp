@@ -1,5 +1,6 @@
 #pragma once
 
+#include "scripted_ai_executor.hpp"
 #include "scripted_ai_limits.hpp"
 
 #include <cstddef>
@@ -22,6 +23,28 @@ struct TreeSummary {
     std::size_t nodeCount{};
     std::size_t maximumDepth{};
     std::size_t maximumChildren{};
+};
+
+enum class SandboxTickStatus : std::uint8_t {
+    Action,
+    NoAction,
+    ExplicitFallback,
+    CapabilityFallback,
+};
+
+enum class SandboxTickFailure : std::uint8_t {
+    None,
+    LuaError,
+    InstructionBudget,
+    AllocationBudget,
+    CapabilityError,
+    StaleHandle,
+    ProtocolError,
+};
+
+struct SandboxTickResult {
+    SandboxTickStatus status{SandboxTickStatus::NoAction};
+    SandboxTickFailure failure{SandboxTickFailure::None};
 };
 
 class Sandbox final {
@@ -53,6 +76,12 @@ public:
 
     void ReleaseBehaviorTree(ScriptHandle handle) noexcept;
 
+    [[nodiscard]] auto EvaluateBehaviorTree(
+        ScriptHandle handle,
+        EphemeralThinkHandle& think,
+        SandboxTickResult& result,
+        std::string& error) -> bool;
+
     [[nodiscard]] auto ExecuteForTesting(
         std::string_view source,
         ExecutionPhase phase,
@@ -62,11 +91,14 @@ public:
     [[nodiscard]] auto MemoryUsed() const noexcept -> std::size_t;
 
 private:
+    struct LuaThinkHandle;
+
     struct AllocatorState {
         std::size_t used{};
         std::size_t sessionLimit{};
         std::size_t thinkGrowthLimit{};
         std::size_t thinkStart{};
+        std::size_t thinkAllocated{};
         bool inThink{};
     };
 
@@ -89,11 +121,16 @@ private:
         std::size_t oldSize,
         std::size_t newSize) noexcept -> void*;
     static void InstructionHook(lua_State* state, lua_Debug* debug);
+    static auto RunEvaluatorThunk(lua_State* state) -> int;
+    static auto ThinkHandleDispatch(lua_State* state) -> int;
 
     SandboxLimits limits_;
     AllocatorState allocator_;
     lua_State* state_{};
     std::uint32_t remainingInstructions_{};
+    ScriptHandle evaluatorHandle_{InvalidScriptHandle};
+    ScriptHandle evaluatorRunnerHandle_{InvalidScriptHandle};
+    LuaThinkHandle* activeLuaHandle_{};
 };
 
 } // namespace ruffneckk::scripted_ai

@@ -38,7 +38,7 @@ inline constexpr std::uint32_t AcceptanceBudgetMicrosecondsPer40Ms = 2'000U;
             <= HardSandboxLimits.maxChildrenPerNode
         && value.sessionHeapBytes >= 1024U * 1024U
         && value.sessionHeapBytes <= HardSandboxLimits.sessionHeapBytes
-        && value.perThinkHeapGrowthBytes >= 4U * 1024U
+        && value.perThinkHeapGrowthBytes >= 1U * 1024U
         && value.perThinkHeapGrowthBytes
             <= HardSandboxLimits.perThinkHeapGrowthBytes
         && value.maxInstructionsPerThink >= 500U

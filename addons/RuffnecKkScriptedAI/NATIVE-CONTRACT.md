@@ -10,7 +10,7 @@
 - Any missing diagnostics service, unknown mutation, second owner, mismatched owner, or changed fingerprint refuses Lua before the first scripted think.
 - Version and build labels are diagnostic only and never decide activation.
 
-The `0.2.0` bridge DLL does not install the hook. It compiles the pre-install policy and positive/negative post-install ownership policy for a later native integration gate.
+The `0.4.0` native-adapter gate DLL does not install the hook. It compiles the pre-install policy, positive/negative post-install ownership policy, pre-callback routing decision, and post-callback continuation policy for the later hook gate.
 
 ## Data and lifecycle bridge
 
@@ -20,7 +20,20 @@ The `0.2.0` bridge DLL does not install the hook. It compiles the pre-install po
 - Script files are canonicalized beneath the configured active-mod or D2RLoader-scope root before their bytes are copied.
 - `DataTablesLoaded` stages bytes without Lua. Only a successful `ThreadServiceV1::runOnGameThread` callback may compile and publish a session generation.
 - `GameJoined`, `GameLeft`, and `sessionGeneration` invalidate late work. `Unavailable` on a remote TCP/IP client means no Lua VM is created there.
-- Publication swaps one immutable generation. A failed replacement preserves the prior same-session generation until readers release it.
+- Publication swaps one structurally immutable generation. Only bounded per-script error/slow/quarantine counters mutate on the authoritative thread; a failed replacement preserves the prior same-session generation until readers release it.
+
+## Execution and native-adapter boundary
+
+- The retained tree is traversed by one trusted Lua evaluator; author sources return declarative tables and cannot provide per-think closures.
+- Each tick receives copied target/combat/distance values and one ephemeral handle carrying only the session generation and think token.
+- Typed capabilities accept or reject bounded idle, wander, attack, chase, retreat, and cast intents. The `0.4.0` build maps them to six explicit adapter methods but links no D2R action implementation.
+- Authority, unit, target, mode, skill, session, token, signed target distance, and scalar widths are validated before the corresponding adapter method. Lua cannot provide a native mode or pointer.
+- The first accepted intent terminates the complete tree. Side-effect-free rejected leaves may continue through a selector, but a second action is impossible.
+- `FallbackScheduled` is a distinct terminal capability result. It models the proven failed-cast path that already schedules a ten-frame idle and prevents both the next selector leaf and a second idle.
+- Every `lua_pcall` path clears the userdata pointer and invalidates the C++ handle before returning.
+- A valid post-callback path with no accepted action, explicit fallback, stale token, Lua/capability failure, instruction exhaustion, allocation exhaustion, or quarantine attempts exactly one ten-frame idle. A rejected explicit idle is never retried recursively.
+- `FallbackAi` is resolver-only. Before callback, a known binding with a stale, unavailable, or quarantined script selects the configured stock record; special states and unbound monsters delegate to the original resolver. After callback begins, the plugin never invokes a stock AI callback under the category-2 tick context.
+- Per-script error and slow-think counters are session-local operational state. Three errors or three Lua-wall strikes above `2 ms`, excluding capability time, quarantine that script until the generation is replaced.
 
 ## Fail-closed fingerprint
 

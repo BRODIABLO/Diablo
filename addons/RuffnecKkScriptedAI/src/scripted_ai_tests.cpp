@@ -1,6 +1,7 @@
 #include "scripted_ai_config.hpp"
 #include "scripted_ai_bridge.hpp"
 #include "scripted_ai_fingerprint.hpp"
+#include "scripted_ai_native.hpp"
 #include "scripted_ai_ownership.hpp"
 #include "scripted_ai_sandbox.hpp"
 
@@ -13,6 +14,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <initializer_list>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -373,19 +375,37 @@ void TestSandbox() {
     Expect(
         sandbox->MemoryUsed() <= HardSandboxLimits.sessionHeapBytes,
         "session allocator must remain inside its hard cap");
+    Expect(
+        !sandbox->LoadBehaviorTree(
+            "return {kind='arbitrary_native_call'}",
+            summary,
+            error),
+        "node kinds outside the V1 allowlist must be rejected");
+    Expect(
+        !sandbox->LoadBehaviorTree(
+            "return {kind='attack', skill=1}",
+            summary,
+            error),
+        "leaf fields outside the exact V1 contract must be rejected");
+    Expect(
+        !sandbox->LoadBehaviorTree(
+            "return {kind='cast'}",
+            summary,
+            error),
+        "required declarative leaf parameters must be enforced");
 
     Sandbox::ScriptHandle isolatedFirst = Sandbox::InvalidScriptHandle;
     Sandbox::ScriptHandle isolatedSecond = Sandbox::InvalidScriptHandle;
     Expect(
         sandbox->CompileBehaviorTree(
-            "_G.poison=17; math.abs=nil; return {kind='first'}",
+            "_G.poison=17; math.abs=nil; return {kind='attack'}",
             isolatedFirst,
             summary,
             error),
         "first isolated tree must compile and remain retained");
     Expect(
         sandbox->CompileBehaviorTree(
-            "assert(poison==nil and type(math.abs)=='function'); return {kind='second'}",
+            "assert(poison==nil and type(math.abs)=='function'); return {kind='fallback'}",
             isolatedSecond,
             summary,
             error),
@@ -430,7 +450,7 @@ void TestSandbox() {
     if (depthSandbox) {
         Expect(
             !depthSandbox->LoadBehaviorTree(
-                "return {kind='a',children={{kind='b',children={{kind='c'}}}}}",
+                "return {kind='sequence',children={{kind='sequence',children={{kind='attack'}}}}}",
                 summary,
                 error),
             "tree depth cap must fail closed");
@@ -443,7 +463,7 @@ void TestSandbox() {
     if (nodeSandbox) {
         Expect(
             !nodeSandbox->LoadBehaviorTree(
-                "return {kind='root',children={{kind='a'},{kind='b'},{kind='c'}}}",
+                "return {kind='selector',children={{kind='attack'},{kind='chase'},{kind='fallback'}}}",
                 summary,
                 error),
             "tree node cap must fail closed");
@@ -456,7 +476,7 @@ void TestSandbox() {
     if (childSandbox) {
         Expect(
             !childSandbox->LoadBehaviorTree(
-                "return {kind='root',children={{kind='a'},{kind='b'},{kind='c'}}}",
+                "return {kind='selector',children={{kind='attack'},{kind='chase'},{kind='fallback'}}}",
                 summary,
                 error),
             "tree child cap must fail closed");
@@ -545,13 +565,15 @@ void WriteTestScript(
         std::span<const AiScriptTableRow> base,
         std::span<const AiScriptTableRow> rotw,
         const std::filesystem::path& root,
-        std::string& error) -> std::shared_ptr<const PreparedBundle> {
+        std::string& error,
+        const SandboxLimits& limits = HardSandboxLimits)
+        -> std::shared_ptr<const PreparedBundle> {
     return StagePreparedBundle(
         revision,
         {.revision = revision * 10U + 1U, .rows = base},
         {.revision = revision * 10U + 2U, .rows = rotw},
         root,
-        HardSandboxLimits,
+        limits,
         ReadScriptSource,
         error);
 }
@@ -745,6 +767,915 @@ void TestBridgeLifecycle() {
     Expect(!bridge.ActiveFor(201U), "cancelled newer session must have no generation");
 }
 
+struct MockThinkCapabilities final : ThinkCapabilities {
+    explicit MockThinkCapabilities(
+            std::initializer_list<CapabilityResult> scripted = {},
+            CapabilityResult fallback = CapabilityResult::Rejected)
+        : results(scripted), fallbackResult(fallback) {}
+
+    [[nodiscard]] auto TryAction(
+            const ActionIntent& intent) noexcept -> CapabilityResult override {
+        const auto index = attemptCount;
+        if (index < attempts.size()) attempts[index] = intent;
+        ++attemptCount;
+        return index < results.size() ? results[index] : fallbackResult;
+    }
+
+    std::vector<CapabilityResult> results;
+    CapabilityResult fallbackResult{CapabilityResult::Rejected};
+    std::array<ActionIntent, 64U> attempts{};
+    std::size_t attemptCount{};
+};
+
+struct FixedClock {
+    std::uint64_t value{};
+
+    [[nodiscard]] static auto Now(void* userData) noexcept -> std::uint64_t {
+        return static_cast<FixedClock*>(userData)->value;
+    }
+};
+
+struct SteppedClock {
+    std::uint64_t value{};
+    std::uint64_t step{};
+
+    [[nodiscard]] static auto Now(void* userData) noexcept -> std::uint64_t {
+        auto& clock = *static_cast<SteppedClock*>(userData);
+        clock.value += clock.step;
+        return clock.value;
+    }
+};
+
+[[nodiscard]] auto CompileTestGeneration(
+        std::uint64_t revision,
+        std::uint64_t sessionId,
+        std::span<const AiScriptTableRow> rows,
+        const std::filesystem::path& root,
+        const SandboxLimits& limits,
+        std::string& error) -> std::shared_ptr<const SessionGeneration> {
+    const auto prepared = StageTestBundle(
+        revision,
+        rows,
+        {},
+        root,
+        error,
+        limits);
+    if (!prepared) return {};
+    return CompileSessionGeneration(*prepared, sessionId, limits, error);
+}
+
+void TestBehaviorTreeEvaluator() {
+    TemporaryScriptTree scripts;
+    WriteTestScript(
+        scripts.root / "decision.lua",
+        "return {kind='selector',children={"
+        "{kind='sequence',children={{kind='has_target'},"
+        "{kind='target_distance_lte',distance=4},{kind='cast',skill=42}}},"
+        "{kind='sequence',children={{kind='has_target'},"
+        "{kind='in_combat'},{kind='attack'}}},"
+        "{kind='wander',radius=7}}}");
+    WriteTestScript(
+        scripts.root / "fallback.lua",
+        "return {kind='fallback'}");
+
+    const std::array rows{
+        MakeAiScriptRow(77U, "decision.lua", 9U),
+        MakeAiScriptRow(78U, "fallback.lua", 12U),
+    };
+    std::string error;
+    const auto generation = CompileTestGeneration(
+        20U,
+        900U,
+        rows,
+        scripts.root,
+        HardSandboxLimits,
+        error);
+    Expect(generation != nullptr, "EXEC-AI fixture generation must compile");
+    if (!generation) return;
+
+    FixedClock fixed{};
+    const ThinkTiming fixedTiming{
+        .now = FixedClock::Now,
+        .userData = &fixed,
+    };
+
+    MockThinkCapabilities selector{
+        {CapabilityResult::Rejected, CapabilityResult::Accepted}};
+    auto decision = generation->EvaluateThink(
+        ScriptBank::Base,
+        77U,
+        900U,
+        1U,
+        {.hasTarget = true, .inCombat = true, .targetDistance = 2U},
+        selector,
+        fixedTiming,
+        error);
+    Expect(
+        decision.disposition == ThinkDisposition::Action,
+        "selector must return the first accepted terminal action");
+    Expect(
+        decision.action == ActionIntent{
+            .kind = ActionKind::AttackTarget,
+            .argument = 0U,
+        },
+        "a rejected cast must allow the selector to accept attack");
+    Expect(selector.attemptCount == 2U, "selector must try exactly two capabilities");
+    Expect(
+        decision.handleInvalidated,
+        "every completed Lua tick must invalidate its ephemeral handle");
+
+    MockThinkCapabilities internalFallback{
+        {CapabilityResult::FallbackScheduled}};
+    decision = generation->EvaluateThink(
+        ScriptBank::Base,
+        77U,
+        900U,
+        20U,
+        {.hasTarget = true, .inCombat = true, .targetDistance = 2U},
+        internalFallback,
+        fixedTiming,
+        error);
+    Expect(
+        decision.disposition == ThinkDisposition::Fallback
+            && decision.fallbackReason
+                == FallbackReason::CapabilityFallbackScheduled
+            && decision.fallbackScheduled,
+        "a capability-owned fallback must terminate the complete tree");
+    Expect(
+        internalFallback.attemptCount == 1U,
+        "a capability-owned fallback must prevent a second selector action");
+
+    MockThinkCapabilities noTarget{{CapabilityResult::Accepted}};
+    decision = generation->EvaluateThink(
+        ScriptBank::Base,
+        77U,
+        900U,
+        2U,
+        {.hasTarget = false, .inCombat = false, .targetDistance = 0U},
+        noTarget,
+        fixedTiming,
+        error);
+    Expect(
+        decision.disposition == ThinkDisposition::Action
+            && decision.action == ActionIntent{
+                .kind = ActionKind::Wander,
+                .argument = 7U,
+            },
+        "failed sequence conditions must reach the selector wander leaf");
+    Expect(noTarget.attemptCount == 1U, "conditions must not call action capabilities");
+
+    MockThinkCapabilities rejected{};
+    decision = generation->EvaluateThink(
+        ScriptBank::Base,
+        77U,
+        900U,
+        3U,
+        {.hasTarget = true, .inCombat = true, .targetDistance = 2U},
+        rejected,
+        fixedTiming,
+        error);
+    Expect(
+        decision.disposition == ThinkDisposition::Fallback
+            && decision.fallbackReason == FallbackReason::CapabilityRejected,
+        "all rejected action leaves must converge to one fallback intent");
+    Expect(decision.fallbackAi == 9U, "fallback intent must retain the binding AI");
+    Expect(rejected.attemptCount == 3U, "all selector actions must be rejected once");
+
+    MockThinkCapabilities explicitFallback{{CapabilityResult::Accepted}};
+    decision = generation->EvaluateThink(
+        ScriptBank::Base,
+        78U,
+        900U,
+        4U,
+        {},
+        explicitFallback,
+        fixedTiming,
+        error);
+    Expect(
+        decision.disposition == ThinkDisposition::Fallback
+            && decision.fallbackReason == FallbackReason::ExplicitFallback,
+        "the declarative fallback leaf must return one explicit fallback");
+    Expect(
+        explicitFallback.attemptCount == 0U,
+        "the fallback leaf must not touch an action capability");
+
+    MockThinkCapabilities stale{{CapabilityResult::Accepted}};
+    decision = generation->EvaluateThink(
+        ScriptBank::Base,
+        77U,
+        899U,
+        5U,
+        {.hasTarget = true, .inCombat = true, .targetDistance = 2U},
+        stale,
+        fixedTiming,
+        error);
+    Expect(
+        decision.fallbackReason == FallbackReason::StaleHandle
+            && !decision.enteredLua,
+        "a stale session must fall back before entering Lua");
+    Expect(stale.attemptCount == 0U, "stale sessions must not touch capabilities");
+
+    MockThinkCapabilities direct{{CapabilityResult::Accepted}};
+    EphemeralThinkHandle handle(
+        900U,
+        6U,
+        {.hasTarget = true, .inCombat = true, .targetDistance = 1U},
+        direct,
+        fixedTiming);
+    Expect(
+        handle.TryAction({.kind = ActionKind::AttackTarget})
+            == CapabilityResult::Accepted,
+        "an active handle must accept its first permitted action");
+    Expect(
+        handle.TryAction({.kind = ActionKind::Wander, .argument = 5U})
+            == CapabilityResult::Rejected,
+        "an active handle must reject a second terminal action");
+    Expect(
+        handle.HadSecondActionAttempt() && direct.attemptCount == 1U,
+        "a second action must be refused before reaching the capability");
+    handle.Invalidate();
+    Expect(
+        handle.TryAction({.kind = ActionKind::AttackTarget})
+            == CapabilityResult::Rejected
+            && handle.HadStaleAccess(),
+        "an invalidated handle must remain inert");
+
+    std::string sandboxError;
+    auto directSandbox = Sandbox::Create(HardSandboxLimits, sandboxError);
+    Sandbox::ScriptHandle lostTree = Sandbox::InvalidScriptHandle;
+    TreeSummary summary{};
+    Expect(
+        directSandbox && directSandbox->CompileBehaviorTree(
+            "return {kind='attack'}",
+            lostTree,
+            summary,
+            sandboxError),
+        "lost-tree Lua error fixture must compile");
+    if (directSandbox && lostTree >= 0) {
+        directSandbox->ReleaseBehaviorTree(lostTree);
+        MockThinkCapabilities lostCapability{{CapabilityResult::Accepted}};
+        EphemeralThinkHandle lostHandle(
+            900U, 7U, {}, lostCapability, fixedTiming);
+        SandboxTickResult lostResult{};
+        Expect(
+            !directSandbox->EvaluateBehaviorTree(
+                lostTree,
+                lostHandle,
+                lostResult,
+                sandboxError)
+                && lostResult.failure == SandboxTickFailure::LuaError
+                && !lostHandle.IsValid(),
+            "a retained-tree Lua failure must invalidate the handle and fail closed");
+    }
+
+    MockThinkCapabilities errors({}, CapabilityResult::Error);
+    for (std::uint64_t token = 10U; token < 13U; ++token) {
+        decision = generation->EvaluateThink(
+            ScriptBank::Base,
+            77U,
+            900U,
+            token,
+            {.hasTarget = true, .inCombat = true, .targetDistance = 2U},
+            errors,
+            fixedTiming,
+            error);
+        Expect(
+            decision.fallbackReason == FallbackReason::CapabilityError,
+            "capability errors must become fallback decisions");
+    }
+    Expect(
+        decision.quarantined
+            && decision.scriptErrors
+                == HardSandboxLimits.maxScriptErrorsPerSession,
+        "three script errors must quarantine the binding for the session");
+    MockThinkCapabilities quarantined{{CapabilityResult::Accepted}};
+    decision = generation->EvaluateThink(
+        ScriptBank::Base,
+        77U,
+        900U,
+        13U,
+        {.hasTarget = true, .inCombat = true, .targetDistance = 2U},
+        quarantined,
+        fixedTiming,
+        error);
+    Expect(
+        decision.fallbackReason == FallbackReason::Quarantined
+            && !decision.enteredLua && quarantined.attemptCount == 0U,
+        "quarantine must prevent later Lua and capability execution");
+
+    auto slowLimits = HardSandboxLimits;
+    slowLimits.slowThinkMicroseconds = 100U;
+    const std::array slowRows{MakeAiScriptRow(80U, "decision.lua", 15U)};
+    const auto slowGeneration = CompileTestGeneration(
+        21U,
+        901U,
+        slowRows,
+        scripts.root,
+        slowLimits,
+        error);
+    Expect(slowGeneration != nullptr, "slow-strike fixture must compile");
+    if (slowGeneration) {
+        SteppedClock slowClock{.step = 100U};
+        const ThinkTiming slowTiming{
+            .now = SteppedClock::Now,
+            .userData = &slowClock,
+        };
+        for (std::uint64_t token = 1U; token <= 3U; ++token) {
+            MockThinkCapabilities acceptedAction{{CapabilityResult::Accepted}};
+            decision = slowGeneration->EvaluateThink(
+                ScriptBank::Base,
+                80U,
+                901U,
+                token,
+                {.hasTarget = false},
+                acceptedAction,
+                slowTiming,
+                error);
+            Expect(
+                decision.disposition == ThinkDisposition::Action
+                    && decision.luaMicroseconds == 200U,
+                "slow timing must exclude mocked capability time");
+        }
+        Expect(
+            decision.quarantined
+                && decision.slowStrikes
+                    == slowLimits.maxSlowStrikesPerSession,
+            "three deterministic slow strikes must quarantine the script");
+        MockThinkCapabilities afterSlow{{CapabilityResult::Accepted}};
+        decision = slowGeneration->EvaluateThink(
+            ScriptBank::Base,
+            80U,
+            901U,
+            4U,
+            {},
+            afterSlow,
+            slowTiming,
+            error);
+        Expect(
+            decision.fallbackReason == FallbackReason::Quarantined
+                && !decision.enteredLua,
+            "slow-strike quarantine must apply before the next tick");
+    }
+
+    std::string instructionSource = "return {kind='selector',children={";
+    for (std::size_t index{}; index < 32U; ++index) {
+        instructionSource += "{kind='attack'},";
+    }
+    instructionSource += "}}";
+    WriteTestScript(scripts.root / "instruction.lua", instructionSource);
+    auto instructionLimits = HardSandboxLimits;
+    instructionLimits.maxInstructionsPerThink = 500U;
+    instructionLimits.instructionHookInterval = 500U;
+    const std::array instructionRows{
+        MakeAiScriptRow(81U, "instruction.lua", 16U),
+    };
+    const auto instructionGeneration = CompileTestGeneration(
+        22U,
+        902U,
+        instructionRows,
+        scripts.root,
+        instructionLimits,
+        error);
+    Expect(instructionGeneration != nullptr, "instruction fixture must compile");
+    if (instructionGeneration) {
+        MockThinkCapabilities instructionCapabilities{};
+        decision = instructionGeneration->EvaluateThink(
+            ScriptBank::Base,
+            81U,
+            902U,
+            1U,
+            {.hasTarget = true},
+            instructionCapabilities,
+            fixedTiming,
+            error);
+        Expect(
+            decision.fallbackReason == FallbackReason::InstructionBudget
+                && decision.handleInvalidated,
+            "instruction exhaustion must converge to fallback with no live handle");
+    }
+
+    auto allocationLimits = HardSandboxLimits;
+    allocationLimits.perThinkHeapGrowthBytes = 1U * 1'024U;
+    const std::array allocationRows{MakeAiScriptRow(82U, "decision.lua", 17U)};
+    const auto allocationGeneration = CompileTestGeneration(
+        23U,
+        903U,
+        allocationRows,
+        scripts.root,
+        allocationLimits,
+        error);
+    Expect(allocationGeneration != nullptr, "allocation fixture must compile");
+    if (allocationGeneration) {
+        MockThinkCapabilities allocationCapabilities(
+            {}, CapabilityResult::Error);
+        decision = allocationGeneration->EvaluateThink(
+            ScriptBank::Base,
+            82U,
+            903U,
+            1U,
+            {.hasTarget = true, .inCombat = true, .targetDistance = 2U},
+            allocationCapabilities,
+            fixedTiming,
+            error);
+        Expect(
+            decision.fallbackReason == FallbackReason::AllocationBudget
+                && decision.handleInvalidated,
+            "allocation exhaustion must converge to fallback with no live handle");
+    }
+}
+
+struct MockNativeActionAdapter final : NativeActionAdapter {
+    [[nodiscard]] auto IsAuthoritativeContext(
+            const NativeThinkContext&) noexcept -> bool override {
+        ++authorityChecks;
+        return authoritative;
+    }
+
+    [[nodiscard]] auto IsValidMonster(
+            const NativeThinkContext&) noexcept -> bool override {
+        ++unitChecks;
+        return unitValid;
+    }
+
+    [[nodiscard]] auto IsValidTarget(
+            const NativeThinkContext&) noexcept -> bool override {
+        ++targetChecks;
+        return targetValid;
+    }
+
+    [[nodiscard]] auto IsValidMode(
+            const NativeThinkContext&,
+            ActionKind action) noexcept -> bool override {
+        ++modeChecks;
+        return validModes[static_cast<std::size_t>(action)];
+    }
+
+    [[nodiscard]] auto IsValidSkill(
+            const NativeThinkContext&,
+            std::uint16_t skillId) noexcept -> bool override {
+        ++skillChecks;
+        lastSkill = skillId;
+        return skillValid;
+    }
+
+    [[nodiscard]] auto TryIdle(
+            const NativeThinkContext&,
+            std::uint8_t frames) noexcept -> NativeCallResult override {
+        ++idleCalls;
+        lastIdleFrames = frames;
+        return Record({.kind = ActionKind::Idle, .argument = frames});
+    }
+
+    [[nodiscard]] auto TryWander(
+            const NativeThinkContext&,
+            std::uint8_t radius) noexcept -> NativeCallResult override {
+        ++wanderCalls;
+        return Record({.kind = ActionKind::Wander, .argument = radius});
+    }
+
+    [[nodiscard]] auto TryAttackTarget(
+            const NativeThinkContext&) noexcept -> NativeCallResult override {
+        ++attackCalls;
+        return Record({.kind = ActionKind::AttackTarget});
+    }
+
+    [[nodiscard]] auto TryChaseTarget(
+            const NativeThinkContext&) noexcept -> NativeCallResult override {
+        ++chaseCalls;
+        return Record({.kind = ActionKind::ChaseTarget});
+    }
+
+    [[nodiscard]] auto TryRetreatFromTarget(
+            const NativeThinkContext&,
+            std::uint8_t distance) noexcept -> NativeCallResult override {
+        ++retreatCalls;
+        return Record({
+            .kind = ActionKind::RetreatFromTarget,
+            .argument = distance,
+        });
+    }
+
+    [[nodiscard]] auto TryCastOnTarget(
+            const NativeThinkContext&,
+            std::uint16_t skillId) noexcept -> NativeCallResult override {
+        ++castCalls;
+        return Record({
+            .kind = ActionKind::CastOnTarget,
+            .argument = skillId,
+        });
+    }
+
+    [[nodiscard]] auto Record(ActionIntent intent) noexcept
+            -> NativeCallResult {
+        const auto index = callCount;
+        if (index < calls.size()) calls[index] = intent;
+        ++callCount;
+        return index < results.size() ? results[index] : defaultResult;
+    }
+
+    std::vector<NativeCallResult> results;
+    NativeCallResult defaultResult{NativeCallResult::Rejected};
+    std::array<ActionIntent, 32U> calls{};
+    std::array<bool, 6U> validModes{true, true, true, true, true, true};
+    std::size_t callCount{};
+    std::uint32_t authorityChecks{};
+    std::uint32_t unitChecks{};
+    std::uint32_t targetChecks{};
+    std::uint32_t modeChecks{};
+    std::uint32_t skillChecks{};
+    std::uint32_t idleCalls{};
+    std::uint32_t wanderCalls{};
+    std::uint32_t attackCalls{};
+    std::uint32_t chaseCalls{};
+    std::uint32_t retreatCalls{};
+    std::uint32_t castCalls{};
+    std::uint16_t lastSkill{};
+    std::uint8_t lastIdleFrames{};
+    bool authoritative{true};
+    bool unitValid{true};
+    bool targetValid{true};
+    bool skillValid{true};
+};
+
+void TestNativeActionBoundary() {
+    TemporaryScriptTree scripts;
+    WriteTestScript(
+        scripts.root / "decision.lua",
+        "return {kind='selector',children={{kind='cast',skill=42},"
+        "{kind='attack'},{kind='wander',radius=7}}}");
+    WriteTestScript(
+        scripts.root / "attack.lua",
+        "return {kind='attack'}");
+    WriteTestScript(
+        scripts.root / "fallback.lua",
+        "return {kind='fallback'}");
+    WriteTestScript(
+        scripts.root / "idle.lua",
+        "return {kind='idle',frames=12}");
+    WriteTestScript(
+        scripts.root / "wander.lua",
+        "return {kind='wander',radius=7}");
+    WriteTestScript(
+        scripts.root / "chase.lua",
+        "return {kind='chase'}");
+    WriteTestScript(
+        scripts.root / "retreat.lua",
+        "return {kind='retreat',distance=8}");
+
+    const std::array rows{
+        MakeAiScriptRow(90U, "decision.lua", 21U),
+        MakeAiScriptRow(91U, "attack.lua", 22U),
+        MakeAiScriptRow(92U, "fallback.lua", 23U),
+        MakeAiScriptRow(93U, "idle.lua", 24U),
+        MakeAiScriptRow(94U, "wander.lua", 25U),
+        MakeAiScriptRow(95U, "chase.lua", 26U),
+        MakeAiScriptRow(96U, "retreat.lua", 27U),
+    };
+    std::string error;
+    const auto generation = CompileTestGeneration(
+        30U,
+        1'000U,
+        rows,
+        scripts.root,
+        HardSandboxLimits,
+        error);
+    Expect(generation != nullptr, "NATIVE-AI fixture generation must compile");
+    if (!generation) return;
+
+    const auto binding = generation->InspectBinding(ScriptBank::Base, 90U);
+    Expect(
+        binding.bound && binding.scriptReady && !binding.quarantined
+            && binding.fallbackAi == 21U,
+        "runtime binding inspection must expose only resolver-safe state");
+    Expect(
+        SelectPreCallbackRoute(0, true, binding).route
+            == PreCallbackRoute::ScriptedBridge,
+        "a ready normal binding must select the scripted bridge");
+    const auto staleRoute = SelectPreCallbackRoute(0, false, binding);
+    Expect(
+        staleRoute.route == PreCallbackRoute::StockFallback
+            && staleRoute.fallbackAi == 21U,
+        "a bound stale generation must select FallbackAi before callback");
+    auto quarantinedBinding = binding;
+    quarantinedBinding.quarantined = true;
+    Expect(
+        SelectPreCallbackRoute(0, true, quarantinedBinding).route
+            == PreCallbackRoute::StockFallback,
+        "a quarantined binding must select FallbackAi before callback");
+    Expect(
+        SelectPreCallbackRoute(7, true, binding).route
+            == PreCallbackRoute::DelegateOriginal,
+        "every nonzero special state must delegate to the original resolver");
+    Expect(
+        SelectPreCallbackRoute(
+            0,
+            true,
+            generation->InspectBinding(ScriptBank::Base, 999U)).route
+            == PreCallbackRoute::DelegateOriginal,
+        "an unbound monster must delegate to the original resolver");
+    auto invalidFallback = binding;
+    invalidFallback.fallbackAi = StockAiCount;
+    Expect(
+        SelectPreCallbackRoute(0, false, invalidFallback).route
+            == PreCallbackRoute::DelegateOriginal,
+        "an invalid stock fallback must fail closed to the original resolver");
+
+    int game{};
+    int unit{};
+    int target{};
+    const NativeThinkContext context{
+        .game = &game,
+        .unit = &unit,
+        .target = &target,
+        .sessionGeneration = 1'000U,
+        .thinkToken = 1U,
+        .monStatsId = 90U,
+        .targetDistance = 2U,
+        .inCombat = true,
+    };
+    FixedClock fixed{};
+    const ThinkTiming timing{
+        .now = FixedClock::Now,
+        .userData = &fixed,
+    };
+
+    MockNativeActionAdapter skillRejected;
+    skillRejected.skillValid = false;
+    skillRejected.results = {NativeCallResult::Accepted};
+    auto execution = ExecuteNativeThink(
+        *generation,
+        ScriptBank::Base,
+        context,
+        skillRejected,
+        timing,
+        error);
+    Expect(
+        execution.continuation == NativeContinuation::ActionPipeline
+            && execution.decision.action.kind == ActionKind::AttackTarget,
+        "an invalid cast skill must be rejected before the adapter and allow attack");
+    Expect(
+        skillRejected.skillChecks == 1U && skillRejected.castCalls == 0U
+            && skillRejected.attackCalls == 1U
+            && skillRejected.idleCalls == 0U,
+        "skill and mode validation must precede the typed action adapter");
+
+    auto wanderContext = context;
+    wanderContext.target = nullptr;
+    wanderContext.monStatsId = 94U;
+    wanderContext.thinkToken = 21U;
+    MockNativeActionAdapter acceptedWander;
+    acceptedWander.results = {NativeCallResult::Accepted};
+    execution = ExecuteNativeThink(
+        *generation,
+        ScriptBank::Base,
+        wanderContext,
+        acceptedWander,
+        timing,
+        error);
+    Expect(
+        execution.continuation == NativeContinuation::ActionPipeline
+            && acceptedWander.wanderCalls == 1U
+            && acceptedWander.calls[0] == ActionIntent{
+                .kind = ActionKind::Wander,
+                .argument = 7U,
+            }
+            && acceptedWander.targetChecks == 0U,
+        "wander must map its byte radius without requiring a target");
+
+    auto chaseContext = context;
+    chaseContext.monStatsId = 95U;
+    chaseContext.thinkToken = 22U;
+    MockNativeActionAdapter acceptedChase;
+    acceptedChase.results = {NativeCallResult::Accepted};
+    execution = ExecuteNativeThink(
+        *generation,
+        ScriptBank::Base,
+        chaseContext,
+        acceptedChase,
+        timing,
+        error);
+    Expect(
+        execution.continuation == NativeContinuation::ActionPipeline
+            && acceptedChase.chaseCalls == 1U
+            && acceptedChase.targetChecks == 1U,
+        "chase must revalidate its target before the typed adapter");
+
+    auto retreatContext = context;
+    retreatContext.monStatsId = 96U;
+    retreatContext.thinkToken = 23U;
+    MockNativeActionAdapter acceptedRetreat;
+    acceptedRetreat.results = {NativeCallResult::Accepted};
+    execution = ExecuteNativeThink(
+        *generation,
+        ScriptBank::Base,
+        retreatContext,
+        acceptedRetreat,
+        timing,
+        error);
+    Expect(
+        execution.continuation == NativeContinuation::ActionPipeline
+            && acceptedRetreat.retreatCalls == 1U
+            && acceptedRetreat.calls[0] == ActionIntent{
+                .kind = ActionKind::RetreatFromTarget,
+                .argument = 8U,
+            },
+        "retreat must map its byte distance after target validation");
+
+    auto acceptedIdleContext = context;
+    acceptedIdleContext.monStatsId = 93U;
+    acceptedIdleContext.thinkToken = 24U;
+    MockNativeActionAdapter acceptedIdle;
+    acceptedIdle.results = {NativeCallResult::Accepted};
+    execution = ExecuteNativeThink(
+        *generation,
+        ScriptBank::Base,
+        acceptedIdleContext,
+        acceptedIdle,
+        timing,
+        error);
+    Expect(
+        execution.continuation == NativeContinuation::ActionPipeline
+            && acceptedIdle.idleCalls == 1U
+            && acceptedIdle.lastIdleFrames == 12U,
+        "an explicit idle action must map its byte delay exactly once");
+
+    auto castContext = context;
+    castContext.thinkToken = 2U;
+    MockNativeActionAdapter castFallback;
+    castFallback.results = {NativeCallResult::FallbackScheduled};
+    execution = ExecuteNativeThink(
+        *generation,
+        ScriptBank::Base,
+        castContext,
+        castFallback,
+        timing,
+        error);
+    Expect(
+        execution.continuation
+                == NativeContinuation::CapabilityFallbackScheduled
+            && execution.decision.fallbackScheduled
+            && execution.decision.fallbackReason
+                == FallbackReason::CapabilityFallbackScheduled,
+        "a cast-owned fallback must terminate the tree without a second idle");
+    Expect(
+        castFallback.castCalls == 1U && castFallback.attackCalls == 0U
+            && castFallback.idleCalls == 0U && castFallback.callCount == 1U,
+        "cast rejection with internal fallback must be exactly one native call");
+
+    auto attackContext = context;
+    attackContext.monStatsId = 91U;
+    attackContext.thinkToken = 3U;
+    MockNativeActionAdapter rejectedAttack;
+    rejectedAttack.results = {
+        NativeCallResult::Rejected,
+        NativeCallResult::Accepted,
+    };
+    execution = ExecuteNativeThink(
+        *generation,
+        ScriptBank::Base,
+        attackContext,
+        rejectedAttack,
+        timing,
+        error);
+    Expect(
+        execution.decision.fallbackReason
+                == FallbackReason::CapabilityRejected
+            && execution.continuation
+                == NativeContinuation::FallbackIdleScheduled,
+        "a rejected action must schedule exactly one post-callback idle");
+    Expect(
+        rejectedAttack.attackCalls == 1U && rejectedAttack.idleCalls == 1U
+            && rejectedAttack.lastIdleFrames == NativeFallbackIdleFrames
+            && rejectedAttack.callCount == 2U,
+        "post-callback fallback must use the frozen ten-frame idle once");
+
+    auto explicitContext = context;
+    explicitContext.monStatsId = 92U;
+    explicitContext.thinkToken = 4U;
+    MockNativeActionAdapter explicitFallback;
+    explicitFallback.results = {NativeCallResult::Accepted};
+    execution = ExecuteNativeThink(
+        *generation,
+        ScriptBank::Base,
+        explicitContext,
+        explicitFallback,
+        timing,
+        error);
+    Expect(
+        execution.decision.fallbackReason == FallbackReason::ExplicitFallback
+            && explicitFallback.callCount == 1U
+            && explicitFallback.idleCalls == 1U,
+        "an explicit Lua fallback must schedule one native idle");
+
+    auto errorContext = attackContext;
+    errorContext.thinkToken = 5U;
+    MockNativeActionAdapter actionError;
+    actionError.results = {
+        NativeCallResult::Error,
+        NativeCallResult::Accepted,
+    };
+    execution = ExecuteNativeThink(
+        *generation,
+        ScriptBank::Base,
+        errorContext,
+        actionError,
+        timing,
+        error);
+    Expect(
+        execution.decision.fallbackReason == FallbackReason::CapabilityError
+            && actionError.attackCalls == 1U && actionError.idleCalls == 1U
+            && actionError.callCount == 2U,
+        "a capability error must fail closed through one post-callback idle");
+
+    auto idleContext = context;
+    idleContext.monStatsId = 93U;
+    idleContext.thinkToken = 6U;
+    MockNativeActionAdapter rejectedIdle;
+    rejectedIdle.results = {NativeCallResult::Rejected};
+    execution = ExecuteNativeThink(
+        *generation,
+        ScriptBank::Base,
+        idleContext,
+        rejectedIdle,
+        timing,
+        error);
+    Expect(
+        execution.continuation == NativeContinuation::FallbackIdleFailed
+            && rejectedIdle.idleCalls == 1U && rejectedIdle.callCount == 1U,
+        "a rejected idle leaf must never recursively attempt a second idle");
+
+    auto invalidTargetContext = attackContext;
+    invalidTargetContext.thinkToken = 7U;
+    MockNativeActionAdapter invalidTarget;
+    invalidTarget.targetValid = false;
+    invalidTarget.results = {NativeCallResult::Accepted};
+    execution = ExecuteNativeThink(
+        *generation,
+        ScriptBank::Base,
+        invalidTargetContext,
+        invalidTarget,
+        timing,
+        error);
+    Expect(
+        invalidTarget.targetChecks == 1U && invalidTarget.attackCalls == 0U
+            && invalidTarget.idleCalls == 1U,
+        "an invalid target must be rejected before any target action call");
+
+    auto invalidModeContext = attackContext;
+    invalidModeContext.thinkToken = 8U;
+    MockNativeActionAdapter invalidMode;
+    invalidMode.validModes[static_cast<std::size_t>(
+        ActionKind::AttackTarget)] = false;
+    invalidMode.results = {NativeCallResult::Accepted};
+    execution = ExecuteNativeThink(
+        *generation,
+        ScriptBank::Base,
+        invalidModeContext,
+        invalidMode,
+        timing,
+        error);
+    Expect(
+        execution.decision.fallbackReason == FallbackReason::CapabilityError
+            && invalidMode.attackCalls == 0U && invalidMode.idleCalls == 1U,
+        "an invalid native mode must fail before the action and use one idle");
+
+    auto invalidContext = context;
+    invalidContext.thinkToken = 9U;
+    MockNativeActionAdapter remoteClient;
+    remoteClient.authoritative = false;
+    execution = ExecuteNativeThink(
+        *generation,
+        ScriptBank::Base,
+        invalidContext,
+        remoteClient,
+        timing,
+        error);
+    Expect(
+        execution.continuation == NativeContinuation::InvalidContext
+            && execution.decision.fallbackReason
+                == FallbackReason::InvalidNativeContext
+            && !execution.decision.enteredLua
+            && remoteClient.callCount == 0U,
+        "a non-authoritative context must touch neither Lua nor native actions");
+
+    auto invalidDistance = context;
+    invalidDistance.thinkToken = 10U;
+    invalidDistance.targetDistance = -1;
+    MockNativeActionAdapter negativeDistance;
+    execution = ExecuteNativeThink(
+        *generation,
+        ScriptBank::Base,
+        invalidDistance,
+        negativeDistance,
+        timing,
+        error);
+    Expect(
+        execution.continuation == NativeContinuation::InvalidContext
+            && !execution.decision.enteredLua
+            && negativeDistance.callCount == 0U,
+        "a negative distance paired with a target must fail before Lua and adapters");
+}
+
 void TestPluginPolicy() {
     const auto source = ReadText(SCRIPTED_AI_PLUGIN_SOURCE_FILE);
     Expect(
@@ -776,13 +1707,35 @@ void TestPluginPolicy() {
     Expect(
         source.find("D2_AI_Attack") == source.npos
             && source.find("D2MonUseSkill") == source.npos,
-        "bridge gate must not contain gameplay action helpers");
+        "EXEC gate must not contain D2R gameplay action helpers");
+    Expect(
+        source.find("constexpr char Version[] = \"0.4.0\"") != source.npos,
+        "NATIVE-AI-1 build must advertise component version 0.4.0");
 
     const auto bridgeSource = ReadText(SCRIPTED_AI_BRIDGE_SOURCE_FILE);
     Expect(
         bridgeSource.find("CompileSessionGeneration") != bridgeSource.npos
             && bridgeSource.find("pending_") != bridgeSource.npos,
         "bridge core must compile pending snapshots before publication");
+    Expect(
+        bridgeSource.find("EvaluateThink") != bridgeSource.npos
+            && bridgeSource.find("FallbackReason::InstructionBudget")
+                != bridgeSource.npos
+            && bridgeSource.find("script.quarantined") != bridgeSource.npos,
+        "EXEC core must own deterministic fallback and quarantine policy");
+
+    const auto nativeSource = ReadText(SCRIPTED_AI_NATIVE_SOURCE_FILE);
+    Expect(
+        nativeSource.find("ExecuteNativeThink") != nativeSource.npos
+            && nativeSource.find("SelectPreCallbackRoute") != nativeSource.npos
+            && nativeSource.find("ScheduleFallbackIdle") != nativeSource.npos,
+        "NATIVE core must own typed routing and exactly-once fallback policy");
+    Expect(
+        nativeSource.find("InstallInlineHook") == nativeSource.npos
+            && nativeSource.find("AITACTICS_") == nativeSource.npos
+            && nativeSource.find("D2GAME_AICORE_") == nativeSource.npos
+            && nativeSource.find("0x4A36C0") == nativeSource.npos,
+        "NATIVE-AI-1 must contain no resolver hook or direct D2R helper call");
 }
 
 } // namespace
@@ -795,6 +1748,8 @@ int main(int argc, char** argv) {
         TestSandbox();
         TestAiScriptTransaction();
         TestBridgeLifecycle();
+        TestBehaviorTreeEvaluator();
+        TestNativeActionBoundary();
         TestPluginPolicy();
         if (argc > 1) {
             TestCanonicalImage(argv[1]);
@@ -807,9 +1762,9 @@ int main(int argc, char** argv) {
     }
 
     if (Failures != 0) {
-        std::cerr << Failures << " Scripted AI bridge assertion(s) failed\n";
+        std::cerr << Failures << " Scripted AI NATIVE-AI-1 assertion(s) failed\n";
         return 1;
     }
-    std::cout << "Scripted AI bridge tests PASS\n";
+    std::cout << "Scripted AI NATIVE-AI-1 tests PASS\n";
     return 0;
 }

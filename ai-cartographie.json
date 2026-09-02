@@ -2799,7 +2799,7 @@
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-standalone-d2rloader-addon",
-                                                                        "summary":  "Plugin autonome RuffnecKk Scripted AI 0.2.0 default-off : table aiscript Base/RotW, génération Lua session-scoped atomique, rollback et autorité hôte, sans hook ni gameplay.",
+                                                                        "summary":  "Plugin autonome RuffnecKk Scripted AI 0.4.0 default-off : bridge Lua borné et adaptateurs natifs injectables avec continuation/fallback prouvés, sans hook ni gameplay.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
@@ -2845,6 +2845,16 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "scripted_ai_executor.cpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_executor.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_executor.hpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_executor.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "scripted_ai_fingerprint.cpp",
                                                                                                      "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_fingerprint.cpp",
                                                                                                      "kind":  "file"
@@ -2857,6 +2867,16 @@
                                                                                                  {
                                                                                                      "name":  "scripted_ai_limits.hpp",
                                                                                                      "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_limits.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_native.cpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_native.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_native.hpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_native.hpp",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

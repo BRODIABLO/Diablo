@@ -66,6 +66,13 @@ struct PreparedBundle {
     std::array<PreparedBank, 2U> banks;
 };
 
+struct BindingRuntimeState {
+    bool bound{};
+    bool scriptReady{};
+    bool quarantined{};
+    std::uint16_t fallbackAi{};
+};
+
 using SourceReader = std::function<bool(
     const std::filesystem::path& path,
     std::size_t maximumBytes,
@@ -101,6 +108,18 @@ public:
     [[nodiscard]] auto ScriptCount() const noexcept -> std::size_t;
     [[nodiscard]] auto BindingCount(ScriptBank bank) const noexcept
         -> std::size_t;
+    [[nodiscard]] auto InspectBinding(
+        ScriptBank bank,
+        std::uint32_t monStatsId) const noexcept -> BindingRuntimeState;
+    [[nodiscard]] auto EvaluateThink(
+        ScriptBank bank,
+        std::uint32_t monStatsId,
+        std::uint64_t sessionId,
+        std::uint64_t thinkToken,
+        ThinkSnapshot snapshot,
+        ThinkCapabilities& capabilities,
+        ThinkTiming timing,
+        std::string& error) const -> ThinkDecision;
 
 private:
     friend auto CompileSessionGeneration(
@@ -113,12 +132,16 @@ private:
         std::string name;
         Sandbox::ScriptHandle handle{Sandbox::InvalidScriptHandle};
         TreeSummary summary;
+        mutable std::uint32_t errors{};
+        mutable std::uint32_t slowStrikes{};
+        mutable bool quarantined{};
     };
 
     SessionGeneration() = default;
 
     std::uint64_t sessionId_{};
     std::uint64_t lifecycleRevision_{};
+    SandboxLimits limits_{};
     std::unique_ptr<Sandbox> sandbox_;
     std::vector<CompiledScript> scripts_;
     std::array<std::vector<PreparedBinding>, 2U> banks_;

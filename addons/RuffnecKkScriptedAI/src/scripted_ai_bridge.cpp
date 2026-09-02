@@ -390,6 +390,159 @@ auto SessionGeneration::BindingCount(ScriptBank bank) const noexcept
     return banks_[BankIndex(bank)].size();
 }
 
+auto SessionGeneration::InspectBinding(
+        ScriptBank bank,
+        std::uint32_t monStatsId) const noexcept -> BindingRuntimeState {
+    const auto& bindings = banks_[BankIndex(bank)];
+    const auto binding = std::lower_bound(
+        bindings.begin(),
+        bindings.end(),
+        monStatsId,
+        [](const PreparedBinding& candidate, std::uint32_t id) {
+            return candidate.monStatsId < id;
+        });
+    if (binding == bindings.end() || binding->monStatsId != monStatsId) {
+        return {};
+    }
+    BindingRuntimeState state{
+        .bound = true,
+        .scriptReady = binding->scriptIndex < scripts_.size()
+            && sandbox_ != nullptr,
+        .quarantined = false,
+        .fallbackAi = binding->fallbackAi,
+    };
+    if (binding->scriptIndex < scripts_.size()) {
+        state.quarantined = scripts_[binding->scriptIndex].quarantined;
+    }
+    return state;
+}
+
+auto SessionGeneration::EvaluateThink(
+        ScriptBank bank,
+        std::uint32_t monStatsId,
+        std::uint64_t sessionId,
+        std::uint64_t thinkToken,
+        ThinkSnapshot snapshot,
+        ThinkCapabilities& capabilities,
+        ThinkTiming timing,
+        std::string& error) const -> ThinkDecision {
+    ThinkDecision decision{};
+    const auto& bindings = banks_[BankIndex(bank)];
+    const auto binding = std::lower_bound(
+        bindings.begin(),
+        bindings.end(),
+        monStatsId,
+        [](const PreparedBinding& candidate, std::uint32_t id) {
+            return candidate.monStatsId < id;
+        });
+    if (binding == bindings.end() || binding->monStatsId != monStatsId) {
+        decision.fallbackReason = FallbackReason::MissingBinding;
+        error.clear();
+        return decision;
+    }
+    decision.fallbackAi = binding->fallbackAi;
+    if (sessionId == 0U || sessionId != sessionId_ || thinkToken == 0U) {
+        decision.fallbackReason = FallbackReason::StaleHandle;
+        error = "think session or token does not match the active generation";
+        return decision;
+    }
+    if (binding->scriptIndex >= scripts_.size() || sandbox_ == nullptr) {
+        decision.fallbackReason = FallbackReason::InternalError;
+        error = "compiled Scripted AI binding is incomplete";
+        return decision;
+    }
+
+    const auto& script = scripts_[binding->scriptIndex];
+    decision.scriptErrors = script.errors;
+    decision.slowStrikes = script.slowStrikes;
+    decision.quarantined = script.quarantined;
+    if (script.quarantined) {
+        decision.fallbackReason = FallbackReason::Quarantined;
+        error.clear();
+        return decision;
+    }
+
+    EphemeralThinkHandle think(
+        sessionId,
+        thinkToken,
+        snapshot,
+        capabilities,
+        timing);
+    const auto started = ReadMicroseconds(timing);
+    SandboxTickResult tick{};
+    const auto accepted = sandbox_->EvaluateBehaviorTree(
+        script.handle,
+        think,
+        tick,
+        error);
+    const auto finished = ReadMicroseconds(timing);
+    const auto wallMicroseconds = finished >= started
+        ? finished - started
+        : 0U;
+    decision.luaMicroseconds = wallMicroseconds
+        - std::min(wallMicroseconds, think.CapabilityMicroseconds());
+    decision.enteredLua = true;
+    decision.handleInvalidated = !think.IsValid();
+
+    if (!accepted) {
+        switch (tick.failure) {
+        case SandboxTickFailure::InstructionBudget:
+            decision.fallbackReason = FallbackReason::InstructionBudget;
+            break;
+        case SandboxTickFailure::AllocationBudget:
+            decision.fallbackReason = FallbackReason::AllocationBudget;
+            break;
+        case SandboxTickFailure::CapabilityError:
+            decision.fallbackReason = FallbackReason::CapabilityError;
+            break;
+        case SandboxTickFailure::StaleHandle:
+            decision.fallbackReason = FallbackReason::StaleHandle;
+            break;
+        case SandboxTickFailure::LuaError:
+            decision.fallbackReason = FallbackReason::LuaError;
+            break;
+        case SandboxTickFailure::ProtocolError:
+        case SandboxTickFailure::None:
+            decision.fallbackReason = FallbackReason::InternalError;
+            break;
+        }
+        if (script.errors < std::numeric_limits<std::uint32_t>::max()) {
+            ++script.errors;
+        }
+    } else if (tick.status == SandboxTickStatus::Action) {
+        decision.disposition = ThinkDisposition::Action;
+        decision.fallbackReason = FallbackReason::None;
+        decision.action = think.CommittedAction();
+        error.clear();
+    } else if (tick.status == SandboxTickStatus::ExplicitFallback) {
+        decision.fallbackReason = FallbackReason::ExplicitFallback;
+        error.clear();
+    } else if (tick.status == SandboxTickStatus::CapabilityFallback) {
+        decision.fallbackReason = FallbackReason::CapabilityFallbackScheduled;
+        decision.fallbackScheduled = true;
+        error.clear();
+    } else {
+        decision.fallbackReason = think.ActionAttempts() == 0U
+            ? FallbackReason::NoAction
+            : FallbackReason::CapabilityRejected;
+        error.clear();
+    }
+
+    if (decision.luaMicroseconds > limits_.slowThinkMicroseconds
+            && script.slowStrikes
+                < std::numeric_limits<std::uint32_t>::max()) {
+        ++script.slowStrikes;
+    }
+    if (script.errors >= limits_.maxScriptErrorsPerSession
+            || script.slowStrikes >= limits_.maxSlowStrikesPerSession) {
+        script.quarantined = true;
+    }
+    decision.scriptErrors = script.errors;
+    decision.slowStrikes = script.slowStrikes;
+    decision.quarantined = script.quarantined;
+    return decision;
+}
+
 auto CompileSessionGeneration(
         const PreparedBundle& prepared,
         std::uint64_t sessionId,
@@ -404,6 +557,7 @@ auto CompileSessionGeneration(
             new SessionGeneration());
         candidate->sessionId_ = sessionId;
         candidate->lifecycleRevision_ = prepared.lifecycleRevision;
+        candidate->limits_ = limits;
         candidate->banks_[BankIndex(ScriptBank::Base)] =
             prepared.banks[BankIndex(ScriptBank::Base)].bindings;
         candidate->banks_[BankIndex(ScriptBank::Rotw)] =

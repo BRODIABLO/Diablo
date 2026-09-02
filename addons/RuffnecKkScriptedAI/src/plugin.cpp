@@ -23,7 +23,7 @@ namespace {
 
 using namespace ruffneckk::scripted_ai;
 
-constexpr char Version[] = "0.2.0";
+constexpr char Version[] = "0.4.0";
 constexpr char PluginId[] = "ruffneckk-scripted-ai";
 constexpr std::size_t MaximumConfigBytes = 64U * 1024U;
 constexpr char AiScriptTableName[] = "aiscript";
@@ -807,7 +807,7 @@ void __cdecl OnGameThreadLifecycle(
     std::snprintf(
         message,
         sizeof(message),
-        "RuffnecKk Scripted AI %s registered its private Base+RotW AIScript transaction bridge from %s for reported build %s; Lua generation creation is authoritative-session-only, and no resolver hook or gameplay action is installed.",
+        "RuffnecKk Scripted AI %s registered its private Base+RotW AIScript transaction bridge from %s for reported build %s; immutable generations include the bounded evaluator and injectable native-action contract, while no resolver hook or D2R gameplay action is installed.",
         Version,
         LoadedConfigPath.c_str(),
         buildLabel);

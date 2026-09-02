@@ -7,14 +7,181 @@ extern "C" {
 }
 
 #include <algorithm>
+#include <array>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
+#include <limits>
 #include <string>
 #include <unordered_set>
+#include <utility>
 
 namespace ruffneckk::scripted_ai {
 namespace {
+
+constexpr char ThinkHandleMetatable[] =
+    "RuffnecKk.ScriptedAI.EphemeralThinkHandle";
+
+constexpr int EvaluatorFailure = 0;
+constexpr int EvaluatorAction = 1;
+constexpr int EvaluatorFallback = 2;
+constexpr int EvaluatorSuccess = 3;
+constexpr int EvaluatorCapabilityFallback = 4;
+
+constexpr int LuaCapabilityRejected = 0;
+constexpr int LuaCapabilityAccepted = 1;
+constexpr int LuaCapabilityFallback = 2;
+
+constexpr char TrustedEvaluatorSource[] = R"lua(
+return function(root, m)
+    local FAILURE = 0
+    local ACTION = 1
+    local FALLBACK = 2
+    local SUCCESS = 3
+    local CAPABILITY_FALLBACK = 4
+
+    local function action(result)
+        if result == 1 then
+            return ACTION
+        end
+        if result == 2 then
+            return CAPABILITY_FALLBACK
+        end
+        return FAILURE
+    end
+
+    local function tick(node)
+        local kind = node.kind
+        if kind == "selector" then
+            for index = 1, #node.children do
+                local result = tick(node.children[index])
+                if result == ACTION or result == FALLBACK
+                        or result == CAPABILITY_FALLBACK then
+                    return result
+                end
+                if result == SUCCESS then
+                    return SUCCESS
+                end
+            end
+            return FAILURE
+        end
+        if kind == "sequence" then
+            for index = 1, #node.children do
+                local result = tick(node.children[index])
+                if result == FAILURE then
+                    return FAILURE
+                end
+                if result == ACTION or result == FALLBACK
+                        or result == CAPABILITY_FALLBACK then
+                    return result
+                end
+            end
+            return SUCCESS
+        end
+        if kind == "has_target" then
+            return m:hasTarget() and SUCCESS or FAILURE
+        end
+        if kind == "in_combat" then
+            return m:inCombat() and SUCCESS or FAILURE
+        end
+        if kind == "target_distance_lte" then
+            return m:targetDistance() <= node.distance and SUCCESS or FAILURE
+        end
+        if kind == "target_distance_gte" then
+            return m:targetDistance() >= node.distance and SUCCESS or FAILURE
+        end
+        if kind == "idle" then
+            return action(m:idle(node.frames or 1))
+        end
+        if kind == "wander" then
+            return action(m:wander(node.radius or 5))
+        end
+        if kind == "attack" then
+            return action(m:attackTarget())
+        end
+        if kind == "chase" then
+            return action(m:chaseTarget())
+        end
+        if kind == "retreat" then
+            return action(m:retreatFromTarget(node.distance or 6))
+        end
+        if kind == "cast" then
+            return action(m:castOnTarget(node.skill))
+        end
+        if kind == "fallback" then
+            return FALLBACK
+        end
+        error("unsupported Scripted AI node kind")
+    end
+
+    return tick(root)
+end
+)lua";
+
+enum class HandleOperation : int {
+    HasTarget,
+    InCombat,
+    TargetDistance,
+    Idle,
+    Wander,
+    AttackTarget,
+    ChaseTarget,
+    RetreatFromTarget,
+    CastOnTarget,
+    ToString,
+};
+
+[[nodiscard]] auto IsCompositeKind(std::string_view kind) noexcept -> bool {
+    return kind == "selector" || kind == "sequence";
+}
+
+[[nodiscard]] auto IsKnownLeafKind(std::string_view kind) noexcept -> bool {
+    return kind == "has_target" || kind == "in_combat"
+        || kind == "target_distance_lte" || kind == "target_distance_gte"
+        || kind == "idle" || kind == "wander" || kind == "attack"
+        || kind == "chase" || kind == "retreat" || kind == "cast"
+        || kind == "fallback";
+}
+
+[[nodiscard]] auto IsAllowedNodeField(
+        std::string_view kind,
+        std::string_view field) noexcept -> bool {
+    if (field == "kind") return true;
+    if (IsCompositeKind(kind)) return field == "children";
+    if (kind == "target_distance_lte" || kind == "target_distance_gte"
+            || kind == "retreat") {
+        return field == "distance";
+    }
+    if (kind == "idle") return field == "frames";
+    if (kind == "wander") return field == "radius";
+    if (kind == "cast") return field == "skill";
+    return false;
+}
+
+[[nodiscard]] auto ScalarRange(
+        std::string_view kind,
+        std::string_view field,
+        lua_Integer& minimum,
+        lua_Integer& maximum) noexcept -> bool {
+    minimum = 0;
+    maximum = 0;
+    if (field == "distance") {
+        minimum = (kind == "retreat") ? 1 : 0;
+        maximum = 255;
+        return true;
+    }
+    if (field == "frames" || field == "radius") {
+        minimum = 1;
+        maximum = 255;
+        return true;
+    }
+    if (field == "skill") {
+        minimum = 0;
+        maximum = 65'535;
+        return true;
+    }
+    return false;
+}
 
 void RemoveGlobal(lua_State* state, const char* name) {
     lua_pushnil(state);
@@ -99,6 +266,12 @@ int RetainBehaviorTree(lua_State* state) {
 
 } // namespace
 
+struct Sandbox::LuaThinkHandle {
+    EphemeralThinkHandle* handle{};
+    std::uint64_t sessionGeneration{};
+    std::uint64_t thinkToken{};
+};
+
 Sandbox::Sandbox(const SandboxLimits& limits) noexcept
     : limits_(limits) {
     allocator_.sessionLimit = limits.sessionHeapBytes;
@@ -167,6 +340,58 @@ auto Sandbox::Initialize(std::string& error) -> bool {
     RemoveGlobal(state_, "xpcall");
     RemoveTableField(state_, LUA_MATHLIBNAME, "random");
     RemoveTableField(state_, LUA_MATHLIBNAME, "randomseed");
+
+    if (luaL_newmetatable(state_, ThinkHandleMetatable) == 0) {
+        lua_pop(state_, 1);
+        error = "ephemeral think-handle metatable already exists";
+        return false;
+    }
+    lua_newtable(state_);
+    constexpr std::array methods{
+        std::pair{"hasTarget", HandleOperation::HasTarget},
+        std::pair{"inCombat", HandleOperation::InCombat},
+        std::pair{"targetDistance", HandleOperation::TargetDistance},
+        std::pair{"idle", HandleOperation::Idle},
+        std::pair{"wander", HandleOperation::Wander},
+        std::pair{"attackTarget", HandleOperation::AttackTarget},
+        std::pair{"chaseTarget", HandleOperation::ChaseTarget},
+        std::pair{"retreatFromTarget", HandleOperation::RetreatFromTarget},
+        std::pair{"castOnTarget", HandleOperation::CastOnTarget},
+    };
+    for (const auto& [name, operation] : methods) {
+        lua_pushinteger(state_, static_cast<lua_Integer>(operation));
+        lua_pushcclosure(state_, ThinkHandleDispatch, 1);
+        lua_setfield(state_, -2, name);
+    }
+    lua_setfield(state_, -2, "__index");
+    lua_pushinteger(
+        state_, static_cast<lua_Integer>(HandleOperation::ToString));
+    lua_pushcclosure(state_, ThinkHandleDispatch, 1);
+    lua_setfield(state_, -2, "__tostring");
+    lua_pushboolean(state_, 0);
+    lua_setfield(state_, -2, "__metatable");
+    lua_pop(state_, 1);
+
+    if (luaL_loadbufferx(
+            state_,
+            TrustedEvaluatorSource,
+            sizeof(TrustedEvaluatorSource) - 1U,
+            "@ruffneckk-scripted-ai-evaluator",
+            "t") != LUA_OK
+            || lua_pcall(state_, 0, 1, 0) != LUA_OK) {
+        error = "trusted behavior-tree evaluator failed to initialize: "
+            + StackError(state_);
+        lua_settop(state_, 0);
+        return false;
+    }
+    if (!lua_isfunction(state_, -1)) {
+        error = "trusted behavior-tree evaluator did not return a function";
+        lua_settop(state_, 0);
+        return false;
+    }
+    evaluatorHandle_ = luaL_ref(state_, LUA_REGISTRYINDEX);
+    lua_pushcfunction(state_, RunEvaluatorThunk);
+    evaluatorRunnerHandle_ = luaL_ref(state_, LUA_REGISTRYINDEX);
     error.clear();
     return true;
 }
@@ -192,6 +417,15 @@ auto Sandbox::Allocate(
     }
     const auto proposed = reduced + newSize;
     if (proposed > state->sessionLimit) return nullptr;
+    const auto grossGrowth = newSize > accountedOld
+        ? newSize - accountedOld
+        : 0U;
+    if (state->inThink
+            && grossGrowth > state->thinkGrowthLimit - std::min(
+                state->thinkGrowthLimit,
+                state->thinkAllocated)) {
+        return nullptr;
+    }
     if (state->inThink
             && proposed > state->thinkStart
                 + state->thinkGrowthLimit) {
@@ -201,6 +435,7 @@ auto Sandbox::Allocate(
     auto* replacement = std::realloc(pointer, newSize);
     if (replacement == nullptr) return nullptr;
     state->used = proposed;
+    if (state->inThink) state->thinkAllocated += grossGrowth;
     return replacement;
 }
 
@@ -219,6 +454,152 @@ void Sandbox::InstructionHook(lua_State* state, lua_Debug*) {
     sandbox->remainingInstructions_ -= interval;
 }
 
+auto Sandbox::ThinkHandleDispatch(lua_State* state) -> int {
+    const auto operation = static_cast<HandleOperation>(
+        lua_tointeger(state, lua_upvalueindex(1)));
+    if (operation == HandleOperation::ToString) {
+        lua_pushliteral(state, "ScriptedAIThinkHandle");
+        return 1;
+    }
+
+    auto* slot = static_cast<LuaThinkHandle*>(
+        luaL_checkudata(state, 1, ThinkHandleMetatable));
+    auto* handle = slot != nullptr ? slot->handle : nullptr;
+    const auto valid = handle != nullptr && handle->IsValid()
+        && slot->sessionGeneration == handle->SessionGeneration()
+        && slot->thinkToken == handle->ThinkToken();
+    const auto snapshot = valid ? handle->Snapshot() : ThinkSnapshot{};
+
+    switch (operation) {
+    case HandleOperation::HasTarget:
+        lua_pushboolean(state, valid && snapshot.hasTarget);
+        return 1;
+    case HandleOperation::InCombat:
+        lua_pushboolean(state, valid && snapshot.inCombat);
+        return 1;
+    case HandleOperation::TargetDistance:
+        lua_pushinteger(
+            state,
+            valid ? static_cast<lua_Integer>(snapshot.targetDistance) : 0);
+        return 1;
+    case HandleOperation::ToString:
+        break;
+    default:
+        break;
+    }
+
+    const auto boundedArgument = [&](int index,
+                                     lua_Integer minimum,
+                                     lua_Integer maximum,
+                                     const char* label) -> std::uint32_t {
+        const auto value = luaL_checkinteger(state, index);
+        luaL_argcheck(
+            state,
+            value >= minimum && value <= maximum,
+            index,
+            label);
+        return static_cast<std::uint32_t>(value);
+    };
+
+    ActionIntent intent{};
+    switch (operation) {
+    case HandleOperation::Idle:
+        intent = {
+            .kind = ActionKind::Idle,
+            .argument = boundedArgument(2, 1, 255, "frames must be 1..255"),
+        };
+        break;
+    case HandleOperation::Wander:
+        intent = {
+            .kind = ActionKind::Wander,
+            .argument = boundedArgument(2, 1, 255, "radius must be 1..255"),
+        };
+        break;
+    case HandleOperation::AttackTarget:
+        intent = {.kind = ActionKind::AttackTarget, .argument = 0U};
+        break;
+    case HandleOperation::ChaseTarget:
+        intent = {.kind = ActionKind::ChaseTarget, .argument = 0U};
+        break;
+    case HandleOperation::RetreatFromTarget:
+        intent = {
+            .kind = ActionKind::RetreatFromTarget,
+            .argument = boundedArgument(
+                2, 1, 255, "distance must be 1..255"),
+        };
+        break;
+    case HandleOperation::CastOnTarget:
+        intent = {
+            .kind = ActionKind::CastOnTarget,
+            .argument = boundedArgument(
+                2, 0, 65'535, "skill must be 0..65535"),
+        };
+        break;
+    case HandleOperation::HasTarget:
+    case HandleOperation::InCombat:
+    case HandleOperation::TargetDistance:
+    case HandleOperation::ToString:
+        return luaL_error(state, "invalid Scripted AI think-handle operation");
+    }
+
+    if (!valid) {
+        if (handle != nullptr) (void)handle->TryAction(intent);
+        lua_pushinteger(state, LuaCapabilityRejected);
+        return 1;
+    }
+    const auto result = handle->TryAction(intent);
+    if (result == CapabilityResult::Error) {
+        return luaL_error(state, "Scripted AI capability failed");
+    }
+    const auto luaResult = result == CapabilityResult::Accepted
+        ? LuaCapabilityAccepted
+        : result == CapabilityResult::FallbackScheduled
+            ? LuaCapabilityFallback
+            : LuaCapabilityRejected;
+    lua_pushinteger(state, luaResult);
+    return 1;
+}
+
+auto Sandbox::RunEvaluatorThunk(lua_State* state) -> int {
+    auto* sandbox = *static_cast<Sandbox**>(lua_getextraspace(state));
+    if (sandbox == nullptr
+            || sandbox->evaluatorHandle_ == InvalidScriptHandle) {
+        return luaL_error(
+            state, "trusted Scripted AI evaluator is unavailable");
+    }
+    sandbox->allocator_.inThink = true;
+    sandbox->allocator_.thinkStart = sandbox->allocator_.used;
+    sandbox->allocator_.thinkAllocated = 0U;
+    const auto treeHandle = static_cast<ScriptHandle>(
+        luaL_checkinteger(state, 1));
+    auto* think = static_cast<EphemeralThinkHandle*>(
+        lua_touserdata(state, 2));
+    if (treeHandle < 0 || think == nullptr) {
+        return luaL_error(state, "invalid Scripted AI evaluation request");
+    }
+
+    lua_rawgeti(state, LUA_REGISTRYINDEX, sandbox->evaluatorHandle_);
+    if (!lua_isfunction(state, -1)) {
+        return luaL_error(state, "trusted Scripted AI evaluator was lost");
+    }
+    lua_rawgeti(state, LUA_REGISTRYINDEX, treeHandle);
+    if (!lua_istable(state, -1)) {
+        return luaL_error(state, "retained Scripted AI tree was lost");
+    }
+    auto* slot = static_cast<LuaThinkHandle*>(
+        lua_newuserdatauv(state, sizeof(LuaThinkHandle), 0));
+    *slot = {
+        .handle = think,
+        .sessionGeneration = think->SessionGeneration(),
+        .thinkToken = think->ThinkToken(),
+    };
+    sandbox->activeLuaHandle_ = slot;
+    luaL_getmetatable(state, ThinkHandleMetatable);
+    lua_setmetatable(state, -2);
+    lua_call(state, 2, 1);
+    return 1;
+}
+
 auto Sandbox::ExecuteChunk(
         std::string_view source,
         ExecutionPhase phase,
@@ -234,8 +615,9 @@ auto Sandbox::ExecuteChunk(
     }
 
     lua_settop(state_, 0);
-    allocator_.inThink = phase == ExecutionPhase::Think;
+    allocator_.inThink = false;
     allocator_.thinkStart = allocator_.used;
+    allocator_.thinkAllocated = 0U;
     const auto status = luaL_loadbufferx(
         state_,
         source.data(),
@@ -249,6 +631,10 @@ auto Sandbox::ExecuteChunk(
         return false;
     }
     InstallChunkEnvironment(state_, -1);
+
+    allocator_.inThink = phase == ExecutionPhase::Think;
+    allocator_.thinkStart = allocator_.used;
+    allocator_.thinkAllocated = 0U;
 
     remainingInstructions_ = phase == ExecutionPhase::Think
         ? limits_.maxInstructionsPerThink
@@ -316,12 +702,20 @@ auto Sandbox::ValidateTree(
         const auto* kind = lua_tolstring(state_, -1, &kindLength);
         const auto validKind = kind != nullptr
             && IsCanonicalKind(std::string_view(kind, kindLength));
+        const std::string kindValue = validKind
+            ? std::string(kind, kindLength)
+            : std::string{};
         lua_pop(state_, 1);
         if (!validKind) {
             error = "every behavior-tree node needs a canonical kind";
             return false;
         }
+        if (!IsCompositeKind(kindValue) && !IsKnownLeafKind(kindValue)) {
+            error = "behavior-tree node kind is not part of the V1 allowlist";
+            return false;
+        }
 
+        bool sawRequiredParameter{};
         lua_pushnil(state_);
         while (lua_next(state_, nodeIndex) != 0) {
             if (lua_type(state_, -2) != LUA_TSTRING) {
@@ -333,25 +727,64 @@ auto Sandbox::ValidateTree(
             const auto* keyText = lua_tolstring(state_, -2, &keyLength);
             const std::string_view key(keyText, keyLength);
             const auto valueType = lua_type(state_, -1);
+            if (!IsAllowedNodeField(kindValue, key)) {
+                lua_pop(state_, 2);
+                error = "behavior-tree node contains a field outside its V1 contract";
+                return false;
+            }
             if (key == "children") {
                 if (valueType != LUA_TTABLE) {
                     lua_pop(state_, 2);
                     error = "behavior-tree children must be an array table";
                     return false;
                 }
-            } else if (valueType != LUA_TBOOLEAN && valueType != LUA_TNUMBER
-                    && valueType != LUA_TSTRING) {
-                lua_pop(state_, 2);
-                error = "behavior-tree fields must be scalar except for children";
-                return false;
+            } else if (key == "kind") {
+                if (valueType != LUA_TSTRING) {
+                    lua_pop(state_, 2);
+                    error = "behavior-tree kind must be a string";
+                    return false;
+                }
+            } else {
+                lua_Integer minimum{};
+                lua_Integer maximum{};
+                if (!ScalarRange(kindValue, key, minimum, maximum)
+                        || !lua_isinteger(state_, -1)) {
+                    lua_pop(state_, 2);
+                    error = "behavior-tree parameters must be bounded integers";
+                    return false;
+                }
+                const auto value = lua_tointeger(state_, -1);
+                if (value < minimum || value > maximum) {
+                    lua_pop(state_, 2);
+                    error = "behavior-tree parameter is outside its V1 range";
+                    return false;
+                }
+                sawRequiredParameter = true;
             }
             lua_pop(state_, 1);
+        }
+
+        if ((kindValue == "target_distance_lte"
+                || kindValue == "target_distance_gte"
+                || kindValue == "cast")
+                && !sawRequiredParameter) {
+            error = "behavior-tree node is missing its required V1 parameter";
+            return false;
         }
 
         lua_getfield(state_, nodeIndex, "children");
         if (lua_isnil(state_, -1)) {
             lua_pop(state_, 1);
+            if (IsCompositeKind(kindValue)) {
+                error = "selector and sequence nodes require children";
+                return false;
+            }
             return true;
+        }
+        if (!IsCompositeKind(kindValue)) {
+            lua_pop(state_, 1);
+            error = "behavior-tree leaves cannot contain children";
+            return false;
         }
         if (!lua_istable(state_, -1)) {
             lua_pop(state_, 1);
@@ -360,6 +793,11 @@ auto Sandbox::ValidateTree(
         }
         const auto childrenIndex = lua_absindex(state_, -1);
         const auto childCount = lua_rawlen(state_, childrenIndex);
+        if (childCount == 0U) {
+            lua_pop(state_, 1);
+            error = "selector and sequence nodes require at least one child";
+            return false;
+        }
         summary.maximumChildren = std::max(
             summary.maximumChildren,
             childCount);
@@ -450,6 +888,130 @@ void Sandbox::ReleaseBehaviorTree(ScriptHandle handle) noexcept {
     if (state_ != nullptr && handle >= 0) {
         luaL_unref(state_, LUA_REGISTRYINDEX, handle);
     }
+}
+
+auto Sandbox::EvaluateBehaviorTree(
+        ScriptHandle handle,
+        EphemeralThinkHandle& think,
+        SandboxTickResult& result,
+        std::string& error) -> bool {
+    result = {};
+    if (state_ == nullptr || evaluatorHandle_ == InvalidScriptHandle
+            || evaluatorRunnerHandle_ == InvalidScriptHandle || handle < 0) {
+        result.failure = SandboxTickFailure::ProtocolError;
+        error = "Scripted AI evaluator state is unavailable";
+        think.Invalidate();
+        return false;
+    }
+    if (!think.IsValid()) {
+        result.failure = SandboxTickFailure::StaleHandle;
+        error = "Scripted AI think handle is stale";
+        think.Invalidate();
+        return false;
+    }
+
+    lua_settop(state_, 0);
+    allocator_.inThink = false;
+    remainingInstructions_ = limits_.maxInstructionsPerThink;
+    activeLuaHandle_ = nullptr;
+    lua_sethook(
+        state_,
+        InstructionHook,
+        LUA_MASKCOUNT,
+        static_cast<int>(limits_.instructionHookInterval));
+
+    lua_rawgeti(state_, LUA_REGISTRYINDEX, evaluatorRunnerHandle_);
+    lua_pushinteger(state_, static_cast<lua_Integer>(handle));
+    lua_pushlightuserdata(state_, &think);
+    const auto callStatus = lua_pcall(state_, 2, 1, 0);
+    lua_sethook(state_, nullptr, 0, 0);
+    allocator_.inThink = false;
+    if (activeLuaHandle_ != nullptr) {
+        activeLuaHandle_->handle = nullptr;
+        activeLuaHandle_ = nullptr;
+    }
+    think.Invalidate();
+
+    if (callStatus != LUA_OK) {
+        error = StackError(state_);
+        if (callStatus == LUA_ERRMEM) {
+            result.failure = SandboxTickFailure::AllocationBudget;
+        } else if (think.HadCapabilityError()) {
+            result.failure = SandboxTickFailure::CapabilityError;
+        } else if (think.HadStaleAccess()) {
+            result.failure = SandboxTickFailure::StaleHandle;
+        } else if (error.find("instruction budget exceeded")
+                != error.npos) {
+            result.failure = SandboxTickFailure::InstructionBudget;
+        } else {
+            result.failure = SandboxTickFailure::LuaError;
+        }
+        lua_settop(state_, 0);
+        return false;
+    }
+    if (!lua_isinteger(state_, -1)) {
+        result.failure = SandboxTickFailure::ProtocolError;
+        error = "trusted Scripted AI evaluator returned a non-integer result";
+        lua_settop(state_, 0);
+        return false;
+    }
+
+    const auto evaluatorResult = static_cast<int>(lua_tointeger(state_, -1));
+    lua_settop(state_, 0);
+    if (think.HadSecondActionAttempt()) {
+        result.failure = SandboxTickFailure::ProtocolError;
+        error = "trusted Scripted AI evaluator attempted a second action";
+        return false;
+    }
+    if (think.HadCapabilityError()) {
+        result.failure = SandboxTickFailure::CapabilityError;
+        error = "Scripted AI capability failed without a Lua error";
+        return false;
+    }
+
+    switch (evaluatorResult) {
+    case EvaluatorAction:
+        if (!think.HasCommittedAction()) {
+            result.failure = SandboxTickFailure::ProtocolError;
+            error = "trusted Scripted AI evaluator reported an uncommitted action";
+            return false;
+        }
+        result.status = SandboxTickStatus::Action;
+        break;
+    case EvaluatorFallback:
+        if (think.HasCommittedAction() || think.HasScheduledFallback()) {
+            result.failure = SandboxTickFailure::ProtocolError;
+            error = "trusted Scripted AI evaluator discarded a terminal capability result";
+            return false;
+        }
+        result.status = SandboxTickStatus::ExplicitFallback;
+        break;
+    case EvaluatorCapabilityFallback:
+        if (think.HasCommittedAction() || !think.HasScheduledFallback()) {
+            result.failure = SandboxTickFailure::ProtocolError;
+            error = "trusted Scripted AI evaluator reported an invalid capability fallback";
+            return false;
+        }
+        result.status = SandboxTickStatus::CapabilityFallback;
+        break;
+    case EvaluatorFailure:
+    case EvaluatorSuccess:
+        if (think.HasCommittedAction() || think.HasScheduledFallback()) {
+            result.failure = SandboxTickFailure::ProtocolError;
+            error = "trusted Scripted AI evaluator lost a terminal capability result";
+            return false;
+        }
+        result.status = SandboxTickStatus::NoAction;
+        break;
+    default:
+        result.failure = SandboxTickFailure::ProtocolError;
+        error = "trusted Scripted AI evaluator returned an unknown result";
+        return false;
+    }
+
+    result.failure = SandboxTickFailure::None;
+    error.clear();
+    return true;
 }
 
 auto Sandbox::HasGlobal(std::string_view name) const -> bool {

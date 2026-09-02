@@ -8,12 +8,13 @@ sa priorité de livraison; ce chantier ouvre seulement une seconde ligne de
 travail gouvernée.
 
 La première verticale est `Scripted AI`. Aucun hook runtime ni chemin gameplay
-n’est encore implanté. Les gates de conception natifs, d’incubation et de
-transaction données/lifecycle sont fermés. RuffnecKk Scripted AI `0.2.0`
-enregistre maintenant sa table privée `aiscript`, confine et copie les sources,
-puis publie une génération Lua seulement après attestation du thread hôte. Le
-tick de l’arbre et toute capacité d’action restent volontairement absents
-jusqu’au gate `EXEC-AI-1`.
+n’est encore implanté. Les gates de conception natifs, d’incubation, de
+transaction données/lifecycle, d’évaluation et d’adaptation native simulée sont
+fermés. RuffnecKk Scripted AI `0.4.0` enregistre sa table privée `aiscript`,
+publie sa génération Lua sur le thread hôte, ticke les arbres par un handle
+éphémère et mappe les intentions vers six adaptateurs typés injectables. Aucune
+implémentation D2R de ces adaptateurs n’est encore liée; le résolveur demeure
+intact jusqu’au gate `HOOK-AI-1`.
 
 ## Objectif
 
@@ -391,9 +392,10 @@ La V1 ne possède **aucun état persistant par unité** et n’expose ni GUID,
 pointeur, identité stable, `tostring` d’un userdata ni clé équivalente. Un
 handle est un userdata éphémère portant `{sessionGeneration, thinkToken}`; il
 est invalidé dans tous les chemins de sortie du `lua_pcall` et toute méthode
-appelée ensuite refuse sans toucher D2R. Une closure peut conserver un état
-global au script, mais seulement dans la VM bornée de la session et sans moyen
-supporté de le rattacher à l’identité d’un monstre.
+appelée ensuite refuse sans toucher D2R. Les auteurs rendent uniquement des
+tables déclaratives : aucun node callable ni closure d’auteur n’est exécuté par
+le tick. L’état opérationnel mutable se limite aux compteurs natifs bornés par
+script (erreurs, lenteurs et quarantaine), sans identité d’unité.
 
 Cette réduction de surface ferme mort, despawn et réutilisation de GUID sans
 ajouter de hook : aucune donnée par unité ne survit au think. `GameLeft` invalide
@@ -555,17 +557,75 @@ déploiement ni démarrage D2R n’a eu lieu.
 
 ### EXEC-AI-1 — Évaluateur Lua et intentions simulées, sans hook
 
-- [ ] figer la sémantique V1 des nodes `selector`, `sequence` et des leaves
+- [x] figer la sémantique V1 des nodes `selector`, `sequence` et des leaves
   déclaratives ainsi que le résultat explicite `action` ou `fallback`;
-- [ ] exécuter l’arbre retenu par la génération via un handle de think
+- [x] exécuter l’arbre retenu par la génération via un handle de think
   éphémère simulé, avec exactement une intention terminale au maximum;
-- [ ] faire converger absence d’action, leaf refusée, erreur Lua, budget
+- [x] faire converger absence d’action, leaf refusée, erreur Lua, budget
   d’instructions ou d’allocation et handle périmé vers une unique intention de
   fallback, sans appeler D2R;
-- [ ] prouver les budgets par think, l’invalidation de handle et la quarantaine
+- [x] prouver les budgets par think, l’invalidation de handle et la quarantaine
   bornée par tests déterministes avec capacités natives mockées;
-- [ ] conserver le résolveur, son hook, les helpers natifs, le déploiement et
+- [x] conserver le résolveur, son hook, les helpers natifs, le déploiement et
   tout gameplay hors de ce gate.
+
+Gate fermé le 1er septembre 2026 par RuffnecKk Scripted AI `0.3.0` : les nodes
+V1, les champs admis et leurs bornes sont exacts; le premier leaf accepté engage
+l’unique action terminale et toute sortie sans action converge vers un fallback
+typé portant le `FallbackAi` du binding. Les tests déterministes couvrent
+séquences/sélecteurs, refus puis acceptation, handle périmé ou retenu, seconde
+action, erreurs, trois strikes d’erreur ou de lenteur, quarantaine et budgets
+d’instructions, de croissance nette et d’allocations cumulées. Deux builds
+Release x64 indépendants produisent une DLL byte-identique de `427008` octets,
+SHA-256 `FCB4BE478ACFD0978D85F22EE699E2B94CEDF9D58C27E036231089A9E702611E`,
+et les deux suites CTest passent `1/1`. La DLL conserve exactement trois exports,
+l’API D2RLoader v3 et le TOML embarqué byte-exact; elle ne contient encore ni
+hook de résolveur, ni appel d’action D2R, ni chemin gameplay. Aucun déploiement
+ou démarrage D2R n’a eu lieu.
+
+### NATIVE-AI-1 — Adaptateurs d’actions et continuation, sans hook
+
+- [x] mapper les intentions typées vers une interface d’adaptateurs injectables
+  pour les helpers d’action et d’idle gouvernés, sans exposer ces helpers à Lua;
+- [x] revalider côté natif l’autorité, l’unité, la cible, le mode, le skill et
+  chaque borne avant tout appel d’adaptateur;
+- [x] prouver qu’une action acceptée laisse exclusivement continuer le pipeline
+  natif, tandis qu’un refus, une absence ou une erreur produit exactement un
+  fallback, sans double idle après un fallback interne de cast;
+- [x] arrêter et tester la sémantique de `FallbackAi` avant callback ou du
+  fallback idle après callback;
+- [x] couvrir tous les chemins avec des doubles injectés, sans installer le
+  résolveur, appeler D2R, déployer la DLL ni lancer le jeu.
+
+Gate fermé le 1er septembre 2026 par RuffnecKk Scripted AI `0.4.0` : les six
+actions sont mappées vers des méthodes d’adaptateur distinctes et l’autorité,
+l’unité, la cible, le mode, le skill, la session, le token, la distance signée
+et les bornes scalaires sont revalidés avant l’appel concerné. Une action
+acceptée rend exclusivement la continuation au pipeline natif. Le résultat
+terminal `FallbackScheduled` modélise le rejet de cast qui a déjà planifié son
+idle et bloque tout second leaf ou idle. Les autres sorties post-callback
+tentent exactement un idle de dix frames; un leaf idle refusé n’est jamais
+rappelé récursivement. `FallbackAi` est réservé au routage pré-callback d’un
+binding connu mais indisponible ou quarantiné; special states et unités non
+liées délèguent à l’original. Deux builds Release x64 indépendants produisent la
+même DLL de `427520` octets, SHA-256
+`9E2A3A6EE1C549890D859C460BA58FDC1E934CCA8E226525570766D42FDCC02F`,
+et les deux suites CTest passent `1/1`. La PE reste API v3, trois exports,
+VERSIONINFO `0.4.0` et TOML embarqué byte-exact. Aucun hook, appel D2R,
+déploiement ou démarrage du jeu n’a eu lieu.
+
+### HOOK-AI-1 — Résolveur, record bridge et ownership, sans déploiement
+
+- [ ] implémenter l’adaptateur D2R des six méthodes derrière les ABI et les
+  fenêtres gouvernées, sans exposer de mode, pointeur ou helper brut à Lua;
+- [ ] installer un unique hook gouverné sur le résolveur `0x4A36C0` seulement
+  après vérification complète de son empreinte native et de l’ABI utilisée;
+- [ ] déléguer byte-for-byte à l’original pour special state, binding absent,
+  génération indisponible, client non autoritaire et tout refus fail-closed;
+- [ ] fournir un record category 2 statique uniquement aux unités liées et
+  garantir sa durée de vie au-delà de chaque callback;
+- [ ] prouver l’ownership post-install, la désinstallation et la coexistence
+  sans déployer D2R; la qualification gameplay reste réservée à `RUN-AI`.
 
 ### RUN-AI — Qualification
 
@@ -606,10 +666,11 @@ répertoire de preuves `reverse-engineering/d2r-3.2.92777/scripted-domains/**`.
 `ROADMAP.html`, `Mission/WORKSTREAMS.json`, `known-rvas.json`, `findings.md` et
 le cadastre restent des registres partagés.
 
-**Prochain gate : `EXEC-AI-1`.** Implanter et tester l’évaluateur de l’arbre
-retenu avec un handle de think éphémère et des capacités entièrement mockées.
-Chaque chemin doit produire au plus une intention terminale ou une intention de
-fallback, sans appeler D2R. Le résolveur `0x4A36C0`, son hook, les helpers natifs,
-le gameplay et le déploiement restent absents jusqu’au gate d’intégration natif.
-Aucun commit, push, déploiement ou test runtime n’est autorisé implicitement par
-ce document.
+**Prochain gate : `HOOK-AI-1`.** Matérialiser l’adaptateur D2R derrière le
+contrat désormais testé, installer le hook géré unique du résolveur `0x4A36C0`
+et publier le record category 2 statique uniquement pour les bindings admis.
+Special states, unités non liées et tout refus doivent déléguer à l’original;
+ownership post-install, désinstallation et doubles de coexistence sont prouvés
+avant tout déploiement. Gameplay et qualification runtime restent réservés à
+`RUN-AI`. Aucun commit, push, déploiement ou test runtime n’est autorisé
+implicitement par ce document.
