@@ -256,7 +256,8 @@ export function runtimeInstructionsForTargetWidth(targetWidth) {
   if (targetWidth === 12) {
     return Object.freeze([
       'Runtime: load these saves with ISC12 enabled.',
-      'If the mod includes a D2R 9-bit ItemStatCost extension plugin, replace it with ISC12; do not load both codecs together.',
+      'ExtendedItemStats 0.3.14 may stay installed only when ISC12 verifies it as the sole owner of all six full-item transport hooks.',
+      'Remove any other D2R 9-bit ItemStatCost codec before loading; unsupported providers fail closed.',
     ]);
   }
   return Object.freeze([
@@ -297,9 +298,12 @@ offers an installed mod folder or MPQ archive as the public alternative. It
 then asks whether the target uses the same game data. JSON schemas remain an
 advanced command-line integration point, not an interactive choice.
 
-When loading converted saves, ISC12 replaces any mod-supplied D2R 9-bit
-ItemStatCost extension. The old 9-bit codec and ISC12 must not be loaded
-together. Restore the 9-bit codec and disable ISC12 after a downgrade.`;
+When loading 12-bit saves, enable ISC12. ExtendedItemStats 0.3.14 is an
+explicitly attested transport provider and may remain installed only when
+ISC12 verifies its exact version and sole ownership of all six full-item
+transport hooks. Remove any other D2R 9-bit ItemStatCost codec before loading;
+unsupported providers fail closed. Restore the original D2R 9-bit codec and
+disable ISC12 after a downgrade.`;
 
 export function interactiveIntroduction() {
   const usageMarker = '\n\nUsage:';

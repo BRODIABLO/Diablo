@@ -1,13 +1,15 @@
 # Mission courante
 
-Dernière mise à jour : 1er septembre 2026
+Dernière mise à jour : 2 septembre 2026
 
 ## Priorité active
 
 [ISC12 — ItemStatCost 12-bit clean-sheet format](isc12-3.3.md)
 
-État : **ISC12 0.2.0 : tous les gates solo qualifiés en portée mod-locale et
-globale sur D2R 3.3.93847 / D2RLoader 1.2.0-beta**. Le candidat comportemental
+État : **ISC12 0.2.1 : coexistence bornée avec ExtendedItemStats 0.3.14,
+migrations cross-mod D2S/D2I, ordre inverse, producteur G9 réel, cold reload et
+portées mod-locale/globale validés sur D2R 3.3.93847 / D2RLoader
+1.2.0-beta**. La baseline comportementale historique
 G5–G8 exact mesure 451 072 octets et vaut SHA-256
 `6089619DE3B01FD474669096A8AEC8A470559FAD993DCB939AC976709A7D2D52`;
 27/27 nouvelles fenêtres natives exactes uniques et le ledger `VALID 228/15`
@@ -204,19 +206,46 @@ emploient 10 bases absentes de la cible : `mff`, `mfc`, `mfd`, `gay`, `cct`,
 `gav`, `mls`, `hsm`, `bct` et `fel`. Les AutoMagic, les identités TXT brutes,
 les payloads Gold incidents et la collecte de tous les blockers ont été corrigés
 avant ce verdict. Aucun output n'est écrit et le runtime BKVince reste intact.
-Aucune qualification runtime cross-schema n'est encore revendiquée.
+ISC12 0.2.1 admet maintenant exactement deux états de transport G9 : les six
+surfaces natives intactes, ou les six hooks suivis et possédés exclusivement par
+`extended-item-stats` avec `ExtendedItemStats.dll` version 0.3.14. Toute version,
+identité, cardinalité ou surface partielle différente demeure fail-closed. Deux
+builds Release byte-identiques de 329 728 octets valent
+`C6B4E610…B55395` et leurs CTest passent `5/5`.
+Sous Yupgoolg, les six hooks externes ont été attestés, 43 sites codec / 129
+mutations ont été publiés et `HECubeMove.d2s` migré depuis BKVince a chargé au
+Camp des Rogues, sauvegardé avec `error=0/0`, quitté puis rechargé correctement.
+Le D2S final de 1 183 octets vaut `C634CA35…99AEC5`. Avec ISC12 chargé avant
+`ExtendedItemStats.dll`, G9 est d'abord resté en attente, puis le premier vrai
+producteur `0x9C/0x9D` a réattesté les six hooks et scellé le transport sur
+ExtendedItemStats 0.3.14. Le même candidat passe ensuite un cold reload
+mod-local et un cold start distinct en portée globale.
+Le convertisseur standalone est lui aussi reconstruit deux fois de façon
+byte-identique : 94 677 504 octets, `2945CEB6…DAF8D`, avec `60/60` tests.
+Son ZIP candidat reproductible contient uniquement l'EXE, mesure 35 959 447
+octets et vaut `530B4050…53EBC`; le README actualisé reste à côté pour relecture.
+Après capture, le profil Yupgoolg est restauré : aucun fichier `HECubeMove` ni
+DLL ISC12 de test n'y demeure et son shared stash original retrouve
+`88701305…E6B32`. L'instance BKVince active de Vincent n'est pas touchée.
+
+Le shared stash gouverné du dépôt BKVince fournit le témoin D2I cross-mod non
+vide : six pages, neuf items sur la page 6, conversion BKVince → Yupgoolg
+680 → 695 octets, sortie `AACEB3C4…1CC85B`, source inchangée
+`86833D4B…04E1B4`. Yupgoolg accepte cette sortie, la réécrit selon sa disposition
+de 101 pages à 7 299 octets, puis la relit après arrêt complet et en portée
+globale. Les trois captures sont byte-identiques à `ED0C4B77…8BB0C`; le parseur
+cible retrouve exactement les neuf matériaux stackables sur la page 6. Le
+profil runtime est ensuite restauré : stash original `88701305…E6B32`, aucune
+DLL ISC12 ni fixture résiduelle et zéro processus Diablo.
 
 ## Prochain gate
 
-Fermer le gate fonctionnel du migrateur avec un témoin cross-mod compatible :
-sélectionner ou créer, sans modifier les originaux refusés, un personnage et un
-shared stash dont chaque base existe dans les deux mods — ou choisir un mod cible
-qui contient les bases BKVince concernées — puis convertir et confirmer
-load/save/reload sous ISC12. En parallèle, le petit ZIP Discord ISC12 seul peut
-être distribué aux testeurs qui utilisent de nouveaux personnages et shared
-stashes. Après ces preuves, préparer la release GitHub complète et publier le
-convertisseur comme asset séparé. Aucun tag ni asset GitHub n'est encore
-autorisé.
+Le seul gate fonctionnel encore ouvert est la matrice multijoueur à deux clients
+indépendants : paire ISC12 identique, puis les deux incompatibilités ISC12 ↔
+vanilla qui doivent refuser fail-closed avant divergence. Le candidat ZIP du
+convertisseur est prêt; il reste à relire son README, puis à préparer la release
+GitHub complète et le publier comme asset séparé. Aucun tag ni asset GitHub
+n'est encore autorisé.
 
 ## Frontière Git active
 

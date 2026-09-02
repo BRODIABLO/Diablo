@@ -1,4 +1,4 @@
-# ISC12 0.2.0
+# ISC12 0.2.1
 
 > Config-free public-test candidate. Installing the DLL activates ISC12 after
 > its complete native fingerprint passes.
@@ -7,8 +7,10 @@ ISC12 is a clean-sheet D2RLoader format for overhaul mods that need more than
 511 `ItemStatCost` rows. It reserves serialized IDs `0..4094` for stats and
 `0xFFF` as the list terminator.
 
-Version 0.2.0 now has a production-callable experimental publication path. It
-uses a same-thread authority bounded to the synchronous initial
+Version 0.2.1 preserves the production-callable experimental publication path
+introduced in 0.2.0 and adds one narrowly attested coexistence contract for
+`ExtendedItemStats.dll` 0.3.14. It uses a same-thread authority bounded to the
+synchronous initial
 `D2RLoaderLoadPlugin` callback, preflights every G0, G10 and codec surface before
 the first write, reserves relay/state lifetime, then commits G0, G10 and codec
 in one startup window. This follows D2RLoader's official startup patching model;
@@ -251,6 +253,36 @@ with `captured=3`, `queued=3`, `staging-error=0`, and `flush-error=0`. The
 runtime self-test proves an accepted 3/3 tree, node overflow with zero queue
 callbacks, and flush reentry contained after one callback in terminal state.
 
+Version 0.2.1 also recognizes the exact six-hook full-item transport installed
+by `ExtendedItemStats.dll` 0.3.14. Admission requires every surface to be a
+tracked inline hook with `extended-item-stats` as its sole owner, plus the exact
+installed file version. When admitted, ISC12 retains its 12-bit stat codecs but
+delegates G9 full-item packet transport to that provider. Native transport
+remains the independent fallback when all six surfaces are untouched. Any
+partial set, additional owner, different plugin ID, missing binary or other
+version is rejected before publication. No generic compatibility with other
+ItemStatCost serialization plugins is claimed.
+
+Two independent Release `/W4 /WX` builds of 0.2.1 are byte-identical at
+329,728 bytes, SHA-256
+`C6B4E610F34E4AF42553E606EF835C9E7619916B5BC3ED1209490B9894B55395`;
+both CTest runs pass `5/5`. That exact DLL completed the mod-local Yupgoolg
+cold start with ExtendedItemStats 0.3.14, then loaded, saved and reloaded a
+BKVince-to-Yupgoolg converted character in the Rogue Encampment with
+standard-container `error=0/0`. The inverse load order is also qualified:
+ISC12 loaded first, kept G9 unresolved, and the first live 0x9C/0x9D producer
+sealed transport to the six-hook ExtendedItemStats 0.3.14 provider. A separate
+global-scope cold start admitted the same provider during startup.
+
+The governed non-empty BKVince shared stash converted from 680 to 695 bytes
+with nine stackable material items on page 6. Yupgoolg accepted it, expanded
+the outer stash layout to 101 pages and 7,299 bytes, then read the result after
+a full process restart and again with ISC12 installed globally. All three
+runtime captures are byte-identical at SHA-256
+`ED0C4B77AD8C83A56C30080652FAF8C161B6754150A45668CFE316871238BB0C`
+and target-schema parsing still finds the same nine items on page 6. The
+original Yupgoolg stash was restored byte-for-byte after the test.
+
 A controlled standard shared-stash D2I grew from 68,216 to 68,307 bytes after
 the socketed armor was moved into it. Its SHA-256
 `7375F2F7CB2DAC3178853397D5A7FCE6782F5B26220A0980995261C76E96507F`
@@ -308,10 +340,10 @@ is unsupported. D2RLoader's native `.d2rl` environment record provides the visib
 plugin/mod compatibility warning; it is not a cryptographic schema marker and
 ISC12 does not promise to hard-block every misuse. Backups remain mandatory.
 
-The config-free 0.2.0 candidate is being distributed first as a small public
+The config-free 0.2.1 candidate is being distributed first as a small public
 test for new characters and new shared stashes. ISC12 Save Converter remains a
-separate companion tool and will be published after its source-to-target schema
-migration gates are closed.
+separate companion tool. Its source-to-target migration and solo runtime gates
+are closed; publish it separately after final packaging and review.
 
 ## Credits
 

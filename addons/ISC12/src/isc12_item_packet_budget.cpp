@@ -5,6 +5,34 @@
 #include <limits>
 
 namespace ruffneckk::isc12 {
+
+auto ClassifyFullItemTransportProvider(
+        bool allNativeSurfacesMatch,
+        std::span<const FullItemTransportHookObservation> observations,
+        std::string_view pluginId,
+        std::string_view pluginVersion) noexcept
+        -> FullItemTransportProvider {
+    if (allNativeSurfacesMatch) {
+        return FullItemTransportProvider::NativeG9;
+    }
+    if (pluginId != ExtendedItemStatsProviderId
+            || pluginVersion != ExtendedItemStatsProviderVersion
+            || observations.size()
+                != FullItemTransportProviderSurfaceCount) {
+        return FullItemTransportProvider::Invalid;
+    }
+    for (const auto& observation : observations) {
+        if (!observation.querySucceeded
+                || !observation.trackedInlineHook
+                || observation.ownerCount != 1
+                || observation.ownerPluginId
+                    != ExtendedItemStatsProviderId) {
+            return FullItemTransportProvider::Invalid;
+        }
+    }
+    return FullItemTransportProvider::ExtendedItemStatsV1;
+}
+
 namespace {
 
 constexpr auto BitsToBytes(

@@ -159,7 +159,9 @@ test('interactive introduction keeps the complete wrapped description', () => {
 test('explains which item-stat codec must load converted saves', () => {
   const isc12 = runtimeInstructionsForTargetWidth(12).join('\n');
   assert.match(isc12, /ISC12 enabled/);
-  assert.match(isc12, /do not load both codecs together/);
+  assert.match(isc12, /ExtendedItemStats 0\.3\.14 may stay installed/);
+  assert.match(isc12, /sole owner of all six full-item transport hooks/);
+  assert.match(isc12, /unsupported providers fail closed/);
 
   const d2r9 = runtimeInstructionsForTargetWidth(9).join('\n');
   assert.match(d2r9, /restoring the mod's D2R 9-bit ItemStatCost codec/);

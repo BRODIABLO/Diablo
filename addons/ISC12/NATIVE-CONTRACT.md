@@ -402,6 +402,21 @@ SHA-256
 `1311F1C4BE44B0918F34C32007C3A19D35D240D8B72DCAD8C1853EEE53EC11B5`;
 two reproducible Release builds, the deployed DLL and CTest `5/5` agree.
 
+### Versioned external G9 provider in 0.2.1
+
+ISC12 0.2.1 admits exactly one alternative to the complete native G9 surface:
+the six tracked inline hooks owned exclusively by plugin ID
+`extended-item-stats`, with the installed `ExtendedItemStats.dll` file version
+equal to 0.3.14. The six entry fingerprints cover the two producers, decoder,
+metadata builder, serializer and native queue entry. ISC12 keeps ownership of
+the 12-bit ItemStatCost codecs and delegates only full-item packet transport.
+
+The provider decision is fail-closed. A partial hook set, multiple owners,
+another owner ID, missing versioned binary or any other version refuses
+publication. If the native provider was observed before later plugin loading,
+the first producer re-inspects and seals the process-lifetime provider before
+starting a transaction; it never switches providers during an active packet.
+
 The engineering dependency is explicit and satisfied: the bounded G1
 serializer body precedes G9 staging. The production startup caller invokes the
 prepared G0/G10/codec commit and performs the readiness step before the initial
@@ -426,6 +441,17 @@ and global scopes, loaded 36 plugins including all five eezstreet DLLs, applied
 pre-existing unrelated plugin failures remained. The pair was restored
 mod-local without a global duplicate. This attests startup publication, not
 two-client packet behavior.
+
+The 0.2.1 provider contract was then exercised in both timing states. With the
+mod-local ISC12 DLL ordered before `ExtendedItemStats.dll`, startup left the
+provider unresolved; the first live 0x9C/0x9D producer observed the complete
+six-hook ownership set and exact 0.3.14 file version, sealed once to
+`ExtendedItemStatsV1`, and delegated through the preserved trampolines. A full
+restart read the resulting 7,299-byte, nine-item D2I unchanged. With ISC12
+installed globally, ExtendedItemStats was already present when the global
+plugin initialized; startup admitted it directly and read the same D2S/D2I.
+This closes provider timing and hybrid-scope qualification for the exact
+0.2.1 binary; it does not broaden the admitted provider identity or version.
 
 For historical provenance only, the six entry hooks previously audited belong
 to the RuffnecKk ExtendedItemStats prototype and an experimental RuffDood fork

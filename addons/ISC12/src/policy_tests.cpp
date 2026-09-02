@@ -1718,6 +1718,55 @@ int main() {
     static_assert(PacketACMaximumPacketBytes == 175);
     static_assert(PacketACPacketHeadroomBytes == 69);
 
+    CHECK(ClassifyFullItemTransportProvider(true, {}, {}, {})
+        == FullItemTransportProvider::NativeG9);
+    std::array<
+        FullItemTransportHookObservation,
+        FullItemTransportProviderSurfaceCount> externalTransportHooks{};
+    for (auto& hook : externalTransportHooks) {
+        hook = {
+            .querySucceeded = true,
+            .trackedInlineHook = true,
+            .ownerCount = 1,
+            .ownerPluginId = ExtendedItemStatsProviderId,
+        };
+    }
+    CHECK(ClassifyFullItemTransportProvider(
+        false,
+        externalTransportHooks,
+        ExtendedItemStatsProviderId,
+        ExtendedItemStatsProviderVersion)
+        == FullItemTransportProvider::ExtendedItemStatsV1);
+    CHECK(ClassifyFullItemTransportProvider(
+        false,
+        externalTransportHooks,
+        ExtendedItemStatsProviderId,
+        "0.3.15") == FullItemTransportProvider::Invalid);
+    auto partialTransportHooks = externalTransportHooks;
+    partialTransportHooks[2].querySucceeded = false;
+    CHECK(ClassifyFullItemTransportProvider(
+        false,
+        partialTransportHooks,
+        ExtendedItemStatsProviderId,
+        ExtendedItemStatsProviderVersion)
+        == FullItemTransportProvider::Invalid);
+    auto multiOwnerTransportHooks = externalTransportHooks;
+    multiOwnerTransportHooks[4].ownerCount = 2;
+    CHECK(ClassifyFullItemTransportProvider(
+        false,
+        multiOwnerTransportHooks,
+        ExtendedItemStatsProviderId,
+        ExtendedItemStatsProviderVersion)
+        == FullItemTransportProvider::Invalid);
+    auto wrongOwnerTransportHooks = externalTransportHooks;
+    wrongOwnerTransportHooks[5].ownerPluginId = "another-plugin";
+    CHECK(ClassifyFullItemTransportProvider(
+        false,
+        wrongOwnerTransportHooks,
+        ExtendedItemStatsProviderId,
+        ExtendedItemStatsProviderVersion)
+        == FullItemTransportProvider::Invalid);
+
     constexpr auto packet9CBudget =
         FullItemPacketBudgetFor(FullItemPacketKind::ItemAction9C);
     constexpr auto packet9DBudget =

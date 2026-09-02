@@ -137,6 +137,8 @@ constexpr std::uintptr_t Packet9DProducerEpilogueEndRva = 0x47A037;
 constexpr std::uintptr_t Packet9CQueueCallRva = 0x479E10;
 constexpr std::uintptr_t Packet9DQueueCallRva = 0x47A001;
 constexpr std::uintptr_t NativeFullItemPacketQueueRva = 0x4817F0;
+static_assert(
+    NativeFullItemPacketQueueRva == FullItemTransportQueueEntryRva);
 constexpr std::uintptr_t NativeAuxiliaryReaderRva = 0x530A00;
 constexpr std::uintptr_t NativePlayerReaderRva = 0x533760;
 constexpr std::uintptr_t NativePlayerPreviewCopyRva = 0xA1E110;
@@ -320,6 +322,11 @@ NativePlayerStatReaderFn NativeAuxiliaryReader{};
 NativePlayerStatReaderFn NativePlayerReader{};
 NativePlayerPreviewCopyFn NativePlayerPreviewCopy{};
 NativeFullItemPacketQueueFn NativeFullItemPacketQueue{};
+FullItemTransportProvider PreparedFullItemTransportProvider{
+    FullItemTransportProvider::Invalid};
+InspectFullItemTransportProviderFn InspectFullItemTransportProvider{};
+std::atomic<FullItemTransportProvider> ActiveFullItemTransportProvider{
+    FullItemTransportProvider::Invalid};
 bool Prepared{};
 bool PersistencePrepared{};
 bool AnyMutationInstalled{};
@@ -2488,6 +2495,12 @@ auto ReleaseUnpatchedResources() noexcept -> void {
     NativePlayerReader = nullptr;
     NativePlayerPreviewCopy = nullptr;
     NativeFullItemPacketQueue = nullptr;
+    PreparedFullItemTransportProvider =
+        FullItemTransportProvider::Invalid;
+    InspectFullItemTransportProvider = nullptr;
+    ActiveFullItemTransportProvider.store(
+        FullItemTransportProvider::Invalid,
+        std::memory_order_release);
     if (RelayPage) {
         VirtualFree(RelayPage, 0, MEM_RELEASE);
         RelayPage = nullptr;
@@ -3346,7 +3359,57 @@ auto BuildDescriptionIndexNative(void* dataTables) -> std::uint32_t {
     return 1;
 }
 
-auto QueueCapturedFullItemPacket(
+auto ResolveFullItemTransportProvider() noexcept
+        -> FullItemTransportProvider {
+    auto provider = ActiveFullItemTransportProvider.load(
+        std::memory_order_acquire);
+    if (provider == FullItemTransportProvider::Unresolved) {
+        if (FullItemPacketTransaction.state
+                != FullItemPacketStagingState::Idle
+                || !InspectFullItemTransportProvider) {
+            FailClosed(
+                "full-item transport cannot be resolved during an active transaction",
+                0);
+        }
+        const auto inspected = InspectFullItemTransportProvider();
+        if (inspected == FullItemTransportProvider::Invalid
+                || inspected == FullItemTransportProvider::Unresolved) {
+            FailClosed(
+                "full-item transport changed to an unattested provider",
+                0);
+        }
+        auto expected = FullItemTransportProvider::Unresolved;
+        if (ActiveFullItemTransportProvider.compare_exchange_strong(
+                expected,
+                inspected,
+                std::memory_order_acq_rel,
+                std::memory_order_acquire)) {
+            provider = inspected;
+            if (DiagnosticsEnabled && LoaderContext) {
+                LoaderContext->LogInfo(
+                    provider
+                            == FullItemTransportProvider::ExtendedItemStatsV1
+                        ? "ISC12 diagnostics: G9 transport sealed to the attested ExtendedItemStats 0.3.14 provider."
+                        : "ISC12 diagnostics: G9 transport sealed to the native atomic packet path.");
+            }
+        } else {
+            provider = expected;
+            if (provider != inspected) {
+                FailClosed(
+                    "concurrent full-item transport resolution diverged",
+                    0);
+            }
+        }
+    }
+    if (provider != FullItemTransportProvider::NativeG9
+            && provider
+                != FullItemTransportProvider::ExtendedItemStatsV1) {
+        FailClosed("full-item transport is unavailable", 0);
+    }
+    return provider;
+}
+
+auto QueueFullItemPacket(
         void*,
         void* client,
         const std::uint8_t* bytes,
@@ -3613,7 +3676,7 @@ auto CompleteFullItemProducer(
         1, std::memory_order_relaxed) + 1U;
     const auto flush = FlushOrDiscardFullItemPacketTransaction(
         FullItemPacketTransaction,
-        &QueueCapturedFullItemPacket,
+        &QueueFullItemPacket,
         nullptr);
     if (FullItemPacketTransaction.state
             == FullItemPacketStagingState::Fatal
@@ -3721,6 +3784,11 @@ auto VerifyPublicationPattern(
                             LoaderBase, LoaderImageSize)
                         == D2SSaveIoProviderKind::
                             D2RCoreWriteAndCloseWithEnvironment;
+                }
+                if (pattern.rva == FullItemTransportQueueEntryRva) {
+                    return PreparedFullItemTransportProvider
+                        == FullItemTransportProvider::
+                            ExtendedItemStatsV1;
                 }
                 return pattern.rva == ItemSaveStatWriterCallRva
                     && InspectItemSaveStatWriterProviderContract(
@@ -4514,6 +4582,21 @@ extern "C" auto ISC12InvokeItemAction9CNative(
         std::uint8_t action,
         std::uint32_t temporaryFlags,
         std::uint32_t gamble) noexcept -> void {
+    const auto transport = ResolveFullItemTransportProvider();
+    if (transport == FullItemTransportProvider::ExtendedItemStatsV1) {
+        if (!PersistencePacket9CTrampoline) {
+            FailClosed("full-item 0x9C trampoline is unavailable", 0);
+        }
+        __try {
+            PersistencePacket9CTrampoline(
+                client, item, action, temporaryFlags, gamble);
+        } __except (GuardedCodecExceptionFilter(GetExceptionCode())) {
+            FailClosed(
+                "external full-item 0x9C producer raised an exception",
+                0);
+        }
+        return;
+    }
     const auto admission = BeginFullItemPacketProducer(
         FullItemPacketTransaction,
         FullItemProducerDescriptor{
@@ -4554,6 +4637,26 @@ extern "C" auto ISC12InvokeItemAction9DNative(
         std::uint8_t action,
         std::uint32_t temporaryFlags,
         std::uint32_t gamble) noexcept -> void {
+    const auto transport = ResolveFullItemTransportProvider();
+    if (transport == FullItemTransportProvider::ExtendedItemStatsV1) {
+        if (!PersistencePacket9DTrampoline) {
+            FailClosed("full-item 0x9D trampoline is unavailable", 0);
+        }
+        __try {
+            PersistencePacket9DTrampoline(
+                client,
+                parentItem,
+                item,
+                action,
+                temporaryFlags,
+                gamble);
+        } __except (GuardedCodecExceptionFilter(GetExceptionCode())) {
+            FailClosed(
+                "external full-item 0x9D producer raised an exception",
+                0);
+        }
+        return;
+    }
     const auto admission = BeginFullItemPacketProducer(
         FullItemPacketTransaction,
         FullItemProducerDescriptor{
@@ -4597,6 +4700,11 @@ extern "C" auto ISC12CaptureItemAction9CQueue(
         void* client,
         const std::uint8_t* bytes,
         std::size_t length) noexcept -> void {
+    const auto transport = ResolveFullItemTransportProvider();
+    if (transport == FullItemTransportProvider::ExtendedItemStatsV1) {
+        QueueFullItemPacket(nullptr, client, bytes, length);
+        return;
+    }
     const auto result = CaptureFullItemPacketQueueCall(
         FullItemPacketTransaction,
         FullItemPacketKind::ItemAction9C,
@@ -4616,6 +4724,11 @@ extern "C" auto ISC12CaptureItemAction9DQueue(
         void* client,
         const std::uint8_t* bytes,
         std::size_t length) noexcept -> void {
+    const auto transport = ResolveFullItemTransportProvider();
+    if (transport == FullItemTransportProvider::ExtendedItemStatsV1) {
+        QueueFullItemPacket(nullptr, client, bytes, length);
+        return;
+    }
     const auto result = CaptureFullItemPacketQueueCall(
         FullItemPacketTransaction,
         FullItemPacketKind::ItemAction9D,
@@ -4888,11 +5001,18 @@ auto PrepareLoaderExtension(
         const D2RL::PluginContext* context,
         std::uint8_t* base,
         std::size_t imageSize,
+        FullItemTransportProvider initialTransportProvider,
+        InspectFullItemTransportProviderFn inspectTransportProvider,
         bool diagnostics,
         std::string& error) noexcept -> bool {
     error.clear();
     if (!context || !base || imageSize == 0
-            || context->exeBase != reinterpret_cast<std::uintptr_t>(base)) {
+            || context->exeBase != reinterpret_cast<std::uintptr_t>(base)
+            || (initialTransportProvider
+                    != FullItemTransportProvider::NativeG9
+                && initialTransportProvider
+                    != FullItemTransportProvider::ExtendedItemStatsV1)
+            || !inspectTransportProvider) {
         return SetError(error, "loader extension received an invalid context");
     }
     if (AnyMutationInstalled) {
@@ -4917,6 +5037,14 @@ auto PrepareLoaderExtension(
     LoaderContext = context;
     LoaderBase = base;
     LoaderImageSize = imageSize;
+    PreparedFullItemTransportProvider = initialTransportProvider;
+    InspectFullItemTransportProvider = inspectTransportProvider;
+    ActiveFullItemTransportProvider.store(
+        initialTransportProvider
+                == FullItemTransportProvider::ExtendedItemStatsV1
+            ? initialTransportProvider
+            : FullItemTransportProvider::Unresolved,
+        std::memory_order_release);
     BuildCalls.store(0, std::memory_order_release);
     LastRowCount.store(0, std::memory_order_release);
     LastDescriptionCount.store(0, std::memory_order_release);

@@ -5,8 +5,37 @@
 #include <cstdint>
 #include <limits>
 #include <span>
+#include <string_view>
 
 namespace ruffneckk::isc12 {
+
+enum class FullItemTransportProvider : std::uint8_t {
+    Invalid,
+    Unresolved,
+    NativeG9,
+    ExtendedItemStatsV1,
+};
+
+struct FullItemTransportHookObservation {
+    bool querySucceeded{};
+    bool trackedInlineHook{};
+    std::uint32_t ownerCount{};
+    std::string_view ownerPluginId{};
+};
+
+inline constexpr std::string_view ExtendedItemStatsProviderId =
+    "extended-item-stats";
+inline constexpr std::string_view ExtendedItemStatsProviderVersion =
+    "0.3.14";
+inline constexpr std::size_t FullItemTransportProviderSurfaceCount = 6;
+
+// Accepts either the complete native transport or one exact, versioned
+// external provider. A partial/mixed hook set is never treated as native.
+[[nodiscard]] auto ClassifyFullItemTransportProvider(
+    bool allNativeSurfacesMatch,
+    std::span<const FullItemTransportHookObservation> observations,
+    std::string_view pluginId,
+    std::string_view pluginVersion) noexcept -> FullItemTransportProvider;
 
 enum class FullItemPacketKind : std::uint8_t {
     ItemAction9C,

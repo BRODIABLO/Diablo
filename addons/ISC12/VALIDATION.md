@@ -14,9 +14,9 @@
 - [x] Admit D2RLoader 1.1/1.2 composition only through exact D2RCore
   providers: bounded relay, export/body, live PDATA/unwind, forward slot and
   exact native destination; retain every provider CALL.
-- [x] The config-free 0.2.0 candidate is active by DLL presence and retains no
+- [x] The config-free 0.2.1 candidate is active by DLL presence and retains no
   parser, path, dependency or configuration artifact.
-- [x] The 0.2.0 target is not eligible for a final release archive; the small
+- [x] The 0.2.1 target is not eligible for a final release archive; the small
   config-free archive is explicitly a public-test candidate.
 - [x] Duplicate-scope mutex is PID-qualified: one owner per D2R process without
   blocking a second local host/joiner process.
@@ -464,6 +464,46 @@
   Final state is the new DLL mod-local, no global duplicate and no running D2R
   process. Gameplay and TCP/IP were not rerun; their exact-binary evidence
   remains attached to `6089619D...D2D52`.
+- [x] ISC12 0.2.1 policy accepts only the complete native G9 provider or the
+  exact six tracked inline hooks solely owned by plugin ID
+  `extended-item-stats` with installed file version 0.3.14. Unit tests reject a
+  wrong version, partial hook set, multiple owners and a different owner ID.
+- [x] Two independent Release `/W4 /WX` builds and CTest `5/5` runs are
+  byte-identical at 329,728 bytes, version 0.2.1, SHA-256
+  `C6B4E610F34E4AF42553E606EF835C9E7619916B5BC3ED1209490B9894B55395`.
+- [x] Mod-local D2R 3.3.93847 / D2RLoader 1.2 cold start with
+  `ExtendedItemStats.dll` 0.3.14 loaded first: all six hooks were attributed to
+  its sole owner, ISC12 delegated G9 transport, published 43 codec sites / 129
+  mutations and reached gameplay. The deployed DLL matched the reproducible
+  build above.
+- [x] Positive source-to-target runtime witness: `HECubeMove.d2s` migrated from
+  BKVince data to Yupgoolg data, loaded into the Rogue Encampment, saved
+  repeatedly with `error=0/0`, exited and loaded into gameplay again. The final
+  1,183-byte D2S is SHA-256
+  `C634CA357C49B1609894CAAAB67AF2F243801136A11CBF3A57C7BD231099AEC5`.
+  The compatible target-schema shared stash was also written repeatedly at
+  7,016 bytes with `error=0/0`, final SHA-256
+  `C5F8B88BB5BFB689A637509D4DA78D41C614B0600714AA994B10EBCE9D0C4070`.
+- [x] Inverse load order plus live external G9 producer: ISC12 0.2.1 loaded
+  before `ExtendedItemStats.dll` 0.3.14, initially kept G9 unresolved, then the
+  first real 0x9C/0x9D producer re-inspected all six tracked hooks and logged
+  `G9 transport sealed to the attested ExtendedItemStats 0.3.14 provider`.
+  The same DLL then passed a cold reload and a separate global-scope cold
+  start, where the provider was already present and admitted during startup.
+- [x] Offline non-empty cross-mod D2I conversion: the governed 680-byte
+  BKVince shared stash has six pages and nine items on page 6. It converts to a
+  695-byte Yupgoolg-targeted ISC12 D2I, SHA-256
+  `AACEB3C444903F8B1E777CC899E4D6EAF91449CE8DEC45B30E63E2DEA11CC85B`,
+  without modifying the source SHA-256
+  `86833D4BA22FD64DBEE0C4701B6CB5A4D0329A23EA79C08E9F5FFB572404E1B4`.
+- [x] That exact 695-byte nine-item cross-mod D2I was accepted under Yupgoolg,
+  rewritten by the target's 101-page stash layout to 7,299 bytes, and read
+  again after a full process restart and in global scope. All three captured
+  copies are byte-identical at SHA-256
+  `ED0C4B77AD8C83A56C30080652FAF8C161B6754150A45668CFE316871238BB0C`;
+  target-schema parsing still finds exactly nine stackable material items on
+  page 6. The larger personal BKVince stash remains correctly refused because
+  it contains seven target-missing item bases.
 - [ ] Matching host/joiner passes; mismatches fail closed.
 
 ### External two-client handoff
@@ -472,9 +512,9 @@ One human may operate both sides, but the proof requires two independent D2R
 clients active at the same time. A single process/account instance cannot close
 host and joiner behavior. Each matching peer must use:
 
-- the exact 451,072-byte ISC12 DLL SHA-256
-  `6089619DE3B01FD474669096A8AEC8A470559FAD993DCB939AC976709A7D2D52`;
-- byte-identical TOML, mod data, high-ID ItemStatCost schema and test fixtures;
+- the exact config-free 329,728-byte ISC12 0.2.1 DLL SHA-256
+  `C6B4E610F34E4AF42553E606EF835C9E7619916B5BC3ED1209490B9894B55395`;
+- matching mod data, high-ID ItemStatCost schema and test fixtures;
 - the same D2RLoader scope and a matching generated environment fingerprint;
 - a schema and saved/item fixture that actually reaches IDs above 510. The
   restored 400-row ISC12Lab/BKVince table cannot by itself exercise 12-bit
@@ -490,17 +530,18 @@ The community matrix has three required sessions:
 3. Absent/vanilla ISC12 host with an ISC12 joiner: reject fail-closed before
    shared state can diverge.
 
-Collect fresh D2RLoader and ISC12 logs from both peers, DLL/TOML/data hashes,
+Collect fresh D2RLoader and ISC12 logs from both peers, DLL/data hashes,
 scope, environment fingerprint, the visible before/after stat values and the
 post-reconnect save evidence. A successful connection using only IDs below 511
 does not close G5-G8 functional multiplayer behavior.
 
 Mod-local and global publication, the schema lifecycle, native character
 creation, standard D2S/D2I persistence, two cold D2S cycles, serialized IDs 512
-and 4094, real 0x9C/0x9D socket-tree capture, overflow/reentry containment and
-complete-stack coexistence have run on disposable fixtures. The runtime profile,
-assert-dialog setting and original shared stash were restored byte-for-byte
-after evidence capture. G5-G8, their native budgets and the fixed-width packet
-census are closed in source/static proof and both hybrid startup scopes.
-Multiplayer host/joiner plus mismatch rejection remain open before any complete
-network claim or public release.
+and 4094, real 0x9C/0x9D socket-tree capture, overflow/reentry containment,
+inverse-order ExtendedItemStats coexistence and a non-empty BKVince-to-Yupgoolg
+D2I load/save/reload have run on disposable fixtures. The runtime profile and
+original shared stash were restored byte-for-byte after evidence capture;
+neither scope retains ISC12 and no Diablo process remains. G5-G8, their native
+budgets and the fixed-width packet census are closed in source/static proof and
+both hybrid startup scopes. Multiplayer host/joiner plus mismatch rejection
+remain open before any complete network claim or public release.

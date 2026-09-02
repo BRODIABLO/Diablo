@@ -14,6 +14,9 @@ struct NativePattern {
     std::span<const std::uint8_t> mask;
 };
 
+inline constexpr std::uintptr_t FullItemTransportQueueEntryRva =
+    0x4817F0;
+
 inline constexpr auto LoaderEntryBytes = std::to_array<std::uint8_t>({
     0x4C,0x8B,0xDC,0x55,0x49,0x8D,0xAB,0x98,0xF1,
     0xFF,0xFF,0x48,0x81,0xEC,0x60,0x0F,0x00,0x00,
@@ -322,6 +325,37 @@ inline constexpr auto NativeQueueEntryBytes =
     0xE8,0x48,0x8B,0xF2,0x48,0x8B,0xF9,0x48,0x85,0xC9,
     0x75,0x1F,
 });
+inline constexpr auto ExtendedItemStatsDispatch9CEntryBytes =
+        std::to_array<std::uint8_t>({
+    0x40,0x53,0x48,0x81,0xEC,0x50,0x01,0x00,0x00,0x48,
+    0x8B,0x05,0xF8,0xCF,0x89,0x02,0x48,0x33,0xC4,0x48,
+    0x89,0x84,0x24,0x40,0x01,0x00,0x00,0x48,0x8B,0xD9,
+    0x33,0xD2,
+});
+inline constexpr auto ExtendedItemStatsDispatch9DEntryBytes =
+        std::to_array<std::uint8_t>({
+    0x40,0x53,0x48,0x81,0xEC,0x60,0x01,0x00,0x00,0x48,
+    0x8B,0x05,0x28,0xCE,0x89,0x02,0x48,0x33,0xC4,0x48,
+    0x89,0x84,0x24,0x50,0x01,0x00,0x00,0x48,0x8B,0xD9,
+    0x33,0xD2,
+});
+inline constexpr auto ExtendedItemStatsDecodeEntryBytes =
+        std::to_array<std::uint8_t>({
+    0x40,0x55,0x53,0x41,0x55,0x41,0x57,0x48,0x8B,0xEC,
+    0x48,0x83,0xEC,0x68,
+});
+inline constexpr auto ExtendedItemStatsMetadataEntryBytes =
+        std::to_array<std::uint8_t>({
+    0x48,0x83,0xEC,0x38,0x48,0x8B,0x44,0x24,0x60,0xC7,
+    0x44,0x24,0x28,0x69,0x00,0x00,0x00,0x48,0x89,0x44,
+    0x24,0x20,0xE8,0x05,0x00,0x00,0x00,
+});
+inline constexpr auto ExtendedItemStatsSerializeEntryBytes =
+        std::to_array<std::uint8_t>({
+    0x48,0x89,0x5C,0x24,0x08,0x57,0x48,0x83,0xEC,0x60,
+    0x48,0x8B,0xD9,0x41,0x8B,0xF9,0x48,0x8D,0x4C,0x24,
+    0x38,0xE8,0x26,0x57,0x6A,0x00,
+});
 inline constexpr auto NativeQueueSpanDispatchBytes =
         std::to_array<std::uint8_t>({
     0xE8,0x55,0x7D,0x1C,0x00,0x8B,0x17,0x4C,0x8D,0x44,
@@ -371,6 +405,11 @@ static_assert(Packet9DAfterQueueBytes.size() == 19);
 static_assert(Packet9CProducerEpilogueBytes.size() == 30);
 static_assert(Packet9DProducerEpilogueBytes.size() == 30);
 static_assert(NativeQueueEntryBytes.size() == 22);
+static_assert(ExtendedItemStatsDispatch9CEntryBytes.size() == 32);
+static_assert(ExtendedItemStatsDispatch9DEntryBytes.size() == 32);
+static_assert(ExtendedItemStatsDecodeEntryBytes.size() == 14);
+static_assert(ExtendedItemStatsMetadataEntryBytes.size() == 27);
+static_assert(ExtendedItemStatsSerializeEntryBytes.size() == 26);
 static_assert(NativeQueueSpanDispatchBytes.size() == 39);
 static_assert(SocketedItemPacketWalkerBytes.size() == 102);
 inline constexpr auto AuxPlayerReaderFirstBytes =
@@ -1392,6 +1431,16 @@ inline constexpr auto Packet9DProducerEpilogueMask =
     ExactMask<Packet9DProducerEpilogueBytes.size()>();
 inline constexpr auto NativeQueueEntryMask =
     ExactMask<NativeQueueEntryBytes.size()>();
+inline constexpr auto ExtendedItemStatsDispatch9CEntryMask =
+    ExactMask<ExtendedItemStatsDispatch9CEntryBytes.size()>();
+inline constexpr auto ExtendedItemStatsDispatch9DEntryMask =
+    ExactMask<ExtendedItemStatsDispatch9DEntryBytes.size()>();
+inline constexpr auto ExtendedItemStatsDecodeEntryMask =
+    ExactMask<ExtendedItemStatsDecodeEntryBytes.size()>();
+inline constexpr auto ExtendedItemStatsMetadataEntryMask =
+    ExactMask<ExtendedItemStatsMetadataEntryBytes.size()>();
+inline constexpr auto ExtendedItemStatsSerializeEntryMask =
+    ExactMask<ExtendedItemStatsSerializeEntryBytes.size()>();
 inline constexpr auto NativeQueueSpanDispatchMask =
     ExactMask<NativeQueueSpanDispatchBytes.size()>();
 inline constexpr auto FullItemSerializerOverflowMask =
@@ -1613,6 +1662,31 @@ inline constexpr auto SaveLayoutFieldSelectorMask =
 inline constexpr auto CompactCurrentSaveLayoutMask =
     ExactMask<CompactCurrentSaveLayoutBytes.size()>();
 
+// ExtendedItemStats 0.3.14 owns exactly these six full-item transport
+// entries. ISC12 accepts that external transport only when DiagnosticsService
+// attributes every changed surface to the same versioned plugin.
+inline constexpr std::array ExtendedItemStatsTransportV1Patterns{
+    NativePattern{"external.eis-v1-dispatch-9c", 0x12E2C0,
+        ExtendedItemStatsDispatch9CEntryBytes,
+        ExtendedItemStatsDispatch9CEntryMask},
+    NativePattern{"external.eis-v1-dispatch-9d", 0x12E490,
+        ExtendedItemStatsDispatch9DEntryBytes,
+        ExtendedItemStatsDispatch9DEntryMask},
+    NativePattern{"external.eis-v1-decode", 0x374BF0,
+        ExtendedItemStatsDecodeEntryBytes,
+        ExtendedItemStatsDecodeEntryMask},
+    NativePattern{"external.eis-v1-metadata", 0x374FF0,
+        ExtendedItemStatsMetadataEntryBytes,
+        ExtendedItemStatsMetadataEntryMask},
+    NativePattern{"external.eis-v1-serialize", 0x375EE0,
+        ExtendedItemStatsSerializeEntryBytes,
+        ExtendedItemStatsSerializeEntryMask},
+    NativePattern{"external.eis-v1-queue", FullItemTransportQueueEntryRva,
+        NativeQueueEntryBytes,
+        NativeQueueEntryMask},
+};
+static_assert(ExtendedItemStatsTransportV1Patterns.size() == 6);
+
 inline constexpr std::array FoundationPatterns{
     NativePattern{"loader.entry", 0x31E310, LoaderEntryBytes, LoaderEntryMask},
     NativePattern{"loader.compile-call", 0x31EC7B, LoaderCompileCallBytes, LoaderCompileCallMask},
@@ -1659,7 +1733,7 @@ inline constexpr std::array FoundationPatterns{
     NativePattern{"transport.g9-packet-9c-consumer-bound", 0x12E2F0, Packet9CConsumerPayloadBoundBytes, Packet9CConsumerPayloadBoundMask},
     NativePattern{"transport.g9-packet-9d-consumer-buffer-header", 0x12E4B0, Packet9DConsumerBufferHeaderBytes, Packet9DConsumerBufferHeaderMask},
     NativePattern{"transport.g9-socketed-item-walker", 0x481BAD, SocketedItemPacketWalkerBytes, SocketedItemPacketWalkerMask},
-    NativePattern{"transport.g9-native-queue-entry", 0x4817F0, NativeQueueEntryBytes, NativeQueueEntryMask},
+    NativePattern{"transport.g9-native-queue-entry", FullItemTransportQueueEntryRva, NativeQueueEntryBytes, NativeQueueEntryMask},
     NativePattern{"transport.g9-native-queue-span-dispatch", 0x4818B6, NativeQueueSpanDispatchBytes, NativeQueueSpanDispatchMask},
     NativePattern{"codec.g2-reader-first", 0x530A99, AuxPlayerReaderFirstBytes, AuxPlayerReaderFirstMask},
     NativePattern{"codec.g2-reader-owner", 0x530A00, AuxPlayerReaderOwnerBytes, AuxPlayerReaderOwnerMask},

@@ -5,6 +5,7 @@
 #include "isc12_native_sites.hpp"
 
 #include <Windows.h>
+#include <winver.h>
 
 #include <algorithm>
 #include <array>
@@ -13,6 +14,7 @@
 #include <cstdio>
 #include <cwchar>
 #include <cstring>
+#include <filesystem>
 #include <limits>
 #include <string>
 #include <string_view>
@@ -36,6 +38,8 @@ std::uint8_t* Base{};
 std::size_t ImageSize{};
 std::string RuntimeBuild{"<unavailable>"};
 HANDLE ProcessMutex{};
+FullItemTransportProvider DetectedTransportProvider{
+    FullItemTransportProvider::Invalid};
 
 enum class SchemaLifecycleState : std::uint8_t {
     Inactive,
@@ -98,7 +102,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "ruffneckk-isc12",
     .name = "ISC12",
-    .version = "0.2.0",
+    .version = "0.2.1",
     .author = "RuffnecKk",
     .description = "Extends ItemStatCost.txt capacity to 4,095 rows. Requires ISC12-compatible save files.",
     .flags = D2RL::PluginFlags::Shared | D2RL::PluginFlags::NativeHooks,
@@ -456,6 +460,235 @@ auto QueryOwnership(
         && status.size == pattern.bytes.size();
 }
 
+auto ReadFileVersion(
+        const std::filesystem::path& path,
+        std::array<char, 64>& version) noexcept -> bool {
+    version.fill('\0');
+    DWORD ignored{};
+    const auto size = GetFileVersionInfoSizeW(path.c_str(), &ignored);
+    if (size == 0) return false;
+    try {
+        std::string bytes(size, '\0');
+        if (!GetFileVersionInfoW(
+                path.c_str(), 0, size, bytes.data())) {
+            return false;
+        }
+        VS_FIXEDFILEINFO* fixed{};
+        UINT fixedSize{};
+        if (!VerQueryValueW(
+                bytes.data(),
+                L"\\",
+                reinterpret_cast<void**>(&fixed),
+                &fixedSize)
+                || !fixed
+                || fixedSize < sizeof(VS_FIXEDFILEINFO)
+                || fixed->dwSignature != 0xFEEF04BD) {
+            return false;
+        }
+        const auto major = HIWORD(fixed->dwFileVersionMS);
+        const auto minor = LOWORD(fixed->dwFileVersionMS);
+        const auto patch = HIWORD(fixed->dwFileVersionLS);
+        const auto build = LOWORD(fixed->dwFileVersionLS);
+        const auto written = build == 0
+            ? std::snprintf(
+                version.data(), version.size(), "%u.%u.%u",
+                major, minor, patch)
+            : std::snprintf(
+                version.data(), version.size(), "%u.%u.%u.%u",
+                major, minor, patch, build);
+        return written > 0
+            && static_cast<std::size_t>(written) < version.size();
+    } catch (...) {
+        version.fill('\0');
+        return false;
+    }
+}
+
+auto FindExtendedItemStatsFileVersion(
+        std::array<char, 64>& version) noexcept -> bool {
+    version.fill('\0');
+    try {
+        if (Context && Context->loadScope == D2RL::LoadScope::Mod) {
+            const auto* pluginDirectory =
+                D2RL::GetPluginDirectory(Context);
+            if (pluginDirectory && pluginDirectory[0] != L'\0') {
+                const auto colocated =
+                    std::filesystem::path{pluginDirectory}
+                    / L"ExtendedItemStats.dll";
+                std::error_code error;
+                if (std::filesystem::is_regular_file(colocated, error)) {
+                    return ReadFileVersion(colocated, version);
+                }
+            }
+        }
+
+        std::array<wchar_t, 32768> executablePath{};
+        const auto length = GetModuleFileNameW(
+            nullptr,
+            executablePath.data(),
+            static_cast<DWORD>(executablePath.size()));
+        if (length == 0 || length >= executablePath.size()) return false;
+        const auto gameDirectory =
+            std::filesystem::path{executablePath.data()}.parent_path();
+
+        if (Context && Context->activeMod
+                && Context->activeMod[0] != '\0') {
+            std::array<wchar_t, 512> activeMod{};
+            const auto converted = MultiByteToWideChar(
+                CP_UTF8,
+                MB_ERR_INVALID_CHARS,
+                Context->activeMod,
+                -1,
+                activeMod.data(),
+                static_cast<int>(activeMod.size()));
+            if (converted > 1) {
+                const auto modCandidate = gameDirectory
+                    / L"mods" / activeMod.data()
+                    / L"d2rloader" / L"plugins"
+                    / L"ExtendedItemStats.dll";
+                std::error_code error;
+                if (std::filesystem::is_regular_file(modCandidate, error)) {
+                    return ReadFileVersion(modCandidate, version);
+                }
+            }
+        }
+
+        if (Context && Context->loadScope == D2RL::LoadScope::Global) {
+            const auto* pluginDirectory =
+                D2RL::GetPluginDirectory(Context);
+            if (pluginDirectory && pluginDirectory[0] != L'\0') {
+                const auto colocated =
+                    std::filesystem::path{pluginDirectory}
+                    / L"ExtendedItemStats.dll";
+                std::error_code error;
+                if (std::filesystem::is_regular_file(colocated, error)) {
+                    return ReadFileVersion(colocated, version);
+                }
+            }
+        }
+
+        if (Context && Context->modDirectory
+                && Context->modDirectory[0] != L'\0') {
+            const auto modCandidate =
+                std::filesystem::path{Context->modDirectory}
+                / L"d2rloader" / L"plugins"
+                / L"ExtendedItemStats.dll";
+            std::error_code error;
+            if (std::filesystem::is_regular_file(modCandidate, error)) {
+                return ReadFileVersion(modCandidate, version);
+            }
+        }
+
+        const auto globalCandidate = gameDirectory
+            / L"d2rloader" / L"plugins" / L"ExtendedItemStats.dll";
+        std::error_code error;
+        return std::filesystem::is_regular_file(globalCandidate, error)
+            && ReadFileVersion(globalCandidate, version);
+    } catch (...) {
+        version.fill('\0');
+        return false;
+    }
+}
+
+auto InspectFullItemTransportProvider() noexcept
+        -> FullItemTransportProvider {
+    const bool allNativeSurfacesMatch = std::all_of(
+        ExtendedItemStatsTransportV1Patterns.begin(),
+        ExtendedItemStatsTransportV1Patterns.end(),
+        [](const NativePattern& pattern) noexcept {
+            return Matches(pattern);
+        });
+    if (allNativeSurfacesMatch) {
+        return ClassifyFullItemTransportProvider(true, {}, {}, {});
+    }
+    if (!DiagnosticsService) {
+        return FullItemTransportProvider::Invalid;
+    }
+
+    std::array<
+        FullItemTransportHookObservation,
+        FullItemTransportProviderSurfaceCount> observations{};
+    std::array<
+        std::array<char, 65>,
+        FullItemTransportProviderSurfaceCount> owners{};
+    for (std::size_t index{}; index < observations.size(); ++index) {
+        D2RL::Diagnostics::HookStatus status{};
+        const auto queried = QueryOwnership(
+            ExtendedItemStatsTransportV1Patterns[index], status);
+        auto& observation = observations[index];
+        observation.querySucceeded = queried;
+        if (!queried) {
+            if (ReleaseDiagnosticsEnabled && Context) {
+                char message[224]{};
+                std::snprintf(
+                    message,
+                    sizeof(message),
+                    "ISC12 diagnostics: external G9 probe %s; "
+                    "queried=false.",
+                    ExtendedItemStatsTransportV1Patterns[index].id);
+                Context->LogInfo(message);
+            }
+            continue;
+        }
+        const auto ownerEnd = std::find(
+            std::begin(status.ownerPluginId),
+            std::end(status.ownerPluginId),
+            '\0');
+        const auto ownerLength = static_cast<std::size_t>(
+            ownerEnd - std::begin(status.ownerPluginId));
+        std::memcpy(
+            owners[index].data(),
+            status.ownerPluginId,
+            ownerLength);
+        owners[index][ownerLength] = '\0';
+        observation.trackedInlineHook =
+            status.state == D2RL::Diagnostics::ModificationState::Tracked
+            && status.kind
+                == D2RL::Diagnostics::ModificationKind::InlineHook;
+        observation.ownerCount = status.ownerCount;
+        observation.ownerPluginId = {
+            owners[index].data(), ownerLength};
+        if (ReleaseDiagnosticsEnabled && Context) {
+            char message[320]{};
+            std::snprintf(
+                message,
+                sizeof(message),
+                "ISC12 diagnostics: external G9 probe %s; queried=%s; "
+                "state=%u; kind=%u; owners=%u; owner=%.*s.",
+                ExtendedItemStatsTransportV1Patterns[index].id,
+                queried ? "true" : "false",
+                static_cast<unsigned>(status.state),
+                static_cast<unsigned>(status.kind),
+                status.ownerCount,
+                static_cast<int>(ownerLength),
+                owners[index].data());
+            Context->LogInfo(message);
+        }
+    }
+
+    std::array<char, 64> providerVersion{};
+    const bool identityFound =
+        FindExtendedItemStatsFileVersion(providerVersion);
+    if (ReleaseDiagnosticsEnabled && Context) {
+        char message[192]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "ISC12 diagnostics: ExtendedItemStats installed binary "
+            "found=%s; version=%s.",
+            identityFound ? "true" : "false",
+            identityFound ? providerVersion.data() : "<unavailable>");
+        Context->LogInfo(message);
+    }
+    return ClassifyFullItemTransportProvider(
+        false,
+        observations,
+        identityFound ? ExtendedItemStatsProviderId : std::string_view{},
+        identityFound
+            ? std::string_view{providerVersion.data()}
+            : std::string_view{});
+}
+
 auto ValidateOwnership(const NativePattern& pattern) noexcept -> bool {
     if (!DiagnosticsService) return true;
     D2RL::Diagnostics::HookStatus status{};
@@ -513,13 +746,18 @@ auto ValidateFoundationFingerprint() noexcept -> bool {
             d2sSaveIoProvider
                 == D2SSaveIoProviderKind::
                     D2RCoreWriteAndCloseWithEnvironment;
+        const bool acceptedExternalItemTransport =
+            pattern.rva == FullItemTransportQueueEntryRva
+            && DetectedTransportProvider
+                == FullItemTransportProvider::ExtendedItemStatsV1;
         if (!Matches(pattern)
                 && !acceptedD2RCoreProvider
                 && !acceptedD2RCoreSaveWriter
                 && !acceptedD2RCoreItemWriter
                 && !acceptedD2RCorePlayerSave
                 && !acceptedD2RCoreItemReader
-                && !acceptedD2RCoreSaveIo) {
+                && !acceptedD2RCoreSaveIo
+                && !acceptedExternalItemTransport) {
             char message[512]{};
             D2RL::Diagnostics::HookStatus status{};
             if (QueryOwnership(pattern, status)) {
@@ -552,6 +790,13 @@ auto ValidateFoundationFingerprint() noexcept -> bool {
             }
             Context->LogError(message);
             return false;
+        }
+        if (acceptedExternalItemTransport) {
+            Context->LogInfo(
+                "ISC12: verified ExtendedItemStats 0.3.14 as the sole "
+                "owner of all six full-item transport hooks; ISC12 will "
+                "delegate G9 packet transport to that provider.");
+            continue;
         }
         if (acceptedD2RCoreProvider) {
             Context->LogInfo(
@@ -642,6 +887,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     DiagnosticsService = nullptr;
     LifecycleService = nullptr;
     DataTableService = nullptr;
+    DetectedTransportProvider = FullItemTransportProvider::Invalid;
     DataTablesLoadedListenerHandle.store(
         D2RL::Lifecycle::InvalidHandle, std::memory_order_release);
     ImageSize = 0;
@@ -673,8 +919,21 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     context->LogInfo(identity);
 
     if (!InitializeImageBounds() || !QueryDiagnosticsService()
-            || !QuerySchemaLifecycleServices()
-            || !ValidateFoundationFingerprint()) {
+            || !QuerySchemaLifecycleServices()) {
+        ReleaseProcessMutex();
+        return false;
+    }
+    DetectedTransportProvider = InspectFullItemTransportProvider();
+    if (DetectedTransportProvider == FullItemTransportProvider::Invalid
+            || DetectedTransportProvider
+                == FullItemTransportProvider::Unresolved) {
+        context->LogError(
+            "ISC12: full-item transport is neither completely native nor "
+            "the attested ExtendedItemStats 0.3.14 provider; plugin refused.");
+        ReleaseProcessMutex();
+        return false;
+    }
+    if (!ValidateFoundationFingerprint()) {
         ReleaseProcessMutex();
         return false;
     }
@@ -684,6 +943,8 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
             context,
             Base,
             ImageSize,
+            DetectedTransportProvider,
+            &InspectFullItemTransportProvider,
             ReleaseDiagnosticsEnabled,
             loaderError)) {
         const auto message = std::string("ISC12: loader preparation failed (")
@@ -772,7 +1033,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     std::snprintf(
         message,
         sizeof(message),
-        "ISC12 0.2.0 active for observed D2R %s; max-stat-id=%u; foundation-patterns=%zu; codec-sites=%zu; codec-mutations=%zu; scope=%s; activation=presence.",
+        "ISC12 0.2.1 active for observed D2R %s; max-stat-id=%u; foundation-patterns=%zu; codec-sites=%zu; codec-mutations=%zu; scope=%s; activation=presence.",
         RuntimeBuild.c_str(),
         static_cast<unsigned>(MaximumStatId),
         FoundationPatterns.size(),

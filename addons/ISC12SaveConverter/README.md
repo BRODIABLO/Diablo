@@ -13,10 +13,11 @@ implemented. The 60-test suite proves byte-exact 9-to-12-to-9 round trips for a
 real standalone v105 item, complete characters and shared stashes. It also
 proves source-to-target schema migration between vanilla and BKVince data,
 including changed stat IDs, `SaveBits`, `SaveParamBits`, `SaveAdd`, signed player
-attributes, auto-affixes and raw table references. Earlier runtime qualification
-on D2R 3.3.93847 loaded and saved same-schema BKVince and Yupgoolg conversions
-under ISC12. The new cross-schema path still requires its final runtime gate and
-is never a replacement for backups.
+attributes, auto-affixes and raw table references. Runtime qualification on D2R
+3.3.93847 loaded, saved and reloaded the cross-schema BKVince-to-Yupgoolg
+character and shared-stash witnesses under ISC12. The nine-item shared stash
+remained byte-identical after a full process restart and a separate global-scope
+run. The converter is never a replacement for backups.
 
 The tool:
 
@@ -81,9 +82,13 @@ save fails closed without creating output.
 ## Loading converted saves
 
 Converting the save does not modify the installed mod. A 12-bit save must be
-loaded with ISC12 enabled. If the mod already includes a D2R 9-bit ItemStatCost
-extension such as `ExtendedItemStats.dll`, replace that plugin with ISC12; the
-two codecs own the same serialization path and must not be loaded together.
+loaded with ISC12 enabled. `ExtendedItemStats.dll` version 0.3.14 may remain
+installed: ISC12 accepts it only after verifying that exact installed version
+and its exclusive ownership of all six full-item transport hooks, then
+delegates that transport to it. Any other D2R 9-bit ItemStatCost codec or
+ExtendedItemStats version remains unsupported and must be removed before
+loading; ISC12 refuses an unknown, partial or mixed provider instead of
+guessing.
 
 After a downgrade to D2R 9-bit, restore the mod's original 9-bit ItemStatCost
 plugin, if it had one, and disable ISC12 before loading the save. The executable
@@ -113,8 +118,19 @@ npm run convert --prefix addons/ISC12SaveConverter -- --to isc12 <save-folder>
 npm run convert --prefix addons/ISC12SaveConverter -- --to d2r9 --source-mod <isc12-mod> --target-vanilla <save-folder>
 ```
 
-Use `--help` for all options. The remaining public-release work is packaging,
-human review of the release README and publication beside ISC12.
+Use `--help` for all options. The remaining public-release work is human review
+of this README and publication beside ISC12.
+
+## Public test candidate
+
+The candidate archive contains only `ISC12SaveConverter.exe`; this README stays
+beside the archive for human review before the final public package is assembled.
+
+- executable: 94,677,504 bytes, SHA-256
+  `2945CEB6BE8E2BB800D266711772F3EB76B8AA271EF6D36904673129595DAF8D`;
+- candidate ZIP: 35,959,447 bytes, SHA-256
+  `530B40501E4C52A58A62D8358864B45ACE06D2C07A9A736D1E30686F2CA53EBC`;
+- archive allowlist: exactly one root entry, `ISC12SaveConverter.exe`.
 
 ## Third-party components and references
 

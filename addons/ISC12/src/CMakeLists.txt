@@ -1,6 +1,6 @@
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     cmake_minimum_required(VERSION 3.28)
-    project(ISC12 VERSION 0.2.0 LANGUAGES CXX RC ASM_MASM)
+    project(ISC12 VERSION 0.2.1 LANGUAGES CXX RC ASM_MASM)
     include(CTest)
 else()
     enable_language(RC)
@@ -45,6 +45,7 @@ target_compile_definitions(ISC12 PRIVATE
 target_link_libraries(ISC12 PRIVATE
     D2RLPlugin::D2RLPlugin
     bcrypt
+    version
 )
 set_target_properties(ISC12 PROPERTIES
     OUTPUT_NAME "d2rl-ruffneckk-isc12"

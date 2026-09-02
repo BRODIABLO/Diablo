@@ -2,6 +2,7 @@
 
 #include "isc12_codec_patch.hpp"
 #include "isc12_envelope.hpp"
+#include "isc12_item_packet_budget.hpp"
 #include "isc12_native_schema_adapter.hpp"
 #include "isc12_publication_coordinator.hpp"
 
@@ -15,6 +16,9 @@ struct PluginContext;
 }
 
 namespace ruffneckk::isc12 {
+
+using InspectFullItemTransportProviderFn =
+    FullItemTransportProvider (*)() noexcept;
 
 #if defined(ISC12_CODEC_PATCH_TESTING)
 enum class LoaderInstallResult : std::uint8_t {
@@ -176,6 +180,8 @@ auto PrepareLoaderExtension(
     const D2RL::PluginContext* context,
     std::uint8_t* base,
     std::size_t imageSize,
+    FullItemTransportProvider initialTransportProvider,
+    InspectFullItemTransportProviderFn inspectTransportProvider,
     bool diagnostics,
     std::string& error) noexcept -> bool;
 

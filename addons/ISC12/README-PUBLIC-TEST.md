@@ -1,4 +1,4 @@
-# ISC12 0.2.0 Test version
+# ISC12 0.2.1 Test version
 ISC12 converts D2R serialized `ItemStatCost` IDs from
 9 bits to 12 bits, hence the naming `ISC12`. This increases `ItemStatCost.txt` capacity from 511 to
 4,095 rows.
@@ -35,6 +35,12 @@ Globally:
 ```
 
 Do not install the same DLL both globally and inside a mod.
+
+If the mod already loads `ExtendedItemStats.dll` 0.3.14, it may remain
+installed. ISC12 verifies that exact version and requires it to be the sole
+owner of all six full-item transport hooks before delegating transport to it.
+Other ExtendedItemStats versions and other ItemStatCost serialization plugins
+are not qualified; ISC12 refuses an unknown, partial or mixed provider.
 
 Before starting the game, make sure the selected mod save folder contains no
 existing 9-bit character or shared-stash file that D2R could load. Create both
