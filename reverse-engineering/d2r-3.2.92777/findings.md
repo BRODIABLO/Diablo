@@ -2126,3 +2126,49 @@ confiance explicite.
   actions : il porte sur le lifecycle GUID, l’ownership du hook, les budgets et
   l’empreinte fail-closed complète. Aucune DLL ni injection n’est créée par ce
   lot statique.
+
+## 2026-09-01 — Extended Act Level IDs : résolveur central et layout `Levels.Act`
+
+- `DRLG_ResolveActFromLevelId 0x326710` suit l'ABI x64 observée
+  `uint8 (uint8 dataContext, int32 levelId)`. Son corps utile autonome va de
+  `0x326710` à `0x3267A6`, même si l'entrée pdata englobante commence plus tôt.
+  Il obtient le vecteur `ActInfo` par `0x3006E0`, sélectionne les DataTables du
+  contexte par `GetDataTablesForContext 0x300A90`, lit le compte à `+0x108`,
+  parcourt à rebours des records de `0x8C` octets et compare le Level ID au
+  `rangeStart` signé à `record+0x04`. Il renvoie l'index d'acte zéro-based ou
+  zéro si aucune plage ne correspond.
+- Le census du workbench commun trouve **113 appels directs**. La signature
+  stricte de 48 octets
+  `48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 30 8B F2 0F B6 D9 E8 B7 9F FD FF 0F B6 CB 48 8B F8 E8 5C A3 FD FF 8B 98 08 01 00 00 83 EB 01 78 43 90`
+  n'a qu'un match, à `0x326710`, dans l'image commune 92777/93847.
+- Une sonde D2RLoader temporaire, exécutée le 1er septembre 2026 sur le runtime
+  officiel D2R `3.3.93847` avec toute la pile BKVince active, a interrogé
+  `DataTableServiceV1` pendant `DataTablesLoaded`. Les banques Classic et LoD
+  exposent 137 lignes, RotW 147; les trois ont `rowSize=0x18C`. Sur tous les
+  Level IDs présents et les frontières `1/40/75/103/109`, l'unique octet qui
+  reproduit `Levels.txt → Act` est `row+0x0D`. Une entrée en partie BKVince a
+  ensuite observé `dataContext=3`, égal à la valeur ABI `Bank::Rotw=3`.
+  Preuve locale :
+  `analysis-cache/extended-act-level-ids-probe/evidence/20260901-1918/ruffneckk-extended-act-level-ids-probe.log`
+  (SHA-256 `F81B7F76F28D36CC173D7D7A8CB83888D9D026BAF0C5C5B801B40B8B5FC6BA6D`).
+- D2MOO 1.10f explique pourquoi cette surface existe :
+  `DRLG_GetActNoFromLevelId` applique les seuils fixes
+  `{1,40,75,103,109,1024}` et porte déjà le commentaire
+  `Lookup the act from Levels.txt`. Cette référence est strictement sémantique;
+  aucune adresse, structure ou ABI 32 bits n'est transférée.
+- Le contrat produit peut donc rester minimal : un hook propriétaire du seul
+  résolveur central, des caches immuables copiés après chaque révision de tables
+  et une sélection `dataContext 1..3 → Bank 1..3`. Avant de publier un cache,
+  la DLL doit vérifier le service API v4, `rowSize=0x18C`, les actes ancres et
+  chaque valeur `0..4`; `dataContext=0`, cache non prêt, ID absent ou valeur
+  invalide reprennent toujours l'original. Le nom du build reste diagnostique
+  et n'entre dans aucune allowlist.
+- Le produit final `0.1.0` ferme aussi le test hors plage du résolveur. Un
+  fixture TSV CRLF temporaire `Id=147 / Act=0`, construit sans modifier la
+  source BKVince, fait passer la banque RotW de 147 à 148 lignes. L'appel de
+  l'entrée native hookée journalise alors `Act index 0 (Act 1), data context 3,
+  source=Levels.txt`. Le fixture est ensuite retiré et le `levels.txt` runtime
+  retrouve byte-exact le SHA-256
+  `A46B5438164ADB1FB9540890103594EA48A79AFA2478CB6865D2E6DB5795EB04`.
+  Preuve locale :
+  `analysis-cache/extended-act-level-ids-product/evidence/20260901-1947-functional-fixture/ruffneckk-extended-act-level-ids.fixture.log`.

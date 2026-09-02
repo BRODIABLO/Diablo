@@ -252,6 +252,14 @@
       "notes": "Returns the active compiled data-table container with observed ABI DataTables* (uint8 dataContext). Its exact complete body asserts context<4 and then indexes the global table by context*16. Burn Damage Fix 2.2 uses the same contract for StatesTxt; ISC12 G4 now fingerprints it and rejects a preview D2S whose context byte at +0xF8 is outside 0..3 before any branch-B ItemStatCost lookup."
     },
     {
+      "rva": "0x326710",
+      "name": "DRLG_ResolveActFromLevelId",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; analysis-cache/extended-act-level-ids-probe/evidence/20260901-1918/ruffneckk-extended-act-level-ids-probe.log; analysis-cache/extended-act-level-ids-product/evidence/20260901-1947-functional-fixture/ruffneckk-extended-act-level-ids.fixture.log; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/Drlg/DrlgDrlg.cpp:854-872",
+      "notes": "Central act resolver with observed Windows x64 ABI uint8 (uint8 dataContext, int32 levelId). It obtains the context ActInfo vector through 0x3006E0, reads its count at DataTables+0x108, walks records backward with stride 0x8C, compares levelId against the signed range start at record+0x04 and returns the selected zero-based act index; an empty or unmatched vector returns zero. The governed index contains 113 direct calls. Its strict 48-byte entry signature is unique in the common 92777/93847 corpus. A D2R 3.3.93847 runtime probe with the complete active stack observed dataContext 3 in BKVince and independently proved through PluginSDK DataTableServiceV1 that all three compiled Levels banks use row size 0x18C and the unique Act byte at row+0x0D. Extended Act Level IDs hooks only this entry, validates the service ABI, row size and anchor acts on every table revision, copies bank-owned rows into plugin-owned immutable caches and falls back to the original whenever a context, row or Act value is unavailable or invalid. Its final 0.1.0 runtime fixture compiled a temporary RotW Levels row Id 147 / Act 0 and the hooked entry resolved it to Act index 0 from Levels.txt before byte-exact restoration. D2MOO supplies semantic provenance only and no legacy address, structure or ABI."
+    },
+    {
       "rva": "0x314070",
       "name": "DATATBLS_GetItemRecordFromItemCode",
       "kind": "function",

@@ -1063,6 +1063,66 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "ExtendedActLevelIds",
+                                                           "path":  "addons/ExtendedActLevelIds",
+                                                           "kind":  "directory",
+                                                           "meta":  {
+                                                                        "role":  "x-public-intermod-d2rloader-addon",
+                                                                        "summary":  "DLL autonome RuffnecKk qui résout l’acte des nouveaux Level IDs depuis Levels.txt au lieu des plages contiguës ActInfo, avec cache API v4 et fallback fail-closed.",
+                                                                        "agentAccess":  "read-write",
+                                                                        "status":  "experimental"
+                                                                    },
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "src",
+                                                                                "path":  "addons/ExtendedActLevelIds/src",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "CMakeLists.txt",
+                                                                                                     "path":  "addons/ExtendedActLevelIds/src/CMakeLists.txt",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "extended_act_level_ids_policy.hpp",
+                                                                                                     "path":  "addons/ExtendedActLevelIds/src/extended_act_level_ids_policy.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.cpp",
+                                                                                                     "path":  "addons/ExtendedActLevelIds/src/plugin.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "plugin.rc",
+                                                                                                     "path":  "addons/ExtendedActLevelIds/src/plugin.rc",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "policy_tests.cpp",
+                                                                                                     "path":  "addons/ExtendedActLevelIds/src/policy_tests.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "README.md",
+                                                                                "path":  "addons/ExtendedActLevelIds/README.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "ruffneckk-extended-act-level-ids.json",
+                                                                                "path":  "addons/ExtendedActLevelIds/ruffneckk-extended-act-level-ids.json",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "VALIDATION.md",
+                                                                                "path":  "addons/ExtendedActLevelIds/VALIDATION.md",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "FloatingDamage",
                                                            "path":  "addons/FloatingDamage",
                                                            "kind":  "directory",
@@ -20933,6 +20993,11 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "ruffneckk-extended-act-level-ids.json",
+                                                                                                     "path":  "data-BKVince/d2rloader/config/ruffneckk-extended-act-level-ids.json",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "transmogrify.toml",
                                                                                                      "path":  "data-BKVince/d2rloader/config/transmogrify.toml",
                                                                                                      "kind":  "file"
@@ -22329,6 +22394,11 @@
                                                                                                  {
                                                                                                      "name":  "MeleeSplash.dll",
                                                                                                      "path":  "data-BKVince/d2rloader/plugins/MeleeSplash.dll",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "d2rl-ruffneckk-extended-act-level-ids.dll",
+                                                                                                     "path":  "data-BKVince/d2rloader/plugins/d2rl-ruffneckk-extended-act-level-ids.dll",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {

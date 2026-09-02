@@ -150,15 +150,15 @@
     {
       "id": "extended-act-level-ids",
       "name": "Extended Act Level IDs",
-      "status": "paused",
+      "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/extended-act-level-ids-3.2.md",
-      "nextGate": "After the current RemoteStash proof gate, identify the 92777 ActInfo loader, native act-range structure, and every consumer before deciding whether a DLL is necessary.",
+      "nextGate": "Author a playable test area with an ID above 146 and Act=0, then validate transitions, town/start, waypoints, automap, quests, portals, save/reload, mouse/controller, solo, host and joiner before producing a public ZIP.",
       "include": [
         "Mission/extended-act-level-ids-3.2.md",
-        "data-BKVince/BKVince.mpq/ExtendedActLevelIds.json",
-        "data-BKVince/d2rloader/plugins/ExtendedActLevelIds-src/**",
-        "data-BKVince/d2rloader/plugins/ExtendedActLevelIds.dll"
+        "addons/ExtendedActLevelIds/**",
+        "data-BKVince/d2rloader/config/ruffneckk-extended-act-level-ids.json",
+        "data-BKVince/d2rloader/plugins/d2rl-ruffneckk-extended-act-level-ids.dll"
       ]
     },
     {
