@@ -1,0 +1,7 @@
+interface:
+  display_name: "Workspace Improvement Radar"
+  short_description: "Signaler les lacunes de méthode réellement démontrées"
+  default_prompt: "Utilise $workspace-improvement-radar pour déterminer si cette friction révèle une lacune qui justifie un nouveau skill."
+
+policy:
+  allow_implicit_invocation: true

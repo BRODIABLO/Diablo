@@ -351,6 +351,35 @@
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "workspace-improvement-radar",
+                                                                                "path":  ".agents/skills/workspace-improvement-radar",
+                                                                                "kind":  "directory",
+                                                                                "meta":  {
+                                                                                             "role":  "x-workspace-improvement-radar",
+                                                                                             "summary":  "Radar transversal qui signale uniquement les lacunes réutilisables et démontrées de méthode, de planning, de réflexion, d\u0027automatisation ou de validation lorsqu\u0027un nouveau skill constitue la plus petite correction durable.",
+                                                                                             "agentAccess":  "read-write"
+                                                                                         },
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "agents",
+                                                                                                     "path":  ".agents/skills/workspace-improvement-radar/agents",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "openai.yaml",
+                                                                                                                          "path":  ".agents/skills/workspace-improvement-radar/agents/openai.yaml",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "SKILL.md",
+                                                                                                     "path":  ".agents/skills/workspace-improvement-radar/SKILL.md",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
                                                                             }
                                                                         ]
                                                        }

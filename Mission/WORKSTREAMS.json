@@ -708,6 +708,7 @@
         ".agents/skills/d2rloader-plugin-incubation/agents/openai.yaml",
         ".agents/skills/d2rloader-plugin-incubation/references/incubation-checklist.md",
         ".agents/skills/plugin-architect/**",
+        ".agents/skills/workspace-improvement-radar/**",
         ".agents/skills/diablo-roadmap-release/references/release-checklist.md",
         ".agents/skills/diablo-git-checkpoint/scripts/inspect-checkpoint.mjs",
         "reverse-engineering/cheat-spawn.md",
