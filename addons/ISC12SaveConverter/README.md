@@ -9,7 +9,7 @@ Author: RuffnecKk
 ## Current status
 
 The offline codec, interactive console and standalone Windows executable are
-implemented. The 41-test suite proves byte-exact 9-to-12-to-9 round trips for a
+implemented. The 43-test suite proves byte-exact 9-to-12-to-9 round trips for a
 real standalone v105 item, complete characters and shared stashes using vanilla,
 BKVince and Yupgoolg data. Runtime qualification on D2R 3.3.93847 also loaded and
 saved converted BKVince and Yupgoolg characters under ISC12. This is a qualified
@@ -38,6 +38,7 @@ Interactive completion is explicit. The executable prints `SUCCESS` or
 `FAILED`, keeps errors and the exact output path visible, writes nothing after a
 failed preflight, and waits for Enter before closing. After success it also
 offers to open the output directory in Windows Explorer.
+The open-folder prompt accepts both `O` (letter) and `0` (zero).
 
 ## Mod schemas
 

@@ -735,7 +735,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/isc12-3.3.md",
-      "nextGate": "Tous les gates techniques ISC12 et ISC12 Save Converter sont fermés. Le convertisseur passe 41/41 et produit deux EXE byte-identiques de 94 638 592 octets, SHA-256 C388E52C…82B4D. Un personnage Yupgoolg propre passe 1 144 → 1 154 → 1 144 byte-exact, charge à Harrogath sous ISC12, survit à Save and Exit et sa sortie runtime repasse 12 → 9 → 12 byte-exact; son shared stash ferme aussi le round-trip. abc.d2s est écarté puisqu'il échoue sous le mod original sans ISC12. Le programme précise qu'ISC12 remplace tout codec ItemStatCost 9 bits du mod et ne coexiste jamais avec lui. Le prochain gate prépare les archives publiques conjointes, README hors ZIP, catalogue de hashes et publication. Aucun tag ni asset GitHub n'est encore autorisé.",
+      "nextGate": "Tous les gates techniques ISC12 et ISC12 Save Converter sont fermés. Le convertisseur passe 43/43 et produit deux EXE byte-identiques de 94 638 592 octets, SHA-256 B6D876B1…69B3F1. Un personnage Yupgoolg propre passe 1 144 → 1 154 → 1 144 byte-exact, charge à Harrogath sous ISC12, survit à Save and Exit et sa sortie runtime repasse 12 → 9 → 12 byte-exact; son shared stash ferme aussi le round-trip. abc.d2s est écarté puisqu'il échoue sous le mod original sans ISC12. Le programme précise qu'ISC12 remplace tout codec ItemStatCost 9 bits du mod et ne coexiste jamais avec lui. Le prochain gate prépare les archives publiques conjointes, README hors ZIP, catalogue de hashes et publication. Aucun tag ni asset GitHub n'est encore autorisé.",
       "include": [
         "Mission/isc12-3.3.md",
         "addons/ISC12/**",

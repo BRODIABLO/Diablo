@@ -54,7 +54,7 @@ export async function runCli(argv, io = console) {
 export async function promptForArguments(input = process.stdin, output = process.stdout) {
   const prompt = createInterface({ input, output });
   try {
-    output.write(`${USAGE.split('\n').slice(0, 4).join('\n')}\n\n`);
+    output.write(`${interactiveIntroduction()}\n\n`);
     output.write('1. D2R 9-bit -> ISC12 12-bit\n');
     output.write('2. ISC12 12-bit -> D2R 9-bit\n');
     const direction = (await prompt.question('Choose 1 or 2: ')).trim();
@@ -219,6 +219,12 @@ When loading converted saves, ISC12 replaces any mod-supplied D2R 9-bit
 ItemStatCost extension. The old 9-bit codec and ISC12 must not be loaded
 together. Restore the 9-bit codec and disable ISC12 after a downgrade.`;
 
+export function interactiveIntroduction() {
+  const usageMarker = '\n\nUsage:';
+  const markerIndex = USAGE.indexOf(usageMarker);
+  return markerIndex >= 0 ? USAGE.slice(0, markerIndex) : USAGE;
+}
+
 export async function main(argv = process.argv.slice(2), io = console) {
   const interactive = argv.length === 0;
   try {
@@ -251,9 +257,9 @@ async function finishInteractiveSuccess(outputDirectory) {
   process.stdout.write('\n=== SUCCESS ===\n');
   process.stdout.write(`Converted saves are in:\n${outputDirectory}\n\n`);
   const answer = (await waitForEnter(
-    'Type O and press Enter to open the output folder, or press Enter to close: ',
+    'Type O (letter) or 0 (zero), then press Enter to open the output folder; press Enter alone to close: ',
   )).trim().toLowerCase();
-  if (answer === 'o' && process.platform === 'win32') {
+  if (shouldOpenOutputDirectory(answer) && process.platform === 'win32') {
     const child = spawn('explorer.exe', [outputDirectory], {
       detached: true,
       stdio: 'ignore',
@@ -261,6 +267,11 @@ async function finishInteractiveSuccess(outputDirectory) {
     });
     child.unref();
   }
+}
+
+export function shouldOpenOutputDirectory(answer) {
+  const normalized = String(answer || '').trim().toLowerCase();
+  return normalized === 'o' || normalized === '0';
 }
 
 async function waitForEnter(message) {

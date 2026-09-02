@@ -6,9 +6,11 @@ import test from 'node:test';
 
 import {
   findCompanionSharedStashes,
+  interactiveIntroduction,
   parseArguments,
   runCli,
   runtimeInstructionsForTargetWidth,
+  shouldOpenOutputDirectory,
 } from './cli.mjs';
 
 test('parses the minimal public CLI contract', () => {
@@ -65,6 +67,13 @@ test('help returns a structured successful result', async () => {
   assert.match(lines.join('\n'), /Clean, unmodded D2R v105/);
 });
 
+test('interactive introduction keeps the complete wrapped description', () => {
+  const introduction = interactiveIntroduction();
+  assert.match(introduction, /Supports clean vanilla saves and\nmodded saves using matching mod data/);
+  assert.match(introduction, /Original files are never overwritten/);
+  assert.doesNotMatch(introduction, /Usage:/);
+});
+
 test('explains which item-stat codec must load converted saves', () => {
   const isc12 = runtimeInstructionsForTargetWidth(12).join('\n');
   assert.match(isc12, /ISC12 enabled/);
@@ -73,4 +82,12 @@ test('explains which item-stat codec must load converted saves', () => {
   const d2r9 = runtimeInstructionsForTargetWidth(9).join('\n');
   assert.match(d2r9, /restoring the mod's D2R 9-bit ItemStatCost codec/);
   assert.match(d2r9, /disabling ISC12/);
+});
+
+test('accepts both letter O and zero for opening the output folder', () => {
+  assert.equal(shouldOpenOutputDirectory('O'), true);
+  assert.equal(shouldOpenOutputDirectory('o'), true);
+  assert.equal(shouldOpenOutputDirectory('0'), true);
+  assert.equal(shouldOpenOutputDirectory(''), false);
+  assert.equal(shouldOpenOutputDirectory('open'), false);
 });
