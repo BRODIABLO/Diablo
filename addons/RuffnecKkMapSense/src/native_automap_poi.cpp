@@ -98,9 +98,16 @@ std::array<AutomapExitLabelDefinition, MaximumAutomapExitLabels>
 std::array<AutomapExitLabelDefinition, MaximumAutomapExitLabels>
     ExitDefinitionScratch{};
 std::size_t ExitDefinitionCount{};
-Detail::AutomapWaypointDefinitionCatalog<MaximumAutomapWaypointLabels>
+std::array<AutomapExitLabelDefinition, MaximumAutomapExitLabels>
+    ExternalExitDefinitions{};
+std::size_t ExternalExitDefinitionCount{};
+std::array<std::int32_t, MaximumAutomapExitLabels>
+    CompleteNativeExitOwners{};
+std::size_t CompleteNativeExitOwnerCount{};
+Detail::LayeredAutomapWaypointDefinitionCatalog<
+    MaximumAutomapWaypointLabels>
     WaypointDefinitions{};
-Detail::AutomapLevelDefinitionCatalog<MaximumAutomapLevelLabels>
+Detail::LayeredAutomapLevelDefinitionCatalog<MaximumAutomapLevelLabels>
     LevelDefinitions{};
 std::array<TrackedSpecialChestPreset, MaximumAutomapSpecialChestPresets>
     SpecialChestPresets{};
@@ -213,6 +220,98 @@ template <typename Function>
         && now - observed <= PoiSnapshotLifetimeMilliseconds;
 }
 
+[[nodiscard]] auto HasCompleteNativeExitOwner(
+        std::int32_t levelId,
+        std::int32_t additionalOwner = UnknownNavigationLevelId) noexcept
+        -> bool {
+    if (levelId == additionalOwner) return true;
+    for (std::size_t index = 0U;
+            index < CompleteNativeExitOwnerCount;
+            ++index) {
+        if (CompleteNativeExitOwners[index] == levelId) return true;
+    }
+    return false;
+}
+
+[[nodiscard]] auto HasExternalExitOwner(
+        std::span<const AutomapExitLabelDefinition> external,
+        std::int32_t levelId) noexcept -> bool {
+    for (const auto& definition : external) {
+        if (definition.sourceLevelId == levelId) return true;
+    }
+    return false;
+}
+
+[[nodiscard]] auto EffectiveExitDefinitionCount(
+        std::span<const AutomapExitLabelDefinition> external,
+        std::span<const AutomapExitLabelDefinition> native,
+        std::int32_t additionalCompleteOwner =
+            UnknownNavigationLevelId) noexcept -> std::size_t {
+    std::size_t count{};
+    for (const auto& definition : external) {
+        if (ShouldRetainExternalAutomapExit(
+                definition,
+                native,
+                HasCompleteNativeExitOwner(
+                    definition.sourceLevelId,
+                    additionalCompleteOwner))) {
+            ++count;
+        }
+    }
+    for (const auto& definition : native) {
+        if (HasCompleteNativeExitOwner(
+                definition.sourceLevelId,
+                additionalCompleteOwner)
+            || !HasExternalExitOwner(external, definition.sourceLevelId)) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+[[nodiscard]] auto BuildEffectiveExitDefinitionsLocked(
+        std::array<AutomapExitLabelDefinition,
+            MaximumAutomapExitLabels>& output,
+        std::size_t& outputCount) noexcept -> bool {
+    outputCount = 0U;
+    const auto external = std::span(
+        ExternalExitDefinitions.data(),
+        ExternalExitDefinitionCount);
+    const auto native = std::span(
+        ExitDefinitions.data(),
+        ExitDefinitionCount);
+    if (EffectiveExitDefinitionCount(external, native)
+            > output.size()) {
+        return false;
+    }
+    for (const auto& definition : external) {
+        if (!ShouldRetainExternalAutomapExit(
+                definition,
+                native,
+                HasCompleteNativeExitOwner(definition.sourceLevelId))) {
+            continue;
+        }
+        output[outputCount++] = definition;
+    }
+    for (const auto& definition : native) {
+        if (!HasCompleteNativeExitOwner(definition.sourceLevelId)
+            && HasExternalExitOwner(external, definition.sourceLevelId)) {
+            continue;
+        }
+        output[outputCount++] = definition;
+    }
+    return true;
+}
+
+void MarkCompleteNativeExitOwner(std::int32_t levelId) noexcept {
+    if (HasCompleteNativeExitOwner(levelId)
+        || CompleteNativeExitOwnerCount
+            >= CompleteNativeExitOwners.size()) {
+        return;
+    }
+    CompleteNativeExitOwners[CompleteNativeExitOwnerCount++] = levelId;
+}
+
 void ClearProjectionLocked() noexcept {
     ProjectedSnapshotCount = 0U;
     LastProjectionTick = 0U;
@@ -230,6 +329,8 @@ void ClearCurrentLevelLocked() noexcept {
 
 void ClearAllPoiLocked() noexcept {
     ExitDefinitionCount = 0U;
+    ExternalExitDefinitionCount = 0U;
+    CompleteNativeExitOwnerCount = 0U;
     WaypointDefinitions.Clear();
     LevelDefinitions.Clear();
     SpecialChestPresetCount = 0U;
@@ -578,11 +679,41 @@ void BuildExitGraphDistances(
 void ProjectExitLabelsLocked(
         const NativeAutomapPoiPass& pass,
         std::uint32_t mask,
-        std::size_t& count) noexcept {
-    if (!HasCollection(mask, AutomapPoiCollection::ExitLabels)) return;
+        std::size_t& count,
+        const NativeAutomapLayerCatalog* layers) noexcept {
+    if (!HasCollection(mask, AutomapPoiCollection::ExitLabels)
+        || layers == nullptr) {
+        return;
+    }
+    std::array<AutomapExitLabelDefinition, MaximumAutomapExitLabels>
+        effectiveDefinitions{};
+    std::size_t effectiveDefinitionCount{};
+    if (!BuildEffectiveExitDefinitionsLocked(
+            effectiveDefinitions,
+            effectiveDefinitionCount)) {
+        ProjectionRejected.fetch_add(1U, std::memory_order_relaxed);
+        return;
+    }
+    std::array<AutomapExitLabelDefinition, MaximumAutomapExitLabels>
+        layerDefinitions{};
+    std::size_t layerDefinitionCount{};
+    for (std::size_t index = 0U;
+            index < effectiveDefinitionCount;
+            ++index) {
+        const auto& definition = effectiveDefinitions[index];
+        // An exit's coordinates live in its source Level's map space. The
+        // target may deliberately be a dungeon on another native layer.
+        if (!NativeAutomapLevelsShareLayer(
+                *layers,
+                pass.currentLevelId,
+                definition.sourceLevelId)) {
+            continue;
+        }
+        layerDefinitions[layerDefinitionCount++] = definition;
+    }
     const auto definitions = std::span(
-        ExitDefinitions.data(),
-        ExitDefinitionCount);
+        layerDefinitions.data(),
+        layerDefinitionCount);
     std::array<std::int32_t, MaximumExitGraphNodes> graphNodes{};
     std::array<std::uint16_t, MaximumExitGraphNodes> graphDistances{};
     std::size_t graphNodeCount{};
@@ -690,12 +821,18 @@ void ProjectExitLabelsLocked(
 void ProjectWaypointLabelsLocked(
         const NativeAutomapPoiPass& pass,
         std::uint32_t mask,
-        std::size_t& count) noexcept {
-    if (!HasCollection(mask, AutomapPoiCollection::WaypointLabels)) return;
+        std::size_t& count,
+        const NativeAutomapLayerCatalog* layers) noexcept {
+    if (!HasCollection(mask, AutomapPoiCollection::WaypointLabels)
+        || layers == nullptr) {
+        return;
+    }
     for (const auto& definition : WaypointDefinitions.Definitions()) {
         if (count >= ProjectedSnapshots.size()) return;
-        if (RevealActForLevelId(definition.levelId)
-                != RevealActForLevelId(pass.currentLevelId)) {
+        if (!NativeAutomapLevelsShareLayer(
+                *layers,
+                pass.currentLevelId,
+                definition.levelId)) {
             continue;
         }
         NavigationNativePoint client{};
@@ -735,11 +872,27 @@ void ProjectWaypointLabelsLocked(
 }
 
 [[nodiscard]] auto HasExactExitLabelLocked(
-        std::int32_t levelId) noexcept -> bool {
-    for (std::size_t index = 0U; index < ExitDefinitionCount; ++index) {
-        const auto& definition = ExitDefinitions[index];
-        if (definition.sourceLevelId == levelId
-            || definition.targetLevelId == levelId) {
+        std::int32_t levelId,
+        std::int32_t currentLevelId,
+        const NativeAutomapLayerCatalog& layers) noexcept -> bool {
+    std::array<AutomapExitLabelDefinition, MaximumAutomapExitLabels>
+        effectiveDefinitions{};
+    std::size_t effectiveDefinitionCount{};
+    if (!BuildEffectiveExitDefinitionsLocked(
+            effectiveDefinitions,
+            effectiveDefinitionCount)) {
+        return false;
+    }
+    for (std::size_t index = 0U;
+            index < effectiveDefinitionCount;
+            ++index) {
+        const auto& definition = effectiveDefinitions[index];
+        if (NativeAutomapLevelsShareLayer(
+                layers,
+                currentLevelId,
+                definition.sourceLevelId)
+            && (definition.sourceLevelId == levelId
+                || definition.targetLevelId == levelId)) {
             return true;
         }
     }
@@ -749,19 +902,28 @@ void ProjectWaypointLabelsLocked(
 void ProjectLevelLabelsLocked(
         const NativeAutomapPoiPass& pass,
         std::uint32_t mask,
-        std::size_t& count) noexcept {
-    if (!HasCollection(mask, AutomapPoiCollection::ExitLabels)) return;
+        std::size_t& count,
+        const NativeAutomapLayerCatalog* layers) noexcept {
+    if (!HasCollection(mask, AutomapPoiCollection::ExitLabels)
+        || layers == nullptr) {
+        return;
+    }
     for (const auto& definition : LevelDefinitions.Definitions()) {
         if (count >= ProjectedSnapshots.size()) return;
-        if (RevealActForLevelId(definition.levelId)
-                != RevealActForLevelId(pass.currentLevelId)) {
+        if (!NativeAutomapLevelsShareLayer(
+                *layers,
+                pass.currentLevelId,
+                definition.levelId)) {
             continue;
         }
         if (!ShouldProjectAutomapLevelLabel(
                 definition.levelId,
                 pass.currentLevelId,
                 HasExactWaypointLabelLocked(definition.levelId),
-                HasExactExitLabelLocked(definition.levelId))) {
+                HasExactExitLabelLocked(
+                    definition.levelId,
+                    pass.currentLevelId,
+                    *layers))) {
             continue;
         }
         NavigationNativePoint client{};
@@ -1304,6 +1466,9 @@ auto PublishNativeAutomapExitLabels(
     if (SessionGeneration != sessionGeneration) {
         return false;
     }
+    // Empty native captures mean "not proved yet", not "the generated atlas
+    // owner does not exist". Preserve both layers byte-for-byte.
+    if (definitionCount == 0U) return true;
     // Build a complete replacement before publishing it. This is deliberately
     // owner-based, not stable-id based: native evidence can move a doorway by
     // a few subtiles between readiness passes, and retaining the older sample
@@ -1326,6 +1491,16 @@ auto PublishNativeAutomapExitLabels(
             ExitDefinitionScratch.begin() + replacementCount);
         replacementCount += definitionCount;
     }
+    const auto external = std::span(
+        ExternalExitDefinitions.data(),
+        ExternalExitDefinitionCount);
+    const auto replacement = std::span(
+        ExitDefinitionScratch.data(),
+        replacementCount);
+    if (EffectiveExitDefinitionCount(external, replacement, levelId)
+            > MaximumAutomapExitLabels) {
+        return false;
+    }
     if (replacementCount != 0U) {
         std::copy_n(
             ExitDefinitionScratch.begin(),
@@ -1333,6 +1508,7 @@ auto PublishNativeAutomapExitLabels(
             ExitDefinitions.begin());
     }
     ExitDefinitionCount = replacementCount;
+    MarkCompleteNativeExitOwner(levelId);
     ++Revision;
     ClearProjectionLocked();
     ExitDefinitionsPublished.fetch_add(
@@ -1358,6 +1534,7 @@ auto MergeNativeAutomapExitLabelFragments(
     }
     StateLockGuard lock(true);
     if (SessionGeneration != sessionGeneration) return false;
+    if (definitionCount == 0U) return true;
 
     std::size_t replacementCount{};
     for (std::size_t existing = 0U;
@@ -1434,6 +1611,16 @@ auto MergeNativeAutomapExitLabelFragments(
         }
     }
 
+    const auto external = std::span(
+        ExternalExitDefinitions.data(),
+        ExternalExitDefinitionCount);
+    const auto replacement = std::span(
+        ExitDefinitionScratch.data(),
+        replacementCount);
+    if (EffectiveExitDefinitionCount(external, replacement)
+            > MaximumAutomapExitLabels) {
+        return false;
+    }
     if (replacementCount != 0U) {
         std::copy_n(
             ExitDefinitionScratch.begin(),
@@ -1449,11 +1636,11 @@ auto MergeNativeAutomapExitLabelFragments(
     return true;
 }
 
-auto ReplaceNativeAutomapExitLabels(
+auto ReplaceExternalAutomapExitLabels(
         std::uint64_t sessionGeneration,
         const AutomapExitLabelDefinition* definitions,
         std::size_t definitionCount) noexcept -> bool {
-    if (definitionCount > ExitDefinitions.size()
+    if (definitionCount > ExternalExitDefinitions.size()
             || (definitionCount != 0U && definitions == nullptr)) {
         return false;
     }
@@ -1465,10 +1652,25 @@ auto ReplaceNativeAutomapExitLabels(
     }
     StateLockGuard lock(true);
     if (SessionGeneration != sessionGeneration) return false;
-    if (definitionCount != 0U) {
-        std::copy_n(definitions, definitionCount, ExitDefinitions.begin());
+    const auto external = definitionCount == 0U
+        ? std::span<const AutomapExitLabelDefinition>{}
+        : std::span<const AutomapExitLabelDefinition>{
+            definitions,
+            definitionCount};
+    const auto native = std::span(
+        ExitDefinitions.data(),
+        ExitDefinitionCount);
+    if (EffectiveExitDefinitionCount(external, native)
+            > MaximumAutomapExitLabels) {
+        return false;
     }
-    ExitDefinitionCount = definitionCount;
+    if (definitionCount != 0U) {
+        std::copy_n(
+            definitions,
+            definitionCount,
+            ExternalExitDefinitions.begin());
+    }
+    ExternalExitDefinitionCount = definitionCount;
     ++Revision;
     ClearProjectionLocked();
     ExitDefinitionsPublished.fetch_add(
@@ -1495,12 +1697,15 @@ auto PublishNativeAutomapWaypointLabels(
     }
     StateLockGuard lock(true);
     if (SessionGeneration != sessionGeneration) return false;
+    if (definitionCount == 0U) return true;
     const auto incoming = definitionCount == 0U
         ? std::span<const AutomapWaypointLabelDefinition>{}
         : std::span<const AutomapWaypointLabelDefinition>{
             definitions,
             definitionCount};
-    if (!WaypointDefinitions.ReplaceOwner(levelId, incoming)) return false;
+    if (!WaypointDefinitions.PublishNativeOwner(levelId, incoming)) {
+        return false;
+    }
     ++Revision;
     ClearProjectionLocked();
     return true;
@@ -1524,18 +1729,19 @@ auto PublishNativeAutomapLevelLabels(
     }
     StateLockGuard lock(true);
     if (SessionGeneration != sessionGeneration) return false;
+    if (definitionCount == 0U) return true;
     const auto incoming = definitionCount == 0U
         ? std::span<const AutomapLevelLabelDefinition>{}
         : std::span<const AutomapLevelLabelDefinition>{
             definitions,
             definitionCount};
-    if (!LevelDefinitions.ReplaceOwner(levelId, incoming)) return false;
+    if (!LevelDefinitions.PublishNativeOwner(levelId, incoming)) return false;
     ++Revision;
     ClearProjectionLocked();
     return true;
 }
 
-auto ReplaceNativeAutomapWaypointLabels(
+auto ReplaceExternalAutomapWaypointLabels(
         std::uint64_t sessionGeneration,
         const AutomapWaypointLabelDefinition* definitions,
         std::size_t definitionCount) noexcept -> bool {
@@ -1562,7 +1768,40 @@ auto ReplaceNativeAutomapWaypointLabels(
         : std::span<const AutomapWaypointLabelDefinition>{
             definitions,
             definitionCount};
-    if (!WaypointDefinitions.ReplaceAll(incoming)) return false;
+    if (!WaypointDefinitions.ReplaceExternal(incoming)) return false;
+    ++Revision;
+    ClearProjectionLocked();
+    return true;
+}
+
+auto ReplaceExternalAutomapLevelLabels(
+        std::uint64_t sessionGeneration,
+        const AutomapLevelLabelDefinition* definitions,
+        std::size_t definitionCount) noexcept -> bool {
+    if (definitionCount > MaximumAutomapLevelLabels
+            || (definitionCount != 0U && definitions == nullptr)) {
+        return false;
+    }
+    for (std::size_t index = 0U; index < definitionCount; ++index) {
+        if (definitions[index].levelId <= 0
+                || definitions[index].subtileX < 0
+                || definitions[index].subtileY < 0) {
+            return false;
+        }
+        for (std::size_t earlier = 0U; earlier < index; ++earlier) {
+            if (definitions[earlier].levelId == definitions[index].levelId) {
+                return false;
+            }
+        }
+    }
+    StateLockGuard lock(true);
+    if (SessionGeneration != sessionGeneration) return false;
+    const auto incoming = definitionCount == 0U
+        ? std::span<const AutomapLevelLabelDefinition>{}
+        : std::span<const AutomapLevelLabelDefinition>{
+            definitions,
+            definitionCount};
+    if (!LevelDefinitions.ReplaceExternal(incoming)) return false;
     ++Revision;
     ClearProjectionLocked();
     return true;
@@ -1748,9 +1987,10 @@ void ObserveNativeAutomapPoiPass(
     }
 
     std::size_t count{};
-    ProjectExitLabelsLocked(pass, mask, count);
-    ProjectWaypointLabelsLocked(pass, mask, count);
-    ProjectLevelLabelsLocked(pass, mask, count);
+    const auto nativeLayers = AcquireNativeAutomapLayerCatalog();
+    ProjectExitLabelsLocked(pass, mask, count, nativeLayers.get());
+    ProjectWaypointLabelsLocked(pass, mask, count, nativeLayers.get());
+    ProjectLevelLabelsLocked(pass, mask, count, nativeLayers.get());
     ProjectTrackedObjectsLocked(pass, mask, count);
     ProjectSpecialChestPresetsLocked(pass, mask, count);
     ProjectedSnapshotCount = count;
@@ -1783,6 +2023,13 @@ void ObserveNativeAutomapPoiPass(
         if (changed && (LastProjectionDiagnosticTick == 0U
                 || now < LastProjectionDiagnosticTick
                 || now - LastProjectionDiagnosticTick >= 100U)) {
+            const auto effectiveExitCount = EffectiveExitDefinitionCount(
+                std::span(
+                    ExternalExitDefinitions.data(),
+                    ExternalExitDefinitionCount),
+                std::span(
+                    ExitDefinitions.data(),
+                    ExitDefinitionCount));
             char message[384]{};
             std::snprintf(
                 message,
@@ -1790,7 +2037,7 @@ void ObserveNativeAutomapPoiPass(
                 "MapSense label projection: session=%llu level=%d definitions=exits/%zu-waypoints/%zu-levels/%zu visible=exits/%zu-waypoints/%zu-levels/%zu clip=%d,%d,%d,%d.",
                 static_cast<unsigned long long>(SessionGeneration),
                 pass.currentLevelId,
-                ExitDefinitionCount,
+                effectiveExitCount,
                 WaypointDefinitions.Definitions().size(),
                 LevelDefinitions.Definitions().size(),
                 visibleExits,

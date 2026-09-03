@@ -1,6 +1,7 @@
 #include "external_label_provider.hpp"
 
 #include "external_atlas_cache.hpp"
+#include "mapsense_data_catalog.hpp"
 #include "native_automap_poi.hpp"
 
 #include <D2RLPlugin/api.h>
@@ -35,13 +36,13 @@ namespace RuffnecKk::MapSense {
 namespace {
 
 constexpr wchar_t HelperFileName[] = L"RuffnecKkMapSenseMapgen.exe";
-constexpr std::uint32_t ProtocolVersion = 1U;
+constexpr std::uint32_t ProtocolVersion = 3U;
 constexpr std::size_t MaximumResponseBytes = 2U * 1'024U * 1'024U;
 constexpr std::size_t MaximumAtlasLevels = ExternalAtlasLevelCapacity;
 constexpr std::size_t MaximumAtlasExits = ExternalAtlasEdgeCapacity;
 constexpr std::size_t MaximumAtlasWaypoints = 512U;
+constexpr std::size_t MaximumAtlasPortals = 64U;
 constexpr std::size_t MaximumWitnessRooms = 4'096U;
-constexpr std::uint32_t HelperTimeoutMilliseconds = 5'000U;
 
 constexpr std::size_t LevelFirstRoomOffset = 0x10;
 constexpr std::size_t LevelPositionXOffset = 0x24;
@@ -55,6 +56,7 @@ constexpr std::int32_t SubtilesPerGameTile = 5;
 constexpr std::uint32_t ExternalExitStableType = 5U;
 constexpr std::uint32_t ExternalWaypointStableType = 2U;
 constexpr std::uint32_t ExternalLevelStableType = 6U;
+constexpr std::uint32_t ExternalPortalStableType = 7U;
 
 struct RoomRectangle final {
     std::int32_t x{};
@@ -89,12 +91,28 @@ struct AtlasWaypoint final {
     std::int32_t classId{};
 };
 
+struct AtlasPortal final {
+    std::int32_t sourceLevelId{};
+    std::int32_t targetLevelId{};
+    std::int32_t subtileX{};
+    std::int32_t subtileY{};
+    std::int32_t classId{};
+};
+
 struct ParsedAtlas final {
     std::vector<AtlasLevel> levels;
     std::vector<AtlasExit> exits;
     std::vector<AtlasWaypoint> waypoints;
+    std::vector<AtlasPortal> portals;
     std::vector<RoomRectangle> witnessRooms;
     double helperElapsedMilliseconds{};
+};
+
+struct AtlasPublication final {
+    std::vector<std::int32_t> visibleLevels;
+    std::vector<AutomapExitLabelDefinition> exits;
+    std::vector<AutomapWaypointLabelDefinition> waypoints;
+    std::vector<AutomapLevelLabelDefinition> levels;
 };
 
 struct Request final {
@@ -106,17 +124,23 @@ struct Request final {
     std::int32_t currentLevelId{};
     std::int32_t currentOriginSubtileX{};
     std::int32_t currentOriginSubtileY{};
+    std::uint64_t dataFingerprint{};
     std::vector<RoomRectangle> currentRooms;
+    std::shared_ptr<const MapSenseDataCatalog> dataCatalog{};
 };
 
-struct RequestKey final {
-    std::uint64_t sessionGeneration{};
-    std::uint32_t seed{};
-    std::uint8_t difficulty{};
-    std::int32_t act{};
-    std::int32_t currentLevelId{};
+using RequestKey = ExternalLabelProviderRequestIdentity;
 
-    [[nodiscard]] auto operator==(const RequestKey&) const -> bool = default;
+enum class GeometryPreparationResult : std::uint8_t {
+    Ready,
+    Failed,
+    Cancelled,
+};
+
+struct HelperCommandResult final {
+    bool succeeded{};
+    bool timedOut{};
+    bool cancelled{};
 };
 
 struct NativeLevelWitness final {
@@ -172,9 +196,14 @@ bool StopRequested{};
 std::optional<Request> PendingRequest;
 std::optional<RequestKey> InFlightRequest;
 std::optional<RequestKey> PublishedRequest;
+std::array<RequestKey, ExternalAtlasLevelCapacity> FailedRequests{};
+std::size_t FailedRequestCount{};
 std::uint64_t LatestSerial{};
 std::uint64_t ActiveSessionGeneration{};
 HANDLE ActiveChildProcess{};
+ExternalLabelProviderOperation ActiveChildOperation{
+    ExternalLabelProviderOperation::None};
+bool ActiveChildCancellationRequested{};
 std::filesystem::path HelperPath;
 std::filesystem::path GeometryCacheRoot;
 ExternalLabelAtlasResultCallback ResultCallback{};
@@ -188,11 +217,70 @@ std::atomic_uint64_t AtlasesPublished{};
 std::atomic_uint64_t StaleResponses{};
 std::atomic_uint64_t FailedResponses{};
 std::atomic_uint64_t Timeouts{};
+std::atomic_uint64_t LabelTimeouts{};
+std::atomic_uint64_t GeometryTimeouts{};
+std::atomic_uint64_t PrimaryCancellations{};
+std::atomic_uint64_t PrewarmCancellations{};
 std::atomic_uint64_t GeometryCacheHits{};
+std::atomic_uint64_t GeometryCacheMisses{};
+std::atomic_uint64_t GeometryCacheInvalid{};
 std::atomic_uint64_t GeometryAtlasesGenerated{};
 std::atomic_uint64_t GeometryFailures{};
 std::atomic_uint64_t GeometrySnapshotsPublished{};
 std::atomic_uint64_t PublishedGeometryCells{};
+std::atomic_uint32_t ActiveOperationCode{};
+std::atomic_uint32_t ActiveOperationSeed{};
+std::atomic_int32_t ActiveOperationAct{-1};
+
+[[nodiscard]] auto RequestIsCurrentLocked(
+        const Request& request) noexcept -> bool {
+    return !StopRequested && request.serial == LatestSerial
+        && request.sessionGeneration == ActiveSessionGeneration;
+}
+
+void CancelActiveChildLocked() noexcept {
+    if (ActiveChildProcess == nullptr) return;
+    ActiveChildCancellationRequested = true;
+    (void)TerminateProcess(ActiveChildProcess, ERROR_CANCELLED);
+}
+
+void RecordHelperCommandResult(
+        ExternalLabelProviderOperation operation,
+        const HelperCommandResult& result) noexcept {
+    if (result.timedOut) {
+        Timeouts.fetch_add(1U, std::memory_order_relaxed);
+        if (operation == ExternalLabelProviderOperation::Labels) {
+            LabelTimeouts.fetch_add(1U, std::memory_order_relaxed);
+        } else {
+            GeometryTimeouts.fetch_add(1U, std::memory_order_relaxed);
+        }
+    }
+    if (!result.cancelled) return;
+    if (operation == ExternalLabelProviderOperation::PrewarmGeometry) {
+        PrewarmCancellations.fetch_add(1U, std::memory_order_relaxed);
+    } else {
+        PrimaryCancellations.fetch_add(1U, std::memory_order_relaxed);
+    }
+}
+
+[[nodiscard]] auto ContainsFailedRequestLocked(
+        const RequestKey& key) noexcept -> bool {
+    return std::find(
+        FailedRequests.begin(),
+        FailedRequests.begin()
+            + static_cast<std::ptrdiff_t>(FailedRequestCount),
+        key)
+        != FailedRequests.begin()
+            + static_cast<std::ptrdiff_t>(FailedRequestCount);
+}
+
+void RememberFailedRequestLocked(const RequestKey& key) noexcept {
+    if (ContainsFailedRequestLocked(key)
+        || FailedRequestCount >= FailedRequests.size()) {
+        return;
+    }
+    FailedRequests[FailedRequestCount++] = key;
+}
 
 [[nodiscard]] auto KeyFor(const Request& request) noexcept -> RequestKey {
     return {
@@ -201,6 +289,7 @@ std::atomic_uint64_t PublishedGeometryCells{};
         .difficulty = request.difficulty,
         .act = request.act,
         .currentLevelId = request.currentLevelId,
+        .dataFingerprint = request.dataFingerprint,
     };
 }
 
@@ -293,12 +382,13 @@ std::atomic_uint64_t PublishedGeometryCells{};
 [[nodiscard]] auto CaptureRequest(
         std::uint64_t sessionGeneration,
         const ClientLevelView& current,
+        std::int32_t resolvedAct,
+        std::shared_ptr<const MapSenseDataCatalog> dataCatalog,
         Request& output) noexcept -> bool {
     output = {};
-    const auto act = RevealActForLevelId(current.levelId);
     if (sessionGeneration == 0U || current.level == nullptr
         || current.drlg == nullptr || current.levelId <= 0
-        || current.difficulty > 2U || act < 0
+        || current.difficulty > 2U || resolvedAct < 0 || resolvedAct >= 5
         || DeriveDrlgStartSeed(current.mapSeed) != current.drlgStartSeed) {
         return false;
     }
@@ -307,15 +397,18 @@ std::atomic_uint64_t PublishedGeometryCells{};
     output.sessionGeneration = sessionGeneration;
     output.seed = current.mapSeed;
     output.difficulty = current.difficulty;
-    output.act = act;
+    output.act = resolvedAct;
     output.currentLevelId = current.levelId;
     output.currentOriginSubtileX = witness.originSubtileX;
     output.currentOriginSubtileY = witness.originSubtileY;
+    output.dataFingerprint = dataCatalog != nullptr
+        ? dataCatalog->AtlasDataFingerprint() : 0U;
     try {
         output.currentRooms.assign(
             witness.rooms.begin(),
             witness.rooms.begin()
                 + static_cast<std::ptrdiff_t>(witness.roomCount));
+        output.dataCatalog = std::move(dataCatalog);
     } catch (...) {
         output = {};
         return false;
@@ -349,12 +442,14 @@ std::atomic_uint64_t PublishedGeometryCells{};
 
 [[nodiscard]] auto RunHelperCommand(
         std::wstring_view arguments,
+        const Request& request,
+        std::int32_t operationAct,
+        ExternalLabelProviderOperation operation,
         std::string& output,
-        bool& timedOut,
         const std::filesystem::path* workingDirectoryOverride = nullptr) noexcept
-        -> bool {
+        -> HelperCommandResult {
     output.clear();
-    timedOut = false;
+    HelperCommandResult result{};
     SECURITY_ATTRIBUTES security{
         .nLength = sizeof(SECURITY_ATTRIBUTES),
         .lpSecurityDescriptor = nullptr,
@@ -362,12 +457,12 @@ std::atomic_uint64_t PublishedGeometryCells{};
     };
     HANDLE readRaw{};
     HANDLE writeRaw{};
-    if (!CreatePipe(&readRaw, &writeRaw, &security, 0U)) return false;
+    if (!CreatePipe(&readRaw, &writeRaw, &security, 0U)) return result;
     UniqueHandle readPipe(readRaw);
     UniqueHandle writePipe(writeRaw);
     if (!SetHandleInformation(
             readPipe.Get(), HANDLE_FLAG_INHERIT, 0U)) {
-        return false;
+        return result;
     }
 
     std::wstring command;
@@ -379,7 +474,7 @@ std::atomic_uint64_t PublishedGeometryCells{};
             ? workingDirectoryOverride->wstring()
             : HelperPath.parent_path().wstring();
     } catch (...) {
-        return false;
+        return result;
     }
     std::vector<wchar_t> mutableCommand(command.begin(), command.end());
     mutableCommand.push_back(L'\0');
@@ -391,18 +486,22 @@ std::atomic_uint64_t PublishedGeometryCells{};
     startup.hStdOutput = writePipe.Get();
     startup.hStdError = writePipe.Get();
     PROCESS_INFORMATION processInfo{};
+    const auto priorityClass =
+        operation == ExternalLabelProviderOperation::PrewarmGeometry
+        ? IDLE_PRIORITY_CLASS
+        : BELOW_NORMAL_PRIORITY_CLASS;
     if (!CreateProcessW(
             HelperPath.c_str(),
             mutableCommand.data(),
             nullptr,
             nullptr,
             TRUE,
-            CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS,
+            CREATE_NO_WINDOW | priorityClass,
             nullptr,
             workingDirectory.c_str(),
             &startup,
             &processInfo)) {
-        return false;
+        return result;
     }
     UniqueHandle process(processInfo.hProcess);
     UniqueHandle processThread(processInfo.hThread);
@@ -411,7 +510,14 @@ std::atomic_uint64_t PublishedGeometryCells{};
     {
         std::scoped_lock lock(StateMutex);
         ActiveChildProcess = process.Get();
-        if (StopRequested) TerminateProcess(process.Get(), ERROR_CANCELLED);
+        ActiveChildOperation = operation;
+        ActiveChildCancellationRequested = false;
+        ActiveOperationCode.store(
+            static_cast<std::uint32_t>(operation),
+            std::memory_order_release);
+        ActiveOperationSeed.store(request.seed, std::memory_order_release);
+        ActiveOperationAct.store(operationAct, std::memory_order_release);
+        if (!RequestIsCurrentLocked(request)) CancelActiveChildLocked();
     }
 
     const auto started = GetTickCount64();
@@ -430,41 +536,98 @@ std::atomic_uint64_t PublishedGeometryCells{};
             success = false;
             break;
         }
-        if (GetTickCount64() - started > HelperTimeoutMilliseconds) {
-            timedOut = true;
+        if (GetTickCount64() - started
+            > ExternalLabelProviderOperationTimeoutMilliseconds(operation)) {
+            result.timedOut = true;
             TerminateProcess(process.Get(), ERROR_TIMEOUT);
             WaitForSingleObject(process.Get(), 1'000U);
             success = false;
             break;
         }
     }
+    bool cancellationRequested{};
     {
         std::scoped_lock lock(StateMutex);
-        if (ActiveChildProcess == process.Get()) ActiveChildProcess = nullptr;
+        if (ActiveChildProcess == process.Get()) {
+            cancellationRequested = ActiveChildCancellationRequested;
+            ActiveChildProcess = nullptr;
+            ActiveChildOperation = ExternalLabelProviderOperation::None;
+            ActiveChildCancellationRequested = false;
+            ActiveOperationCode.store(
+                static_cast<std::uint32_t>(
+                    ExternalLabelProviderOperation::None),
+                std::memory_order_release);
+            ActiveOperationSeed.store(0U, std::memory_order_release);
+            ActiveOperationAct.store(-1, std::memory_order_release);
+        }
     }
     DWORD exitCode{};
-    if (!GetExitCodeProcess(process.Get(), &exitCode)
-        || exitCode != 0U) {
+    const bool hasExitCode = GetExitCodeProcess(process.Get(), &exitCode)
+        != FALSE;
+    result.cancelled = cancellationRequested
+        || (hasExitCode && exitCode == ERROR_CANCELLED);
+    if (!hasExitCode || exitCode != 0U || result.cancelled) {
         success = false;
     }
-    return success;
+    result.succeeded = success;
+    return result;
+}
+
+[[nodiscard]] auto AppendHelperDataSourceArguments(
+        const Request& request,
+        std::wstring& arguments) noexcept -> bool {
+    if (request.dataCatalog == nullptr) return true;
+    try {
+        const auto appendRoots = [&arguments](
+                std::wstring_view option,
+                std::span<const std::filesystem::path> roots) {
+            for (const auto& root : roots) {
+                if (root.empty() || !root.is_absolute()) return false;
+                const auto normalized = root.lexically_normal().wstring();
+                if (normalized.empty()
+                    || normalized.find(L'"') != std::wstring::npos) {
+                    return false;
+                }
+                arguments += L" ";
+                arguments += option;
+                arguments += L" \"";
+                arguments += normalized;
+                arguments += L"\"";
+            }
+            return true;
+        };
+        return appendRoots(
+                L"--excel-root",
+                request.dataCatalog->ActiveExcelDirectories())
+            && appendRoots(
+                L"--tiles-root",
+                request.dataCatalog->ActiveTileDirectories());
+    } catch (...) {
+        return false;
+    }
 }
 
 [[nodiscard]] auto RunLabelHelper(
         const Request& request,
-        std::string& output,
-        bool& timedOut) noexcept -> bool {
+        std::string& output) noexcept -> HelperCommandResult {
     try {
-        const auto arguments = L"labels "
+        auto arguments = L"labels "
             + std::to_wstring(request.seed) + L" "
             + std::to_wstring(request.difficulty) + L" "
             + std::to_wstring(request.act) + L" "
             + std::to_wstring(request.currentLevelId);
-        return RunHelperCommand(arguments, output, timedOut);
+        if (!AppendHelperDataSourceArguments(request, arguments)) {
+            return {};
+        }
+        return RunHelperCommand(
+            arguments,
+            request,
+            request.act,
+            ExternalLabelProviderOperation::Labels,
+            output);
     } catch (...) {
         output.clear();
-        timedOut = false;
-        return false;
+        return {};
     }
 }
 
@@ -492,12 +655,20 @@ std::atomic_uint64_t PublishedGeometryCells{};
 [[nodiscard]] auto PrepareGeometryCacheAct(
         const Request& request,
         std::uint8_t act,
-        ExternalAtlasGeometry* output = nullptr) noexcept -> bool {
-    if (GeometryCacheRoot.empty() || act >= 5U) return false;
+        ExternalLabelProviderOperation operation,
+        ExternalAtlasGeometry* output = nullptr) noexcept
+        -> GeometryPreparationResult {
+    if (GeometryCacheRoot.empty() || act >= 5U
+        || (operation != ExternalLabelProviderOperation::PrimaryGeometry
+            && operation
+                != ExternalLabelProviderOperation::PrewarmGeometry)) {
+        return GeometryPreparationResult::Failed;
+    }
     const ExternalAtlasCacheKey key{
         .seed = request.seed,
         .difficulty = request.difficulty,
         .act = act,
+        .dataFingerprint = request.dataFingerprint,
     };
     ExternalAtlasGeometry cached;
     const auto cacheResult = LoadExternalAtlasGeometryCache(
@@ -507,41 +678,55 @@ std::atomic_uint64_t PublishedGeometryCells{};
     if (cacheResult == ExternalAtlasCacheResult::Hit) {
         GeometryCacheHits.fetch_add(1U, std::memory_order_relaxed);
         if (output != nullptr) *output = std::move(cached);
-        return true;
+        return GeometryPreparationResult::Ready;
+    }
+    if (cacheResult == ExternalAtlasCacheResult::Miss) {
+        GeometryCacheMisses.fetch_add(1U, std::memory_order_relaxed);
+    } else if (cacheResult == ExternalAtlasCacheResult::Invalid) {
+        GeometryCacheInvalid.fetch_add(1U, std::memory_order_relaxed);
     }
 
     std::filesystem::path target;
     if (!BuildExternalAtlasCachePath(GeometryCacheRoot, key, target)) {
         GeometryFailures.fetch_add(1U, std::memory_order_relaxed);
-        return false;
+        return GeometryPreparationResult::Failed;
     }
     std::error_code error;
     std::filesystem::create_directories(target.parent_path(), error);
     if (error) {
         GeometryFailures.fetch_add(1U, std::memory_order_relaxed);
-        return false;
+        return GeometryPreparationResult::Failed;
     }
     auto temporary = target;
     try {
         temporary += L".generated-" + std::to_wstring(GetCurrentProcessId())
             + L"-" + std::to_wstring(GetTickCount64());
-        const auto arguments = L"geometry-binary "
+        auto arguments = L"geometry-binary "
             + std::to_wstring(request.seed) + L" "
             + std::to_wstring(request.difficulty) + L" "
             + std::to_wstring(act) + L" \""
             + temporary.filename().wstring() + L"\"";
+        if (!AppendHelperDataSourceArguments(request, arguments)) {
+            GeometryFailures.fetch_add(1U, std::memory_order_relaxed);
+            return GeometryPreparationResult::Failed;
+        }
         std::string diagnostics;
-        bool timedOut{};
         const auto generationDirectory = temporary.parent_path();
-        const auto launched = RunHelperCommand(
+        const auto helperResult = RunHelperCommand(
             arguments,
+            request,
+            static_cast<std::int32_t>(act),
+            operation,
             diagnostics,
-            timedOut,
             &generationDirectory);
-        if (timedOut) Timeouts.fetch_add(1U, std::memory_order_relaxed);
+        RecordHelperCommandResult(operation, helperResult);
+        if (helperResult.cancelled) {
+            std::filesystem::remove(temporary, error);
+            return GeometryPreparationResult::Cancelled;
+        }
         std::vector<std::uint8_t> bytes;
         ExternalAtlasGeometry generated;
-        const auto valid = launched
+        const auto valid = helperResult.succeeded
             && ReadGeometryArtifact(temporary, bytes)
             && ParseExternalAtlasGeometry(
                 bytes,
@@ -566,15 +751,15 @@ std::atomic_uint64_t PublishedGeometryCells{};
                     request.seed,
                     static_cast<unsigned>(request.difficulty),
                     static_cast<unsigned>(act),
-                    static_cast<unsigned>(launched),
-                    static_cast<unsigned>(timedOut),
+                    static_cast<unsigned>(helperResult.succeeded),
+                    static_cast<unsigned>(helperResult.timedOut),
                     bytes.size(),
                     static_cast<int>(std::min<std::size_t>(
                         diagnostics.size(), 160U)),
                     diagnostics.c_str());
                 Context->LogWarn(message);
             }
-            return false;
+            return GeometryPreparationResult::Failed;
         }
         GeometryAtlasesGenerated.fetch_add(1U, std::memory_order_relaxed);
         if (output != nullptr) *output = std::move(generated);
@@ -591,11 +776,11 @@ std::atomic_uint64_t PublishedGeometryCells{};
                 bytes.size());
             Context->LogInfo(message);
         }
-        return true;
+        return GeometryPreparationResult::Ready;
     } catch (...) {
         std::filesystem::remove(temporary, error);
         GeometryFailures.fetch_add(1U, std::memory_order_relaxed);
-        return false;
+        return GeometryPreparationResult::Failed;
     }
 }
 
@@ -603,12 +788,21 @@ void PrewarmGeometryCache(const Request& request) noexcept {
     const auto prepare = [&request](std::uint8_t act) noexcept {
         {
             std::scoped_lock lock(StateMutex);
-            if (StopRequested || PendingRequest.has_value()) return false;
+            if (!ShouldContinueExternalAtlasPrewarm(
+                    StopRequested,
+                    PendingRequest.has_value(),
+                    request.serial,
+                    LatestSerial,
+                    request.sessionGeneration,
+                    ActiveSessionGeneration)) {
+                return false;
+            }
         }
         ExternalAtlasCacheKey key{
             .seed = request.seed,
             .difficulty = request.difficulty,
             .act = act,
+            .dataFingerprint = request.dataFingerprint,
         };
         std::filesystem::path path;
         if (BuildExternalAtlasCachePath(GeometryCacheRoot, key, path)) {
@@ -617,8 +811,11 @@ void PrewarmGeometryCache(const Request& request) noexcept {
                 return true;
             }
         }
-        (void)PrepareGeometryCacheAct(request, act);
-        return true;
+        return PrepareGeometryCacheAct(
+            request,
+            act,
+            ExternalLabelProviderOperation::PrewarmGeometry)
+            != GeometryPreparationResult::Cancelled;
     };
     for (std::uint8_t act = 0U; act < 5U; ++act) {
         if (act == static_cast<std::uint8_t>(request.act)) continue;
@@ -647,6 +844,7 @@ template <typename... Values>
     std::size_t declaredLevels{};
     std::size_t declaredExits{};
     std::size_t declaredWaypoints{};
+    std::size_t declaredPortals{};
     std::size_t declaredRooms{};
     while (std::getline(responseStream, line)) {
         std::istringstream stream(line);
@@ -684,7 +882,7 @@ template <typename... Values>
                     level.anchorSubtileY,
                     level.roomCount)
                 || output.levels.size() >= MaximumAtlasLevels
-                || RevealActForLevelId(level.levelId) != request.act
+                || level.levelId <= 0
                 || level.originSubtileX < 0 || level.originSubtileY < 0
                 || level.anchorSubtileX < 0 || level.anchorSubtileY < 0
                 || level.roomCount > MaximumWitnessRooms) {
@@ -718,8 +916,7 @@ template <typename... Values>
                     exit.subtileY,
                     exit.kind)
                 || output.exits.size() >= MaximumAtlasExits
-                || RevealActForLevelId(exit.sourceLevelId) != request.act
-                || RevealActForLevelId(exit.targetLevelId) != request.act
+                || exit.sourceLevelId <= 0 || exit.targetLevelId <= 0
                 || exit.subtileX < 0 || exit.subtileY < 0
                 || (exit.kind != 0 && exit.kind != 1)) {
                 return false;
@@ -734,18 +931,35 @@ template <typename... Values>
                     waypoint.subtileY,
                     waypoint.classId)
                 || output.waypoints.size() >= MaximumAtlasWaypoints
-                || RevealActForLevelId(waypoint.levelId) != request.act
+                || waypoint.levelId <= 0
                 || waypoint.subtileX < 0 || waypoint.subtileY < 0
                 || waypoint.classId < 0) {
                 return false;
             }
             output.waypoints.push_back(waypoint);
+        } else if (type == 'P') {
+            AtlasPortal portal{};
+            if (!sawHeader || !ReadExactRecord(
+                    stream,
+                    portal.sourceLevelId,
+                    portal.targetLevelId,
+                    portal.subtileX,
+                    portal.subtileY,
+                    portal.classId)
+                || output.portals.size() >= MaximumAtlasPortals
+                || portal.sourceLevelId <= 0 || portal.targetLevelId <= 0
+                || portal.subtileX < 0 || portal.subtileY < 0
+                || portal.classId < 0) {
+                return false;
+            }
+            output.portals.push_back(portal);
         } else if (type == 'Z') {
             if (!sawHeader || !ReadExactRecord(
                     stream,
                     declaredLevels,
                     declaredExits,
                     declaredWaypoints,
+                    declaredPortals,
                     declaredRooms,
                     output.helperElapsedMilliseconds)) {
                 return false;
@@ -759,8 +973,46 @@ template <typename... Values>
         || declaredLevels != output.levels.size()
         || declaredExits != output.exits.size()
         || declaredWaypoints != output.waypoints.size()
+        || declaredPortals != output.portals.size()
         || declaredRooms != output.witnessRooms.size()) {
         return false;
+    }
+    std::vector<std::int32_t> actLevelIds;
+    actLevelIds.reserve(output.levels.size());
+    for (const auto& level : output.levels) {
+        actLevelIds.push_back(level.levelId);
+    }
+    std::sort(actLevelIds.begin(), actLevelIds.end());
+    if (std::adjacent_find(actLevelIds.begin(), actLevelIds.end())
+        != actLevelIds.end()) {
+        return false;
+    }
+    for (const auto& exit : output.exits) {
+        if (!IsExternalAtlasTopologyEdgeValid(
+                actLevelIds,
+                ExternalAtlasTopologyEdge{
+                    .sourceLevelId = exit.sourceLevelId,
+                    .targetLevelId = exit.targetLevelId,
+                    .kind = exit.kind,
+                })) {
+            return false;
+        }
+    }
+    for (const auto& waypoint : output.waypoints) {
+        if (!std::binary_search(
+                actLevelIds.begin(),
+                actLevelIds.end(),
+                waypoint.levelId)) {
+            return false;
+        }
+    }
+    for (const auto& portal : output.portals) {
+        if (!std::binary_search(
+                actLevelIds.begin(),
+                actLevelIds.end(),
+                portal.sourceLevelId)) {
+            return false;
+        }
     }
     std::sort(output.witnessRooms.begin(), output.witnessRooms.end());
     return true;
@@ -783,25 +1035,18 @@ template <typename... Values>
 }
 
 [[nodiscard]] auto VisibleLevels(
-        const Request& request,
         const ParsedAtlas& atlas) -> std::vector<std::int32_t> {
-    std::vector<ExternalAtlasTopologyEdge> edges;
-    edges.reserve(atlas.exits.size());
-    for (const auto& exit : atlas.exits) {
-        edges.push_back({
-            .sourceLevelId = exit.sourceLevelId,
-            .targetLevelId = exit.targetLevelId,
-            .kind = exit.kind,
-        });
-    }
+    // Publication is no longer guessed from continuous-seam topology. Every
+    // exact anchor in the generated act is retained; the UI-thread native
+    // publisher resolves authoritative Levels.Layer values and the renderer
+    // admits only anchors owned by the current ready layer.
     std::vector<std::int32_t> visible;
-    if (!CollectExternalAtlasVisibleLevels(
-            request.currentLevelId,
-            edges.data(),
-            edges.size(),
-            visible)) {
-        visible.clear();
+    visible.reserve(atlas.levels.size());
+    for (const auto& level : atlas.levels) {
+        visible.push_back(level.levelId);
     }
+    std::sort(visible.begin(), visible.end());
+    visible.erase(std::unique(visible.begin(), visible.end()), visible.end());
     return visible;
 }
 
@@ -875,22 +1120,48 @@ template <typename... Values>
             .subtileY = exit.subtileY,
         });
     }
+    for (const auto& portal : atlas.portals) {
+        if (!ContainsLevel(connected, portal.sourceLevelId)) continue;
+        const auto duplicate = std::find_if(
+            output.begin(),
+            output.end(),
+            [&portal](
+                    const AutomapExitLabelDefinition& existing) noexcept {
+                return existing.sourceLevelId == portal.sourceLevelId
+                    && existing.targetLevelId == portal.targetLevelId
+                    && existing.subtileX == portal.subtileX
+                    && existing.subtileY == portal.subtileY;
+            });
+        if (duplicate != output.end()) continue;
+        output.push_back({
+            .stableId = StableId(
+                ExternalPortalStableType,
+                portal.targetLevelId,
+                portal.subtileX,
+                portal.subtileY),
+            .sourceLevelId = portal.sourceLevelId,
+            .targetLevelId = portal.targetLevelId,
+            .subtileX = portal.subtileX,
+            .subtileY = portal.subtileY,
+        });
+    }
     for (auto& group : seamGroups) {
         std::sort(group.anchors.begin(), group.anchors.end());
         group.anchors.erase(
             std::unique(group.anchors.begin(), group.anchors.end()),
             group.anchors.end());
         if (group.anchors.empty()) continue;
-        std::int64_t sumX{};
-        std::int64_t sumY{};
-        for (const auto& [x, y] : group.anchors) {
-            sumX += x;
-            sumY += y;
+        // MS1 v3 retains one collision-proven, player-width opening per
+        // directed outdoor level pair. Averaging room-centre samples produced
+        // the misplaced Flayer Jungle label and is deliberately rejected.
+        ExternalPhysicalSeamAnchor anchor{};
+        if (!SelectUniqueExternalPhysicalSeamAnchor(
+                group.anchors,
+                anchor)) {
+            return false;
         }
-        const auto x = static_cast<std::int32_t>(
-            sumX / static_cast<std::int64_t>(group.anchors.size()));
-        const auto y = static_cast<std::int32_t>(
-            sumY / static_cast<std::int64_t>(group.anchors.size()));
+        const auto x = anchor.subtileX;
+        const auto y = anchor.subtileY;
         output.push_back({
             .stableId = StableId(
                 ExternalExitStableType,
@@ -907,32 +1178,32 @@ template <typename... Values>
     return output.size() <= MaximumAutomapExitLabels;
 }
 
-[[nodiscard]] auto PublishAtlas(
+[[nodiscard]] auto BuildAtlasPublication(
         const Request& request,
         const ParsedAtlas& atlas,
-        std::vector<std::int32_t>& connected,
-        std::size_t& exitCount,
-        std::size_t& waypointCount) -> bool {
-    connected = VisibleLevels(request, atlas);
-    if (!ContainsLevel(connected, request.currentLevelId)
-        || connected.empty()) {
+        AtlasPublication& output) -> bool {
+    output = {};
+    output.visibleLevels = VisibleLevels(atlas);
+    if (!ContainsLevel(output.visibleLevels, request.currentLevelId)
+        || output.visibleLevels.empty()) {
         return false;
     }
 
-    std::vector<AutomapExitLabelDefinition> exits;
-    if (!BuildExitDefinitions(atlas, connected, exits)) return false;
-    std::vector<AutomapWaypointLabelDefinition> waypoints;
+    if (!BuildExitDefinitions(
+            atlas, output.visibleLevels, output.exits)) {
+        return false;
+    }
     for (const auto& waypoint : atlas.waypoints) {
-        if (!ContainsLevel(connected, waypoint.levelId)) continue;
+        if (!ContainsLevel(output.visibleLevels, waypoint.levelId)) continue;
         if (std::find_if(
-                waypoints.begin(),
-                waypoints.end(),
+                output.waypoints.begin(),
+                output.waypoints.end(),
                 [&waypoint](const AutomapWaypointLabelDefinition& existing) {
                     return existing.levelId == waypoint.levelId;
-                }) != waypoints.end()) {
+                }) != output.waypoints.end()) {
             return false;
         }
-        waypoints.push_back({
+        output.waypoints.push_back({
             .stableId = StableId(
                 ExternalWaypointStableType,
                 waypoint.levelId,
@@ -943,21 +1214,11 @@ template <typename... Values>
             .subtileY = waypoint.subtileY,
         });
     }
-    if (waypoints.size() > MaximumAutomapWaypointLabels) return false;
+    if (output.waypoints.size() > MaximumAutomapWaypointLabels) return false;
 
-    if (!ReplaceNativeAutomapExitLabels(
-            request.sessionGeneration,
-            exits.data(),
-            exits.size())
-        || !ReplaceNativeAutomapWaypointLabels(
-            request.sessionGeneration,
-            waypoints.data(),
-            waypoints.size())) {
-        return false;
-    }
     for (const auto& level : atlas.levels) {
-        if (!ContainsLevel(connected, level.levelId)) continue;
-        const AutomapLevelLabelDefinition definition{
+        if (!ContainsLevel(output.visibleLevels, level.levelId)) continue;
+        output.levels.push_back({
             .stableId = StableId(
                 ExternalLevelStableType,
                 level.levelId,
@@ -966,17 +1227,28 @@ template <typename... Values>
             .levelId = level.levelId,
             .subtileX = level.anchorSubtileX,
             .subtileY = level.anchorSubtileY,
-        };
-        if (!PublishNativeAutomapLevelLabels(
-                request.sessionGeneration,
-                level.levelId,
-                &definition,
-                1U)) {
-            return false;
-        }
+        });
     }
-    exitCount = exits.size();
-    waypointCount = waypoints.size();
+    return output.levels.size() <= MaximumAutomapLevelLabels;
+}
+
+[[nodiscard]] auto CommitAtlasPublication(
+        const Request& request,
+        const AtlasPublication& publication) noexcept -> bool {
+    if (!ReplaceExternalAutomapExitLabels(
+            request.sessionGeneration,
+            publication.exits.data(),
+            publication.exits.size())
+        || !ReplaceExternalAutomapWaypointLabels(
+            request.sessionGeneration,
+            publication.waypoints.data(),
+            publication.waypoints.size())
+        || !ReplaceExternalAutomapLevelLabels(
+            request.sessionGeneration,
+            publication.levels.data(),
+            publication.levels.size())) {
+        return false;
+    }
     return true;
 }
 
@@ -1009,8 +1281,9 @@ void NotifyResult(const Request& request, bool published) noexcept {
 }
 
 void WorkerMain() noexcept {
-    // Geometry is speculative background work. Keep both this coordinator and
-    // every child mapgen process below the game's normal-priority threads.
+    // The current act is one transaction. Keep its coordinator below the
+    // game's normal-priority threads; speculative other-act children run at
+    // idle priority and are preempted by real gameplay requests.
     (void)SetThreadPriority(
         GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
     for (;;) {
@@ -1027,11 +1300,12 @@ void WorkerMain() noexcept {
         }
 
         std::string response;
-        bool timedOut{};
-        const bool launched = RunLabelHelper(request, response, timedOut);
-        if (timedOut) Timeouts.fetch_add(1U, std::memory_order_relaxed);
+        const auto labelResult = RunLabelHelper(request, response);
+        RecordHelperCommandResult(
+            ExternalLabelProviderOperation::Labels,
+            labelResult);
         ParsedAtlas atlas;
-        bool valid = launched;
+        bool valid = labelResult.succeeded;
         try {
             valid = valid && ParseAtlas(request, response, atlas);
         } catch (...) {
@@ -1044,132 +1318,215 @@ void WorkerMain() noexcept {
 
         {
             std::scoped_lock lock(StateMutex);
-            InFlightRequest.reset();
-            if (request.serial != LatestSerial
-                || request.sessionGeneration != ActiveSessionGeneration) {
+            if (!RequestIsCurrentLocked(request)) {
+                InFlightRequest.reset();
                 StaleResponses.fetch_add(1U, std::memory_order_relaxed);
                 continue;
+            }
+            if (!valid) {
+                RememberFailedRequestLocked(KeyFor(request));
+                InFlightRequest.reset();
             }
         }
         if (!valid) {
             FailedResponses.fetch_add(1U, std::memory_order_relaxed);
-            if (launched) LogFailure(request, "malformed-or-incomplete-response");
-            else LogFailure(request, timedOut ? "timeout" : "process-failure");
-            NotifyResult(request, false);
-            continue;
-        }
-
-        std::size_t connectedLevels{};
-        std::vector<std::int32_t> visibleLevels;
-        std::size_t publishedExits{};
-        std::size_t publishedWaypoints{};
-        bool published{};
-        try {
-            published = PublishAtlas(
-                request,
-                atlas,
-                visibleLevels,
-                publishedExits,
-                publishedWaypoints);
-        } catch (...) {
-            published = false;
-        }
-        if (!published) {
-            FailedResponses.fetch_add(1U, std::memory_order_relaxed);
-            LogFailure(request, "publication-failure");
-            NotifyResult(request, false);
-            continue;
-        }
-        connectedLevels = visibleLevels.size();
-
-        ExternalAtlasGeometry geometry;
-        const auto geometryReady = PrepareGeometryCacheAct(
-            request,
-            static_cast<std::uint8_t>(request.act),
-            &geometry);
-        if (geometryReady) {
-            const auto containsGeometryLevel = [&geometry](
-                    std::int32_t levelId) noexcept {
-                return std::find_if(
-                    geometry.levels.begin(),
-                    geometry.levels.end(),
-                    [levelId](const ExternalAtlasGeometryLevel& level) {
-                        return level.levelId == levelId;
-                    }) != geometry.levels.end();
-            };
-            if (!std::all_of(
-                    visibleLevels.begin(),
-                    visibleLevels.end(),
-                    containsGeometryLevel)) {
-                GeometryFailures.fetch_add(1U, std::memory_order_relaxed);
-                LogFailure(request, "visible-level-missing-from-geometry");
-            } else {
-                try {
-                    auto immutableGeometry =
-                        std::make_shared<const ExternalAtlasGeometry>(
-                            std::move(geometry));
-                    auto snapshot =
-                        std::make_shared<const ExternalAtlasGeometrySnapshot>(
-                            ExternalAtlasGeometrySnapshot{
-                                .sessionGeneration =
-                                    request.sessionGeneration,
-                                .seed = request.seed,
-                                .difficulty = request.difficulty,
-                                .act = static_cast<std::uint8_t>(request.act),
-                                .currentLevelId = request.currentLevelId,
-                                .visibleLevelIds = std::move(visibleLevels),
-                                .geometry = std::move(immutableGeometry),
-                            });
-                    {
-                        std::scoped_lock lock(StateMutex);
-                        if (request.serial != LatestSerial
-                            || request.sessionGeneration
-                                != ActiveSessionGeneration) {
-                            StaleResponses.fetch_add(
-                                1U, std::memory_order_relaxed);
-                            continue;
-                        }
-                    }
-                    const auto cellCount = snapshot->geometry->cells.size();
-                    PublishedGeometrySnapshot.store(
-                        std::move(snapshot),
-                        std::memory_order_release);
-                    GeometrySnapshotsPublished.fetch_add(
-                        1U, std::memory_order_relaxed);
-                    PublishedGeometryCells.store(
-                        cellCount, std::memory_order_relaxed);
-                } catch (...) {
-                    GeometryFailures.fetch_add(
-                        1U, std::memory_order_relaxed);
-                }
+            if (labelResult.succeeded) {
+                LogFailure(request, "malformed-or-incomplete-response");
+            } else if (!labelResult.cancelled) {
+                LogFailure(
+                    request,
+                    labelResult.timedOut
+                        ? "label-timeout"
+                        : "label-process-failure");
             }
+            NotifyResult(request, false);
+            continue;
         }
+
+        AtlasPublication publication;
+        bool labelsReady{};
+        try {
+            labelsReady = BuildAtlasPublication(
+                request, atlas, publication);
+        } catch (...) {
+            labelsReady = false;
+        }
+        if (!labelsReady) {
+            {
+                std::scoped_lock lock(StateMutex);
+                if (!RequestIsCurrentLocked(request)) {
+                    InFlightRequest.reset();
+                    StaleResponses.fetch_add(1U, std::memory_order_relaxed);
+                    continue;
+                }
+                RememberFailedRequestLocked(KeyFor(request));
+                InFlightRequest.reset();
+            }
+            FailedResponses.fetch_add(1U, std::memory_order_relaxed);
+            LogFailure(request, "label-publication-build-failure");
+            NotifyResult(request, false);
+            continue;
+        }
+
         {
             std::scoped_lock lock(StateMutex);
-            if (request.serial != LatestSerial
-                || request.sessionGeneration != ActiveSessionGeneration) {
+            if (!RequestIsCurrentLocked(request)) {
+                InFlightRequest.reset();
                 StaleResponses.fetch_add(1U, std::memory_order_relaxed);
                 continue;
             }
-            PublishedRequest = KeyFor(request);
         }
+
+        ExternalAtlasGeometry geometry;
+        const auto geometryResult = PrepareGeometryCacheAct(
+            request,
+            static_cast<std::uint8_t>(request.act),
+            ExternalLabelProviderOperation::PrimaryGeometry,
+            &geometry);
+        if (geometryResult == GeometryPreparationResult::Cancelled) {
+            std::scoped_lock lock(StateMutex);
+            InFlightRequest.reset();
+            if (!RequestIsCurrentLocked(request)) {
+                StaleResponses.fetch_add(1U, std::memory_order_relaxed);
+            } else {
+                RememberFailedRequestLocked(KeyFor(request));
+                FailedResponses.fetch_add(1U, std::memory_order_relaxed);
+            }
+            continue;
+        }
+        if (geometryResult != GeometryPreparationResult::Ready) {
+            {
+                std::scoped_lock lock(StateMutex);
+                if (!RequestIsCurrentLocked(request)) {
+                    InFlightRequest.reset();
+                    StaleResponses.fetch_add(1U, std::memory_order_relaxed);
+                    continue;
+                }
+                RememberFailedRequestLocked(KeyFor(request));
+                InFlightRequest.reset();
+            }
+            FailedResponses.fetch_add(1U, std::memory_order_relaxed);
+            LogFailure(request, "current-act-geometry-failure");
+            NotifyResult(request, false);
+            continue;
+        }
+
+        const auto containsGeometryLevel = [&geometry](
+                std::int32_t levelId) noexcept {
+            return std::find_if(
+                geometry.levels.begin(),
+                geometry.levels.end(),
+                [levelId](const ExternalAtlasGeometryLevel& level) {
+                    return level.levelId == levelId;
+                }) != geometry.levels.end();
+        };
+        const auto missingRequiredLevel = std::find_if(
+            publication.visibleLevels.begin(),
+            publication.visibleLevels.end(),
+            [&geometry, &containsGeometryLevel](
+                    std::int32_t levelId) noexcept {
+                return IsExternalAtlasStandardCampaignLevel(
+                        geometry.act, levelId)
+                    && !containsGeometryLevel(levelId);
+            });
+        if (missingRequiredLevel != publication.visibleLevels.end()) {
+            GeometryFailures.fetch_add(1U, std::memory_order_relaxed);
+            {
+                std::scoped_lock lock(StateMutex);
+                if (!RequestIsCurrentLocked(request)) {
+                    InFlightRequest.reset();
+                    StaleResponses.fetch_add(1U, std::memory_order_relaxed);
+                    continue;
+                }
+                RememberFailedRequestLocked(KeyFor(request));
+                InFlightRequest.reset();
+            }
+            FailedResponses.fetch_add(1U, std::memory_order_relaxed);
+            LogFailure(
+                request,
+                "required-visible-level-missing-from-geometry");
+            NotifyResult(request, false);
+            continue;
+        }
+
+        std::shared_ptr<const ExternalAtlasGeometrySnapshot> snapshot;
+        try {
+            auto immutableGeometry =
+                std::make_shared<const ExternalAtlasGeometry>(
+                    std::move(geometry));
+            snapshot = std::make_shared<const ExternalAtlasGeometrySnapshot>(
+                ExternalAtlasGeometrySnapshot{
+                    .sessionGeneration = request.sessionGeneration,
+                    .seed = request.seed,
+                    .difficulty = request.difficulty,
+                    .act = static_cast<std::uint8_t>(request.act),
+                    .currentLevelId = request.currentLevelId,
+                    .visibleLevelIds = publication.visibleLevels,
+                    .geometry = std::move(immutableGeometry),
+                });
+        } catch (...) {
+            snapshot.reset();
+        }
+
+        bool committed{};
+        bool stale{};
+        {
+            std::scoped_lock lock(StateMutex);
+            const auto completion = DecideExternalLabelProviderCompletion(
+                RequestIsCurrentLocked(request),
+                labelsReady,
+                geometryResult == GeometryPreparationResult::Ready,
+                snapshot != nullptr);
+            if (completion == ExternalLabelProviderCompletion::Stale) {
+                stale = true;
+                InFlightRequest.reset();
+            } else if (completion == ExternalLabelProviderCompletion::Failed
+                || !CommitAtlasPublication(request, publication)) {
+                RememberFailedRequestLocked(KeyFor(request));
+                InFlightRequest.reset();
+            } else {
+                PublishedGeometrySnapshot.store(
+                    snapshot,
+                    std::memory_order_release);
+                PublishedGeometryCells.store(
+                    snapshot->geometry->cells.size(),
+                    std::memory_order_relaxed);
+                PublishedRequest = KeyFor(request);
+                InFlightRequest.reset();
+                committed = true;
+            }
+        }
+        if (stale) {
+            StaleResponses.fetch_add(1U, std::memory_order_relaxed);
+            continue;
+        }
+        if (!committed) {
+            GeometryFailures.fetch_add(1U, std::memory_order_relaxed);
+            FailedResponses.fetch_add(1U, std::memory_order_relaxed);
+            LogFailure(request, "transaction-commit-failure");
+            NotifyResult(request, false);
+            continue;
+        }
+
+        GeometrySnapshotsPublished.fetch_add(1U, std::memory_order_relaxed);
         AtlasesPublished.fetch_add(1U, std::memory_order_relaxed);
         NotifyResult(request, true);
         if (Context != nullptr) {
-            char message[384]{};
+            char message[512]{};
             std::snprintf(
                 message,
                 sizeof(message),
-                "MapSense external labels: PASS session=%llu seed=%u difficulty=%u act=%d current-level=%d visible-levels=%zu exits=%zu waypoints=%zu room-witness=%zu helper-ms=%.3f.",
+                "MapSense external labels: PASS session=%llu seed=%u difficulty=%u act=%d current-level=%d visible-levels=%zu exits=%zu waypoints=%zu room-witness=%zu data=%016llX helper-ms=%.3f.",
                 static_cast<unsigned long long>(request.sessionGeneration),
                 request.seed,
                 static_cast<unsigned>(request.difficulty),
                 request.act,
                 request.currentLevelId,
-                connectedLevels,
-                publishedExits,
-                publishedWaypoints,
+                publication.visibleLevels.size(),
+                publication.exits.size(),
+                publication.waypoints.size(),
                 request.currentRooms.size(),
+                static_cast<unsigned long long>(request.dataFingerprint),
                 atlas.helperElapsedMilliseconds);
             Context->LogInfo(message);
         }
@@ -1208,13 +1565,23 @@ auto InitializeExternalLabelProvider(
         PublishedGeometrySnapshot.store(
             std::shared_ptr<const ExternalAtlasGeometrySnapshot>{},
             std::memory_order_release);
+        PublishedGeometryCells.store(0U, std::memory_order_relaxed);
         StopRequested = false;
         PendingRequest.reset();
         InFlightRequest.reset();
         PublishedRequest.reset();
+        FailedRequestCount = 0U;
         LatestSerial = 0U;
         ActiveSessionGeneration = 0U;
         ActiveChildProcess = nullptr;
+        ActiveChildOperation = ExternalLabelProviderOperation::None;
+        ActiveChildCancellationRequested = false;
+        ActiveOperationCode.store(
+            static_cast<std::uint32_t>(
+                ExternalLabelProviderOperation::None),
+            std::memory_order_release);
+        ActiveOperationSeed.store(0U, std::memory_order_release);
+        ActiveOperationAct.store(-1, std::memory_order_release);
         Worker = std::thread(WorkerMain);
         Active.store(true, std::memory_order_release);
     } catch (...) {
@@ -1230,17 +1597,16 @@ auto InitializeExternalLabelProvider(
 
 void ShutdownExternalLabelProvider() noexcept {
     Active.store(false, std::memory_order_release);
-    PublishedGeometrySnapshot.store(
-        std::shared_ptr<const ExternalAtlasGeometrySnapshot>{},
-        std::memory_order_release);
     {
         std::scoped_lock lock(StateMutex);
         StopRequested = true;
         ++LatestSerial;
         PendingRequest.reset();
-        if (ActiveChildProcess != nullptr) {
-            TerminateProcess(ActiveChildProcess, ERROR_CANCELLED);
-        }
+        CancelActiveChildLocked();
+        PublishedGeometrySnapshot.store(
+            std::shared_ptr<const ExternalAtlasGeometrySnapshot>{},
+            std::memory_order_release);
+        PublishedGeometryCells.store(0U, std::memory_order_relaxed);
     }
     StateCondition.notify_all();
     if (Worker.joinable()) Worker.join();
@@ -1249,8 +1615,17 @@ void ShutdownExternalLabelProvider() noexcept {
         StopRequested = false;
         InFlightRequest.reset();
         PublishedRequest.reset();
+        FailedRequestCount = 0U;
         ActiveSessionGeneration = 0U;
         ActiveChildProcess = nullptr;
+        ActiveChildOperation = ExternalLabelProviderOperation::None;
+        ActiveChildCancellationRequested = false;
+        ActiveOperationCode.store(
+            static_cast<std::uint32_t>(
+                ExternalLabelProviderOperation::None),
+            std::memory_order_release);
+        ActiveOperationSeed.store(0U, std::memory_order_release);
+        ActiveOperationAct.store(-1, std::memory_order_release);
         HelperPath.clear();
         GeometryCacheRoot.clear();
     }
@@ -1261,24 +1636,37 @@ void ShutdownExternalLabelProvider() noexcept {
 
 void ResetExternalLabelProviderSession(
         std::uint64_t sessionGeneration) noexcept {
-    PublishedGeometrySnapshot.store(
-        std::shared_ptr<const ExternalAtlasGeometrySnapshot>{},
-        std::memory_order_release);
-    PublishedGeometryCells.store(0U, std::memory_order_relaxed);
     std::scoped_lock lock(StateMutex);
     ActiveSessionGeneration = sessionGeneration;
     ++LatestSerial;
     PendingRequest.reset();
+    InFlightRequest.reset();
     PublishedRequest.reset();
+    FailedRequestCount = 0U;
+    CancelActiveChildLocked();
+    PublishedGeometrySnapshot.store(
+        std::shared_ptr<const ExternalAtlasGeometrySnapshot>{},
+        std::memory_order_release);
+    PublishedGeometryCells.store(0U, std::memory_order_relaxed);
 }
 
 auto RequestExternalLabelAtlas(
         std::uint64_t sessionGeneration,
-        const ClientLevelView& current) noexcept -> bool {
+        const ClientLevelView& current,
+        std::int32_t resolvedAct,
+        std::shared_ptr<const MapSenseDataCatalog> dataCatalog) noexcept
+        -> bool {
     if (!Active.load(std::memory_order_acquire)) return false;
     Request request;
     try {
-        if (!CaptureRequest(sessionGeneration, current, request)) return false;
+        if (!CaptureRequest(
+                sessionGeneration,
+                current,
+                resolvedAct,
+                std::move(dataCatalog),
+                request)) {
+            return false;
+        }
     } catch (...) {
         return false;
     }
@@ -1289,13 +1677,25 @@ auto RequestExternalLabelAtlas(
             return false;
         }
         const auto key = KeyFor(request);
-        if ((PublishedRequest && *PublishedRequest == key)
-            || (InFlightRequest && *InFlightRequest == key)
-            || (PendingRequest && KeyFor(*PendingRequest) == key)) {
+        const auto pendingKey = PendingRequest
+            ? std::optional<RequestKey>{KeyFor(*PendingRequest)}
+            : std::nullopt;
+        const auto decision = DecideExternalLabelProviderSubmission(
+            key,
+            PublishedRequest,
+            InFlightRequest,
+            pendingKey,
+            ContainsFailedRequestLocked(key),
+            ActiveChildOperation);
+        if (decision == ExternalLabelProviderSubmission::Duplicate) {
             return true;
         }
         request.serial = ++LatestSerial;
         PendingRequest = std::move(request);
+        if (decision
+            == ExternalLabelProviderSubmission::QueueAndCancel) {
+            CancelActiveChildLocked();
+        }
     }
     Requests.fetch_add(1U, std::memory_order_relaxed);
     StateCondition.notify_one();
@@ -1355,7 +1755,18 @@ auto GetExternalLabelProviderCounters() noexcept
         .staleResponses = StaleResponses.load(std::memory_order_relaxed),
         .failedResponses = FailedResponses.load(std::memory_order_relaxed),
         .timeouts = Timeouts.load(std::memory_order_relaxed),
+        .labelTimeouts = LabelTimeouts.load(std::memory_order_relaxed),
+        .geometryTimeouts = GeometryTimeouts.load(
+            std::memory_order_relaxed),
+        .primaryCancellations = PrimaryCancellations.load(
+            std::memory_order_relaxed),
+        .prewarmCancellations = PrewarmCancellations.load(
+            std::memory_order_relaxed),
         .geometryCacheHits = GeometryCacheHits.load(
+            std::memory_order_relaxed),
+        .geometryCacheMisses = GeometryCacheMisses.load(
+            std::memory_order_relaxed),
+        .geometryCacheInvalid = GeometryCacheInvalid.load(
             std::memory_order_relaxed),
         .geometryAtlasesGenerated = GeometryAtlasesGenerated.load(
             std::memory_order_relaxed),
@@ -1365,6 +1776,10 @@ auto GetExternalLabelProviderCounters() noexcept
             std::memory_order_relaxed),
         .publishedGeometryCells = PublishedGeometryCells.load(
             std::memory_order_relaxed),
+        .activeOperation = static_cast<ExternalLabelProviderOperation>(
+            ActiveOperationCode.load(std::memory_order_acquire)),
+        .activeSeed = ActiveOperationSeed.load(std::memory_order_acquire),
+        .activeAct = ActiveOperationAct.load(std::memory_order_acquire),
     };
 }
 

@@ -201,9 +201,11 @@ auto ParseExternalAtlasGeometry(
             const auto frame = ReadI32(bytes, offset);
             const auto tileX = ReadI32(bytes, offset + 4U);
             const auto tileY = ReadI32(bytes, offset + 8U);
-            const auto wall = bytes[offset + 12U];
-            if (frame < 0 || tileX < 0 || tileY < 0 || wall > 1U
-                || !AllZero(bytes, offset + 13U, 3U)) {
+            const auto wallTree = bytes[offset + 12U];
+            const auto raised = bytes[offset + 13U];
+            if (frame < 0 || tileX < 0 || tileY < 0
+                || wallTree > 1U || raised > 1U
+                || !AllZero(bytes, offset + 14U, 2U)) {
                 SetError(error, ExternalAtlasGeometryParseError::InvalidCell);
                 return false;
             }
@@ -211,12 +213,14 @@ auto ParseExternalAtlasGeometry(
                 .frame = frame,
                 .tileX = tileX,
                 .tileY = tileY,
-                .wall = wall != 0U,
+                .wallTree = wallTree != 0U,
+                .raised = raised != 0U,
             });
             MixU32(digest, static_cast<std::uint32_t>(frame));
             MixU32(digest, static_cast<std::uint32_t>(tileX));
             MixU32(digest, static_cast<std::uint32_t>(tileY));
-            MixByte(digest, wall);
+            MixByte(digest, wallTree);
+            MixByte(digest, raised);
             offset += CellRecordBytes;
         }
     }

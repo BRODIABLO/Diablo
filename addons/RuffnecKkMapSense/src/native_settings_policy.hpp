@@ -338,6 +338,25 @@ inline constexpr std::array<ImmunityPalette, 3> ImmunityPalettes{
         && left.size == right.size;
 }
 
+[[nodiscard]] constexpr auto SameMissileMarkerStyle(
+        const MissileMarkerStyle& left,
+        const MissileMarkerStyle& right) noexcept -> bool {
+    return SameColor(left.color, right.color)
+        && left.size == right.size;
+}
+
+[[nodiscard]] constexpr auto SameMissileOptions(
+        const MissileOptions& left,
+        const MissileOptions& right) noexcept -> bool {
+    return left.enabled == right.enabled
+        && SameMissileMarkerStyle(left.fire, right.fire)
+        && SameMissileMarkerStyle(left.cold, right.cold)
+        && SameMissileMarkerStyle(left.lightning, right.lightning)
+        && SameMissileMarkerStyle(left.poison, right.poison)
+        && SameMissileMarkerStyle(left.physical, right.physical)
+        && SameMissileMarkerStyle(left.magic, right.magic);
+}
+
 [[nodiscard]] constexpr auto SameAutomapObjectOptions(
         const AutomapObjectOptions& left,
         const AutomapObjectOptions& right) noexcept -> bool {
@@ -440,6 +459,7 @@ inline void CopyNativeSettings(
     destination.overlay.scale = source.overlay.scale;
     destination.monsters = source.monsters;
     destination.immunities = source.immunities;
+    destination.missiles = source.missiles;
     destination.objects = source.objects;
 }
 
@@ -478,6 +498,7 @@ inline void CopyNativeSettings(
         && SameColor(left.immunities.lightning, right.immunities.lightning)
         && SameColor(left.immunities.poison, right.immunities.poison)
         && SameColor(left.immunities.magic, right.immunities.magic)
+        && SameMissileOptions(left.missiles, right.missiles)
         && SameObjectsOptions(left.objects, right.objects);
 }
 

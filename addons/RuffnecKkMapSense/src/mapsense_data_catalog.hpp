@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -21,6 +22,7 @@ enum class DataCatalogFamily : std::uint8_t {
     SuperUniques,
     MonStats,
     Objects,
+    Missiles,
     Count,
 };
 
@@ -50,6 +52,18 @@ struct DataCatalogLocalizedText final {
 struct DataCatalogLevel final {
     std::int32_t id{};
     DataCatalogLocalizedText name{};
+    // Optional placement metadata copied from the active Levels.txt. Older
+    // fixtures and fallback tables may omit these columns; those records stay
+    // valid for names while atlas placement fails closed.
+    std::int32_t act{-1};
+    std::int32_t layer{-1};
+    std::array<std::int32_t, 3U> sizeX{{-1, -1, -1}};
+    std::array<std::int32_t, 3U> sizeY{{-1, -1, -1}};
+    std::int32_t offsetX{};
+    std::int32_t offsetY{};
+    std::int32_t depend{};
+    std::int32_t drlgType{-1};
+    bool hasAtlasPlacement{};
     // Levels.txt uses 255 for "no waypoint" and a smaller ordinal for every
     // data-defined waypoint. This lets passive level labels preserve waypoint
     // wording even when the exact PresetUnit chain has not materialized.
@@ -58,6 +72,13 @@ struct DataCatalogLevel final {
     // allocation. D2R exposes localized level names but no standalone
     // localized "Waypoint" token in the active language catalog.
     std::string waypointLabelUtf8{};
+};
+
+struct DataCatalogLevelAtlasPlacement final {
+    std::int32_t originSubtileX{};
+    std::int32_t originSubtileY{};
+    std::int32_t anchorSubtileX{};
+    std::int32_t anchorSubtileY{};
 };
 
 struct DataCatalogShrine final {
@@ -76,9 +97,34 @@ struct DataCatalogMonStats final {
     std::uint32_t hcIdx{};
     std::string id{};
     DataCatalogLocalizedText name{};
-    bool boss{};
     bool primeEvil{};
 };
+
+enum class DataCatalogMissileElement : std::uint8_t {
+    Hidden,
+    Physical,
+    Fire,
+    Cold,
+    Lightning,
+    Poison,
+    Magic,
+};
+
+struct DataCatalogMissile final {
+    std::uint32_t classId{};
+    std::string id{};
+    DataCatalogMissileElement element{DataCatalogMissileElement::Hidden};
+};
+
+// Combines PrimeMH's stock class taxonomy with the active mod's Missiles.txt.
+// A changed/extended EType wins, then positive physical damage is the bounded
+// fallback; unknown effect-only rows remain hidden.
+[[nodiscard]] auto ClassifyDataCatalogMissileElement(
+    std::uint32_t classId,
+    std::string_view activeElement,
+    bool hasPhysicalDamage) noexcept -> DataCatalogMissileElement;
+[[nodiscard]] auto StockDataCatalogMissileElement(
+    std::uint32_t classId) noexcept -> DataCatalogMissileElement;
 
 struct DataCatalogObject final {
     std::uint32_t objectId{};
@@ -172,8 +218,8 @@ struct MapSenseDataCatalogLimits final {
 
 struct MapSenseDataCatalogLoadOptions final {
     // Optional, explicitly trusted vanilla TXT roots. Each path must directly
-    // contain levels.txt, shrines.txt, superuniques.txt, monstats.txt and/or
-    // objects.txt. The loader also checks a packaged "vanilla-excel" folder
+    // contain levels.txt, shrines.txt, superuniques.txt, monstats.txt,
+    // objects.txt and/or missiles.txt. The loader also checks a packaged "vanilla-excel" folder
     // next to the plugin and "base" below active Excel roots when present.
     std::vector<std::filesystem::path> vanillaExcelDirectories{};
     MapSenseDataCatalogLimits limits{};
@@ -215,6 +261,15 @@ public:
 
     [[nodiscard]] auto FindLevel(std::int32_t id) const noexcept
         -> const DataCatalogLevel*;
+    [[nodiscard]] auto Levels() const noexcept
+        -> std::span<const DataCatalogLevel>;
+    // Resolves fixed Levels.txt placement, including bounded Depend chains.
+    // Dynamic (-1) coordinates/sizes, cycles and overflow are rejected rather
+    // than guessed. Difficulty uses D2R's 0=Normal, 1=Nightmare, 2=Hell.
+    [[nodiscard]] auto ResolveLevelAtlasPlacement(
+        std::int32_t id,
+        std::uint8_t difficulty,
+        DataCatalogLevelAtlasPlacement& output) const noexcept -> bool;
     [[nodiscard]] auto FindShrineByRow(std::uint32_t row) const noexcept
         -> const DataCatalogShrine*;
     [[nodiscard]] auto FindShrineByInteractType(
@@ -248,11 +303,24 @@ public:
             -> const DataCatalogObject* {
         return FindObjectById(classId);
     }
+    [[nodiscard]] auto FindMissile(std::uint32_t classId) const noexcept
+        -> const DataCatalogMissile*;
 
     [[nodiscard]] auto FamilyStatus(DataCatalogFamily family) const noexcept
         -> const DataCatalogFamilyStatus&;
     [[nodiscard]] auto FamilyStatuses() const noexcept
         -> std::span<const DataCatalogFamilyStatus>;
+    // Ordered roots resolved from D2RLoader's active mod. The external helper
+    // searches them in the same precedence order and falls back to its
+    // embedded vanilla data for every missing table/DS1.
+    [[nodiscard]] auto ActiveExcelDirectories() const noexcept
+        -> std::span<const std::filesystem::path>;
+    [[nodiscard]] auto ActiveTileDirectories() const noexcept
+        -> std::span<const std::filesystem::path>;
+    // Stable session identity over the active table bytes plus bounded tile
+    // metadata. Zero denotes the all-embedded vanilla source set.
+    [[nodiscard]] auto AtlasDataFingerprint() const noexcept
+        -> std::uint64_t;
     [[nodiscard]] auto HasLocalizationService() const noexcept -> bool;
     // True only after LocalizationService returned at least one player-facing
     // string that differs from its technical TXT key. This distinguishes an

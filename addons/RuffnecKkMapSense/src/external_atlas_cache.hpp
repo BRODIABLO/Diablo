@@ -9,11 +9,20 @@
 namespace RuffnecKk::MapSense {
 
 inline constexpr std::uint32_t ExternalAtlasCacheRevision = 1U;
+// Revision 4 invalidates geometry produced before outdoor rooms honored their
+// exact DT1 mask, waypoint/shrine/terrain LvlSub passes, and seam ownership.
+// Keep the parent revision stable so seed-scoped Reveal Map intent survives
+// while only the obsolete geometry receives a cache miss.
+inline constexpr std::uint32_t ExternalAtlasGeometryCacheRevision = 4U;
 
 struct ExternalAtlasCacheKey final {
     std::uint32_t seed{};
     std::uint8_t difficulty{};
     std::uint8_t act{};
+    // Zero is the embedded vanilla source set. Active mod data gets its own
+    // namespace so geometry from one table/asset set is never reused by
+    // another.
+    std::uint64_t dataFingerprint{};
 };
 
 enum class ExternalAtlasCacheResult : std::uint8_t {

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(RuffnecKkMapSense VERSION 0.13.22 LANGUAGES C CXX RC)
+project(RuffnecKkMapSense VERSION 0.13.38 LANGUAGES C CXX RC)
 
 include(FetchContent)
 
@@ -112,9 +112,6 @@ set_target_properties(RuffnecKkMapSense PROPERTIES
     OUTPUT_NAME "RuffnecKkMapSense"
 )
 add_custom_command(TARGET RuffnecKkMapSense POST_BUILD
-    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "${CMAKE_CURRENT_SOURCE_DIR}/../package/RuffnecKkMapSenseAutomapSprites.msp"
-        "$<TARGET_FILE_DIR:RuffnecKkMapSense>/RuffnecKkMapSenseAutomapSprites.msp"
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/../package/RuffnecKkMapSenseMapgen.exe"
         "$<TARGET_FILE_DIR:RuffnecKkMapSense>/RuffnecKkMapSenseMapgen.exe"

@@ -12,6 +12,30 @@ inline constexpr std::size_t NativeUiStateCount = 32U;
 inline constexpr std::size_t NativeUiQuestPanelState = 14U;
 inline constexpr std::uint64_t NativeUiPanelVisibilityLifetimeMilliseconds =
     500U;
+inline constexpr std::uint32_t NativeUiGameStateMask =
+    std::uint32_t{1U} << 0U;
+inline constexpr std::uint32_t NativeUiAutomapStateMask =
+    std::uint32_t{1U} << 10U;
+
+// MapSense-owned map pixels may be submitted only while D2R proves that both
+// the gameplay world and its native automap are active. Loading screens clear
+// at least one of these states, so stale render caches cannot bleed across a
+// waypoint or act transition.
+[[nodiscard]] constexpr auto IsNativeGameplayAutomapFrame(
+        std::uint32_t activeMask) noexcept -> bool {
+    constexpr auto requiredMask = NativeUiGameStateMask
+        | NativeUiAutomapStateMask;
+    return (activeMask & requiredMask) == requiredMask;
+}
+
+[[nodiscard]] constexpr auto ShouldDrawMapSenseOwnedVisualFrame(
+        bool gameplayReady,
+        std::uint32_t activeMask,
+        bool localPlayerAlive) noexcept -> bool {
+    return gameplayReady
+        && IsNativeGameplayAutomapFrame(activeMask)
+        && localPlayerAlive;
+}
 
 // D2R's 32-byte interface-state table mixes modal panels with a small set of
 // world/HUD states. The native automap is submitted before those panels and is
@@ -68,8 +92,8 @@ struct NativeUiMapHorizontalClip final {
 // governed native UI enum. They may coexist with the automap without hiding
 // MapSense pixels.
 inline constexpr std::uint32_t NativeUiWorldHudStateMask =
-    (std::uint32_t{1U} << 0U)
-    | (std::uint32_t{1U} << 10U)
+    NativeUiGameStateMask
+    | NativeUiAutomapStateMask
     | (std::uint32_t{1U} << 12U)
     | (std::uint32_t{1U} << 18U)
     | (std::uint32_t{1U} << 20U)

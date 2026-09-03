@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -14,8 +15,13 @@ inline constexpr std::uint32_t NativeMissileUnitType = 3U;
 inline constexpr std::size_t NativeClientUnitHashBucketCount = 128U;
 inline constexpr std::size_t NativeClientUnitHashTypeStride =
     NativeClientUnitHashBucketCount * sizeof(void*);
+inline constexpr std::size_t NativeClientUnitHashTypeCount = 6U;
+inline constexpr std::size_t NativeServerUnitHashTableOffsetFromClient =
+    NativeClientUnitHashTypeCount * NativeClientUnitHashTypeStride;
 inline constexpr std::size_t MaximumNativeAutomapMissiles = 32'768U;
 inline constexpr std::size_t MaximumNativeMissilesPerBucket = 8'192U;
+inline constexpr std::size_t NativeMissileIdentityTableCapacity =
+    MaximumNativeAutomapMissiles * 2U;
 inline constexpr std::uint64_t NativeAutomapMissileLifetimeMilliseconds = 250U;
 
 namespace Detail {
@@ -44,6 +50,129 @@ namespace Detail {
         && currentTick - observedTick
             <= NativeAutomapMissileLifetimeMilliseconds;
 }
+
+enum class NativeMissileIdentityResult : std::uint8_t {
+    Missing,
+    Inserted,
+    DuplicateClient,
+    DuplicateServer,
+    ClassConflict,
+    CapacityExceeded,
+    Invalid,
+};
+
+// A fixed open-addressed set keeps dual client/server collection bounded and
+// allocation-free. Identity is the native unit id; class id is retained as a
+// consistency witness so a conflicting server copy can never produce a
+// second marker. Reset touches only slots used by the previous frame.
+template <std::size_t Capacity, std::size_t MaximumEntries>
+class NativeMissileIdentitySet final {
+    static_assert(Capacity != 0U && (Capacity & (Capacity - 1U)) == 0U);
+    static_assert(MaximumEntries != 0U);
+    static_assert(MaximumEntries * 2U <= Capacity);
+    static_assert(Capacity <= static_cast<std::size_t>(UINT32_MAX));
+
+public:
+    constexpr void Reset() noexcept {
+        for (std::size_t index = 0U; index < touchedCount_; ++index) {
+            entries_[touchedSlots_[index]] = 0U;
+        }
+        touchedCount_ = 0U;
+    }
+
+    [[nodiscard]] constexpr auto Find(
+            std::uint32_t unitId,
+            std::int32_t classId) const noexcept
+            -> NativeMissileIdentityResult {
+        return Probe(unitId, classId).result;
+    }
+
+    [[nodiscard]] constexpr auto Insert(
+            std::uint32_t unitId,
+            std::int32_t classId,
+            bool serverSource) noexcept
+            -> NativeMissileIdentityResult {
+        const auto probe = Probe(unitId, classId);
+        if (probe.result != NativeMissileIdentityResult::Missing) {
+            return probe.result;
+        }
+        if (touchedCount_ >= MaximumEntries) {
+            return NativeMissileIdentityResult::CapacityExceeded;
+        }
+
+        entries_[probe.slot] = Encode(unitId, classId, serverSource) + 1U;
+        touchedSlots_[touchedCount_++] = static_cast<std::uint32_t>(probe.slot);
+        return NativeMissileIdentityResult::Inserted;
+    }
+
+    [[nodiscard]] constexpr auto Size() const noexcept -> std::size_t {
+        return touchedCount_;
+    }
+
+private:
+    struct ProbeResult final {
+        NativeMissileIdentityResult result{};
+        std::size_t slot{};
+    };
+
+    [[nodiscard]] static constexpr auto Encode(
+            std::uint32_t unitId,
+            std::int32_t classId,
+            bool serverSource) noexcept -> std::uint64_t {
+        return (static_cast<std::uint64_t>(unitId) << 32U)
+            | static_cast<std::uint32_t>(classId)
+            | (serverSource ? UINT32_C(0x80000000) : 0U);
+    }
+
+    [[nodiscard]] static constexpr auto Hash(
+            std::uint32_t unitId) noexcept -> std::size_t {
+        return static_cast<std::size_t>(
+            static_cast<std::uint64_t>(unitId)
+                * UINT64_C(0x9E3779B185EBCA87))
+            & (Capacity - 1U);
+    }
+
+    [[nodiscard]] constexpr auto Probe(
+            std::uint32_t unitId,
+            std::int32_t classId) const noexcept -> ProbeResult {
+        if (unitId == UINT32_MAX || classId < 0) {
+            return {NativeMissileIdentityResult::Invalid, 0U};
+        }
+
+        auto slot = Hash(unitId);
+        for (std::size_t attempt = 0U; attempt < Capacity; ++attempt) {
+            const auto storedPlusOne = entries_[slot];
+            if (storedPlusOne == 0U) {
+                return {NativeMissileIdentityResult::Missing, slot};
+            }
+
+            const auto stored = storedPlusOne - 1U;
+            const auto storedUnitId = static_cast<std::uint32_t>(
+                stored >> 32U);
+            if (storedUnitId == unitId) {
+                const auto storedDetails = static_cast<std::uint32_t>(stored);
+                const auto storedClassId = static_cast<std::int32_t>(
+                    storedDetails & UINT32_C(0x7FFFFFFF));
+                const auto storedOnServer =
+                    (storedDetails & UINT32_C(0x80000000)) != 0U;
+                return {
+                    storedClassId == classId
+                        ? (storedOnServer
+                            ? NativeMissileIdentityResult::DuplicateServer
+                            : NativeMissileIdentityResult::DuplicateClient)
+                        : NativeMissileIdentityResult::ClassConflict,
+                    slot,
+                };
+            }
+            slot = (slot + 1U) & (Capacity - 1U);
+        }
+        return {NativeMissileIdentityResult::CapacityExceeded, 0U};
+    }
+
+    std::array<std::uint64_t, Capacity> entries_{};
+    std::array<std::uint32_t, MaximumEntries> touchedSlots_{};
+    std::size_t touchedCount_{};
+};
 
 } // namespace Detail
 
@@ -85,18 +214,28 @@ struct NativeAutomapMissileSnapshot final {
 struct NativeAutomapMissileCounters final {
     std::uint64_t automapPulses{};
     std::uint64_t clientTableScans{};
+    std::uint64_t serverTableScans{};
     std::uint64_t bucketsVisited{};
+    std::uint64_t clientBucketsVisited{};
+    std::uint64_t serverBucketsVisited{};
     std::uint64_t traversalLimits{};
     std::uint64_t cyclesRejected{};
     std::uint64_t unitsObserved{};
+    std::uint64_t clientUnitsObserved{};
+    std::uint64_t serverUnitsObserved{};
     std::uint64_t unitTypeRejected{};
     std::uint64_t invalidUnitIds{};
     std::uint64_t invalidClassIds{};
     std::uint64_t pathRejected{};
     std::uint64_t projectionRejected{};
     std::uint64_t nativeClipRejected{};
+    std::uint64_t duplicatesSuppressed{};
+    std::uint64_t clientPreferredDuplicates{};
+    std::uint64_t classConflictsRejected{};
     std::uint64_t framesPublished{};
     std::uint64_t missilesPublished{};
+    std::uint64_t clientMissilesPublished{};
+    std::uint64_t serverMissilesPublished{};
     std::uint64_t writerContentionDrops{};
     std::uint64_t readerContentionDrops{};
     std::uint64_t accessFaults{};
@@ -104,6 +243,8 @@ struct NativeAutomapMissileCounters final {
     std::uint64_t totalScanMicroseconds{};
     std::uint64_t scanTimingSamples{};
     std::uint64_t currentPublished{};
+    std::uint64_t currentClientPublished{};
+    std::uint64_t currentServerPublished{};
 };
 
 auto InitializeNativeAutomapMissile(
@@ -114,7 +255,8 @@ void InvalidateNativeAutomapMissileFrame() noexcept;
 void SetNativeAutomapMissileEnabled(bool enabled) noexcept;
 
 // Called only by the existing AUTOMAP_RenderUnit owner during the local-player
-// pass. It performs one bounded client type-3 table scan and publishes values.
+// pass. It performs bounded client and server type-3 table scans, suppresses
+// duplicate identities with client priority, and publishes value copies only.
 void ObserveNativeAutomapMissilePlayerPass(
     const NativeAutomapMissilePlayerPass& pass) noexcept;
 

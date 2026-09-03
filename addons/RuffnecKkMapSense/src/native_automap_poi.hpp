@@ -163,6 +163,31 @@ struct AutomapExitLabelDefinition final {
     bool canonicalLevelPairAnchor{};
 };
 
+// Native evidence can refine one directed transition without owning every
+// other transition emitted for the same source Level. This pair-level rule is
+// especially important for permanent portals: a complete native room pass
+// may prove the ordinary exits while the external DRLG atlas remains the only
+// seed-static proof of the portal destination.
+[[nodiscard]] constexpr auto NativeAutomapExitOverridesExternal(
+        const AutomapExitLabelDefinition& external,
+        const AutomapExitLabelDefinition& native) noexcept -> bool {
+    return external.sourceLevelId == native.sourceLevelId
+        && external.targetLevelId == native.targetLevelId;
+}
+
+[[nodiscard]] constexpr auto ShouldRetainExternalAutomapExit(
+        const AutomapExitLabelDefinition& external,
+        std::span<const AutomapExitLabelDefinition> native,
+        bool nativeOwnerComplete) noexcept -> bool {
+    if (!nativeOwnerComplete) return true;
+    for (const auto& definition : native) {
+        if (NativeAutomapExitOverridesExternal(external, definition)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // One exact generated waypoint preset owned by its materialized level. Unlike
 // live object units, this immutable definition remains available while the
 // player pans anywhere across the revealed native automap.
@@ -274,6 +299,20 @@ public:
         return true;
     }
 
+    [[nodiscard]] constexpr auto ReplaceAll(
+            std::span<const AutomapLevelLabelDefinition> incoming) noexcept
+            -> bool {
+        if (incoming.size() > definitions_.size()) return false;
+        for (std::size_t index = 0U; index < incoming.size(); ++index) {
+            scratch_[index] = incoming[index];
+        }
+        for (std::size_t index = 0U; index < incoming.size(); ++index) {
+            definitions_[index] = scratch_[index];
+        }
+        count_ = incoming.size();
+        return true;
+    }
+
     constexpr void Clear() noexcept {
         count_ = 0U;
     }
@@ -288,6 +327,124 @@ private:
     std::array<AutomapLevelLabelDefinition, Capacity> scratch_{};
     std::size_t count_{};
 };
+
+// The externally generated atlas is the immutable baseline for one
+// session/seed/difficulty/act. Native DRLG observations are a second layer:
+// a positive definition overrides the same owner, while an empty observation
+// is deliberately a no-op and can never erase the baseline. Keeping this
+// ownership rule in a small allocation-free catalog makes the regression
+// contract independently testable from the renderer and gameplay hooks.
+template <typename Definition, typename Catalog, std::size_t Capacity>
+class LayeredAutomapOwnerDefinitionCatalog final {
+public:
+    [[nodiscard]] constexpr auto ReplaceExternal(
+            std::span<const Definition> incoming) noexcept -> bool {
+        if (!UniqueOwners(incoming)) return false;
+        std::size_t effectiveCount = incoming.size();
+        for (const auto& definition : native_.Definitions()) {
+            if (!HasOwner(incoming, definition.levelId)) ++effectiveCount;
+        }
+        if (effectiveCount > Capacity) return false;
+        if (!external_.ReplaceAll(incoming)) return false;
+        RebuildEffective();
+        return true;
+    }
+
+    [[nodiscard]] constexpr auto PublishNativeOwner(
+            std::int32_t levelId,
+            std::span<const Definition> incoming) noexcept -> bool {
+        // A negative or not-yet-ready native observation is not evidence that
+        // an externally generated owner does not exist.
+        if (incoming.empty()) return true;
+        if (incoming.size() != 1U || incoming.front().levelId != levelId) {
+            return false;
+        }
+        const auto nativeHasOwner = HasOwner(native_.Definitions(), levelId);
+        const auto externalHasOwner = HasOwner(
+            external_.Definitions(),
+            levelId);
+        auto effectiveCount = effectiveCount_;
+        if (!nativeHasOwner && !externalHasOwner) ++effectiveCount;
+        if (effectiveCount > Capacity) return false;
+        if (!native_.ReplaceOwner(levelId, incoming)) return false;
+        RebuildEffective();
+        return true;
+    }
+
+    constexpr void Clear() noexcept {
+        external_.Clear();
+        native_.Clear();
+        effectiveCount_ = 0U;
+    }
+
+    [[nodiscard]] constexpr auto Definitions() const noexcept
+            -> std::span<const Definition> {
+        return {effective_.data(), effectiveCount_};
+    }
+
+    [[nodiscard]] constexpr auto ExternalDefinitions() const noexcept
+            -> std::span<const Definition> {
+        return external_.Definitions();
+    }
+
+    [[nodiscard]] constexpr auto NativeDefinitions() const noexcept
+            -> std::span<const Definition> {
+        return native_.Definitions();
+    }
+
+private:
+    [[nodiscard]] static constexpr auto HasOwner(
+            std::span<const Definition> definitions,
+            std::int32_t levelId) noexcept -> bool {
+        for (const auto& definition : definitions) {
+            if (definition.levelId == levelId) return true;
+        }
+        return false;
+    }
+
+    [[nodiscard]] static constexpr auto UniqueOwners(
+            std::span<const Definition> definitions) noexcept -> bool {
+        for (std::size_t index = 0U; index < definitions.size(); ++index) {
+            for (std::size_t earlier = 0U; earlier < index; ++earlier) {
+                if (definitions[earlier].levelId
+                        == definitions[index].levelId) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    constexpr void RebuildEffective() noexcept {
+        effectiveCount_ = 0U;
+        for (const auto& definition : external_.Definitions()) {
+            if (HasOwner(native_.Definitions(), definition.levelId)) continue;
+            effective_[effectiveCount_++] = definition;
+        }
+        for (const auto& definition : native_.Definitions()) {
+            effective_[effectiveCount_++] = definition;
+        }
+    }
+
+    Catalog external_{};
+    Catalog native_{};
+    std::array<Definition, Capacity> effective_{};
+    std::size_t effectiveCount_{};
+};
+
+template <std::size_t Capacity>
+using LayeredAutomapWaypointDefinitionCatalog =
+    LayeredAutomapOwnerDefinitionCatalog<
+        AutomapWaypointLabelDefinition,
+        AutomapWaypointDefinitionCatalog<Capacity>,
+        Capacity>;
+
+template <std::size_t Capacity>
+using LayeredAutomapLevelDefinitionCatalog =
+    LayeredAutomapOwnerDefinitionCatalog<
+        AutomapLevelLabelDefinition,
+        AutomapLevelDefinitionCatalog<Capacity>,
+        Capacity>;
 
 } // namespace Detail
 
@@ -561,7 +718,7 @@ void SetNativeAutomapPoiCollectionMask(std::uint32_t mask) noexcept;
     std::int32_t levelId,
     const AutomapExitLabelDefinition* definitions,
     std::size_t definitionCount) noexcept -> bool;
-[[nodiscard]] auto ReplaceNativeAutomapExitLabels(
+[[nodiscard]] auto ReplaceExternalAutomapExitLabels(
     std::uint64_t sessionGeneration,
     const AutomapExitLabelDefinition* definitions,
     std::size_t definitionCount) noexcept -> bool;
@@ -575,9 +732,13 @@ void SetNativeAutomapPoiCollectionMask(std::uint32_t mask) noexcept;
     std::int32_t levelId,
     const AutomapLevelLabelDefinition* definitions,
     std::size_t definitionCount) noexcept -> bool;
-[[nodiscard]] auto ReplaceNativeAutomapWaypointLabels(
+[[nodiscard]] auto ReplaceExternalAutomapWaypointLabels(
     std::uint64_t sessionGeneration,
     const AutomapWaypointLabelDefinition* definitions,
+    std::size_t definitionCount) noexcept -> bool;
+[[nodiscard]] auto ReplaceExternalAutomapLevelLabels(
+    std::uint64_t sessionGeneration,
+    const AutomapLevelLabelDefinition* definitions,
     std::size_t definitionCount) noexcept -> bool;
 [[nodiscard]] auto PublishNativeAutomapSpecialChests(
     std::uint64_t sessionGeneration,

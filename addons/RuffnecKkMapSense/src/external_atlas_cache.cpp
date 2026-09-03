@@ -124,14 +124,27 @@ auto BuildExternalAtlasCachePath(
         || swprintf_s(
             actFile.data(),
             actFile.size(),
-            L"act-%u.msa",
-            static_cast<unsigned>(key.act)) <= 0) {
+            L"act-%u-r%u.msa",
+            static_cast<unsigned>(key.act),
+            ExternalAtlasGeometryCacheRevision) <= 0) {
         return false;
     }
     try {
-        output = root
-            / (L"v" + std::to_wstring(ExternalAtlasCacheRevision))
-            / seedDirectory.data()
+        auto base = root
+            / (L"v" + std::to_wstring(ExternalAtlasCacheRevision));
+        if (key.dataFingerprint != 0U) {
+            std::array<wchar_t, 40U> dataDirectory{};
+            if (swprintf_s(
+                    dataDirectory.data(),
+                    dataDirectory.size(),
+                    L"data-%016llX",
+                    static_cast<unsigned long long>(
+                        key.dataFingerprint)) <= 0) {
+                return false;
+            }
+            base /= dataDirectory.data();
+        }
+        output = base / seedDirectory.data()
             / difficultyDirectory.data()
             / actFile.data();
     } catch (...) {

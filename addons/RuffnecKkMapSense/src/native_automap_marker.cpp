@@ -240,6 +240,7 @@ const D2RL::PluginContext* DiagnosticContext{};
 std::atomic_bool Active{};
 std::atomic_bool CollectionEnabled{};
 std::atomic_bool ImmunityCollectionEnabled{};
+std::atomic_bool LocalPlayerFrameAlive{};
 std::atomic<std::uint64_t> Epoch{};
 std::atomic<std::uint64_t> LastAutomapPulseTick{};
 std::atomic<std::uint64_t> LastMonsterTableScanTick{};
@@ -255,8 +256,6 @@ std::uint64_t LastPurgeTick{};
 std::unordered_map<std::uint32_t, Candidate> MarkerCache;
 std::atomic_flag NativeAutomapViewportLock = ATOMIC_FLAG_INIT;
 NativeAutomapViewportSnapshot PublishedNativeAutomapViewport{};
-std::atomic_bool AtlasProjectionWitnessReported{};
-std::atomic_bool AtlasProjectionWitnessRejectedReported{};
 std::vector<TrackedMonster> TrackedMonsters;
 std::vector<TrackedMonster> DiscoveryScratch;
 std::uint64_t TrackedMonsterEpoch{};
@@ -430,73 +429,6 @@ auto ProjectNavigationClient(
     }
 }
 
-struct AtlasProjectionCaptureDiagnostic final {
-    const char* stage{"not-run"};
-    NavigationNativePoint anchor{};
-    NavigationNativePoint clientXBasis{};
-    NavigationNativePoint clientYBasis{};
-    NavigationNativePoint diagonal{};
-};
-
-[[nodiscard]] auto CaptureAtlasProjectionWitness(
-        void* borrowedAutomapContext,
-        std::int32_t anchorClientX,
-        std::int32_t anchorClientY,
-        AtlasProjectionWitness& output,
-        AtlasProjectionCaptureDiagnostic& diagnostic) noexcept -> bool {
-    output = {};
-    diagnostic = {};
-    constexpr auto maximum = (std::numeric_limits<std::int32_t>::max)();
-    if (anchorClientX > maximum - AtlasProjectionBasisClientUnits
-        || anchorClientY > maximum - AtlasProjectionBasisClientUnits) {
-        diagnostic.stage = "input-overflow";
-        return false;
-    }
-    if (!ProjectNavigationClient(
-            borrowedAutomapContext,
-            anchorClientX,
-            anchorClientY,
-            diagnostic.anchor)) {
-        diagnostic.stage = "anchor-project";
-        return false;
-    }
-    if (!ProjectNavigationClient(
-            borrowedAutomapContext,
-            anchorClientX + AtlasProjectionBasisClientUnits,
-            anchorClientY,
-            diagnostic.clientXBasis)) {
-        diagnostic.stage = "x-basis-project";
-        return false;
-    }
-    if (!ProjectNavigationClient(
-            borrowedAutomapContext,
-            anchorClientX,
-            anchorClientY + AtlasProjectionBasisClientUnits,
-            diagnostic.clientYBasis)) {
-        diagnostic.stage = "y-basis-project";
-        return false;
-    }
-    if (!ProjectNavigationClient(
-            borrowedAutomapContext,
-            anchorClientX + AtlasProjectionBasisClientUnits,
-            anchorClientY + AtlasProjectionBasisClientUnits,
-            diagnostic.diagonal)) {
-        diagnostic.stage = "diagonal-project";
-        return false;
-    }
-    const auto valid = BuildAtlasProjectionWitness(
-        anchorClientX,
-        anchorClientY,
-        {diagnostic.anchor.x, diagnostic.anchor.y},
-        {diagnostic.clientXBasis.x, diagnostic.clientXBasis.y},
-        {diagnostic.clientYBasis.x, diagnostic.clientYBasis.y},
-        {diagnostic.diagonal.x, diagnostic.diagonal.y},
-        AtlasProjectionBasisClientUnits,
-        output);
-    diagnostic.stage = valid ? "ready" : "non-affine-or-degenerate";
-    return valid;
-}
-
 void MixNavigationDiagnosticValue(
         std::uint64_t& hash,
         std::uint64_t value) noexcept {
@@ -632,6 +564,16 @@ void LogNavigationProjectionDiagnostic(
     }
 }
 
+[[nodiscard]] auto IsObservedLocalPlayerAlive(void* player) noexcept -> bool {
+    __try {
+        return player != nullptr && GetUnitMode != nullptr
+            && Detail::IsLocalPlayerAliveMode(GetUnitMode(player));
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
 void ObserveNavigationPlayerPass(
         void* player,
         void* automapContext) noexcept {
@@ -658,45 +600,6 @@ void ObserveNavigationPlayerPass(
         const auto* const diagnosticContext = DiagnosticContext;
         const auto playerClientX = GetUnitClientX(player);
         const auto playerClientY = GetUnitClientY(player);
-        AtlasProjectionWitness atlasProjection{};
-        AtlasProjectionCaptureDiagnostic atlasProjectionDiagnostic{};
-        const auto atlasProjectionValid = CaptureAtlasProjectionWitness(
-            automapContext,
-            playerClientX,
-            playerClientY,
-            atlasProjection,
-            atlasProjectionDiagnostic);
-        if (atlasProjectionValid
-            && !AtlasProjectionWitnessReported.exchange(
-                true,
-                std::memory_order_acq_rel)
-            && diagnosticContext != nullptr) {
-            diagnosticContext->LogInfo(
-                "MapSense external atlas: native pan/zoom projection witness is affine and ready.");
-        }
-        if (!atlasProjectionValid
-            && !AtlasProjectionWitnessRejectedReported.exchange(
-                true,
-                std::memory_order_acq_rel)
-            && diagnosticContext != nullptr) {
-            char message[512]{};
-            std::snprintf(
-                message,
-                sizeof(message),
-                "MapSense external atlas: projection witness rejected stage=%s client=(%d,%d) anchor=(%d,%d) x-basis=(%d,%d) y-basis=(%d,%d) diagonal=(%d,%d).",
-                atlasProjectionDiagnostic.stage,
-                playerClientX,
-                playerClientY,
-                atlasProjectionDiagnostic.anchor.x,
-                atlasProjectionDiagnostic.anchor.y,
-                atlasProjectionDiagnostic.clientXBasis.x,
-                atlasProjectionDiagnostic.clientXBasis.y,
-                atlasProjectionDiagnostic.clientYBasis.x,
-                atlasProjectionDiagnostic.clientYBasis.y,
-                atlasProjectionDiagnostic.diagonal.x,
-                atlasProjectionDiagnostic.diagonal.y);
-            diagnosticContext->LogWarn(message);
-        }
         const NavigationAutomapPass pass{
             .currentLevelId = currentLevelId,
             .inTown = inTown,
@@ -729,7 +632,6 @@ void ObserveNavigationPlayerPass(
             .clipHeight = pass.clipHeight,
             .observedTick = static_cast<std::uint64_t>(GetTickCount64()),
             .epoch = Epoch.load(std::memory_order_acquire),
-            .atlasProjection = atlasProjection,
         };
         NativeAutomapClipBounds clipBounds{};
         if (TryResolveNativeAutomapClipBounds(viewport, clipBounds)
@@ -769,15 +671,13 @@ void ObserveNavigationPlayerPass(
 }
 
 void ResetPublishedMarkers(bool resetCounters) noexcept {
+    LocalPlayerFrameAlive.store(false, std::memory_order_release);
     Epoch.fetch_add(1U, std::memory_order_acq_rel);
     LastAutomapPulseTick.store(0U, std::memory_order_release);
     LastMonsterTableScanTick.store(0U, std::memory_order_release);
     TrackedMarkerCount.store(0U, std::memory_order_release);
     TrackedMonsterCount.store(0U, std::memory_order_release);
     PublishedSequence.fetch_add(1U, std::memory_order_acq_rel);
-    AtlasProjectionWitnessReported.store(false, std::memory_order_release);
-    AtlasProjectionWitnessRejectedReported.store(false, std::memory_order_release);
-
     if (!resetCounters) return;
     AutomapPulses.store(0U, std::memory_order_relaxed);
     MonsterTableScans.store(0U, std::memory_order_relaxed);
@@ -1396,7 +1296,12 @@ __declspec(noinline) void __fastcall HookRenderAutomapUnit(
     // native pointer or context after the pass returns.
     void* const player = TryGetLocalPlayerPass(unit);
     if (player == nullptr) return;
+    if (!IsObservedLocalPlayerAlive(player)) {
+        LocalPlayerFrameAlive.store(false, std::memory_order_release);
+        return;
+    }
     ObserveNavigationPlayerPass(player, automapContext);
+    LocalPlayerFrameAlive.store(true, std::memory_order_release);
     if (!CollectionEnabled.load(std::memory_order_acquire)) return;
 
     const auto currentTick = static_cast<std::uint64_t>(GetTickCount64());
@@ -1822,6 +1727,15 @@ void ResetNativeAutomapMarker() noexcept {
 void InvalidateNativeAutomapMarkerFrame() noexcept {
     ResetPublishedMarkers(false);
     InvalidateNativeAutomapMissileFrame();
+}
+
+void InvalidateNativeAutomapLocalPlayerFrame() noexcept {
+    LocalPlayerFrameAlive.store(false, std::memory_order_release);
+}
+
+auto IsNativeAutomapLocalPlayerFrameAlive() noexcept -> bool {
+    return Active.load(std::memory_order_acquire)
+        && LocalPlayerFrameAlive.load(std::memory_order_acquire);
 }
 
 void SetNativeAutomapMarkerEnabled(bool enabled) noexcept {

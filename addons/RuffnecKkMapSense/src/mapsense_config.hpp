@@ -22,7 +22,7 @@
 
 namespace RuffnecKk::MapSense {
 
-inline constexpr std::int64_t CurrentConfigSchemaVersion = 14;
+inline constexpr std::int64_t CurrentConfigSchemaVersion = 15;
 
 inline constexpr float MinimumMonsterMarkerSize = 3.0F;
 inline constexpr float MaximumMonsterMarkerSize = 40.0F;
@@ -40,6 +40,9 @@ inline constexpr float MaximumAutomapLabelSize = 72.0F;
 inline constexpr float MinimumAutomapObjectSize = 6.0F;
 inline constexpr float DefaultAutomapObjectSize = 36.0F;
 inline constexpr float MaximumAutomapObjectSize = 80.0F;
+inline constexpr float MinimumMissileMarkerSize = 1.0F;
+inline constexpr float DefaultMissileMarkerSize = 3.0F;
+inline constexpr float MaximumMissileMarkerSize = 16.0F;
 inline constexpr float MinimumNavigationLineThickness = 1.0F;
 inline constexpr float DefaultNavigationLineThickness = 2.0F;
 inline constexpr float MaximumNavigationLineThickness = 8.0F;
@@ -155,6 +158,20 @@ inline constexpr RgbaColor DefaultWeaponRackColor{
     36.0F / 255.0F,
     1.0F,
 };
+inline constexpr RgbaColor DefaultFireMissileColor{
+    1.0F, 0.0F, 0.0F, 127.0F / 255.0F};
+inline constexpr RgbaColor DefaultColdMissileColor{
+    0.0F, 208.0F / 255.0F, 1.0F, 127.0F / 255.0F};
+inline constexpr RgbaColor DefaultLightningMissileColor{
+    1.0F, 1.0F, 0.0F, 70.0F / 255.0F};
+inline constexpr RgbaColor DefaultPoisonMissileColor{
+    50.0F / 255.0F, 205.0F / 255.0F, 50.0F / 255.0F,
+    127.0F / 255.0F};
+inline constexpr RgbaColor DefaultPhysicalMissileColor{
+    205.0F / 255.0F, 133.0F / 255.0F, 63.0F / 255.0F,
+    127.0F / 255.0F};
+inline constexpr RgbaColor DefaultMagicMissileColor{
+    1.0F, 136.0F / 255.0F, 0.0F, 127.0F / 255.0F};
 
 struct OverlayOptions {
     bool enabled{true};
@@ -214,6 +231,21 @@ struct ImmunityOptions {
     RgbaColor lightning{1.0F, 0.88F, 0.18F, 1.0F};
     RgbaColor poison{0.34F, 0.88F, 0.24F, 1.0F};
     RgbaColor magic{0.78F, 0.36F, 1.0F, 1.0F};
+};
+
+struct MissileMarkerStyle {
+    RgbaColor color{};
+    float size{DefaultMissileMarkerSize};
+};
+
+struct MissileOptions {
+    bool enabled{true};
+    MissileMarkerStyle fire{DefaultFireMissileColor};
+    MissileMarkerStyle cold{DefaultColdMissileColor};
+    MissileMarkerStyle lightning{DefaultLightningMissileColor};
+    MissileMarkerStyle poison{DefaultPoisonMissileColor};
+    MissileMarkerStyle physical{DefaultPhysicalMissileColor};
+    MissileMarkerStyle magic{DefaultMagicMissileColor};
 };
 
 struct AutomapLabelOptions {
@@ -327,6 +359,7 @@ struct Config {
     OverlayOptions overlay{};
     MonsterOptions monsters{};
     ImmunityOptions immunities{};
+    MissileOptions missiles{};
     ObjectsOptions objects{};
     NavigationOptions navigation{};
     HudOptions hud{};
@@ -650,6 +683,51 @@ inline auto ReadAutomapLabelOptions(
     return fallback;
 }
 
+inline auto ReadMissileMarkerStyle(
+        const toml::table& missiles,
+        std::string_view key,
+        MissileMarkerStyle fallback) -> MissileMarkerStyle {
+    const auto* style = ReadOptionalTable(missiles, key);
+    if (style == nullptr) return fallback;
+    RejectUnknownKeys(*style, {"color", "size"}, key);
+    fallback.color = ReadOptionalColor(*style, "color", fallback.color);
+    fallback.size = ReadOptionalFloat(
+        *style,
+        "size",
+        fallback.size,
+        MinimumMissileMarkerSize,
+        MaximumMissileMarkerSize);
+    return fallback;
+}
+
+inline auto ReadMissileOptions(
+        const toml::table& root,
+        MissileOptions fallback) -> MissileOptions {
+    const auto* missiles = ReadOptionalTable(root, "missiles");
+    if (missiles == nullptr) return fallback;
+    RejectUnknownKeys(
+        *missiles,
+        {"enabled", "fire", "cold", "lightning", "poison", "physical", "magic"},
+        "missiles");
+    fallback.enabled = ReadOptional(
+        *missiles,
+        "enabled",
+        fallback.enabled);
+    fallback.fire = ReadMissileMarkerStyle(
+        *missiles, "fire", fallback.fire);
+    fallback.cold = ReadMissileMarkerStyle(
+        *missiles, "cold", fallback.cold);
+    fallback.lightning = ReadMissileMarkerStyle(
+        *missiles, "lightning", fallback.lightning);
+    fallback.poison = ReadMissileMarkerStyle(
+        *missiles, "poison", fallback.poison);
+    fallback.physical = ReadMissileMarkerStyle(
+        *missiles, "physical", fallback.physical);
+    fallback.magic = ReadMissileMarkerStyle(
+        *missiles, "magic", fallback.magic);
+    return fallback;
+}
+
 inline auto ReadAutomapObjectOptions(
         const toml::table& objects,
         std::string_view key,
@@ -970,7 +1048,7 @@ inline auto ReadCustomLevelLineOptions(
 inline auto ParseConfig(const toml::table& root) -> Config {
     RejectUnknownKeys(
         root,
-        {"schema_version", "general", "overlay", "monsters", "immunities", "objects", "navigation", "hud", "menu", "diagnostics"},
+        {"schema_version", "general", "overlay", "monsters", "immunities", "missiles", "objects", "navigation", "hud", "menu", "diagnostics"},
         "root");
 
     const auto* schemaNode = root.get("schema_version");
@@ -992,6 +1070,10 @@ inline auto ParseConfig(const toml::table& root) -> Config {
     if (*schemaVersion < 10 && root.contains("objects")) {
         throw std::runtime_error(
             "MapSense object settings require schema_version 10");
+    }
+    if (*schemaVersion < 15 && root.contains("missiles")) {
+        throw std::runtime_error(
+            "MapSense missile settings require schema_version 15");
     }
 
     Config config{};
@@ -1218,6 +1300,11 @@ inline auto ParseConfig(const toml::table& root) -> Config {
         // exclusively for the separate locked-state padlock. Upgrade only the
         // shipped amber value so customized legacy lock colors survive.
         config.objects.chests.lockedAccentColor = DefaultLockedChestColor;
+    }
+    if (*schemaVersion >= 15) {
+        config.missiles = ReadMissileOptions(
+            root,
+            std::move(config.missiles));
     }
     if (const auto* navigation = ReadOptionalTable(root, "navigation")) {
         RejectUnknownKeys(
@@ -1451,6 +1538,28 @@ inline auto SerializeConfig(const Config& config) -> std::string {
         << "lightning = \"" << ColorToHex(config.immunities.lightning) << "\"\n"
         << "poison = \"" << ColorToHex(config.immunities.poison) << "\"\n"
         << "magic = \"" << ColorToHex(config.immunities.magic) << "\"\n\n"
+        << "[missiles]\n"
+        << "enabled = " << config.missiles.enabled << "\n\n"
+        << "[missiles.fire]\n"
+        << "color = \"" << ColorToHex(config.missiles.fire.color) << "\"\n"
+        << "size = " << config.missiles.fire.size << "\n\n"
+        << "[missiles.cold]\n"
+        << "color = \"" << ColorToHex(config.missiles.cold.color) << "\"\n"
+        << "size = " << config.missiles.cold.size << "\n\n"
+        << "[missiles.lightning]\n"
+        << "color = \"" << ColorToHex(config.missiles.lightning.color)
+        << "\"\n"
+        << "size = " << config.missiles.lightning.size << "\n\n"
+        << "[missiles.poison]\n"
+        << "color = \"" << ColorToHex(config.missiles.poison.color) << "\"\n"
+        << "size = " << config.missiles.poison.size << "\n\n"
+        << "[missiles.physical]\n"
+        << "color = \"" << ColorToHex(config.missiles.physical.color)
+        << "\"\n"
+        << "size = " << config.missiles.physical.size << "\n\n"
+        << "[missiles.magic]\n"
+        << "color = \"" << ColorToHex(config.missiles.magic.color) << "\"\n"
+        << "size = " << config.missiles.magic.size << "\n\n"
         << "[objects]\n"
         << "enabled = " << config.objects.enabled << "\n\n"
         << "[objects.exit_labels]\n"

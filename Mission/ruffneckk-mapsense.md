@@ -1,6 +1,6 @@
 # RuffnecKk MapSense — D2R 3.2.92777 et 3.3.93847
 
-Dernière mise à jour : 30 août 2026
+Dernière mise à jour : 2 septembre 2026
 
 ## Décision et état
 
@@ -69,22 +69,23 @@ chaque rang dispose maintenant d'une forme indépendante parmi `x`,
 exprimaient la portée en unités client/dimétriques de 500 à 2 500; le schéma 7
 les remplace par 30 à 220 vrais subtiles monde, avec 60 par défaut.
 
-État actuel : **MapSense 0.13.11 est implanté comme candidat source; trois
-builds Release reproductibles et CTest `1/1` passent, mais aucun déploiement ni
-verdict gameplay 0.13.11 n'est revendiqué**. Le runtime qualifié reste 0.13.9
-sur D2R 3.3.93847 : 36 plugins, 18 patches, 190 tables TXT et `24/24`, avec
-Revive Overhaul comme seul échec plugin déjà connu. Le verdict humain 0.13.8
-avait accepté l'orientation des jungles et les étoiles des special chests, puis
-rejeté la déduplication locale générique, la géométrie du coffre et la ligne de
-progression depuis Great Marsh. Le lot 0.13.9 répondait à ces trois échecs et
-ajoutait les noms configurables de waypoints; 0.13.11 remplace maintenant le
-coffre procédural par les images exactes PrimeMH autorisées et resserre la
-coordination Reveal/navigation.
-Le master dynamique `Disable MapSense` / `Enable MapSense` et les actions
-`Arm Reveal All` / `Disarm Reveal All` restent implantés; le TOML runtime avait
-déjà migré au schéma 12 et n'était donc pas resté byte-identique au schéma 11.
-Les témoins humains Inventory, Skill Tree et Quest panel demeurent des PASS
-historiques, pas une validation implicite du nouveau hash.
+État actuel : **MapSense 0.13.35 est déployé en portée mod-locale et son cold
+start officiel passe; le verdict gameplay humain reste ouvert**. Zig 0.16.0
+ReleaseSafe, Release x64 `/W4 /WX`, CTest `1/1`, la matrice MS1 v3/MSA1 v2 de
+quatre seeds × cinq actes et les gates custom BKVince/LevelId 733 passent. Le
+gate visuel mort/chargement est implanté sans nouvelle RVA, signature, ABI ni
+propriété de hook. Le runtime doit encore confirmer la disparition immédiate
+à la mort et au chargement, puis la restauration correcte après transition.
+
+La 0.13.34 corrige le raccourci outdoor incomplet du helper : masque DT1 par
+pièce, passes `LvlSub` waypoint/shrine/terrain, ordre de seed et coutures entre
+pièces sont maintenant fidèles sans collision rasterisée ni room gameplay dans
+D2R. Une couche n'est plus créditée avant qu'un vrai passage de rendu automap
+retrouve ses témoins exacts dans les arbres natifs floor/wall. Le verdict
+visuel Actes III/V, les transitions inter-actes, les FPS et l'absence de freeze
+restent ouverts sur les hashes 0.13.34 documentés plus bas. Les acquis coffre
+PrimeMH, navigation, marqueurs live, immunités, boss et master dynamique restent
+dans leurs pipelines existants et ne sont pas régénérés par le helper.
 
 Le catalogue de session immuable charge en priorité `levels.txt`, `shrines.txt`,
 `superuniques.txt`, `monstats.txt` et `objects.txt` depuis les racines du mod
@@ -1987,6 +1988,705 @@ n'est produit. `libd2` et D2MOO sont crédités; la provenance et l'autorisation
 de redistribution de chaque payload dérivé restent à consigner formellement
 avant une release publique.
 
+### Spike natif post-0.13.22 — publication par `Levels.Layer`
+
+Le témoin gameplay 0.13.22 invalide son terrain D3D12/ImGui : D2R dessine déjà
+le niveau courant et le second atlas crée un doublon qui change de position et
+flashe lorsque le personnage bouge. Vincent donne **GO** à un spike statique
+strictement read-only; aucune injection ni DLL runtime n'est autorisée dans ce
+gate.
+
+Le corpus x64 commun prouve une route native sans room. Le callback standard
+`0xD2240` résout `Levels.Layer`, obtient un propriétaire `0xB0` contenant quatre
+arbres floor/wall/object/extra, puis alimente les arbres floor et wall. La clé
+cellule de 12 octets contient frame et coordonnées automap; sa conversion exacte
+depuis les tiles libd2 vaut `(tx-ty)*8`, `(tx+ty)*4`, avec `+24` en Y pour une
+wall. L'insertion `0xD1460` alloue par le jeu, déduplique et équilibre l'arbre.
+Au changement de layer, D2R sérialise ces arbres dans son format automap, les
+vide et les recharge par le cycle natif; le teardown possède aussi toutes les
+libérations.
+
+Le spike est donc **PASS statique borné** pour publier les cellules MaxiMap de
+chaque niveau dans son propre `Levels.Layer`, sur le thread UI natif et sans
+`DrlgRoom`, `ActiveRoom`, collision, monstre ou objet actif. Le champ `layer` du
+MSA1 actuel est toutefois un index de sheet DC6 libd2 et ne doit jamais être
+passé comme `Levels.Layer`. Les town montages spéciaux restent délégués au jeu.
+
+L'architecture retenue pour un éventuel prototype supprime entièrement le
+terrain ImGui, conserve le helper/cache seed-driven et publie progressivement
+chaque niveau vers son layer natif. Elle interdit de recopier tout l'acte dans
+chaque layer courant : cela gonflerait les sidecars et détournerait leur modèle.
+Les noms distants, waypoints et autres POI restent un gate séparé; ce spike ne
+les déclare pas résolus. Les mesures d'insertion, de sidecar et de FPS Tab ouvert
+restent `not run`.
+
+### Correction 0.13.24 — propriétaire automap actif et traversées physiques
+
+Le premier runtime du spike natif a affiché l'ensemble des noms et waypoints
+avec des FPS jugés corrects, mais a ensuite bloqué un changement par waypoint
+pendant plus de 40 secondes. Le log contenait 38 202 passages de replay et le
+processus atteignait environ 17,65 Go. Le corpus natif gouverné prouve que
+`AUTOMAP_GetOrCreateLayer 0xD5360`, lorsqu'il reçoit un layer différent du
+propriétaire courant, emprunte le chemin `0xD1710` qui sérialise les quatre
+arbres puis libère leur contenu. Cette preuve invalide le changement temporaire
+de propriétaire; elle ne prétend pas, à elle seule, attribuer chaque octet de
+mémoire du témoin à une allocation précise.
+
+La correction interdit désormais tout appel à `AUTOMAP_GetOrCreateLayer` : son
+RVA ne subsiste que comme témoin d'empreinte. Chaque pompe UI lit seulement
+`AUTOMAP_CurrentLayerOwner` à `D2R+0x2A2CF68`, exige que son identifiant à
+`+0x00` égale le `Levels.Layer` autoritaire du niveau réellement actif, puis
+insère au maximum 2 048 cellules dans ses arbres floor/wall à `+0x08/+0x30`.
+Un propriétaire nul ou différent attend de façon bornée puis échoue fermé;
+aucun propriétaire étranger n'est créé, sélectionné, retenu ou restauré. La
+publication et l'acceptation sont suivies par layer, et les autres layers ne
+sont amorcés qu'après une transition réelle du joueur.
+
+Le helper passe au protocole MS1 v2. Pour chaque paire extérieure dirigée, il
+choisit exactement une ouverture de largeur joueur prouvée par les RoomLinks et
+la collision générée dans son processus privé; il refuse les doublons au lieu
+d'en moyenner les centres. Sur le seed témoin `1395822899`, Spider Forest vers
+Flayer Jungle vaut `(5000, 4268)` et le sens inverse `(4999, 4268)`, donc deux
+subtiles réciproques adjacents, contre l'ancien ancrage moyen déplacé. Les neuf
+waypoints exacts de l'Acte III restent issus de la génération libd2.
+
+Le source gouverné du helper réside sous `addons/RuffnecKkMapSense/mapgen/`,
+épingle libd2 au commit
+`ac4d735e57fcab6a3c356f810bb256da95a93716` et conserve le patch complet. Trois
+builds Zig 0.16.0 donnent le même exécutable de 12 090 880 octets, SHA-256
+`0A79F65827B1EB40819B90B30E2727625047D0CC451DD460224A1DFE98C7D58C`.
+La matrice 4 seeds × 5 actes passe : nombres de waypoints `9/9/9/3/9`, une
+traversée unique par paire dirigée, réciprocité à un sous-tile et sortie MS1
+déterministe. Le build DLL Release `/W4 /WX` et CTest `1/1` passent; la DLL de
+3 360 256 octets vaut SHA-256
+`D9E620040A58DB87B8BE654F5714452ADECF52836010A3CD36A8E4DA6623F025`.
+
+Le déploiement mod-local et le cold start 0.13.24 passent sur le runtime
+officiel 3.3.93847, Build Key
+`623f7a1f73eabb08ccb2b2046e3f9164` : hashes source/runtime identiques pour la
+DLL et le helper, helper seed-scoped prêt, empreinte native acceptée, 36 plugins
+et 17 patches actifs sans échec, puis initialisation `24/24`. Le rollback exact
+des deux binaires précédents réside sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.24-active-owner-predeploy-20260901T133626/`.
+
+Le gameplay 0.13.24 est **FAILED** : noms, waypoints, FPS et ancrage Flayer
+Jungle ont d'abord passé, puis le waypoint Acte III vers Dry Hills a crashé le
+jeu pendant la sérialisation du layer courant. Le prochain gate 0.13.25 doit
+reprendre la même pile complète et les mêmes témoins, puis traverser plusieurs
+actes dans les deux sens sans owner bloqué ni crash.
+
+### Correction 0.13.25 — arbres floor/wall et limite du sidecar
+
+Le crash report runtime du waypoint Acte III vers Dry Hills place l'accès
+invalide à `D2R+0x12D399E`. Le dernier layer complété comptait exactement
+`19202/7556/11646` cellules tentées/insérées/dédupliquées. Dans
+`AUTOMAP_SerializeCellTree 0xD7CE0`, chaque nœud devient trois `uint16`, soit
+six octets, et la longueur traverse un intermédiaire signé de 16 bits. Le
+registre `RBP=0xFFFFB118` ferme le diagnostic :
+`0xB118=45336=7556*6`. La taille sign-étendue a ensuite atteint la copie
+optimisée; la commutation a donc échoué avant que l'owner Acte II remplace
+l'owner Acte III, ce qui explique simultanément le crash et l'automap restée
+sur le mauvais acte.
+
+La cause productrice était distincte du changement d'acte. `AutomapCell.wall`
+servait à la fois à choisir l'arbre `owner+0x08/+0x30` et à appliquer `+24` sur
+Y. Or le premier choix dépend du tableau natif floor/wall, tandis que le second
+dépend seulement de `orientation>=0x10`. Le helper possédait déjà la preuve
+`PlacedTile.pass`, mais la jetait. MSA1 passe à la version 2 sans grossir ses
+records de 16 octets : byte 12=`wallTree`, byte 13=`raised`, bytes 14–15
+réservés. Les DS1 conservent directement la provenance de leurs tableaux;
+les outdoors utilisent `pass!=0`; les montages de town et objets restent dans
+l'arbre floor sans élévation.
+
+La DLL 0.13.25 choisissait l'arbre par `wallTree`, construisait la coordonnée par
+`raised`, puis utilisait `tree+0x20` comme si le total des nœuds était le total
+émis par le sérialiseur. Le gameplay a ensuite prouvé que ce garde-fou était
+trop grossier : les arbres natifs persistants pouvaient déjà dépasser 5 461
+nœuds tout en demeurant structurellement valides, ce qui bloquait la
+complétion terrain et, par couplage erroné, tous les noms.
+
+La matrice helper 4 seeds × 5 actes génère deux fois chaque MSA1, exige un hash
+identique et valide chaque record. Tous les actes contiennent des cellules dans
+les deux arbres et au moins une wall non élevée, ce qui aurait immédiatement
+rejeté l'ancien amalgame. Pour le seed témoin `1395822899`, l'Acte III produit
+30 276 cellules brutes réparties `13 682 floor / 16 594 wall`; leur insertion
+reste soumise à la déduplication native et au garde-fou dynamique. Le prochain
+gate runtime doit mesurer les comptes finaux des deux arbres, exiger zéro refus,
+passer Acte III → Dry Hills puis plusieurs actes dans les deux sens, et confirmer
+que noms, waypoints, FPS et automap actif suivent chaque transition.
+
+### Correction 0.13.26 — catalogue de coordonnées indépendant
+
+`AUTOMAP_SerializeCellTree 0xD7CE0` ignore les nœuds dont le premier octet de
+clé à `node+0x20` est non nul. Son plafond de 5 461 concerne donc les records
+tag-zéro réellement émis, pas le compteur total `tree+0x20`.
+`AUTOMAP_FindCellInsertionPoint 0xD4B70` possède l'ABI exacte
+`(tree, FindResult*, key) -> FindResult*`; son résultat de 16 octets contient
+`{node, insertionSlot}`. Un slot nul prouve que la clé existe déjà et permet à
+MapSense d'avancer sans allocation ni budget supplémentaire. Pour une clé
+absente seulement, la DLL parcourt l'arbre de façon bornée, compte les records
+tag-zéro et refuse une mutation qui rendrait le sidecar non sérialisable. Les
+compteurs total et émis sont exposés séparément.
+
+La readiness des labels est maintenant distincte de celle du terrain. Dès que
+le snapshot exact seed/difficulté/acte est accepté, son catalogue immuable de
+coordonnées rend les noms de niveaux et waypoints éligibles sur le layer natif
+autoritaire courant; un terrain encore en insertion ou refusé fail-closed ne
+supprime plus les textes. L'Acte I génère les niveaux 1 à 39, Cow Level inclus,
+et le cache géométrique passe à la révision 2 tandis que l'intent Reveal Map
+reste en révision 1. Les tests de politique et la matrice 4 seeds × 5 actes
+passent; le gate runtime doit encore confirmer Acte III → II → I → III, les
+labels, waypoints, FPS et l'absence de crash ou de chargement bloqué.
+
+### Corrections 0.13.27–0.13.31 — cellules non sérialisées et matrice Acts I–V
+
+Le corpus natif a finalement fermé l'ambiguïté du sidecar : le loader natif
+conserve le premier octet de la clé automap comme tag, tandis que
+`AUTOMAP_SerializeCellTree 0xD7CE0` n'émet que les cellules tag-zéro. Le candidat
+0.13.30 publie donc les cellules synthétiques de l'atlas avec le tag `1`. Elles
+restent dans les arbres floor/wall natifs utilisés par le rendu courant, mais
+ne gonflent pas le sidecar borné de D2R lors d'un changement de layer. Cette
+route remplace les scans complets et les budgets qui bloquaient ou ralentissaient
+les transitions.
+
+Le premier témoin 0.13.30 a validé les Actes II et III, puis a isolé un rejet de
+l'Acte V avant toute publication : le helper fournissait 28 labels, niveaux
+109–136, alors que le MSA1 de campagne standard contient les 24 géométries
+109–132. Les niveaux 133–136 sont les branches Pandemonium/uber conditionnelles,
+pas des surfaces de campagne manquantes. Le candidat 0.13.31 exige désormais la
+couverture géométrique seulement pour les plages de campagne déclarées de chaque
+acte; un label de branche optionnelle absent ne rejette plus tout l'acte. Les
+niveaux BKVince custom 137–146, dont les Rifts 138–146, restent explicitement
+hors de ce gate et ne sont pas revendiqués par le helper libd2 actuel.
+
+Le build Release x64 strict et CTest passent `1/1`. La DLL source/runtime
+byte-identique mesure 3 364 864 octets, version `0.13.31-candidate`, SHA-256
+`E6A1DD3774DFC80B4EBA111324A823835B85666F1F897CD4AEC02F98AD2F1FA6`.
+Le helper runtime inchangé vaut SHA-256
+`F350F001FA5A31AB8D0ABCC08EE3AE3DE8CF8D032147480CC5449F603442A3A4`.
+Le rollback exact pré-déploiement réside sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.31-predeploy-20260901-224037/`.
+
+Le cold start mod-local du 1er septembre 2026 sur D2R 3.3.93847 avec la pile
+complète active est **PASS**. Dans une même partie Insanity et le même seed
+`1231900215`, la matrice waypoint Acte V → I → II → III → IV → V publie :
+
+- `external labels: PASS` avec niveaux/waypoints `39/9`, `35/9`, `28/9`,
+  `6/3`, `28/9` pour les actes 0 à 4;
+- `native atlas layer: COMPLETE` sur les layers `0`, `27`, `57`, `77`, `79`;
+- aucun `ERROR`, assert, crash, chargement bloqué ni rejet
+  `missing-from-geometry` dans les logs frais.
+
+Le témoin visuel confirme dans chaque town le layer natif unique, les noms et
+waypoints, ainsi que la surface distante adjacente : Blood Moor, Rocky Waste,
+Spider Forest, Outer Steppes et Bloody Foothills. Frigid Highlands confirme en
+plus l'atlas Acte V hors town. Aucun second terrain ImGui, flash ou automap
+restée sur l'acte précédent n'est observé. Le runtime est laissé ouvert à
+Harrogath pour la validation humaine prolongée; les mesures FPS instrumentées,
+les seeds/difficultés supplémentaires, le multijoueur et le support des niveaux
+custom restent des gates séparés.
+
+### Décision du 2 septembre 2026 — atlas alimenté par le mod actif
+
+Vincent a donné `GO` à l’implantation d’un helper libd2 **mod-aware** après la
+revue d’architecture `plugin-architect`. Le contrat autonome hybride de
+`RuffnecKkMapSense.dll` dans la RuffnecKk D2RLoader Suite demeure inchangé :
+aucune nouvelle DLL, aucun nouveau hook natif et aucun exécutable à lancer
+manuellement par l’utilisateur. MapSense continue de démarrer son helper privé,
+masqué et hors des threads gameplay/rendu.
+
+Le helper doit désormais construire son contexte à partir des tables et assets
+du mod actif que la DLL a résolus et bornés, puis utiliser les ressources
+vanilla embarquées uniquement comme fallback. La découverte est gouvernée par
+les données, pas par BKVince : aucun ID, nom ou chemin propre à `Rift`, à
+BKVince ou à un autre mod ne peut servir d’exception d’implantation. Les IDs de
+niveaux et presets lus dans les tables deviennent des valeurs ouvertes afin que
+des lignes custom arbitraires puissent traverser toute la génération sans trap
+d’enum fermée.
+
+La position d’un nom distant est celle de son **entrée dans le niveau source**.
+Ainsi, un lien custom `109 -> 138` doit être publié comme un record `MS1 E`
+ancré dans la géométrie de 109; les coordonnées internes ou le centre de 138 ne
+doivent jamais être projetés sur le layer de 109. Les placements de secours
+par centre de niveau ajoutés au candidat 0.13.32 sont rejetés : ils peuvent
+prouver la découverte d’une ligne, mais pas sa position automap exacte.
+
+Avant tout nouveau déploiement runtime, un gate déterministe hors jeu doit :
+
+- conserver byte-for-byte les sorties/goldens vanilla pertinentes;
+- charger les tables et le DS1 actifs de BKVince et émettre une entrée exacte
+  `MS1 E 109 138 ...` sans constante spéciale pour 138;
+- réussir un fixture synthétique utilisant un autre ID et un autre nom custom;
+- prouver que le cache inclut l’empreinte des données du mod et ne peut donc
+  pas réutiliser l’atlas d’un autre jeu de données.
+
+Le support générique des labels et waypoints issus de tables/DS1 custom est le
+gate courant. La reconstruction visuelle complète de terrains custom utilisant
+des DT1 absents du corpus embarqué, les mods distribués uniquement sous une
+forme que MapSense ne peut pas lire et les graphes custom mal formés restent des
+gates distincts; aucune couverture universelle n’est revendiquée avant leurs
+preuves. Les monstres, objets live et lignes Direct existants ne changent pas.
+
+### Implantation 0.13.33 — preuves hors runtime
+
+Le helper charge maintenant les sept tables actives nécessaires (`Levels`,
+`LvlPrest`, `LvlTypes`, `LvlMaze`, `LvlSub`, `LvlWarp`, `Objects`) et résout les
+DS1 depuis les racines actives ordonnées avant son fallback vanilla embarqué.
+Les enums libd2 de niveaux et presets sont ouvertes. La DLL transmet les
+racines actives au processus privé et namespace le cache de géométrie revision
+3 par une empreinte de tables/assets; l’augmentation statique 0.13.32 et son
+centre inventé ont été supprimés.
+
+Les gates déterministes du 2 septembre 2026 passent : quatre seeds sur les
+cinq actes vanilla conservent leurs sorties MS1/MSA1 v2; BKVince émet exactement
+`MS1 E 109 138 5020 5100 0` et neuf waypoints pour l’acte V; un fixture
+temporaire remappé vers le LevelId arbitraire `733` émet exactement
+`MS1 E 109 733 5020 5100 0`. Le test C++ couvre aussi le namespace du cache et
+un target de warp arbitraire. Le patch libd2 complet s’applique en reverse sans
+erreur sur le commit épinglé `ac4d735e57fcab6a3c356f810bb256da95a93716`.
+
+Le build Release x64 `/W4 /WX` et CTest `1/1` passent. La DLL candidate mesure
+3 396 096 octets, porte PE/PluginInfo 0.13.33-candidate, expose les quatre
+exports attendus et vaut SHA-256
+`D2CDE23036243C3D5187A0F58DCD5E9349DCB558C6F2EA5E2C6F74412FE8C29B`.
+Le helper ReleaseSafe mesure 12 121 088 octets et vaut SHA-256
+`2291DA9B1A529EFF5BF676D2E31EB01FAF6172B5B19CBD1884A63352E56BEF6D`;
+les copies source, package et build sont byte-identiques. Aucun déploiement ni
+PASS visuel/runtime n’est attribué à ce hash avant le prochain gate complet.
+
+### Correction 0.13.34 — outdoor fidèle et témoin natif post-rendu
+
+Le témoin humain 0.13.33 a invalidé la complétude outdoor : Spider Forest et
+Great Marsh pouvaient perdre leurs waypoints avant visite, tandis que l'Acte V
+ne publiait rien. La revue `plugin-architect` a isolé une cause concrète dans
+le helper : son chemin automap sans collision chargeait tous les DT1 du
+`LevelType`, ignorait `pRoomEx.nDT1Mask`, sautait les trois passes `LvlSub`
+waypoint/shrine/terrain et ne reproduisait pas la propriété des coutures entre
+pièces. Le runtime pouvait ensuite déclarer la couche complète sur le seul
+succès des insertions, sans témoin d'un passage de rendu natif.
+
+La 0.13.34 remplace ce raccourci par une matérialisation outdoor fidèle qui
+s'arrête avant toute allocation ou rasterisation de collision. Elle conserve
+l'ordre exact des seeds, les masques DT1 de chaque pièce, les trois passes
+`LvlSub`, les arbres floor/wall et la première pièce propriétaire d'une
+couture. Les remplacements de Blank décidés par une pièce ultérieure sont
+répercutés après le parcours complet du niveau. Aucun `ActiveRoom`, monstre,
+objet gameplay ou table live D2R n'est créé par ce chemin. Le cache géométrique
+passe à la révision 4; l'intention Reveal Map seed/difficulté reste en révision
+1.
+
+Après la dernière insertion, la DLL entre désormais dans l'état borné
+`AwaitingWitness`. Le prochain vrai passage local-player du hook automap, après
+l'appel original D2R, doit retrouver jusqu'à huit clés exactes dans chacun des
+arbres floor et wall du même propriétaire/layer natif. Trois échecs consécutifs
+font échouer proprement la couche; elle n'est jamais créditée ni persistée
+`COMPLETE` avant ce témoin.
+
+Les gates hors jeu passent le 2 septembre 2026 : Zig 0.16.0 ReleaseSafe,
+Release x64 `/W4 /WX`, CTest `1/1`, matrice déterministe MS1/MSA1 v2 de quatre
+seeds × cinq actes, neuf waypoints par acte, entrée BKVince réelle `109 -> 138`
+et remap indépendant vers le faux LevelId `733`. La génération MSA1 BKVince
+Acte V seed 1337 produit 24 niveaux et 34 586 cellules en environ 520 ms. Le
+patch libd2 régénéré s'applique en sens inverse sans erreur sur le commit épinglé
+`ac4d735e57fcab6a3c356f810bb256da95a93716`.
+
+La DLL 0.13.34-candidate mesure 3 399 168 octets, SHA-256
+`C6EDC2C577D9687E27D0D3AD2886B5A76FBB7F42C4B1D6221DFBE7E8506D3E40`.
+Le helper mesure 12 129 792 octets, SHA-256
+`4A14B843651F0D28AB74EE9DCC73DABAA23DAE44E7AC88FD7720FBFA7DEB3D39`.
+Les copies build/package/runtime sont byte-identiques. Le rollback 0.13.33
+pré-déploiement réside sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.34-predeploy-20260902-0914/`.
+
+Le cold start mod-local sur D2R officiel 3.3.93847 avec la pile complète est
+PASS : MapSense 0.13.34 charge, le helper seed-scoped est prêt, 38 plugins et
+17 patches restent actifs et le frontend atteint `24/24`. Le verdict visuel
+Actes III/V, les transitions inter-actes, les FPS et l'absence de freeze restent
+un gate humain ouvert sur ce hash exact.
+
+### Décision du 2 septembre 2026 — baseline externe immuable et preuves natives positives
+
+Vincent autorise par `GO` la correction architecturale du catalogue de labels
+dans la DLL autonome hybride `RuffnecKkMapSense.dll`, membre indépendante de la
+RuffnecKk D2RLoader Suite. Aucune nouvelle DLL, configuration, RVA, signature,
+ABI ou propriété de hook n'est ajoutée. Les monstres live, coffres spéciaux,
+shrines, racks, lignes de navigation, renderer ImGui/D3D12, hotkeys et cellules
+automap natives restent hors du lot.
+
+Le diagnostic ferme deux défauts distincts. Premièrement, le helper externe
+remplace actuellement le catalogue complet, puis les captures natives
+remplacent le même propriétaire et peuvent publier une absence sur un niveau
+encore non matérialisé; l'ordre d'arrivée décide alors si un waypoint distant
+reste visible. Deuxièmement, les waypoints outdoor sans preset déjà exposé sont
+encore localisés par un replay LvlSub abrégé, séparé de la matérialisation
+outdoor fidèle qui produit les cellules automap.
+
+Le contrat approuvé sépare une baseline externe complète, atomiquement liée au
+couple session/seed/difficulté/données, de corrections natives strictement
+positives. Une observation native absente ou incomplète ne peut jamais effacer
+la baseline. Au rendu, une preuve native positive remplace la définition
+externe du même waypoint; sans preuve positive, la baseline demeure. Les
+sorties et ancres de niveaux appliquent la même séparation sans modifier la
+politique de navigation. La génération helper doit en outre capturer les
+waypoints pendant la même passe outdoor fidèle que la géométrie, et distinguer
+les transitions de warp/preset des coutures wilderness fondées sur la
+collision.
+
+Les gates pré-runtime exigent des régressions positionnelles, et non seulement
+des comptes : Stony Field, Dark Wood, Spider Forest, Great Marsh et Arreat
+Plateau avant visite; Monastery Gate dans les deux directions; portails
+permanents Frigid Highlands/Abaddon, Arreat Plateau/Pit of Acheron et Frozen
+Tundra/Infernal Pit; conservation après capture native vide puis positive;
+matrice quatre seeds, cinq actes, trois difficultés; build Release `/W4 /WX`
+et CTest. Aucun déploiement ni verdict gameplay n'est attribué au prochain
+candidat avant ces preuves.
+
+### Pré-gate 0.13.35 — acquis figés, red portals et propriétaires séparés
+
+Le lot implanté conserve sans modification le renderer automap/ImGui, les
+monstres live, les coffres Joffreybesos, shrines/racks, hotkeys, cellules
+natives et lignes de navigation verte/rouge/mauve. Le helper ne crée toujours
+aucune `ActiveRoom`, unité, monstre ou missile dans D2R.
+
+Les catalogues waypoint et niveau possèdent maintenant une baseline externe
+immuable et une couche native positive. Une publication native vide devient un
+no-op; une preuve positive remplace seulement son propriétaire exact. Les
+sorties appliquent la même règle au couple dirigé source/destination, ce qui
+préserve un red portal externe même lorsqu'une capture native complète connaît
+les sorties ordinaires du même niveau.
+
+MS1 v3 encode `P source target x y class`. Tristram est ancré sur Stone Alpha
+du preset Cairn Stones généré avec l'offset `+4,+4` prouvé par
+`ACT1Q4_OpenPortalToTristram`. Abaddon, Pit of Acheron et Infernal Pit sont
+ancrés sur les tuiles DT1 style 29 qui créent l'objet permanent 60. Le portail
+Cow, les town portals et les portails joueur restent exclus parce que leur
+position n'est pas déterminée par le seed. La façade Tamoe/Monastery utilise
+la tuile double porte générée, et non une autre ouverture valide de la longue
+frontière de collision.
+
+Les preuves pré-runtime passent : CTest `1/1`; tests unitaires libd2; quatre
+seeds × cinq actes générés deux fois avec labels et géométrie déterministes;
+9/9/9/3/9 waypoints; un portail Tristram en Acte I; trois portails Acte V;
+régressions exactes Monastery et Spider/Flayer; BKVince `109 -> 138`; fixture
+custom indépendante `109 -> 733`. Le déploiement runtime et le verdict visuel
+restent le prochain gate.
+
+### Gate visuel 0.13.35 — mort et écrans de chargement
+
+Vincent exige que les features MapSense cessent de linger derrière la mort du
+joueur et disparaissent dès l'arrivée d'un écran de chargement, notamment lors
+d'un waypoint. Le correctif autorisé conserve intégralement la baseline atlas,
+les catalogues, la persistance Reveal Map, les caches POI/monstres/missiles,
+les coffres Joffreybesos et les lignes verte/rouge/mauve. Il ne détruit, ne
+recalcule et ne remplace aucune de ces données.
+
+Le renderer applique maintenant un unique prédicat fail-closed avant toute
+soumission de pixels MapSense : `GameplayReady`, états natifs `UI_GAME` et
+`UI_AUTOMAP`, puis témoin vivant publié par la passe automap du joueur local.
+Cette passe utilisait déjà `GetUnitMode` à la RVA gouvernée `0x34AB60`; les
+modes joueur `DEATH=0` et `DEAD=17` sont corroborés par l'entrée gouvernée
+`SUNIT_IsDead` et D2MOO. Une mort révoque le témoin sur la passe native; un
+écran de chargement, la fermeture de Tab ou un échec de lecture UI le révoque
+avant le rendu. Seule une nouvelle passe du joueur vivant peut le réarmer.
+Aucun pointeur D2R n'est conservé et aucune nouvelle surface native n'est
+introduite.
+
+Les tests de politique couvrent chaque combinaison jeu/automap/vivant, les
+deux modes de mort et les modes vivants adjacents. Le build Release x64 strict
+`/W4 /WX` et CTest `1/1` passent. Le binaire pré-runtime mesure 3 491 840 octets
+et vaut SHA-256
+`8B0F5E98E0727758CB33BBDDDB011EFEBCCFB2EF8E827A681529DEF80FFF44EF`.
+Le helper réellement empaqueté reste inchangé, mesure 14 267 904 octets et vaut
+SHA-256
+`F7FC445E3C8E8CB0BD2F948EA8F2F6BC128AF5260E30479095338420D6F4F923`.
+Sa matrice fraîche passe encore quatre seeds × cinq actes, les comptes
+waypoints `9/9/9/3/9`, les portails `1/0/0/0/3`, l'entrée BKVince `109 -> 138`
+et la fixture arbitraire `109 -> 733`. Le comportement visuel exact à la mort
+et pendant les transitions demeure un gate runtime humain, pas une conclusion
+tirée des tests statiques.
+
+Le cold start mod-local autorisé du 2 septembre 2026 à 15:00 sur Battle.net
+D2R 3.3.93847 (Build Key `623f7a1f73eabb08ccb2b2046e3f9164`, SHA-256 D2R.exe
+`E1F5436E3D9687F644EF16938B1B183D1FDEF434F18CF66D852CF68F48CC8936`)
+charge exactement la DLL et le helper documentés ci-dessus. MapSense journalise
+le build-name comme diagnostic seulement, accepte son empreinte complète,
+installe les hooks D3D12 fail-closed, trouve Exocet et les textures de coffres,
+puis initialise son hôte ImGui et son helper seed-scoped. La pile complète
+atteint `D2R startup complete` avec 38 plugins chargés et 17 memory patches,
+sans nouvel échec, rejet, assert ni crash. L'avertissement sur l'ancien
+`automap sprite atlas` est attendu : le double underlay ImGui est retiré et la
+géométrie générée appartient maintenant exclusivement aux arbres de cellules
+natifs. L'instance demeure ouverte pour le verdict visuel humain; mort,
+waypoint/inter-acte, réapparition, noms/waypoints/red portals et FPS restent
+`not run` tant que Vincent ne les a pas observés.
+
+### Gate humain 0.13.35 et pré-gate 0.13.36 — niveaux custom sans spécialisation de mod
+
+Le 2 septembre 2026, Vincent confirme en jeu que le candidat 0.13.35 affiche
+les noms et waypoints distants attendus dans les cinq actes : les Actes I et
+III sont explicitement déclarés complets, puis le balayage de tous les actes
+ne laisse plus aucun élément standard invisible. Les FPS demeurent corrects.
+Cette preuve ferme le défaut général d'atlas/waypoints; elle ne transforme pas
+les gates mort, chargement, portails permanents ou multijoueur en succès
+implicites.
+
+Le niveau custom utilisé comme stress test reste absent. Le diagnostic prouve
+que l'atlas n'est pas en cause : le helper 0.13.35 émet bien la transition
+`109 -> 138` à son ancre Harrogath. Le catalogue journalise exactement neuf
+clés de niveaux non résolues; elles correspondent exactement aux neuf noms
+custom dont la valeur anglaise est byte-identique à la clé de localisation.
+Le garde-fou contre l'écho prématuré de `LocalizationServiceV1` les marquait
+donc à tort comme non localisés, puis le renderer les refusait. Le niveau
+custom réel n'est qu'un témoin : le contrat produit vise tout niveau et tout
+mod inconnus à l'avance.
+
+Vincent autorise par `GO` un correctif strictement générique, sans nom de mod,
+nom de niveau ou LevelId en dur. Une traduction exacte non résolue n'est
+reconsidérée qu'après qu'une autre traduction différente a prouvé que les
+tables de langue sont prêtes; MapSense redemande alors la clé au service. Une
+entrée réelle peut réussir avec une valeur identique, tandis qu'une clé
+absente reste `NotFound`. L'écho global observé avant initialisation reste
+refusé. Cette seconde passe s'exécute une fois lors de la construction du
+catalogue, jamais dans le renderer ou par frame; l'atlas, ses catalogues, les
+POI, la navigation et les collectors live sont inchangés.
+
+La pré-qualification 0.13.36 passe le build Release x64 strict `/W4 /WX` et
+CTest `1/1`. La régression utilise un niveau arbitraire `733` dont la valeur
+localisée est identique à sa clé et le place avant la traduction qui certifie
+le service, ce qui prouve l'indépendance à l'ordre et à BKVince. Le test
+d'écho prématuré existant et le refus des clés réellement absentes passent
+toujours. La DLL build/package mesure 3 495 424 octets et vaut SHA-256
+`2C42B0361CAA02111C2531600E4A612B2471DD8DE0D7F995B7EF1C618CA8CEE6`;
+les deux copies sont byte-identiques. Le déploiement, le cold start et le
+verdict visuel d'un niveau custom demeurent `not run` jusqu'à l'autorisation
+runtime distincte.
+
+### Décision du 2 septembre 2026 — transaction atlas et watchdogs spécialisés
+
+Le premier gate runtime 0.13.36 invalide la publication de l'atlas, sans
+invalider son architecture native : le statut frais montre quatre expirations,
+quatre échecs géométriques, quatre réponses périmées et aucun snapshot, tandis
+que les 146 noms actifs sont tous localisés. Des mesures read-only du helper
+empaqueté avec les racines BKVince actives bornent les labels à 352–669 ms,
+mais la géométrie à 3 087–5 873 ms selon l'acte; plusieurs seeds Acte V
+dépassent à eux seuls le watchdog universel de 5 000 ms. Ce délai est donc
+faux par construction, et non le symptôme d'un helper bloqué.
+
+Vincent autorise par `GO` la réparation transactionnelle de la DLL autonome
+hybride MapSense, membre indépendante de la RuffnecKk D2RLoader Suite. Le
+helper libd2, le format MSA1, les hooks, RVA, signatures, ABI, cellules natives,
+catalogues de POI, monstres live, coffres, shrines, lignes Direct et rendu sous
+Tab demeurent inchangés. Une requête exacte reste propriétaire de toute la
+transaction labels → géométrie courante → snapshot → publication; une
+répétition exacte ne change plus son numéro de série. Les labels conservent un
+watchdog de 5 s et la géométrie reçoit un watchdog distinct, borné à 30 s,
+asynchrone et annulable. Un changement réel de session, seed, difficulté, acte
+ou niveau annule le child privé devenu inutile. Le préchauffage reste
+séquentiel, passe en priorité idle, ne publie aucun état visible et cède
+immédiatement à une requête gameplay.
+
+Une géométrie absente, invalide ou expirée ne peut plus produire un PASS atlas,
+un callback positif ni une requête publiée. Les échecs exacts restent latchés
+pour empêcher toute tempête de retry dans la session. La télémétrie distingue
+désormais les expirations labels/géométrie, les annulations primary/prewarm,
+les misses/invalidations de cache et l'opération active. Le gate unitaire doit
+prouver déduplication, conservation du serial pendant une géométrie lente,
+annulation sur nouvelle identité, préemption du prewarm, sélection des délais
+et refus de publication après échec. Le gate helper est étendu aux racines
+actives afin de chronométrer réellement la géométrie modée; aucun déploiement
+ne précède ces preuves.
+
+La pré-qualification 0.13.37 ferme ces gates hors runtime. Le build Release
+x64 strict `/W4 /WX` et CTest `1/1` passent après extraction de la politique
+pure dans le header du provider. La matrice helper conserve deux sorties
+byte-déterministes pour quatre seeds × cinq actes vanilla, puis génère et
+valide 20/20 géométries supplémentaires avec les véritables racines Excel et
+tiles BKVince. Le maximum modé observé est 5 670 ms en Acte V, très inférieur
+au watchdog géométrique de 30 s; l'entrée réelle `109 -> 138` et la fixture
+indépendante `109 -> 733` passent toujours. Le helper est inchangé, mesure
+14 267 904 octets et vaut SHA-256
+`F7FC445E3C8E8CB0BD2F948EA8F2F6BC128AF5260E30479095338420D6F4F923`.
+
+La DLL build/package 0.13.37-candidate mesure 3 500 544 octets, expose les
+trois exports D2RLoader attendus et vaut SHA-256
+`D8F9CD16E04385DFB97DBE288D39D11F140D095E7BA5DE452BE40B2FE016F33A`;
+les copies build et package sont byte-identiques. La 0.13.36 pré-emballage est
+conservée sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.37-prepackage-20260902-1708/`
+avec son SHA-256 exact
+`2C42B0361CAA02111C2531600E4A612B2471DD8DE0D7F995B7EF1C618CA8CEE6`.
+Vincent a ensuite autorisé la séquence runtime bornée. La DLL 0.13.37 est
+déployée seule dans la portée mod-locale BKVince et sa copie runtime est
+byte-identique au package : SHA-256
+`D8F9CD16E04385DFB97DBE288D39D11F140D095E7BA5DE452BE40B2FE016F33A`.
+Le helper n'a pas été recopié et conserve son hash exact
+`F7FC445E3C8E8CB0BD2F948EA8F2F6BC128AF5260E30479095338420D6F4F923`.
+La 0.13.36 remplacée est sauvegardée sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.37-predeploy-20260902-212524/`
+avec son SHA-256
+`2C42B0361CAA02111C2531600E4A612B2471DD8DE0D7F995B7EF1C618CA8CEE6`.
+
+Le cold start frais utilise `D2RLoader.exe -mod BKVince -txt -offline` sur
+Battle.net D2R 3.3.93847, Build Key
+`623f7a1f73eabb08ccb2b2046e3f9164`. MapSense 0.13.37-candidate accepte son
+empreinte native complète, installe ses hooks D3D12 fail-closed, prépare le
+helper seed-scoped et initialise son hôte ImGui. La pile complète atteint
+`38 plugins loaded; 17 memory patches applied`, inclut les cinq DLL eezstreet,
+puis termine `24/24` avec `D2R startup complete`; aucun plugin MapSense n'est
+rejeté ni échoué et le processus jeu demeure répondant. Ce résultat ferme le
+gate de déploiement et de cold start technique. Reveal Map, la publication de
+la géométrie distante, les transitions d'acte, la fluidité et les niveaux
+custom restent `not run` jusqu'au témoin gameplay humain de ce même processus.
+
+Le témoin gameplay humain de ce même processus ferme ensuite le gate custom :
+Vincent rejoint l'Acte V en premier, ouvre l'automap et confirme que le niveau
+réel `Rift Level 1` apparaît visuellement au bon endroit. La télémétrie
+concordante publie l'Acte V sans erreur ni expiration : 38 niveaux visibles,
+58 sorties, 9 waypoints et 30 904 cellules insérées. Ce résultat prouve le
+contrat générique recherché sur un niveau custom inconnu du plugin à l'avance;
+il ne constitue ni un cas spécial BKVince/Rift ni une allowlist de LevelId.
+Les transitions inter-actes, la fluidité et la matrice complète des labels et
+waypoints restent à valider séparément.
+
+Vincent poursuit immédiatement la matrice dans les cinq actes et prononce le
+verdict gameplay complet : tout est visible, rien n'est laissé pour compte et
+tous les éléments sont correctement placés partout. Les logs frais concordent
+avec ce parcours et ses retours entre actes. Ils publient sans erreur l'Acte I
+avec 39 niveaux/73 sorties/9 waypoints, l'Acte II avec 35/72/9, l'Acte III avec
+28/60/9, l'Acte IV avec 6/10/3 et l'Acte V avec 38/58/9. Chaque acte atteint
+`native atlas layer: COMPLETE`; aucune expiration, annulation, réponse
+périmée ni erreur n'apparaît pendant la matrice, et le processus reste
+répondant. Les gates couverture complète, positionnement, niveaux custom et
+transitions inter-actes sont donc **PASS gameplay** pour ce seed à l'index de
+difficulté 2.
+
+Avec Reveal Map actif et l'Acte III affiché, Vincent observe 183 FPS au repos.
+Ce témoin humain n'est pas un benchmark A/B automatisé, mais il ne reproduit
+plus la chute antérieure d'environ 130–140 FPS sans Reveal vers 80–100 FPS avec
+Reveal. La régression de performance visible des prototypes qui chargeaient
+des pièces runtime est donc **non reproduite et considérée corrigée sur ce
+run**; une qualification de release pourra encore consigner des mesures
+contrôlées sur plusieurs scènes si nécessaire.
+
+### Décision du 2 septembre 2026 — source missile client + serveur
+
+Le témoin gameplay suivant la réussite complète de Reveal Map révèle un défaut
+distinct du seed atlas : les missiles cessent d'apparaître sur l'automap dans
+l'Acte IV, tandis que de grands cercles et X transitoires peuvent apparaître
+dans la même scène. Le statut frais de MapSense confirme que le collecteur
+0.13.37 est encore `client-only=true` et publie `current=0` dans River of
+Flame malgré une pipeline mécaniquement active. L'atlas, les labels, waypoints,
+niveaux custom et lignes Direct restent explicitement hors de ce correctif.
+
+Une lecture live strictement read-only des deux tables de type 3 ferme la cause
+du premier symptôme. Au même instant, la table client à
+`D2R+0x2A24510` contient zéro missile, tandis que la table serveur à
+`D2R+0x2A25D10` contient 11 puis 15 unités type 3 valides, sans fault, cycle ou
+type mismatch. Leurs ids, classes, chemins dynamiques et coordonnées monde sont
+cohérents. Les classes 144/145/323/325/326 se résolvent dans le `Missiles.txt`
+actif en projectiles feu, poison et froid; elles ne sont donc pas du décor
+arbitraire.
+
+La preuve statique gouvernée établit la seconde source sans transposition
+d'adresse externe. `SERVER_GetUnitByIdAndType 0x9A5A0` possède une signature
+stricte de 28 octets unique et résout la base `0x2A25110`; son masque `0x7F`,
+son stride `0x400` et son tail-jump vers le même walker `0x9F270` sont
+identiques au resolver client adjacent `0x9A5D0`. L'écart exact `0x1800`
+correspond aux six tableaux de types client précédant les tableaux serveur.
+Le callsite natif `0x3B7D0E` sélectionne ce resolver pour une unité type 3
+lorsque le témoin serveur `0x34F8D0` est vrai, sinon il appelle le resolver
+client. La référence sémantique épinglée PrimeMH au commit
+`92b6a97d8e56346f8b63a88bb647c1af044d2c8b` confirme indépendamment que son
+collector concatène `missile_ptrs` et `server_missile_ptrs`.
+
+Vincent autorise par `GO` MapSense 0.13.38 : la passe locale existante scanne
+d'abord les 128 buckets client puis les 128 buckets serveur. Chaque source garde
+ses limites de 32 768 unités et 8 192 unités par bucket, son cycle guard et sa
+frontière SEH. Un set d'identités fixe, allocation-free et remis à zéro
+uniquement sur ses slots touchés déduplique par `unitId`, conserve `classId`
+comme témoin de cohérence et préfère toujours la copie client. Une copie serveur
+exacte est supprimée; un même id avec une classe différente est refusé et
+compté. Aucun `Unit*`, chemin ou contexte automap n'est retenu après la passe.
+Les diagnostics séparent maintenant scans, buckets, observations, publications
+et courant client/serveur, ainsi que doublons, préférences client et conflits.
+
+La pré-qualification statique passe deux builds Release `/W4 /WX` byte-exacts,
+CTest `1/1`, le parse JSON du registre natif et `git diff --check`. La DLL build
+et package mesure 3 502 592 octets, porte PE/PluginInfo
+`0.13.38-candidate` et vaut SHA-256
+`B1896B4CB2789A897319607958F783C1084325A4E6EF154B45FBA74AD9B38329`.
+La copie package 0.13.37 remplacée est conservée sous
+`analysis-cache/mapsense-0.13.38-prequalification/package-before-0.13.38/`.
+La DLL runtime demeure volontairement inchangée : le déploiement, le cold start,
+la présence des missiles Acte IV, l'absence de doublons et le coût CPU/FPS sont
+`not run` jusqu'à une autorisation runtime distincte.
+
+Le grand cercle et le X restent un gate d'attribution séparé. Au premier
+checkpoint 0.13.38, le renderer MapSense ne produisait pour un missile qu'une
+petite ellipse neutre, la
+configuration runtime impose des points pour tous les rangs de monstres et la
+navigation ne dessine que des lignes. D2RCore expose toutefois les témoins
+`s_drawMissileServerPositions`, `s_drawMissileServerRadius` et
+`s_drawMissileServerLink`, exactement compatibles avec les formes observées.
+Une matrice A/B fraîche MapSense actif/pausé avec état debug contrôlé doit encore
+prouver le propriétaire des pixels; aucune touche aléatoire ni suppression
+visuelle par symptôme n'est autorisée.
+
+### Lot intégré 0.13.38 — missiles, identité boss et panneau
+
+Vincent demande de fermer en un seul lot les régressions restantes sans lancer
+de gate gameplay pendant son absence. Le seed-atlas, Reveal Map, les labels,
+les waypoints, les niveaux custom, les transitions et leurs caches sont gelés :
+ce lot ne modifie aucun de leurs contrats après le verdict gameplay complet de
+0.13.37.
+
+Le collecteur missile client + serveur qualifié ci-dessus alimente maintenant
+le même modèle visible que PrimeMH au commit épinglé
+`92b6a97d8e56346f8b63a88bb647c1af044d2c8b` : six familles Fire, Cold/Ice,
+Lightning, Poison, Physical et Magic, tandis que les familles SFX, trigger et
+dummy restent invisibles. Une comparaison automatisée des 736 classes connues
+donne 736 correspondances et zéro divergence avec le `get_missile_type` de
+PrimeMH. Les six tailles et couleurs par défaut sont également identiques et
+deviennent configurables dans le panneau ImGui et dans le schéma TOML 15.
+
+La compatibilité mod ne dépend pas de BKVince. Le catalogue lit le
+`Missiles.txt` du mod actif : une classe stock conserve la taxonomie PrimeMH
+tant que son `EType` stock n'a pas changé, un `EType` actif reconnu prend le
+dessus, et une classe ajoutée est classée par son `EType` puis, uniquement pour
+un projectile à dégâts physiques positifs, comme Physical. Les effets inconnus
+restent invisibles. Le `Missiles.txt` BKVince courant contient 763 lignes et
+toutes les colonnes numériques requises passent cette validation. Une source
+active invalide ou binaire sans TXT échoue fermée et ne retombe pas sur une
+classe vanilla portant le même index.
+
+Les faux noms `Rancid Defiler` provenaient du flag comportemental
+`MonStats.boss`, que les cinq familles `putriddefiler` de BKVince portent sans
+être des boss nommés. Ce champ est retiré du catalogue MapSense. Un nom de boss
+exige désormais l'identité live Super Unique (rank ou index) ou le contrat
+`primeevil`; le marqueur ordinaire reste visible sans texte.
+
+Le panneau supprime les paragraphes explicatifs signalés pour les monstres,
+coffres, coffres spéciaux, waypoints et shrines. Le bouton global devient
+`Pause/Resume All MapSense Features`, tandis que Reveal est une action séparée
+`Reveal Entire Difficulty` / `Stop Persistent Reveal`, ce qui élimine
+l'apparence de deux master switches. Le TOML package supprime également les
+commentaires objets correspondants.
+
+Le grand cercle vert, le X rouge et l'affichage `Pathing` ne sont toujours pas
+attribués à MapSense : ses nouveaux missiles sont des ellipses pleines bornées à
+16 px, ses monstres suivent les formes configurées et sa navigation ne produit
+que des lignes. Les symboles de debug missile exposés par D2RCore restent le
+candidat statique positif. Aucun global d'un autre composant n'est modifié au
+hasard; la preuve finale exige un A/B runtime lorsque Vincent sera disponible.
+
+Le runtime demeure volontairement sur 0.13.37. Ce lot est fermé par compilation
+Release `/W4 /WX`, CTest `1/1`, contrôle du paquet et deux builds propres
+byte-identiques. La DLL build et package mesure 3 511 808 octets, porte
+PE/PluginInfo `0.13.38-candidate` et vaut SHA-256
+`156FAD56537BDD080BF1D5EBA2BC805027B0EFC5121D221E904C2BCD2EA2D83B`.
+Le cold start, le rendu missile Acte IV, l'absence du faux nom et la nouvelle
+ergonomie du panneau restent `not run` jusqu'au prochain gate humain.
+
 ## Validation future
 
 - configurations absente, valide et invalide;
@@ -2018,8 +2718,12 @@ statique ou cold start ne sera transformé en succès gameplay.
 
 ## Rollback et frontière Git
 
-Le runtime BKVince porte actuellement le candidat MapSense 0.13.9, SHA-256
-`5C0FD8DE0D143FEF4B4D04C86C2F1D1D1B4B35379EE70CF372D46A0CD9BD1E9F`.
+Le runtime BKVince porte actuellement le candidat MapSense 0.13.37, SHA-256
+`D8F9CD16E04385DFB97DBE288D39D11F140D095E7BA5DE452BE40B2FE016F33A`.
+Le rollback immédiat vers la 0.13.36 byte-identique réside sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.37-predeploy-20260902-212524/`.
+Le rollback 0.13.31 antérieur réside sous
+`analysis-cache/runtime-sync-backups/mapsense-0.13.31-predeploy-20260901-224037/`.
 Le TOML personnel schéma 13 post-migration vaut SHA-256
 `748CF1EED016DD31EA1B58D13EA2B7C1A1CDDB6C0A2748F3B3B63609B3E3FE46`.
 Le rollback immédiat sous

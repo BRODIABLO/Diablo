@@ -28,6 +28,17 @@ constexpr std::size_t HardMaximumKeyBytes = 4'096U;
 constexpr std::size_t HardMaximumLocalizedBytes = 65'536U;
 constexpr std::size_t HardMaximumDiagnostics = 512U;
 constexpr std::size_t MaximumDiagnosticMessageBytes = 1'024U;
+constexpr std::size_t MaximumAtlasAssetFingerprintEntries = 65'536U;
+
+const std::array<std::filesystem::path, 7U> AtlasTableNames{{
+    L"levels.txt",
+    L"lvlprest.txt",
+    L"lvltypes.txt",
+    L"lvlmaze.txt",
+    L"lvlsub.txt",
+    L"lvlwarp.txt",
+    L"objects.txt",
+}};
 
 struct TableSpec final {
     DataCatalogFamily family{};
@@ -42,7 +53,78 @@ const std::array<TableSpec, FamilyCount> TableSpecs{{
         L"superuniques.bin"},
     {DataCatalogFamily::MonStats, L"monstats.txt", L"monstats.bin"},
     {DataCatalogFamily::Objects, L"objects.txt", L"objects.bin"},
+    {DataCatalogFamily::Missiles, L"missiles.txt", L"missiles.bin"},
 }};
+
+// PrimeMH's pinned missile taxonomy is indexed by the immutable D2 missile
+// class id. It is compressed to one byte per stock class: Y=physical,
+// F=fire, C=cold/ice, L=lightning, P=poison, M=magic and H=non-gameplay
+// SFX/trigger/dummy. The second table records the stock Missiles.txt EType.
+// A modded EType overrides PrimeMH only when it differs from the stock row;
+// appended custom rows are classified directly from their active TXT data.
+constexpr std::string_view PrimeMissileTaxonomy =
+    "YYLLLLLYYYYYFYYYYYHHHHFFFFFMCFCYPHFYYYPPCFFPFFFPPPHFFFFMLLFCFFFPPPPFFFPPPPPPHMMMMMFHHFMCCCLC"
+    "MLHHCMLLFFFFFFCCCCCCCCMYPYPCYFCLLYYYYFFFFFFYFFFPHPMHFFPMMMHFPCYPHHCCCCCCCCLLLLLPLMHLFFLFFMMM"
+    "MMMMMMMMMMCLYYYYYLLPMLLMPCFLPYYLMPMMPPPPPLYYYYFLLHMMMMFPFYYMMPPFMHHHHHHHHHLMCCCCCFYLMMMCCCCC"
+    "CFMLFCPFHLLMMLMMHHHHHHHHFFHHHHHHFFFFHHHHHHHHLPHPFCHMHMHFHHHHFHHLLYYLCCYHHHHLLHHHHMHHHHHHHHHH"
+    "HHHYHHHHHHHHHHHHHHHHHHYPYHHHHHFFLLLLFFLLLHYYYFYCCCPPPFFFHHHFCFHLLLCCPPLLLFFFYYYFFFLMFFFFFFFC"
+    "CFFFFFYYYYHYYHPPHYYFFFFFFYYHFFFFFCCLYYHYYYYYYYYYYYYYLLMPPMMHYFYFFYLLHHHHMYYFHHHHHHHLLYHLLPMY"
+    "YYFLFFLLCCCFFFFFLCHHHHLFYFHHHCCCCCCYYCCMMMMMMHHHHHHMMMHHHHHHHMMMMMMFMMMFCHHHHHHHHHHHHHHHMLLL"
+    "YYYYPPFFMFLPFCYYYPCFLMLPPFFFFFFFFPLCLFYYYYMMMFFMMPMFPPPMMMMMMPMMFMMPPPMMFMMMMMFMMCCCCCFYFFFL";
+constexpr std::string_view StockMissileElementTaxonomy =
+    "__LLLLL_____F_________FFFFFM____P_______CF__FFFPPP_____M______FPPPP___PPPPP__MMMM_F__F______"
+    "M___C__L____FF_CCCC__________FC_L____F_F____FFFP____FF_________P______________LPL___FFL_F___"
+    "__________CL_______P_L__PCFLP_______P_PPPL____F_L_M___FPF______________________________C____"
+    "CF_LFCPF__L__L______________________________LP_PFC___M_F____F______L________________________"
+    "____________________________________F___L____F__C___P_FF_____F___________F________L____F____"
+    "____________________________FFFFFC___________________L_______F_____L_______F___________L_P__"
+    "_____FLL_C_F___FLC____L__F_____________________________________________F__________________LL"
+    "_____P______FC___PCFLMLPPFF___FFFPL_LF_______F___MMFMMM______M___M_MMM_MF_________________F_";
+static_assert(PrimeMissileTaxonomy.size() == 736U);
+static_assert(StockMissileElementTaxonomy.size() == 736U);
+
+[[nodiscard]] constexpr auto MissileElementFromCode(char code) noexcept
+        -> DataCatalogMissileElement {
+    switch (code) {
+        case 'Y': return DataCatalogMissileElement::Physical;
+        case 'F': return DataCatalogMissileElement::Fire;
+        case 'C': return DataCatalogMissileElement::Cold;
+        case 'L': return DataCatalogMissileElement::Lightning;
+        case 'P': return DataCatalogMissileElement::Poison;
+        case 'M': return DataCatalogMissileElement::Magic;
+        default: return DataCatalogMissileElement::Hidden;
+    }
+}
+
+[[nodiscard]] constexpr auto MissileElementCodeFromTxt(
+        std::string_view element) noexcept -> char {
+    if (element == "fire" || element == "burn") return 'F';
+    if (element == "cold" || element == "frze") return 'C';
+    if (element == "ltng") return 'L';
+    if (element == "pois") return 'P';
+    if (element == "mag") return 'M';
+    return '_';
+}
+
+[[nodiscard]] constexpr auto ClassifyMissileElementImpl(
+        std::uint32_t classId,
+        std::string_view activeElement,
+        bool hasPhysicalDamage) noexcept -> DataCatalogMissileElement {
+    const auto activeCode = MissileElementCodeFromTxt(activeElement);
+    if (classId < PrimeMissileTaxonomy.size()) {
+        if (activeCode == StockMissileElementTaxonomy[classId]) {
+            return MissileElementFromCode(PrimeMissileTaxonomy[classId]);
+        }
+        if (activeCode != '_') return MissileElementFromCode(activeCode);
+        return hasPhysicalDamage
+            ? DataCatalogMissileElement::Physical
+            : DataCatalogMissileElement::Hidden;
+    }
+    if (activeCode != '_') return MissileElementFromCode(activeCode);
+    return hasPhysicalDamage
+        ? DataCatalogMissileElement::Physical
+        : DataCatalogMissileElement::Hidden;
+}
 
 [[nodiscard]] constexpr auto FamilyIndex(DataCatalogFamily family) noexcept
         -> std::size_t {
@@ -176,6 +258,122 @@ private:
             : ch;
     });
     return value;
+}
+
+void FingerprintBytes(
+        std::uint64_t& fingerprint,
+        const void* data,
+        std::size_t size) noexcept {
+    const auto* bytes = static_cast<const std::uint8_t*>(data);
+    for (std::size_t index = 0U; index < size; ++index) {
+        fingerprint ^= bytes[index];
+        fingerprint *= UINT64_C(1099511628211);
+    }
+}
+
+template <typename Value>
+void FingerprintValue(
+        std::uint64_t& fingerprint,
+        const Value& value) noexcept {
+    FingerprintBytes(fingerprint, &value, sizeof(value));
+}
+
+void FingerprintPath(
+        std::uint64_t& fingerprint,
+        const std::filesystem::path& path) {
+    const auto normalized = NormalizedPathKey(path);
+    FingerprintBytes(
+        fingerprint,
+        normalized.data(),
+        normalized.size() * sizeof(wchar_t));
+}
+
+[[nodiscard]] auto BuildAtlasDataFingerprint(
+        const std::vector<std::filesystem::path>& excelDirectories,
+        const std::vector<std::filesystem::path>& tileDirectories,
+        std::size_t maximumTableBytes) -> std::uint64_t {
+    if (excelDirectories.empty() && tileDirectories.empty()) return 0U;
+    auto fingerprint = UINT64_C(14695981039346656037);
+    for (const auto& root : excelDirectories) {
+        FingerprintPath(fingerprint, root);
+        for (const auto& name : AtlasTableNames) {
+            const auto path = root / name;
+            FingerprintPath(fingerprint, name);
+            std::error_code tableError;
+            const auto status = std::filesystem::symlink_status(
+                path, tableError);
+            const auto size = tableError
+                ? std::uintmax_t{0U}
+                : std::filesystem::file_size(path, tableError);
+            std::string bytes;
+            if (!tableError && std::filesystem::is_regular_file(status)
+                && size != 0U && size <= maximumTableBytes
+                && size <= static_cast<std::uintmax_t>(
+                    (std::numeric_limits<std::size_t>::max)())) {
+                bytes.assign(static_cast<std::size_t>(size), '\0');
+                std::ifstream input(path, std::ios::binary);
+                input.read(
+                    bytes.data(),
+                    static_cast<std::streamsize>(bytes.size()));
+                if (!input
+                    || input.peek() != std::char_traits<char>::eof()) {
+                    bytes.clear();
+                }
+            }
+            if (!bytes.empty()) {
+                const std::uint8_t present = 1U;
+                FingerprintValue(fingerprint, present);
+                FingerprintBytes(
+                    fingerprint, bytes.data(), bytes.size());
+            } else {
+                const std::uint8_t missing = 0U;
+                FingerprintValue(fingerprint, missing);
+            }
+        }
+    }
+    std::size_t assetCount{};
+    for (const auto& root : tileDirectories) {
+        FingerprintPath(fingerprint, root);
+        std::error_code error;
+        if (!std::filesystem::is_directory(root, error) || error) continue;
+        std::filesystem::recursive_directory_iterator iterator(
+            root,
+            std::filesystem::directory_options::skip_permission_denied,
+            error);
+        const std::filesystem::recursive_directory_iterator end{};
+        while (!error && iterator != end
+            && assetCount < MaximumAtlasAssetFingerprintEntries) {
+            const auto& entry = *iterator;
+            std::error_code entryError;
+            const auto status = entry.symlink_status(entryError);
+            if (!entryError && std::filesystem::is_regular_file(status)) {
+                auto extension = entry.path().extension().native();
+                std::transform(
+                    extension.begin(), extension.end(), extension.begin(),
+                    [](wchar_t value) {
+                        return value >= L'A' && value <= L'Z'
+                            ? static_cast<wchar_t>(value + (L'a' - L'A'))
+                            : value;
+                    });
+                if (extension == L".ds1" || extension == L".dt1") {
+                    FingerprintPath(
+                        fingerprint,
+                        entry.path().lexically_relative(root));
+                    const auto size = entry.file_size(entryError);
+                    if (!entryError) FingerprintValue(fingerprint, size);
+                    const auto modified = entry.last_write_time(entryError);
+                    if (!entryError) {
+                        const auto ticks = modified.time_since_epoch().count();
+                        FingerprintValue(fingerprint, ticks);
+                    }
+                    ++assetCount;
+                }
+            }
+            iterator.increment(error);
+        }
+        FingerprintValue(fingerprint, assetCount);
+    }
+    return fingerprint == 0U ? UINT64_C(1) : fingerprint;
 }
 
 void AppendUniquePath(
@@ -700,6 +898,17 @@ private:
     return parsed.ec == std::errc{} && parsed.ptr == end && output >= 0;
 }
 
+[[nodiscard]] auto ParseSigned(
+        std::string_view value,
+        std::int32_t& output) noexcept -> bool {
+    output = 0;
+    if (value.empty()) return false;
+    const auto* const begin = value.data();
+    const auto* const end = begin + value.size();
+    const auto parsed = std::from_chars(begin, end, output, 10);
+    return parsed.ec == std::errc{} && parsed.ptr == end;
+}
+
 [[nodiscard]] auto ParseFlag(std::string_view value, bool& output) noexcept
         -> bool {
     if (value.empty() || value == "0") {
@@ -755,31 +964,7 @@ public:
             }
             return result;
         }
-        CachedLocalization cached{.utf8 = std::string(key)};
-        if (service_ != nullptr && service_->getStringByKey != nullptr) {
-            std::uint32_t required{};
-            const auto first = service_->getStringByKey(
-                context_, cached.utf8.c_str(), nullptr, 0U, &required);
-            if (first == D2RL::Localization::Result::BufferTooSmall
-                && required > 1U && required <= maximumBytes_) {
-                std::vector<char> buffer(required, '\0');
-                std::uint32_t returned = required;
-                const auto second = service_->getStringByKey(
-                    context_, cached.utf8.c_str(), buffer.data(),
-                    static_cast<std::uint32_t>(buffer.size()), &returned);
-                if (second == D2RL::Localization::Result::Success
-                    && returned > 1U && returned <= buffer.size()
-                    && buffer[returned - 1U] == '\0') {
-                    const std::string_view localized(
-                        buffer.data(), returned - 1U);
-                    if (localized.find('\0') == std::string_view::npos
-                        && Utf8Valid(localized)) {
-                        cached.utf8.assign(localized);
-                        cached.serviceResolved = true;
-                    }
-                }
-            }
-        }
+        auto cached = QueryService(key);
         const auto inserted = cache_.emplace(
             std::string(key), std::move(cached)).first;
         result.utf8 = inserted->second.utf8;
@@ -791,12 +976,71 @@ public:
         return result;
     }
 
+    // A localized value may legitimately equal its lookup key, especially
+    // for player-facing names added by a mod in the client's current
+    // language. The same shape is also produced while D2R's language tables
+    // are not ready. Once another lookup proves that the service is ready,
+    // re-query exact unresolved values: a real entry succeeds again while a
+    // missing key is required to return NotFound. This preserves the early
+    // key-echo guard without rejecting arbitrary mod-defined names.
+    [[nodiscard]] auto RefreshVerifiedExactResolution(
+            DataCatalogLocalizedText& value) -> bool {
+        if (!hasVerifiedPlayerFacingLocalization_
+            || value.localized || value.key.empty()
+            || value.utf8 != value.key) {
+            return false;
+        }
+        auto refreshed = QueryService(value.key);
+        if (!refreshed.serviceResolved) return false;
+        if (refreshed.utf8 == value.key
+            && value.key.starts_with("ShrId")) {
+            return false;
+        }
+        value.utf8 = refreshed.utf8;
+        value.localized = true;
+        cache_.insert_or_assign(value.key, std::move(refreshed));
+        return true;
+    }
+
     [[nodiscard]] auto HasVerifiedPlayerFacingLocalization() const noexcept
             -> bool {
         return hasVerifiedPlayerFacingLocalization_;
     }
 
 private:
+    [[nodiscard]] auto QueryService(std::string_view key) const
+            -> CachedLocalization {
+        CachedLocalization result{.utf8 = std::string(key)};
+        if (service_ == nullptr || service_->getStringByKey == nullptr) {
+            return result;
+        }
+        std::uint32_t required{};
+        const auto first = service_->getStringByKey(
+            context_, result.utf8.c_str(), nullptr, 0U, &required);
+        if (first != D2RL::Localization::Result::BufferTooSmall
+            || required <= 1U || required > maximumBytes_) {
+            return result;
+        }
+        std::vector<char> buffer(required, '\0');
+        std::uint32_t returned = required;
+        const auto second = service_->getStringByKey(
+            context_, result.utf8.c_str(), buffer.data(),
+            static_cast<std::uint32_t>(buffer.size()), &returned);
+        if (second != D2RL::Localization::Result::Success
+            || returned <= 1U || returned > buffer.size()
+            || buffer[returned - 1U] != '\0') {
+            return result;
+        }
+        const std::string_view localized(buffer.data(), returned - 1U);
+        if (localized.find('\0') != std::string_view::npos
+            || !Utf8Valid(localized)) {
+            return result;
+        }
+        result.utf8.assign(localized);
+        result.serviceResolved = true;
+        return result;
+    }
+
     [[nodiscard]] static auto IsPlayerFacingResolution(
             std::string_view key,
             std::string_view fallback,
@@ -838,10 +1082,30 @@ void CountLocalization(
 
 } // namespace
 
+auto ClassifyDataCatalogMissileElement(
+        std::uint32_t classId,
+        std::string_view activeElement,
+        bool hasPhysicalDamage) noexcept -> DataCatalogMissileElement {
+    return ClassifyMissileElementImpl(
+        classId,
+        activeElement,
+        hasPhysicalDamage);
+}
+
+auto StockDataCatalogMissileElement(std::uint32_t classId) noexcept
+        -> DataCatalogMissileElement {
+    return classId < PrimeMissileTaxonomy.size()
+        ? MissileElementFromCode(PrimeMissileTaxonomy[classId])
+        : DataCatalogMissileElement::Hidden;
+}
+
 struct MapSenseDataCatalog::Impl final {
     std::array<DataCatalogFamilyStatus, FamilyCount> statuses{};
     bool hasLocalizationService{};
     bool hasVerifiedPlayerFacingLocalization{};
+    std::vector<std::filesystem::path> activeExcelDirectories{};
+    std::vector<std::filesystem::path> activeTileDirectories{};
+    std::uint64_t atlasDataFingerprint{};
 
     std::vector<DataCatalogLevel> levels{};
     std::map<std::int32_t, std::size_t> levelById{};
@@ -859,9 +1123,76 @@ struct MapSenseDataCatalog::Impl final {
     std::vector<DataCatalogObject> objects{};
     std::map<std::string, std::size_t, std::less<>> objectByClass{};
     std::map<std::uint32_t, std::size_t> objectById{};
+
+    std::vector<DataCatalogMissile> missiles{};
 };
 
 namespace {
+
+void RefreshVerifiedExactLocalizations(
+        LocalizationCache& localization,
+        MapSenseDataCatalog::Impl& impl) {
+    for (auto& level : impl.levels) {
+        if (!localization.RefreshVerifiedExactResolution(level.name)) {
+            continue;
+        }
+        level.waypointLabelUtf8.clear();
+        if (!level.name.utf8.empty()) {
+            level.waypointLabelUtf8.reserve(
+                level.name.utf8.size() + sizeof(" Waypoint") - 1U);
+            level.waypointLabelUtf8 = level.name.utf8;
+            level.waypointLabelUtf8 += " Waypoint";
+        }
+    }
+    for (auto& shrine : impl.shrines) {
+        static_cast<void>(
+            localization.RefreshVerifiedExactResolution(shrine.name));
+    }
+    for (auto& superUnique : impl.superUniques) {
+        static_cast<void>(localization.RefreshVerifiedExactResolution(
+            superUnique.name));
+    }
+    for (auto& monStats : impl.monStats) {
+        static_cast<void>(
+            localization.RefreshVerifiedExactResolution(monStats.name));
+    }
+    for (auto& object : impl.objects) {
+        static_cast<void>(
+            localization.RefreshVerifiedExactResolution(object.name));
+    }
+}
+
+void RecountCatalogLocalizations(MapSenseDataCatalog::Impl& impl) noexcept {
+    for (auto& status : impl.statuses) {
+        status.localizedNameCount = 0U;
+        status.unresolvedNameCount = 0U;
+    }
+    auto& levelStatus =
+        impl.statuses[FamilyIndex(DataCatalogFamily::Levels)];
+    for (const auto& level : impl.levels) {
+        CountLocalization(level.name, levelStatus);
+    }
+    auto& shrineStatus =
+        impl.statuses[FamilyIndex(DataCatalogFamily::Shrines)];
+    for (const auto& shrine : impl.shrines) {
+        if (shrine.row != 0U) CountLocalization(shrine.name, shrineStatus);
+    }
+    auto& superUniqueStatus =
+        impl.statuses[FamilyIndex(DataCatalogFamily::SuperUniques)];
+    for (const auto& superUnique : impl.superUniques) {
+        CountLocalization(superUnique.name, superUniqueStatus);
+    }
+    auto& monStatsStatus =
+        impl.statuses[FamilyIndex(DataCatalogFamily::MonStats)];
+    for (const auto& monStats : impl.monStats) {
+        CountLocalization(monStats.name, monStatsStatus);
+    }
+    auto& objectStatus =
+        impl.statuses[FamilyIndex(DataCatalogFamily::Objects)];
+    for (const auto& object : impl.objects) {
+        CountLocalization(object.name, objectStatus);
+    }
+}
 
 [[nodiscard]] auto ParseLevels(
         std::string_view bytes,
@@ -878,6 +1209,33 @@ namespace {
     }
     const auto displayNameColumn = reader.FindColumn("*StringName");
     const auto waypointColumn = reader.FindColumn("Waypoint");
+    const auto actColumn = reader.FindColumn("Act");
+    const auto layerColumn = reader.FindColumn("Layer");
+    const std::array sizeXColumns{
+        reader.FindColumn("SizeX"),
+        reader.FindColumn("SizeX(N)"),
+        reader.FindColumn("SizeX(H)"),
+    };
+    const std::array sizeYColumns{
+        reader.FindColumn("SizeY"),
+        reader.FindColumn("SizeY(N)"),
+        reader.FindColumn("SizeY(H)"),
+    };
+    const auto offsetXColumn = reader.FindColumn("OffsetX");
+    const auto offsetYColumn = reader.FindColumn("OffsetY");
+    const auto dependColumn = reader.FindColumn("Depend");
+    const auto drlgTypeColumn = reader.FindColumn("DrlgType");
+    constexpr auto MissingColumn = (std::numeric_limits<std::size_t>::max)();
+    const bool hasPlacementColumns = actColumn != MissingColumn
+        && layerColumn != MissingColumn
+        && std::ranges::none_of(sizeXColumns, [](std::size_t column) {
+            return column == MissingColumn;
+        })
+        && std::ranges::none_of(sizeYColumns, [](std::size_t column) {
+            return column == MissingColumn;
+        })
+        && offsetXColumn != MissingColumn && offsetYColumn != MissingColumn
+        && dependColumn != MissingColumn && drlgTypeColumn != MissingColumn;
     std::vector<DataCatalogLevel> records;
     std::map<std::int32_t, std::size_t> index;
     std::vector<std::string_view> row;
@@ -912,6 +1270,35 @@ namespace {
             return false;
         }
         record.name = localization.Resolve(key, displayFallback);
+        if (actColumn != MissingColumn) {
+            std::int32_t act{};
+            if (ParseSigned(row[actColumn], act) && act >= 0 && act < 5) {
+                record.act = act;
+            }
+        }
+        if (hasPlacementColumns) {
+            bool placementValid = record.act >= 0
+                && ParseSigned(row[layerColumn], record.layer)
+                && record.layer >= 0
+                && ParseSigned(row[offsetXColumn], record.offsetX)
+                && ParseSigned(row[offsetYColumn], record.offsetY)
+                && ParseSigned(row[dependColumn], record.depend)
+                && record.depend >= 0
+                && ParseSigned(row[drlgTypeColumn], record.drlgType)
+                && record.drlgType >= 0;
+            for (std::size_t difficulty = 0U;
+                    difficulty < record.sizeX.size();
+                    ++difficulty) {
+                placementValid = ParseSigned(
+                        row[sizeXColumns[difficulty]],
+                        record.sizeX[difficulty])
+                    && ParseSigned(
+                        row[sizeYColumns[difficulty]],
+                        record.sizeY[difficulty])
+                    && placementValid;
+            }
+            record.hasAtlasPlacement = placementValid;
+        }
         if (waypointColumn != (std::numeric_limits<std::size_t>::max)()) {
             std::int32_t waypointOrdinal{};
             if (!ParseSignedId(row[waypointColumn], waypointOrdinal)
@@ -1087,7 +1474,7 @@ namespace {
     if (!reader.Open(bytes, limits, error)) return false;
     std::vector<std::size_t> columns;
     if (!reader.RequireColumns(
-            {"Id", "NameStr", "boss", "primeevil"},
+            {"Id", "NameStr", "primeevil"},
             columns, error)) {
         return false;
     }
@@ -1106,8 +1493,7 @@ namespace {
         DataCatalogMonStats record{
             .hcIdx = static_cast<std::uint32_t>(records.size()),
         };
-        if (!ParseFlag(row[columns[2]], record.boss)
-            || !ParseFlag(row[columns[3]], record.primeEvil)) {
+        if (!ParseFlag(row[columns[2]], record.primeEvil)) {
             error = "MonStats.txt has an invalid numeric/flag value at line "
                 + std::to_string(reader.LineNumber());
             return false;
@@ -1224,6 +1610,71 @@ namespace {
     return true;
 }
 
+[[nodiscard]] auto ParseMissiles(
+        std::string_view bytes,
+        const MapSenseDataCatalogLimits& limits,
+        MapSenseDataCatalog::Impl& impl,
+        DataCatalogFamilyStatus& status,
+        std::string& error) -> bool {
+    StrictTsvReader reader;
+    if (!reader.Open(bytes, limits, error)) return false;
+    std::vector<std::size_t> columns;
+    if (!reader.RequireColumns({
+            "Missile", "EType", "SrcDamage", "SrcMissDmg",
+            "MinDamage", "MinLevDam1", "MinLevDam2", "MinLevDam3",
+            "MinLevDam4", "MinLevDam5", "MaxDamage", "MaxLevDam1",
+            "MaxLevDam2", "MaxLevDam3", "MaxLevDam4", "MaxLevDam5"},
+            columns, error)) {
+        return false;
+    }
+    std::vector<DataCatalogMissile> records;
+    std::vector<std::string_view> row;
+    bool hasRow{};
+    while (reader.Next(row, hasRow, error) && hasRow) {
+        if (records.size() >= limits.maximumRowsPerFamily
+            || records.size()
+                > static_cast<std::size_t>(
+                    (std::numeric_limits<std::uint32_t>::max)())) {
+            error = "Missiles.txt exceeds the configured row bound";
+            return false;
+        }
+        DataCatalogMissile record{
+            .classId = static_cast<std::uint32_t>(records.size()),
+        };
+        if (!CopyBoundedKey(row[columns[0]], limits, false, record.id)) {
+            error = "Missiles.txt has an invalid Missile at line "
+                + std::to_string(reader.LineNumber());
+            return false;
+        }
+        auto hasPhysicalDamage = false;
+        for (std::size_t columnIndex = 2U;
+                columnIndex < columns.size(); ++columnIndex) {
+            const auto value = row[columns[columnIndex]];
+            if (value.empty()) continue;
+            std::int32_t parsed{};
+            if (!ParseSigned(value, parsed)) {
+                error = "Missiles.txt has an invalid damage value at line "
+                    + std::to_string(reader.LineNumber());
+                return false;
+            }
+            hasPhysicalDamage = hasPhysicalDamage || parsed > 0;
+        }
+        record.element = ClassifyDataCatalogMissileElement(
+            record.classId,
+            row[columns[1]],
+            hasPhysicalDamage);
+        records.push_back(std::move(record));
+    }
+    if (!error.empty()) return false;
+    if (records.empty()) {
+        error = "Missiles.txt contains no records";
+        return false;
+    }
+    status.rowCount = records.size();
+    impl.missiles = std::move(records);
+    return true;
+}
+
 [[nodiscard]] auto ParseFamily(
         DataCatalogFamily family,
         std::string_view bytes,
@@ -1248,6 +1699,8 @@ namespace {
         case DataCatalogFamily::Objects:
             return ParseObjects(
                 bytes, limits, localization, impl, status, error);
+        case DataCatalogFamily::Missiles:
+            return ParseMissiles(bytes, limits, impl, status, error);
         case DataCatalogFamily::Count:
             break;
     }
@@ -1303,6 +1756,18 @@ auto MapSenseDataCatalog::Load(
 
         const auto directories = DiscoverSourceDirectories(
             context, options, diagnostics);
+        if (directories.activeInspectionAllowed) {
+            impl->activeExcelDirectories = directories.active;
+            for (const auto& excel : directories.active) {
+                AppendUniquePath(
+                    impl->activeTileDirectories,
+                    excel.parent_path() / L"tiles");
+            }
+            impl->atlasDataFingerprint = BuildAtlasDataFingerprint(
+                impl->activeExcelDirectories,
+                impl->activeTileDirectories,
+                limits.maximumTableBytes);
+        }
         for (const auto& spec : TableSpecs) {
             auto& status = impl->statuses[FamilyIndex(spec.family)];
             if (!directories.activeInspectionAllowed) {
@@ -1369,20 +1834,26 @@ auto MapSenseDataCatalog::Load(
             status.state = fallback
                 ? DataCatalogFamilyState::VanillaFallbackTxt
                 : DataCatalogFamilyState::ActiveTxt;
-            if (status.unresolvedNameCount != 0U) {
-                diagnostics.Add(
-                    DataCatalogDiagnosticSeverity::Warning,
-                    spec.family,
-                    "localization_incomplete",
-                    std::string(DataCatalogFamilyName(spec.family)) + " has "
-                        + std::to_string(status.unresolvedNameCount)
-                        + " unresolved localization key(s); raw keys are "
-                          "retained and explicitly marked.");
-            }
         }
 
         impl->hasVerifiedPlayerFacingLocalization =
             localization.HasVerifiedPlayerFacingLocalization();
+        if (impl->hasVerifiedPlayerFacingLocalization) {
+            RefreshVerifiedExactLocalizations(localization, *impl);
+        }
+        RecountCatalogLocalizations(*impl);
+        for (const auto& spec : TableSpecs) {
+            const auto& status = impl->statuses[FamilyIndex(spec.family)];
+            if (status.unresolvedNameCount == 0U) continue;
+            diagnostics.Add(
+                DataCatalogDiagnosticSeverity::Warning,
+                spec.family,
+                "localization_incomplete",
+                std::string(DataCatalogFamilyName(spec.family)) + " has "
+                    + std::to_string(status.unresolvedNameCount)
+                    + " unresolved localization key(s); raw keys are "
+                      "retained and explicitly marked.");
+        }
 
         result.catalog = std::shared_ptr<const MapSenseDataCatalog>(
             new MapSenseDataCatalog(std::move(impl)));
@@ -1425,6 +1896,82 @@ auto MapSenseDataCatalog::FindLevel(std::int32_t id) const noexcept
     const auto found = impl_->levelById.find(id);
     return found == impl_->levelById.end()
         ? nullptr : &impl_->levels[found->second];
+}
+
+auto MapSenseDataCatalog::Levels() const noexcept
+        -> std::span<const DataCatalogLevel> {
+    return impl_ ? std::span<const DataCatalogLevel>{impl_->levels}
+                 : std::span<const DataCatalogLevel>{};
+}
+
+auto MapSenseDataCatalog::ResolveLevelAtlasPlacement(
+        std::int32_t id,
+        std::uint8_t difficulty,
+        DataCatalogLevelAtlasPlacement& output) const noexcept -> bool {
+    output = {};
+    if (!impl_ || id <= 0 || difficulty >= 3U) return false;
+    const auto* const target = FindLevel(id);
+    if (target == nullptr || !target->hasAtlasPlacement
+        || target->act < 0 || target->act >= 5
+        || target->sizeX[difficulty] <= 0
+        || target->sizeY[difficulty] <= 0) {
+        return false;
+    }
+
+    // Depend chains in the governed tables are shallow, but a mod can supply
+    // arbitrary data. Bound traversal without allocating on a hot/session
+    // path and reject cycles deterministically.
+    constexpr std::size_t MaximumDependDepth = 64U;
+    std::array<std::int32_t, MaximumDependDepth> visited{};
+    std::size_t visitedCount{};
+    std::int64_t originTileX{};
+    std::int64_t originTileY{};
+    const DataCatalogLevel* current = target;
+    for (;;) {
+        if (current == nullptr || !current->hasAtlasPlacement
+            || current->act != target->act
+            || visitedCount >= visited.size()) {
+            return false;
+        }
+        if (std::find(
+                visited.begin(),
+                visited.begin() + static_cast<std::ptrdiff_t>(visitedCount),
+                current->id)
+            != visited.begin()
+                + static_cast<std::ptrdiff_t>(visitedCount)) {
+            return false;
+        }
+        visited[visitedCount++] = current->id;
+        originTileX += current->offsetX;
+        originTileY += current->offsetY;
+        if (current->depend == 0) break;
+        current = FindLevel(current->depend);
+    }
+
+    constexpr std::int64_t SubtilesPerGameTile = 5;
+    const auto originSubtileX = originTileX * SubtilesPerGameTile;
+    const auto originSubtileY = originTileY * SubtilesPerGameTile;
+    const auto anchorSubtileX = originSubtileX
+        + static_cast<std::int64_t>(target->sizeX[difficulty])
+            * SubtilesPerGameTile / 2;
+    const auto anchorSubtileY = originSubtileY
+        + static_cast<std::int64_t>(target->sizeY[difficulty])
+            * SubtilesPerGameTile / 2;
+    constexpr auto Maximum = static_cast<std::int64_t>(
+        (std::numeric_limits<std::int32_t>::max)());
+    if (originSubtileX < 0 || originSubtileY < 0
+        || anchorSubtileX < 0 || anchorSubtileY < 0
+        || originSubtileX > Maximum || originSubtileY > Maximum
+        || anchorSubtileX > Maximum || anchorSubtileY > Maximum) {
+        return false;
+    }
+    output = {
+        .originSubtileX = static_cast<std::int32_t>(originSubtileX),
+        .originSubtileY = static_cast<std::int32_t>(originSubtileY),
+        .anchorSubtileX = static_cast<std::int32_t>(anchorSubtileX),
+        .anchorSubtileY = static_cast<std::int32_t>(anchorSubtileY),
+    };
+    return true;
 }
 
 auto MapSenseDataCatalog::FindShrineByRow(std::uint32_t row) const noexcept
@@ -1476,6 +2023,13 @@ auto MapSenseDataCatalog::FindObjectById(std::uint32_t objectId) const noexcept
         ? nullptr : &impl_->objects[found->second];
 }
 
+auto MapSenseDataCatalog::FindMissile(std::uint32_t classId) const noexcept
+        -> const DataCatalogMissile* {
+    return impl_ && classId < impl_->missiles.size()
+        ? &impl_->missiles[classId]
+        : nullptr;
+}
+
 auto MapSenseDataCatalog::FamilyStatus(DataCatalogFamily family) const noexcept
         -> const DataCatalogFamilyStatus& {
     static const DataCatalogFamilyStatus unavailable{};
@@ -1486,7 +2040,28 @@ auto MapSenseDataCatalog::FamilyStatus(DataCatalogFamily family) const noexcept
 auto MapSenseDataCatalog::FamilyStatuses() const noexcept
         -> std::span<const DataCatalogFamilyStatus> {
     return impl_ ? std::span<const DataCatalogFamilyStatus>{impl_->statuses}
-                 : std::span<const DataCatalogFamilyStatus>{};
+        : std::span<const DataCatalogFamilyStatus>{};
+}
+
+auto MapSenseDataCatalog::ActiveExcelDirectories() const noexcept
+        -> std::span<const std::filesystem::path> {
+    return impl_
+        ? std::span<const std::filesystem::path>{
+            impl_->activeExcelDirectories}
+        : std::span<const std::filesystem::path>{};
+}
+
+auto MapSenseDataCatalog::ActiveTileDirectories() const noexcept
+        -> std::span<const std::filesystem::path> {
+    return impl_
+        ? std::span<const std::filesystem::path>{
+            impl_->activeTileDirectories}
+        : std::span<const std::filesystem::path>{};
+}
+
+auto MapSenseDataCatalog::AtlasDataFingerprint() const noexcept
+        -> std::uint64_t {
+    return impl_ ? impl_->atlasDataFingerprint : 0U;
 }
 
 auto MapSenseDataCatalog::HasLocalizationService() const noexcept -> bool {
@@ -1512,6 +2087,7 @@ auto DataCatalogFamilyName(DataCatalogFamily family) noexcept
         case DataCatalogFamily::SuperUniques: return "superuniques";
         case DataCatalogFamily::MonStats: return "monstats";
         case DataCatalogFamily::Objects: return "objects";
+        case DataCatalogFamily::Missiles: return "missiles";
         case DataCatalogFamily::Count: break;
     }
     return "unknown";

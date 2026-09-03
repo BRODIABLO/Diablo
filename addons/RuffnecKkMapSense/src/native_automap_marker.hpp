@@ -1,7 +1,5 @@
 #pragma once
 
-#include "atlas_projection.hpp"
-
 #include "overlay_scene.hpp"
 
 #include <array>
@@ -35,6 +33,16 @@ namespace Detail {
 
 inline constexpr std::uint8_t NativeDataContextCount = 4U;
 inline constexpr std::uint64_t MaximumMonStatsRecordCount = 65'536U;
+inline constexpr std::uint32_t LocalPlayerModeDeath = 0U;
+inline constexpr std::uint32_t LocalPlayerModeDead = 17U;
+
+// D2R player modes differ from monster modes. Only the two proven terminal
+// player modes suppress MapSense; every other mode remains a living gameplay
+// state, including attack, cast, hit recovery and town movement.
+[[nodiscard]] constexpr auto IsLocalPlayerAliveMode(
+        std::uint32_t mode) noexcept -> bool {
+    return mode != LocalPlayerModeDeath && mode != LocalPlayerModeDead;
+}
 
 // D2R's MonStats getter asserts before it can return null for an invalid
 // context or class id. Keep the complete preflight pure so every native call
@@ -220,7 +228,6 @@ struct NativeAutomapViewportSnapshot final {
     std::int32_t clipHeight{};
     std::uint64_t observedTick{};
     std::uint64_t epoch{};
-    AtlasProjectionWitness atlasProjection{};
 };
 
 struct NativeAutomapClipBounds final {
@@ -279,10 +286,21 @@ struct NativeAutomapMarkerSnapshot final {
     std::uint64_t sequence{};
 };
 
+// MonStats.boss is an engine-behavior flag shared by unnamed families such as
+// Putrid Defilers. Player-facing boss identity instead requires the live
+// superunique rank/index or the dedicated Prime Evil data contract.
+[[nodiscard]] constexpr auto HasNamedBossDisplayIdentity(
+        MonsterRank rank,
+        std::int32_t superUniqueIndex,
+        bool primeEvil) noexcept -> bool {
+    return rank == MonsterRank::SuperUnique
+        || superUniqueIndex >= 0
+        || primeEvil;
+}
+
 // ImGui preserves submission order. Draw lower-value layers first so a dense
 // pack cannot bury the marker that carries the most useful combat identity.
-// A MonStats boss may not expose the SuperUnique runtime rank, so callers can
-// explicitly promote that independently verified identity to the top layer.
+// Callers may explicitly promote a separately verified named-boss identity.
 [[nodiscard]] constexpr auto MonsterMarkerRenderLayer(
         MonsterRank rank,
         bool bossIdentity = false) noexcept -> std::uint8_t {
@@ -365,6 +383,11 @@ void ResetNativeAutomapMarker() noexcept;
 // Hides the current renderer-facing marker epoch without resetting diagnostic
 // counters. The next native automap pass starts a fresh visible epoch.
 void InvalidateNativeAutomapMarkerFrame() noexcept;
+// Revokes only the renderer's current local-player witness. Atlas, navigation,
+// POI and marker caches stay intact and a later living player pass re-arms the
+// frame without rebuilding them.
+void InvalidateNativeAutomapLocalPlayerFrame() noexcept;
+[[nodiscard]] auto IsNativeAutomapLocalPlayerFrameAlive() noexcept -> bool;
 void SetNativeAutomapMarkerEnabled(bool enabled) noexcept;
 void SetNativeAutomapImmunityCollectionEnabled(bool enabled) noexcept;
 void SetNativeAutomapLevelObservedCallback(

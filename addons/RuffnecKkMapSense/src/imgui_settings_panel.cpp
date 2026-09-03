@@ -481,14 +481,10 @@ struct ImmunityColorControl final {
         const char* sectionLabel,
         const char* enabledLabel,
         AutomapLabelOptions& options,
-        float dpiScale,
-        const char* description = nullptr) noexcept -> bool {
+        float dpiScale) noexcept -> bool {
     ImGui::PushID(sectionLabel);
     ImGui::SeparatorText(sectionLabel);
     auto saveRequested = ImGui::Checkbox(enabledLabel, &options.enabled);
-    if (description != nullptr) {
-        ImGui::TextDisabled("%s", description);
-    }
     if (options.enabled) {
         (void)ImGui::SliderFloat(
             "Text Size",
@@ -566,18 +562,31 @@ struct ImmunityColorControl final {
             dpiScale,
             "Trapped Lock Color");
         ImGui::PopID();
-        ImGui::TextWrapped(
-            "Chest artwork uses the exact PrimeMH image; only the state lock colors are configurable.");
     }
 
     ImGui::SeparatorText("Special Chests");
     saveRequested |= ImGui::Checkbox(
         "Show Special Chests",
         &specialOptions.enabled);
-    if (specialOptions.enabled) {
-        ImGui::TextWrapped(
-            "PrimeMH's special-chest stars are embedded in the exact artwork.");
-    }
+    ImGui::PopID();
+    return saveRequested;
+}
+
+[[nodiscard]] auto DrawMissileMarkerStyle(
+        const char* label,
+        MissileMarkerStyle& style,
+        float dpiScale) noexcept -> bool {
+    ImGui::PushID(label);
+    ImGui::SeparatorText(label);
+    (void)ImGui::SliderFloat(
+        "Size",
+        &style.size,
+        MinimumMissileMarkerSize,
+        MaximumMissileMarkerSize,
+        "%.0f px",
+        ImGuiSliderFlags_AlwaysClamp);
+    auto saveRequested = ImGui::IsItemDeactivatedAfterEdit();
+    saveRequested |= DrawMonsterMarkerColor(style.color, dpiScale);
     ImGui::PopID();
     return saveRequested;
 }
@@ -702,7 +711,7 @@ auto DrawImGuiSettingsPanel(
     if (contentVisible) {
         if (!frameExpanded) {
             if (ImGui::Button(
-                    config.featuresEnabled ? "Open" : "Open (OFF)",
+                    config.featuresEnabled ? "Open" : "Open (PAUSED)",
                     ImVec2{ImGui::GetContentRegionAvail().x, 0.0F})) {
                 expanded = true;
             }
@@ -712,8 +721,8 @@ auto DrawImGuiSettingsPanel(
             }
 
             const auto masterLabel = config.featuresEnabled
-                ? "Disable MapSense"
-                : "Enable MapSense";
+                ? "Pause All MapSense Features"
+                : "Resume All MapSense Features";
             if (ImGui::Button(
                     masterLabel,
                     ImVec2{ImGui::GetContentRegionAvail().x, 0.0F})) {
@@ -726,7 +735,7 @@ auto DrawImGuiSettingsPanel(
             }
 
             if (ImGui::CollapsingHeader(
-                    "Map & Reveal",
+                    "Reveal Map",
                     ImGuiTreeNodeFlags_DefaultOpen)) {
                 (void)ImGui::SliderFloat(
                     "Additions Opacity",
@@ -740,8 +749,8 @@ auto DrawImGuiSettingsPanel(
                 ImGui::BeginDisabled(!config.featuresEnabled);
                 DrawActionButton(
                     revealMapEnabled
-                        ? "Reveal Map: ON (click to disable)"
-                        : "Reveal Map: OFF (click to enable)",
+                        ? "Stop Persistent Reveal"
+                        : "Reveal Entire Difficulty",
                     ImGuiSettingsAction::ToggleRevealMap,
                     actionCallback);
                 ImGui::EndDisabled();
@@ -750,11 +759,6 @@ auto DrawImGuiSettingsPanel(
             if (ImGui::CollapsingHeader(
                     "Monsters",
                     ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::TextWrapped(
-                    "All monster categories are always visible. Configure "
-                    "each category independently. X and Player Cross expose "
-                    "Size and Thickness; Dot exposes Size only.");
-
                 saveRequested |= DrawMonsterMarkerStyle(
                     "Normal",
                     config.monsters.normal,
@@ -814,6 +818,26 @@ auto DrawImGuiSettingsPanel(
                 }
             }
 
+            if (ImGui::CollapsingHeader("Missiles")) {
+                saveRequested |= ImGui::Checkbox(
+                    "Show Missiles",
+                    &config.missiles.enabled);
+                if (config.missiles.enabled) {
+                    saveRequested |= DrawMissileMarkerStyle(
+                        "Fire", config.missiles.fire, dpiScale);
+                    saveRequested |= DrawMissileMarkerStyle(
+                        "Cold / Ice", config.missiles.cold, dpiScale);
+                    saveRequested |= DrawMissileMarkerStyle(
+                        "Lightning", config.missiles.lightning, dpiScale);
+                    saveRequested |= DrawMissileMarkerStyle(
+                        "Poison", config.missiles.poison, dpiScale);
+                    saveRequested |= DrawMissileMarkerStyle(
+                        "Physical", config.missiles.physical, dpiScale);
+                    saveRequested |= DrawMissileMarkerStyle(
+                        "Magic", config.missiles.magic, dpiScale);
+                }
+            }
+
             if (ImGui::CollapsingHeader("Objects")) {
                 saveRequested |= ImGui::Checkbox(
                     "Show Automap Objects",
@@ -829,14 +853,12 @@ auto DrawImGuiSettingsPanel(
                         "Waypoint Labels",
                         "Show Waypoint Labels",
                         config.objects.waypointLabels,
-                        dpiScale,
-                        "Shows the current area's localized name above D2R's native waypoint icon.");
+                        dpiScale);
                     saveRequested |= DrawAutomapLabelOptions(
                         "Shrine Labels",
                         "Show Shrine Labels",
                         config.objects.shrineLabels,
-                        dpiScale,
-                        "Shows the localized buff name near D2R's native shrine marker.");
+                        dpiScale);
                     saveRequested |= DrawChestOptions(
                         config.objects.chests,
                         config.objects.superChests,

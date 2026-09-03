@@ -1,14 +1,20 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
+#include <memory>
+#include <vector>
 
 namespace D2RL {
 struct PluginContext;
 }
 
 namespace RuffnecKk::MapSense {
+
+struct ExternalAtlasGeometrySnapshot;
 
 enum class RevealOutcome : std::uint32_t {
     Complete,
@@ -26,6 +32,216 @@ struct RevealCounters {
     std::uint64_t staticRoomsMaterialized{};
     std::uint64_t staticRoomsReleased{};
     std::uint64_t staticRoomFailures{};
+};
+
+struct NativeAutomapCellKeyValue final {
+    std::int16_t frame{};
+    std::int32_t x{};
+    std::int32_t y{};
+};
+
+// D2R creates ordinary newly explored cells with tag 0 and recreates cells
+// loaded from its automap sidecar with tag 1 before inserting both into the
+// same renderer-owned tree. The serializer emits only keys whose low tag byte
+// is zero. MapSense therefore uses the native restored-cell tag for generated
+// atlas cells: they render normally but are rebuilt from MapSense's exact
+// seed/difficulty intent instead of being appended to D2R's bounded sidecar.
+inline constexpr std::uint16_t NativeAutomapOrdinaryCellTag = 0U;
+inline constexpr std::uint16_t NativeAutomapRestoredCellTag = 1U;
+inline constexpr std::uint16_t NativeAutomapSyntheticCellTag =
+    NativeAutomapRestoredCellTag;
+
+[[nodiscard]] constexpr auto NativeAutomapCellIsSerialized(
+        std::uint16_t tag) noexcept -> bool {
+    return (tag & 0x00FFU) == 0U;
+}
+
+// D2R serializes a tree node only when the first byte of its 12-byte cell key
+// is zero. Each emitted key contributes three uint16 values, and the serializer
+// reports their byte length through a signed 16-bit intermediate. The bound is
+// therefore on emitted zero-tag keys, not on tree+0x20's total node count.
+inline constexpr std::uint64_t NativeAutomapSerializedBytesPerCell = 6U;
+inline constexpr std::uint64_t NativeAutomapMaximumEmittedTreeCells =
+    static_cast<std::uint64_t>(
+        (std::numeric_limits<std::int16_t>::max)())
+    / NativeAutomapSerializedBytesPerCell;
+
+[[nodiscard]] constexpr auto CanAppendNativeAutomapEmittedCell(
+        std::uint64_t emittedCellCount) noexcept -> bool {
+    return emittedCellCount < NativeAutomapMaximumEmittedTreeCells;
+}
+
+// Converts one immutable mapgen tile into the exact 12-byte native cell-key
+// coordinate basis. D2R's ordinary tile path performs the same
+// (tileX-tileY)*8, (tileX+tileY)*4 conversion and raises orientations >= 0x10
+// by 24 independently from the floor/wall owner tree selection.
+[[nodiscard]] constexpr auto BuildNativeAutomapCellKeyValue(
+        std::int32_t frame,
+        std::int32_t tileX,
+        std::int32_t tileY,
+        bool raised,
+        NativeAutomapCellKeyValue& output) noexcept -> bool {
+    output = {};
+    if (frame < 0
+        || frame > (std::numeric_limits<std::int16_t>::max)()
+        || tileX < 0 || tileY < 0) {
+        return false;
+    }
+    const auto x = (static_cast<std::int64_t>(tileX) - tileY) * 8;
+    auto y = (static_cast<std::int64_t>(tileX) + tileY) * 4;
+    if (raised) y += 24;
+    if (x < (std::numeric_limits<std::int32_t>::min)()
+        || x > (std::numeric_limits<std::int32_t>::max)()
+        || y < (std::numeric_limits<std::int32_t>::min)()
+        || y > (std::numeric_limits<std::int32_t>::max)()) {
+        return false;
+    }
+    output = {
+        .frame = static_cast<std::int16_t>(frame),
+        .x = static_cast<std::int32_t>(x),
+        .y = static_cast<std::int32_t>(y),
+    };
+    return true;
+}
+
+struct NativeAutomapLevelLayer final {
+    std::int32_t levelId{-1};
+    std::int32_t layer{-1};
+};
+
+// Immutable renderer-facing coordinate catalog. Its exact session, seed,
+// difficulty, act and authoritative Levels.Layer mapping are published before
+// optional terrain insertion. readyLayers tracks completed external terrain
+// or a proven zero-work label-only layer; it must not suppress labels over an
+// already-visible native map.
+struct NativeAutomapLayerCatalog final {
+    std::uint64_t sessionGeneration{};
+    std::uint32_t seed{};
+    std::uint8_t difficulty{};
+    std::uint8_t act{};
+    std::uint64_t geometryDigest{};
+    std::vector<NativeAutomapLevelLayer> levels;
+    std::vector<std::int32_t> readyLayers;
+};
+
+[[nodiscard]] inline auto FindNativeAutomapLayer(
+        const NativeAutomapLayerCatalog& catalog,
+        std::int32_t levelId,
+        std::int32_t& output) noexcept -> bool {
+    output = -1;
+    const auto found = std::lower_bound(
+        catalog.levels.begin(),
+        catalog.levels.end(),
+        levelId,
+        [](const NativeAutomapLevelLayer& entry,
+                std::int32_t requested) noexcept {
+            return entry.levelId < requested;
+        });
+    if (found == catalog.levels.end() || found->levelId != levelId
+        || found->layer < 0) {
+        return false;
+    }
+    output = found->layer;
+    return true;
+}
+
+[[nodiscard]] inline auto NativeAutomapLayerIsReady(
+        const NativeAutomapLayerCatalog& catalog,
+        std::int32_t layer) noexcept -> bool {
+    return layer >= 0 && std::binary_search(
+        catalog.readyLayers.begin(),
+        catalog.readyLayers.end(),
+        layer);
+}
+
+[[nodiscard]] inline auto NativeAutomapLevelsShareLayer(
+        const NativeAutomapLayerCatalog& catalog,
+        std::int32_t currentLevelId,
+        std::int32_t anchoredLevelId) noexcept -> bool {
+    std::int32_t currentLayer{};
+    std::int32_t anchoredLayer{};
+    return FindNativeAutomapLayer(catalog, currentLevelId, currentLayer)
+        && FindNativeAutomapLayer(catalog, anchoredLevelId, anchoredLayer)
+        && currentLayer == anchoredLayer;
+}
+
+[[nodiscard]] inline auto NativeAutomapLevelsShareReadyLayer(
+        const NativeAutomapLayerCatalog& catalog,
+        std::int32_t currentLevelId,
+        std::int32_t anchoredLevelId) noexcept -> bool {
+    std::int32_t currentLayer{};
+    return NativeAutomapLevelsShareLayer(
+            catalog, currentLevelId, anchoredLevelId)
+        && FindNativeAutomapLayer(catalog, currentLevelId, currentLayer)
+        && NativeAutomapLayerIsReady(catalog, currentLayer);
+}
+
+enum class NativeAutomapAtlasPublicationStatus : std::uint8_t {
+    Unavailable,
+    Accepted,
+    InProgress,
+    WaitingForOwner,
+    AwaitingWitness,
+    Complete,
+    Stale,
+    Failed,
+};
+
+enum class NativeAutomapActiveOwnerState : std::uint8_t {
+    Pending,
+    Ready,
+    Mismatch,
+};
+
+// Publication is permitted only when D2R already owns a non-null active
+// automap layer whose id exactly matches the authoritative Levels.Layer for
+// the player. MapSense must never create or switch a layer to satisfy this
+// predicate.
+[[nodiscard]] constexpr auto ClassifyNativeAutomapActiveOwner(
+        bool ownerPresent,
+        std::int32_t ownerLayer,
+        std::int32_t expectedLayer) noexcept
+        -> NativeAutomapActiveOwnerState {
+    if (!ownerPresent) return NativeAutomapActiveOwnerState::Pending;
+    return ownerLayer == expectedLayer && expectedLayer >= 0
+        ? NativeAutomapActiveOwnerState::Ready
+        : NativeAutomapActiveOwnerState::Mismatch;
+}
+
+// A missing or previous-layer owner is normal while the automap is closed or
+// D2R is completing a level transition. Neither state is a publication
+// failure: the publisher must sleep until a real automap pass wakes it.
+[[nodiscard]] constexpr auto NativeAutomapOwnerRequiresPulse(
+        NativeAutomapActiveOwnerState state) noexcept -> bool {
+    return state != NativeAutomapActiveOwnerState::Ready;
+}
+
+// Tag-1 atlas cells are transient across D2R's destructive native owner
+// switch. Completion remains reusable only while the same native layer is
+// still active; returning from another layer must republish that layer.
+[[nodiscard]] constexpr auto NativeAutomapLayerCompletionIsReusable(
+        bool ready,
+        std::int32_t lastActiveLayer,
+        std::int32_t currentLayer) noexcept -> bool {
+    return ready && currentLayer >= 0 && lastActiveLayer == currentLayer;
+}
+
+struct NativeAutomapAtlasCounters final {
+    std::uint64_t atlasesAccepted{};
+    std::uint64_t atlasesCompleted{};
+    std::uint64_t layerCatalogsPublished{};
+    std::uint64_t cellsAttempted{};
+    std::uint64_t cellsInserted{};
+    std::uint64_t duplicateCells{};
+    std::uint64_t failures{};
+    std::uint64_t pendingCells{};
+    std::uint64_t ownerPending{};
+    std::uint64_t ownerMismatches{};
+    std::uint64_t witnessPasses{};
+    std::uint64_t witnessFailures{};
+    std::uint64_t layerTransitions{};
+    std::uint64_t maximumFloorTreeCells{};
+    std::uint64_t maximumWallTreeCells{};
 };
 
 inline constexpr std::uint32_t StaticPoiRoomWarpMask = 0x00000FF0U;
@@ -529,8 +745,9 @@ void BeginRevealSession() noexcept;
 void ResetRevealSession() noexcept;
 
 auto RevealCurrentZone() noexcept -> RevealOutcome;
-// Uses D2RCore's public revealmap command for the normal act-wide automap
-// reveal. Distant-name discovery is a separate passive plugin operation.
+// Legacy diagnostic actions retain D2RCore's public revealmap command. The
+// product-facing Reveal Map toggle does not use this path; it publishes the
+// generated atlas directly into D2R's native cell trees without rooms.
 auto RevealCurrentAct() noexcept -> RevealOutcome;
 auto ArmRevealAll() noexcept -> RevealOutcome;
 auto ToggleRevealAll() noexcept -> RevealOutcome;
@@ -545,6 +762,46 @@ auto DisableRevealAll() noexcept -> RevealOutcome;
     const ClientLevelView& current,
     std::int32_t levelId,
     void*& outputLevel) noexcept -> bool;
+
+// Accepts one validated, seed-scoped helper artifact on D2R's UI thread. Pump
+// reads and revalidates D2R's already-active owner on every callback, then
+// inserts only levels whose authoritative Levels.Layer equals that owner. It
+// never creates, switches, retains or restores an automap owner. No ActiveRoom,
+// Unit or monster table is touched.
+[[nodiscard]] auto BeginNativeAutomapAtlasPublication(
+    std::uint64_t sessionGeneration,
+    std::shared_ptr<const ExternalAtlasGeometrySnapshot> snapshot,
+    const ClientLevelView& current,
+    std::int32_t resolvedAct) noexcept
+    -> NativeAutomapAtlasPublicationStatus;
+[[nodiscard]] auto PumpNativeAutomapAtlasPublication(
+    const ClientLevelView& current,
+    std::uint32_t maximumCells) noexcept
+    -> NativeAutomapAtlasPublicationStatus;
+[[nodiscard]] auto QueryNativeAutomapAtlasPublication(
+    std::uint64_t sessionGeneration,
+    const ClientLevelView& current,
+    std::int32_t resolvedAct) noexcept
+    -> NativeAutomapAtlasPublicationStatus;
+// Called only from MapSense's existing native automap-pass observer. It
+// atomically resumes a matching publisher that was sleeping for D2R's owner;
+// no native pointer is retained or dereferenced here.
+[[nodiscard]] auto TryWakeNativeAutomapAtlasPublication(
+    std::uint64_t sessionGeneration,
+    std::int32_t observedLevelId) noexcept -> bool;
+// Called after D2R's original local-player automap render pass. A generated
+// layer is not credited as ready until bounded exact keys are still present in
+// the same native floor/wall owner that D2R just rendered.
+[[nodiscard]] auto ObserveNativeAutomapAtlasPublication(
+    std::uint64_t sessionGeneration,
+    std::int32_t observedLevelId) noexcept
+    -> NativeAutomapAtlasPublicationStatus;
+void ResetNativeAutomapAtlasPublication(
+    std::uint64_t sessionGeneration) noexcept;
+[[nodiscard]] auto AcquireNativeAutomapLayerCatalog() noexcept
+    -> std::shared_ptr<const NativeAutomapLayerCatalog>;
+[[nodiscard]] auto GetNativeAutomapAtlasCounters() noexcept
+    -> NativeAutomapAtlasCounters;
 [[nodiscard]] auto MaterializeClientRoom(
     std::uint8_t dataContext,
     void* drlgRoom) noexcept -> void*;

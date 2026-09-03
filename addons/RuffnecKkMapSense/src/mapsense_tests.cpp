@@ -121,7 +121,9 @@ void MixAtlasU32(std::uint64_t& digest, std::uint32_t value) {
 
 auto BuildExternalAtlasGeometryFixture() -> std::vector<std::uint8_t> {
     auto output = std::vector<std::uint8_t>{'M', 'S', 'A', '1'};
-    AppendAtlasU16(output, 1U);
+    AppendAtlasU16(
+        output,
+        RuffnecKk::MapSense::ExternalAtlasGeometryProtocolVersion);
     AppendAtlasU16(output, 1U);
     AppendAtlasU32(output, 1'395'822'899U);
     output.push_back(2U);
@@ -149,22 +151,25 @@ auto BuildExternalAtlasGeometryFixture() -> std::vector<std::uint8_t> {
             std::int32_t frame,
             std::int32_t tileX,
             std::int32_t tileY,
-            bool wall) {
+            bool wallTree,
+            bool raised) {
         AppendAtlasI32(output, frame);
         AppendAtlasI32(output, tileX);
         AppendAtlasI32(output, tileY);
-        output.push_back(wall ? 1U : 0U);
-        output.insert(output.end(), 3U, 0U);
+        output.push_back(wallTree ? 1U : 0U);
+        output.push_back(raised ? 1U : 0U);
+        output.insert(output.end(), 2U, 0U);
         MixAtlasU32(digest, static_cast<std::uint32_t>(frame));
         MixAtlasU32(digest, static_cast<std::uint32_t>(tileX));
         MixAtlasU32(digest, static_cast<std::uint32_t>(tileY));
-        MixAtlasByte(digest, wall ? 1U : 0U);
+        MixAtlasByte(digest, wallTree ? 1U : 0U);
+        MixAtlasByte(digest, raised ? 1U : 0U);
     };
     appendLevel(75, 0U, 2U);
-    appendCell(101, 4'000, 5'000, false);
-    appendCell(102, 4'001, 5'000, true);
+    appendCell(101, 4'000, 5'000, false, false);
+    appendCell(102, 4'001, 5'000, true, false);
     appendLevel(76, 0U, 1U);
-    appendCell(103, 4'002, 5'001, false);
+    appendCell(103, 4'002, 5'001, true, true);
     StoreAtlasU64(output, 24U, digest);
     return output;
 }
@@ -220,6 +225,7 @@ void WriteCatalogFixture(
 }
 
 const std::map<std::string, std::string, std::less<>> CatalogTranslations{
+    {"ExactCustomLevelName", "ExactCustomLevelName"},
     {"LevelKey", "Sortie \xC3\x89preuve"},
     {"ShrineKey", "Sanctuaire d\xE2\x80\x99" "exp\xC3\xA9rience"},
     {"SuNameKey", "Unique supr\xC3\xAAme"},
@@ -341,11 +347,62 @@ void WriteCompleteCatalog(
         "ClientFn\tShrineFunction\r\n"
         "Expansion\t\t\t\t\t\t\t\t\t\r\n"
         "chest_mod\tChestKey\t99\t0\t1\t4\t3\t3\t0\t0\r\n");
+    WriteCatalogFixture(
+        excel / "missiles.txt",
+        "Missile\tEType\tSrcDamage\tSrcMissDmg\tMinDamage\t"
+        "MinLevDam1\tMinLevDam2\tMinLevDam3\tMinLevDam4\tMinLevDam5\t"
+        "MaxDamage\tMaxLevDam1\tMaxLevDam2\tMaxLevDam3\tMaxLevDam4\t"
+        "MaxLevDam5\r\n"
+        "arrow\t\t128\t\t1\t0\t0\t0\t0\t0\t2\t0\t0\t0\t0\t0\r\n");
+}
+
+void WritePlacementCatalog(const std::filesystem::path& excel) {
+    WriteCompleteCatalog(excel);
+    WriteCatalogFixture(
+        excel / "levels.txt",
+        "Name\t*StringName\tId\tAct\tLayer\tSizeX\tSizeY\tSizeX(N)\t"
+        "SizeY(N)\tSizeX(H)\tSizeY(H)\tOffsetX\tOffsetY\tDepend\t"
+        "DrlgType\tLevelName\tWaypoint\r\n"
+        "Null\tNull\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t\t255\r\n"
+        "Fixed Custom\tFixed Custom\t138\t4\t98\t200\t200\t210\t220\t"
+        "220\t240\t3000\t2100\t0\t1\tCustomLevelKey\t255\r\n"
+        "Dependent Custom\tDependent Custom\t139\t4\t98\t40\t50\t60\t"
+        "80\t70\t90\t10\t-20\t138\t2\tDependentLevelKey\t255\r\n"
+        "Dynamic Custom\tDynamic Custom\t140\t4\t99\t-1\t-1\t-1\t-1\t"
+        "-1\t-1\t-1\t-1\t0\t3\tDynamicLevelKey\t255\r\n"
+        "Cycle A\tCycle A\t141\t4\t100\t20\t20\t20\t20\t20\t20\t"
+        "1\t1\t142\t2\tCycleAKey\t255\r\n"
+        "Cycle B\tCycle B\t142\t4\t100\t20\t20\t20\t20\t20\t20\t"
+        "1\t1\t141\t2\tCycleBKey\t255\r\n");
 }
 
 void CheckMapSenseDataCatalogContract() {
     using namespace RuffnecKk::MapSense;
     try {
+        CHECK(ClassifyDataCatalogMissileElement(0U, "", false)
+            == DataCatalogMissileElement::Physical);
+        CHECK(ClassifyDataCatalogMissileElement(2U, "ltng", false)
+            == DataCatalogMissileElement::Lightning);
+        CHECK(ClassifyDataCatalogMissileElement(18U, "", true)
+            == DataCatalogMissileElement::Hidden);
+        CHECK(ClassifyDataCatalogMissileElement(693U, "mag", false)
+            == DataCatalogMissileElement::Poison);
+        CHECK(ClassifyDataCatalogMissileElement(693U, "fire", false)
+            == DataCatalogMissileElement::Fire);
+        CHECK(ClassifyDataCatalogMissileElement(736U, "frze", false)
+            == DataCatalogMissileElement::Cold);
+        CHECK(ClassifyDataCatalogMissileElement(737U, "burn", false)
+            == DataCatalogMissileElement::Fire);
+        CHECK(ClassifyDataCatalogMissileElement(738U, "", true)
+            == DataCatalogMissileElement::Physical);
+        CHECK(ClassifyDataCatalogMissileElement(739U, "", false)
+            == DataCatalogMissileElement::Hidden);
+        CHECK(StockDataCatalogMissileElement(0U)
+            == DataCatalogMissileElement::Physical);
+        CHECK(StockDataCatalogMissileElement(18U)
+            == DataCatalogMissileElement::Hidden);
+        CHECK(StockDataCatalogMissileElement(736U)
+            == DataCatalogMissileElement::Hidden);
         {
             const DataCatalogObject shrine{
                 .subClass = 0x01U,
@@ -453,6 +510,9 @@ void CheckMapSenseDataCatalogContract() {
             CHECK(result.catalog->HasLocalizationService());
             CHECK(result.catalog->HasVerifiedPlayerFacingLocalization());
             CHECK(result.catalog->AllFamiliesAvailable());
+            CHECK(result.catalog->ActiveExcelDirectories().size() == 2U);
+            CHECK(result.catalog->ActiveTileDirectories().size() == 2U);
+            CHECK(result.catalog->AtlasDataFingerprint() != 0U);
             for (std::size_t familyIndex = 0U;
                     familyIndex < result.catalog->FamilyStatuses().size();
                     ++familyIndex) {
@@ -476,6 +536,12 @@ void CheckMapSenseDataCatalogContract() {
                 && level->waypointLabelUtf8
                     == "Sortie \xC3\x89preuve Waypoint");
             CHECK(level != nullptr && level->hasWaypoint);
+            CHECK(level != nullptr && level->act == -1);
+            CHECK(level != nullptr && !level->hasAtlasPlacement);
+            CHECK(result.catalog->Levels().size() == 1U);
+            DataCatalogLevelAtlasPlacement omittedPlacement{};
+            CHECK(!result.catalog->ResolveLevelAtlasPlacement(
+                12, 0U, omittedPlacement));
             CHECK(result.catalog->FindLevel(13) == nullptr);
 
             const auto* const noneShrine =
@@ -503,7 +569,7 @@ void CheckMapSenseDataCatalogContract() {
             // comments (42/99 in these fixtures) must not drive lookup.
             const auto* boss = result.catalog->FindMonStats(0U);
             CHECK(boss != nullptr);
-            CHECK(boss != nullptr && boss->boss && boss->primeEvil);
+            CHECK(boss != nullptr && boss->primeEvil);
             CHECK(boss != nullptr
                 && boss->name.utf8 == "D\xC3\xA9mon majeur");
             CHECK(result.catalog->FindMonStats(42U) == nullptr);
@@ -518,6 +584,86 @@ void CheckMapSenseDataCatalogContract() {
             CHECK(object != nullptr && !object->name.localized);
             CHECK(object != nullptr && object->name.utf8 == "ChestKey");
             CHECK(result.catalog->FindObjectById(99U) == nullptr);
+            const auto* missile = result.catalog->FindMissile(0U);
+            CHECK(missile != nullptr);
+            CHECK(missile != nullptr && missile->id == "arrow");
+            CHECK(missile != nullptr
+                && missile->element
+                    == DataCatalogMissileElement::Physical);
+            CHECK(result.catalog->FindMissile(1U) == nullptr);
+        }
+
+        {
+            // An arbitrary mod level may use a player-facing localization key
+            // whose value is byte-identical in the current language. Keep the
+            // result independent of row order: the exact match deliberately
+            // appears before the different translation that proves the D2R
+            // language service is ready.
+            ScopedCatalogTestDirectory directory("exact-custom-level-name");
+            const auto activeExcel = directory.Path()
+                / "TestMod.mpq" / "data" / "global" / "excel";
+            WriteCompleteCatalog(activeExcel);
+            WriteCatalogFixture(
+                activeExcel / "levels.txt",
+                "Name\t*StringName\tId\tLevelName\tWaypoint\r\n"
+                "Null\tNull\t0\t\t255\r\n"
+                "Expansion\t\t\t\t\r\n"
+                "Arbitrary Custom Level\tCustom Display Comment\t733\t"
+                    "ExactCustomLevelName\t255\r\n"
+                "Act 1 - Town\tPlayer Level\t12\tLevelKey\t0\r\n");
+            const auto root = directory.Path().wstring();
+            const auto context = MakeCatalogContext(root.c_str());
+            const auto result = MapSenseDataCatalog::Load(&context);
+            CHECK(result);
+            CHECK(result.catalog->HasVerifiedPlayerFacingLocalization());
+            const auto* custom = result.catalog->FindLevel(733);
+            CHECK(custom != nullptr);
+            CHECK(custom != nullptr && custom->name.localized);
+            CHECK(custom != nullptr
+                && custom->name.utf8 == "ExactCustomLevelName");
+            const auto& status = result.catalog->FamilyStatus(
+                DataCatalogFamily::Levels);
+            CHECK(status.localizedNameCount == 2U);
+            CHECK(status.unresolvedNameCount == 0U);
+        }
+
+        {
+            ScopedCatalogTestDirectory directory("level-placement");
+            const auto activeExcel = directory.Path()
+                / "TestMod.mpq" / "data" / "global" / "excel";
+            WritePlacementCatalog(activeExcel);
+            const auto root = directory.Path().wstring();
+            const auto context = MakeCatalogContext(root.c_str());
+            const auto result = MapSenseDataCatalog::Load(&context);
+            CHECK(result);
+            CHECK(result.catalog->Levels().size() == 5U);
+
+            const auto* fixed = result.catalog->FindLevel(138);
+            CHECK(fixed != nullptr);
+            CHECK(fixed != nullptr && fixed->act == 4);
+            CHECK(fixed != nullptr && fixed->layer == 98);
+            CHECK(fixed != nullptr && fixed->hasAtlasPlacement);
+            DataCatalogLevelAtlasPlacement placement{};
+            CHECK(result.catalog->ResolveLevelAtlasPlacement(
+                138, 1U, placement));
+            CHECK(placement.originSubtileX == 15'000);
+            CHECK(placement.originSubtileY == 10'500);
+            CHECK(placement.anchorSubtileX == 15'525);
+            CHECK(placement.anchorSubtileY == 11'050);
+
+            CHECK(result.catalog->ResolveLevelAtlasPlacement(
+                139, 1U, placement));
+            CHECK(placement.originSubtileX == 15'050);
+            CHECK(placement.originSubtileY == 10'400);
+            CHECK(placement.anchorSubtileX == 15'200);
+            CHECK(placement.anchorSubtileY == 10'600);
+
+            CHECK(!result.catalog->ResolveLevelAtlasPlacement(
+                140, 0U, placement));
+            CHECK(!result.catalog->ResolveLevelAtlasPlacement(
+                141, 0U, placement));
+            CHECK(!result.catalog->ResolveLevelAtlasPlacement(
+                138, 3U, placement));
         }
 
         {
@@ -591,7 +737,7 @@ void CheckMapSenseDataCatalogContract() {
             CHECK(blankObject != nullptr);
             CHECK(blankObject != nullptr && blankObject->name.key.empty());
             const auto* ordinalBoss = result.catalog->FindMonStats(1U);
-            CHECK(ordinalBoss != nullptr && ordinalBoss->boss);
+            CHECK(ordinalBoss != nullptr && ordinalBoss->primeEvil);
             CHECK(ordinalBoss != nullptr
                 && ordinalBoss->name.utf8 == "D\xC3\xA9mon majeur");
             CHECK(result.catalog->FindObjectById(1U) != nullptr);
@@ -971,6 +1117,82 @@ void CheckProgressiveRevealGraphContract() {
         ProgressiveRevealLevelCapacity + 1U)));
 }
 
+void CheckExternalLabelProviderCoordinatorPolicy() {
+    using namespace RuffnecKk::MapSense;
+
+    const ExternalLabelProviderRequestIdentity current{
+        .sessionGeneration = 7U,
+        .seed = 1'395'822'899U,
+        .difficulty = 2U,
+        .act = 2,
+        .currentLevelId = 75,
+        .dataFingerprint = UINT64_C(0x123456789ABCDEF0),
+    };
+    auto nextAct = current;
+    nextAct.act = 4;
+    nextAct.currentLevelId = 109;
+    const std::optional<ExternalLabelProviderRequestIdentity> none;
+
+    CHECK(ExternalLabelProviderOperationTimeoutMilliseconds(
+        ExternalLabelProviderOperation::Labels) == 5'000U);
+    CHECK(ExternalLabelProviderOperationTimeoutMilliseconds(
+        ExternalLabelProviderOperation::PrimaryGeometry) == 30'000U);
+    CHECK(ExternalLabelProviderOperationTimeoutMilliseconds(
+        ExternalLabelProviderOperation::PrewarmGeometry) == 30'000U);
+    CHECK(DecideExternalLabelProviderSubmission(
+        current, none, none, none, false,
+        ExternalLabelProviderOperation::None)
+        == ExternalLabelProviderSubmission::Queue);
+
+    // Exact replays retain the in-flight transaction serial instead of
+    // queuing a self-staling copy while geometry is still being generated.
+    CHECK(DecideExternalLabelProviderSubmission(
+        current, none, current, none, false,
+        ExternalLabelProviderOperation::PrimaryGeometry)
+        == ExternalLabelProviderSubmission::Duplicate);
+    CHECK(DecideExternalLabelProviderSubmission(
+        current, current, none, none, false,
+        ExternalLabelProviderOperation::PrewarmGeometry)
+        == ExternalLabelProviderSubmission::Duplicate);
+    CHECK(DecideExternalLabelProviderSubmission(
+        current, none, none, current, false,
+        ExternalLabelProviderOperation::None)
+        == ExternalLabelProviderSubmission::Duplicate);
+    CHECK(DecideExternalLabelProviderSubmission(
+        current, none, none, none, true,
+        ExternalLabelProviderOperation::None)
+        == ExternalLabelProviderSubmission::Duplicate);
+
+    // A real transition preempts both primary and speculative helper work.
+    CHECK(DecideExternalLabelProviderSubmission(
+        nextAct, current, current, none, false,
+        ExternalLabelProviderOperation::PrimaryGeometry)
+        == ExternalLabelProviderSubmission::QueueAndCancel);
+    CHECK(DecideExternalLabelProviderSubmission(
+        nextAct, current, none, none, false,
+        ExternalLabelProviderOperation::PrewarmGeometry)
+        == ExternalLabelProviderSubmission::QueueAndCancel);
+
+    CHECK(ShouldContinueExternalAtlasPrewarm(
+        false, false, 11U, 11U, 7U, 7U));
+    CHECK(!ShouldContinueExternalAtlasPrewarm(
+        false, true, 11U, 11U, 7U, 7U));
+    CHECK(!ShouldContinueExternalAtlasPrewarm(
+        false, false, 11U, 12U, 7U, 7U));
+    CHECK(!ShouldContinueExternalAtlasPrewarm(
+        false, false, 11U, 11U, 7U, 8U));
+
+    CHECK(DecideExternalLabelProviderCompletion(
+        true, true, true, true)
+        == ExternalLabelProviderCompletion::Publish);
+    CHECK(DecideExternalLabelProviderCompletion(
+        true, true, false, false)
+        == ExternalLabelProviderCompletion::Failed);
+    CHECK(DecideExternalLabelProviderCompletion(
+        false, true, true, true)
+        == ExternalLabelProviderCompletion::Stale);
+}
+
 void CheckExternalAtlasTopologyContract() {
     using namespace RuffnecKk::MapSense;
 
@@ -1013,10 +1235,41 @@ void CheckExternalAtlasTopologyContract() {
     CHECK(visible == std::vector<std::int32_t>{84});
     CHECK(!CollectExternalAtlasVisibleLevels(0, nullptr, 0U, visible));
     CHECK(visible.empty());
+
+    // BKVince keeps the stock Uber-branch topology where level 133 has a
+    // warp target at Act I level 17. A disconnected warp target is valid even
+    // when it is outside this generated act (or is a future mod-defined id),
+    // but a continuous seam may never cross the atlas membership boundary.
+    const std::array<std::int32_t, 2> actFiveLevels{109, 133};
+    CHECK(IsExternalAtlasTopologyEdgeValid(
+        actFiveLevels,
+        ExternalAtlasTopologyEdge{133, 17, 0}));
+    CHECK(IsExternalAtlasTopologyEdgeValid(
+        actFiveLevels,
+        ExternalAtlasTopologyEdge{133, 733, 0}));
+    CHECK(!IsExternalAtlasTopologyEdgeValid(
+        actFiveLevels,
+        ExternalAtlasTopologyEdge{133, 17, 1}));
+    CHECK(!IsExternalAtlasTopologyEdgeValid(
+        actFiveLevels,
+        ExternalAtlasTopologyEdge{146, 133, 0}));
+    CHECK(!IsExternalAtlasTopologyEdgeValid(
+        actFiveLevels,
+        ExternalAtlasTopologyEdge{133, 0, 0}));
 }
 
 void CheckExternalAtlasGeometryContract() {
     using namespace RuffnecKk::MapSense;
+
+    CHECK(IsExternalAtlasStandardCampaignLevel(0U, 1));
+    CHECK(IsExternalAtlasStandardCampaignLevel(0U, 39));
+    CHECK(!IsExternalAtlasStandardCampaignLevel(0U, 40));
+    CHECK(IsExternalAtlasStandardCampaignLevel(4U, 109));
+    CHECK(IsExternalAtlasStandardCampaignLevel(4U, 132));
+    CHECK(!IsExternalAtlasStandardCampaignLevel(4U, 133));
+    CHECK(!IsExternalAtlasStandardCampaignLevel(4U, 136));
+    CHECK(!IsExternalAtlasStandardCampaignLevel(4U, 138));
+    CHECK(!IsExternalAtlasStandardCampaignLevel(5U, 109));
 
     const auto fixture = BuildExternalAtlasGeometryFixture();
     ExternalAtlasGeometry atlas;
@@ -1041,8 +1294,12 @@ void CheckExternalAtlasGeometryContract() {
     CHECK(atlas.levels[1].firstCell == 2U);
     CHECK(atlas.cells[0].frame == 101);
     CHECK(atlas.cells[0].tileX == 4'000);
-    CHECK(!atlas.cells[0].wall);
-    CHECK(atlas.cells[1].wall);
+    CHECK(!atlas.cells[0].wallTree);
+    CHECK(!atlas.cells[0].raised);
+    CHECK(atlas.cells[1].wallTree);
+    CHECK(!atlas.cells[1].raised);
+    CHECK(atlas.cells[2].wallTree);
+    CHECK(atlas.cells[2].raised);
 
     CHECK(!ParseExternalAtlasGeometry(
         fixture,
@@ -1056,6 +1313,17 @@ void CheckExternalAtlasGeometryContract() {
     CHECK(atlas.cells.empty());
 
     auto corrupt = fixture;
+    corrupt[4U] = 1U;
+    CHECK(!ParseExternalAtlasGeometry(
+        corrupt,
+        1'395'822'899U,
+        2U,
+        2U,
+        atlas,
+        &error));
+    CHECK(error == ExternalAtlasGeometryParseError::UnsupportedVersion);
+
+    corrupt = fixture;
     corrupt[44U] ^= 1U;
     CHECK(!ParseExternalAtlasGeometry(
         corrupt,
@@ -1076,6 +1344,39 @@ void CheckExternalAtlasGeometryContract() {
         atlas,
         &error));
     CHECK(error == ExternalAtlasGeometryParseError::InvalidReservedBytes);
+
+    corrupt = fixture;
+    corrupt[56U] = 2U;
+    CHECK(!ParseExternalAtlasGeometry(
+        corrupt,
+        1'395'822'899U,
+        2U,
+        2U,
+        atlas,
+        &error));
+    CHECK(error == ExternalAtlasGeometryParseError::InvalidCell);
+
+    corrupt = fixture;
+    corrupt[57U] = 2U;
+    CHECK(!ParseExternalAtlasGeometry(
+        corrupt,
+        1'395'822'899U,
+        2U,
+        2U,
+        atlas,
+        &error));
+    CHECK(error == ExternalAtlasGeometryParseError::InvalidCell);
+
+    corrupt = fixture;
+    corrupt[58U] = 1U;
+    CHECK(!ParseExternalAtlasGeometry(
+        corrupt,
+        1'395'822'899U,
+        2U,
+        2U,
+        atlas,
+        &error));
+    CHECK(error == ExternalAtlasGeometryParseError::InvalidCell);
 
     corrupt = fixture;
     corrupt.pop_back();
@@ -1155,6 +1456,115 @@ void CheckAtlasProjectionContract() {
         witness));
 }
 
+void CheckNativeAutomapAtlasPolicy() {
+    using namespace RuffnecKk::MapSense;
+
+    ExternalPhysicalSeamAnchor seam{};
+    const std::array<std::pair<std::int32_t, std::int32_t>, 0>
+        noSeamAnchors{};
+    CHECK(!SelectUniqueExternalPhysicalSeamAnchor(noSeamAnchors, seam));
+    const std::array oneSeamAnchor{
+        std::pair<std::int32_t, std::int32_t>{5'000, 4'268},
+    };
+    CHECK(SelectUniqueExternalPhysicalSeamAnchor(oneSeamAnchor, seam));
+    CHECK(seam.subtileX == 5'000);
+    CHECK(seam.subtileY == 4'268);
+    const std::array twoSeamAnchors{
+        std::pair<std::int32_t, std::int32_t>{5'000, 4'268},
+        std::pair<std::int32_t, std::int32_t>{5'020, 4'380},
+    };
+    CHECK(!SelectUniqueExternalPhysicalSeamAnchor(twoSeamAnchors, seam));
+
+    CHECK(ClassifyNativeAutomapActiveOwner(false, -1, 57)
+        == NativeAutomapActiveOwnerState::Pending);
+    CHECK(ClassifyNativeAutomapActiveOwner(true, 57, 57)
+        == NativeAutomapActiveOwnerState::Ready);
+    CHECK(ClassifyNativeAutomapActiveOwner(true, 58, 57)
+        == NativeAutomapActiveOwnerState::Mismatch);
+    CHECK(ClassifyNativeAutomapActiveOwner(true, -1, -1)
+        == NativeAutomapActiveOwnerState::Mismatch);
+    CHECK(NativeAutomapOwnerRequiresPulse(
+        NativeAutomapActiveOwnerState::Pending));
+    CHECK(!NativeAutomapOwnerRequiresPulse(
+        NativeAutomapActiveOwnerState::Ready));
+    CHECK(NativeAutomapOwnerRequiresPulse(
+        NativeAutomapActiveOwnerState::Mismatch));
+
+    CHECK(NativeAutomapOrdinaryCellTag == 0U);
+    CHECK(NativeAutomapRestoredCellTag == 1U);
+    CHECK(NativeAutomapSyntheticCellTag == NativeAutomapRestoredCellTag);
+    CHECK(NativeAutomapCellIsSerialized(NativeAutomapOrdinaryCellTag));
+    CHECK(!NativeAutomapCellIsSerialized(NativeAutomapRestoredCellTag));
+    CHECK(NativeAutomapCellIsSerialized(0x0100U));
+    CHECK(!NativeAutomapCellIsSerialized(0x0101U));
+    CHECK(NativeAutomapLayerCompletionIsReusable(true, 16, 16));
+    CHECK(!NativeAutomapLayerCompletionIsReusable(false, 16, 16));
+    CHECK(!NativeAutomapLayerCompletionIsReusable(true, 16, 17));
+    CHECK(!NativeAutomapLayerCompletionIsReusable(true, -1, -1));
+
+    NativeAutomapCellKeyValue floor{};
+    CHECK(BuildNativeAutomapCellKeyValue(
+        101, 4'000, 3'900, false, floor));
+    CHECK(floor.frame == 101);
+    CHECK(floor.x == 800);
+    CHECK(floor.y == 31'600);
+
+    NativeAutomapCellKeyValue raised{};
+    CHECK(BuildNativeAutomapCellKeyValue(
+        101, 4'000, 3'900, true, raised));
+    CHECK(raised.x == floor.x);
+    CHECK(raised.y == floor.y + 24);
+
+    CHECK(NativeAutomapSerializedBytesPerCell == 6U);
+    CHECK(NativeAutomapMaximumEmittedTreeCells == 5'461U);
+    CHECK(CanAppendNativeAutomapEmittedCell(5'460U));
+    CHECK(!CanAppendNativeAutomapEmittedCell(5'461U));
+    CHECK(!CanAppendNativeAutomapEmittedCell(10'517U));
+    CHECK(5'461U * NativeAutomapSerializedBytesPerCell == 32'766U);
+    CHECK(5'462U * NativeAutomapSerializedBytesPerCell == 32'772U);
+
+    NativeAutomapCellKeyValue rejected{};
+    CHECK(!BuildNativeAutomapCellKeyValue(
+        32'768, 4'000, 3'900, false, rejected));
+    CHECK(!BuildNativeAutomapCellKeyValue(
+        101, -1, 3'900, false, rejected));
+    CHECK(!BuildNativeAutomapCellKeyValue(
+        101,
+        (std::numeric_limits<std::int32_t>::max)(),
+        0,
+        false,
+        rejected));
+
+    NativeAutomapLayerCatalog catalog{
+        .sessionGeneration = 42U,
+        .seed = 1'395'822'899U,
+        .difficulty = 2U,
+        .act = 2U,
+        .geometryDigest = UINT64_C(0x123456789ABCDEF0),
+        .levels = {
+            {.levelId = 75, .layer = 57},
+            {.levelId = 76, .layer = 57},
+            {.levelId = 83, .layer = 57},
+            {.levelId = 84, .layer = 58},
+        },
+        .readyLayers = {57},
+    };
+    std::int32_t layer{};
+    CHECK(FindNativeAutomapLayer(catalog, 75, layer));
+    CHECK(layer == 57);
+    CHECK(!FindNativeAutomapLayer(catalog, 74, layer));
+    CHECK(NativeAutomapLevelsShareLayer(catalog, 75, 76));
+    CHECK(NativeAutomapLevelsShareLayer(catalog, 75, 83));
+    CHECK(!NativeAutomapLevelsShareLayer(catalog, 75, 84));
+    CHECK(NativeAutomapLevelsShareLayer(catalog, 84, 84));
+    CHECK(NativeAutomapLevelsShareReadyLayer(catalog, 75, 76));
+    CHECK(NativeAutomapLevelsShareReadyLayer(catalog, 75, 83));
+    CHECK(!NativeAutomapLevelsShareReadyLayer(catalog, 75, 84));
+    CHECK(!NativeAutomapLevelsShareReadyLayer(catalog, 84, 84));
+    catalog.readyLayers.push_back(58);
+    CHECK(NativeAutomapLevelsShareReadyLayer(catalog, 84, 84));
+}
+
 void CheckAutomapSpritePackageContract(const char* path) {
     using namespace RuffnecKk::MapSense;
 
@@ -1205,8 +1615,17 @@ void CheckExternalAtlasCacheContract() {
     };
     std::filesystem::path path;
     CHECK(BuildExternalAtlasCachePath(directory.Path(), key, path));
-    CHECK(path.filename() == L"act-2.msa");
+    CHECK(path.filename() == L"act-2-r4.msa");
     CHECK(path.parent_path().filename() == L"difficulty-2");
+
+    auto moddedKey = key;
+    moddedKey.dataFingerprint = UINT64_C(0x0123456789ABCDEF);
+    std::filesystem::path moddedPath;
+    CHECK(BuildExternalAtlasCachePath(
+        directory.Path(), moddedKey, moddedPath));
+    CHECK(moddedPath != path);
+    CHECK(moddedPath.parent_path().parent_path().parent_path().filename()
+        == L"data-0123456789ABCDEF");
 
     ExternalAtlasGeometry atlas;
     CHECK(LoadExternalAtlasGeometryCache(directory.Path(), key, atlas)
@@ -1371,6 +1790,42 @@ void CheckNativeUiPanelPolicy() {
     CHECK(ShouldDrawMapSenseOwnedMapOverlay(true, false));
     CHECK(ShouldDrawMapSenseOwnedMapOverlay(true, true));
     CHECK(!ShouldDrawMapSenseOwnedMapOverlay(false, false));
+
+    constexpr auto gameplayAutomapMask = NativeUiGameStateMask
+        | NativeUiAutomapStateMask;
+    CHECK(IsNativeGameplayAutomapFrame(gameplayAutomapMask));
+    CHECK(IsNativeGameplayAutomapFrame(
+        gameplayAutomapMask | (std::uint32_t{1U} << 20U)));
+    CHECK(!IsNativeGameplayAutomapFrame(NativeUiGameStateMask));
+    CHECK(!IsNativeGameplayAutomapFrame(NativeUiAutomapStateMask));
+    CHECK(!IsNativeGameplayAutomapFrame(0U));
+
+    CHECK(Detail::IsLocalPlayerAliveMode(1U));
+    CHECK(Detail::IsLocalPlayerAliveMode(16U));
+    CHECK(Detail::IsLocalPlayerAliveMode(18U));
+    CHECK(!Detail::IsLocalPlayerAliveMode(Detail::LocalPlayerModeDeath));
+    CHECK(!Detail::IsLocalPlayerAliveMode(Detail::LocalPlayerModeDead));
+
+    CHECK(ShouldDrawMapSenseOwnedVisualFrame(
+        true,
+        gameplayAutomapMask,
+        true));
+    CHECK(!ShouldDrawMapSenseOwnedVisualFrame(
+        false,
+        gameplayAutomapMask,
+        true));
+    CHECK(!ShouldDrawMapSenseOwnedVisualFrame(
+        true,
+        NativeUiGameStateMask,
+        true));
+    CHECK(!ShouldDrawMapSenseOwnedVisualFrame(
+        true,
+        NativeUiAutomapStateMask,
+        true));
+    CHECK(!ShouldDrawMapSenseOwnedVisualFrame(
+        true,
+        gameplayAutomapMask,
+        false));
 
     CHECK(ClassifyNativeUiMapPanelCoverage(
         (std::uint32_t{1U} << 0U) | (std::uint32_t{1U} << 10U))
@@ -3800,6 +4255,44 @@ void CheckNavigationResolverHelpers() {
         separateDefinition,
         false));
 
+    const AutomapExitLabelDefinition externalOrdinaryExit{
+        .sourceLevelId = 112,
+        .targetLevelId = 113,
+        .subtileX = 2'800,
+        .subtileY = 4'700,
+    };
+    const AutomapExitLabelDefinition nativeOrdinaryExit{
+        .sourceLevelId = 112,
+        .targetLevelId = 113,
+        .subtileX = 2'804,
+        .subtileY = 4'704,
+    };
+    const AutomapExitLabelDefinition externalPermanentPortal{
+        .sourceLevelId = 112,
+        .targetLevelId = 126,
+        .subtileX = 2'787,
+        .subtileY = 4'705,
+    };
+    const std::array nativeOwnerDefinitions{nativeOrdinaryExit};
+    CHECK(NativeAutomapExitOverridesExternal(
+        externalOrdinaryExit,
+        nativeOrdinaryExit));
+    CHECK(!NativeAutomapExitOverridesExternal(
+        externalPermanentPortal,
+        nativeOrdinaryExit));
+    CHECK(!ShouldRetainExternalAutomapExit(
+        externalOrdinaryExit,
+        nativeOwnerDefinitions,
+        true));
+    CHECK(ShouldRetainExternalAutomapExit(
+        externalPermanentPortal,
+        nativeOwnerDefinitions,
+        true));
+    CHECK(ShouldRetainExternalAutomapExit(
+        externalOrdinaryExit,
+        nativeOwnerDefinitions,
+        false));
+
     const AutomapExitLabelDefinition reverseCanonicalMonastery{
         .stableId = 210U,
         .sourceLevelId = 26,
@@ -4064,7 +4557,7 @@ auto RectsOverlap(
 
 void CheckAutomapWaypointCatalogContract() {
     using RuffnecKk::MapSense::AutomapWaypointLabelDefinition;
-    using RuffnecKk::MapSense::Detail::AutomapWaypointDefinitionCatalog;
+    using RuffnecKk::MapSense::Detail::LayeredAutomapWaypointDefinitionCatalog;
 
     const AutomapWaypointLabelDefinition levelOne{
         .stableId = 101U,
@@ -4100,12 +4593,12 @@ void CheckAutomapWaypointCatalogContract() {
         return std::span<const AutomapWaypointLabelDefinition>{&definition, 1U};
     };
 
-    AutomapWaypointDefinitionCatalog<2U> catalog;
-    CHECK(catalog.ReplaceOwner(1, one(levelOne)));
-    CHECK(catalog.ReplaceOwner(2, one(levelTwo)));
+    LayeredAutomapWaypointDefinitionCatalog<2U> catalog;
+    const std::array externalBaseline{levelOne, levelTwo};
+    CHECK(catalog.ReplaceExternal(externalBaseline));
     CHECK(catalog.Definitions().size() == 2U);
 
-    CHECK(catalog.ReplaceOwner(1, one(levelOneReplacement)));
+    CHECK(catalog.PublishNativeOwner(1, one(levelOneReplacement)));
     CHECK(catalog.Definitions().size() == 2U);
     CHECK(catalog.Definitions()[0].levelId == 2);
     CHECK(catalog.Definitions()[1].stableId == levelOneReplacement.stableId);
@@ -4115,7 +4608,7 @@ void CheckAutomapWaypointCatalogContract() {
         catalog.Definitions()[0],
         catalog.Definitions()[1],
     };
-    CHECK(!catalog.ReplaceOwner(3, one(overflowOwner)));
+    CHECK(!catalog.PublishNativeOwner(3, one(overflowOwner)));
     CHECK(catalog.Definitions().size() == beforeOverflow.size());
     CHECK(catalog.Definitions()[0].stableId == beforeOverflow[0].stableId);
     CHECK(catalog.Definitions()[0].subtileX == beforeOverflow[0].subtileX);
@@ -4126,18 +4619,29 @@ void CheckAutomapWaypointCatalogContract() {
     // exact owner definition already proven by an earlier settlement pass.
     CHECK(catalog.Definitions()[1].stableId == levelOneReplacement.stableId);
 
-    // A complete no-waypoint result erases only that source level.
-    CHECK(catalog.ReplaceOwner(
+    // An empty native observation is negative evidence only. It must not erase
+    // either the native positive or the external baseline for that owner.
+    CHECK(catalog.PublishNativeOwner(
         1,
         std::span<const AutomapWaypointLabelDefinition>{}));
-    CHECK(catalog.Definitions().size() == 1U);
-    CHECK(catalog.Definitions()[0].levelId == 2);
+    CHECK(catalog.Definitions().size() == 2U);
+    CHECK(catalog.Definitions()[1].stableId
+        == levelOneReplacement.stableId);
+
+    // A refreshed external atlas does not erase positive native evidence, and
+    // owners without native evidence move atomically to the new seed.
+    const std::array nextExternal{levelOne, nextSeedLevelTwo};
+    CHECK(catalog.ReplaceExternal(nextExternal));
+    CHECK(catalog.Definitions().size() == 2U);
+    CHECK(catalog.Definitions()[0].stableId == nextSeedLevelTwo.stableId);
+    CHECK(catalog.Definitions()[1].stableId
+        == levelOneReplacement.stableId);
 
     // Session reset drops all old-seed coordinates. Replay may republish the
     // same owner only from the newly materialized DRLG coordinates.
     catalog.Clear();
     CHECK(catalog.Definitions().empty());
-    CHECK(catalog.ReplaceOwner(2, one(nextSeedLevelTwo)));
+    CHECK(catalog.ReplaceExternal(one(nextSeedLevelTwo)));
     CHECK(catalog.Definitions().size() == 1U);
     CHECK(catalog.Definitions()[0].stableId == nextSeedLevelTwo.stableId);
     CHECK(catalog.Definitions()[0].subtileX == 410);
@@ -4146,7 +4650,7 @@ void CheckAutomapWaypointCatalogContract() {
 
 void CheckAutomapLevelCatalogContract() {
     using RuffnecKk::MapSense::AutomapLevelLabelDefinition;
-    using RuffnecKk::MapSense::Detail::AutomapLevelDefinitionCatalog;
+    using RuffnecKk::MapSense::Detail::LayeredAutomapLevelDefinitionCatalog;
 
     const AutomapLevelLabelDefinition first{
         .stableId = 701U,
@@ -4170,15 +4674,20 @@ void CheckAutomapLevelCatalogContract() {
         return std::span<const AutomapLevelLabelDefinition>{&definition, 1U};
     };
 
-    AutomapLevelDefinitionCatalog<2U> catalog;
-    CHECK(catalog.ReplaceOwner(79, one(first)));
-    CHECK(catalog.ReplaceOwner(80, one(second)));
+    LayeredAutomapLevelDefinitionCatalog<2U> catalog;
+    const std::array externalBaseline{first, second};
+    CHECK(catalog.ReplaceExternal(externalBaseline));
     CHECK(catalog.Definitions().size() == 2U);
-    CHECK(catalog.ReplaceOwner(79, one(replacement)));
+    CHECK(catalog.PublishNativeOwner(79, one(replacement)));
     CHECK(catalog.Definitions().size() == 2U);
     CHECK(catalog.Definitions()[0].levelId == 80);
     CHECK(catalog.Definitions()[1].stableId == replacement.stableId);
     CHECK(catalog.Definitions()[1].subtileX == 130);
+    CHECK(catalog.PublishNativeOwner(
+        79,
+        std::span<const AutomapLevelLabelDefinition>{}));
+    CHECK(catalog.Definitions().size() == 2U);
+    CHECK(catalog.Definitions()[1].stableId == replacement.stableId);
     catalog.Clear();
     CHECK(catalog.Definitions().empty());
 }
@@ -4216,8 +4725,10 @@ int main(int argc, char** argv) {
     CheckRevealReplayRequestPolicy();
     CheckProgressiveRevealGraphContract();
     CheckExternalAtlasTopologyContract();
+    CheckExternalLabelProviderCoordinatorPolicy();
     CheckExternalAtlasGeometryContract();
     CheckAtlasProjectionContract();
+    CheckNativeAutomapAtlasPolicy();
     if (argc >= 3) CheckAutomapSpritePackageContract(argv[2]);
     CheckExternalAtlasCacheContract();
     CheckStaticPoiRoomSelectionContract();
@@ -4230,7 +4741,7 @@ int main(int argc, char** argv) {
     CheckAutomapLevelCatalogContract();
     CheckTownWaypointLabelPolicy();
 
-    static_assert(CurrentConfigSchemaVersion == 14);
+    static_assert(CurrentConfigSchemaVersion == 15);
     static_assert(DeriveDrlgStartSeed(1U) == 1'791'398'751U);
     static_assert(DeriveDrlgStartSeed(1'337U) == 2'802'456'439U);
     static_assert(DeriveDrlgStartSeed(0x12345678U) == 62'524'658U);
@@ -4280,9 +4791,75 @@ int main(int argc, char** argv) {
         == 25U);
     static_assert(NativeMissileUnitType == 3U);
     static_assert(NativeClientUnitHashTypeStride == 0x400U);
+    static_assert(NativeServerUnitHashTableOffsetFromClient == 0x1800U);
+    static_assert(NativeMissileIdentityTableCapacity
+        == MaximumNativeAutomapMissiles * 2U);
     static_assert(
         Detail::NativeClientUnitHashTableOffsetForType(
             NativeMissileUnitType) == 0xC00U);
+    constexpr auto dualMissileIdentityContract = []() constexpr {
+        Detail::NativeMissileIdentitySet<8U, 4U> identities{};
+        if (identities.Size() != 0U) return false;
+        if (identities.Insert(17U, 144, false)
+                != Detail::NativeMissileIdentityResult::Inserted) {
+            return false;
+        }
+        if (identities.Find(17U, 144)
+                != Detail::NativeMissileIdentityResult::DuplicateClient) {
+            return false;
+        }
+        if (identities.Insert(17U, 144, true)
+                != Detail::NativeMissileIdentityResult::DuplicateClient) {
+            return false;
+        }
+        if (identities.Find(17U, 145)
+                != Detail::NativeMissileIdentityResult::ClassConflict) {
+            return false;
+        }
+        if (identities.Insert(18U, 323, true)
+                != Detail::NativeMissileIdentityResult::Inserted) {
+            return false;
+        }
+        if (identities.Find(18U, 323)
+                != Detail::NativeMissileIdentityResult::DuplicateServer) {
+            return false;
+        }
+        if (identities.Insert(
+                UINT32_MAX - 1U,
+                (std::numeric_limits<std::int32_t>::max)(),
+                true) != Detail::NativeMissileIdentityResult::Inserted) {
+            return false;
+        }
+        if (identities.Find(
+                UINT32_MAX - 1U,
+                (std::numeric_limits<std::int32_t>::max)())
+                != Detail::NativeMissileIdentityResult::DuplicateServer) {
+            return false;
+        }
+        if (identities.Size() != 3U) return false;
+        identities.Reset();
+        if (identities.Size() != 0U
+            || identities.Find(17U, 144)
+                != Detail::NativeMissileIdentityResult::Missing) {
+            return false;
+        }
+        constexpr std::array collidingIds{1U, 9U, 17U, 25U};
+        for (const auto id : collidingIds) {
+            if (identities.Insert(id, static_cast<std::int32_t>(id), false)
+                    != Detail::NativeMissileIdentityResult::Inserted) {
+                return false;
+            }
+        }
+        return identities.Find(17U, 17)
+                == Detail::NativeMissileIdentityResult::DuplicateClient
+            && identities.Insert(33U, 33, false)
+                == Detail::NativeMissileIdentityResult::CapacityExceeded
+            && identities.Find(UINT32_MAX, 5)
+                == Detail::NativeMissileIdentityResult::Invalid
+            && identities.Find(6U, -1)
+                == Detail::NativeMissileIdentityResult::Invalid;
+    }();
+    static_assert(dualMissileIdentityContract);
     static_assert(Detail::MayVisitNativeMissileUnit(0U, 0U));
     static_assert(Detail::MayVisitNativeMissileUnit(
         MaximumNativeAutomapMissiles - 1U,
@@ -4376,6 +4953,14 @@ int main(int argc, char** argv) {
         MonsterMarkerRenderLayer(MonsterRank::SuperUnique) == 4U);
     static_assert(
         MonsterMarkerRenderLayer(MonsterRank::Normal, true) == 4U);
+    static_assert(HasNamedBossDisplayIdentity(
+        MonsterRank::SuperUnique, -1, false));
+    static_assert(HasNamedBossDisplayIdentity(
+        MonsterRank::Normal, 7, false));
+    static_assert(HasNamedBossDisplayIdentity(
+        MonsterRank::Normal, -1, true));
+    static_assert(!HasNamedBossDisplayIdentity(
+        MonsterRank::Normal, -1, false));
     static_assert(Detail::IsEnemyMarkerUnitEligible(0U));
     static_assert(!Detail::IsEnemyMarkerUnitEligible(
         Detail::UnitIsMercenaryFlag));
@@ -4794,6 +5379,52 @@ size = 31
         roundTripWaypointLabels.objects.waypointLabels,
         schema13WaypointLabels.objects.waypointLabels));
 
+    const auto schema15Missiles = ParseConfig(R"toml(
+schema_version = 15
+[missiles]
+enabled = false
+[missiles.fire]
+color = "#01020304"
+size = 1
+[missiles.cold]
+color = "#11121314"
+size = 2
+[missiles.lightning]
+color = "#21222324"
+size = 3
+[missiles.poison]
+color = "#31323334"
+size = 4
+[missiles.physical]
+color = "#41424344"
+size = 15
+[missiles.magic]
+color = "#51525354"
+size = 16
+)toml");
+    CHECK(!schema15Missiles.missiles.enabled);
+    CHECK(ColorToHex(schema15Missiles.missiles.fire.color) == "#01020304");
+    CHECK(ColorToHex(schema15Missiles.missiles.cold.color) == "#11121314");
+    CHECK(ColorToHex(schema15Missiles.missiles.lightning.color)
+        == "#21222324");
+    CHECK(ColorToHex(schema15Missiles.missiles.poison.color)
+        == "#31323334");
+    CHECK(ColorToHex(schema15Missiles.missiles.physical.color)
+        == "#41424344");
+    CHECK(ColorToHex(schema15Missiles.missiles.magic.color) == "#51525354");
+    CHECK(schema15Missiles.missiles.fire.size == 1.0F);
+    CHECK(schema15Missiles.missiles.magic.size == 16.0F);
+    const auto serializedMissiles = SerializeConfig(schema15Missiles);
+    CHECK(serializedMissiles.find("[missiles]\nenabled = false")
+        != std::string::npos);
+    CHECK(serializedMissiles.find(
+        "[missiles.fire]\ncolor = \"#01020304\"\nsize = 1.00")
+        != std::string::npos);
+    const auto roundTripMissiles = ParseConfig(serializedMissiles);
+    CHECK(SameMissileOptions(
+        roundTripMissiles.missiles,
+        schema15Missiles.missiles));
+
     const auto serialized = SerializeConfig(configured);
     CHECK(serialized.find("[hud]") == std::string::npos);
     CHECK(serialized.find("start_menu_open") == std::string::npos);
@@ -4928,6 +5559,7 @@ size = 31
     CHECK(roundTrip.immunities.haloThickness == 3.5F);
     CHECK(ColorToHex(roundTrip.immunities.physical) == "#AABBCCDD");
     CHECK(ColorToHex(roundTrip.immunities.fire) == "#FF2200CC");
+    CHECK(SameMissileOptions(roundTrip.missiles, configured.missiles));
     CHECK(SameObjectsOptions(roundTrip.objects, configured.objects));
     CHECK(roundTrip.navigation.lineThickness == 3.25F);
     CHECK(!roundTrip.navigation.waypoint.enabled);
@@ -4998,6 +5630,14 @@ color = "#F02030EE"
     CHECK(defaults.immunities.haloThickness
         == DefaultImmunityHaloThickness);
     CHECK(ColorToHex(defaults.immunities.physical) == "#D8C39AFF");
+    CHECK(defaults.missiles.enabled);
+    CHECK(ColorToHex(defaults.missiles.fire.color) == "#FF00007F");
+    CHECK(ColorToHex(defaults.missiles.cold.color) == "#00D0FF7F");
+    CHECK(ColorToHex(defaults.missiles.lightning.color) == "#FFFF0046");
+    CHECK(ColorToHex(defaults.missiles.poison.color) == "#32CD327F");
+    CHECK(ColorToHex(defaults.missiles.physical.color) == "#CD853F7F");
+    CHECK(ColorToHex(defaults.missiles.magic.color) == "#FF88007F");
+    CHECK(defaults.missiles.fire.size == DefaultMissileMarkerSize);
     CHECK(defaults.objects.enabled);
     CHECK(defaults.objects.exitLabels.enabled);
     CHECK(ColorToHex(defaults.objects.exitLabels.color) == "#FFD33DFF");
@@ -5266,7 +5906,7 @@ show_with_automap_only = true
     CHECK(ColorToHex(legacyRuntime.immunities.physical) == "#D8C39AFF");
 
     CHECK(Throws([] { ParseConfig(""); }));
-    CHECK(Throws([] { ParseConfig("schema_version = 15"); }));
+    CHECK(Throws([] { ParseConfig("schema_version = 16"); }));
     CHECK(Throws([] { ParseConfig("schema_version = true"); }));
     CHECK(Throws([] {
         ParseConfig(
@@ -5286,6 +5926,18 @@ show_with_automap_only = true
     }));
     CHECK(Throws([] {
         ParseConfig("schema_version = 9\n[objects]\nenabled = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig("schema_version = 14\n[missiles]\nenabled = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig("schema_version = 15\n[missiles]\nunknown = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig("schema_version = 15\n[missiles.fire]\nsize = 0.5");
+    }));
+    CHECK(Throws([] {
+        ParseConfig("schema_version = 15\n[missiles.magic]\nsize = 16.5");
     }));
     CHECK(Throws([] {
         ParseConfig(
@@ -6036,6 +6688,9 @@ thickness = 5
     appliedSettings.monsters.superUniqueBoss.showNames = false;
     appliedSettings.monsters.superUniqueBoss.nameColor = ParseColor("#12345678");
     appliedSettings.monsters.superUniqueBoss.nameSize = 21.0F;
+    appliedSettings.missiles.enabled = false;
+    appliedSettings.missiles.fire.color = ParseColor("#10203040");
+    appliedSettings.missiles.fire.size = 9.0F;
     appliedSettings.objects.enabled = false;
     appliedSettings.objects.exitLabels.enabled = false;
     appliedSettings.objects.exitLabels.color = ParseColor("#ABC123EF");
@@ -6079,6 +6734,10 @@ thickness = 5
     CHECK(ColorToHex(draftModel.Draft().monsters.superUniqueBoss.nameColor)
         == "#12345678");
     CHECK(draftModel.Draft().monsters.superUniqueBoss.nameSize == 21.0F);
+    CHECK(!draftModel.Draft().missiles.enabled);
+    CHECK(ColorToHex(draftModel.Draft().missiles.fire.color)
+        == "#10203040");
+    CHECK(draftModel.Draft().missiles.fire.size == 9.0F);
     CHECK(!draftModel.Draft().objects.enabled);
     CHECK(!draftModel.Draft().objects.exitLabels.enabled);
     CHECK(ColorToHex(draftModel.Draft().objects.exitLabels.color)
@@ -6102,6 +6761,12 @@ thickness = 5
     CHECK(draftModel.Dirty());
     draftModel.Discard();
     draftModel.Draft().monsters.superUniqueBoss.showNames = true;
+    CHECK(draftModel.Dirty());
+    draftModel.Discard();
+    draftModel.Draft().missiles.enabled = true;
+    CHECK(draftModel.Dirty());
+    draftModel.Discard();
+    draftModel.Draft().missiles.lightning.size = 8.0F;
     CHECK(draftModel.Dirty());
     draftModel.Discard();
     draftModel.Draft().objects.enabled = true;
@@ -6153,6 +6818,11 @@ thickness = 5
         == "#FFD33DFF");
     CHECK(draftModel.Draft().monsters.superUniqueBoss.nameSize
         == DefaultAutomapLabelSize);
+    CHECK(draftModel.Draft().missiles.enabled);
+    CHECK(ColorToHex(draftModel.Draft().missiles.fire.color)
+        == "#FF00007F");
+    CHECK(draftModel.Draft().missiles.fire.size
+        == DefaultMissileMarkerSize);
     CHECK(draftModel.Draft().immunities.style
         == ImmunityDisplayStyle::ColoredI);
     CHECK(draftModel.Draft().immunities.indicatorSize
@@ -6192,6 +6862,8 @@ thickness = 5
     CHECK(newlyApplied.monsters.normal.thickness == 2.0F);
     CHECK(newlyApplied.monsters.normal.size == 18.0F);
     CHECK(newlyApplied.monsters.superUniqueBoss.showNames);
+    CHECK(newlyApplied.missiles.enabled);
+    CHECK(ColorToHex(newlyApplied.missiles.fire.color) == "#FF00007F");
     CHECK(newlyApplied.objects.enabled);
     CHECK(newlyApplied.objects.exitLabels.enabled);
     CHECK(newlyApplied.objects.waypointLabels.enabled);
@@ -6254,6 +6926,29 @@ thickness = 5
                 == DefaultImmunityHaloThickness);
             CHECK(ColorToHex(shipped.immunities.physical)
                 == "#D8C39AFF");
+            CHECK(shipped.missiles.enabled);
+            CHECK(ColorToHex(shipped.missiles.fire.color)
+                == "#FF00007F");
+            CHECK(ColorToHex(shipped.missiles.cold.color)
+                == "#00D0FF7F");
+            CHECK(ColorToHex(shipped.missiles.lightning.color)
+                == "#FFFF0046");
+            CHECK(ColorToHex(shipped.missiles.poison.color)
+                == "#32CD327F");
+            CHECK(ColorToHex(shipped.missiles.physical.color)
+                == "#CD853F7F");
+            CHECK(ColorToHex(shipped.missiles.magic.color)
+                == "#FF88007F");
+            CHECK(shipped.missiles.fire.size
+                == DefaultMissileMarkerSize);
+            CHECK(shipped.missiles.magic.size
+                == DefaultMissileMarkerSize);
+            CHECK(shippedText.find("Every monster category")
+                == std::string::npos);
+            CHECK(shippedText.find("Shows the current area's localized name")
+                == std::string::npos);
+            CHECK(shippedText.find("exact PrimeMH texture")
+                == std::string::npos);
             CHECK(shipped.objects.enabled);
             CHECK(shipped.objects.exitLabels.enabled);
             CHECK(ColorToHex(shipped.objects.exitLabels.color)
