@@ -4,6 +4,33 @@ Dernière mise à jour : 2 septembre 2026
 
 ## Priorité active
 
+[RuffnecKk D2RLoader Suite — prochaine release publique](ruffneckk-suite-next-release.md)
+
+État : **périmètre 1.3.0 verrouillé dans un registre gouverné, packaging encore
+bloqué**. La dernière release publique reste `v1.2.0`. La cible contient 22
+plugins, 17 memory patches, l'EXE ISC12 Save Converter et deux bundles, soit 42
+assets. ISC12 0.2.1 et son convertisseur rejoignent finalement cette release;
+Cast Triggers, Armageddon-Hurricane CtC Fix et Resistance Floor entrent en
+`1.0.0`; Remote Stash 2.3.0, Vendor Stock Refresh 2.0.0 et Shadow Master AI Fix
+sont inclus. Ground Item Label Limit est retiré; Extended Act Level IDs,
+MapSense et la feature update MassID sont reportés.
+
+Le gate actif est de synchroniser ces composants dans le dépôt produit,
+verrouiller la version de maintenance MassID, puis qualifier la pile complète
+sur Steam 3.3.93787. Aucun composant ne peut utiliser un numéro de build comme
+allowlist. `releaseReady` reste faux et le générateur refuse toute allowlist qui
+ne correspond pas au registre. Aucun commit, push, tag ou asset GitHub n'est
+autorisé par cette priorité seule.
+
+## Prochain gate
+
+Conserver le registre 1.3.0 valide à 22 plugins, 17 patches, un outil autonome
+et deux bundles; synchroniser les composants retenus, réconcilier la version de
+maintenance MassID, puis qualifier la pile Steam complète avant de passer le
+registre à `package-ready` ou de promouvoir l'allowlist de 42 assets.
+
+## Priorité précédente conservée — ISC12
+
 [ISC12 — ItemStatCost 12-bit clean-sheet format](isc12-3.3.md)
 
 État : **ISC12 0.2.1 : coexistence bornée avec ExtendedItemStats 0.3.14,
@@ -238,7 +265,7 @@ cible retrouve exactement les neuf matériaux stackables sur la page 6. Le
 profil runtime est ensuite restauré : stash original `88701305…E6B32`, aucune
 DLL ISC12 ni fixture résiduelle et zéro processus Diablo.
 
-## Prochain gate
+## Prochain gate ISC12 conservé
 
 Le seul gate fonctionnel encore ouvert est la matrice multijoueur à deux clients
 indépendants : paire ISC12 identique, puis les deux incompatibilités ISC12 ↔

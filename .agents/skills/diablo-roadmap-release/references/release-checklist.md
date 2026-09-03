@@ -10,12 +10,16 @@
 
 ## Archive publique
 
+- Le registre gouverné de prochaine release est valide; chaque ajout, retrait, renommage, report et changement de version y est consigné avec sa décision et ses gates.
+- Les comptes plugins, patches, outils, bundles et assets totaux sont dérivés du registre et concordent avec l'allowlist finale.
+- `releaseReady=true` et `package-ready` ne sont définis qu'après fermeture de tous les gates requis, notamment Steam lorsqu'il fait partie de la revendication.
+- L'allowlist finale correspond exactement aux composants, versions et assets inclus dans le registre; aucun composant retiré ou reporté ne subsiste.
 - Une allowlist exacte a été définie avant création.
 - Le README a été créé ou actualisé et placé à côté du ZIP dans le dossier de livraison pour la relecture et la modification humaines de Vincent.
 - Le README n'est pas inclus dans le ZIP généré par l'agent; Vincent l'ajoutera lui-même au ZIP final après sa révision.
 - Les fichiers proviennent du build et de la configuration réellement validés.
 - La liste des entrées du ZIP a été inspectée après création.
-- Aucun README, source, symbole, log ou fichier de preuve interdit n'est inclus dans le ZIP généré par l'agent; pour un plugin incubé, seul le fichier de configuration indépendant confirmé, JSON ou TOML, accompagne la DLL.
+- Aucun README, source, symbole, log ou fichier de preuve interdit n'est inclus dans le ZIP généré par l'agent; pour un plugin incubé, un fichier de configuration indépendant JSON ou TOML accompagne la DLL seulement si le contrat confirmé en a réellement besoin.
 - Aucune DLL tierce n'est redistribuée sans autorisation et crédits appropriés.
 - Le SHA-256 du ZIP et des artefacts distribués est consigné dans la mission.
 
