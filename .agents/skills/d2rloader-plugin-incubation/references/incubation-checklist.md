@@ -24,7 +24,12 @@ Relever la baseline D2R/D2RLoader/API-SDK de la Suite, les versions et hashes de
 - Auteur exact `RuffnecKk`; crédits tiers conservés séparément.
 - Si le plugin a nécessité des connaissances acquises grâce à D2MOO, crédit explicite à D2MOO présent dans le README du plugin conservé à côté du ZIP généré par l'agent.
 - Description anglaise courte, visible par le joueur et sans détails internes.
-- Build ciblé, signatures complètes, ABI et erreurs de chargement strictement contrôlés.
+- Steam, Battle.net et tout futur canal suivent exactement la même décision native. Aucune liste de builds admissibles n'existe et aucun `build-name`, canal, numéro de version, hash global du PE ou statut connu/inconnu ne peut autoriser, refuser ou sélectionner un profil; ces identifiants sont seulement journalisés pour le diagnostic.
+- Empreinte native fail-closed couvrant chaque RVA, signature, témoin de layout/ABI et plage utilisée avant le premier hook; toute différence refuse proprement le chargement.
+- Lorsqu'il existe plusieurs empreintes natives, elles sont essayées d'après les octets et témoins de layout/ABI observés, jamais d'après les métadonnées de distribution. Exactement une correspondance complète est requise; zéro correspondance, une correspondance partielle ou plusieurs correspondances ambiguës refusent proprement le chargement.
+- Une qualification peut couvrir un autre runtime seulement lorsque toutes les surfaces utilisées y sont prouvées byte-identiques; sinon, une qualification séparée est requise avant d'en revendiquer la compatibilité. Le runtime testé et les couvertures par équivalence restent nommés séparément, mais ce statut documentaire n'entre jamais dans la décision de chargement.
+- Tests de politique prouvant qu'une identité ou version inconnue avec empreinte complète valide charge, qu'une identité Steam/Battle.net connue avec empreinte invalide est refusée, que chaque profil natif se sélectionne sans métadonnée de version et que les correspondances absentes, partielles ou ambiguës échouent avant le premier hook; matrice statique/runtime/gameplay consignée pour le runtime effectivement qualifié.
+- Audit de release couvrant chaque DLL republiée, y compris historique; toute comparaison autorisante ou bloquante avec un numéro de build bloque la nouvelle release.
 - Baseline D2RLoader/SDK gouvernée respectée et version d'ABI inter-DLL explicitement contrôlée.
 - Installation globale et mod-locale démontrée, sans `ModScopedOnly`.
 - Configuration dédiée indépendante valide en JSON ou TOML; priorité mod actif puis repli global, sans bloc dans `D2RPlugins.json`.
@@ -32,12 +37,13 @@ Relever la baseline D2R/D2RLoader/API-SDK de la Suite, les versions et hashes de
 - Configuration absente gérée par défaut; configuration présente mais invalide refusée explicitement.
 - Dépendances inter-DLL explicites et versionnées; fournisseur optionnel absent ou incompatible traité sans crash, hook partiel ni ordre de chargement caché.
 - Aucun hook canonique sans propriétaire unique; aucune plage concurrente non auditée.
-- Coexistence démontrée avec tous les composants actifs de la Suite et les cinq DLL du PluginPack, sans plugin rejeté ou en échec.
+- Coexistence démontrée sur le runtime officiel courant avec tous les composants actifs compatibles de la Suite et les cinq DLL du PluginPack, sans plugin rejeté ou en échec.
 - Aucun plugin installé n'est retiré, désactivé ou neutralisé pendant un cold start ou un test déclaré de compatibilité.
 - Toutes les fonctionnalités du PluginPack sont explicitement activées pendant la matrice; la simple présence d'une DLL dont une fonctionnalité reste désactivée n'est pas une preuve.
 - Toute isolation temporaire est étiquetée « diagnostic seulement », puis annulée; elle ne peut jamais soutenir une conclusion de compatibilité ou une livraison.
 - Les deux ordres de chargement pertinents sont testés pour toute chaîne externe composable; un consommateur ne doit jamais exiger les octets vanilla d'une entrée légitimement possédée par un autre plugin.
 - Version, SHA-256, baseline SDK, dépendances et statut de compatibilité consignés pour la release de la Suite sans supprimer le versionnement autonome du composant.
+- Compatibilité multijoueur entre builds traitée comme un gate séparé; aucune compatibilité réseau n'est déduite de l'empreinte native seule.
 
 ## Gate du ZIP public
 
