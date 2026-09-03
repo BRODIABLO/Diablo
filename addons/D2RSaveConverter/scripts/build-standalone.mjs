@@ -12,9 +12,9 @@ if (process.platform !== 'win32') {
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const outputRoot = path.join(projectRoot, 'dist');
-const bundlePath = path.join(outputRoot, 'isc12-save-converter.cjs');
-const blobPath = path.join(outputRoot, 'isc12-save-converter.blob');
-const executablePath = path.join(outputRoot, 'ISC12SaveConverter.exe');
+const bundlePath = path.join(outputRoot, 'd2r-save-converter.cjs');
+const blobPath = path.join(outputRoot, 'd2r-save-converter.blob');
+const executablePath = path.join(outputRoot, 'D2RSaveConverter.exe');
 const seaConfigPath = path.join(outputRoot, 'sea-config.json');
 const postjectPath = path.join(projectRoot, 'node_modules', 'postject', 'dist', 'cli.js');
 
@@ -51,7 +51,7 @@ run(process.execPath, [
 ]);
 
 const help = execFileSync(executablePath, ['--help'], { encoding: 'utf8' });
-if (!help.includes('ISC12 Save Converter') || !help.includes('--to isc12|d2r9')) {
+if (!help.includes('D2R Save Converter') || !help.includes('--to isc12|d2r9')) {
   throw new Error('The standalone executable did not return the expected public help contract.');
 }
 const executable = await readFile(executablePath);

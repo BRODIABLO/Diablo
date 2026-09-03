@@ -297,7 +297,7 @@ export function runtimeInstructionsForTargetWidth(targetWidth, sourceWidth = nul
   ]);
 }
 
-export const USAGE = `ISC12 Save Converter
+export const USAGE = `D2R Save Converter
 
 Converts D2R .d2s files and compatible .d2i shared stashes between D2R 9-bit
 and ISC12 12-bit formats, and independently migrates them between source and
@@ -305,9 +305,9 @@ target mod schemas. Either or both can change in one pass. Original files are
 never overwritten.
 
 Usage:
-  isc12-save-converter --to isc12 [options] <file-or-directory> [...]
-  isc12-save-converter --to d2r9 [options] <file-or-directory> [...]
-  isc12-save-converter --from d2r9|isc12 --to d2r9|isc12 [options] <file-or-directory> [...]
+  d2r-save-converter --to isc12 [options] <file-or-directory> [...]
+  d2r-save-converter --to d2r9 [options] <file-or-directory> [...]
+  d2r-save-converter --from d2r9|isc12 --to d2r9|isc12 [options] <file-or-directory> [...]
 
 Options:
   --from d2r9|isc12       Source stat-ID format. Omit for the opposite of --to.

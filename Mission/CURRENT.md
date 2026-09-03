@@ -1,6 +1,6 @@
 # Mission courante
 
-Dernière mise à jour : 2 septembre 2026
+Dernière mise à jour : 3 septembre 2026
 
 ## Priorité active
 
@@ -8,7 +8,7 @@ Dernière mise à jour : 2 septembre 2026
 
 État : **périmètre 1.3.0 verrouillé dans un registre gouverné, packaging encore
 bloqué**. La dernière release publique reste `v1.2.0`. La cible contient 22
-plugins, 17 memory patches, l'EXE ISC12 Save Converter et deux bundles, soit 42
+plugins, 17 memory patches, l'EXE D2R Save Converter et deux bundles, soit 42
 assets. ISC12 0.2.1 et son convertisseur rejoignent finalement cette release;
 Cast Triggers, Armageddon-Hurricane CtC Fix et Resistance Floor entrent en
 `1.0.0`; Remote Stash 2.3.0, Vendor Stock Refresh 2.0.0 et Shadow Master AI Fix
@@ -193,7 +193,7 @@ et oppose `1e602a9f…c872` à `42bbaffc…9c50`; les deux logs nomment
 `environment fingerprint mismatch`. Le runtime, les tables, sauvegardes,
 ignore-lists et DLL sont restaurés byte-exact, sans processus restant.
 
-ISC12 Save Converter ferme maintenant son gate technique. La suite passe
+D2R Save Converter ferme maintenant son gate technique. La suite passe
 `38/38`; l'EXE autonome UX avec overlay vanilla et lecture MPQ binaire de
 94 635 520 octets vaut `15697D98…59511E`. `HEBKCharm.d2s` se convertit avec le
 dossier BKVince partiel; le vrai `yupgoolg132.mpq` livre ses 22 tables connues
@@ -277,7 +277,7 @@ n'est encore autorisé.
 ## Frontière Git active
 
 Le lot couvre `Mission/isc12-3.3.md`, `addons/ISC12/**`,
-`addons/ISC12SaveConverter/**`, le patch ciblé `@d2runewizard/d2s`, les preuves
+`addons/D2RSaveConverter/**`, le patch ciblé `@d2runewizard/d2s`, les preuves
 et scripts ISC12, la proposition `sdk-contribution/Services-requests.md` et les
 registres partagés strictement nécessaires. Les changements MapSense et les
 autres travaux concurrents restent hors propriété ISC12 et doivent être

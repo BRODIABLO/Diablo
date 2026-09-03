@@ -1,10 +1,10 @@
 {
-  "name": "@ruffneckk/isc12-save-converter",
+  "name": "@ruffneckk/d2r-save-converter",
   "private": true,
   "version": "0.2.1",
   "type": "module",
   "bin": {
-    "isc12-save-converter": "src/cli-entry.mjs"
+    "d2r-save-converter": "src/cli-entry.mjs"
   },
   "scripts": {
     "generate:vanilla-excel": "node scripts/generate-vanilla-excel.mjs",

@@ -1678,158 +1678,158 @@
                                                                         ]
                                                        },
                                                        {
-                                                           "name":  "ISC12SaveConverter",
-                                                           "path":  "addons/ISC12SaveConverter",
+                                                           "name":  "D2RSaveConverter",
+                                                           "path":  "addons/D2RSaveConverter",
                                                            "kind":  "directory",
                                                            "meta":  {
                                                                         "role":  "x-public-save-conversion-tool",
-                                                                        "summary":  "Outil public autonome et hors ligne de conversion lossless des flux ItemStatCost entre les formats D2R 9 bits et ISC12 12 bits.",
+                                                                        "summary":  "Outil public autonome et hors ligne de conversion des sauvegardes D2R entre formats ItemStatCost 9/12 bits et schémas de mods compatibles.",
                                                                         "agentAccess":  "read-write",
                                                                         "status":  "experimental"
                                                                     },
                                                            "children":  [
                                                                             {
                                                                                 "name":  "scripts",
-                                                                                "path":  "addons/ISC12SaveConverter/scripts",
+                                                                                "path":  "addons/D2RSaveConverter/scripts",
                                                                                 "kind":  "directory",
                                                                                 "children":  [
                                                                                                  {
                                                                                                      "name":  "build-standalone.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/scripts/build-standalone.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/scripts/build-standalone.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "create-runtime-fixture.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/scripts/create-runtime-fixture.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/scripts/create-runtime-fixture.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "generate-vanilla-excel.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/scripts/generate-vanilla-excel.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/scripts/generate-vanilla-excel.mjs",
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
                                                                             },
                                                                             {
                                                                                 "name":  "src",
-                                                                                "path":  "addons/ISC12SaveConverter/src",
+                                                                                "path":  "addons/D2RSaveConverter/src",
                                                                                 "kind":  "directory",
                                                                                 "children":  [
                                                                                                  {
                                                                                                      "name":  "batch-converter.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/batch-converter.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/batch-converter.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "batch-converter.test.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/batch-converter.test.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/batch-converter.test.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "cli.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/cli.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/cli.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "cli.test.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/cli.test.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/cli.test.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "cli-entry.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/cli-entry.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/cli-entry.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "default-schema.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/default-schema.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/default-schema.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "default-schema.test.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/default-schema.test.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/default-schema.test.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "mod-schema.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/mod-schema.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/mod-schema.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "mod-schema.test.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/mod-schema.test.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/mod-schema.test.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "mpq-reader.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/mpq-reader.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/mpq-reader.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "runewizard-bridge.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/runewizard-bridge.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/runewizard-bridge.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "runewizard-bridge.test.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/runewizard-bridge.test.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/runewizard-bridge.test.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "shared-stash.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/shared-stash.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/shared-stash.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "shared-stash.test.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/shared-stash.test.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/shared-stash.test.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "stat-stream.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/stat-stream.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/stat-stream.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "stat-stream.test.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/stat-stream.test.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/stat-stream.test.mjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "stormlib-wrapper.cjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/stormlib-wrapper.cjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/stormlib-wrapper.cjs",
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
                                                                                                      "name":  "vanilla-excel.generated.mjs",
-                                                                                                     "path":  "addons/ISC12SaveConverter/src/vanilla-excel.generated.mjs",
+                                                                                                     "path":  "addons/D2RSaveConverter/src/vanilla-excel.generated.mjs",
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
                                                                             },
                                                                             {
                                                                                 "name":  ".gitignore",
-                                                                                "path":  "addons/ISC12SaveConverter/.gitignore",
+                                                                                "path":  "addons/D2RSaveConverter/.gitignore",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
-                                                                                "name":  "Launch-ISC12-Save-Converter.cmd",
-                                                                                "path":  "addons/ISC12SaveConverter/Launch-ISC12-Save-Converter.cmd",
+                                                                                "name":  "Launch-D2R-Save-Converter.cmd",
+                                                                                "path":  "addons/D2RSaveConverter/Launch-D2R-Save-Converter.cmd",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
                                                                                 "name":  "package.json",
-                                                                                "path":  "addons/ISC12SaveConverter/package.json",
+                                                                                "path":  "addons/D2RSaveConverter/package.json",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
                                                                                 "name":  "package-lock.json",
-                                                                                "path":  "addons/ISC12SaveConverter/package-lock.json",
+                                                                                "path":  "addons/D2RSaveConverter/package-lock.json",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {
                                                                                 "name":  "README.md",
-                                                                                "path":  "addons/ISC12SaveConverter/README.md",
+                                                                                "path":  "addons/D2RSaveConverter/README.md",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]

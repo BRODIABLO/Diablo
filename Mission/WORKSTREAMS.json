@@ -739,7 +739,7 @@
       "include": [
         "Mission/isc12-3.3.md",
         "addons/ISC12/**",
-        "addons/ISC12SaveConverter/**",
+        "addons/D2RSaveConverter/**",
         "patches/@d2runewizard+d2s+2.0.132.patch",
         "reverse-engineering/d2r-3.2.92777/isc12/**",
         "reverse-engineering/d2r-3.2.92777/sdk-contribution/Services-requests.md",

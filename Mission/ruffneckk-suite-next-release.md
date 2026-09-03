@@ -34,7 +34,7 @@ Décisions explicites de Vincent :
 - `Remote Stash 2.3.0` entre dans cette release;
 - `Vendor Stock Refresh 2.0.0` entre dans cette release;
 - `Shadow Master AI Fix` entre comme memory patch;
-- `ISC12 0.2.1` entre comme plugin et son `ISC12 Save Converter 0.2.1`
+- `ISC12 0.2.1` entre comme plugin et `D2R Save Converter 0.2.1`
   accompagne la même release comme EXE autonome;
 - les deux presets `Ground Item Label Limit` sont retirés;
 - `Normal Area Scaling` reste retiré conformément au candidat 1.3.0 existant;

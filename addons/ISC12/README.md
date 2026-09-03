@@ -335,13 +335,13 @@ Mod-local:
 
 The clean-sheet contract is a product and support boundary, not an outer-file
 marker: create new characters under ISC12 or migrate existing D2R 9-bit saves
-with ISC12 Save Converter. Direct loading of existing vanilla/non-ISC12 saves
+with D2R Save Converter. Direct loading of existing vanilla/non-ISC12 saves
 is unsupported. D2RLoader's native `.d2rl` environment record provides the visible
 plugin/mod compatibility warning; it is not a cryptographic schema marker and
 ISC12 does not promise to hard-block every misuse. Backups remain mandatory.
 
 The config-free 0.2.1 candidate is being distributed first as a small public
-test for new characters and new shared stashes. ISC12 Save Converter remains a
+test for new characters and new shared stashes. D2R Save Converter remains a
 separate companion tool. Its source-to-target migration and solo runtime gates
 are closed; publish it separately after final packaging and review.
 

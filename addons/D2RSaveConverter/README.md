@@ -1,4 +1,4 @@
-# ISC12 Save Converter
+# D2R Save Converter
 
 Converts standard (v105) D2R `.d2s` files and compatible `.d2i` shared stashes
 across D2R 9-bit and ISC12 12-bit formats. Source-to-target mod-schema migration
@@ -116,25 +116,25 @@ the correct current sidecar.
 
 ## Run the standalone executable
 
-Double-click `ISC12SaveConverter.exe` and follow the prompts, or use its
+Double-click `D2RSaveConverter.exe` and follow the prompts, or use its
 command-line interface:
 
 ```text
-ISC12SaveConverter.exe --to isc12 <save-folder>
-ISC12SaveConverter.exe --to isc12 --source-mod <old-mod> --target-mod <isc12-mod> <save-folder>
-ISC12SaveConverter.exe --to d2r9 --source-mod <isc12-mod> --target-mod <old-mod> <save-folder>
-ISC12SaveConverter.exe --from d2r9 --to d2r9 --source-mod <old-mod> --target-mod <new-mod> <save-folder>
-ISC12SaveConverter.exe --from isc12 --to isc12 --source-mod <old-mod> --target-mod <new-mod> <save-folder>
+D2RSaveConverter.exe --to isc12 <save-folder>
+D2RSaveConverter.exe --to isc12 --source-mod <old-mod> --target-mod <isc12-mod> <save-folder>
+D2RSaveConverter.exe --to d2r9 --source-mod <isc12-mod> --target-mod <old-mod> <save-folder>
+D2RSaveConverter.exe --from d2r9 --to d2r9 --source-mod <old-mod> --target-mod <new-mod> <save-folder>
+D2RSaveConverter.exe --from isc12 --to isc12 --source-mod <old-mod> --target-mod <new-mod> <save-folder>
 ```
 
 ## Run from source
 
-On Windows, double-click `Launch-ISC12-Save-Converter.cmd`, or run:
+On Windows, double-click `Launch-D2R-Save-Converter.cmd`, or run:
 
 ```text
-npm run convert --prefix addons/ISC12SaveConverter -- --to isc12 <save-folder>
-npm run convert --prefix addons/ISC12SaveConverter -- --to d2r9 --source-mod <isc12-mod> --target-vanilla <save-folder>
-npm run convert --prefix addons/ISC12SaveConverter -- --from d2r9 --to d2r9 --source-mod <old-mod> --target-mod <new-mod> <save-folder>
+npm run convert --prefix addons/D2RSaveConverter -- --to isc12 <save-folder>
+npm run convert --prefix addons/D2RSaveConverter -- --to d2r9 --source-mod <isc12-mod> --target-vanilla <save-folder>
+npm run convert --prefix addons/D2RSaveConverter -- --from d2r9 --to d2r9 --source-mod <old-mod> --target-mod <new-mod> <save-folder>
 ```
 
 Use `--help` for all options. The remaining public-release work is human review
@@ -147,7 +147,7 @@ published. This README stays beside the local artifacts for human review before
 a replacement public package is assembled.
 
 - executable: 94,679,552 bytes, SHA-256
-  `906E057307E9704E2EAF6CD184D85760B672100EBD3026A7EDB6915B285141A4`;
+  `5BC08306B1A165641383D991AC430CF135126E5FB034667B34DE2A00FB95FD48`;
 - reproducibility: two independent standalone builds are byte-identical;
 - replacement ZIP: not packaged in this change.
 
@@ -164,5 +164,5 @@ including `SaveAdd`. No D2MOO binary code, address or 32-bit ABI is reused.
 ## Development test
 
 ```text
-npm test --prefix addons/ISC12SaveConverter
+npm test --prefix addons/D2RSaveConverter
 ```
