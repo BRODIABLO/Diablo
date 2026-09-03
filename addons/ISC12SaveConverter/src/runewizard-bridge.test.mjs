@@ -195,6 +195,65 @@ test('migrates a real item vanilla to BKVince and back across changed Save Bits 
   assert.deepEqual(downgraded.bytes, vanillaBytes);
 });
 
+test('migrates changed Save Bits and Save Add while keeping either stat-ID width', async () => {
+  const { readItem, writeItem } = await import('@d2runewizard/d2s');
+  const model = await readItem(
+    NATIVE_MAGIC_D2I_FIXTURE,
+    0x69,
+    bkvinceConstants,
+    codecConfig(LEGACY_STAT_ID_BITS),
+  );
+  const vanilla9 = new Uint8Array(await writeItem(
+    structuredClone(model),
+    0x69,
+    DEFAULT_D2R_V105_CONSTANTS,
+    codecConfig(LEGACY_STAT_ID_BITS),
+  ));
+
+  const bkvince9 = await transcodeItemRecord({
+    input: vanilla9,
+    sourceConstants: DEFAULT_D2R_V105_CONSTANTS,
+    targetConstants: bkvinceConstants,
+    sourceWidth: LEGACY_STAT_ID_BITS,
+    targetWidth: LEGACY_STAT_ID_BITS,
+    scope: 'Vanilla 9-bit -> BKVince 9-bit',
+  });
+  const restored9 = await transcodeItemRecord({
+    input: bkvince9.bytes,
+    sourceConstants: bkvinceConstants,
+    targetConstants: DEFAULT_D2R_V105_CONSTANTS,
+    sourceWidth: LEGACY_STAT_ID_BITS,
+    targetWidth: LEGACY_STAT_ID_BITS,
+    scope: 'BKVince 9-bit -> vanilla 9-bit',
+  });
+  assert.deepEqual(restored9.bytes, vanilla9);
+
+  const vanilla12 = await transcodeItemRecord({
+    input: vanilla9,
+    constants: DEFAULT_D2R_V105_CONSTANTS,
+    sourceWidth: LEGACY_STAT_ID_BITS,
+    targetWidth: ISC12_STAT_ID_BITS,
+    scope: 'Vanilla 9-bit -> vanilla ISC12',
+  });
+  const bkvince12 = await transcodeItemRecord({
+    input: vanilla12.bytes,
+    sourceConstants: DEFAULT_D2R_V105_CONSTANTS,
+    targetConstants: bkvinceConstants,
+    sourceWidth: ISC12_STAT_ID_BITS,
+    targetWidth: ISC12_STAT_ID_BITS,
+    scope: 'Vanilla ISC12 -> BKVince ISC12',
+  });
+  const restored12 = await transcodeItemRecord({
+    input: bkvince12.bytes,
+    sourceConstants: bkvinceConstants,
+    targetConstants: DEFAULT_D2R_V105_CONSTANTS,
+    sourceWidth: ISC12_STAT_ID_BITS,
+    targetWidth: ISC12_STAT_ID_BITS,
+    scope: 'BKVince ISC12 -> vanilla ISC12',
+  });
+  assert.deepEqual(restored12.bytes, vanilla12.bytes);
+});
+
 test('preserves durability when target Save Add and Save Bits differ', async () => {
   const targetConstants = structuredClone(bkvinceConstants);
   targetConstants.magical_properties[72].sB = 12;

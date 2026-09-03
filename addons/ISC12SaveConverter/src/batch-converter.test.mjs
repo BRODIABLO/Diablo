@@ -99,7 +99,41 @@ test('preflights every input and writes nothing when one save is invalid', async
   await assert.rejects(() => stat(outputDirectory), /ENOENT/);
 });
 
-test('parses both explicit public conversion directions', () => {
+test('allows a same-width batch and gives it a migration-specific output directory', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'isc12-same-width-batch-'));
+  const document = await createBlankCharacter({ name: 'ISCSame', className: 'Amazon' });
+  const sourcePath = path.join(root, 'ISCSame.d2s');
+  await writeFile(sourcePath, document.sourceBytes);
+  const outputDirectory = await chooseUnusedOutputDirectory(
+    sourcePath,
+    LEGACY_STAT_ID_BITS,
+    LEGACY_STAT_ID_BITS,
+  );
+
+  await convertBatch({
+    inputs: [sourcePath],
+    outputDirectory,
+    constants: bkvinceConstants,
+    sourceWidth: LEGACY_STAT_ID_BITS,
+    targetWidth: LEGACY_STAT_ID_BITS,
+  });
+
+  assert.equal(path.basename(outputDirectory), 'D2R 9-bit Mod Migrated');
+  assert.deepEqual(
+    new Uint8Array(await readFile(path.join(outputDirectory, 'ISCSame.d2s'))),
+    document.sourceBytes,
+  );
+  assert.equal(
+    path.basename(await chooseUnusedOutputDirectory(
+      sourcePath,
+      ISC12_STAT_ID_BITS,
+      ISC12_STAT_ID_BITS,
+    )),
+    'ISC12 Mod Migrated',
+  );
+});
+
+test('parses all four public source and target format combinations', () => {
   assert.deepEqual(parseDirection('isc12'), {
     sourceWidth: LEGACY_STAT_ID_BITS,
     targetWidth: ISC12_STAT_ID_BITS,
@@ -108,5 +142,14 @@ test('parses both explicit public conversion directions', () => {
     sourceWidth: ISC12_STAT_ID_BITS,
     targetWidth: LEGACY_STAT_ID_BITS,
   });
-  assert.throws(() => parseDirection('auto'), /Unknown conversion direction/);
+  assert.deepEqual(parseDirection('d2r9', 'd2r9'), {
+    sourceWidth: LEGACY_STAT_ID_BITS,
+    targetWidth: LEGACY_STAT_ID_BITS,
+  });
+  assert.deepEqual(parseDirection('isc12', 'isc12'), {
+    sourceWidth: ISC12_STAT_ID_BITS,
+    targetWidth: ISC12_STAT_ID_BITS,
+  });
+  assert.throws(() => parseDirection('auto'), /Unknown target format/);
+  assert.throws(() => parseDirection('isc12', 'auto'), /Unknown source format/);
 });

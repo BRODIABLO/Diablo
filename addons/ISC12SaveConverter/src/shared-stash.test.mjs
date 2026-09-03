@@ -76,6 +76,30 @@ test('transcodes the governed Shared Stash 9 to 12 to 9 byte-exact', async () =>
   assert.deepEqual(downgraded.bytes, REAL_SHARED_STASH);
 });
 
+test('rewrites governed Shared Stashes byte-exact without changing their stat-ID width', async () => {
+  const migrated9 = await transcodeSharedStash({
+    input: REAL_SHARED_STASH,
+    constants: bkvinceConstants,
+    sourceWidth: LEGACY_STAT_ID_BITS,
+    targetWidth: LEGACY_STAT_ID_BITS,
+  });
+  assert.deepEqual(migrated9.bytes, REAL_SHARED_STASH);
+
+  const upgraded = await transcodeSharedStash({
+    input: REAL_SHARED_STASH,
+    constants: bkvinceConstants,
+    sourceWidth: LEGACY_STAT_ID_BITS,
+    targetWidth: ISC12_STAT_ID_BITS,
+  });
+  const migrated12 = await transcodeSharedStash({
+    input: upgraded.bytes,
+    constants: bkvinceConstants,
+    sourceWidth: ISC12_STAT_ID_BITS,
+    targetWidth: ISC12_STAT_ID_BITS,
+  });
+  assert.deepEqual(migrated12.bytes, upgraded.bytes);
+});
+
 test('reports a high-ID Shared Stash item instead of deleting it', async () => {
   const constants = structuredClone(bkvinceConstants);
   constants.magical_properties[2013] = {

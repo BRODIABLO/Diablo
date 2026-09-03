@@ -17,17 +17,25 @@ import {
   loadConstantsFromSchemaFile,
 } from './mod-schema.mjs';
 
+const INTERACTIVE_CONVERSIONS = Object.freeze({
+  1: Object.freeze({ source: 'd2r9', target: 'isc12' }),
+  2: Object.freeze({ source: 'isc12', target: 'd2r9' }),
+  3: Object.freeze({ source: 'd2r9', target: 'd2r9' }),
+  4: Object.freeze({ source: 'isc12', target: 'isc12' }),
+});
+
 export async function runCli(argv, io = console) {
   const options = parseArguments(argv);
   if (options.help) {
     io.log(USAGE);
     return Object.freeze({ exitCode: 0 });
   }
-  const direction = parseDirection(options.to);
+  const direction = parseDirection(options.to, options.from ?? null);
   const schemas = await loadSelectedSchemas(options);
   const outputDirectory = options.output || await chooseUnusedOutputDirectory(
     options.inputs[0],
     direction.targetWidth,
+    direction.sourceWidth,
   );
   const result = await convertBatch({
     inputs: options.inputs,
@@ -45,7 +53,10 @@ export async function runCli(argv, io = console) {
     io.log(`  ${file.file}  ${file.inputBytes} -> ${file.outputBytes} bytes  [${file.kind}]`);
   });
   io.log('Original files were not modified.');
-  runtimeInstructionsForTargetWidth(direction.targetWidth).forEach((line) => io.log(line));
+  runtimeInstructionsForTargetWidth(
+    direction.targetWidth,
+    direction.sourceWidth,
+  ).forEach((line) => io.log(line));
   return Object.freeze({
     exitCode: 0,
     outputDirectory: result.outputDirectory,
@@ -59,8 +70,11 @@ export async function promptForArguments(input = process.stdin, output = process
     output.write(`${interactiveIntroduction()}\n\n`);
     output.write('1. D2R 9-bit -> ISC12 12-bit\n');
     output.write('2. ISC12 12-bit -> D2R 9-bit\n');
-    const direction = (await prompt.question('Choose 1 or 2: ')).trim();
-    if (direction !== '1' && direction !== '2') throw new Error('Direction must be 1 or 2.');
+    output.write('3. D2R 9-bit -> D2R 9-bit (migrate between game data)\n');
+    output.write('4. ISC12 12-bit -> ISC12 12-bit (migrate between game data)\n');
+    const choice = (await prompt.question('Choose 1, 2, 3 or 4: ')).trim();
+    const direction = INTERACTIVE_CONVERSIONS[choice];
+    if (!direction) throw new Error('Conversion must be 1, 2, 3 or 4.');
     const source = unquote(await prompt.question('Save file or folder (you can drag it here): '));
     if (!source) throw new Error('A save file or folder is required.');
     const inputs = [source];
@@ -81,12 +95,8 @@ export async function promptForArguments(input = process.stdin, output = process
       'Which game data was used to create these saves?',
       '--source-mod',
     );
-    const sameGameData = (await prompt.question(
-      '\nWill the converted saves be loaded by the same vanilla game or mod data? [Y/n]: ',
-    )).trim().toLowerCase();
     let targetSchema = [];
-    if (!['', 'y', 'yes'].includes(sameGameData)) {
-      if (!['n', 'no'].includes(sameGameData)) throw new Error('Answer Y or N.');
+    if (direction.source === direction.target) {
       targetSchema = await promptForGameData(
         prompt,
         output,
@@ -94,9 +104,24 @@ export async function promptForArguments(input = process.stdin, output = process
         '--target-mod',
         '--target-vanilla',
       );
+    } else {
+      const sameGameData = (await prompt.question(
+        '\nWill the converted saves be loaded by the same vanilla game or mod data? [Y/n]: ',
+      )).trim().toLowerCase();
+      if (!['', 'y', 'yes'].includes(sameGameData)) {
+        if (!['n', 'no'].includes(sameGameData)) throw new Error('Answer Y or N.');
+        targetSchema = await promptForGameData(
+          prompt,
+          output,
+          'Which game data will load the converted saves?',
+          '--target-mod',
+          '--target-vanilla',
+        );
+      }
     }
     return [
-      '--to', direction === '1' ? 'isc12' : 'd2r9',
+      '--from', direction.source,
+      '--to', direction.target,
       ...sourceSchema,
       ...targetSchema,
       ...inputs,
@@ -112,6 +137,8 @@ export function parseArguments(argv) {
     const argument = argv[index];
     if (argument === '--help' || argument === '-h') {
       options.help = true;
+    } else if (argument === '--from') {
+      options.from = readOptionValue(argv, ++index, '--from');
     } else if (argument === '--to') {
       options.to = readOptionValue(argv, ++index, '--to');
     } else if (argument === '--schema') {
@@ -252,12 +279,17 @@ function unquote(value) {
   return trimmed;
 }
 
-export function runtimeInstructionsForTargetWidth(targetWidth) {
+export function runtimeInstructionsForTargetWidth(targetWidth, sourceWidth = null) {
   if (targetWidth === 12) {
     return Object.freeze([
       'Runtime: load these saves with ISC12 enabled.',
       'ExtendedItemStats 0.3.14 may stay installed only when ISC12 verifies it as the sole owner of all six full-item transport hooks.',
       'Remove any other D2R 9-bit ItemStatCost codec before loading; unsupported providers fail closed.',
+    ]);
+  }
+  if (sourceWidth === targetWidth) {
+    return Object.freeze([
+      'Runtime: load these saves with the target game data and its D2R 9-bit ItemStatCost codec. Keep ISC12 disabled.',
     ]);
   }
   return Object.freeze([
@@ -267,16 +299,19 @@ export function runtimeInstructionsForTargetWidth(targetWidth) {
 
 export const USAGE = `ISC12 Save Converter
 
-Converts standard (v105) D2R 9-bit .d2s files and compatible .d2i shared
-stashes to and from ISC12 12-bit format. Supports clean vanilla saves and
-modded saves using matching mod data. Original files are never overwritten.
+Converts D2R .d2s files and compatible .d2i shared stashes between D2R 9-bit
+and ISC12 12-bit formats, and independently migrates them between source and
+target mod schemas. Either or both can change in one pass. Original files are
+never overwritten.
 
 Usage:
   isc12-save-converter --to isc12 [options] <file-or-directory> [...]
   isc12-save-converter --to d2r9 [options] <file-or-directory> [...]
+  isc12-save-converter --from d2r9|isc12 --to d2r9|isc12 [options] <file-or-directory> [...]
 
 Options:
-  --to isc12|d2r9         Required explicit conversion direction.
+  --from d2r9|isc12       Source stat-ID format. Omit for the opposite of --to.
+  --to isc12|d2r9         Required target stat-ID format.
   --mod <path>            Use one mod's TXT data for both source and target.
   --source-mod <path>     Mod folder, unpacked TXT data, or MPQ for the source.
   --target-mod <path>     Mod folder, unpacked TXT data, or MPQ for the target.
@@ -289,13 +324,15 @@ Options:
 
 Without game-data options, clean, unmodded D2R v105 is used for source and
 target. A lone --source-mod/--source-schema also becomes the target (same-game-
-data shortcut). Use an explicit target option only when migrating between two
-different table sets. Mod paths must expose the matching TXT data; BIN-only
-mods are unsupported.
+data shortcut). Use an explicit target option when migrating between two
+different table sets. Omitting --from preserves the original 9-to-12 or
+12-to-9 behavior; specify it to allow 9-to-9 or 12-to-12 schema migrations.
+Mod paths must expose the matching TXT data; BIN-only mods are unsupported.
 
-Interactive mode calls this option "Clean, unmodded D2R v105 (vanilla)" and
-offers an installed mod folder or MPQ archive as the public alternative. It
-then asks whether the target uses the same game data. JSON schemas remain an
+Interactive mode offers all four source/target width combinations. It calls
+the built-in data "Clean, unmodded D2R v105 (vanilla)" and offers an installed
+mod folder or MPQ archive as the public alternative. Same-width migrations
+always ask for separate source and target game data. JSON schemas remain an
 advanced command-line integration point, not an interactive choice.
 
 When loading 12-bit saves, enable ISC12. ExtendedItemStats 0.3.14 is an

@@ -1,28 +1,41 @@
 # ISC12 Save Converter
 
-Converts standard (v105) D2R 9-bit `.d2s` files and compatible `.d2i` shared
-stashes to and from ISC12 12-bit format. Supports clean vanilla saves and
-modded saves using matching mod data. Original files are never overwritten.
+Converts standard (v105) D2R `.d2s` files and compatible `.d2i` shared stashes
+across D2R 9-bit and ISC12 12-bit formats. Source-to-target mod-schema migration
+is independent from the selected stat-ID widths. Original files are never
+overwritten.
 
 Author: RuffnecKk
+
+This executable is the standalone save-conversion tool selected for the next
+RuffnecKk D2RLoader Suite 1.3.0 release. Its final release packaging remains
+pending.
 
 ## Current status
 
 The offline codec, interactive console and standalone Windows executable are
-implemented. The 60-test suite proves byte-exact 9-to-12-to-9 round trips for a
+implemented. The 64-test suite proves byte-exact 9-to-12-to-9 round trips for a
 real standalone v105 item, complete characters and shared stashes. It also
-proves source-to-target schema migration between vanilla and BKVince data,
-including changed stat IDs, `SaveBits`, `SaveParamBits`, `SaveAdd`, signed player
+proves all four width combinations (`9→12`, `12→9`, `9→9` and `12→12`) plus
+source-to-target schema migration between vanilla and BKVince data, including
+changed stat IDs, `SaveBits`, `SaveParamBits`, `SaveAdd`, signed player
 attributes, auto-affixes and raw table references. Runtime qualification on D2R
 3.3.93847 loaded, saved and reloaded the cross-schema BKVince-to-Yupgoolg
 character and shared-stash witnesses under ISC12. The nine-item shared stash
 remained byte-identical after a full process restart and a separate global-scope
 run. The converter is never a replacement for backups.
 
+The rebuilt standalone executable also migrates the same compatible BKVince
+character and nine-item shared stash to Yupgoolg in both 9-to-9 and 12-to-12
+modes, then restores each source byte-exact. Changing width and schema in one
+pass produces the exact same target bytes as either two-step order. The final
+ISC12 character and shared-stash outputs are byte-identical to the witnesses
+already qualified in the game runtime.
+
 The tool:
 
 - converts copies instead of overwriting original saves;
-- supports explicit 9-to-12 and 12-to-9 directions;
+- supports explicit 9-to-12, 12-to-9, 9-to-9 and 12-to-12 conversions;
 - maps serialized stats by exact `Stat` name instead of assuming stable row IDs;
 - converts values and params through the source and target save layouts;
 - accepts a source stat above ID 510 during downgrade when the same named target
@@ -33,8 +46,9 @@ The tool:
 
 It scans all inputs before creating the output directory. A corrupt or blocked
 file therefore prevents the entire batch from writing partial converted saves.
-Converted files keep their original names inside a new `ISC12 Converted` or
-`D2R 9-bit Converted` directory. Existing output directories are never reused.
+Converted files keep their original names inside a new `ISC12 Converted`,
+`D2R 9-bit Converted`, `ISC12 Mod Migrated` or `D2R 9-bit Mod Migrated`
+directory. Existing output directories are never reused.
 
 When a character `.d2s` is selected interactively, the converter finds every
 adjacent shared-stash `.d2i`, lists the exact paths and offers to include them in
@@ -56,9 +70,11 @@ adaptation to ISC12.
 
 A custom mod that changes item bases, classes or serialized stat layouts must be
 selected through its installed mod folder or MPQ archive. The converter first
-uses the source data to decode what the save means, then uses the target data to
-encode the same character for the destination game environment. Source and
-target may use the same data or two different table sets.
+uses the source stat-ID width and source data to decode what the save means,
+then uses the target width and target data to encode the same character for the
+destination game environment. Width and schema are independent: one operation
+can change either one or both. Source and target may use the same data or two
+different table sets.
 
 The tool starts from its bundled vanilla tables and overlays only the TXT files
 supplied by each mod, matching D2R's normal inheritance behavior. It supports
@@ -107,6 +123,8 @@ command-line interface:
 ISC12SaveConverter.exe --to isc12 <save-folder>
 ISC12SaveConverter.exe --to isc12 --source-mod <old-mod> --target-mod <isc12-mod> <save-folder>
 ISC12SaveConverter.exe --to d2r9 --source-mod <isc12-mod> --target-mod <old-mod> <save-folder>
+ISC12SaveConverter.exe --from d2r9 --to d2r9 --source-mod <old-mod> --target-mod <new-mod> <save-folder>
+ISC12SaveConverter.exe --from isc12 --to isc12 --source-mod <old-mod> --target-mod <new-mod> <save-folder>
 ```
 
 ## Run from source
@@ -116,21 +134,22 @@ On Windows, double-click `Launch-ISC12-Save-Converter.cmd`, or run:
 ```text
 npm run convert --prefix addons/ISC12SaveConverter -- --to isc12 <save-folder>
 npm run convert --prefix addons/ISC12SaveConverter -- --to d2r9 --source-mod <isc12-mod> --target-vanilla <save-folder>
+npm run convert --prefix addons/ISC12SaveConverter -- --from d2r9 --to d2r9 --source-mod <old-mod> --target-mod <new-mod> <save-folder>
 ```
 
 Use `--help` for all options. The remaining public-release work is human review
-of this README and publication beside ISC12.
+of this README, replacement packaging and publication beside ISC12.
 
-## Public test candidate
+## Standalone candidate status
 
-The candidate archive contains only `ISC12SaveConverter.exe`; this README stays
-beside the archive for human review before the final public package is assembled.
+The previous test ZIP is superseded by the four-mode build and must not be
+published. This README stays beside the local artifacts for human review before
+a replacement public package is assembled.
 
-- executable: 94,677,504 bytes, SHA-256
-  `2945CEB6BE8E2BB800D266711772F3EB76B8AA271EF6D36904673129595DAF8D`;
-- candidate ZIP: 35,959,447 bytes, SHA-256
-  `530B40501E4C52A58A62D8358864B45ACE06D2C07A9A736D1E30686F2CA53EBC`;
-- archive allowlist: exactly one root entry, `ISC12SaveConverter.exe`.
+- executable: 94,679,552 bytes, SHA-256
+  `906E057307E9704E2EAF6CD184D85760B672100EBD3026A7EDB6915B285141A4`;
+- reproducibility: two independent standalone builds are byte-identical;
+- replacement ZIP: not packaged in this change.
 
 ## Third-party components and references
 

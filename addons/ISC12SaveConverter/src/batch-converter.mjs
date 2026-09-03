@@ -99,7 +99,6 @@ export async function convertBatch({
   if (typeof outputDirectory !== 'string' || outputDirectory.trim() === '') {
     throw new TypeError('An output directory is required.');
   }
-  if (sourceWidth === targetWidth) throw new Error('Source and target widths must differ.');
   const discovered = await discoverSaveFiles(inputs);
   if (discovered.length === 0) throw new Error('No .d2s or .d2i save files were found.');
 
@@ -176,11 +175,18 @@ export async function discoverSaveFiles(inputs) {
   return Object.freeze(found);
 }
 
-export async function chooseUnusedOutputDirectory(inputPath, targetWidth) {
+export async function chooseUnusedOutputDirectory(inputPath, targetWidth, sourceWidth = null) {
   const absoluteInput = path.resolve(inputPath);
   const metadata = await stat(absoluteInput);
   const parent = metadata.isDirectory() ? path.dirname(absoluteInput) : path.dirname(absoluteInput);
-  const label = targetWidth === ISC12_STAT_ID_BITS ? 'ISC12 Converted' : 'D2R 9-bit Converted';
+  const sameWidth = sourceWidth === targetWidth;
+  const label = sameWidth
+    ? targetWidth === ISC12_STAT_ID_BITS
+      ? 'ISC12 Mod Migrated'
+      : 'D2R 9-bit Mod Migrated'
+    : targetWidth === ISC12_STAT_ID_BITS
+      ? 'ISC12 Converted'
+      : 'D2R 9-bit Converted';
   for (let suffix = 1; suffix <= 9999; suffix += 1) {
     const candidate = path.join(parent, suffix === 1 ? label : `${label} (${suffix})`);
     try {
@@ -193,15 +199,27 @@ export async function chooseUnusedOutputDirectory(inputPath, targetWidth) {
   throw new Error(`Could not reserve an unused ${label} output directory.`);
 }
 
-export function parseDirection(value) {
+export function parseDirection(value, sourceValue = null) {
   const normalized = String(value || '').trim().toLowerCase();
+  let targetWidth;
   if (['isc12', '12', '9-to-12', '9→12'].includes(normalized)) {
-    return Object.freeze({ sourceWidth: LEGACY_STAT_ID_BITS, targetWidth: ISC12_STAT_ID_BITS });
+    targetWidth = ISC12_STAT_ID_BITS;
+  } else if (['d2r9', 'd2r-9-bit', '9', '12-to-9', '12→9', 'legacy'].includes(normalized)) {
+    targetWidth = LEGACY_STAT_ID_BITS;
+  } else {
+    throw new Error(`Unknown target format: ${value || '(missing)'}.`);
   }
-  if (['d2r9', 'd2r-9-bit', '9', '12-to-9', '12→9', 'legacy'].includes(normalized)) {
-    return Object.freeze({ sourceWidth: ISC12_STAT_ID_BITS, targetWidth: LEGACY_STAT_ID_BITS });
-  }
-  throw new Error(`Unknown conversion direction: ${value || '(missing)'}.`);
+  const sourceWidth = sourceValue === null
+    ? targetWidth === ISC12_STAT_ID_BITS ? LEGACY_STAT_ID_BITS : ISC12_STAT_ID_BITS
+    : parseSaveFormat(sourceValue, 'source');
+  return Object.freeze({ sourceWidth, targetWidth });
+}
+
+function parseSaveFormat(value, label) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (['isc12', '12'].includes(normalized)) return ISC12_STAT_ID_BITS;
+  if (['d2r9', 'd2r-9-bit', '9', 'legacy'].includes(normalized)) return LEGACY_STAT_ID_BITS;
+  throw new Error(`Unknown ${label} format: ${value || '(missing)'}.`);
 }
 
 function isSharedStash(input) {

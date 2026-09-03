@@ -64,6 +64,19 @@ test('parses separate source and target mod data without calling either ISC12-fo
     ]),
     /only one target game-data option/,
   );
+  assert.deepEqual(parseArguments([
+    '--from', 'd2r9',
+    '--to', 'd2r9',
+    '--source-mod', 'Source Mod',
+    '--target-mod', 'Target Mod',
+    'Hero.d2s',
+  ]), {
+    inputs: ['Hero.d2s'],
+    from: 'd2r9',
+    to: 'd2r9',
+    sourceMod: 'Source Mod',
+    targetMod: 'Target Mod',
+  });
 });
 
 test('finds adjacent shared stashes for a selected character save', async () => {
@@ -98,6 +111,7 @@ test('help returns a structured successful result', async () => {
   assert.match(lines.join('\n'), /Clean, unmodded D2R v105/);
   assert.match(lines.join('\n'), /--source-mod/);
   assert.match(lines.join('\n'), /--target-mod/);
+  assert.match(lines.join('\n'), /--from d2r9\|isc12/);
   assert.match(lines.join('\n'), /BIN-only/);
 });
 
@@ -149,10 +163,85 @@ test('runs the public CLI across separate vanilla and BKVince schemas byte-exact
   assert.match(logs.join('\n'), /Target game data: Built-in clean vanilla/);
 });
 
+test('runs 9-to-9 and 12-to-12 migrations across separate mod schemas', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'isc12-cli-same-width-schema-'));
+  const document = await createBlankCharacter({ name: 'ISCSame', className: 'Amazon' });
+  const sourcePath = path.join(root, 'ISCSame.d2s');
+  const bkvinceMod = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '../../../data-BKVince',
+  );
+  const model = await read(
+    document.sourceBytes,
+    bkvinceConstants,
+    codecConfig(LEGACY_STAT_ID_BITS),
+  );
+  model.items = [];
+  const vanilla9 = new Uint8Array(await write(
+    model,
+    DEFAULT_D2R_V105_CONSTANTS,
+    codecConfig(LEGACY_STAT_ID_BITS),
+  ));
+  await writeFile(sourcePath, vanilla9);
+  const silent = { log: () => {} };
+
+  const bkvince9Directory = path.join(root, 'bkvince9');
+  await runCli([
+    '--from', 'd2r9',
+    '--to', 'd2r9',
+    '--target-mod', bkvinceMod,
+    '--output', bkvince9Directory,
+    sourcePath,
+  ], silent);
+  const restored9Directory = path.join(root, 'restored9');
+  await runCli([
+    '--from', 'd2r9',
+    '--to', 'd2r9',
+    '--source-mod', bkvinceMod,
+    '--target-vanilla',
+    '--output', restored9Directory,
+    path.join(bkvince9Directory, 'ISCSame.d2s'),
+  ], silent);
+  assert.deepEqual(
+    new Uint8Array(await readFile(path.join(restored9Directory, 'ISCSame.d2s'))),
+    vanilla9,
+  );
+
+  const vanilla12Directory = path.join(root, 'vanilla12');
+  await runCli([
+    '--to', 'isc12',
+    '--output', vanilla12Directory,
+    sourcePath,
+  ], silent);
+  const vanilla12 = new Uint8Array(await readFile(path.join(vanilla12Directory, 'ISCSame.d2s')));
+  const bkvince12Directory = path.join(root, 'bkvince12');
+  await runCli([
+    '--from', 'isc12',
+    '--to', 'isc12',
+    '--target-mod', bkvinceMod,
+    '--output', bkvince12Directory,
+    path.join(vanilla12Directory, 'ISCSame.d2s'),
+  ], silent);
+  const restored12Directory = path.join(root, 'restored12');
+  await runCli([
+    '--from', 'isc12',
+    '--to', 'isc12',
+    '--source-mod', bkvinceMod,
+    '--target-vanilla',
+    '--output', restored12Directory,
+    path.join(bkvince12Directory, 'ISCSame.d2s'),
+  ], silent);
+  assert.deepEqual(
+    new Uint8Array(await readFile(path.join(restored12Directory, 'ISCSame.d2s'))),
+    vanilla12,
+  );
+});
+
 test('interactive introduction keeps the complete wrapped description', () => {
   const introduction = interactiveIntroduction();
-  assert.match(introduction, /Supports clean vanilla saves and\nmodded saves using matching mod data/);
-  assert.match(introduction, /Original files are never overwritten/);
+  assert.match(introduction, /independently migrates them between source and\ntarget mod schemas/);
+  assert.match(introduction, /Either or both can change in one pass/);
+  assert.match(introduction, /Original files are\nnever overwritten/);
   assert.doesNotMatch(introduction, /Usage:/);
 });
 
@@ -166,6 +255,10 @@ test('explains which item-stat codec must load converted saves', () => {
   const d2r9 = runtimeInstructionsForTargetWidth(9).join('\n');
   assert.match(d2r9, /restoring the mod's D2R 9-bit ItemStatCost codec/);
   assert.match(d2r9, /disabling ISC12/);
+
+  const d2r9Migration = runtimeInstructionsForTargetWidth(9, 9).join('\n');
+  assert.match(d2r9Migration, /target game data/);
+  assert.match(d2r9Migration, /Keep ISC12 disabled/);
 });
 
 test('accepts both letter O and zero for opening the output folder', () => {
