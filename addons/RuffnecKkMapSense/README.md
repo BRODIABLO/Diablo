@@ -1,14 +1,14 @@
 # RuffnecKk MapSense
 
 RuffnecKk MapSense is an experimental D2RLoader client plugin for Diablo II:
-Resurrected targeting builds 3.2.92777 and 3.3.93847. Version 0.13.38 is the
+Resurrected targeting builds 3.2.92777 and 3.3.93847. Version 0.13.41 is the
 current source candidate. It combines native map reveal, a compact in-game
 settings panel, hostile-monster markers, immunity indicators, Direct
 navigation, localized exit/waypoint/shrine/boss labels, and data-driven
 chest/rack markers. The current candidate also provides PrimeMH-compatible,
 element-aware missile markers; GPS corridor routing remains planned.
 
-## Native seed atlas candidate (0.13.38)
+## Native seed atlas candidate (0.13.41)
 
 The seed-atlas architecture replaces both the failed distant-room
 materialization path and the duplicate D3D12/ImGui terrain prototype with one
@@ -119,6 +119,29 @@ client/server counters expose scans, observations and publications. This fixes
 areas where D2R keeps active projectiles exclusively in the server table without
 loading rooms, monsters or any generated-map state.
 
+Version 0.13.39 replaces the three overlapping activation gates with one
+persistent `Enable MapSense` master. The former `features_enabled` and
+`overlay.enabled` settings migrate into that master and the affected individual
+feature switches, then disappear on the next save. `Reveal Map` is now an
+ordinary checkbox, monsters gain their own `Show Monsters` switch, and the
+MapSense-only ImGui palette offers ten persistent themes without recoloring any
+other plugin sharing the renderer.
+
+Version 0.13.40 combines the primary label and geometry generation into one
+helper process and reuses its already-loaded mod data context. Native atlas
+publication remains progressive but doubles the bounded cells per UI pump and
+halves the inter-pump delay. This shortens cold activation without restoring
+the transition stalls or frame-rate loss of distant gameplay-room loading.
+
+Version 0.13.41 localizes every player-facing ImGui title, section, control,
+choice and hint. It identifies D2R's active language through the existing
+`LocalizationServiceV1`, after the game's language tables are proven ready,
+then selects an embedded UTF-8 catalog covering all thirteen shipped locales;
+the two Spanish locales intentionally share neutral wording. English is the
+fail-safe startup and unknown-language fallback. Game content names remain
+authoritative D2R translations, and MapSense adds no localization files, mod
+string-table keys, native hook, configuration setting or runtime dependency.
+
 The same candidate completes the renderer-side missile contract. Stock class
 ids use PrimeMH's pinned Fire, Cold/Ice, Lightning, Poison, Physical, Magic and
 non-gameplay SFX/trigger taxonomy. `Missiles.txt` from the active mod may
@@ -187,7 +210,7 @@ mod-defined levels beyond the packaged libd2 dataset.
 Version 0.13.32 was the first mod-data-aware experiment. It discovered active
 `Levels.txt` members in the DLL, but could place only fixed-size records and
 runtime-visible entrances. That incomplete static augmentation is retained
-only as release history and is not present in 0.13.38.
+only as release history and is not present in 0.13.41.
 
 Version 0.13.27 validates generated topology against the helper response's
 actual act membership instead of assuming that every exit target belongs to a
@@ -674,30 +697,32 @@ The movable launcher appears only after D2R reports `LocalPlayerReady` and is
 hidden again on `GameLeft`. It expands into a deliberately small accordion
 panel. The current candidate contains:
 
-- **Additions Opacity**, which controls the current monster markers and will
-  also apply to later MapSense additions; it never controls D2R's native
-  automap opacity;
-- **Reveal Level**;
-- **Reveal Act**;
-- **Arm Reveal All**;
-- **Disarm Reveal All**;
-- one dynamic **Disable MapSense** / **Enable MapSense** master control that
-  preserves every individual option;
-- independent shape, color, alpha, and marker size for Normal, Minion,
-  Champion, Unique, and Super Unique / Boss; each `X` or `Player Cross` category
-  also exposes its own **Thickness**, while `Dot` deliberately does not;
+- one **Enable MapSense** master switch that suspends or resumes every feature
+  without changing any individual choice;
+- an ordinary **Reveal Map** checkbox and **Additions Opacity**, which never
+  controls D2R's native automap opacity;
+- ten MapSense-only menu themes: Sanctuary Gold, Hellfire, Horadric Sand,
+  Arcane Sanctuary, Tristram Moon, Kurast Jade, Necromancer Bone, Harrogath
+  Frost, Blood Moor, and High Contrast;
+- a **Show Monsters** switch plus independent shape, color, alpha, and marker
+  size for Normal, Minion, Champion, Unique, and Super Unique / Boss; each `X`
+  or `Player Cross` category also exposes its own **Thickness**, while `Dot`
+  deliberately does not;
 - immunity display mode, indicator size or halo thickness, and six element
   colors;
 - an **Objects** master switch plus independent exit labels, waypoint labels,
   shrine text, chests, super chests and stars, armor racks, and weapon racks,
   with the relevant colors and sizes;
+- missile visibility plus independent Fire, Cold/Ice, Lightning, Poison,
+  Physical, and Magic colors and sizes;
 - Direct-navigation thickness plus independent activation and colors for the
-  waypoint, main progression, and custom-level lines; the custom section also
-  shows the number of manually configured target levels.
+  waypoint, main progression, quest, and custom-level lines.
 
 Each color opens in a compact picker; permanent technical RGBA fields are not
 shown in the panel. Hovering the color preview displays a custom technical
-tooltip above the pointer. Theme selection and localization are deferred.
+tooltip above the pointer. The panel text itself is currently English. Gameplay
+names come from D2R's active localized data catalog, except that the composed
+waypoint label still appends the fixed English suffix ` Waypoint`.
 
 Closing or collapsing the panel returns to the launcher. Appearance, position,
 and opacity changes are saved to the active MapSense configuration
@@ -742,7 +767,7 @@ fluidity gates remain to be measured.
 
 ## Configuration migration
 
-MapSense 0.13.12 writes configuration schema 14. Existing schemas 1 through 13 are
+MapSense 0.13.41 writes configuration schema 16. Existing schemas 1 through 15 are
 accepted only when they do not contain a removed key. Schemas 1 through 3
 migrate with `x` for every category, preserving
 the earlier hollow angular-cross appearance instead of silently changing marker
@@ -777,7 +802,7 @@ red quest family and
 exposes its switch and color in the in-game menu. Because schema 7 kept the
 reserved quest switch hidden and disabled, its exact old false value migrates
 once to enabled; schema 8 then preserves the player's explicit choice. Saving
-any accepted legacy configuration writes schema 15.
+any accepted legacy configuration writes schema 16.
 
 Schema 10 adds the optional boss-name fields and the complete `objects`
 section. Older schemas migrate to the documented 0.13.0 defaults: yellow exit
@@ -790,7 +815,7 @@ Schema 11 changes only exact former defaults: shrine text now shares the exit
 label gold, normal chest interiors use gold, and locked chest interiors use
 amber instead of green. Every user-customized schema-10 color is preserved.
 
-Schema 12 adds the persistent `[general].features_enabled` master state. Chests
+Schema 12 added the former `[general].features_enabled` master state. Chests
 now use `outline_color`, `interior_color`, `locked_accent_color`, and
 `trapped_accent_color`. Special chests inherit that exact palette, size, and
 geometry; their table retains only its visibility and star controls. Schemas 10
@@ -812,6 +837,15 @@ Schema 15 adds `[missiles]` plus Fire, Cold, Lightning, Poison, Physical and
 Magic color/size tables. Schemas 1 through 14 migrate to enabled with the exact
 PrimeMH defaults. The panel exposes every value, so the custom-level target list
 remains the only setting intended for manual TOML editing.
+
+Schema 16 keeps only `[general].enabled` as the MapSense master, adds
+`[monsters].enabled`, and adds `[menu].theme`. For schemas 12 through 15, the
+new master preserves the effective conjunction of the former `enabled` and
+`features_enabled` values. A legacy `[overlay].enabled = false` migrates by
+disabling monsters, immunities, missiles, objects, and every navigation-line
+family; the retired overlay key is never written again. The ten stable theme
+identifiers are independent from their English display names so a future menu
+localization can translate labels without breaking existing TOML files.
 
 The current defaults are 28 px for exit, waypoint, shrine, and boss text and
 36 px for chest/rack markers. The in-game sliders extend to 72 px for text
@@ -835,51 +869,17 @@ is expected to recover its autonomous renderer if a MapSense host goes away.
 
 ## Reveal controls
 
-The plugin registers four independent actions in the D2R Controls menu under
+The plugin registers two independent actions in the D2R Controls menu under
 `RuffnecKk Suite`. They intentionally have no default binding:
 
-- `Reveal Current Level` remembers the stable current LevelId and calls the
-  native automap callback for every room in that level. Its stable logical ID
-  remains `reveal-zone` for existing bindings.
-- `Reveal Current Act` dispatches D2RCore's native `revealmap` operation for
-  the complete current act and remembers that act for later games.
-- `Toggle Reveal All Acts` reveals the complete current act immediately and
-  arms the same operation once when each later act loads. Press it again to disarm.
+- `Toggle Reveal Map` arms or disarms the seed/difficulty-scoped native atlas;
 - `Toggle MapSense Settings` expands or collapses the settings panel.
 
-D2R exposes generated client geometry incrementally. MapSense never manually
-mass-initializes unloaded act levels. Whole-act requests use D2RCore's native
-`revealmap` command on D2R's UI thread; single-level requests use the already
-fingerprinted room callback. The plugin keeps remembered
-LevelIds, ActIds, and Reveal All intent for the lifetime of the MapSense
-process. Save & Exit followed by a new game at the same difficulty resets only
-per-session acceptance/deduplication. After `LocalPlayerReady`, the current
-level is directly confirmed after a 750 ms readiness delay, with at most eight
-retries spaced 250 ms apart. A remembered Act or All request is then submitted
-only after the first real native automap pass for that level. Complete-act
-command acceptance and direct current-level confirmation are tracked
-independently, so an early accepted command can no longer suppress the
-per-level replay. Matching remembered levels are confirmed again as newly
-generated geometry appears.
-After whole-act acceptance, the bounded InitLevel observer builds exit labels
-and waypoint labels from every materialized Level linked to that act's generated
-DRLG. Retrying these catalogs is independent of the current-level
-Direct-navigation line, and changing levels preserves them until D2R reports an
-act or session transition. Save & Exit clears all copied positions. The
-remembered Reveal Level/Act/All intent then replays on the new game and rebuilds
-the waypoint catalog from that game's new generated seed; stale coordinates are
-never reused.
-Reveal-wide catalog collection is passive: it scans only generated `DrlgRoom`,
-`RoomTile`, and `PresetUnit` data that D2R has already linked and never calls
-`DRLGROOM_CreateActiveRoom` itself. Waypoint and exit owners settle
-independently, so one incomplete family preserves its previous proof without
-blocking a complete result from the other. Only the local-player navigation
-refresh retains the bounded room-materialization path needed for exact current
-routes.
-An actual Normal/Nightmare/Hell change clears all remembered Reveal intent;
-an unknown difficulty fails closed. `off` only disarms progressive Reveal All
-and does not erase automap exploration already held by D2R. This memory is not
-written to TOML or a character save and does not survive a process restart.
+The setting is also exposed as the ordinary `Reveal Map` checkbox in the ImGui
+panel. Its intent persists outside TOML under the exact seed and difficulty;
+same-seed cold starts restore it, while a reroll or difficulty change does not
+inherit it. Disarming reveal, or turning off the MapSense master, cannot erase
+cells that D2R already holds as explored.
 
 The equivalent console commands are:
 

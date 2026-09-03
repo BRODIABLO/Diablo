@@ -266,7 +266,6 @@ void DrawImmunityPreview(const ImmunityOptions& immunities) {
 void DrawMapTab(Config& draft) {
     DrawSectionTitle("MapSense overlay");
     ImGui::Checkbox("Enable MapSense", &draft.enabled);
-    ImGui::Checkbox("Enable overlay", &draft.overlay.enabled);
     ImGui::Checkbox(
         "Show diagnostic witness scene",
         &draft.overlay.diagnosticPreview);

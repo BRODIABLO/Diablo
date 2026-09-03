@@ -1,4 +1,5 @@
 #include "imgui_settings_panel.hpp"
+#include "ui_localization.hpp"
 
 #include <imgui.h>
 
@@ -30,64 +31,210 @@ auto GetPositionRuntimeState() noexcept -> PositionRuntimeState& {
     return state;
 }
 
+struct MenuCorePalette final {
+    ImVec4 background;
+    ImVec4 surface;
+    ImVec4 accent;
+    ImVec4 text;
+};
+
+struct MenuPanelPalette final {
+    ImVec4 text;
+    ImVec4 windowBg;
+    ImVec4 border;
+    ImVec4 titleBg;
+    ImVec4 titleBgActive;
+    ImVec4 frameBg;
+    ImVec4 frameBgHovered;
+    ImVec4 frameBgActive;
+    ImVec4 button;
+    ImVec4 buttonHovered;
+    ImVec4 buttonActive;
+    ImVec4 header;
+    ImVec4 headerHovered;
+    ImVec4 headerActive;
+    ImVec4 checkMark;
+    ImVec4 sliderGrab;
+    ImVec4 sliderGrabActive;
+};
+
+[[nodiscard]] auto Rgb(
+        std::uint32_t value,
+        float alpha = 1.0F) noexcept -> ImVec4 {
+    constexpr auto Denominator = 255.0F;
+    return {
+        static_cast<float>((value >> 16U) & 0xFFU) / Denominator,
+        static_cast<float>((value >> 8U) & 0xFFU) / Denominator,
+        static_cast<float>(value & 0xFFU) / Denominator,
+        alpha,
+    };
+}
+
+[[nodiscard]] auto Mix(
+        const ImVec4& left,
+        const ImVec4& right,
+        float amount) noexcept -> ImVec4 {
+    const auto inverse = 1.0F - amount;
+    return {
+        left.x * inverse + right.x * amount,
+        left.y * inverse + right.y * amount,
+        left.z * inverse + right.z * amount,
+        left.w * inverse + right.w * amount,
+    };
+}
+
+[[nodiscard]] auto MakeDerivedPalette(
+        const MenuCorePalette& core) noexcept -> MenuPanelPalette {
+    auto windowBg = core.background;
+    windowBg.w = 0.98F;
+    return {
+        core.text,
+        windowBg,
+        Mix(core.surface, core.accent, 0.55F),
+        Mix(core.background, core.surface, 0.35F),
+        Mix(core.background, core.surface, 0.78F),
+        core.surface,
+        Mix(core.surface, core.accent, 0.25F),
+        Mix(core.surface, core.accent, 0.42F),
+        Mix(core.background, core.surface, 0.72F),
+        Mix(core.surface, core.accent, 0.34F),
+        Mix(core.surface, core.accent, 0.54F),
+        Mix(core.background, core.surface, 0.76F),
+        Mix(core.surface, core.accent, 0.31F),
+        Mix(core.surface, core.accent, 0.50F),
+        core.accent,
+        Mix(core.surface, core.accent, 0.58F),
+        core.accent,
+    };
+}
+
+[[nodiscard]] auto PaletteFor(MenuTheme theme) noexcept -> MenuPanelPalette {
+    if (theme == MenuTheme::SanctuaryGold) {
+        // Preserve the established MapSense appearance as the default theme.
+        return {
+            {0.86F, 0.80F, 0.67F, 1.0F},
+            {0.025F, 0.018F, 0.014F, 0.98F},
+            {0.62F, 0.48F, 0.22F, 1.0F},
+            {0.055F, 0.030F, 0.020F, 1.0F},
+            {0.12F, 0.065F, 0.030F, 1.0F},
+            {0.12F, 0.065F, 0.038F, 1.0F},
+            {0.22F, 0.12F, 0.055F, 1.0F},
+            {0.30F, 0.17F, 0.07F, 1.0F},
+            {0.18F, 0.09F, 0.045F, 1.0F},
+            {0.34F, 0.20F, 0.075F, 1.0F},
+            {0.48F, 0.30F, 0.095F, 1.0F},
+            {0.19F, 0.10F, 0.045F, 1.0F},
+            {0.31F, 0.19F, 0.07F, 1.0F},
+            {0.43F, 0.28F, 0.10F, 1.0F},
+            {0.86F, 0.67F, 0.24F, 1.0F},
+            {0.62F, 0.48F, 0.22F, 1.0F},
+            {0.86F, 0.67F, 0.24F, 1.0F},
+        };
+    }
+
+    MenuCorePalette core{};
+    switch (theme) {
+        case MenuTheme::Hellfire:
+            core = {Rgb(0x090303U), Rgb(0x260907U),
+                Rgb(0xF05A28U), Rgb(0xF3D7C1U)};
+            break;
+        case MenuTheme::HoradricSand:
+            core = {Rgb(0x0B0803U), Rgb(0x2B1B09U),
+                Rgb(0xE3B85BU), Rgb(0xF0E2BDU)};
+            break;
+        case MenuTheme::ArcaneSanctuary:
+            core = {Rgb(0x050513U), Rgb(0x17152EU),
+                Rgb(0xA96DFFU), Rgb(0xECE6FFU)};
+            break;
+        case MenuTheme::TristramMoon:
+            core = {Rgb(0x04080DU), Rgb(0x101D2AU),
+                Rgb(0x61B7E8U), Rgb(0xDCEBF4U)};
+            break;
+        case MenuTheme::KurastJade:
+            core = {Rgb(0x03100AU), Rgb(0x0D2B1DU),
+                Rgb(0x49C98AU), Rgb(0xD8ECDDU)};
+            break;
+        case MenuTheme::NecromancerBone:
+            core = {Rgb(0x070906U), Rgb(0x171C14U),
+                Rgb(0x9CCB55U), Rgb(0xE1E0C9U)};
+            break;
+        case MenuTheme::HarrogathFrost:
+            core = {Rgb(0x040A12U), Rgb(0x102536U),
+                Rgb(0x72D8F0U), Rgb(0xE2F7FAU)};
+            break;
+        case MenuTheme::BloodMoor:
+            core = {Rgb(0x0B0405U), Rgb(0x2A0E14U),
+                Rgb(0xD74658U), Rgb(0xEFD7DAU)};
+            break;
+        case MenuTheme::HighContrast:
+            core = {Rgb(0x000000U), Rgb(0x161616U),
+                Rgb(0xFFD83DU), Rgb(0xFFFFFFU)};
+            break;
+        case MenuTheme::SanctuaryGold:
+            break;
+    }
+    return MakeDerivedPalette(core);
+}
+
 class ScopedPanelStyle final {
 public:
-    ScopedPanelStyle() noexcept {
+    explicit ScopedPanelStyle(MenuTheme theme) noexcept {
+        const auto palette = PaletteFor(theme);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 2.0F);
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 1.0F);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0F);
 
         ImGui::PushStyleColor(
             ImGuiCol_Text,
-            ImVec4{0.86F, 0.80F, 0.67F, 1.0F});
+            palette.text);
         ImGui::PushStyleColor(
             ImGuiCol_WindowBg,
-            ImVec4{0.025F, 0.018F, 0.014F, 0.98F});
+            palette.windowBg);
         ImGui::PushStyleColor(
             ImGuiCol_Border,
-            ImVec4{0.62F, 0.48F, 0.22F, 1.0F});
+            palette.border);
         ImGui::PushStyleColor(
             ImGuiCol_TitleBg,
-            ImVec4{0.055F, 0.030F, 0.020F, 1.0F});
+            palette.titleBg);
         ImGui::PushStyleColor(
             ImGuiCol_TitleBgActive,
-            ImVec4{0.12F, 0.065F, 0.030F, 1.0F});
+            palette.titleBgActive);
         ImGui::PushStyleColor(
             ImGuiCol_FrameBg,
-            ImVec4{0.12F, 0.065F, 0.038F, 1.0F});
+            palette.frameBg);
         ImGui::PushStyleColor(
             ImGuiCol_FrameBgHovered,
-            ImVec4{0.22F, 0.12F, 0.055F, 1.0F});
+            palette.frameBgHovered);
         ImGui::PushStyleColor(
             ImGuiCol_FrameBgActive,
-            ImVec4{0.30F, 0.17F, 0.07F, 1.0F});
+            palette.frameBgActive);
         ImGui::PushStyleColor(
             ImGuiCol_Button,
-            ImVec4{0.18F, 0.09F, 0.045F, 1.0F});
+            palette.button);
         ImGui::PushStyleColor(
             ImGuiCol_ButtonHovered,
-            ImVec4{0.34F, 0.20F, 0.075F, 1.0F});
+            palette.buttonHovered);
         ImGui::PushStyleColor(
             ImGuiCol_ButtonActive,
-            ImVec4{0.48F, 0.30F, 0.095F, 1.0F});
+            palette.buttonActive);
         ImGui::PushStyleColor(
             ImGuiCol_Header,
-            ImVec4{0.19F, 0.10F, 0.045F, 1.0F});
+            palette.header);
         ImGui::PushStyleColor(
             ImGuiCol_HeaderHovered,
-            ImVec4{0.31F, 0.19F, 0.07F, 1.0F});
+            palette.headerHovered);
         ImGui::PushStyleColor(
             ImGuiCol_HeaderActive,
-            ImVec4{0.43F, 0.28F, 0.10F, 1.0F});
+            palette.headerActive);
         ImGui::PushStyleColor(
             ImGuiCol_CheckMark,
-            ImVec4{0.86F, 0.67F, 0.24F, 1.0F});
+            palette.checkMark);
         ImGui::PushStyleColor(
             ImGuiCol_SliderGrab,
-            ImVec4{0.62F, 0.48F, 0.22F, 1.0F});
+            palette.sliderGrab);
         ImGui::PushStyleColor(
             ImGuiCol_SliderGrabActive,
-            ImVec4{0.86F, 0.67F, 0.24F, 1.0F});
+            palette.sliderGrabActive);
     }
 
     ~ScopedPanelStyle() noexcept {
@@ -105,6 +252,32 @@ void Invoke(
     if (callback != nullptr) {
         callback(action);
     }
+}
+
+[[nodiscard]] auto MenuThemeLabel(MenuTheme theme) noexcept -> const char* {
+    switch (theme) {
+        case MenuTheme::SanctuaryGold:
+            return UiText(UiTextId::ThemeSanctuaryGold);
+        case MenuTheme::Hellfire:
+            return UiText(UiTextId::ThemeHellfire);
+        case MenuTheme::HoradricSand:
+            return UiText(UiTextId::ThemeHoradricSand);
+        case MenuTheme::ArcaneSanctuary:
+            return UiText(UiTextId::ThemeArcaneSanctuary);
+        case MenuTheme::TristramMoon:
+            return UiText(UiTextId::ThemeTristramMoon);
+        case MenuTheme::KurastJade:
+            return UiText(UiTextId::ThemeKurastJade);
+        case MenuTheme::NecromancerBone:
+            return UiText(UiTextId::ThemeNecromancerBone);
+        case MenuTheme::HarrogathFrost:
+            return UiText(UiTextId::ThemeHarrogathFrost);
+        case MenuTheme::BloodMoor:
+            return UiText(UiTextId::ThemeBloodMoor);
+        case MenuTheme::HighContrast:
+            return UiText(UiTextId::ThemeHighContrast);
+    }
+    return UiText(UiTextId::ThemeSanctuaryGold);
 }
 
 void UpdateRememberedPosition(
@@ -126,26 +299,17 @@ void UpdateRememberedPosition(
         : 0.0F;
 }
 
-void DrawActionButton(
-        const char* label,
-        const ImGuiSettingsAction action,
-        const ImGuiSettingsActionCallback callback) noexcept {
-    if (ImGui::Button(label, ImVec2{ImGui::GetContentRegionAvail().x, 0.0F})) {
-        Invoke(callback, action);
-    }
-}
-
 [[nodiscard]] auto MonsterMarkerShapeLabel(
         MonsterMarkerShape shape) noexcept -> const char* {
     switch (shape) {
         case MonsterMarkerShape::X:
             return "X";
         case MonsterMarkerShape::PlayerCross:
-            return "Player Cross";
+            return UiText(UiTextId::PlayerCross);
         case MonsterMarkerShape::Dot:
-            return "Dot";
+            return UiText(UiTextId::Dot);
     }
-    return "Player Cross";
+    return UiText(UiTextId::PlayerCross);
 }
 
 [[nodiscard]] auto DrawMonsterMarkerShape(
@@ -157,7 +321,9 @@ void DrawActionButton(
     };
 
     auto changed = false;
-    if (ImGui::BeginCombo("Shape", MonsterMarkerShapeLabel(shape))) {
+    if (ImGui::BeginCombo(
+            UiText(UiTextId::Shape),
+            MonsterMarkerShapeLabel(shape))) {
         for (const auto candidate : Shapes) {
             const auto selected = candidate == shape;
             if (ImGui::Selectable(
@@ -177,11 +343,11 @@ void DrawActionButton(
         ImmunityDisplayStyle style) noexcept -> const char* {
     switch (style) {
         case ImmunityDisplayStyle::ColoredI:
-            return "Colored i";
+            return UiText(UiTextId::ColoredI);
         case ImmunityDisplayStyle::SplitHalo:
-            return "Split Halo";
+            return UiText(UiTextId::SplitHalo);
     }
-    return "Colored i";
+    return UiText(UiTextId::ColoredI);
 }
 
 [[nodiscard]] auto DrawImmunityDisplayStyle(
@@ -192,7 +358,9 @@ void DrawActionButton(
     };
 
     auto changed = false;
-    if (ImGui::BeginCombo("Style", ImmunityDisplayStyleLabel(style))) {
+    if (ImGui::BeginCombo(
+            UiText(UiTextId::Style),
+            ImmunityDisplayStyleLabel(style))) {
         for (const auto candidate : Styles) {
             const auto selected = candidate == style;
             if (ImGui::Selectable(
@@ -288,7 +456,8 @@ void DrawColorDetailsTooltip(
 [[nodiscard]] auto DrawMonsterMarkerColor(
         RgbaColor& color,
         float dpiScale,
-        const char* label = "Color") noexcept -> bool {
+        const char* label = nullptr) noexcept -> bool {
+    if (label == nullptr) label = UiText(UiTextId::Color);
     auto channels = std::array<float, 4>{
         color.red,
         color.green,
@@ -384,7 +553,7 @@ void DrawColorDetailsTooltip(
 }
 
 struct ImmunityColorControl final {
-    const char* label;
+    UiTextId label;
     RgbaColor ImmunityOptions::* color;
 };
 
@@ -392,12 +561,12 @@ struct ImmunityColorControl final {
         ImmunityOptions& immunities,
         float dpiScale) noexcept -> bool {
     constexpr std::array Controls{
-        ImmunityColorControl{"Physical", &ImmunityOptions::physical},
-        ImmunityColorControl{"Fire", &ImmunityOptions::fire},
-        ImmunityColorControl{"Lightning", &ImmunityOptions::lightning},
-        ImmunityColorControl{"Cold", &ImmunityOptions::cold},
-        ImmunityColorControl{"Poison", &ImmunityOptions::poison},
-        ImmunityColorControl{"Magic", &ImmunityOptions::magic},
+        ImmunityColorControl{UiTextId::Physical, &ImmunityOptions::physical},
+        ImmunityColorControl{UiTextId::Fire, &ImmunityOptions::fire},
+        ImmunityColorControl{UiTextId::Lightning, &ImmunityOptions::lightning},
+        ImmunityColorControl{UiTextId::Cold, &ImmunityOptions::cold},
+        ImmunityColorControl{UiTextId::Poison, &ImmunityOptions::poison},
+        ImmunityColorControl{UiTextId::Magic, &ImmunityOptions::magic},
     };
 
     auto saveRequested = false;
@@ -407,11 +576,11 @@ struct ImmunityColorControl final {
             ImGuiTableFlags_SizingStretchSame)) {
         for (const auto& control : Controls) {
             ImGui::TableNextColumn();
-            ImGui::PushID(control.label);
+            ImGui::PushID(static_cast<int>(control.label));
             saveRequested |= DrawMonsterMarkerColor(
                 immunities.*(control.color),
                 dpiScale,
-                control.label);
+                UiText(control.label));
             ImGui::PopID();
         }
         ImGui::EndTable();
@@ -430,7 +599,7 @@ struct ImmunityColorControl final {
     auto saveRequested = DrawMonsterMarkerShape(style.shape);
 
     (void)ImGui::SliderFloat(
-        "Size",
+        UiText(UiTextId::Size),
         &style.size,
         MinimumMonsterMarkerSize,
         MaximumMonsterMarkerSize,
@@ -440,7 +609,7 @@ struct ImmunityColorControl final {
 
     if (style.shape != MonsterMarkerShape::Dot) {
         (void)ImGui::SliderFloat(
-            "Thickness",
+            UiText(UiTextId::Thickness),
             &style.thickness,
             MinimumMonsterMarkerThickness,
             MaximumMonsterMarkerThickness,
@@ -452,13 +621,13 @@ struct ImmunityColorControl final {
 
     if (drawNameOptions) {
         ImGui::PushID("Names");
-        ImGui::SeparatorText("Names");
+        ImGui::SeparatorText(UiText(UiTextId::Names));
         saveRequested |= ImGui::Checkbox(
-            "Show Names",
+            UiText(UiTextId::ShowNames),
             &style.showNames);
         if (style.showNames) {
             (void)ImGui::SliderFloat(
-                "Name Size",
+                UiText(UiTextId::NameSize),
                 &style.nameSize,
                 MinimumAutomapLabelSize,
                 MaximumAutomapLabelSize,
@@ -468,7 +637,7 @@ struct ImmunityColorControl final {
             saveRequested |= DrawMonsterMarkerColor(
                 style.nameColor,
                 dpiScale,
-                "Name Color");
+                UiText(UiTextId::NameColor));
         }
         ImGui::PopID();
     }
@@ -487,7 +656,7 @@ struct ImmunityColorControl final {
     auto saveRequested = ImGui::Checkbox(enabledLabel, &options.enabled);
     if (options.enabled) {
         (void)ImGui::SliderFloat(
-            "Text Size",
+            UiText(UiTextId::TextSize),
             &options.size,
             MinimumAutomapLabelSize,
             MaximumAutomapLabelSize,
@@ -497,7 +666,7 @@ struct ImmunityColorControl final {
         saveRequested |= DrawMonsterMarkerColor(
             options.color,
             dpiScale,
-            "Text Color");
+            UiText(UiTextId::TextColor));
     }
     ImGui::PopID();
     return saveRequested;
@@ -513,7 +682,7 @@ struct ImmunityColorControl final {
     auto saveRequested = ImGui::Checkbox(enabledLabel, &options.enabled);
     if (options.enabled) {
         (void)ImGui::SliderFloat(
-            "Marker Size",
+            UiText(UiTextId::MarkerSize),
             &options.size,
             MinimumAutomapObjectSize,
             MaximumAutomapObjectSize,
@@ -524,7 +693,7 @@ struct ImmunityColorControl final {
         saveRequested |= DrawMonsterMarkerColor(
             options.color,
             dpiScale,
-            "Marker Color");
+            UiText(UiTextId::MarkerColor));
         ImGui::PopID();
     }
     ImGui::PopID();
@@ -536,13 +705,13 @@ struct ImmunityColorControl final {
         SuperChestOptions& specialOptions,
         float dpiScale) noexcept -> bool {
     ImGui::PushID("Chests");
-    ImGui::SeparatorText("Chests");
+    ImGui::SeparatorText(UiText(UiTextId::Chests));
     auto saveRequested = ImGui::Checkbox(
-        "Show Chests",
+        UiText(UiTextId::ShowChests),
         &options.enabled);
     if (options.enabled) {
         (void)ImGui::SliderFloat(
-            "Marker Size",
+            UiText(UiTextId::MarkerSize),
             &options.size,
             MinimumAutomapObjectSize,
             MaximumAutomapObjectSize,
@@ -554,19 +723,19 @@ struct ImmunityColorControl final {
         saveRequested |= DrawMonsterMarkerColor(
             options.lockedAccentColor,
             dpiScale,
-            "Locked Lock Color");
+            UiText(UiTextId::LockedLockColor));
         ImGui::PopID();
         ImGui::PushID("TrappedAccentColor");
         saveRequested |= DrawMonsterMarkerColor(
             options.trappedAccentColor,
             dpiScale,
-            "Trapped Lock Color");
+            UiText(UiTextId::TrappedLockColor));
         ImGui::PopID();
     }
 
-    ImGui::SeparatorText("Special Chests");
+    ImGui::SeparatorText(UiText(UiTextId::SpecialChests));
     saveRequested |= ImGui::Checkbox(
-        "Show Special Chests",
+        UiText(UiTextId::ShowSpecialChests),
         &specialOptions.enabled);
     ImGui::PopID();
     return saveRequested;
@@ -579,7 +748,7 @@ struct ImmunityColorControl final {
     ImGui::PushID(label);
     ImGui::SeparatorText(label);
     (void)ImGui::SliderFloat(
-        "Size",
+        UiText(UiTextId::Size),
         &style.size,
         MinimumMissileMarkerSize,
         MaximumMissileMarkerSize,
@@ -602,7 +771,7 @@ struct ImmunityColorControl final {
     saveRequested |= DrawMonsterMarkerColor(
         options.color,
         dpiScale,
-        "Line Color");
+        UiText(UiTextId::LineColor));
     ImGui::PopID();
     return saveRequested;
 }
@@ -611,18 +780,15 @@ struct ImmunityColorControl final {
         CustomLevelLineOptions& options,
         float dpiScale) noexcept -> bool {
     ImGui::PushID("CustomLevelLines");
-    ImGui::SeparatorText("Custom Levels");
+    ImGui::SeparatorText(UiText(UiTextId::CustomLevels));
     auto saveRequested = ImGui::Checkbox(
-        "Custom Level Lines",
+        UiText(UiTextId::CustomLevelLines),
         &options.enabled);
     saveRequested |= DrawMonsterMarkerColor(
         options.color,
         dpiScale,
-        "Line Color");
-    ImGui::TextDisabled(
-        "%zu configured destination%s",
-        options.targets.size(),
-        options.targets.size() == 1U ? "" : "s");
+        UiText(UiTextId::LineColor));
+    ImGui::TextDisabled("%s", UiText(UiTextId::CustomTomlHint));
     ImGui::PopID();
     return saveRequested;
 }
@@ -635,7 +801,7 @@ auto DrawImGuiSettingsPanel(
         bool revealMapEnabled,
         const ImGuiSettingsActionCallback actionCallback) noexcept
         -> ImGuiSettingsBounds {
-    const ScopedPanelStyle style{};
+    const ScopedPanelStyle style{config.menu.theme};
     const auto& io = ImGui::GetIO();
     const auto dpiScale = std::max(1.0F, io.FontGlobalScale);
     const auto frameExpanded = expanded;
@@ -711,80 +877,97 @@ auto DrawImGuiSettingsPanel(
     if (contentVisible) {
         if (!frameExpanded) {
             if (ImGui::Button(
-                    config.featuresEnabled ? "Open" : "Open (PAUSED)",
+                    config.enabled
+                        ? UiText(UiTextId::Open)
+                        : UiText(UiTextId::OpenOff),
                     ImVec2{ImGui::GetContentRegionAvail().x, 0.0F})) {
                 expanded = true;
             }
         } else {
-            if (ImGui::Button("Collapse")) {
+            if (ImGui::Button(UiText(UiTextId::Collapse))) {
                 expanded = false;
             }
 
-            const auto masterLabel = config.featuresEnabled
-                ? "Pause All MapSense Features"
-                : "Resume All MapSense Features";
-            if (ImGui::Button(
-                    masterLabel,
-                    ImVec2{ImGui::GetContentRegionAvail().x, 0.0F})) {
-                config.featuresEnabled = !config.featuresEnabled;
-                saveRequested = true;
-            }
-            if (!config.featuresEnabled) {
-                ImGui::TextDisabled(
-                    "Features are suspended. Cells already revealed by D2R remain revealed.");
+            saveRequested |= ImGui::Checkbox(
+                UiText(UiTextId::EnableMapSense),
+                &config.enabled);
+
+            if (ImGui::CollapsingHeader(UiText(UiTextId::Appearance))) {
+                if (ImGui::BeginCombo(
+                        UiText(UiTextId::MenuTheme),
+                        MenuThemeLabel(config.menu.theme))) {
+                    for (const auto theme : MenuThemes) {
+                        const auto selected = config.menu.theme == theme;
+                        if (ImGui::Selectable(
+                                MenuThemeLabel(theme),
+                                selected)) {
+                            config.menu.theme = theme;
+                            saveRequested = true;
+                        }
+                        if (selected) ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
             }
 
             if (ImGui::CollapsingHeader(
-                    "Reveal Map",
+                    UiText(UiTextId::MapAndReveal),
                     ImGuiTreeNodeFlags_DefaultOpen)) {
+                auto revealMap = revealMapEnabled;
+                ImGui::BeginDisabled(!config.enabled);
+                if (ImGui::Checkbox(
+                        UiText(UiTextId::RevealMap),
+                        &revealMap)) {
+                    Invoke(
+                        actionCallback,
+                        ImGuiSettingsAction::ToggleRevealMap);
+                }
+                ImGui::EndDisabled();
+
                 (void)ImGui::SliderFloat(
-                    "Additions Opacity",
+                    UiText(UiTextId::AdditionsOpacity),
                     &config.overlay.opacity,
                     0.10F,
                     1.0F,
                     "%.2f",
                     ImGuiSliderFlags_AlwaysClamp);
                 saveRequested |= ImGui::IsItemDeactivatedAfterEdit();
-
-                ImGui::BeginDisabled(!config.featuresEnabled);
-                DrawActionButton(
-                    revealMapEnabled
-                        ? "Stop Persistent Reveal"
-                        : "Reveal Entire Difficulty",
-                    ImGuiSettingsAction::ToggleRevealMap,
-                    actionCallback);
-                ImGui::EndDisabled();
             }
 
             if (ImGui::CollapsingHeader(
-                    "Monsters",
+                    UiText(UiTextId::Monsters),
                     ImGuiTreeNodeFlags_DefaultOpen)) {
+                saveRequested |= ImGui::Checkbox(
+                    UiText(UiTextId::ShowMonsters),
+                    &config.monsters.enabled);
+                ImGui::BeginDisabled(!config.monsters.enabled);
                 saveRequested |= DrawMonsterMarkerStyle(
-                    "Normal",
+                    UiText(UiTextId::Normal),
                     config.monsters.normal,
                     dpiScale);
                 saveRequested |= DrawMonsterMarkerStyle(
-                    "Minion",
+                    UiText(UiTextId::Minion),
                     config.monsters.minion,
                     dpiScale);
                 saveRequested |= DrawMonsterMarkerStyle(
-                    "Champion",
+                    UiText(UiTextId::Champion),
                     config.monsters.champion,
                     dpiScale);
                 saveRequested |= DrawMonsterMarkerStyle(
-                    "Unique",
+                    UiText(UiTextId::Unique),
                     config.monsters.unique,
                     dpiScale);
                 saveRequested |= DrawMonsterMarkerStyle(
-                    "Super Unique / Boss",
+                    UiText(UiTextId::SuperUniqueBoss),
                     config.monsters.superUniqueBoss,
                     dpiScale,
                     true);
+                ImGui::EndDisabled();
             }
 
-            if (ImGui::CollapsingHeader("Immunities")) {
+            if (ImGui::CollapsingHeader(UiText(UiTextId::Immunities))) {
                 saveRequested |= ImGui::Checkbox(
-                    "Show Immunities",
+                    UiText(UiTextId::ShowImmunities),
                     &config.immunities.enabled);
 
                 if (config.immunities.enabled) {
@@ -794,7 +977,7 @@ auto DrawImGuiSettingsPanel(
                     if (config.immunities.style
                             == ImmunityDisplayStyle::ColoredI) {
                         (void)ImGui::SliderFloat(
-                            "Indicator Size",
+                            UiText(UiTextId::IndicatorSize),
                             &config.immunities.indicatorSize,
                             MinimumImmunityIndicatorSize,
                             MaximumImmunityIndicatorSize,
@@ -802,7 +985,7 @@ auto DrawImGuiSettingsPanel(
                             ImGuiSliderFlags_AlwaysClamp);
                     } else {
                         (void)ImGui::SliderFloat(
-                            "Halo Thickness",
+                            UiText(UiTextId::HaloThickness),
                             &config.immunities.haloThickness,
                             MinimumImmunityHaloThickness,
                             MaximumImmunityHaloThickness,
@@ -811,52 +994,64 @@ auto DrawImGuiSettingsPanel(
                     }
                     saveRequested |= ImGui::IsItemDeactivatedAfterEdit();
 
-                    ImGui::SeparatorText("Colors");
+                    ImGui::SeparatorText(UiText(UiTextId::Colors));
                     saveRequested |= DrawImmunityColors(
                         config.immunities,
                         dpiScale);
                 }
             }
 
-            if (ImGui::CollapsingHeader("Missiles")) {
+            if (ImGui::CollapsingHeader(UiText(UiTextId::Missiles))) {
                 saveRequested |= ImGui::Checkbox(
-                    "Show Missiles",
+                    UiText(UiTextId::ShowMissiles),
                     &config.missiles.enabled);
                 if (config.missiles.enabled) {
                     saveRequested |= DrawMissileMarkerStyle(
-                        "Fire", config.missiles.fire, dpiScale);
+                        UiText(UiTextId::Fire),
+                        config.missiles.fire,
+                        dpiScale);
                     saveRequested |= DrawMissileMarkerStyle(
-                        "Cold / Ice", config.missiles.cold, dpiScale);
+                        UiText(UiTextId::ColdIce),
+                        config.missiles.cold,
+                        dpiScale);
                     saveRequested |= DrawMissileMarkerStyle(
-                        "Lightning", config.missiles.lightning, dpiScale);
+                        UiText(UiTextId::Lightning),
+                        config.missiles.lightning,
+                        dpiScale);
                     saveRequested |= DrawMissileMarkerStyle(
-                        "Poison", config.missiles.poison, dpiScale);
+                        UiText(UiTextId::Poison),
+                        config.missiles.poison,
+                        dpiScale);
                     saveRequested |= DrawMissileMarkerStyle(
-                        "Physical", config.missiles.physical, dpiScale);
+                        UiText(UiTextId::Physical),
+                        config.missiles.physical,
+                        dpiScale);
                     saveRequested |= DrawMissileMarkerStyle(
-                        "Magic", config.missiles.magic, dpiScale);
+                        UiText(UiTextId::Magic),
+                        config.missiles.magic,
+                        dpiScale);
                 }
             }
 
-            if (ImGui::CollapsingHeader("Objects")) {
+            if (ImGui::CollapsingHeader(UiText(UiTextId::Objects))) {
                 saveRequested |= ImGui::Checkbox(
-                    "Show Automap Objects",
+                    UiText(UiTextId::ShowAutomapObjects),
                     &config.objects.enabled);
 
                 if (config.objects.enabled) {
                     saveRequested |= DrawAutomapLabelOptions(
-                        "Exit Labels",
-                        "Show Exit Labels",
+                        UiText(UiTextId::ExitLabels),
+                        UiText(UiTextId::ShowExitLabels),
                         config.objects.exitLabels,
                         dpiScale);
                     saveRequested |= DrawAutomapLabelOptions(
-                        "Waypoint Labels",
-                        "Show Waypoint Labels",
+                        UiText(UiTextId::WaypointLabels),
+                        UiText(UiTextId::ShowWaypointLabels),
                         config.objects.waypointLabels,
                         dpiScale);
                     saveRequested |= DrawAutomapLabelOptions(
-                        "Shrine Labels",
-                        "Show Shrine Labels",
+                        UiText(UiTextId::ShrineLabels),
+                        UiText(UiTextId::ShowShrineLabels),
                         config.objects.shrineLabels,
                         dpiScale);
                     saveRequested |= DrawChestOptions(
@@ -864,21 +1059,21 @@ auto DrawImGuiSettingsPanel(
                         config.objects.superChests,
                         dpiScale);
                     saveRequested |= DrawAutomapObjectOptions(
-                        "Armor Racks",
-                        "Show Armor Racks",
+                        UiText(UiTextId::ArmorRacks),
+                        UiText(UiTextId::ShowArmorRacks),
                         config.objects.armorRacks,
                         dpiScale);
                     saveRequested |= DrawAutomapObjectOptions(
-                        "Weapon Racks",
-                        "Show Weapon Racks",
+                        UiText(UiTextId::WeaponRacks),
+                        UiText(UiTextId::ShowWeaponRacks),
                         config.objects.weaponRacks,
                         dpiScale);
                 }
             }
 
-            if (ImGui::CollapsingHeader("Navigation")) {
+            if (ImGui::CollapsingHeader(UiText(UiTextId::Navigation))) {
                 (void)ImGui::SliderFloat(
-                    "Line Thickness",
+                    UiText(UiTextId::LineThickness),
                     &config.navigation.lineThickness,
                     MinimumNavigationLineThickness,
                     MaximumNavigationLineThickness,
@@ -887,18 +1082,18 @@ auto DrawImGuiSettingsPanel(
                 saveRequested |= ImGui::IsItemDeactivatedAfterEdit();
 
                 saveRequested |= DrawNavigationLineOptions(
-                    "Waypoint",
-                    "Waypoint Line",
+                    UiText(UiTextId::Waypoint),
+                    UiText(UiTextId::WaypointLine),
                     config.navigation.waypoint,
                     dpiScale);
                 saveRequested |= DrawNavigationLineOptions(
-                    "Main Progression",
-                    "Main Progression Line",
+                    UiText(UiTextId::MainProgression),
+                    UiText(UiTextId::MainProgressionLine),
                     config.navigation.progression,
                     dpiScale);
                 saveRequested |= DrawNavigationLineOptions(
-                    "Quest Targets",
-                    "Quest Target Line",
+                    UiText(UiTextId::QuestTargets),
+                    UiText(UiTextId::QuestTargetLine),
                     config.navigation.quests,
                     dpiScale);
                 saveRequested |= DrawCustomLevelLineOptions(

@@ -656,8 +656,16 @@ void RememberFailedRequestLocked(const RequestKey& key) noexcept {
         const Request& request,
         std::uint8_t act,
         ExternalLabelProviderOperation operation,
-        ExternalAtlasGeometry* output = nullptr) noexcept
+        ExternalAtlasGeometry* output = nullptr,
+        std::string* combinedLabelOutput = nullptr,
+        bool* combinedHelperAttempted = nullptr,
+        HelperCommandResult* combinedHelperResult = nullptr) noexcept
         -> GeometryPreparationResult {
+    if (combinedLabelOutput != nullptr) combinedLabelOutput->clear();
+    if (combinedHelperAttempted != nullptr) {
+        *combinedHelperAttempted = false;
+    }
+    if (combinedHelperResult != nullptr) *combinedHelperResult = {};
     if (GeometryCacheRoot.empty() || act >= 5U
         || (operation != ExternalLabelProviderOperation::PrimaryGeometry
             && operation
@@ -701,24 +709,43 @@ void RememberFailedRequestLocked(const RequestKey& key) noexcept {
     try {
         temporary += L".generated-" + std::to_wstring(GetCurrentProcessId())
             + L"-" + std::to_wstring(GetTickCount64());
-        auto arguments = L"geometry-binary "
-            + std::to_wstring(request.seed) + L" "
-            + std::to_wstring(request.difficulty) + L" "
-            + std::to_wstring(act) + L" \""
-            + temporary.filename().wstring() + L"\"";
+        const bool combinePrimaryAtlas = operation
+                == ExternalLabelProviderOperation::PrimaryGeometry
+            && combinedLabelOutput != nullptr
+            && combinedHelperAttempted != nullptr
+            && combinedHelperResult != nullptr;
+        auto arguments = combinePrimaryAtlas
+            ? L"atlas-binary "
+                + std::to_wstring(request.seed) + L" "
+                + std::to_wstring(request.difficulty) + L" "
+                + std::to_wstring(act) + L" "
+                + std::to_wstring(request.currentLevelId) + L" \""
+                + temporary.filename().wstring() + L"\""
+            : L"geometry-binary "
+                + std::to_wstring(request.seed) + L" "
+                + std::to_wstring(request.difficulty) + L" "
+                + std::to_wstring(act) + L" \""
+                + temporary.filename().wstring() + L"\"";
         if (!AppendHelperDataSourceArguments(request, arguments)) {
             GeometryFailures.fetch_add(1U, std::memory_order_relaxed);
             return GeometryPreparationResult::Failed;
         }
         std::string diagnostics;
+        auto& helperOutput = combinePrimaryAtlas
+            ? *combinedLabelOutput
+            : diagnostics;
         const auto generationDirectory = temporary.parent_path();
         const auto helperResult = RunHelperCommand(
             arguments,
             request,
             static_cast<std::int32_t>(act),
             operation,
-            diagnostics,
+            helperOutput,
             &generationDirectory);
+        if (combinePrimaryAtlas) {
+            *combinedHelperAttempted = true;
+            *combinedHelperResult = helperResult;
+        }
         RecordHelperCommandResult(operation, helperResult);
         if (helperResult.cancelled) {
             std::filesystem::remove(temporary, error);
@@ -755,8 +782,8 @@ void RememberFailedRequestLocked(const RequestKey& key) noexcept {
                     static_cast<unsigned>(helperResult.timedOut),
                     bytes.size(),
                     static_cast<int>(std::min<std::size_t>(
-                        diagnostics.size(), 160U)),
-                    diagnostics.c_str());
+                    helperOutput.size(), 160U)),
+                    helperOutput.c_str());
                 Context->LogWarn(message);
             }
             return GeometryPreparationResult::Failed;
@@ -1300,10 +1327,25 @@ void WorkerMain() noexcept {
         }
 
         std::string response;
-        const auto labelResult = RunLabelHelper(request, response);
-        RecordHelperCommandResult(
-            ExternalLabelProviderOperation::Labels,
-            labelResult);
+        ExternalAtlasGeometry geometry;
+        bool combinedHelperAttempted{};
+        HelperCommandResult combinedHelperResult{};
+        const auto geometryResult = PrepareGeometryCacheAct(
+            request,
+            static_cast<std::uint8_t>(request.act),
+            ExternalLabelProviderOperation::PrimaryGeometry,
+            &geometry,
+            &response,
+            &combinedHelperAttempted,
+            &combinedHelperResult);
+        const auto labelResult = combinedHelperAttempted
+            ? combinedHelperResult
+            : RunLabelHelper(request, response);
+        if (!combinedHelperAttempted) {
+            RecordHelperCommandResult(
+                ExternalLabelProviderOperation::Labels,
+                labelResult);
+        }
         ParsedAtlas atlas;
         bool valid = labelResult.succeeded;
         try {
@@ -1377,12 +1419,6 @@ void WorkerMain() noexcept {
             }
         }
 
-        ExternalAtlasGeometry geometry;
-        const auto geometryResult = PrepareGeometryCacheAct(
-            request,
-            static_cast<std::uint8_t>(request.act),
-            ExternalLabelProviderOperation::PrimaryGeometry,
-            &geometry);
         if (geometryResult == GeometryPreparationResult::Cancelled) {
             std::scoped_lock lock(StateMutex);
             InFlightRequest.reset();

@@ -22,7 +22,7 @@
 
 namespace RuffnecKk::MapSense {
 
-inline constexpr std::int64_t CurrentConfigSchemaVersion = 15;
+inline constexpr std::int64_t CurrentConfigSchemaVersion = 16;
 
 inline constexpr float MinimumMonsterMarkerSize = 3.0F;
 inline constexpr float MaximumMonsterMarkerSize = 40.0F;
@@ -174,7 +174,6 @@ inline constexpr RgbaColor DefaultMagicMissileColor{
     1.0F, 136.0F / 255.0F, 0.0F, 127.0F / 255.0F};
 
 struct OverlayOptions {
-    bool enabled{true};
     bool diagnosticPreview{};
     bool followNativeAutomap{true};
     bool startMenuOpen{};
@@ -200,6 +199,7 @@ struct MonsterMarkerStyle {
 };
 
 struct MonsterOptions {
+    bool enabled{true};
     MonsterMarkerStyle normal{{1.0F, 1.0F, 1.0F, 1.0F}, 18.0F};
     MonsterMarkerStyle minion{{1.0F, 0.831F, 0.231F, 1.0F}, 18.0F};
     MonsterMarkerStyle champion{{0.239F, 0.545F, 1.0F, 1.0F}, 20.0F};
@@ -344,7 +344,57 @@ struct HudOptions {
     bool showWithAutomapOnly{};
 };
 
+enum class MenuTheme : std::uint8_t {
+    SanctuaryGold,
+    Hellfire,
+    HoradricSand,
+    ArcaneSanctuary,
+    TristramMoon,
+    KurastJade,
+    NecromancerBone,
+    HarrogathFrost,
+    BloodMoor,
+    HighContrast,
+};
+
+inline constexpr std::array<MenuTheme, 10> MenuThemes{
+    MenuTheme::SanctuaryGold,
+    MenuTheme::Hellfire,
+    MenuTheme::HoradricSand,
+    MenuTheme::ArcaneSanctuary,
+    MenuTheme::TristramMoon,
+    MenuTheme::KurastJade,
+    MenuTheme::NecromancerBone,
+    MenuTheme::HarrogathFrost,
+    MenuTheme::BloodMoor,
+    MenuTheme::HighContrast,
+};
+
+inline auto MenuThemeToString(MenuTheme theme) noexcept -> std::string_view {
+    switch (theme) {
+        case MenuTheme::SanctuaryGold: return "sanctuary_gold";
+        case MenuTheme::Hellfire: return "hellfire";
+        case MenuTheme::HoradricSand: return "horadric_sand";
+        case MenuTheme::ArcaneSanctuary: return "arcane_sanctuary";
+        case MenuTheme::TristramMoon: return "tristram_moon";
+        case MenuTheme::KurastJade: return "kurast_jade";
+        case MenuTheme::NecromancerBone: return "necromancer_bone";
+        case MenuTheme::HarrogathFrost: return "harrogath_frost";
+        case MenuTheme::BloodMoor: return "blood_moor";
+        case MenuTheme::HighContrast: return "high_contrast";
+    }
+    return "sanctuary_gold";
+}
+
+inline auto ParseMenuTheme(std::string_view text) -> MenuTheme {
+    for (const auto theme : MenuThemes) {
+        if (text == MenuThemeToString(theme)) return theme;
+    }
+    throw std::runtime_error("Unsupported MapSense menu theme");
+}
+
 struct MenuOptions {
+    MenuTheme theme{MenuTheme::SanctuaryGold};
     bool showLauncher{true};
     bool startExpanded{};
     bool rememberPosition{true};
@@ -354,7 +404,6 @@ struct MenuOptions {
 
 struct Config {
     bool enabled{true};
-    bool featuresEnabled{true};
     bool diagnostics{};
     OverlayOptions overlay{};
     MonsterOptions monsters{};
@@ -451,6 +500,20 @@ inline auto ReadOptionalTable(
             "MapSense section must be a table: " + std::string(key));
     }
     return table;
+}
+
+inline auto ReadOptionalMenuTheme(
+        const toml::table& table,
+        std::string_view key,
+        MenuTheme fallback) -> MenuTheme {
+    const auto* node = table.get(key);
+    if (node == nullptr) return fallback;
+    const auto value = node->value<std::string>();
+    if (!value) {
+        throw std::runtime_error(
+            "MapSense menu theme must be a string: " + std::string(key));
+    }
+    return ParseMenuTheme(*value);
 }
 
 inline auto HexNibble(char character) -> std::uint8_t {
@@ -1077,6 +1140,8 @@ inline auto ParseConfig(const toml::table& root) -> Config {
     }
 
     Config config{};
+    auto legacyFeaturesEnabled = true;
+    auto legacyOverlayEnabled = true;
     if (*schemaVersion < 4) {
         // Legacy schemas used the hollow X exclusively. Preserve that
         // appearance while migrating into schema 4.
@@ -1087,7 +1152,9 @@ inline auto ParseConfig(const toml::table& root) -> Config {
         config.monsters.superUniqueBoss.shape = MonsterMarkerShape::X;
     }
     if (const auto* general = ReadOptionalTable(root, "general")) {
-        if (*schemaVersion >= 12) {
+        if (*schemaVersion >= 16) {
+            RejectUnknownKeys(*general, {"enabled"}, "general");
+        } else if (*schemaVersion >= 12) {
             RejectUnknownKeys(
                 *general,
                 {"enabled", "features_enabled"},
@@ -1096,20 +1163,30 @@ inline auto ParseConfig(const toml::table& root) -> Config {
             RejectUnknownKeys(*general, {"enabled"}, "general");
         }
         config.enabled = ReadOptional(*general, "enabled", config.enabled);
-        if (*schemaVersion >= 12) {
-            config.featuresEnabled = ReadOptional(
+        if (*schemaVersion >= 12 && *schemaVersion < 16) {
+            legacyFeaturesEnabled = ReadOptional(
                 *general,
                 "features_enabled",
-                config.featuresEnabled);
+                legacyFeaturesEnabled);
         }
     }
+    if (*schemaVersion < 16) {
+        config.enabled = config.enabled && legacyFeaturesEnabled;
+    }
     if (const auto* overlay = ReadOptionalTable(root, "overlay")) {
-        RejectUnknownKeys(
-            *overlay,
-            {"enabled", "diagnostic_preview", "follow_native_automap", "start_menu_open", "opacity", "scale", "frame_rate"},
-            "overlay");
-        config.overlay.enabled = ReadOptional(
-            *overlay, "enabled", config.overlay.enabled);
+        if (*schemaVersion >= 16) {
+            RejectUnknownKeys(
+                *overlay,
+                {"diagnostic_preview", "follow_native_automap", "start_menu_open", "opacity", "scale", "frame_rate"},
+                "overlay");
+        } else {
+            RejectUnknownKeys(
+                *overlay,
+                {"enabled", "diagnostic_preview", "follow_native_automap", "start_menu_open", "opacity", "scale", "frame_rate"},
+                "overlay");
+            legacyOverlayEnabled = ReadOptional(
+                *overlay, "enabled", legacyOverlayEnabled);
+        }
         config.overlay.diagnosticPreview = ReadOptional(
             *overlay, "diagnostic_preview", config.overlay.diagnosticPreview);
         config.overlay.followNativeAutomap = ReadOptional(
@@ -1155,10 +1232,21 @@ inline auto ParseConfig(const toml::table& root) -> Config {
                 config.monsters.superUniqueBoss.size = legacySize;
             }
         } else {
-            RejectUnknownKeys(
-                *monsters,
-                {"detection_radius", "normal", "minion", "champion", "unique", "super_unique_boss"},
-                "monsters");
+            if (*schemaVersion >= 16) {
+                RejectUnknownKeys(
+                    *monsters,
+                    {"enabled", "detection_radius", "normal", "minion", "champion", "unique", "super_unique_boss"},
+                    "monsters");
+                config.monsters.enabled = ReadOptional(
+                    *monsters,
+                    "enabled",
+                    config.monsters.enabled);
+            } else {
+                RejectUnknownKeys(
+                    *monsters,
+                    {"detection_radius", "normal", "minion", "champion", "unique", "super_unique_boss"},
+                    "monsters");
+            }
             // detection_radius is a retired compatibility key. Keep accepting
             // it in every supported schema, but never read, validate, migrate,
             // or persist its value.
@@ -1354,10 +1442,21 @@ inline auto ParseConfig(const toml::table& root) -> Config {
             *hud, "show_with_automap_only", config.hud.showWithAutomapOnly);
     }
     if (const auto* menu = ReadOptionalTable(root, "menu")) {
-        RejectUnknownKeys(
-            *menu,
-            {"show_launcher", "start_expanded", "remember_position", "position_x", "position_y"},
-            "menu");
+        if (*schemaVersion >= 16) {
+            RejectUnknownKeys(
+                *menu,
+                {"theme", "show_launcher", "start_expanded", "remember_position", "position_x", "position_y"},
+                "menu");
+            config.menu.theme = ReadOptionalMenuTheme(
+                *menu,
+                "theme",
+                config.menu.theme);
+        } else {
+            RejectUnknownKeys(
+                *menu,
+                {"show_launcher", "start_expanded", "remember_position", "position_x", "position_y"},
+                "menu");
+        }
         config.menu.showLauncher = ReadOptional(
             *menu, "show_launcher", config.menu.showLauncher);
         config.menu.startExpanded = ReadOptional(
@@ -1373,6 +1472,20 @@ inline auto ParseConfig(const toml::table& root) -> Config {
         RejectUnknownKeys(*diagnostics, {"enabled"}, "diagnostics");
         config.diagnostics = ReadOptional(
             *diagnostics, "enabled", config.diagnostics);
+    }
+    if (*schemaVersion < 16 && !legacyOverlayEnabled) {
+        // The removed overlay master used to suppress every MapSense-owned
+        // automap primitive. Preserve that effective legacy state by turning
+        // off the individual feature families during the one-way migration.
+        config.overlay.diagnosticPreview = false;
+        config.monsters.enabled = false;
+        config.immunities.enabled = false;
+        config.missiles.enabled = false;
+        config.objects.enabled = false;
+        config.navigation.waypoint.enabled = false;
+        config.navigation.progression.enabled = false;
+        config.navigation.quests.enabled = false;
+        config.navigation.customLevels.enabled = false;
     }
     return config;
 }
@@ -1456,16 +1569,15 @@ inline auto SerializeConfig(const Config& config) -> std::string {
         << "# Changes made in the MapSense menu are saved here.\n\n"
         << "schema_version = " << CurrentConfigSchemaVersion << "\n\n"
         << "[general]\n"
-        << "enabled = " << config.enabled << "\n"
-        << "features_enabled = " << config.featuresEnabled << "\n\n"
+        << "enabled = " << config.enabled << "\n\n"
         << "[overlay]\n"
-        << "enabled = " << config.overlay.enabled << "\n"
         << "diagnostic_preview = " << config.overlay.diagnosticPreview << "\n"
         << "follow_native_automap = " << config.overlay.followNativeAutomap << "\n"
         << "opacity = " << config.overlay.opacity << "\n"
         << "scale = " << config.overlay.scale << "\n"
         << "frame_rate = " << config.overlay.frameRate << "\n\n"
-        << "[monsters]\n\n"
+        << "[monsters]\n"
+        << "enabled = " << config.monsters.enabled << "\n\n"
         << "[monsters.normal]\n"
         << "shape = \"" << MonsterMarkerShapeToString(config.monsters.normal.shape)
         << "\"\n"
@@ -1633,6 +1745,7 @@ inline auto SerializeConfig(const Config& config) -> std::string {
     output
         << "\n"
         << "[menu]\n"
+        << "theme = \"" << MenuThemeToString(config.menu.theme) << "\"\n"
         << "show_launcher = " << config.menu.showLauncher << "\n"
         << "start_expanded = " << config.menu.startExpanded << "\n"
         << "remember_position = " << config.menu.rememberPosition << "\n"

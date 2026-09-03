@@ -132,6 +132,72 @@ function Invoke-GeometryBinary {
     return [int]$stopwatch.ElapsedMilliseconds
 }
 
+function Invoke-PrimaryAtlasBinary {
+    param(
+        [Parameter(Mandatory = $true)]
+        [int]$Seed,
+        [Parameter(Mandatory = $true)]
+        [int]$Act,
+        [Parameter(Mandatory = $true)]
+        [int]$CurrentLevel,
+        [Parameter(Mandatory = $true)]
+        [string]$Directory,
+        [Parameter(Mandatory = $true)]
+        [string]$FileName,
+        [Parameter(Mandatory = $false)]
+        [string]$ExcelRoot,
+        [Parameter(Mandatory = $false)]
+        [string]$TilesRoot,
+        [Parameter(Mandatory = $false)]
+        [int]$MaximumMilliseconds = 30000
+    )
+
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $Executable
+    $startInfo.Arguments =
+        "atlas-binary $Seed 2 $Act $CurrentLevel `"$FileName`""
+    if (-not [string]::IsNullOrWhiteSpace($ExcelRoot)) {
+        $startInfo.Arguments += " --excel-root `"$ExcelRoot`""
+    }
+    if (-not [string]::IsNullOrWhiteSpace($TilesRoot)) {
+        $startInfo.Arguments += " --tiles-root `"$TilesRoot`""
+    }
+    $startInfo.WorkingDirectory = $Directory
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+
+    $process = [System.Diagnostics.Process]::new()
+    $process.StartInfo = $startInfo
+    if (-not $process.Start()) {
+        throw "Could not start primary atlas generator for seed=$Seed act=$Act"
+    }
+    try { $process.PriorityClass = 'BelowNormal' } catch {}
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    if (-not $process.WaitForExit($MaximumMilliseconds)) {
+        try { $process.Kill($true) } catch {}
+        $process.WaitForExit()
+        $stopwatch.Stop()
+        $process.Dispose()
+        throw "Primary atlas generation exceeded ${MaximumMilliseconds}ms for seed=$Seed act=$Act"
+    }
+    $stopwatch.Stop()
+    $lines = @(($stdoutTask.Result + $stderrTask.Result) -split '\r?\n' |
+        Where-Object { $_ -ne '' })
+    $exitCode = $process.ExitCode
+    $process.Dispose()
+    if ($exitCode -ne 0) {
+        throw "Primary atlas generation failed for seed=$Seed act=$Act"
+    }
+    return [pscustomobject]@{
+        ElapsedMilliseconds = [int]$stopwatch.ElapsedMilliseconds
+        Lines = $lines
+    }
+}
+
 function Test-GeometryBinary {
     param(
         [Parameter(Mandatory = $true)]
@@ -382,6 +448,35 @@ foreach ($seed in $seeds) {
         $secondHash = (Get-FileHash -LiteralPath $secondGeometryPath -Algorithm SHA256).Hash
         if ($firstHash -ne $secondHash) {
             throw "Non-deterministic MSA1 geometry for seed=$seed act=$act"
+        }
+        if ($seed -eq 1337 -and $act -eq 2) {
+            $combinedGeometryName =
+                "seed-$seed-act-$act-primary-atlas.msa"
+            $combined = Invoke-PrimaryAtlasBinary `
+                -Seed $seed `
+                -Act $act `
+                -CurrentLevel $currentLevels[$act] `
+                -Directory $validationRoot `
+                -FileName $combinedGeometryName
+            $combinedStable = @($combined.Lines | Where-Object {
+                $_ -match '^MS1 [HLREWP] '
+            })
+            if (@(Compare-Object $firstStable $combinedStable).Count -ne 0) {
+                throw "Combined primary-atlas labels differ for seed=$seed act=$act"
+            }
+            $combinedGeometryPath = Join-Path $validationRoot $combinedGeometryName
+            $combinedGeometry = Test-GeometryBinary `
+                -Path $combinedGeometryPath `
+                -Seed ([uint32]$seed) `
+                -Act $act
+            $combinedHash = (Get-FileHash `
+                -LiteralPath $combinedGeometryPath `
+                -Algorithm SHA256).Hash
+            if ($combinedHash -ne $firstHash -or
+                $combinedGeometry.Cells -ne $geometry.Cells) {
+                throw "Combined primary-atlas geometry differs for seed=$seed act=$act"
+            }
+            Write-Output "PASS primary-atlas seed=$seed act=$act labels=$($combinedStable.Count) geometry=$($combinedGeometry.Cells) elapsed-ms=$($combined.ElapsedMilliseconds)"
         }
         Write-Output "PASS seed=$seed act=$act seams=$seamCount portals=$($portals.Count) geometry=$($geometry.Cells) floor/wall/raised=$($geometry.FloorTree)/$($geometry.WallTree)/$($geometry.Raised) geometry-ms=$firstGeometryElapsed/$secondGeometryElapsed $summary"
     }

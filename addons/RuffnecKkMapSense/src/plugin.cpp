@@ -18,6 +18,7 @@
 #include "overlay_host_api.hpp"
 #include "reveal_engine.hpp"
 #include "sfilllocation_diagnostic.hpp"
+#include "ui_localization.hpp"
 
 #include <imgui.h>
 
@@ -53,8 +54,8 @@ constexpr std::uint32_t ProgressiveRevealStepDelayMilliseconds = 8U;
 constexpr std::uint32_t ProgressiveRevealSettlementDelayMilliseconds = 50U;
 constexpr std::uint32_t ProgressiveRevealSettlementRetryLimit = 8U;
 constexpr std::uint32_t ProgressiveRevealUiQueueRetryLimit = 8U;
-constexpr std::uint32_t NativeAtlasCellsPerUiPump = 2'048U;
-constexpr std::uint32_t NativeAtlasPumpDelayMilliseconds = 2U;
+constexpr std::uint32_t NativeAtlasCellsPerUiPump = 4'096U;
+constexpr std::uint32_t NativeAtlasPumpDelayMilliseconds = 1U;
 constexpr std::uint32_t NavigationRefreshRetryLimit = 8U;
 constexpr std::uint32_t NavigationRefreshRetryDelayMilliseconds = 250U;
 constexpr std::uint64_t DynamicNavigationRefreshIntervalMilliseconds = 1'000U;
@@ -364,7 +365,7 @@ void LogDataCatalogLoad(
 [[nodiscard]] auto BuildNativeAutomapPoiCollectionMask() noexcept
         -> std::uint32_t {
     if (!FeaturesEnabled.load(std::memory_order_acquire)
-            || !Settings.overlay.enabled || !Settings.objects.enabled) {
+            || !Settings.objects.enabled) {
         return 0U;
     }
     std::uint32_t mask{};
@@ -432,6 +433,18 @@ void ApplyNativeAutomapPoiCollectionSettings() noexcept {
                 "MapSense: D2R localization tables are not ready yet; labels and data-driven objects remain pending and will retry on the next player/level lifecycle event.");
         }
         return false;
+    }
+
+    if (RefreshUiLanguage(Context) && Context != nullptr) {
+        const auto language = UiLanguageCode(CurrentUiLanguage());
+        char message[128]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "MapSense: ImGui localization selected %.*s.",
+            static_cast<int>(language.size()),
+            language.data());
+        Context->LogInfo(message);
     }
 
     auto catalog = std::move(catalogLoad.catalog);
@@ -2737,14 +2750,15 @@ void WriteStatus(const D2RL::PluginContext* context) noexcept {
     std::snprintf(
         message,
         sizeof(message),
-            "RuffnecKk MapSense 0.13.38 candidate: active=%s; gameplay=%s; reveal-all=%s; markers=%s; immunity-scan=%s; renderer-hooks=%s; renderer=%s; chest-textures=%s; input=%s; menu=%s; presents=%llu; rendered=%llu; level traversals=%llu; rooms=%llu; failures=%llu; traversal limits=%llu; static-poi=candidates/materialized/released/failures:%llu/%llu/%llu/%llu; static-active-room-calls=0; automap-pulses=%llu; table-scans=%llu; buckets=%llu; table-limits=%llu; automap units=%llu; monsters=%llu; enemy-rejects=dead/unit/class/alignment:%llu/%llu/%llu/%llu; filter-faults=%llu; hostiles=%llu; hostile-bands=0-80/81-140/141-220/>220:%llu/%llu/%llu/%llu; projection-rejects=%llu; clip-rejects=%llu; max-hostile-subtiles=%u; max-accepted-subtiles=%u; max-published-subtiles=%u; accepted=%llu; inserted=%llu; refreshed=%llu; fresh=%llu; expired=%llu; marker waits=%llu; storage faults=%llu; marker faults=%llu.",
+            "RuffnecKk MapSense 0.13.41 candidate: active=%s; gameplay=%s; reveal-all=%s; markers=%s; immunity-scan=%s; renderer-hooks=%s; renderer=%s; chest-textures=%s; input=%s; menu=%s; presents=%llu; rendered=%llu; level traversals=%llu; rooms=%llu; failures=%llu; traversal limits=%llu; static-poi=candidates/materialized/released/failures:%llu/%llu/%llu/%llu; static-active-room-calls=0; automap-pulses=%llu; table-scans=%llu; buckets=%llu; table-limits=%llu; automap units=%llu; monsters=%llu; enemy-rejects=dead/unit/class/alignment:%llu/%llu/%llu/%llu; filter-faults=%llu; hostiles=%llu; hostile-bands=0-80/81-140/141-220/>220:%llu/%llu/%llu/%llu; projection-rejects=%llu; clip-rejects=%llu; max-hostile-subtiles=%u; max-accepted-subtiles=%u; max-published-subtiles=%u; accepted=%llu; inserted=%llu; refreshed=%llu; fresh=%llu; expired=%llu; marker waits=%llu; storage faults=%llu; marker faults=%llu.",
         IsRevealEngineActive() ? "true" : "false",
         GameplayReady.load(std::memory_order_acquire) ? "ready" : "inactive",
         IsRevealAllArmed() ? "armed" : "off",
         MarkerAvailable.load(std::memory_order_acquire)
             ? "ready"
             : "unavailable",
-        Settings.overlay.enabled
+        FeaturesEnabled.load(std::memory_order_acquire)
+                && Settings.monsters.enabled
                 && Settings.immunities.enabled
                 && MarkerAvailable.load(std::memory_order_acquire)
             ? "enabled"
@@ -3330,12 +3344,16 @@ void RequestNativeUiPanelVisibilityRefresh() noexcept {
 
 void ApplyMapSenseFeatureState(bool enabled) noexcept {
     FeaturesEnabled.store(enabled, std::memory_order_release);
-    SetNativeAutomapMarkerEnabled(
-        enabled && Settings.overlay.enabled);
+    // The marker collector also supplies the living local-player automap
+    // witness used by navigation and POIs, so the master controls collection
+    // while the Monsters switch controls only monster publication/rendering.
+    SetNativeAutomapMarkerEnabled(enabled);
     SetNativeAutomapMissileEnabled(
-        enabled && Settings.overlay.enabled && Settings.missiles.enabled);
+        enabled && Settings.missiles.enabled);
     SetNativeAutomapImmunityCollectionEnabled(
-        enabled && Settings.overlay.enabled && Settings.immunities.enabled);
+        enabled
+            && Settings.monsters.enabled
+            && Settings.immunities.enabled);
     ApplyNativeAutomapPoiCollectionSettings();
 
     if (!enabled) {
@@ -3384,18 +3402,15 @@ auto DrawMapSensePanel(bool* open, void*) noexcept
         expanded,
         IsRevealAllArmed(),
         OnImGuiSettingsAction);
-    if (featuresBefore != Settings.featuresEnabled) {
-        ApplyMapSenseFeatureState(Settings.featuresEnabled);
+    if (featuresBefore != Settings.enabled) {
+        ApplyMapSenseFeatureState(Settings.enabled);
     } else {
-        SetNativeAutomapMarkerEnabled(
-            featuresBefore && Settings.overlay.enabled);
+        SetNativeAutomapMarkerEnabled(featuresBefore);
         SetNativeAutomapMissileEnabled(
-            featuresBefore
-                && Settings.overlay.enabled
-                && Settings.missiles.enabled);
+            featuresBefore && Settings.missiles.enabled);
         SetNativeAutomapImmunityCollectionEnabled(
             featuresBefore
-                && Settings.overlay.enabled
+                && Settings.monsters.enabled
                 && Settings.immunities.enabled);
         ApplyNativeAutomapPoiCollectionSettings();
     }
@@ -3437,10 +3452,10 @@ auto WantsMapSenseOwnedOverlay(void*) noexcept -> bool {
             nativeUi.activeMask,
             IsNativeAutomapLocalPlayerFrameAlive())
         && ShouldDrawMapSenseOwnedMapOverlay(gameplayReady, false)
-        && Settings.overlay.enabled
         && ((navigationEnabled
                 && WantsNavigationLineFrame(retainCurrentProjection))
-            || WantsNativeAutomapMarkerFrame(retainCurrentProjection)
+            || (Settings.monsters.enabled
+                && WantsNativeAutomapMarkerFrame(retainCurrentProjection))
             || WantsNativeAutomapMissileFrame()
             || WantsNativeAutomapPoiFrame(retainCurrentProjection));
 }
@@ -5252,99 +5267,101 @@ void DrawMapSenseOwnedOverlay(void*) noexcept {
         AutomapPoiRenderPass::Objects);
     // Element-aware missiles remain below monster identity and protected text.
     DrawNativeMissileSnapshots(drawList, io, dataCatalog, opacity);
-    for (std::uint8_t layer = 0U;
-            layer <= MaximumMonsterMarkerRenderLayer;
-            ++layer) {
-        for (const auto& marker : MarkerSnapshots) {
-            const auto bossIdentity = HasBossIdentity(dataCatalog, marker);
-            if (MonsterMarkerRenderLayer(marker.rank, bossIdentity) != layer) {
-                continue;
+    if (Settings.monsters.enabled) {
+        for (std::uint8_t layer = 0U;
+                layer <= MaximumMonsterMarkerRenderLayer;
+                ++layer) {
+            for (const auto& marker : MarkerSnapshots) {
+                const auto bossIdentity = HasBossIdentity(dataCatalog, marker);
+                if (MonsterMarkerRenderLayer(marker.rank, bossIdentity) != layer) {
+                    continue;
+                }
+                MonsterMarkerScreenGeometry geometry{};
+                if (!TryResolveMonsterMarkerScreenGeometry(marker, io, geometry)) {
+                    continue;
+                }
+                const auto& style = MarkerStyleFor(marker.rank);
+                const auto color = ToImGuiColor(style.color, opacity);
+                switch (style.shape) {
+                case MonsterMarkerShape::X: {
+                    const auto thickness = std::clamp(
+                        style.thickness * Settings.overlay.scale,
+                        MinimumMonsterMarkerThickness,
+                        MaximumMonsterMarkerThickness);
+                    DrawClosedMarkerOutline(
+                        drawList,
+                        BuildCrossOutline(
+                            Vec2{geometry.center.x, geometry.center.y},
+                            geometry.size * 0.5F),
+                        color,
+                        thickness);
+                    break;
+                }
+                case MonsterMarkerShape::PlayerCross: {
+                    const auto thickness = std::clamp(
+                        style.thickness * Settings.overlay.scale,
+                        MinimumMonsterMarkerThickness,
+                        MaximumMonsterMarkerThickness);
+                    const auto outline = BuildPlayerCrossOutline(
+                        Vec2{geometry.center.x, geometry.center.y},
+                        geometry.size);
+                    const auto edgeThickness = thickness
+                        + std::max(1.0F, Settings.overlay.scale);
+                    DrawClosedMarkerOutline(
+                        drawList,
+                        outline,
+                        ToImGuiColor(
+                            RgbaColor{0.02F, 0.015F, 0.01F, 0.80F},
+                            opacity),
+                        edgeThickness);
+                    DrawClosedMarkerOutline(
+                        drawList,
+                        outline,
+                        color,
+                        thickness);
+                    break;
+                }
+                case MonsterMarkerShape::Dot: {
+                    constexpr float OutlineThickness = 1.0F;
+                    const auto radius = geometry.size * 0.5F;
+                    const auto outlineColor = ToImGuiColor(
+                        RgbaColor{0.02F, 0.015F, 0.01F, 0.72F},
+                        opacity);
+                    drawList->AddCircleFilled(
+                        geometry.center,
+                        radius + OutlineThickness,
+                        outlineColor);
+                    drawList->AddCircleFilled(
+                        geometry.center,
+                        radius,
+                        color);
+                    break;
+                }
+                }
+                DrawMonsterImmunities(
+                    drawList,
+                    marker,
+                    geometry.center,
+                    geometry.size,
+                    opacity);
             }
+        }
+        // Text always wins the final compositing pass. A normal/minion marker
+        // that shares the same screen pixels cannot cover a boss name.
+        for (const auto& marker : MarkerSnapshots) {
             MonsterMarkerScreenGeometry geometry{};
             if (!TryResolveMonsterMarkerScreenGeometry(marker, io, geometry)) {
                 continue;
             }
-            const auto& style = MarkerStyleFor(marker.rank);
-            const auto color = ToImGuiColor(style.color, opacity);
-            switch (style.shape) {
-            case MonsterMarkerShape::X: {
-                const auto thickness = std::clamp(
-                    style.thickness * Settings.overlay.scale,
-                    MinimumMonsterMarkerThickness,
-                    MaximumMonsterMarkerThickness);
-                DrawClosedMarkerOutline(
-                    drawList,
-                    BuildCrossOutline(
-                        Vec2{geometry.center.x, geometry.center.y},
-                        geometry.size * 0.5F),
-                    color,
-                    thickness);
-                break;
-            }
-            case MonsterMarkerShape::PlayerCross: {
-                const auto thickness = std::clamp(
-                    style.thickness * Settings.overlay.scale,
-                    MinimumMonsterMarkerThickness,
-                    MaximumMonsterMarkerThickness);
-                const auto outline = BuildPlayerCrossOutline(
-                    Vec2{geometry.center.x, geometry.center.y},
-                    geometry.size);
-                const auto edgeThickness = thickness
-                    + std::max(1.0F, Settings.overlay.scale);
-                DrawClosedMarkerOutline(
-                    drawList,
-                    outline,
-                    ToImGuiColor(
-                        RgbaColor{0.02F, 0.015F, 0.01F, 0.80F},
-                        opacity),
-                    edgeThickness);
-                DrawClosedMarkerOutline(
-                    drawList,
-                    outline,
-                    color,
-                    thickness);
-                break;
-            }
-            case MonsterMarkerShape::Dot: {
-                constexpr float OutlineThickness = 1.0F;
-                const auto radius = geometry.size * 0.5F;
-                const auto outlineColor = ToImGuiColor(
-                    RgbaColor{0.02F, 0.015F, 0.01F, 0.72F},
-                    opacity);
-                drawList->AddCircleFilled(
-                    geometry.center,
-                    radius + OutlineThickness,
-                    outlineColor);
-                drawList->AddCircleFilled(
-                    geometry.center,
-                    radius,
-                    color);
-                break;
-            }
-            }
-            DrawMonsterImmunities(
+            DrawBossName(
                 drawList,
+                io,
+                dataCatalog,
                 marker,
                 geometry.center,
                 geometry.size,
                 opacity);
         }
-    }
-    // Text always wins the final compositing pass. A normal/minion marker that
-    // happens to share the same screen pixels can no longer cover a boss name.
-    for (const auto& marker : MarkerSnapshots) {
-        MonsterMarkerScreenGeometry geometry{};
-        if (!TryResolveMonsterMarkerScreenGeometry(marker, io, geometry)) {
-            continue;
-        }
-        DrawBossName(
-            drawList,
-            io,
-            dataCatalog,
-            marker,
-            geometry.center,
-            geometry.size,
-            opacity);
     }
     // Exit, waypoint, and shrine labels own the final protected layer. No
     // monster icon, immunity badge, or boss name can paint over these
@@ -5627,7 +5644,7 @@ constexpr D2RL::PluginInfo PluginInfo{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "ruffneckk-mapsense",
     .name = "RuffnecKk MapSense",
-    .version = "0.13.38-candidate",
+    .version = "0.13.41-candidate",
     .author = "RuffnecKk",
     .description = "Reveals maps, marks monsters, and draws direct navigation lines.",
     .flags = D2RL::PluginFlags::Client | D2RL::PluginFlags::NativeHooks,
@@ -5648,8 +5665,9 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         return false;
     }
     Context = context;
+    ResetUiLanguage();
     Operational.store(false, std::memory_order_release);
-    FeaturesEnabled.store(true, std::memory_order_release);
+    FeaturesEnabled.store(false, std::memory_order_release);
     HostApiAvailable.store(false, std::memory_order_release);
     GameplayReady.store(false, std::memory_order_release);
     MenuExpanded.store(false, std::memory_order_release);
@@ -5683,13 +5701,8 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     ResetRevealReplayProcessState();
     if (!LoadConfig(Settings)) return false;
     FeaturesEnabled.store(
-        Settings.featuresEnabled,
+        Settings.enabled,
         std::memory_order_release);
-    if (!Settings.enabled) {
-        context->LogInfo(
-            "RuffnecKk MapSense 0.13.38 candidate is disabled; no hook or Controls action was installed.");
-        return true;
-    }
 
     try {
         MarkerSnapshots.clear();
@@ -5798,15 +5811,12 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         SetNativeAutomapLevelObservedCallback(
             OnNativeAutomapLevelObserved,
             nullptr);
-        SetNativeAutomapMarkerEnabled(
-            Settings.featuresEnabled && Settings.overlay.enabled);
+        SetNativeAutomapMarkerEnabled(Settings.enabled);
         SetNativeAutomapMissileEnabled(
-            Settings.featuresEnabled
-                && Settings.overlay.enabled
-                && Settings.missiles.enabled);
+            Settings.enabled && Settings.missiles.enabled);
         SetNativeAutomapImmunityCollectionEnabled(
-            Settings.featuresEnabled
-                && Settings.overlay.enabled
+            Settings.enabled
+                && Settings.monsters.enabled
                 && Settings.immunities.enabled);
     } else {
         context->LogWarn(
@@ -5917,7 +5927,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     std::snprintf(
         loadedMessage,
         sizeof(loadedMessage),
-        "RuffnecKk MapSense 0.13.38 candidate loaded; labels/objects=%s; native-seed-atlas=%s; monster-markers=%s; Direct-navigation=%s; Reveal/settings=active; native-panel-occlusion=%s.",
+        "RuffnecKk MapSense 0.13.41 candidate loaded; labels/objects=%s; native-seed-atlas=%s; monster-markers=%s; Direct-navigation=%s; Reveal/settings=active; native-panel-occlusion=%s.",
         poiRuntimeAvailable ? "pending-localization" : "unavailable",
         externalLabelsAvailable ? "active" : "unavailable",
         markerAvailable ? "active" : "unavailable",
@@ -5970,6 +5980,7 @@ D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
     ShutdownSFillLocationDiagnosticSuppression();
     PoiSnapshots.clear();
     DataCatalog.store({}, std::memory_order_release);
+    ResetUiLanguage();
     InputService = nullptr;
     LifecycleService = nullptr;
     ThreadService = nullptr;

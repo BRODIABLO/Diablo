@@ -45,7 +45,7 @@ inline constexpr std::array<NativeSettingsTabDescriptor, 5> NativeSettingsTabs{{
 
 enum class ToggleKey : std::uint8_t {
     MapSenseEnabled,
-    MapOverlayEnabled,
+    MonstersEnabled,
     ImmunitiesEnabled,
     DiagnosticPreview,
     DiagnosticsEnabled,
@@ -53,7 +53,7 @@ enum class ToggleKey : std::uint8_t {
 
 inline constexpr std::array<ToggleKey, 5> NativeSettingsToggleKeys{{
     ToggleKey::MapSenseEnabled,
-    ToggleKey::MapOverlayEnabled,
+    ToggleKey::MonstersEnabled,
     ToggleKey::ImmunitiesEnabled,
     ToggleKey::DiagnosticPreview,
     ToggleKey::DiagnosticsEnabled,
@@ -63,8 +63,8 @@ inline constexpr std::array<ToggleKey, 5> NativeSettingsToggleKeys{{
         -> NativeSettingsTab {
     switch (key) {
         case ToggleKey::MapSenseEnabled:
-        case ToggleKey::MapOverlayEnabled:
             return NativeSettingsTab::Map;
+        case ToggleKey::MonstersEnabled:
         case ToggleKey::ImmunitiesEnabled:
             return NativeSettingsTab::Monsters;
         case ToggleKey::DiagnosticPreview:
@@ -79,8 +79,8 @@ inline constexpr std::array<ToggleKey, 5> NativeSettingsToggleKeys{{
     switch (key) {
         case ToggleKey::MapSenseEnabled:
             return "Enable MapSense";
-        case ToggleKey::MapOverlayEnabled:
-            return "Enable map additions";
+        case ToggleKey::MonstersEnabled:
+            return "Show monsters";
         case ToggleKey::ImmunitiesEnabled:
             return "Show immunities";
         case ToggleKey::DiagnosticPreview:
@@ -96,9 +96,9 @@ inline constexpr std::array<ToggleKey, 5> NativeSettingsToggleKeys{{
         ToggleKey key) noexcept -> bool {
     switch (key) {
         case ToggleKey::MapSenseEnabled:
-            return config.featuresEnabled;
-        case ToggleKey::MapOverlayEnabled:
-            return config.overlay.enabled;
+            return config.enabled;
+        case ToggleKey::MonstersEnabled:
+            return config.monsters.enabled;
         case ToggleKey::ImmunitiesEnabled:
             return config.immunities.enabled;
         case ToggleKey::DiagnosticPreview:
@@ -112,10 +112,10 @@ inline constexpr std::array<ToggleKey, 5> NativeSettingsToggleKeys{{
 inline void WriteToggle(Config& config, ToggleKey key, bool value) noexcept {
     switch (key) {
         case ToggleKey::MapSenseEnabled:
-            config.featuresEnabled = value;
+            config.enabled = value;
             return;
-        case ToggleKey::MapOverlayEnabled:
-            config.overlay.enabled = value;
+        case ToggleKey::MonstersEnabled:
+            config.monsters.enabled = value;
             return;
         case ToggleKey::ImmunitiesEnabled:
             config.immunities.enabled = value;
@@ -451,9 +451,7 @@ inline void CopyNativeSettings(
         const Config& source,
         Config& destination) noexcept {
     destination.enabled = source.enabled;
-    destination.featuresEnabled = source.featuresEnabled;
     destination.diagnostics = source.diagnostics;
-    destination.overlay.enabled = source.overlay.enabled;
     destination.overlay.diagnosticPreview = source.overlay.diagnosticPreview;
     destination.overlay.opacity = source.overlay.opacity;
     destination.overlay.scale = source.overlay.scale;
@@ -467,12 +465,11 @@ inline void CopyNativeSettings(
         const Config& left,
         const Config& right) noexcept -> bool {
     return left.enabled == right.enabled
-        && left.featuresEnabled == right.featuresEnabled
         && left.diagnostics == right.diagnostics
-        && left.overlay.enabled == right.overlay.enabled
         && left.overlay.diagnosticPreview == right.overlay.diagnosticPreview
         && left.overlay.opacity == right.overlay.opacity
         && left.overlay.scale == right.overlay.scale
+        && left.monsters.enabled == right.monsters.enabled
         && SameMonsterMarkerStyle(
             left.monsters.normal,
             right.monsters.normal)

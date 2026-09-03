@@ -19,6 +19,7 @@
 #include "native_settings_policy.hpp"
 #include "overlay_scene.hpp"
 #include "reveal_engine.hpp"
+#include "ui_localization.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -226,6 +227,7 @@ void WriteCatalogFixture(
 
 const std::map<std::string, std::string, std::less<>> CatalogTranslations{
     {"ExactCustomLevelName", "ExactCustomLevelName"},
+    {"ItemStats1h", "Défense : %d"},
     {"LevelKey", "Sortie \xC3\x89preuve"},
     {"ShrineKey", "Sanctuaire d\xE2\x80\x99" "exp\xC3\xA9rience"},
     {"SuNameKey", "Unique supr\xC3\xAAme"},
@@ -4719,6 +4721,47 @@ void CheckTownWaypointLabelPolicy() {
 int main(int argc, char** argv) {
     using namespace RuffnecKk::MapSense;
 
+    CHECK(UiLocalizationCatalogIsComplete());
+    CHECK(DetectUiLanguageFromFingerprint("Defense: %d")
+        == UiLanguage::English);
+    CHECK(DetectUiLanguageFromFingerprint("防禦：%d")
+        == UiLanguage::TraditionalChinese);
+    CHECK(DetectUiLanguageFromFingerprint("Verteidigung: %d")
+        == UiLanguage::German);
+    CHECK(DetectUiLanguageFromFingerprint("Defensa: %d")
+        == UiLanguage::Spanish);
+    CHECK(DetectUiLanguageFromFingerprint("Défense : %d")
+        == UiLanguage::French);
+    CHECK(DetectUiLanguageFromFingerprint("Difesa: %d")
+        == UiLanguage::Italian);
+    CHECK(DetectUiLanguageFromFingerprint("방어력: %d")
+        == UiLanguage::Korean);
+    CHECK(DetectUiLanguageFromFingerprint("Obrona: %d")
+        == UiLanguage::Polish);
+    CHECK(DetectUiLanguageFromFingerprint("防御力: %d")
+        == UiLanguage::Japanese);
+    CHECK(DetectUiLanguageFromFingerprint("Defesa: %d")
+        == UiLanguage::BrazilianPortuguese);
+    CHECK(DetectUiLanguageFromFingerprint("Защита: %d")
+        == UiLanguage::Russian);
+    CHECK(DetectUiLanguageFromFingerprint("防御: %d")
+        == UiLanguage::SimplifiedChinese);
+    CHECK(std::string_view(UiText(
+        UiTextId::RevealMap,
+        UiLanguage::French)) == "Révéler la carte");
+    CHECK(std::string_view(UiText(
+        UiTextId::CustomTomlHint,
+        UiLanguage::English))
+        == "(to add more custom destinations, configure in TOML)");
+    {
+        const auto localizationContext = MakeCatalogContext(nullptr);
+        ResetUiLanguage();
+        CHECK(RefreshUiLanguage(&localizationContext));
+        CHECK(CurrentUiLanguage() == UiLanguage::French);
+        CHECK(std::string_view(UiText(UiTextId::Open)) == "Ouvrir");
+        ResetUiLanguage();
+    }
+
     CheckNavigationProjectionDiagnosticCacheContract();
     CheckMapSenseDataCatalogContract();
     CheckRevealPersistenceContract();
@@ -4741,7 +4784,8 @@ int main(int argc, char** argv) {
     CheckAutomapLevelCatalogContract();
     CheckTownWaypointLabelPolicy();
 
-    static_assert(CurrentConfigSchemaVersion == 15);
+    static_assert(CurrentConfigSchemaVersion == 16);
+    static_assert(MenuThemes.size() == 10U);
     static_assert(DeriveDrlgStartSeed(1U) == 1'791'398'751U);
     static_assert(DeriveDrlgStartSeed(1'337U) == 2'802'456'439U);
     static_assert(DeriveDrlgStartSeed(0x12345678U) == 62'524'658U);
@@ -5328,8 +5372,7 @@ stars_enabled = true
 stars_color = "#56789ABC"
 stars_size = 33
 )toml");
-    CHECK(schema12FeaturesAndChestPalette.enabled);
-    CHECK(!schema12FeaturesAndChestPalette.featuresEnabled);
+    CHECK(!schema12FeaturesAndChestPalette.enabled);
     CHECK(ColorToHex(
         schema12FeaturesAndChestPalette.objects.chests.outlineColor)
         == "#12345678");
@@ -5425,12 +5468,70 @@ size = 16
         roundTripMissiles.missiles,
         schema15Missiles.missiles));
 
+    const auto schema16FeatureMastersAndTheme = ParseConfig(R"toml(
+schema_version = 16
+[general]
+enabled = true
+[monsters]
+enabled = false
+[menu]
+theme = "arcane_sanctuary"
+)toml");
+    CHECK(schema16FeatureMastersAndTheme.enabled);
+    CHECK(!schema16FeatureMastersAndTheme.monsters.enabled);
+    CHECK(schema16FeatureMastersAndTheme.menu.theme
+        == MenuTheme::ArcaneSanctuary);
+    const auto serializedSchema16 = SerializeConfig(
+        schema16FeatureMastersAndTheme);
+    CHECK(serializedSchema16.find("features_enabled") == std::string::npos);
+    CHECK(serializedSchema16.find("[overlay]\nenabled")
+        == std::string::npos);
+    CHECK(serializedSchema16.find("[monsters]\nenabled = false")
+        != std::string::npos);
+    CHECK(serializedSchema16.find(
+        "[menu]\ntheme = \"arcane_sanctuary\"")
+        != std::string::npos);
+    const auto roundTripSchema16 = ParseConfig(serializedSchema16);
+    CHECK(roundTripSchema16.enabled);
+    CHECK(!roundTripSchema16.monsters.enabled);
+    CHECK(roundTripSchema16.menu.theme == MenuTheme::ArcaneSanctuary);
+
+    const auto legacyOverlayDisabled = ParseConfig(R"toml(
+schema_version = 15
+[overlay]
+enabled = false
+[monsters]
+[immunities]
+enabled = true
+[missiles]
+enabled = true
+[objects]
+enabled = true
+[navigation.waypoint]
+enabled = true
+[navigation.progression]
+enabled = true
+[navigation.quests]
+enabled = true
+[navigation.custom_levels]
+enabled = true
+)toml");
+    CHECK(legacyOverlayDisabled.enabled);
+    CHECK(!legacyOverlayDisabled.monsters.enabled);
+    CHECK(!legacyOverlayDisabled.immunities.enabled);
+    CHECK(!legacyOverlayDisabled.missiles.enabled);
+    CHECK(!legacyOverlayDisabled.objects.enabled);
+    CHECK(!legacyOverlayDisabled.navigation.waypoint.enabled);
+    CHECK(!legacyOverlayDisabled.navigation.progression.enabled);
+    CHECK(!legacyOverlayDisabled.navigation.quests.enabled);
+    CHECK(!legacyOverlayDisabled.navigation.customLevels.enabled);
+
     const auto serialized = SerializeConfig(configured);
     CHECK(serialized.find("[hud]") == std::string::npos);
     CHECK(serialized.find("start_menu_open") == std::string::npos);
     CHECK(serialized.find("marker_size") == std::string::npos);
-    CHECK(serialized.find("features_enabled = true")
-        != std::string::npos);
+    CHECK(serialized.find("features_enabled") == std::string::npos);
+    CHECK(serialized.find("[overlay]\nenabled") == std::string::npos);
     CHECK(serialized.find("outline_color = \"#1450ADFF\"")
         != std::string::npos);
     CHECK(serialized.find("interior_color = \"#13579BDF\"")
@@ -5905,9 +6006,34 @@ show_with_automap_only = true
         == ImmunityDisplayStyle::ColoredI);
     CHECK(ColorToHex(legacyRuntime.immunities.physical) == "#D8C39AFF");
 
+    for (const auto theme : MenuThemes) {
+        CHECK(ParseMenuTheme(MenuThemeToString(theme)) == theme);
+    }
+
     CHECK(Throws([] { ParseConfig(""); }));
-    CHECK(Throws([] { ParseConfig("schema_version = 16"); }));
+    CHECK(Throws([] { ParseConfig("schema_version = 17"); }));
     CHECK(Throws([] { ParseConfig("schema_version = true"); }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 16\n[general]\nfeatures_enabled = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig("schema_version = 16\n[overlay]\nenabled = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig("schema_version = 15\n[monsters]\nenabled = true");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 15\n[menu]\ntheme = \"hellfire\"");
+    }));
+    CHECK(Throws([] {
+        ParseConfig(
+            "schema_version = 16\n[menu]\ntheme = \"unknown\"");
+    }));
+    CHECK(Throws([] {
+        ParseConfig("schema_version = 16\n[menu]\ntheme = 1");
+    }));
     CHECK(Throws([] {
         ParseConfig(
             "schema_version = 5\n[navigation]\nline_thickness = 2");
@@ -6605,7 +6731,8 @@ thickness = 5
         CHECK(!ToggleLabel(key).empty());
     }
     CHECK(TabForToggle(ToggleKey::MapSenseEnabled) == NativeSettingsTab::Map);
-    CHECK(TabForToggle(ToggleKey::MapOverlayEnabled) == NativeSettingsTab::Map);
+    CHECK(TabForToggle(ToggleKey::MonstersEnabled)
+        == NativeSettingsTab::Monsters);
     CHECK(TabForToggle(ToggleKey::ImmunitiesEnabled)
         == NativeSettingsTab::Monsters);
     CHECK(TabForToggle(ToggleKey::DiagnosticPreview)
@@ -6676,12 +6803,12 @@ thickness = 5
     Config appliedSettings{};
     appliedSettings.enabled = false;
     appliedSettings.diagnostics = true;
-    appliedSettings.overlay.enabled = false;
     appliedSettings.overlay.diagnosticPreview = true;
     appliedSettings.overlay.opacity = 0.50F;
     appliedSettings.overlay.scale = 1.25F;
     appliedSettings.overlay.frameRate = 37;
     appliedSettings.overlay.followNativeAutomap = false;
+    appliedSettings.monsters.enabled = false;
     appliedSettings.monsters.normal.thickness = 3.0F;
     appliedSettings.monsters.normal.color = ParseColor("#ABCDEFCC");
     appliedSettings.monsters.normal.size = 14.0F;
@@ -6699,7 +6826,6 @@ thickness = 5
     appliedSettings.objects.waypointLabels.color = ParseColor("#11223344");
     appliedSettings.objects.waypointLabels.size = 19.0F;
     appliedSettings.objects.shrineLabels.enabled = false;
-    appliedSettings.featuresEnabled = false;
     appliedSettings.objects.chests.lockedAccentColor =
         ParseColor("#2468ACE0");
     appliedSettings.objects.superChests.starsEnabled = false;
@@ -6724,7 +6850,7 @@ thickness = 5
     draftModel.Discard();
     CHECK(!draftModel.Dirty());
     CHECK(!draftModel.Draft().enabled);
-    CHECK(!draftModel.Draft().featuresEnabled);
+    CHECK(!draftModel.Draft().monsters.enabled);
     CHECK(draftModel.Draft().overlay.opacity == 0.50F);
     CHECK(draftModel.Draft().monsters.normal.thickness == 3.0F);
     CHECK(draftModel.Draft().monsters.normal.size == 14.0F);
@@ -6792,10 +6918,9 @@ thickness = 5
     draftModel.ResetToDefaults();
     CHECK(draftModel.Dirty());
     CHECK(draftModel.Draft().enabled);
-    CHECK(draftModel.Draft().featuresEnabled);
+    CHECK(draftModel.Draft().monsters.enabled);
     CHECK(draftModel.Draft().overlay.opacity == 1.0F);
     CHECK(draftModel.Draft().overlay.scale == 1.0F);
-    CHECK(draftModel.Draft().overlay.enabled);
     CHECK(!draftModel.Draft().overlay.diagnosticPreview);
     CHECK(draftModel.Draft().monsters.normal.thickness == 2.0F);
     CHECK(draftModel.Draft().monsters.normal.shape
@@ -6855,7 +6980,7 @@ thickness = 5
     CHECK(newlyApplied.enabled);
     CHECK(newlyApplied.overlay.opacity == 1.0F);
     CHECK(newlyApplied.overlay.scale == 1.0F);
-    CHECK(newlyApplied.overlay.enabled);
+    CHECK(newlyApplied.monsters.enabled);
     CHECK(!newlyApplied.overlay.diagnosticPreview);
     CHECK(newlyApplied.overlay.frameRate == 37);
     CHECK(!newlyApplied.overlay.followNativeAutomap);
@@ -6881,13 +7006,16 @@ thickness = 5
             CHECK(shippedSchema.value_or(0) == CurrentConfigSchemaVersion);
             const auto shipped = ParseConfig(shippedDocument);
             CHECK(shipped.enabled);
-            CHECK(shipped.featuresEnabled);
             CHECK(!shipped.diagnostics);
             CHECK(shipped.overlay.opacity == 1.0F);
             CHECK(shippedText.find("detection_radius") == std::string::npos);
             CHECK(shippedText.find("marker_thickness") == std::string::npos);
+            CHECK(shippedText.find("features_enabled") == std::string::npos);
+            CHECK(shippedText.find("[overlay]\n# Enables")
+                == std::string::npos);
             CHECK(shipped.monsters.normal.shape
                 == MonsterMarkerShape::PlayerCross);
+            CHECK(shipped.monsters.enabled);
             CHECK(shipped.monsters.minion.shape
                 == MonsterMarkerShape::PlayerCross);
             CHECK(shipped.monsters.champion.shape
@@ -7005,6 +7133,7 @@ thickness = 5
             CHECK(std::get<std::int32_t>(
                 shipped.navigation.customLevels.targets[3]) == 119);
             CHECK(shipped.menu.showLauncher);
+            CHECK(shipped.menu.theme == MenuTheme::SanctuaryGold);
             CHECK(!shipped.menu.startExpanded);
             CHECK(shipped.menu.rememberPosition);
             CHECK(shipped.menu.positionX == 0.86F);

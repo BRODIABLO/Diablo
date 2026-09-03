@@ -368,10 +368,9 @@ fn appendSignedLe(
     try appendUnsignedLe(U, output, allocator, @bitCast(value));
 }
 
-fn writeGeometryBinary(
+fn writeGeometryBinaryWithContext(
     allocator: std.mem.Allocator,
-    inputs: *const LoadedInputs,
-    data_options: DataOptions,
+    ctx: *drlg.Ctx,
     seed: u32,
     difficulty_value: u32,
     act_no: i32,
@@ -388,10 +387,8 @@ fn writeGeometryBinary(
     }
     const started = performanceCounter();
     const frequency = performanceFrequency();
-    var ctx = try inputs.context(allocator, data_options);
-    defer ctx.deinit();
     var result = try render.generateActAutomapGeometry(
-        &ctx,
+        ctx,
         allocator,
         act_no,
         seed,
@@ -478,6 +475,27 @@ fn writeGeometryBinary(
             digest,
             elapsedMilliseconds(started, performanceCounter(), frequency),
         },
+    );
+}
+
+fn writeGeometryBinary(
+    allocator: std.mem.Allocator,
+    inputs: *const LoadedInputs,
+    data_options: DataOptions,
+    seed: u32,
+    difficulty_value: u32,
+    act_no: i32,
+    output_path: []const u8,
+) !void {
+    var ctx = try inputs.context(allocator, data_options);
+    defer ctx.deinit();
+    try writeGeometryBinaryWithContext(
+        allocator,
+        &ctx,
+        seed,
+        difficulty_value,
+        act_no,
+        output_path,
     );
 }
 
@@ -770,10 +788,9 @@ fn findPresetFacadeOpening(
     return anchor;
 }
 
-fn emitLabelAtlas(
+fn emitLabelAtlasWithContext(
     allocator: std.mem.Allocator,
-    inputs: *const LoadedInputs,
-    data_options: DataOptions,
+    ctx: *drlg.Ctx,
     seed: u32,
     difficulty_value: u32,
     act_no: i32,
@@ -791,10 +808,8 @@ fn emitLabelAtlas(
 
     const started = performanceCounter();
     const frequency = performanceFrequency();
-    var ctx = try inputs.context(allocator, data_options);
-    defer ctx.deinit();
     var result = try drlg.generateActLabels(
-        &ctx,
+        ctx,
         allocator,
         act_no,
         seed,
@@ -802,7 +817,7 @@ fn emitLabelAtlas(
     );
     defer result.deinit(allocator);
     var physical = try drlg.generateActFull(
-        &ctx,
+        ctx,
         allocator,
         act_no,
         seed,
@@ -997,6 +1012,57 @@ fn emitLabelAtlas(
     );
 }
 
+fn emitLabelAtlas(
+    allocator: std.mem.Allocator,
+    inputs: *const LoadedInputs,
+    data_options: DataOptions,
+    seed: u32,
+    difficulty_value: u32,
+    act_no: i32,
+    current_level: i32,
+) !void {
+    var ctx = try inputs.context(allocator, data_options);
+    defer ctx.deinit();
+    try emitLabelAtlasWithContext(
+        allocator,
+        &ctx,
+        seed,
+        difficulty_value,
+        act_no,
+        current_level,
+    );
+}
+
+fn writePrimaryAtlasBinary(
+    allocator: std.mem.Allocator,
+    inputs: *const LoadedInputs,
+    data_options: DataOptions,
+    seed: u32,
+    difficulty_value: u32,
+    act_no: i32,
+    current_level: i32,
+    output_path: []const u8,
+) !void {
+    var ctx = try inputs.context(allocator, data_options);
+    defer ctx.deinit();
+    try emitLabelAtlasWithContext(
+        allocator,
+        &ctx,
+        seed,
+        difficulty_value,
+        act_no,
+        current_level,
+    );
+    try writeGeometryBinaryWithContext(
+        allocator,
+        &ctx,
+        seed,
+        difficulty_value,
+        act_no,
+        output_path,
+    );
+}
+
 fn emitAutomapSpriteStats(allocator: std.mem.Allocator) !void {
     var stats = try render.loadAutomapSpriteStats(allocator);
     defer stats.deinit();
@@ -1129,6 +1195,27 @@ pub fn main(init: std.process.Init.Minimal) !void {
         const difficulty_value = try parseU32(args.next() orelse return error.MissingDifficulty);
         const act_no: i32 = @intCast(try parseU32(args.next() orelse return error.MissingAct));
         try smokeLegacyAutomap(allocator, seed, difficulty_value, act_no);
+        return;
+    }
+    if (first != null and std.mem.eql(u8, first.?, "atlas-binary")) {
+        const seed = try parseU32(args.next() orelse return error.MissingSeed);
+        const difficulty_value = try parseU32(args.next() orelse return error.MissingDifficulty);
+        const act_no: i32 = @intCast(try parseU32(args.next() orelse return error.MissingAct));
+        const current_level: i32 = @intCast(try parseU32(args.next() orelse return error.MissingCurrentLevel));
+        const output_path = args.next() orelse return error.MissingOutputPath;
+        const data_options = try DataOptions.parse(&args);
+        var inputs = try LoadedInputs.load(allocator, data_options);
+        defer inputs.deinit(allocator);
+        try writePrimaryAtlasBinary(
+            allocator,
+            &inputs,
+            data_options,
+            seed,
+            difficulty_value,
+            act_no,
+            current_level,
+            output_path,
+        );
         return;
     }
     if (first != null and std.mem.eql(u8, first.?, "geometry-binary")) {

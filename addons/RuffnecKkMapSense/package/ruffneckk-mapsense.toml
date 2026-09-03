@@ -2,17 +2,13 @@
 # Configure normal settings in the in-game MapSense menu.
 # Only navigation.custom_levels.targets is intended for manual editing.
 
-schema_version = 15
+schema_version = 16
 
 [general]
-# Enables the plugin, reveal engine, in-frame settings panel, and Controls actions.
+# Master switch for every MapSense feature. The settings panel remains available.
 enabled = true
-# Suspends or resumes every MapSense feature without changing individual settings.
-features_enabled = true
 
 [overlay]
-# Enables MapSense additions to D2R's native automap when their live collectors are available.
-enabled = true
 # Legacy diagnostic-scene switch retained for schema 2 compatibility. Keep disabled.
 diagnostic_preview = false
 # Compatibility key: MapSense additions follow the native automap by design.
@@ -22,6 +18,7 @@ scale = 1.00
 frame_rate = 60
 
 [monsters]
+enabled = true
 
 [monsters.normal]
 shape = "player_cross"
@@ -169,6 +166,8 @@ targets = [
 ]
 
 [menu]
+# Changes only the MapSense settings panel palette.
+theme = "sanctuary_gold"
 # Keeps a small movable MapSense launcher visible while the panel is collapsed.
 show_launcher = true
 # Opens the full settings panel at startup instead of the launcher.

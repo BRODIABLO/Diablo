@@ -851,7 +851,7 @@ private:
             ClearImGuiMouseState(false);
         }
         const auto nativeAutomapVisible = IsNativeAutomapVisible();
-        const auto canvasWanted = settings_.overlay.enabled
+        const auto canvasWanted = settings_.enabled
             && settings_.overlay.diagnosticPreview
             && (!settings_.overlay.followNativeAutomap || nativeAutomapVisible);
         const auto menuWanted = menuExpanded_ || settings_.menu.showLauncher;
