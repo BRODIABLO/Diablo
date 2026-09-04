@@ -1,15 +1,15 @@
-# Extended Act Level IDs 2.0.0
+# Extended Act Level IDs 2.0.2
 
-Extended Act Level IDs makes `levels.txt` usable up to D2R's native limit of
-1023 compiled records: canonical Level IDs `0` through `1022`.
+Extended Act Level IDs targets making `levels.txt` usable up to D2R's native
+limit of 1023 compiled records: canonical Level IDs `0` through `1022`.
 
 D2R normally resolves an act from the contiguous ranges compiled from
 `actinfo.txt`. As a result, a new Level ID appended after the Act V range is
 treated as Act V even when its `levels.txt` row declares another act. This
-Version 2.0.0 keeps that fix and extends the two six-byte room-visibility
+Version 2.0.2 keeps that fix and extends the two six-byte room-visibility
 packets whose stock Level ID field is only one byte. It preserves the original
 packet size and carries the two high Level ID bits in a versioned coordinate
-marker understood only by another compatible 2.0.0 instance.
+marker understood only by another compatible v2 instance.
 
 ## Installation
 
@@ -47,8 +47,10 @@ validates all of the following before using them:
 - the PluginSDK service versions;
 - compiled `Levels` row size `0x18C`;
 - a record count between `1` and `1023` in every bank;
+- every physical row through `getRow`, including revision, index, pointer, and
+  row-size checks;
 - canonical contiguous IDs, where every `Id` equals its physical row index;
-- the `Id` field through a service lookup round-trip for every row;
+- the `Id` field through a keyed service round-trip for vanilla IDs `0..255`;
 - the `Act` field at `+0x0D`, including the five vanilla act boundaries;
 - every act value is between `0` and `4`.
 
@@ -64,6 +66,13 @@ signature, service ABI, or hook owner never triggers a truncated fallback.
 Extended packets fail closed. Build names are logged for diagnostics only and
 are not an allowlist.
 
+Version 2.0.2 first validates the complete physical table, then repeats the
+physical lookup and keyed identity round-trip only for IDs `0..255`. This keeps
+the proven vanilla service check without calling the current keyed lookup past
+its observed boundary. A keyed failure still logs the first row index, Level
+ID, service result, and returned-versus-expected metadata without exposing a
+pointer. Any failure rejects the whole bank and retains the original resolver.
+
 The console command `extended-act-level-ids` reports cache state, table
 revision, row counts, compatible peers, encoded/decoded/refused packets,
 resolutions, fallbacks, and the diagnostic build name.
@@ -73,7 +82,7 @@ Act index; the optional data context defaults to RotW (`3`).
 
 ## Saves, portals, and waypoints
 
-Version 2.0.0 does not hook save loading or writing and does not change the
+Version 2.0.2 does not hook save loading or writing and does not change the
 D2S/D2I format. It is therefore unlike ISC12: installing or removing this DLL
 does not widen a serialized field. Existing saves remain structurally
 compatible. A character or mod that depends on custom level rows still needs
@@ -83,11 +92,11 @@ until the gameplay matrix is complete.
 The plugin does not enlarge the fixed waypoint bitset, invent waypoint slots,
 or enlarge portal-flag storage. Extended Level IDs may use the stock wider
 travel requests only within those existing capacities and semantics. Version
-2.0.0 creates no level, transition, waypoint, portal, or quest by itself.
+2.0.2 creates no level, transition, waypoint, portal, or quest by itself.
 
 ## Release candidate
 
-`RuffnecKk-Extended-Act-Level-IDs-2.0.0.zip` is the planned public archive,
+`RuffnecKk-Extended-Act-Level-IDs-2.0.2.zip` is the planned public archive,
 not a public release. Packaging remains blocked until the v2 runtime matrix is
 complete. The archive will contain only the DLL; keep this README beside it.
 
@@ -117,7 +126,8 @@ gate.
 
 ## Compatibility
 
-Version 2.0.0 is built against D2RLoader 1.2.0-beta and PluginSDK API v3 commit
+Version 2.0.2 targets the promoted public D2RLoader 1.2.1 baseline (whose PE
+version is `1.2.1-beta`) and PluginSDK API v3 commit
 `4933e2c42cb2592958cd0df3b6dc5003102252d1`. Runtime qualification targets the
 official D2R `3.3.93847` build. D2R `3.2.92777` is covered only by governed
 byte-exact equivalence of every native surface used by the plugin.

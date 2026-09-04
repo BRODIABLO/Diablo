@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(ExtendedActLevelIds VERSION 2.0.0 LANGUAGES CXX RC)
+project(ExtendedActLevelIds VERSION 2.0.2 LANGUAGES CXX RC)
 
 include(CTest)
 include(FetchContent)

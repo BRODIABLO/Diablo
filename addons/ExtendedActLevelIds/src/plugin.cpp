@@ -364,24 +364,77 @@ std::shared_ptr<const ActMap> BuildBankCache(
             error = "Levels rows must use contiguous Id values 0..1022 and Act values 0..4";
             return {};
         }
+        map->entries.push_back({levelId, act});
+    }
+
+    const auto keyedRowCount = KeyedValidationRowCount(table.rowCount);
+    for (std::uint32_t rowIndex = 0;
+            rowIndex < keyedRowCount;
+            ++rowIndex) {
+        D2RL::DataTables::RowView physical{
+            .structSize = D2RL::DataTables::RowViewSize,
+        };
+        if (DataTables->getRow(
+                context,
+                bank,
+                D2RL::DataTables::TableId::Levels,
+                rowIndex,
+                &physical) != D2RL::DataTables::Result::Success
+                || physical.revision != revision
+                || physical.row == nullptr
+                || physical.rowIndex != rowIndex
+                || physical.rowSize != LevelsRowSize) {
+            error = "physical Levels row lookup failed during keyed validation";
+            return {};
+        }
+
+        const auto levelId = ReadValue<std::int32_t>(
+            physical.row,
+            LevelsIdOffset);
+        if (!IsCanonicalLevelId(levelId, rowIndex)) {
+            error = "Levels Id changed during keyed validation";
+            return {};
+        }
 
         D2RL::DataTables::RowView keyed{
             .structSize = D2RL::DataTables::RowViewSize,
         };
-        if (DataTables->findRowById(
-                context,
-                bank,
-                D2RL::DataTables::TableId::Levels,
-                static_cast<std::uint32_t>(levelId),
-                &keyed) != D2RL::DataTables::Result::Success
-                || keyed.revision != revision
-                || keyed.row != physical.row
-                || keyed.rowIndex != rowIndex
-                || keyed.rowSize != LevelsRowSize) {
-            error = "Levels Id layout failed the service round-trip";
+        const auto keyedResult = DataTables->findRowById(
+            context,
+            bank,
+            D2RL::DataTables::TableId::Levels,
+            static_cast<std::uint32_t>(levelId),
+            &keyed);
+        const auto revisionMatches = keyed.revision == revision;
+        const auto rowMatches = keyed.row == physical.row;
+        const auto rowIndexMatches = keyed.rowIndex == rowIndex;
+        const auto rowSizeMatches = keyed.rowSize == LevelsRowSize;
+        if (keyedResult != D2RL::DataTables::Result::Success
+                || !revisionMatches
+                || !rowMatches
+                || !rowIndexMatches
+                || !rowSizeMatches) {
+            char diagnostic[512]{};
+            std::snprintf(
+                diagnostic,
+                sizeof(diagnostic),
+                "Levels Id service round-trip failed at rowIndex=%u, levelId=%d: serviceResult=%u, revision=%llu/%llu (match=%u), rowIndex=%u/%u (match=%u), rowSize=%u/%u (match=%u), rowMatch=%u",
+                rowIndex,
+                levelId,
+                static_cast<unsigned int>(keyedResult),
+                static_cast<unsigned long long>(keyed.revision),
+                static_cast<unsigned long long>(revision),
+                revisionMatches ? 1U : 0U,
+                keyed.rowIndex,
+                rowIndex,
+                rowIndexMatches ? 1U : 0U,
+                keyed.rowSize,
+                LevelsRowSize,
+                rowSizeMatches ? 1U : 0U,
+                rowMatches ? 1U : 0U);
+            error = diagnostic;
             return {};
         }
-        map->entries.push_back({levelId, act});
     }
 
     std::sort(map->entries.begin(), map->entries.end());
@@ -977,7 +1030,7 @@ auto Status(
     std::snprintf(
         message,
         sizeof(message),
-        "Extended Act Level IDs 2.0.0: %s; cache=%s; revision=%llu; rows=%zu/%zu/%zu; compatible peers=%zu; encoded=%llu; decoded=%llu; refused=%llu; Levels resolutions=%llu; original fallbacks=%llu; build=%s.",
+        "Extended Act Level IDs 2.0.2: %s; cache=%s; revision=%llu; rows=%zu/%zu/%zu; compatible peers=%zu; encoded=%llu; decoded=%llu; refused=%llu; Levels resolutions=%llu; original fallbacks=%llu; build=%s.",
         Operational.load(std::memory_order_acquire) ? "active" : "inactive",
         CacheReady.load(std::memory_order_acquire) ? "ready" : "not ready",
         static_cast<unsigned long long>(
@@ -1032,7 +1085,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "ruffneckk-extended-act-level-ids",
     .name = "Extended Act Level IDs",
-    .version = "2.0.0",
+    .version = "2.0.2",
     .author = "RuffnecKk",
     .description = "Extends functional level IDs to the native 1023-record limit.",
     .flags = D2RL::PluginFlags::Shared | D2RL::PluginFlags::NativeHooks,
@@ -1201,7 +1254,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
 
     Operational.store(true, std::memory_order_release);
     const auto message = std::string(
-        "Extended Act Level IDs 2.0.0 by RuffnecKk active; native fingerprints and private compatibility channel accepted; build=")
+        "Extended Act Level IDs 2.0.2 by RuffnecKk active; native fingerprints and private compatibility channel accepted; build=")
         + RuntimeBuildName + ".";
     Context->LogInfo(message.c_str());
     return true;

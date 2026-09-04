@@ -20,6 +20,7 @@ inline constexpr std::uint8_t MaximumAct = 4;
 inline constexpr std::uint32_t MaximumCompiledLevelRecords = 1023;
 inline constexpr std::int32_t MaximumLevelId =
     static_cast<std::int32_t>(MaximumCompiledLevelRecords - 1);
+inline constexpr std::uint32_t MaximumKeyedValidationLevelId = 0xFF;
 inline constexpr std::int32_t MaximumVanillaNetworkLevelId = 0xFF;
 inline constexpr std::uint16_t CoordinateValueMask = 0x1FFF;
 inline constexpr std::uint16_t CodecMarkerMask = 0x8000;
@@ -42,6 +43,13 @@ constexpr bool IsSupportedDataContext(std::uint8_t dataContext) noexcept {
 
 constexpr bool HasValidLevelRecordCount(std::uint32_t rowCount) noexcept {
     return rowCount > 0 && rowCount <= MaximumCompiledLevelRecords;
+}
+
+constexpr std::uint32_t KeyedValidationRowCount(
+        std::uint32_t rowCount) noexcept {
+    return std::min(
+        rowCount,
+        MaximumKeyedValidationLevelId + 1U);
 }
 
 constexpr bool IsCanonicalLevelId(

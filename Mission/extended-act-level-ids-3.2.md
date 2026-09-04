@@ -2,15 +2,21 @@
 
 Dernière mise à jour : 4 septembre 2026
 
-Statut : **v2 implantée et validée hors jeu; qualification runtime ouverte**.
+Statut : **cache physique deux passes implanté en 2.0.2 et qualifié statiquement;
+runtime exact 1023 à exécuter**.
 Vincent a donné `GO` le 4 septembre 2026 pour étendre le produit existant à la
-limite native de 1023 records. La source 2.0.0, ses cinq hooks fail-closed et
+limite native de 1023 records. La source 2.0.2, ses cinq hooks fail-closed et
 son codec réseau compatible sont compilés; les preuves statiques sont
-gouvernées. Aucun binaire v2 n'a été déployé ni exécuté dans D2R. La matrice
-d'une véritable zone jouable d'ID supérieur à 255, Town Portal, waypoint,
-save/reload et host/joiner reste ouverte avant toute archive ou release. Les
-résultats 0.1.1 ci-dessous demeurent l'historique qualifié de la première
-fonction `Levels.txt → Act`, pas une preuve runtime de la v2.
+gouvernées. Le premier cold start 2.0.0 sur Battle.net D2R 3.3.93847 et
+D2RLoader public 1.2.1 passe avec la pile complète. La matrice d'une véritable
+zone jouable d'ID supérieur à 255, Town Portal, waypoint, save/reload et
+host/joiner reste ouverte avant toute archive ou release. Un fixture exact de
+1023 records démontre que le round-trip `findRowById` du service s'arrête au
+premier ID étendu : `256` retourne `NotFound`, alors que sa ligne physique est
+valide. La DLL refuse son cache RotW et conserve le résolveur original. Les
+résultats 0.1.1 ci-dessous demeurent
+l'historique qualifié de la première fonction `Levels.txt → Act`, pas une
+preuve gameplay du codec v2.
 
 ## Décision v2 — extension fonctionnelle à 1023 records — 4 septembre 2026
 
@@ -78,6 +84,148 @@ fonction `Levels.txt → Act`, pas une preuve runtime de la v2.
 - Les handlers D2R exacts Town Portal/waypoint et le test d'une véritable zone
   `>255` restent des gates de qualification. La v2 ne les hooke pas et ne
   revendique encore ni support gameplay complet ni release.
+
+## Résultat runtime v2 — 4 septembre 2026
+
+- Vincent a autorisé `GO runtime Extended Level IDs v2`. La DLL reproductible
+  SHA-256
+  `1874623DA1B4914BE465A430D117B19174D986CF9E326E057FFEB115AD10C508`
+  a été déployée uniquement dans la portée mod-locale BKVince.
+- Le runtime réellement testé est Battle.net D2R `3.3.93847`, Build Key
+  `623f7a1f73eabb08ccb2b2046e3f9164`, sous la baseline publique promue
+  D2RLoader `1.2.1`. Les hashes de `.build.info`, `D2R.exe`, `D2RLoader.exe`,
+  de la source et de la copie runtime ont été relevés avant conclusion.
+- Le plugin journalise `2.0.0`, accepte l'empreinte native complète et le canal
+  privé, puis publie `Levels revision 1` avec `Classic=137`, `LoD=137` et
+  `RotW=147`.
+- La pile complète charge 38 plugins, applique 17 memory patches et atteint
+  `24/24`. Les cinq plugins eezstreet restent actifs. La copie globale 1.0.0
+  n'a pas été retirée : D2RLoader la saute explicitement parce que la v2
+  mod-locale possède déjà l'identité, ce qui ferme le gate d'arbitrage.
+- Les reçus et logs frais sont conservés sous
+  `analysis-cache/extended-act-level-ids-v2/runtime/20260904-v2-cold-start/`.
+- Ce cold start ne contenait aucun Level ID supérieur à 255. Le codec room
+  visibility, une zone navigable, Town Portal, waypoint, automap, save/reload,
+  hôte/joiner et pair incompatible restent donc `not run`, sans extrapolation.
+
+## Gate capacité 1023 — résultat fail-closed du 4 septembre 2026
+
+- Le fixture gouverné contient exactement 1023 records compilables, IDs
+  contigus `0..1022`, 188 colonnes, CRLF et round-trip byte-exact. Son SHA-256
+  source/runtime était
+  `6D6756E03911C2BA531F007AE9E97EEC6E81C879800182964AF6BCB3E69C3FAF`.
+- D2RLoader a compilé les 192 tables TXT, chargé 38 plugins et 17 memory
+  patches, ignoré la copie globale dupliquée et atteint `24/24`. La DLL v2 a
+  accepté son empreinte native et son canal privé.
+- Le `TableView` RotW a passé les gardes initiales de service, révision,
+  pointeur, nombre et taille de records. Un record physique a ensuite échoué
+  l'identité `findRowById(Id) == même pointeur/même index`; la DLL a donc refusé
+  tout le cache et conservé le résolveur original. Le log actuel ne nomme pas
+  encore le premier ID fautif.
+- Ce résultat invalide l'hypothèse selon laquelle le lookup logique
+  `DataTableServiceV1` garantit directement toute la plage `0..1022`. Il ne
+  justifie pas de supprimer silencieusement le garde-fou : il faut d'abord
+  borner le premier échec, auditer l'implémentation du service et arbitrer entre
+  table physique validée, évolution de service ou nouveau seam natif.
+- Aucun personnage ni save n'a été chargé avec le fixture. Le processus de
+  test a été arrêté, puis `levels.txt` source et runtime ont été restaurés
+  byte-exact au SHA-256
+  `A46B5438164ADB1FB9540890103594EA48A79AFA2478CB6865D2E6DB5795EB04`.
+  Les reçus et logs sont conservés sous
+  `analysis-cache/extended-act-level-ids-v2/runtime/20260904-capacity-1023/`.
+
+## Gate diagnostique 2.0.1 — résultat runtime du 4 septembre 2026
+
+- Vincent a autorisé `next gate go` pour identifier le premier échec du
+  round-trip sans changer la décision fail-closed.
+- Le diagnostic rapporte désormais le premier `rowIndex`, son `levelId`, le
+  résultat numérique de `findRowById`, les valeurs retournées/attendues de
+  révision, index et taille, puis leurs indicateurs de concordance. Le pointeur
+  n'est jamais journalisé : seule son égalité est exposée par `rowMatch=0/1`.
+- La condition et la sortie restent identiques : au premier écart, le cache de
+  banque entier est refusé et le résolveur original demeure actif. Aucun hook,
+  codec, token de compatibilité, appel de service, comportement de sauvegarde
+  ou règle TSV n'a changé.
+- Deux builds Release indépendants de 60 928 octets sont byte-identiques au
+  SHA-256
+  `A990980E762C8C0278DDCFE80F4BBCE6E5F042C859B9BC24B90B4C107D61F945`;
+  chacun passe CTest `1/1` sans avertissement. Les métadonnées PE et PluginInfo
+  portent `2.0.1`, `RuffnecKk`, et les trois exports D2RLoader restent seuls.
+- Vincent a ensuite autorisé `GO runtime diagnostic 1023`. Le binaire exact
+  `A990980E…D61F945` et le fixture exact `6D6756E0…3FAF` ont été déployés
+  temporairement en portée mod-locale sous Battle.net D2R 3.3.93847 et
+  D2RLoader public 1.2.1.
+- La pile complète compile 192 TXT, charge 38 plugins et 17 patches, saute la
+  copie globale plus ancienne et atteint `24/24` avec les cinq DLL eezstreet.
+- Le premier échec est exactement `rowIndex=256 / levelId=256`.
+  `findRowById` retourne `serviceResult=5`, soit `NotFound` dans le SDK; le
+  `RowView` retourné reste nul (`revision=0`, `rowIndex=0`, `rowSize=0`,
+  `rowMatch=0`). Le `getRow(256)` immédiatement précédent avait donc réussi,
+  faute de quoi le diagnostic keyed n'aurait jamais été atteint.
+- Le comportement fail-closed reste vert : cache RotW rejeté en entier,
+  résolveur original conservé, aucun personnage ou save ouvert. Les records
+  physiques 257..1022 ne sont pas encore prouvés individuellement, car la
+  boucle s'arrête volontairement au premier lookup keyed refusé.
+- Le processus a été arrêté. Le premier rollback combiné a restauré la table
+  mais rencontré un verrou tardif sur la DLL; le retry borné, sans relance, a
+  restauré uniquement cette DLL. Source et runtime portent finalement la table
+  `A46B5438…795EB04` et la DLL 2.0.0 `1874623D…10C508`, byte-exact, sans
+  processus Diablo restant.
+- Les preuves fraîches sont conservées sous
+  `analysis-cache/extended-act-level-ids-v2/runtime/20260904-capacity-1023-diagnostic-2.0.1/`.
+
+### Décision d'architecture issue du diagnostic
+
+- **Fait vérifié :** l'API expose un ID `uint32_t` et documente
+  `findRowById` pour `Levels`, mais le fournisseur runtime retourne `NotFound`
+  dès 256. Le chemin keyed actuel est donc réellement borné à la plage vanilla
+  dans cette baseline, quelle qu'en soit la cause interne encore inconnue.
+- **Fait vérifié :** `getTable` expose 1023 records et `getRow` réussit au moins
+  jusqu'à l'index physique 256 avec le stride attendu. Le plugin impose déjà
+  `Id == rowIndex`, unicité, plage `0..1022`, Act `0..4` et ancres vanilla.
+- **Inconnu :** le run n'a pas balayé les lignes physiques 257..1022; il ne
+  prouve donc pas encore que `getRow` les fournit toutes.
+- **Recommandation :** ne pas ajouter de seam natif et ne pas attendre une
+  extension D2RLoader pour poursuivre. Le prochain prototype doit valider les
+  1023 lignes physiques dans une première passe, puis conserver le round-trip
+  keyed seulement pour `0..255`. Cette équivalence est acceptable uniquement
+  parce que le contrat du produit exige des IDs canoniques contigus égaux aux
+  index physiques. Toute ligne physique absente ou invalide conserve le rejet
+  complet du cache.
+- Une correction du service reste un problème réel à signaler, avec Extended
+  Act Level IDs comme consommateur concret, mais elle n'est pas encore une
+  dépendance démontrée : l'API `getRow` existante peut couvrir le besoin si le
+  balayage `0..1022` passe. Aucun changement de comportement n'est implanté
+  sans un nouveau `GO`.
+- Vincent a autorisé l'implantation avec
+  `GO implantation cache physique deux passes` le 4 septembre 2026. Le lot
+  reste borné au cache : aucun nouveau seam natif, hook, protocole réseau,
+  format de sauvegarde ou fichier de configuration n'est autorisé.
+
+### Implantation du cache physique deux passes — 4 septembre 2026
+
+- La version candidate devient `2.0.2`; le diagnostic `2.0.1` reste une preuve
+  historique distincte et immuable.
+- `BuildBankCache` balaie d'abord chaque ligne physique `0..rowCount-1` avec
+  `getRow`, vérifie révision, pointeur, index, stride, `Id == rowIndex` et
+  `Act 0..4`, puis copie seulement `{levelId, act}` dans le cache propriétaire.
+- Une seconde passe réacquiert les lignes physiques et conserve l'identité
+  `findRowById == même pointeur/index/révision/stride` pour au plus `0..255`.
+  Aucun appel keyed n'est fait au-delà de la frontière runtime démontrée.
+- Les trois banques restent publiées atomiquement seulement après leur succès
+  commun; toute erreur réinitialise les caches et conserve le résolveur original.
+- Deux builds Release indépendants sont byte-identiques : 61 440 octets,
+  SHA-256 `FDAF884B69AB879D8F3946E2CF036FF25AF3C03C7CBE479803761A19B13A6EC1`.
+  Les deux CTest passent `1/1` sans avertissement. Les métadonnées portent
+  `RuffnecKk / 2.0.2`, les trois exports D2RLoader restent seuls et les imports
+  demeurent limités aux runtimes Windows/MSVC attendus.
+- Aucun RVA, octet `Expected`, hook, ABI, codec, canal privé, format D2S/D2I,
+  configuration ou dépendance inter-plugin n'a changé. Le runtime n'a pas été
+  touché pendant ce gate.
+- **Prochain gate :** déployer temporairement le binaire exact 2.0.2 avec le
+  fixture exact de 1023 records sous la pile complète, exiger
+  `Classic=137 / LoD=137 / RotW=1023`, puis restaurer byte-exact avant toute
+  matrice avec personnage.
 
 ## Décision de reprise autoritaire — 1er septembre 2026
 

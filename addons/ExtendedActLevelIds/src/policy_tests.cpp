@@ -1,6 +1,9 @@
 #include "extended_act_level_ids_policy.hpp"
 
 #include <array>
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <cassert>
 #include <fstream>
 #include <iterator>
@@ -15,10 +18,17 @@ int main() {
     static_assert(LevelsRowSize == 0x18C);
     static_assert(MaximumCompiledLevelRecords == 1023);
     static_assert(MaximumLevelId == 1022);
+    static_assert(MaximumKeyedValidationLevelId == 255);
     static_assert(!HasValidLevelRecordCount(0));
     static_assert(HasValidLevelRecordCount(1));
     static_assert(HasValidLevelRecordCount(1023));
     static_assert(!HasValidLevelRecordCount(1024));
+    static_assert(KeyedValidationRowCount(0) == 0);
+    static_assert(KeyedValidationRowCount(1) == 1);
+    static_assert(KeyedValidationRowCount(255) == 255);
+    static_assert(KeyedValidationRowCount(256) == 256);
+    static_assert(KeyedValidationRowCount(257) == 256);
+    static_assert(KeyedValidationRowCount(1023) == 256);
     static_assert(IsCanonicalLevelId(0, 0));
     static_assert(IsCanonicalLevelId(1022, 1022));
     static_assert(!IsCanonicalLevelId(-1, 0));
@@ -79,6 +89,18 @@ int main() {
     const std::string pluginText{
         std::istreambuf_iterator<char>(pluginInput),
         std::istreambuf_iterator<char>()};
+    const auto physicalPass = pluginText.find("rowIndex < table.rowCount");
+    const auto keyedPass = pluginText.find("rowIndex < keyedRowCount");
+    const auto keyedLookup = pluginText.find("DataTables->findRowById");
+    if (physicalPass == std::string::npos
+            || keyedPass == std::string::npos
+            || keyedLookup == std::string::npos
+            || physicalPass >= keyedPass
+            || keyedPass >= keyedLookup
+            || pluginText.find("DataTables->findRowById", keyedLookup + 1)
+                != std::string::npos) {
+        return 1;
+    }
     assert(pluginText.find("PluginFlags::Shared | D2RL::PluginFlags::NativeHooks")
         != std::string::npos);
     assert(pluginText.find("ModScopedOnly") == std::string::npos);
@@ -101,7 +123,11 @@ int main() {
     assert(pluginText.find("localPlayerId == playerId") != std::string::npos);
     assert(pluginText.find("EncodeLevelCoordinate") != std::string::npos);
     assert(pluginText.find("DecodeLevelCoordinate") != std::string::npos);
-    assert(pluginText.find("2.0.0") != std::string::npos);
+    assert(pluginText.find("2.0.2") != std::string::npos);
+    assert(pluginText.find("KeyedValidationRowCount") != std::string::npos);
+    assert(pluginText.find("serviceResult=%u") != std::string::npos);
+    assert(pluginText.find("rowIndex=%u, levelId=%d") != std::string::npos);
+    assert(pluginText.find("rowMatch=%u") != std::string::npos);
     assert(pluginText.find("ResolveProbe") != std::string::npos);
     assert(pluginText.find("source=%s") != std::string::npos);
     assert(pluginText.find("ConfigFileName") == std::string::npos);
