@@ -256,3 +256,46 @@ désactivée. Cette extension et le Transmogrify autonome partagent néanmoins
 unique. L'équivalence gameplay intégrée reste ouverte, notamment la fréquence,
 les maxima éthérés, les bows/crossbows/Amazon bows, la réparation, la
 persistance et le multijoueur. La DLL autonome reste un témoin non simultané.
+
+Cette restriction historique est levée le 29 juillet 2026. Le port PluginPack
+et le consommateur autonome emploient maintenant un courtier symétrique : le
+premier chargé possède seul `0x314110`, le second lui enregistre sa
+transformation de record, et chacun fonctionne aussi seul. Les deux ordres et
+le pack sans compagnon atteignent 24/24 avec l'option ranged active, zéro rejet
+et zéro échec. La validation gameplay des bases ranged et de leur réparation
+reste distincte du cold start technique.
+
+## Correctif Community Pack 1.0.1 — 14 août 2026
+
+Le courtier de records du Pack est remplacé par une passe post-compilation.
+`plugin-items.dll` ne hooke plus `GetItemsTxtRecord 0x314110`; il hooke
+`DATATBLS_CompileItemsTxt 0x315FD0`, appelle d'abord la compilation native des
+tables actives, puis applique une mutation bornée et idempotente aux records
+bows/crossbows et aux flags `Repair` de leurs types. Cette architecture conserve
+le comportement ranged tout en laissant `0x314110` vanilla pour
+CubeOutputQuantity. Un ancien Transmogrify qui cherche l'export du courtier ne
+le trouve plus et suit son chemin autonome prévu sur `0x314110`.
+
+Les deux ordres de chargement ont été vérifiés avec la pile BKVince complète et
+toutes les fonctionnalités du Pack actives :
+
+- Pack mod-local puis CubeOutputQuantity global : Cube 1.0.2 charge ses trois
+  hooks et le frontend atteint `24/24`;
+- CubeOutputQuantity mod-local puis `plugin-items.dll` global : Cube charge
+  d'abord, puis la passe post-compilation du Pack traite les contextes actifs;
+- disposition normale restaurée et dernier cold start réussi.
+
+Le contexte expansion contient 800 records Items et 117 records ItemTypes; la
+passe met à jour 42 records ranged et 2 types réparables. Le manifeste porte
+199 sites à ownership unique, le build Release complet réussit et CTest passe
+27/27. Le patch externe Allow CTC While Uninterruptible reste volontairement
+hors de ce correctif : son conflit avec `skills.whirlwindCtC` exige que le
+joueur désactive l'une des deux options.
+
+## Décision de validation — 30 juillet 2026
+
+Vincent décide de ne pas mesurer en jeu les probabilités de résistance à la
+perte de durabilité ni les variantes ranged pendant la matrice PluginPack. Ces
+cas restent formellement `not run`, avec confiance technique fondée sur les
+tests unitaires, les signatures, les cold starts intégrés et les scénarios de
+coexistence déjà acquis. Ils ne sont pas présentés comme un `passed` gameplay.

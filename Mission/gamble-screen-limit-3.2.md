@@ -116,3 +116,12 @@ was rejected. With all five eezstreet PluginPack DLLs present,
 `GambleScreenLimit.dll` and `plugin-items.dll` loaded together with
 `rejected=0` and `failed=0`; the final runtime state uses the mod-local JSON with
 `enabled: true`.
+
+## Integrated PluginPack gameplay — 2026-07-30
+
+With `plugin-items.dll` as the sole shipped owner and
+`items.gambleScreenLimit.enabled=true`, the fresh runtime log resolved the
+effective limit to 32. Vincent then confirmed in game that Gamble Limit works.
+This passes the nominal integrated 32-slot case for batch 1; repeated refresh,
+alternate-vendor, controller and host/joiner coverage remain separate `not run`
+cases rather than inferred successes.

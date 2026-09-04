@@ -187,3 +187,17 @@ Inclure la fonctionnalité dans le cold start final du pack complet, puis exécu
 une régression gameplay intégrée ciblant poison/Open Wounds, ville/hors-ville,
 portail/waypoint, joueur/autres serviteurs, solo, hôte/joiner et save/reload. Le
 cold start ne ferme pas ces observations en jeu par inférence.
+
+## Gameplay intégré — 30 juillet 2026
+
+Vincent confirme que la protection empêche correctement la mort du mercenaire
+en ville dans le PluginPack intégré. Le cas nominal est `passed`; les transitions,
+les autres sources de dégâts et la matrice réseau restent des extensions.
+
+## Promotion RuffnecKk Suite 1.0.0 — 18 août 2026
+
+Vincent approuve la promotion de `0.1.1` à `1.0.0` sur la base du comportement
+nominal déjà validé. La logique reste inchangée. Les builds Debug et Release
+passent `25/25` tests; deux builds Release indépendants concordent
+byte-for-byte, et le runtime live charge `Prevent Merc Death in Town 1.0.0`
+dans la pile complète à `26` plugins, `19` patches et `24/24`.

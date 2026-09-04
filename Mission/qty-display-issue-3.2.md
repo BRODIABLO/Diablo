@@ -19,18 +19,24 @@ The persistent D2R 3.2 workbench passed `status` and `self-test` for build
 the deterministic analysis image SHA-256 is
 `673E8C0B2E89563E75525B24D137098EFD07B2DB4ED42ADEC56AA1ADDF0E63AB`.
 
-- `ITEMS_GetStatsDescription`, RVA `0x2DC4B0`, has four direct callers. Its
-  32-byte entry signature is unique in `.text` and is required before hooking.
-- `STATLIST_UnitGetStatValue`, RVA `0x2F5C60`, reads current stat 70
-  (`STAT_QUANTITY`) from the concrete item.
-- `UNITS_GetItemData`, RVA `0x34A500`, returns the pointer stored at unit
-  offset `+0x10`; item flags are read at item-data offset `+0x18`.
+- `ITEMS_BuildQuantityDescription`, RVA `0x2C1E50`, is the native localized
+  quantity formatter. It reads stat 70 (`STAT_QUANTITY`), calls
+  `ITEMS_GetTotalMaxStack`, formats the `ItemStats1i` string and appends the
+  native line separator. It has four direct tooltip callers.
+- The primary tooltip path calls that formatter at RVA `0x2BE124`. Immediately
+  before it, RVA `0x2BE111` tests `IFLAG_SOCKETED` (`0x00000800`) and the
+  two-byte `jne` at RVA `0x2BE118` jumps exactly past the call. Replacing
+  `75 0F` with `90 90` restores the vanilla call; the formatter remains empty
+  for items whose quantity and maximum stack are both non-positive.
+- The strict 33-byte signature beginning at RVA `0x2BE103` is unique in
+  `.text`. It covers the socketed-flag test, its conditional jump and the
+  native formatter call.
 - `ITEMS_GetTotalMaxStack`, RVA `0x3719E0`, has 39 direct callers. Its verified
   body reads `items.txt` `maxstack` at record offset `+0xF0`, adds stat 254 and
   caps the result at 511.
-- The socketed item flag is `0x00000800`. The 92777 tooltip builder itself
-  checks this flag, while D2MOO corroborates its legacy semantic name as
-  `IFLAG_SOCKETED` without contributing any address or ABI.
+- D2MOO commit `19019806df7f3e877fa105b05395d1e3597e2316`
+  corroborates only the legacy semantic name and value `IFLAG_SOCKETED =
+  0x00000800`; no D2MOO address, structure or ABI is reused.
 
 BKVince deliberately combines `stackable=1`, positive stack limits,
 `hasinv=1` and non-zero `gemsockets` for the affected bases. This combination
@@ -46,24 +52,29 @@ touch `ITEMS_GetStatsDescription` or any tooltip builder. It already uses
 `STAT_QUANTITY` and a maximum-stack helper for vendor inventory, but that is a
 separate code path.
 
-The standalone plugin is therefore the sole owner of RVA `0x2DC4B0` during
-incubation. Transmogrify remains the sole owner of the final tooltip hook at
-`0x2BD480`; Advanced Item Tooltips installs no hook. A future merge moves the
-feature, its option field and its hook into `plugin-items.dll`, after which the
-standalone DLL must be removed to preserve unique hook ownership.
+The standalone plugin is therefore the sole owner of the two-byte patch at RVA
+`0x2BE118` during incubation. Transmogrify remains the sole owner of the final
+tooltip hook at `0x2BD480`; Advanced Item Tooltips installs no hook. The
+abandoned `ITEMS_GetStatsDescription` prototype at `0x2DC4B0` is no longer
+owned by QtyDisplayIssue. A future merge moves the feature, its option field
+and this patch into `plugin-items.dll`, after which the standalone DLL must be
+removed to preserve unique ownership.
 
 ## Implementation and gates
 
-`QtyDisplayIssue 1.0.0` is attributed exactly to `RuffnecKk`, supports global
+`QtyDisplayIssue 1.1.0` is attributed exactly to `RuffnecKk`, supports global
 and mod-local plugin folders, does not declare `ModScopedOnly`, and accepts only
 build 92777. `QtyDisplayIssue.json` is resolved from the active mod first and
 the game directory second. A missing file uses `enabled: true`; malformed
 configuration is rejected.
 
-After vanilla builds the stat description, the hook appends
-`Quantity: current of maximum` only when the item is socketed and both native
-quantity values are positive. The bounded append preserves the original buffer
-on duplicates, invalid inputs or insufficient capacity.
+Version 1.0.0 appended a custom line from `ITEMS_GetStatsDescription`. Vincent's
+retail screenshot on 2026-07-23 proved this was the wrong presentation layer:
+the reverse-assembled buffer placed the blue quantity text on the same rendered
+line as `Javelin Class`. Version 1.1.0 removes that hook and custom text
+entirely. Its sole code change converts the native socketed-item skip at
+`0x2BE118` from `jne +0x0F` to two NOPs, so D2R itself controls placement,
+centering, color, localization and formatting.
 
 Required validation:
 
@@ -79,7 +90,7 @@ Required validation:
 - public ZIP containing only `QtyDisplayIssue.dll` and
   `QtyDisplayIssue.json`.
 
-## Build, package and runtime validation — 2026-07-23
+## Build, package and runtime validation — 2026-07-23 to 2026-07-26
 
 The Release x64 build and bounded tooltip unit tests pass under MSVC
 19.44.35228. The PE is x64, embeds the D2RLoader v2 manifest, exports
@@ -95,34 +106,37 @@ Artifacts:
 - configuration: `data-BKVince/BKVince.mpq/QtyDisplayIssue.json`;
 - public archive: `addons/QtyDisplayIssue/QtyDisplayIssue.zip`;
 - DLL SHA-256:
-  `CDA241E093236212FC92627A2AB6CCCE9E90A799D78EB2B80C7D38D7B9E99CC4`;
+  `0AA995A50A0E31129D094DE1E4F062A2D679367879CE0451534E9BAF5862B8FC`;
 - JSON SHA-256:
   `3D31ADF38FFDAE660197B692145A19558EDA74F465674A8F551661BDB2ED4327`;
 - ZIP SHA-256:
-  `F8193BA438314E71210B584929FFC5419CD0361735657730BC0231BE436008B6`.
+  `380FC845B819E194D807CB73854E179E6EF4CE6DC6914516D89628C16E4B508A`.
 
 The ZIP contains exactly `QtyDisplayIssue.dll` and `QtyDisplayIssue.json` at
 its root.
 
 | Domain | Case | Status | Current-run evidence |
 |---|---|---|---|
-| Deployment | Source/runtime hashes | passed | Mod-local DLL and JSON equal the governed hashes above. |
-| Loading | Missing configuration | passed | Mod-local DLL loaded with its default and installed `0x2DC4B0`; startup reached 24/24. |
-| Loading | Valid mod-local JSON | passed | Hook installed; `active=20`, `rejected=0`, `failed=0`; startup reached 24/24. |
-| Loading | Global JSON fallback | passed | A global `enabled=false` suppressed the mod plugin hook while the plugin loaded successfully. |
-| Loading | Global DLL scope | passed | DLL loaded as `[global]`, installed the same strict hook and reached 24/24. |
-| Loading | Invalid JSON | passed | Wrong `enabled` type returned `D2RLoaderLoadPlugin=false`, installed no hook and produced the expected `failed=1`. |
-| Coexistence | PluginPack and tooltip pipeline | passed | All five eezstreet DLLs, Transmogrify and Advanced Item Tooltips loaded with the enabled plugin; final summary `active=20`, `rejected=0`, `failed=0`. |
-| Gameplay | Socketed projectile quantity visible | not run | Computer-use stopped when user input was detected in the Diablo window. |
+| Deployment | Source/runtime hashes | passed | The governed DLL, the tested global DLL and the tested mod-local DLL were byte-identical at `0AA995A5…62B8FC`; the JSON hash is `3D31ADF3…D4327`. |
+| Build | Release x64 and bounded patch test | passed | Version 1.1.0 compiled under MSVC 19.44.35228; the test proves the unique 33-byte signature and the exact `75 0F` to `90 90` replacement. |
+| Loading | Missing configuration | not run | Version 1.0.0 passed this policy case; it was not rerun after the native-branch repair. |
+| Loading | Valid mod-local JSON | passed | Version 1.1.0 loaded as `[mod]`; the BKVince cold start reached 24/24 with `rejected=0` and `failed=0`. |
+| Loading | Global JSON fallback and DLL scope | passed | With no QtyDisplayIssue files in BKVince, version 1.1.0 loaded only as `[global]`; `active=20`, `disabled=0`, `rejected=0`, `failed=0`, startup 24/24. |
+| Loading | Invalid JSON | not run | Version 1.0.0 rejected the wrong `enabled` type as expected; the case was not rerun on 1.1.0. |
+| Coexistence | PluginPack and tooltip pipeline | passed | The BKVince plugin set loaded with QtyDisplayIssue 1.1.0 globally, 20 active plugins and no rejection or loading failure. |
+| Gameplay | Socketed projectile quantity visible | passed | Vincent reported the 1.1.0 in-game retest successful on 2026-07-26: the affected socketed stackable uses D2R's native quantity line and placement. |
 | Gameplay | Inventory/stash/cube/vendor/ground | not run | Requires visual interaction with prepared affected items. |
 | Input | Mouse/controller | not run | Requires visual gameplay validation. |
 
-The final runtime state is restored to the mod-local DLL and valid mod-local
-JSON only; the temporary global DLL and JSON were removed. The last automated
-cold start reached frontend step 24/24 with the governed hook installed. A
-later visual attempt launched Diablo, but automation stopped immediately when
-user input was detected, as required; no visual result is inferred from that
-session.
+The first retail visual attempt disproved the version 1.0.0 placement despite
+its successful static and cold-start gates. Version 1.1.0 replaces that custom
+tooltip append with the native-branch repair and has now passed the central
+in-game case. Vincent deferred the PluginPack merge on 2026-07-26, then
+explicitly added Qty Display Fix to the accepted PluginPack lot on 2026-07-28.
+The validated standalone DLL and JSON remain the distributable witness until
+the selected merge step moves the patch and `items.qtyDisplayIssue` into
+`plugin-items.dll`, reruns the integration matrix, then removes the standalone
+artifacts to preserve one owner for RVA `0x2BE118`.
 
 ## Promotion dans le PluginPack — 28 juillet 2026
 
@@ -153,3 +167,10 @@ intégré inventory/stash/Cube/vendor/ground et la manette restent `not run`.
 
 Les preuves techniques sont conservées sous
 `analysis-cache/pluginpack-foundation-runtime-validation/20260729-qty-display-issue/report.json`.
+
+## Gameplay intégré — 30 juillet 2026
+
+Vincent confirme que l'affichage de quantité fonctionne sur le témoin préparé
+dans le PluginPack intégré. Le chemin nominal observé est `passed`; les variantes
+inventory/stash/Cube/vendor/ground et la manette qui n'ont pas été observées
+explicitement restent `not run`.

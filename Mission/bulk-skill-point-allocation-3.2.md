@@ -80,7 +80,7 @@ Les getters strictement signés utilisés pour observer la progression sont
 
 ## Implantation livrée
 
-`BulkSkillPointAllocation 1.2.4` est un plugin D2RLoader hybride, attribué à
+`BulkSkillPointAllocation 1.2.5` est un plugin D2RLoader hybride, attribué à
 `RuffnecKk`, sans `ModScopedOnly`. Il peut être installé globalement ou sous un
 mod. Il intercepte le builder à `0x000EC700` avec son prologue strict de 29
 octets et ne modifie que l'opcode `0x3B`; tous les autres paquets traversent le
@@ -451,3 +451,61 @@ Le checkpoint code `78d6290`
 Le gameplay Ctrl/Shift de l'autonome demeure validé en jeu. L'équivalence du
 code intégré n'a pas été rejouée; la DLL autonome reste donc un témoin et ne doit
 jamais être chargée lorsque l'option intégrée est active.
+
+## Gameplay intégré — 30 juillet 2026
+
+Vincent confirme que l'allocation groupée de points de compétence fonctionne
+avec le PluginPack intégré. Le chemin nominal configuré est `passed`; les
+variantes de modificateurs, limites de points et scénarios réseau restent hors
+de cette observation.
+
+## Correctif de localisation 1.2.5 — 11 août 2026
+
+Une capture BKVince en anglais a reproduit `MISSING STRING` dans le modal Shift
+du port intégré. Le runtime utilisait bien `plugin-skills.dll`, avec
+`skills.bulkSkillPointAllocation.enabled=true`,
+`confirmShiftAllocation=true`, la clé `shiftConfirmation` et le fallback
+anglais configurés. La DLL source/runtime antérieure était identique
+(`5261FA145C36E9280599479FEC16C435656F4039DFA5CC15D72406DACA1F0C8E`).
+
+La cause est un défaut de contrat hérité du témoin autonome : après l'échec de
+résolution de `shiftConfirmation`, `LANG_GetStringByKey` retourne la traduction
+active de la clé native `strMissingString`, et non nécessairement la clé
+demandée telle quelle. Le filtre 1.2.4 acceptait donc `Missing string`,
+`Ligne manquante`, `없는 문자열` ou leur équivalent comme un prompt valide et
+n'atteignait jamais `shiftConfirmationFallback`.
+
+La version 1.2.5 corrige le port intégré et le témoin autonome sans texte de
+sentinelle codé en dur : le hook résout aussi `strMissingString` avec le même
+resolveur natif et dans la même langue active, puis rejette un résultat égal à
+cette valeur. Une traduction réelle du mod actif reste prioritaire; une clé
+absente, vide, renvoyée telle quelle ou résolue vers la sentinelle utilise le
+fallback configurable. Les tests couvrent les sentinelles anglaise et coréenne,
+une traduction valide et tous les replis historiques.
+
+BKVince ajoute la clé `shiftConfirmation`, identifiant gouverné `30430`, avec
+ses treize locales dans `data/local/lng/strings/ui.json`. Cette donnée n'est pas
+requise par le plugin pour rester sûr dans un autre mod : chaque mod peut fournir
+la même clé ou une autre clé configurée; sans entrée valide, le fallback demeure
+fonctionnel et `MISSING STRING` ne doit plus être exposé.
+
+Validation technique du 11 août 2026 :
+
+- cinq DLL PluginPack Release compilées;
+- manifeste `139/139` écritures à propriétaire unique;
+- `26/26` CTest PluginPack et `1/1` test autonome réussis;
+- `plugin-skills.dll` build, source gouvernée et runtime identiques, SHA-256
+  `36E9C542875C47BDF51B496F7BA0E9310CCAF1997BA55412B87953DC7B10EC8E`;
+- `ui.json` source/runtime identiques, SHA-256
+  `1D6617050B5BB7FCC648B0BD5132E9CD487604082BCDFA115E68C816CAF778C6`;
+- cold start ciblé BKVince avec la pile installée complète : `19/19` plugins,
+  `15/15` patchsets, zéro désactivation/rejet/échec, transaction PluginPack
+  `5/5` et startup `24/24`;
+- rendu visuel du prompt traduit, clics `Yes`/`No` et chemin fallback avec clé
+  absente : `not run`, à confirmer dans l'instance laissée ouverte.
+
+La PR amont existante est
+`eezstreet/D2RL-Plugins#6`, branche
+`RuffDood:codex/pluginpack-foundation`. Elle ne porte encore aucune review ni
+aucun thread au moment du correctif; le nouveau commit doit mettre à jour cette
+PR plutôt qu'en créer une seconde.

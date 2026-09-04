@@ -334,3 +334,18 @@ workbench, `VendorStockRefresh-src/` et l'archive autonome comme oracles. Le JSO
 et la DLL standalone sont retires de BKVince apres validation du port. Aucun
 layout vendeur n'est livre; les DLL du pack sont reconstruites depuis le fork
 source sans modifier, lier ni redistribuer un binaire d'eezstreet.
+
+## Gameplay intégré — 30 juillet 2026
+
+Vincent confirme que le bouton de rafraîchissement renouvelle correctement le
+stock du vendeur avec le PluginPack intégré. Le cas nominal est `passed`; les
+variantes par acte, manette, clics rapides et réseau restent hors de ce témoin.
+
+## Version RuffnecKk Suite 0.2.0 — 18 août 2026
+
+Vincent conserve Vendor Stock Refresh en série `0.x` et approuve le passage de
+`0.1.6` à `0.2.0`. Aucun comportement ni contrat de configuration ne change.
+Les builds Debug et Release passent `25/25` tests; deux builds Release
+indépendants concordent byte-for-byte, et le runtime live charge
+`Vendor Stock Refresh 0.2.0` dans la pile complète à `26` plugins,
+`19` patches et `24/24`.

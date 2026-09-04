@@ -247,3 +247,20 @@ checkpoint code `25811d8` est poussé sur la branche de fondation. Les preuves
 gameplay autonomes transition/oskill et récupération du cadavre restent
 valables; la réapparition en ville et l'équivalence gameplay du port intégré
 restent ouvertes.
+
+## Validation gameplay intégrée globale — 30 juillet 2026
+
+Après génération des objets témoins et chargement du PluginPack en portée
+globale sans BKVince, Vincent confirme que Charm Aura Trigger Fix fonctionne en
+jeu. Le chemin nominal intégré est `passed`. Les variantes spécifiques de mort
+Hardcore, multijoueur et comptage diagnostique qui n'ont pas été observées
+explicitement restent `not run`.
+
+## Lot gameplay PluginPack — 30 juillet 2026
+
+Le correctif intégré était actif, mais les témoins demandés — charm et arme
+portant chacun `+1 to Fanaticism` en oskill — n'ont pas pu être générés. Les cas
+gameplay intégrés demeurent `not run`. Vincent accepte provisoirement une
+confiance technique fondée sur les preuves gameplay autonomes, le port direct
+de la même logique, les tests Release et les cold starts intégrés; cette
+confiance n'est pas convertie en validation gameplay.

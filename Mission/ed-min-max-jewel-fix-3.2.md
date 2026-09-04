@@ -174,6 +174,36 @@ fonctionnelle de référence. L'équivalence gameplay du code intégré n'a pas 
 rejouée; la DLL autonome est donc conservée comme témoin jusqu'à ce contrôle,
 sans être chargée en même temps que l'option intégrée.
 
+## Lot gameplay PluginPack — 30 juillet 2026
+
+Le port intégré était actif dans le lot testé, mais aucun joyau témoin
+`+40% Enhanced Damage / +10 Maximum Damage` n'a pu être généré. Le cas gameplay
+intégré demeure donc `not run`, avec confiance technique fondée sur la preuve
+gameplay autonome, le port direct de la même logique, les tests Release et les
+cold starts intégrés. Cette confiance n'est pas enregistrée comme un `passed`.
+
+## Validation gameplay intégrée globale — 30 juillet 2026
+
+Le test a finalement été rejoué sans mod BKVince, avec le PluginPack chargé en
+portée globale. Une War Sword vanilla `8–20`, utilisée avec l'attaque normale
+et sans skill actif, produit d'abord `24–60`. Après sertissage hors arme d'un
+joyau `+40% Enhanced Damage / +15 Maximum Damage` dans un casque, la même épée
+inchangée produit `27–120`.
+
+Le minimum `24 -> 27` démontre l'application du pourcentage ED. Avec le seul
+bonus plat `+15 max`, le maximum aurait été voisin de `105`; le maximum observé
+à `120` démontre que l'ED est également restauré sur cette extrémité malgré le
+bonus plat. Le chemin nominal hors arme du port intégré est donc `passed`.
+
+Preuves :
+
+- avant :
+  `analysis-cache/pluginpack-gameplay-validation/20260730-global-runewizard/enhanced-damage-minmax/before-war-sword-8-20-attack-24-60.png`,
+  SHA-256 `F806D1DB5970B79AD0411B8C4498B3B7E963B0D30813A82EE96B70F5D98813D3`;
+- après :
+  `analysis-cache/pluginpack-gameplay-validation/20260730-global-runewizard/enhanced-damage-minmax/after-helmet-ed40-max15-attack-27-120.png`,
+  SHA-256 `A56E684E5D09BE27DB7DC9C672A17E577CA80CA61CC4864F38A815FD98BCB1F5`.
+
 ## Livrables
 
 - `data-BKVince/d2rloader/plugins/EnhancedDamageMinMaxFix-src/` ;

@@ -183,3 +183,27 @@ Next gate: keep the integrated gameplay regression independent and non-blocking:
 compare 64 and 128 in dense piles under remastered/legacy rendering, mouse and
 controller, then record readability, frame cost and long-session stability.
 The owner is now `plugin-items.dll`, never `plugin-misc.dll`.
+
+## Integrated PluginPack gameplay — 2026-07-30
+
+The batch-1 runtime loaded `plugin-items.dll` with
+`items.groundItemLabels.enabled=true` and an effective limit of 64. Vincent's
+dense-pile screenshot contains exactly 64 visible item-label rectangles: 63
+potion labels and one `Sup. Leather Armor [99]` label. Additional physical
+potions remain visible without rectangles, proving that the configured cap was
+reached rather than the pile ending at 64 items. The screenshot is preserved as
+`analysis-cache/pluginpack-gameplay-validation/20260730-block1-qtytester-restore/ground-item-labels-64.png`
+with SHA-256
+`8AF5199ACF9EFB8864CDB3058BFF9E40C91D12736F2AE115B75C9AB4754D407E`.
+This passes the integrated remastered/mouse 64-label case. The 128, legacy,
+controller, frame-cost and long-session cases remain `not run`.
+
+## Integrated 128-label gameplay — 2026-07-30
+
+Vincent confirms in game that the same integrated `plugin-items.dll` reaches
+the configured 128-label limit. The dense-pile screenshot is preserved as
+`analysis-cache/pluginpack-gameplay-validation/20260730-block1-labels-128/ground-item-labels-128.png`
+with SHA-256
+`A9F383933F701D34BDD8B65B32E43A2767404D46D0F78EF4C326250DBA98EDBB`.
+The integrated remastered/mouse 128-label case is `passed`. Legacy rendering,
+controller input, frame cost and long-session stability remain `not run`.

@@ -326,3 +326,10 @@ Tester le port intégré en jeu sur une base plafonnée à un socket, puis véri
 la configuration invalide, la consommation normale de quête et la coexistence
 avec Infinite Larzuk. La matrice solo/hôte/joiner reste requise avant toute
 proposition de merge ou livraison publique du pack.
+
+## Décision de validation intégrée — 30 juillet 2026
+
+Vincent considère le port Larzuk fiable sur la base des preuves autonomes, des
+hooks actifs, des cold starts et de la confiance technique. Aucun nouveau témoin
+gameplay exact n'a toutefois été exécuté dans ce lot : le port intégré demeure
+donc `not run` en gameplay, et n'est pas artificiellement marqué `passed`.

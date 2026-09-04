@@ -240,3 +240,25 @@ propriétaire. Elle ne remplace pas l'observation gameplay du module fusionné.
    une autre base réellement sans durabilité comme témoin négatif.
 7. En cas d'écart, rejouer uniquement le cas fautif avec le témoin autonome;
    retirer les artefacts autonomes du lot final après équivalence fusionnée.
+
+## Validation gameplay intégrée — 30 juillet 2026
+
+Avec `items.etherealItemRules.enabled=true`, `chancePercent=100` et
+`allowSetItems=true`, Vincent confirme en jeu que les objets admissibles
+apparaissent tous éthérés et que les objets de set peuvent eux aussi apparaître
+éthérés. Ces deux cas du module intégré sont `passed`.
+
+L'ancien memory patch BKVince `ethereal-item-rules.json`, devenu un second
+propriétaire inutile du même comportement, a été retiré de la source gouvernée
+et du profil runtime à la demande de Vincent. Les autres memory patches, dont
+Infinite Larzuk, demeurent inchangés. Les exclusions par ItemType,
+l'indestructible, le multijoueur et la persistance restent `not run`.
+
+## Promotion RuffnecKk Suite 1.0.0 — 18 août 2026
+
+Vincent confirme qu'Ethereal Item Rules n'est plus un prototype et approuve sa
+promotion de `0.1.1` à `1.0.0`. La politique et la configuration restent
+inchangées. Les builds Debug et Release passent `25/25` tests; deux builds
+Release indépendants concordent byte-for-byte, et le runtime live charge
+`Ethereal Item Rules 1.0.0` dans la pile complète à `26` plugins,
+`19` patches et `24/24`.

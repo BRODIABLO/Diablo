@@ -276,3 +276,10 @@ avec `Repair All`. Chaque action doit coûter au plus 100 gold et chaque objet
 physiquement réparé doit perdre exactement un point de durabilité maximale tout
 en restant plein. Après sauvegarde/rechargement, confirmer la persistance, puis
 remettre `enabled=false` avant la livraison finale.
+
+## Gameplay intégré — 30 juillet 2026
+
+Vincent confirme que le plafond de coût de réparation et l'usure configurée
+fonctionnent avec le PluginPack intégré. Le cas nominal combiné est `passed`;
+les bornes, objets spéciaux, vendeurs multiples et scénarios réseau restent des
+extensions de matrice.

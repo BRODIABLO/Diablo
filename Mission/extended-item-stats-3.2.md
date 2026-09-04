@@ -406,6 +406,13 @@ plugin demeurent visibles dans ce démarrage. Le reroll réel dans le mod de
 YupGoogl reste un gate gameplay externe : il n’est pas déclaré réussi par
 inférence depuis les tests et le cold start.
 
+L’archive de test `ExtendedItemStats-0.3.17-test.zip` contient strictement
+`ExtendedItemStats.dll` à sa racine, mesure `230476` octets et porte le
+SHA-256 `71EA2253B1B279FE8EBFB2DF5ED66DAA25C7F3E7146199AF26537BED83FFCA4E`.
+La DLL extraite retrouve byte-exact le SHA-256 validé de la DLL dépôt/runtime.
+Cette archive demeure une livraison de test tant que YupGoogl n’a pas confirmé
+le reroll réel dans son mod.
+
 Les gates encore ouverts sont la confirmation fonctionnelle du fenêtrage à la
 manette, la mesure native d’overflow selon résolution/échelle UI, la validation
 runtime du renderer autonome de repli sans `FloatingDamage`, la matrice de cycle de vie complète
@@ -444,3 +451,55 @@ Cette promotion ferme le gate technique du merge, mais ne transforme pas le
 cold start en preuve gameplay. Le survol intégré, le renderer autonome de
 repli, la manette, le cycle de vie complet d'un objet de 4096 octets et la
 matrice solo/hôte/joiner restent des régressions indépendantes ouvertes.
+
+## Correction du tooltip integre — 30 juillet 2026
+
+Les essais gameplay du premier lot integre ont revele quatre regressions qui
+n'existaient pas dans l'oracle autonome `0.3.17` : la molette pouvait ne pas
+rafraichir le texte, certaines pages basculaient entre le renderer natif et le
+renderer overlay, la largeur du cadre variait selon la page et un tooltip
+pouvait survivre ou se dedoubler autour du personal stash. Trois rapports
+`0xC0000005` ont aussi ete produits pendant une experience intermediaire; leur
+stack ne nomme pas `plugin-items`, donc la cause exacte n'est pas declaree,
+mais cette experience a ete retiree et n'est pas conservee dans le candidat.
+
+Le candidat corrige repose maintenant sur un seul chemin de rendu pour tous les
+tooltips pagines : chaque page respecte le budget natif prouve de 60 KiB
+(`1024` unites de texte), quitte a afficher moins de lignes lorsque les affixes
+sont tres larges. Il n'existe donc plus de bascule page par page vers la police
+ImGui. L'invalidation reemploie exactement le mouvement physique `+1/-1` de
+l'oracle autonome avant `WM_MOUSEMOVE`, car le message synthetique seul ne
+force pas D2R a reconstruire son tooltip.
+
+La largeur fixe n'est plus simulee avec des espaces, que le renderer natif
+ignore. Le hook gouverne `UI_QueueStyledTextLayout` (`0x880160`) mesure chaque
+ligne complete avec `UI_MeasureStyledText` (`0x909560`), conserve la plus large,
+elargit uniquement le record natif correspondant au tooltip actif et le borne
+avec `UI_ClampTextLayoutToRect` (`0x8DA750`). Les dimensions natives proviennent
+de `0x7F510`/`0x7F4A0` et l'echelle de `0x8460F0`. Ces six identifications sont
+promues dans `known-rvas.json` avec confiance haute et le nouveau hook possede
+une signature stricte de 32 octets ainsi qu'un proprietaire unique dans le
+manifeste commun.
+
+La molette accumule maintenant les deltas haute resolution inferieurs a 120 au
+lieu de les jeter. Pendant un drag de scrollbar, l'unite et le widget natifs
+restent epingles meme lorsque le pointeur quitte la region. Les suppressions de
+texte et pointeurs natifs ajoutees pendant les essais fautifs ont ete retirees;
+le cycle de vie revient a celui de l'oracle `0.3.17` avec seulement les gardes
+de dechargement propres au PluginPack.
+
+Le build Release `plugin-items.dll` mesure `730112` octets et porte le SHA-256
+`251D4FC400241D107553C42530545231CA3E11963463A3C297DC3018F1EAC57B`.
+Le manifeste valide `136/136` ecritures executables sans chevauchement, les
+trois tests Extended Item Stats et la suite complete `25/25` CTest passent.
+Ces preuves ferment les gates statiques. Vincent confirme en jeu le 30 juillet
+2026 que le rendu integre est fonctionnel pour cette passe : molette reactive,
+defilement continu, largeur stable fondee sur l'affixe le plus long, scrollbar
+correctement positionnee, drag maintenu hors du cadre et un seul tooltip avec
+le personal stash ouvert. La derniere correction attribue le texte natif a un
+seul panneau et filtre uniquement la soumission identique d'un panneau voisin.
+Le candidat observe mesure `730624` octets et porte le SHA-256
+`C4FAC30552E7E26788A374FF2FABB3F0A6D0AA847EAD286D0B2DD13AC99DA462`;
+la suite passe `25/25` et le manifeste `136/136`. Cette confirmation ferme le
+cas solo visuel du premier lot, sans inferer les gates manette, cycle de vie au
+plafond ou solo/hote/joiner qui n'ont pas ete executes dans cette passe.
