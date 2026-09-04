@@ -1,0 +1,6 @@
+interface:
+  display_name: "D2RLoader Suite Promotion"
+  short_description: "Promote qualified components into the public Suite"
+  default_prompt: "Use $d2rloader-suite-promotion to promote this qualified component into the public RuffnecKk Suite with governed provenance and release gates."
+policy:
+  allow_implicit_invocation: true

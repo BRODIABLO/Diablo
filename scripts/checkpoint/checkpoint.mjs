@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { inspectWorkspaceRepositories } from '../workspace/repositories.mjs';
 
 const defaultRepoRoot = fileURLToPath(new URL('../../', import.meta.url));
 export const defaultStatePath = 'analysis-cache/checkpoint/state.json';
@@ -23,9 +24,11 @@ function extractCurrentMission(markdown) {
   };
 }
 
-export function buildState({ inspector, registry, currentMission, head, generatedAt }) {
+export function buildState({ inspector, registry, currentMission, head, generatedAt, repositories = [] }) {
   const selected = registry.workstreams.find((stream) => stream.mission === currentMission.path) || null;
   const selectedReport = inspector.workstreams.streams.find((stream) => stream.id === selected?.id) || null;
+  const externalRepositories = repositories.filter((repository) => repository.id !== 'workspace');
+  const selectedRepositories = externalRepositories.filter((repository) => repository.workstreamId === selected?.id);
   const blockers = [];
   if (inspector.conflicts.count) blockers.push(`${inspector.conflicts.count} conflict(s)`);
   if (inspector.mixed.count) blockers.push(`${inspector.mixed.count} mixed staged/worktree file(s)`);
@@ -33,9 +36,14 @@ export function buildState({ inspector, registry, currentMission, head, generate
   if (inspector.workstreams.validationErrors.length) blockers.push('invalid workstream registry');
   if (inspector.workstreams.unassigned.length) blockers.push(`${inspector.workstreams.unassigned.length} unassigned file(s)`);
   if (inspector.workstreams.overlaps.length) blockers.push(`${inspector.workstreams.overlaps.length} overlapping file(s)`);
+  for (const repository of repositories) {
+    if (repository.required && (!repository.exists || !repository.gitRepository)) {
+      blockers.push(`required repository '${repository.id}' is unavailable at ${repository.path}`);
+    }
+  }
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt,
     repository: {
       branch: inspector.branch, upstream: inspector.upstream, ahead: inspector.ahead, behind: inspector.behind, head,
@@ -45,8 +53,29 @@ export function buildState({ inspector, registry, currentMission, head, generate
       workstreamId: selected?.id || null,
       registryStatus: selected?.status || null,
       registryNextGate: selected?.nextGate || null,
-      changedFiles: selectedReport?.count || 0,
+      changedFiles: (selectedReport?.count || 0) + selectedRepositories.reduce((total, repository) => total + repository.changed, 0),
+      repositoryChanges: selectedRepositories.map(({ id, role, path: repositoryPath, changed, staged, unstaged, untracked }) => ({
+        id, role, path: repositoryPath, changed, staged, unstaged, untracked,
+      })),
     },
+    repositories: repositories.map((repository) => ({
+      id: repository.id,
+      role: repository.role,
+      path: repository.path,
+      pathSource: repository.pathSource,
+      required: repository.required,
+      workstreamId: repository.workstreamId || null,
+      exists: repository.exists,
+      gitRepository: repository.gitRepository,
+      branch: repository.branch,
+      upstream: repository.upstream,
+      head: repository.head,
+      origin: repository.origin,
+      changed: repository.changed,
+      staged: repository.staged,
+      unstaged: repository.unstaged,
+      untracked: repository.untracked,
+    })),
     worktree: {
       staged: inspector.staged.count,
       unstaged: inspector.unstaged.count,
@@ -81,6 +110,9 @@ function printSummary(state, statePath, wroteState) {
   console.log(`next gate: ${state.currentMission.nextGate || state.currentMission.registryNextGate || '(not resolved)'}`);
   console.log(`changed files in mission: ${state.currentMission.changedFiles}`);
   console.log(`staged/unstaged/untracked: ${state.worktree.staged}/${state.worktree.unstaged}/${state.worktree.untracked}`);
+  for (const repository of state.repositories.filter((entry) => entry.id !== 'workspace')) {
+    console.log(`repository ${repository.id}: ${repository.changed} change(s) at ${repository.path}`);
+  }
   console.log(`shared/unassigned/overlaps: ${state.worktree.shared}/${state.worktree.unassigned}/${state.worktree.overlaps}`);
   console.log(`checkpoint ready: ${state.checkpoint.ready ? 'yes' : 'no'}`);
   for (const blocker of state.checkpoint.blockers) console.log(`blocker: ${blocker}`);
@@ -97,10 +129,12 @@ export function main(argv = process.argv.slice(2), repoRoot = defaultRepoRoot) {
   const registry = JSON.parse(fs.readFileSync(path.join(repoRoot, 'Mission', 'WORKSTREAMS.json'), 'utf8'));
   const currentMission = extractCurrentMission(fs.readFileSync(path.join(repoRoot, 'Mission', 'CURRENT.md'), 'utf8'));
   const headParts = run('git', ['log', '-1', '--format=%H%x00%s%x00%cI'], repoRoot).stdout.trim().split('\0');
+  const repositories = inspectWorkspaceRepositories(repoRoot);
   const state = buildState({
     inspector, registry, currentMission,
     head: { sha: headParts[0], subject: headParts[1], committedAt: headParts[2] },
     generatedAt: new Date().toISOString(),
+    repositories,
   });
   const statePath = path.join(repoRoot, defaultStatePath);
   const shouldWrite = !argv.includes('--no-write') && !argv.includes('--check');

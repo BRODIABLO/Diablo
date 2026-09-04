@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "repositories": [
+    {
+      "id": "workspace",
+      "role": "incubation-and-runtime-laboratory",
+      "path": ".",
+      "environmentVariable": "DIABLO_WORKSPACE_ROOT",
+      "required": true
+    },
+    {
+      "id": "suite",
+      "role": "public-product-source",
+      "path": "../RuffnecKk-D2RLoader-Suite",
+      "environmentVariable": "RUFFNECKK_SUITE_ROOT",
+      "workstreamId": "ruffneckk-suite-next-release",
+      "required": true
+    },
+    {
+      "id": "suite-governance",
+      "role": "private-release-governance",
+      "path": "../RuffnecKk-D2RLoader-Suite-Governance",
+      "environmentVariable": "RUFFNECKK_SUITE_GOVERNANCE_ROOT",
+      "workstreamId": "ruffneckk-suite-next-release",
+      "required": true
+    }
+  ]
+}

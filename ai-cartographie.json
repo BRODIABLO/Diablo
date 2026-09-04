@@ -175,6 +175,30 @@
                                                                                              ]
                                                                             },
                                                                             {
+                                                                                "name":  "d2rloader-suite-promotion",
+                                                                                "path":  ".agents/skills/d2rloader-suite-promotion",
+                                                                                "kind":  "directory",
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "agents",
+                                                                                                     "path":  ".agents/skills/d2rloader-suite-promotion/agents",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "openai.yaml",
+                                                                                                                          "path":  ".agents/skills/d2rloader-suite-promotion/agents/openai.yaml",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "SKILL.md",
+                                                                                                     "path":  ".agents/skills/d2rloader-suite-promotion/SKILL.md",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
                                                                                 "name":  "d2r-runtime-validation",
                                                                                 "path":  ".agents/skills/d2r-runtime-validation",
                                                                                 "kind":  "directory",
@@ -42128,6 +42152,23 @@
                                                                         ]
                                                        },
                                                        {
+                                                           "name":  "releases",
+                                                           "path":  "scripts/releases",
+                                                           "kind":  "directory",
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "Test-SuiteGovernance.ps1",
+                                                                                "path":  "scripts/releases/Test-SuiteGovernance.ps1",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "Test-SuiteGovernance.Tests.ps1",
+                                                                                "path":  "scripts/releases/Test-SuiteGovernance.Tests.ps1",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
                                                            "name":  "reverse-engineering",
                                                            "path":  "scripts/reverse-engineering",
                                                            "kind":  "directory",
@@ -42360,6 +42401,16 @@
                                                                                 "name":  "Sync-BKVince.Tests.ps1",
                                                                                 "path":  "scripts/runtime/Sync-BKVince.Tests.ps1",
                                                                                 "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "Sync-SuiteRelease.ps1",
+                                                                                "path":  "scripts/runtime/Sync-SuiteRelease.ps1",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "Sync-SuiteRelease.Tests.ps1",
+                                                                                "path":  "scripts/runtime/Sync-SuiteRelease.Tests.ps1",
+                                                                                "kind":  "file"
                                                                             }
                                                                         ]
                                                        },
@@ -42464,6 +42515,23 @@
                                                                             {
                                                                                 "name":  "zip-policy.json",
                                                                                 "path":  "scripts/verify/zip-policy.json",
+                                                                                "kind":  "file"
+                                                                            }
+                                                                        ]
+                                                       },
+                                                       {
+                                                           "name":  "workspace",
+                                                           "path":  "scripts/workspace",
+                                                           "kind":  "directory",
+                                                           "children":  [
+                                                                            {
+                                                                                "name":  "repositories.mjs",
+                                                                                "path":  "scripts/workspace/repositories.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "repositories.test.mjs",
+                                                                                "path":  "scripts/workspace/repositories.test.mjs",
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
@@ -42658,6 +42726,11 @@
                                   {
                                       "name":  "turbo.json",
                                       "path":  "turbo.json",
+                                      "kind":  "file"
+                                  },
+                                  {
+                                      "name":  "workspace-repositories.json",
+                                      "path":  "workspace-repositories.json",
                                       "kind":  "file"
                                   }
                               ]

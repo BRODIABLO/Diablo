@@ -4,26 +4,46 @@ Dernière mise à jour : 4 septembre 2026
 
 ## Priorité active
 
-[RuffnecKk D2RLoader Suite — release publique v1.3.1](ruffneckk-suite-next-release.md)
+[RuffnecKk D2RLoader Suite — hotfix publique v1.3.2](ruffneckk-suite-next-release.md)
 
-État : **la RuffnecKk D2RLoader Suite `v1.3.1` est publique depuis le
-3 septembre 2026**. Elle pointe sur le commit produit `c63ac0c`, contient
-exactement 24 plugins, 17 memory patches et deux bundles, distribués dans deux
-archives reproductibles. Le registre privé final est au commit `47df4a4`.
+État : **le hotfix `v1.3.2` est publié et vérifié sur GitHub**. MapSense
+`1.0.1` ne dépend plus du hook
+`UNITS_GetClassId` possédé par Bind And Summon `1.4.4`; Floating Damage `1.4.3`
+et MapSense négocient le propriétaire DirectX 12 avec leurs noms publics;
+ISC12 `1.0.2` et Vendor Stock Refresh `2.0.2` reconnaissent les fournisseurs
+exacts du D2RLoader `1.2.1` public fourni le 4 septembre.
 
-Le cold start final sous D2R `3.3.93847` et D2RLoader
-`1.2.1-beta preview 10` atteint `24/24`; ISC12 `1.0.1`, Vendor Stock Refresh
-`2.0.1` et Remote Stash `2.3.1` sont actifs. L'absence du fichier optionnel de
-skin MPQ de Remote Stash retombe correctement sur le TOML D2RLoader. Steam
-`3.3.93787` reste non testé et aucune qualification Steam ou multijoueur n'est
-revendiquée par cette release.
+Deux builds Release propres donnent quatre DLL byte-identiques; les quatorze
+tests ciblés passent dans chaque build, avec la politique source et le cadastre
+d'ownership natif. Après un
+premier refus fail-closed qui a révélé la paire Write/Close publique absente du
+sélecteur ISC12, le candidat corrigé atteint `24/24` sous D2R `3.3.93847` : 37
+plugins chargés, 17 patches, seulement Stash Search et Revive Overhaul en échec
+préexistant. ISC12 publie son schéma, MapSense et Bind cohabitent, Floating
+Damage rend par l'hôte MapSense et Vendor valide son relais paquet. Aucun
+processus Diablo ne reste actif.
+
+Le commit public `3ee22db64b3f4d4738ad391c7a7241029a383f18` est poussé sur
+`main` et porte le tag `v1.3.2`. La release contient exactement 43 assets : 24
+plugins, 17 patches et deux bundles. Les 43 digests GitHub correspondent au
+catalogue local sous `analysis-cache/ruffneckk-suite-release-1.3.2/`. La Suite
+`v1.3.1` et ses 43 assets restent le rollback intact.
 
 ## Prochain gate
 
-La release `v1.3.1` est terminée et ne conserve aucun gate de publication
-ouvert. Le prochain gate est de choisir explicitement la prochaine mission
-significative sans réouvrir les gates clos de `v1.3.1`. Les sections de
-priorités précédentes ci-dessous demeurent des handoffs historiques.
+La réorganisation des dépôts est implantée sans modification de la ROADMAP :
+la Suite publique et sa gouvernance privée vivent désormais comme dépôts
+frères hors de `analysis-cache`, le checkpoint du workspace les agrège, et la
+promotion incubation → Suite ainsi que la synchronisation release → runtime
+sont gouvernées par des procédures dédiées. Le registre privé `1.3.2` pointe
+maintenant uniquement vers les sources `suite:` promues.
+
+Le contrôle post-publication a aussi trouvé que le binaire Resistance Floor
+`1.0.1` de l'asset immuable `v1.3.2` contient encore une allowlist de numéros de
+build. La source canonique publique est corrigée et testée, mais sa
+republication exige une future autorisation de release distincte. Demander une
+autorisation séparée avant tout commit ou push des trois dépôts, toute nouvelle
+release ou toute synchronisation vers un runtime installé.
 
 ## Priorité précédente conservée — ISC12
 

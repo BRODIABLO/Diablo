@@ -1,6 +1,97 @@
 # RuffnecKk D2RLoader Suite — prochaine release publique
 
-Dernière mise à jour : 3 septembre 2026
+Dernière mise à jour : 4 septembre 2026
+
+## Statut final — hotfix 1.3.2 publié
+
+Le 4 septembre 2026, Vincent autorise un hotfix rapide contre le D2RLoader
+`1.2.1` public réellement distribué. Le candidat conserve le catalogue complet
+de `v1.3.1` et met à jour uniquement MapSense `1.0.1`, Floating Damage `1.4.3`,
+ISC12 `1.0.2` et Vendor Stock Refresh `2.0.2`.
+
+Le conflit rapporté avec Bind And Summon `1.4.4-embedded110` est fermé par
+architecture : MapSense ne pose plus et n'appelle plus le hook
+`UNITS_GetClassId` à `0x349860`. Bind And Summon reste l'unique propriétaire;
+MapSense lit le champ `D2UnitStrc+0x04` seulement après validation d'un témoin
+de layout indépendant à `0x34B7B2`. La gouvernance épingle le DLL fourni à
+168 448 octets, SHA-256
+`8416C7908753ED3D35DB43BECE0CFAE9EF768F520C41ECEDFD570C8A4E6B70B0`, et
+conserve ses onze hooks attestés.
+
+Le vrai `D2RCore.dll` public vaut
+`2130A98D0B879696116A7DDDE5C11AE8C91942B54B8276DB43E02074A715BBC8`.
+ISC12 et Vendor ajoutent uniquement ses profils exacts complets; les profils
+preview 10, 1.2 et 1.1 restent admissibles par leurs propres empreintes. Le
+premier cold start public a correctement refusé ISC12 avant mutation parce que
+la paire finale `WriteD2sFileWithEnvironment` / `CloseD2sFileWithEnvironment`
+n'était pas encore incluse dans le sélecteur de génération. La correction
+ajoute cette paire exacte, sans assouplir les empreintes ni sélectionner par
+numéro de version.
+
+Deux builds Release propres produisent les quatre DLL byte-identiques, les
+quatorze tests ciblés passent dans chaque build et l'ownership natif est
+`VALID`. Le second cold start sur
+D2R `3.3.93847` et le D2RLoader `1.2.1-beta` public atteint `24/24`, avec 37
+plugins chargés, 17 memory patches et seulement les deux échecs préexistants
+Stash Search et Revive Overhaul. ISC12 `1.0.2` valide la paire publique, publie
+152 empreintes / 43 sites / 129 mutations et atteint `SchemaReady=true`;
+MapSense `1.0.1` installe ses hooks DirectX 12 sans collision avec Bind And
+Summon, Floating Damage `1.4.3` rend sa première frame par l'hôte MapSense, et
+Vendor Stock Refresh `2.0.2` valide son relais paquet. Aucun processus Diablo
+ne reste actif. Le warning déjà connu d'atlas sprite MapSense laisse seulement
+le generated underlay fail-closed; le gameplay visuel élargi n'a pas été rejoué.
+
+Les DLL finales valent respectivement `ECFC729C…35D921` pour MapSense,
+`1F6BAE0A…7FE2B` pour Floating Damage, `12F452FC…94E1C` pour Vendor et
+`FE350F17…08F45` pour ISC12. Les quatre archives finales valent
+`B27BAF8A…408C9F`, `0313D135…9FE41`, `A22FC56C…AD199E` et
+`DB91B436…1966CAA`; la dernière est l'archive ISC12 revue par Vincent avec les
+README ISC12 et D2R Save Converter insérés.
+
+La Suite `v1.3.2` est publique depuis le 4 septembre 2026. Le tag et `main`
+pointent sur le commit produit `3ee22db64b3f4d4738ad391c7a7241029a383f18`.
+La release contient exactement 24 plugins, 17 patches et deux bundles, soit 43
+assets; leurs 43 digests GitHub correspondent byte-exact au catalogue local.
+Les deux constructions du catalogue complet sont identiques. Le bundle plugins
+vaut `6282AF9A…B2E5F0C` et le bundle patches `288090AE…4547C8`. Le registre
+privé est `published`, `releaseReady=true`, et son allowlist verrouille 68
+entrées. `v1.3.1` demeure intacte comme rollback.
+
+## Réorganisation post-publication
+
+Les deux dépôts de produit ne sont plus hébergés dans le cache jetable du
+workspace. Le dépôt public autoritaire est
+`C:\Workspaces\RuffnecKk-D2RLoader-Suite`; le dépôt privé de gouvernance est
+`C:\Workspaces\RuffnecKk-D2RLoader-Suite-Governance`. Le fichier
+`workspace-repositories.json` centralise ces relations et permet des overrides
+par environnement. `npm run checkpoint` inventorie désormais les trois dépôts
+et attribue leurs changements au workstream actif.
+
+Le skill `d2rloader-suite-promotion` est implicitement applicable dès qu'un
+composant incubé devient qualifié, entre dans la prochaine release ou change
+de source autoritaire. Il promeut une copie filtrée dans le dépôt produit,
+préserve la provenance dans le registre privé et refuse un état
+`package-ready` ou `published` qui dépend encore d'une source `workspace:`.
+Le registre `releases/1.3.2/next-release.json` référence maintenant les onze
+composants concernés sous `suite:`; `promotion-ledger.json` conserve leurs
+origines et empreintes d'arbre. D2R Save Converter est autonome sous
+`tools/d2r-save-converter` et Shadow Master AI Fix sous `patches/`.
+
+La synchronisation vers un jeu installé est séparée de la promotion de source.
+`scripts/runtime/Sync-SuiteRelease.ps1` fournit Plan, Apply, Verify et Rollback
+à partir de l'allowlist exacte; toute mutation runtime exige une confirmation
+explicite, préserve les configurations par défaut et produit un reçu local.
+Aucune synchronisation runtime n'a été exécutée pendant cette réorganisation.
+
+Le contrôle statique complet des 24 plugins a mis au jour un écart réel dans
+Resistance Floor `1.0.1` : l'asset déjà publié refuse encore les builds autres
+que `92777` et `93847` par numéro. Le binaire publié de SHA-256
+`871928BBC03B99164A545E0C2CB4287CBEDE424E24A1B1918052DB1612AABE31`
+contient ces marqueurs. La source canonique publique a été corrigée pour ne
+traiter le build-name qu'en diagnostic et pour décider exclusivement d'après
+l'empreinte native fail-closed; son build Release et son test de politique
+passent. Le tag et les 43 assets immuables de `v1.3.2` ne sont pas modifiés :
+une future republication de ce correctif constitue un gate séparé.
 
 ## Statut final — hotfix 1.3.1 publié
 

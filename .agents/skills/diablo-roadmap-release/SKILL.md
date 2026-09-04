@@ -29,17 +29,18 @@ description: Maintenir la mission courante et ROADMAP.html, séquencer une nouve
 
 ## Gouverner la prochaine release de la Suite
 
-1. Mettre à jour le registre machine-readable `manifests/next-release.json` du dépôt produit dès qu'une décision ajoute, retire, renomme, reporte ou change la version d'un composant. Conserver la formulation de la décision, le statut des gates et une note de release; ne pas attendre la création des ZIP.
-2. Traiter ce registre comme source de vérité du périmètre et des comptes dérivés. L'allowlist de release reste la source de vérité des chemins, versions finales et SHA-256 des artefacts, mais elle doit correspondre exactement au registre avant packaging.
-3. Distinguer pour chaque composant les gates source, build, runtime Battle.net, runtime Steam et packaging. Une ancienne preuve ou un candidat admissible ne ferme pas le gate de l'artefact final.
-4. Ne mettre `releaseReady=true` et le statut `package-ready` qu'après fermeture de tous les gates requis. Le générateur doit refuser une allowlist divergente, une version non verrouillée, un composant reporté présent ou un compte d'assets écrit en dur qui ne correspond plus aux entrées.
-5. Générer ou actualiser les notes lisibles depuis les décisions enregistrées, puis vérifier manuellement leur qualité. Le changelog ne remplace pas le registre gouverné.
+1. Résoudre le dépôt privé Governance par `workspace-repositories.json`, puis mettre à jour son registre versionné `releases/<version>/next-release.json` dès qu'une décision ajoute, retire, renomme, reporte ou change la version d'un composant. Conserver la formulation de la décision, le statut des gates et une note de release; ne pas attendre la création des ZIP.
+2. Lorsqu'un composant inclus pointe encore vers `workspace:`, appliquer automatiquement le skill `d2rloader-suite-promotion` avant d'autoriser `package-ready`. Le dépôt public Suite est l'unique source de packaging d'un composant promu.
+3. Traiter ce registre comme source de vérité du périmètre et des comptes dérivés. L'allowlist de release reste la source de vérité des chemins, versions finales et SHA-256 des artefacts, mais elle doit correspondre exactement au registre avant packaging.
+4. Distinguer pour chaque composant les gates source, build, runtime Battle.net, runtime Steam et packaging. Une ancienne preuve ou un candidat admissible ne ferme pas le gate de l'artefact final.
+5. Ne mettre `releaseReady=true` et le statut `package-ready` qu'après fermeture de tous les gates requis. Le générateur doit refuser une allowlist divergente, une version non verrouillée, un composant reporté présent ou un compte d'assets écrit en dur qui ne correspond plus aux entrées.
+6. Générer ou actualiser les notes lisibles depuis les décisions enregistrées, puis vérifier manuellement leur qualité. Le changelog ne remplace pas le registre gouverné.
 
 ## Préparer une livraison
 
 1. Valider le registre de prochaine release, puis définir une allowlist explicite et exactement concordante du contenu public. Pour un plugin incubé, appliquer le skill `d2rloader-plugin-incubation`.
 2. Créer ou actualiser le README de la release et le déposer à côté du ZIP dans le dossier de livraison. Ne jamais l'inclure dans l'archive générée par l'agent : Vincent le relit et le modifie humainement avant de l'ajouter lui-même au ZIP final.
-3. Construire l'archive depuis des artefacts validés, inspecter ses entrées réelles et vérifier l'absence de README, sources, secrets, logs ou preuves non destinés au public.
+3. Construire l'archive depuis des artefacts validés, inspecter ses entrées réelles et vérifier l'absence de README, sources, secrets, logs ou preuves non destinés au public. Autoriser un compagnon runtime seulement lorsqu'il appartient au plugin, est indispensable et figure exactement dans le registre et l'allowlist.
 4. Calculer les SHA-256 des artefacts et prouver leur égalité avec les fichiers testés dans le runtime.
 5. Exécuter les tests ciblés, le build, la validation du cadastre si nécessaire, le cold start et la matrice fonctionnelle requise.
 6. Garder les ZIP de travail sous `addons/` locaux et gitignorés. Publier les artefacts validés comme assets de la GitHub Release du dépôt produit approprié, vérifier leur digest distant, et conserver les anciennes releases/tags sans recopier leurs binaires dans le dépôt principal.

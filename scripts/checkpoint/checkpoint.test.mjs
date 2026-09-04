@@ -17,15 +17,29 @@ function fixture() {
     currentMission: { name: 'Alpha', path: 'Mission/alpha.md', nextGate: 'Validate Alpha.' },
     head: { sha: 'abc', subject: 'Previous checkpoint', committedAt: '2026-07-23T00:00:00Z' },
     generatedAt: '2026-07-23T12:00:00Z',
+    repositories: [
+      { id: 'workspace', role: 'incubation-and-runtime-laboratory', path: '/workspace', pathSource: 'config', required: true, exists: true, gitRepository: true, branch: 'main', upstream: 'origin/main', head: 'abc', origin: 'origin', workstreamId: null, changed: 3, staged: 0, unstaged: 2, untracked: 1 },
+      { id: 'suite', role: 'public-product-source', path: '/suite', pathSource: 'config', required: true, exists: true, gitRepository: true, branch: 'main', upstream: 'origin/main', head: 'def', origin: 'origin', workstreamId: 'alpha', changed: 4, staged: 1, unstaged: 2, untracked: 1 },
+    ],
   };
 }
 
 test('selects the current mission and reports a safe checkpoint', () => {
   const state = buildState(fixture());
   assert.equal(state.currentMission.workstreamId, 'alpha');
-  assert.equal(state.currentMission.changedFiles, 3);
+  assert.equal(state.currentMission.changedFiles, 7);
+  assert.equal(state.currentMission.repositoryChanges[0].id, 'suite');
   assert.equal(state.checkpoint.ready, true);
   assert.equal(state.checkpoint.recommendedWorkstream, 'alpha');
+});
+
+test('blocks when a required sibling repository is unavailable', () => {
+  const input = fixture();
+  input.repositories[1].exists = false;
+  input.repositories[1].gitRepository = false;
+  const state = buildState(input);
+  assert.equal(state.checkpoint.ready, false);
+  assert.match(state.checkpoint.blockers.join('\n'), /required repository 'suite'/);
 });
 
 test('turns ownership and Git hazards into blockers', () => {
