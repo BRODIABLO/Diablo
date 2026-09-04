@@ -13,7 +13,7 @@
 
 namespace ruffneckk::burn_damage_fix {
 
-inline constexpr std::int64_t ConfigVersion = 2;
+inline constexpr std::int64_t ConfigVersion = 1;
 inline constexpr std::int32_t StatRegenerationEvent = 3;
 inline constexpr std::int32_t BurningState = 115;
 inline constexpr std::int32_t FireHitOverlay = 81;
@@ -55,12 +55,14 @@ inline constexpr FireResistanceMetadata BurnFireResistance{
 
 struct Config {
     bool enabled{true};
-    bool normalizeGenericBurn{true};
-    bool applyFireResistance{true};
-    bool replayFireHit{true};
-    bool suppressNativeBurning{true};
-    std::int32_t overlayRepeatFrames{DefaultOverlayRepeatFrames};
     bool diagnostics{false};
+
+    static constexpr bool normalizeGenericBurn{true};
+    static constexpr bool applyFireResistance{true};
+    static constexpr bool replayFireHit{true};
+    static constexpr bool suppressNativeBurning{true};
+    static constexpr std::int32_t overlayRepeatFrames{
+        DefaultOverlayRepeatFrames};
 };
 
 inline auto ShouldResolveBurn(
@@ -185,7 +187,6 @@ inline auto ParseToml(
         for (const auto& [key, value] : root) {
             (void)value;
             if (key != "config_version" && key != "enabled"
-                    && key != "fixes" && key != "overlay"
                     && key != "diagnostics") {
                 error = "unknown top-level setting or section: "
                     + std::string(key.str());
@@ -195,49 +196,24 @@ inline auto ParseToml(
 
         const auto* versionNode = root.get("config_version");
         const auto* enabledNode = root.get("enabled");
-        const auto* fixesNode = root.get("fixes");
-        const auto* overlayNode = root.get("overlay");
         const auto* diagnosticsNode = root.get("diagnostics");
         const auto configVersion = versionNode
             ? versionNode->value<std::int64_t>()
             : std::optional<std::int64_t>{};
         if (!versionNode || !versionNode->is_integer() || !configVersion
-                || (*configVersion != 1
-                    && *configVersion != ConfigVersion)) {
-            error = "config_version must be integer 1 or 2";
+                || *configVersion != ConfigVersion) {
+            error = "config_version must be integer 1";
             return false;
         }
         if (!enabledNode || !enabledNode->is_boolean()) {
             error = "enabled must be a boolean";
             return false;
         }
-        const auto* fixes = fixesNode ? fixesNode->as_table() : nullptr;
-        const auto* overlay = overlayNode ? overlayNode->as_table() : nullptr;
         const auto* diagnostics = diagnosticsNode
             ? diagnosticsNode->as_table() : nullptr;
-        if (!fixes) {
-            error = "fixes must be a table";
-            return false;
-        }
-        if (!overlay && *configVersion == ConfigVersion) {
-            error = "overlay must be a table";
-            return false;
-        }
-        if (overlay && *configVersion == 1) {
-            error = "overlay requires config_version 2";
-            return false;
-        }
         if (!diagnostics) {
             error = "diagnostics must be a table";
             return false;
-        }
-        for (const auto& [key, value] : *fixes) {
-            (void)value;
-            if (key != "normalize_generic_burn"
-                    && key != "apply_fire_resistance") {
-                error = "unknown fixes setting: " + std::string(key.str());
-                return false;
-            }
         }
         for (const auto& [key, value] : *diagnostics) {
             (void)value;
@@ -246,58 +222,7 @@ inline auto ParseToml(
                 return false;
             }
         }
-        if (overlay) {
-            for (const auto& [key, value] : *overlay) {
-                (void)value;
-                if (key != "enabled" && key != "repeat_frames"
-                        && key != "suppress_native_burning") {
-                    error = "unknown overlay setting: "
-                        + std::string(key.str());
-                    return false;
-                }
-            }
-        }
-
-        const auto* normalizeNode = fixes->get("normalize_generic_burn");
-        const auto* resistanceNode = fixes->get("apply_fire_resistance");
-        const auto* overlayEnabledNode = overlay
-            ? overlay->get("enabled") : nullptr;
-        const auto* overlayRepeatNode = overlay
-            ? overlay->get("repeat_frames") : nullptr;
-        const auto* suppressNativeBurningNode = overlay
-            ? overlay->get("suppress_native_burning") : nullptr;
         const auto* diagnosticsEnabledNode = diagnostics->get("enabled");
-        if (!normalizeNode || !normalizeNode->is_boolean()) {
-            error = "fixes.normalize_generic_burn must be a boolean";
-            return false;
-        }
-        if (!resistanceNode || !resistanceNode->is_boolean()) {
-            error = "fixes.apply_fire_resistance must be a boolean";
-            return false;
-        }
-        auto overlayRepeat = static_cast<std::int64_t>(
-            DefaultOverlayRepeatFrames);
-        if (overlay) {
-            if (!overlayEnabledNode || !overlayEnabledNode->is_boolean()) {
-                error = "overlay.enabled must be a boolean";
-                return false;
-            }
-            if (!overlayRepeatNode || !overlayRepeatNode->is_integer()) {
-                error = "overlay.repeat_frames must be an integer";
-                return false;
-            }
-            overlayRepeat = *overlayRepeatNode->value<std::int64_t>();
-            if (overlayRepeat < MinimumOverlayRepeatFrames
-                    || overlayRepeat > MaximumOverlayRepeatFrames) {
-                error = "overlay.repeat_frames must be between 1 and 250";
-                return false;
-            }
-            if (suppressNativeBurningNode
-                    && !suppressNativeBurningNode->is_boolean()) {
-                error = "overlay.suppress_native_burning must be a boolean";
-                return false;
-            }
-        }
         if (!diagnosticsEnabledNode || !diagnosticsEnabledNode->is_boolean()) {
             error = "diagnostics.enabled must be a boolean";
             return false;
@@ -305,25 +230,7 @@ inline auto ParseToml(
 
         Config parsed{};
         parsed.enabled = *enabledNode->value<bool>();
-        parsed.normalizeGenericBurn = *normalizeNode->value<bool>();
-        parsed.applyFireResistance = *resistanceNode->value<bool>();
-        if (overlay) {
-            parsed.replayFireHit = *overlayEnabledNode->value<bool>();
-            if (suppressNativeBurningNode) {
-                parsed.suppressNativeBurning =
-                    *suppressNativeBurningNode->value<bool>();
-            }
-        } else {
-            // Version 1 predates the two dispatcher hooks. Preserve its
-            // behavior until the user opts in by migrating to version 2.
-            parsed.replayFireHit = false;
-        }
-        parsed.overlayRepeatFrames = static_cast<std::int32_t>(overlayRepeat);
         parsed.diagnostics = *diagnosticsEnabledNode->value<bool>();
-        if (parsed.replayFireHit && !parsed.applyFireResistance) {
-            error = "overlay.enabled requires fixes.apply_fire_resistance";
-            return false;
-        }
         result = parsed;
         error.clear();
         return true;

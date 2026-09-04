@@ -48,11 +48,15 @@ constexpr std::uintptr_t StateOverlayFieldDescriptorRva = 0x307EB3;
 constexpr std::uintptr_t StateRecordCompileWitnessRva = 0x3083D7;
 constexpr std::uintptr_t StateVectorLayoutWitnessRva = 0x30843C;
 constexpr std::uintptr_t GetUnitStatRva = 0x2F5020;
+constexpr std::uintptr_t GetStateStatListRva = 0x2F5940;
+constexpr std::uintptr_t GetStatListOwnerGuidRva = 0x2F6E20;
+constexpr std::uintptr_t GetStatListOwnerTypeRva = 0x2F6E30;
 constexpr std::uintptr_t CheckStateRva = 0x3351B0;
 constexpr std::uintptr_t StateToggleContextLayoutWitnessRva = 0x3354E0;
 constexpr std::uintptr_t SetOverlayRva = 0x349020;
 constexpr std::uintptr_t OverlayStatWriteWitnessRva = 0x34916C;
 constexpr std::uintptr_t IsDeadRva = 0x34C2C0;
+constexpr std::uintptr_t GetUnitIdRva = 0x34A330;
 constexpr std::uintptr_t GetUnitTypeRva = 0x34B9D0;
 constexpr std::uintptr_t GetItemDataContextRva = 0x34A0E0;
 constexpr std::uintptr_t GetHirelingTypeIdRva = 0x3AF240;
@@ -71,6 +75,8 @@ constexpr std::size_t StateRecordStride = 0x44;
 constexpr std::size_t MaximumDataContexts = 4;
 constexpr std::int32_t PlayerUnitType = 0;
 constexpr std::int32_t MonsterUnitType = 1;
+constexpr std::int32_t InvalidStatListOwnerType = 6;
+constexpr std::int32_t BurningStateId = 115;
 constexpr std::int32_t FireLengthStat = 315;
 constexpr std::int32_t BurningMinStat = 316;
 constexpr std::int32_t BurningMaxStat = 317;
@@ -78,6 +84,8 @@ constexpr std::int32_t PassiveFireMasteryStat = 329;
 constexpr std::uint32_t GenericBurnPatchSize = 6;
 constexpr std::size_t RelayBytes = 16;
 constexpr char FireTypeName[] = "Fire";
+constexpr std::uintptr_t BurnKillCreditTableRva = 0x448DCA;
+constexpr std::uintptr_t BurnKillCreditScanRva = 0x448DE5;
 
 constexpr std::array<std::uint8_t, 10> GenericBurnProductionExpected{
     0x81, 0xC3, 0x3C, 0x01, 0x00, 0x00, 0x41, 0x0F, 0x48, 0xDE,
@@ -170,10 +178,29 @@ constexpr std::array<std::uint8_t, 32> GetUnitStatExpected{
     0x20,0x57,0x48,0x83,0xEC,0x20,0x41,0x0F,0xB7,0xE8,0x8B,0xFA,0x48,0x8B,
     0xD9,0x48,0x85,0xC9,
 };
+constexpr auto GetStateStatListExpected = std::to_array<std::uint8_t>({
+    0x48,0x89,0x5C,0x24,0x10,0x57,0x48,0x83,0xEC,0x20,0x8B,0xDA,0x48,0x8B,
+    0xF9,0x48,0x85,0xC9,0x75,0x13,0x88,0x4C,0x24,0x30,0x48,0x8D,0x4C,0x24,
+    0x30,0xE8,0x9E,0xB9,
+});
+constexpr auto GetStatListOwnerGuidExpected =
+    std::to_array<std::uint8_t>({
+        0x48,0x85,0xC9,0x75,0x03,0x33,0xC0,0xC3,0x8B,0x41,0x0C,0xC3,
+    });
+constexpr auto GetStatListOwnerTypeExpected =
+    std::to_array<std::uint8_t>({
+        0xB8,0x06,0x00,0x00,0x00,0x48,0x85,0xC9,0x74,0x03,0x8B,0x41,0x08,
+        0xC3,
+    });
 constexpr std::array<std::uint8_t, 32> CheckStateExpected{
     0x48,0x89,0x5C,0x24,0x08,0x48,0x89,0x74,0x24,0x10,0x57,0x48,0x83,0xEC,
     0x20,0x8B,0xDA,0x48,0x8B,0xF1,0xE8,0x07,0x68,0x01,0x00,0x85,0xC0,0x74,
     0x0E,0x83,0xE8,0x01,
+};
+constexpr std::array<std::uint8_t, 32> GetUnitIdExpected{
+    0x48,0x83,0xEC,0x28,0x48,0x85,0xC9,0x75,0x1D,0x88,0x4C,0x24,0x30,0x48,
+    0x8D,0x4C,0x24,0x30,0xE8,0x39,0xCA,0xFF,0xFF,0x84,0xC0,0x74,0x01,0xCC,
+    0xB8,0xFF,0xFF,0xFF,
 };
 constexpr auto StateToggleContextLayoutWitnessExpected =
     std::to_array<std::uint8_t>({
@@ -246,6 +273,20 @@ constexpr auto EmptyStateRecordInitializerExpected =
         0x48,0x34,0x48,0x89,0x48,0x3C,0xC7,0x00,0x00,0x00,0xFF,0xFF,0x48,
         0x83,0xC0,0x44,0x48,0x3B,0xC2,0x75,0xD1,
     });
+constexpr auto BurnKillCreditTableOriginal = std::to_array<std::uint8_t>({
+    0xC7,0x44,0x24,0x40,0x02,0x00,0x00,0x00,
+});
+constexpr auto BurnKillCreditTablePatched = std::to_array<std::uint8_t>({
+    0xC7,0x44,0x24,0x40,0x02,0x3E,0x73,0x00,
+});
+constexpr auto BurnKillCreditScanOriginal = std::to_array<std::uint8_t>({
+    0x8B,0x54,0x9C,0x40,0x48,0x8B,0xCF,0xE8,0x4F,0xCB,0xEA,0xFF,0x48,0xFF,
+    0xC3,0x48,0x8B,0xF0,0x48,0x83,0xFB,0x02,0x7C,0xE3,
+});
+constexpr auto BurnKillCreditScanPatched = std::to_array<std::uint8_t>({
+    0x0F,0xB6,0x54,0x1C,0x40,0x48,0x8B,0xCF,0xE8,0x4E,0xCB,0xEA,0xFF,0xFF,
+    0xC3,0x48,0x8B,0xF0,0x48,0x83,0xFB,0x03,0x7C,0xE3,
+});
 
 struct DamagePayloadView {
     std::array<std::byte, 0x20> reserved00{};
@@ -303,6 +344,26 @@ struct NativeOverlayContextSlot {
     std::uint16_t observedOverlay{EmptyStateOverlay};
 };
 
+enum class BurnKillCreditPatchStatus : std::uint8_t {
+    Unavailable,
+    Intact,
+    Missing,
+    Changed,
+};
+
+struct BurnOwnerDiagnosticSnapshot {
+    SRWLOCK lock{};
+    std::uint64_t sequence{};
+    std::int32_t attackerType{InvalidStatListOwnerType};
+    std::uint32_t attackerGuid{std::numeric_limits<std::uint32_t>::max()};
+    std::int32_t ownerType{InvalidStatListOwnerType};
+    std::uint32_t ownerGuid{std::numeric_limits<std::uint32_t>::max()};
+    bool stateExisted{};
+    bool statePresent{};
+    bool ownerPresent{};
+    bool ownerMatches{};
+};
+
 static_assert(offsetof(DamagePayloadView, fireDamage) == 0x20);
 static_assert(offsetof(DamagePayloadView, burnDamage) == 0x24);
 static_assert(sizeof(DamagePayloadView) == 0x140);
@@ -344,11 +405,16 @@ using GetDataTablesForContextFn = void*(__fastcall*)(
     std::uint8_t) noexcept;
 using GetUnitStatFn = std::int32_t(__fastcall*)(
     void*, std::int32_t, std::int32_t) noexcept;
+using GetStateStatListFn = void*(__fastcall*)(
+    void*, std::int32_t) noexcept;
+using GetStatListOwnerGuidFn = std::uint32_t(__fastcall*)(void*) noexcept;
+using GetStatListOwnerTypeFn = std::int32_t(__fastcall*)(void*) noexcept;
 using CheckStateFn = std::int32_t(__fastcall*)(
     void*, std::int32_t) noexcept;
 using SetOverlayFn = void(__fastcall*)(
     void*, std::int32_t, std::int32_t) noexcept;
 using IsDeadFn = std::int32_t(__fastcall*)(void*) noexcept;
+using GetUnitIdFn = std::uint32_t(__fastcall*)(void*) noexcept;
 using GetUnitTypeFn = std::int32_t(__fastcall*)(void*) noexcept;
 using GetItemDataContextFn = std::uint8_t(__fastcall*)(void*) noexcept;
 using GetHirelingTypeIdFn = std::int32_t(__fastcall*)(void*) noexcept;
@@ -369,9 +435,13 @@ ApplyResistancesAndAbsorbFn ApplyResistancesAndAbsorb{};
 GetDifficultyRecordFn GetDifficultyRecord{};
 GetDataTablesForContextFn GetDataTablesForContext{};
 GetUnitStatFn GetUnitStat{};
+GetStateStatListFn GetStateStatList{};
+GetStatListOwnerGuidFn GetStatListOwnerGuid{};
+GetStatListOwnerTypeFn GetStatListOwnerType{};
 CheckStateFn CheckState{};
 SetOverlayFn SetOverlay{};
 IsDeadFn IsDead{};
+GetUnitIdFn GetUnitId{};
 GetUnitTypeFn GetUnitType{};
 GetItemDataContextFn GetItemDataContext{};
 GetHirelingTypeIdFn GetHirelingTypeId{};
@@ -387,6 +457,11 @@ std::atomic<std::uint64_t> ResolvedBurnCancellations{};
 std::atomic<std::uint64_t> ResistanceResolutionFailures{};
 std::atomic<std::uint64_t> BurningStateActiveWitnesses{};
 std::atomic<std::uint64_t> BurningStateMissingWitnesses{};
+std::atomic<std::uint64_t> BurnOwnerMatches{};
+std::atomic<std::uint64_t> BurnOwnerMismatches{};
+std::atomic<std::uint64_t> BurnOwnerMissing{};
+std::atomic<std::uint64_t> BurnStateNotApplied{};
+std::atomic<std::uint64_t> BurnOwnerReadFailures{};
 std::atomic<std::uint64_t> OverlayCadenceChecks{};
 std::atomic<std::uint64_t> OverlayReplays{};
 std::atomic<std::uint64_t> OverlayForeignReplacements{};
@@ -397,13 +472,14 @@ std::atomic<std::uint64_t> NativeOverlayFailures{};
 std::atomic<std::uint64_t> NativeOverlayRestores{};
 std::atomic_bool NativeOverlayUnscopedFailureReported{};
 std::array<NativeOverlayContextSlot, MaximumDataContexts> NativeOverlaySlots{};
+BurnOwnerDiagnosticSnapshot LastBurnOwnerDiagnostic{};
 
 constexpr D2RL::PluginInfo Info{
     .infoSize = D2RL::PluginInfoSize,
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "burn-damage-fix",
     .name = "Burn Damage Fix",
-    .version = "2.2.0",
+    .version = "1.0.0",
     .author = "RuffnecKk",
     .description = "Restores Burn damage and Fire defenses with a moving periodic flame.",
     .flags = D2RL::PluginFlags::Shared | D2RL::PluginFlags::NativeHooks,
@@ -462,6 +538,40 @@ auto Matches(
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
     }
+}
+
+auto InspectBurnKillCreditPatch() noexcept -> BurnKillCreditPatchStatus {
+    if (!Base || !ImageSize) return BurnKillCreditPatchStatus::Unavailable;
+    const auto tablePatched = Matches(
+        BurnKillCreditTableRva, BurnKillCreditTablePatched);
+    const auto scanPatched = Matches(
+        BurnKillCreditScanRva, BurnKillCreditScanPatched);
+    if (tablePatched && scanPatched) {
+        return BurnKillCreditPatchStatus::Intact;
+    }
+    const auto tableOriginal = Matches(
+        BurnKillCreditTableRva, BurnKillCreditTableOriginal);
+    const auto scanOriginal = Matches(
+        BurnKillCreditScanRva, BurnKillCreditScanOriginal);
+    if (tableOriginal && scanOriginal) {
+        return BurnKillCreditPatchStatus::Missing;
+    }
+    return BurnKillCreditPatchStatus::Changed;
+}
+
+auto BurnKillCreditPatchStatusName(
+        BurnKillCreditPatchStatus status) noexcept -> const char* {
+    switch (status) {
+    case BurnKillCreditPatchStatus::Intact:
+        return "intact";
+    case BurnKillCreditPatchStatus::Missing:
+        return "missing";
+    case BurnKillCreditPatchStatus::Changed:
+        return "changed";
+    case BurnKillCreditPatchStatus::Unavailable:
+        return "unavailable";
+    }
+    return "unavailable";
 }
 
 auto IsExecutableProtection(DWORD value) noexcept -> bool {
@@ -936,6 +1046,29 @@ auto ValidateRuntime() noexcept -> bool {
                 "burning-state diagnostic predicate")) {
         return false;
     }
+    if (Settings.diagnostics
+            && (!requireSignature(
+                    GetStateStatListRva,
+                    GetStateStatListExpected,
+                    "burning stat-list diagnostic lookup")
+                || !requireSignature(
+                    GetStatListOwnerGuidRva,
+                    GetStatListOwnerGuidExpected,
+                    "stat-list owner GUID diagnostic accessor")
+                || !requireSignature(
+                    GetStatListOwnerTypeRva,
+                    GetStatListOwnerTypeExpected,
+                    "stat-list owner type diagnostic accessor")
+                || !requireSignature(
+                    GetUnitIdRva,
+                    GetUnitIdExpected,
+                    "unit ID diagnostic accessor")
+                || !requireSignature(
+                    GetUnitTypeRva,
+                    GetUnitTypeExpected,
+                    "unit type diagnostic accessor"))) {
+        return false;
+    }
     return true;
 }
 
@@ -1377,6 +1510,90 @@ void HookMonsterEventDispatcher(
         callbackArg0, callbackArg1, callbackArg2);
 }
 
+void RecordBurnOwnerDiagnostic(
+        void* attacker,
+        void* defender,
+        bool stateExisted) noexcept {
+    if (!Settings.diagnostics || !defender || !GetStateStatList
+            || !GetStatListOwnerGuid || !GetStatListOwnerType
+            || !GetUnitId || !GetUnitType) {
+        return;
+    }
+
+    auto attackerType = InvalidStatListOwnerType;
+    auto attackerGuid = std::numeric_limits<std::uint32_t>::max();
+    auto ownerType = InvalidStatListOwnerType;
+    auto ownerGuid = std::numeric_limits<std::uint32_t>::max();
+    bool statePresent{};
+    bool ownerPresent{};
+    bool ownerMatches{};
+    bool readFailed{};
+    __try {
+        if (attacker) {
+            attackerType = GetUnitType(attacker);
+            attackerGuid = GetUnitId(attacker);
+        }
+        if (auto* stateList = GetStateStatList(defender, BurningStateId)) {
+            statePresent = true;
+            ownerType = GetStatListOwnerType(stateList);
+            ownerGuid = GetStatListOwnerGuid(stateList);
+            ownerPresent = ownerType != InvalidStatListOwnerType
+                && ownerGuid != std::numeric_limits<std::uint32_t>::max();
+            ownerMatches = attacker && ownerPresent
+                && attackerType == ownerType && attackerGuid == ownerGuid;
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        readFailed = true;
+    }
+
+    if (readFailed) {
+        BurnOwnerReadFailures.fetch_add(1, std::memory_order_relaxed);
+    } else if (!statePresent) {
+        BurnStateNotApplied.fetch_add(1, std::memory_order_relaxed);
+        return;
+    } else if (!ownerPresent) {
+        BurnOwnerMissing.fetch_add(1, std::memory_order_relaxed);
+    } else if (ownerMatches) {
+        BurnOwnerMatches.fetch_add(1, std::memory_order_relaxed);
+    } else {
+        BurnOwnerMismatches.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    std::uint64_t sequence{};
+    AcquireSRWLockExclusive(&LastBurnOwnerDiagnostic.lock);
+    sequence = ++LastBurnOwnerDiagnostic.sequence;
+    LastBurnOwnerDiagnostic.attackerType = attackerType;
+    LastBurnOwnerDiagnostic.attackerGuid = attackerGuid;
+    LastBurnOwnerDiagnostic.ownerType = ownerType;
+    LastBurnOwnerDiagnostic.ownerGuid = ownerGuid;
+    LastBurnOwnerDiagnostic.stateExisted = stateExisted;
+    LastBurnOwnerDiagnostic.statePresent = statePresent;
+    LastBurnOwnerDiagnostic.ownerPresent = ownerPresent;
+    LastBurnOwnerDiagnostic.ownerMatches = ownerMatches;
+    ReleaseSRWLockExclusive(&LastBurnOwnerDiagnostic.lock);
+
+    const auto shouldLog = readFailed || !stateExisted
+        || !ownerPresent || !ownerMatches;
+    if (Context && shouldLog) {
+        char message[512]{};
+        std::snprintf(
+            message,
+            sizeof(message),
+            "BurnDamageFix diagnostics: burn-owner #%llu; existing=%s; state=%s; attacker=%d/%u; owner=%d/%u; owner-present=%s; match=%s; kill-credit-patch=%s.",
+            static_cast<unsigned long long>(sequence),
+            stateExisted ? "yes" : "no",
+            statePresent ? "yes" : "no",
+            attackerType,
+            attackerGuid,
+            ownerType,
+            ownerGuid,
+            ownerPresent ? "yes" : "no",
+            ownerMatches ? "yes" : "no",
+            BurnKillCreditPatchStatusName(InspectBurnKillCreditPatch()));
+        Context->LogInfo(message);
+    }
+}
+
 void HookApplyBurnDamage(
         void* attacker,
         void* defender,
@@ -1406,7 +1623,16 @@ void HookApplyBurnDamage(
     if (ShouldSuppressNativeBurning(Settings) && defender) {
         (void)SuppressNativeBurningOverlay(defender);
     }
+    bool stateExisted{};
+    if (Settings.diagnostics && defender && GetStateStatList) {
+        __try {
+            stateExisted = GetStateStatList(defender, BurningStateId) != nullptr;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            BurnOwnerReadFailures.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
     OriginalApplyBurnDamage(attacker, defender, resolvedBurn, burnLength);
+    RecordBurnOwnerDiagnostic(attacker, defender, stateExisted);
 
     const auto shouldWitness = ShouldWitnessBurningState(
         Settings, resolvedBurn, burnLength);
@@ -1435,7 +1661,7 @@ auto Status(
     std::snprintf(
         message,
         sizeof(message),
-        "Burn Damage Fix 2.2.0: active=%s; build=%s; generic=%s; resistance=%s; overlay=%s/fire_hit/%df; native-burning=%s/%llu/%llu/%llu/%llu/%llu removed/already-none/custom/fail/restored; diagnostics=%s; production=%llu/%llu; resolved=%llu/%llu/%llu applied/cancelled/fail; burning-state=%llu/%llu active/missing; overlay-replay=%llu/%llu/%llu replayed/cadence/foreign-replaced; config=%s.",
+        "Burn Damage Fix 1.0.0: active=%s; build=%s; generic=%s; resistance=%s; overlay=%s/fire_hit/%df; native-burning=%s/%llu/%llu/%llu/%llu/%llu removed/already-none/custom/fail/restored; diagnostics=%s; production=%llu/%llu; resolved=%llu/%llu/%llu applied/cancelled/fail; burning-state=%llu/%llu active/missing; overlay-replay=%llu/%llu/%llu replayed/cadence/foreign-replaced; config=%s.",
         Operational.load(std::memory_order_acquire) ? "true" : "false",
         RuntimeBuild.c_str(),
         Settings.normalizeGenericBurn ? "on" : "off",
@@ -1476,6 +1702,55 @@ auto Status(
             OverlayForeignReplacements.load(std::memory_order_relaxed)),
         LoadedConfigPath.c_str());
     command->plugin->WriteConsoleMessage(message);
+    if (Settings.diagnostics) {
+        std::uint64_t sequence{};
+        std::int32_t attackerType{};
+        std::uint32_t attackerGuid{};
+        std::int32_t ownerType{};
+        std::uint32_t ownerGuid{};
+        bool stateExisted{};
+        bool statePresent{};
+        bool ownerPresent{};
+        bool ownerMatches{};
+        AcquireSRWLockShared(&LastBurnOwnerDiagnostic.lock);
+        sequence = LastBurnOwnerDiagnostic.sequence;
+        attackerType = LastBurnOwnerDiagnostic.attackerType;
+        attackerGuid = LastBurnOwnerDiagnostic.attackerGuid;
+        ownerType = LastBurnOwnerDiagnostic.ownerType;
+        ownerGuid = LastBurnOwnerDiagnostic.ownerGuid;
+        stateExisted = LastBurnOwnerDiagnostic.stateExisted;
+        statePresent = LastBurnOwnerDiagnostic.statePresent;
+        ownerPresent = LastBurnOwnerDiagnostic.ownerPresent;
+        ownerMatches = LastBurnOwnerDiagnostic.ownerMatches;
+        ReleaseSRWLockShared(&LastBurnOwnerDiagnostic.lock);
+
+        char diagnosticMessage[768]{};
+        std::snprintf(
+            diagnosticMessage,
+            sizeof(diagnosticMessage),
+            "Burn owner diagnostics: kill-credit-patch=%s; observations=%llu/%llu/%llu/%llu/%llu match/mismatch/owner-missing/not-applied/read-fail; last=#%llu existing=%s state=%s attacker=%d/%u owner=%d/%u owner-present=%s match=%s.",
+            BurnKillCreditPatchStatusName(InspectBurnKillCreditPatch()),
+            static_cast<unsigned long long>(
+                BurnOwnerMatches.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(
+                BurnOwnerMismatches.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(
+                BurnOwnerMissing.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(
+                BurnStateNotApplied.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(
+                BurnOwnerReadFailures.load(std::memory_order_relaxed)),
+            static_cast<unsigned long long>(sequence),
+            stateExisted ? "yes" : "no",
+            statePresent ? "yes" : "no",
+            attackerType,
+            attackerGuid,
+            ownerType,
+            ownerGuid,
+            ownerPresent ? "yes" : "no",
+            ownerMatches ? "yes" : "no");
+        command->plugin->WriteConsoleMessage(diagnosticMessage);
+    }
     return D2RL::ConsoleCommandResult::Handled;
 }
 
@@ -1488,6 +1763,11 @@ void ResetState() noexcept {
     ResistanceResolutionFailures.store(0, std::memory_order_relaxed);
     BurningStateActiveWitnesses.store(0, std::memory_order_relaxed);
     BurningStateMissingWitnesses.store(0, std::memory_order_relaxed);
+    BurnOwnerMatches.store(0, std::memory_order_relaxed);
+    BurnOwnerMismatches.store(0, std::memory_order_relaxed);
+    BurnOwnerMissing.store(0, std::memory_order_relaxed);
+    BurnStateNotApplied.store(0, std::memory_order_relaxed);
+    BurnOwnerReadFailures.store(0, std::memory_order_relaxed);
     OverlayCadenceChecks.store(0, std::memory_order_relaxed);
     OverlayReplays.store(0, std::memory_order_relaxed);
     OverlayForeignReplacements.store(0, std::memory_order_relaxed);
@@ -1498,6 +1778,18 @@ void ResetState() noexcept {
     NativeOverlayRestores.store(0, std::memory_order_relaxed);
     NativeOverlayUnscopedFailureReported.store(
         false, std::memory_order_relaxed);
+    InitializeSRWLock(&LastBurnOwnerDiagnostic.lock);
+    LastBurnOwnerDiagnostic.sequence = 0;
+    LastBurnOwnerDiagnostic.attackerType = InvalidStatListOwnerType;
+    LastBurnOwnerDiagnostic.attackerGuid =
+        std::numeric_limits<std::uint32_t>::max();
+    LastBurnOwnerDiagnostic.ownerType = InvalidStatListOwnerType;
+    LastBurnOwnerDiagnostic.ownerGuid =
+        std::numeric_limits<std::uint32_t>::max();
+    LastBurnOwnerDiagnostic.stateExisted = false;
+    LastBurnOwnerDiagnostic.statePresent = false;
+    LastBurnOwnerDiagnostic.ownerPresent = false;
+    LastBurnOwnerDiagnostic.ownerMatches = false;
     for (auto& slot : NativeOverlaySlots) {
         InitializeSRWLock(&slot.lock);
         slot.observedRecord = nullptr;
@@ -1513,9 +1805,13 @@ void ResetState() noexcept {
     GetDifficultyRecord = nullptr;
     GetDataTablesForContext = nullptr;
     GetUnitStat = nullptr;
+    GetStateStatList = nullptr;
+    GetStatListOwnerGuid = nullptr;
+    GetStatListOwnerType = nullptr;
     CheckState = nullptr;
     SetOverlay = nullptr;
     IsDead = nullptr;
+    GetUnitId = nullptr;
     GetUnitType = nullptr;
     GetItemDataContext = nullptr;
     GetHirelingTypeId = nullptr;
@@ -1582,11 +1878,6 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     Base = reinterpret_cast<std::uint8_t*>(context->exeBase);
     ResetState();
     if (!Base || !LoadConfig()) return false;
-    if (Settings.replayFireHit && !Settings.applyFireResistance) {
-        context->LogError(
-            "BurnDamageFix: overlay replay requires Fire Resistance resolution; plugin refused.");
-        return false;
-    }
 
     const auto* runtimeBuild = D2RL::GetBuildName(context);
     RuntimeBuild = runtimeBuild && runtimeBuild[0] != '\0'
@@ -1601,7 +1892,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     }
     if (!Settings.enabled) {
         context->LogInfo(
-            "Burn Damage Fix 2.2.0 by RuffnecKk loaded disabled; no hook was installed.");
+            "Burn Damage Fix 1.0.0 by RuffnecKk loaded disabled; no hook was installed.");
         return true;
     }
 
@@ -1625,9 +1916,15 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     GetDataTablesForContext = At<GetDataTablesForContextFn>(
         GetDataTablesForContextRva);
     GetUnitStat = At<GetUnitStatFn>(GetUnitStatRva);
+    GetStateStatList = At<GetStateStatListFn>(GetStateStatListRva);
+    GetStatListOwnerGuid = At<GetStatListOwnerGuidFn>(
+        GetStatListOwnerGuidRva);
+    GetStatListOwnerType = At<GetStatListOwnerTypeFn>(
+        GetStatListOwnerTypeRva);
     CheckState = At<CheckStateFn>(CheckStateRva);
     SetOverlay = At<SetOverlayFn>(SetOverlayRva);
     IsDead = At<IsDeadFn>(IsDeadRva);
+    GetUnitId = At<GetUnitIdFn>(GetUnitIdRva);
     GetUnitType = At<GetUnitTypeFn>(GetUnitTypeRva);
     GetItemDataContext = At<GetItemDataContextFn>(GetItemDataContextRva);
     GetHirelingTypeId = At<GetHirelingTypeIdFn>(GetHirelingTypeIdRva);
@@ -1666,11 +1963,21 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     if (!InstallProductionRelay()) return false;
     Operational.store(true, std::memory_order_release);
 
+    if (Settings.diagnostics) {
+        char diagnosticMessage[192]{};
+        std::snprintf(
+            diagnosticMessage,
+            sizeof(diagnosticMessage),
+            "BurnDamageFix diagnostics: burn kill-credit patch is %s; Burn owner observations enabled.",
+            BurnKillCreditPatchStatusName(InspectBurnKillCreditPatch()));
+        context->LogInfo(diagnosticMessage);
+    }
+
     char message[768]{};
     std::snprintf(
         message,
         sizeof(message),
-        "Burn Damage Fix 2.2.0 by RuffnecKk active for observed D2R %s; generic=%s; resistance=%s; overlay=%s/fire_hit/%df; native-burning=%s; installation=%s; TOML=%s.",
+        "Burn Damage Fix 1.0.0 by RuffnecKk active for observed D2R %s; generic=%s; resistance=%s; overlay=%s/fire_hit/%df; native-burning=%s; installation=%s; TOML=%s.",
         RuntimeBuild.c_str(),
         Settings.normalizeGenericBurn ? "enabled" : "disabled",
         Settings.applyFireResistance ? "enabled" : "disabled",

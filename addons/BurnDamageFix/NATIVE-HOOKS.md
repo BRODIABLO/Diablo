@@ -45,8 +45,8 @@ patch at `0x44CB32` remains the only D2R executable write for this feature.
 The native application path calls `STATES_ToggleState 0x3354C0` with state 115
 after validating positive damage and duration. The governed 3.2, 3.3 and
 BKVince tables all map state 115 to overlay `burning` 224, whose asset is
-`Expansion\\On_Fire`. With `overlay.suppress_native_burning=true`, 2.2 resolves
-the active compiled row immediately before the original Burn application and
+`Expansion\\On_Fire`. The 1.0 fixed policy resolves the active compiled row
+immediately before the original Burn application and
 performs only an aligned atomic compare/exchange from `224` to `0xFFFF`. An
 already-empty row is accepted, while any other custom overlay id is preserved
 and reported. No `states.txt` is shipped or rewritten. On plugin unload, the
@@ -55,10 +55,10 @@ still contains `0xFFFF`; a third-party replacement is never overwritten.
 
 The independent `fire_hit` replay remains unchanged. It runs immediately after
 the original Burn application confirms state 115, then before event type 3
-reaches either dispatcher whenever `gameFrame % repeat_frames == 0`, the state
+reaches either dispatcher whenever `gameFrame % 10 == 0`, the state
 is still active and the unit is alive. The last emitted animation may finish
-naturally after the state disappears. The default `repeat_frames=10` is a
-0.4-second candidate cadence for the table's eight-frame,
+naturally after the state disappears. The fixed ten-frame interval is a
+0.4-second cadence for the table's eight-frame,
 16-frames-per-second `fire_hit`; client stacking/restart behavior and density
 remain runtime gates.
 
@@ -68,8 +68,9 @@ remain runtime gates.
   its live hook in the chain while rejecting unknown owners.
 - Bind And Summon has no executable-code ownership or exact signature match for
   either dispatcher. Its apparent address coincidences were `.pdata` entries.
-- The 2.2 change adds no executable hook. Its process-local StatesTxt write is
-  restricted to state 115 overlay1 when the value is exactly vanilla `224`;
+- The 1.0 release adds no executable hook for this replacement. Its
+  process-local StatesTxt write is restricted to state 115 overlay1 when the
+  value is exactly vanilla `224`;
   custom mappings are preserved, and neither Monster Display nor Bind And
   Summon owns this data cell in the audited builds.
 - Melee Splash owns the outer damage-fill entry `0x44C030`, not the internal

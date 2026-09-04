@@ -48,6 +48,11 @@ int main() {
     static_assert(DefaultOverlayRepeatFrames == 10);
     static_assert(NativeBurningOverlay == 224);
     static_assert(EmptyStateOverlay == 0xFFFF);
+    static_assert(Config::normalizeGenericBurn);
+    static_assert(Config::applyFireResistance);
+    static_assert(Config::replayFireHit);
+    static_assert(Config::suppressNativeBurning);
+    static_assert(Config::overlayRepeatFrames == 10);
 
     CHECK(BurnFireResistance.resistanceStat == 39);
     CHECK(BurnFireResistance.maximumResistanceStat == 40);
@@ -65,7 +70,7 @@ int main() {
     CHECK(ShouldResolveBurn(config, 256, 75));
     CHECK(!ShouldResolveBurn(config, 0, 75));
     CHECK(!ShouldResolveBurn(config, 256, 0));
-    config.applyFireResistance = false;
+    config.enabled = false;
     CHECK(!ShouldResolveBurn(config, 256, 75));
 
     config = {};
@@ -82,25 +87,12 @@ int main() {
     CHECK(ShouldReplayFireHit(config, StatRegenerationEvent, 10));
     CHECK(!ShouldReplayFireHit(config, StatRegenerationEvent, 9));
     CHECK(!ShouldReplayFireHit(config, 2, 10));
-    config.replayFireHit = false;
+    config.enabled = false;
     CHECK(!ShouldReplayFireHit(config, StatRegenerationEvent, 10));
-    config = {};
-    config.overlayRepeatFrames = MinimumOverlayRepeatFrames;
-    CHECK(ShouldReplayFireHit(config, StatRegenerationEvent, 1));
-    config.overlayRepeatFrames = MaximumOverlayRepeatFrames;
-    CHECK(ShouldReplayFireHit(config, StatRegenerationEvent, 250));
-    CHECK(!ShouldReplayFireHit(config, StatRegenerationEvent, 249));
-    config.overlayRepeatFrames = MinimumOverlayRepeatFrames - 1;
-    CHECK(!ShouldReplayFireHit(config, StatRegenerationEvent, 0));
-    config.overlayRepeatFrames = MaximumOverlayRepeatFrames + 1;
-    CHECK(!ShouldReplayFireHit(config, StatRegenerationEvent, 250));
 
     config = {};
     CHECK(ShouldSuppressNativeBurning(config));
-    config.suppressNativeBurning = false;
-    CHECK(!ShouldSuppressNativeBurning(config));
-    config = {};
-    config.replayFireHit = false;
+    config.enabled = false;
     CHECK(!ShouldSuppressNativeBurning(config));
     CHECK(ClassifyNativeBurningOverlay(NativeBurningOverlay)
         == NativeBurningOverlayAction::Suppress);
@@ -143,97 +135,50 @@ int main() {
         == std::numeric_limits<std::int32_t>::max());
 
     constexpr std::string_view validToml = R"toml(
-config_version = 2
-enabled = true
-[fixes]
-normalize_generic_burn = true
-apply_fire_resistance = true
-[overlay]
-enabled = true
-repeat_frames = 10
-suppress_native_burning = true
-[diagnostics]
-enabled = false
-)toml";
+ config_version = 1
+ enabled = true
+ [diagnostics]
+ enabled = false
+ )toml";
     std::string error;
     CHECK(ParseToml(validToml, config, error));
-    CHECK(config.enabled && config.normalizeGenericBurn
-        && config.applyFireResistance && config.replayFireHit
-        && config.suppressNativeBurning
-        && config.overlayRepeatFrames == 10 && !config.diagnostics);
-    constexpr std::string_view existingVersion2Toml = R"toml(
-config_version = 2
-enabled = true
-[fixes]
-normalize_generic_burn = true
-apply_fire_resistance = true
-[overlay]
-enabled = true
-repeat_frames = 10
-[diagnostics]
-enabled = false
-)toml";
-    CHECK(ParseToml(existingVersion2Toml, config, error));
-    CHECK(config.replayFireHit && config.suppressNativeBurning);
-    auto nativeSuppressionDisabled = std::string(validToml);
-    nativeSuppressionDisabled.replace(
-        nativeSuppressionDisabled.find("suppress_native_burning = true"),
-        std::string("suppress_native_burning = true").size(),
-        "suppress_native_burning = false");
-    CHECK(ParseToml(nativeSuppressionDisabled, config, error));
-    CHECK(config.replayFireHit && !config.suppressNativeBurning
-        && !ShouldSuppressNativeBurning(config));
-    constexpr std::string_view legacyToml = R"toml(
-config_version = 1
-enabled = true
-[fixes]
-normalize_generic_burn = true
-apply_fire_resistance = true
-[diagnostics]
-enabled = false
-)toml";
-    CHECK(ParseToml(legacyToml, config, error));
-    CHECK(!config.replayFireHit
-        && !ShouldSuppressNativeBurning(config)
-        && config.overlayRepeatFrames == DefaultOverlayRepeatFrames);
+    CHECK(config.enabled && !config.diagnostics);
+    constexpr std::string_view disabledToml = R"toml(
+ config_version = 1
+ enabled = false
+ [diagnostics]
+ enabled = true
+ )toml";
+    CHECK(ParseToml(disabledToml, config, error));
+    CHECK(!config.enabled && config.diagnostics);
     auto unknownTopLevel = std::string(validToml);
     unknownTopLevel.insert(
-        unknownTopLevel.find("[fixes]"), "unknown = true\n");
+        unknownTopLevel.find("[diagnostics]"), "unknown = true\n");
     CHECK(!ParseToml(unknownTopLevel, config, error));
-    CHECK(!ParseToml(std::string(validToml) + "unknown = true\n", config, error));
     CHECK(!ParseToml(
-        "config_version = 2\nenabled = 1\n[fixes]\n"
-        "normalize_generic_burn = true\napply_fire_resistance = true\n"
-        "[overlay]\nenabled = true\nrepeat_frames = 10\n"
+        "config_version = 1\nenabled = 1\n"
         "[diagnostics]\nenabled = false\n",
         config,
         error));
     CHECK(!ParseToml(
-        "config_version = 2\nenabled = true\n[fixes]\n"
-        "normalize_generic_burn = true\napply_fire_resistance = true\n"
-        "[overlay]\nenabled = true\nrepeat_frames = 0\n"
+        "config_version = 1\nenabled = true\n"
+        "[diagnostics]\nenabled = 0\n",
+        config,
+        error));
+    CHECK(!ParseToml(
+        "config_version = 2\nenabled = true\n"
         "[diagnostics]\nenabled = false\n",
         config,
         error));
     CHECK(!ParseToml(
-        "config_version = 2\nenabled = true\n[fixes]\n"
-        "normalize_generic_burn = true\napply_fire_resistance = true\n"
-        "[overlay]\nenabled = true\nrepeat_frames = 10\n"
-        "suppress_native_burning = 1\n"
+        "config_version = 1\nenabled = true\n"
+        "[fixes]\nnormalize_generic_burn = true\n"
         "[diagnostics]\nenabled = false\n",
         config,
         error));
     CHECK(!ParseToml(
-        std::string(validToml)
-            .replace(std::string(validToml).find("repeat_frames = 10"),
-                std::string("repeat_frames = 10").size(),
-                "repeat_frames = 251"),
-        config,
-        error));
-    CHECK(!ParseToml(
-        "config_version = 2\nenabled = true\n[fixes]\n"
-        "normalize_generic_burn = true\napply_fire_resistance = false\n"
-        "[overlay]\nenabled = true\nrepeat_frames = 10\n"
+        "config_version = 1\nenabled = true\n"
+        "[overlay]\nenabled = true\n"
         "[diagnostics]\nenabled = false\n",
         config,
         error));

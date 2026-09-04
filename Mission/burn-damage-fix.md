@@ -56,6 +56,26 @@ replay `fire_hit` doivent rester inchangés. Monster Display et Bind And Summon
 restent des gates de coexistence runtime, mais aucun nouveau seam partagé avec
 eux n'est introduit.
 
+## Décision de release publique 1.0.0 — 2026-08-27
+
+Vincent donne `GO` pour réduire la configuration publique aux seuls
+`config_version`, master switch `enabled` et diagnostics. La normalisation du
+Burn générique, la résolution Fire Resistance, le rejeu `fire_hit` à dix frames
+et la suppression de la flamme native stationnaire deviennent la politique
+fixe du plugin : ce sont les correctifs livrés, pas des variantes gameplay à
+supporter indépendamment.
+
+Comme `BurnDamageFix` n'a encore jamais été publié, sa première version
+communautaire est `1.0.0` et son schéma public minimal repart à
+`config_version=1`. Les numéros 2.0.0 à 2.2.0 décrivent uniquement les
+candidates internes successives du laboratoire et ne forment pas une lignée de
+releases publiques. L'ancienne configuration de test est refusée explicitement
+afin qu'aucun réglage retiré ne soit ignoré silencieusement. L'absence de fichier
+reste valide et charge les valeurs embarquées. Cette simplification ne modifie
+aucune surface native, aucun dommage, aucune durée ni aucun comportement
+réseau; elle réduit seulement le contrat de configuration et sa matrice de
+support.
+
 ## But
 
 Réparer les deux défauts Burn rapportés par Necrolis : la production générique
@@ -197,6 +217,38 @@ allowlist de deux entrées seulement :
 Le README anglais, avec crédit D2MOO explicite, demeure à côté du ZIP et n'est
 pas inclus dans l'archive générée. La candidate est préparée pour relecture;
 aucune GitHub Release n'est créée par cette demande.
+
+## Release publique candidate 1.0.0 — 2026-08-27
+
+La configuration publique est ramenée à `config_version=1`, `enabled` et
+`diagnostics.enabled`. Les quatre choix mécaniques auparavant exposés sont
+désormais des constantes de politique : normalisation Burn, Fire Resistance,
+rejeu `fire_hit` à dix frames et suppression de la flamme native sont toujours
+livrés ensemble. Les anciens blocs `[fixes]` et `[overlay]` sont refusés
+explicitement.
+
+Deux builds Release x64 autonomes passent `1/1` CTest et sont byte-identiques.
+Le binaire promu et l'archive locale contiennent exactement :
+
+- `BurnDamageFix.dll` — 189 440 octets — SHA-256
+  `F2E811E5EC2823616A3418604E657E7ABEA1D401937802342A8710972040703E`;
+- `burn-damage-fix.toml` — 367 octets — SHA-256
+  `287802A7356272E47928765E0E88001AB8BCB623B55A0891C9DF40B3219A40A5`;
+- `BurnDamageFix-1.0.0.zip` — SHA-256
+  `25BB4FE4426DAB101F7AF664C99D85796405919717F25901E3E67BD3218C296E`.
+
+Les deux builds canoniques de la Suite passent `26/26` CTest, leurs 18 DLL
+restent byte-identiques entre A et B, et les 17 autres plugins conservent leurs
+hashes déjà épinglés. La DLL Suite Burn 1.0.0 mesure 189 440 octets et porte le
+SHA-256
+`5EC7F809EF1B61FE3CC1E7555AE289FA09DBFC8C1DCFDB351A79CCDBED91C214`.
+
+Le cold start de l'exécutable public 1.0.0 reste à capturer. Au contrôle final,
+BKVince était encore ouvert avec la candidate interne 2.2.0 et sa configuration
+de laboratoire version 2; conformément à la consigne de Vincent, cette instance
+n'a été ni fermée ni modifiée. Les preuves gameplay 3.3.93847 qualifient donc
+les mécanismes fixes inchangés, tandis que le témoin de chargement du binaire
+1.0.0 exact demeure un gate avant publication.
 
 ## Architecture implantée — fondation 2.1.0
 
@@ -409,10 +461,10 @@ qualifient pas encore la nouvelle DLL.
    BKVCombat et réapplication intensive.
 4. Save & Exit/reload dans le même processus est validé. Tester encore les rôles
    hôte et joiner lorsque Burn doit être qualifié en multijoueur.
-5. Tester `suppress_native_burning=false`, un row déjà `0xFFFF`, puis un id
-   custom afin de prouver respectivement le rollback fonctionnel, le no-op et la
-   préservation tierce. Vérifier aussi la restauration conditionnelle lors d'un
-   déchargement propre.
+5. Le mode public ne permet plus de désactiver la suppression native. Qualifier
+   encore au runtime un row déjà `0xFFFF`, puis un id custom afin de prouver le
+   no-op et la préservation tierce. Vérifier aussi la restauration
+   conditionnelle lors d'un déchargement propre.
 
 Le défaut préexistant `RogueScoutMovement` sous 92777, l'échec courant de Fourth
 Skill Tree Framework et le crash graphique `dxgi.dll` non reproduit restent des
