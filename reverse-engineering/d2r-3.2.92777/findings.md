@@ -3,6 +3,24 @@
 Ce document conserve uniquement les conclusions utiles aux prochaines sessions.
 Les sorties volumineuses demeurent sous `analysis-cache/corpus/`.
 
+## ISC12 — disposition runtime du conteneur persistant
+
+- Le premier write réel du candidat à enveloppe a produit exactement 499
+  octets : 96 octets d'enveloppe ISC12 suivis d'un D2S valide de 403 octets.
+  Le writer et la primitive atomique ont donc rempli leur contrat local.
+- D2RLoader 1.2 a néanmoins annulé le lancement au frontend avec
+  `route=prepare result=invalid-character`. Une enveloppe externe opaque est
+  incompatible avec ce trajet même lorsque son payload interne est valide.
+- La DLL runtime conserve désormais les conteneurs D2S/D2I standards. Le hook
+  reader valide le buffer inchangé; le hook writer valide puis retourne à la
+  continuation native avant `CREATE_ALWAYS`, afin que le couple D2RCore
+  writer/closer compose normalement `.d2rl`, backups et environnement.
+- Vincent accepte la persistance native non atomique et fixe le clean-sheet
+  comme contrat de support : nouveau personnage ou migration externe future,
+  backups obligatoires, aucun chargement direct d'une save vanilla/non-ISC12.
+  L'enveloppe et l'atomic writer restent des composants unit-testés réservés à
+  l'outillage de migration.
+
 ## ProgressiveAffixesPlugin — sélection du nombre d’affixes
 
 - `0x442C60` est le générateur Magic appelé avec `(itemWrapper, generation)` ;
@@ -52,6 +70,21 @@ npm.cmd run ref:d2rlplugins -- status
   rehydratees rendent 105 850 fonctions x64 accessibles par `.pdata`.
 - L'index compact connait actuellement plus d'un million de references code ou
   RIP, les chaines des sections de donnees et les patches BKVince actifs.
+
+## Treasure Class drop entry et Player Condition Calc
+
+- `0x441300` est l'entrée serveur de génération des drops Treasure Class. Ses
+  trois appels directs sont `0x40BB3E`, `0x415C21` et `0x447E17`.
+- L'ABI Windows x64 observée comporte dix arguments. `R8` transporte le joueur
+  ou le monstre tueur et `R9W` un identifiant Treasure Class scalaire; les six
+  arguments restants occupent les slots de pile du caller.
+- Le crash Community Pack du 14 août 2026 provenait d'un ancien wrapper à quatre
+  arguments qui déréférençait `R9` comme un pointeur. Le témoin fautif avait
+  `R9=0x261`, exactement conforme à l'usage natif `movzx ebp,r9w`.
+- Lorsqu'un tueur de type Monster est reçu, `D2GAME_GetMinionOwner 0x4A53C0`
+  fournit le propriétaire joueur éventuel. Un wrapper doit transmettre les dix
+  arguments inchangés, conserver l'état par thread de manière réentrante et ne
+  jamais déréférencer `R9`.
 
 ## Routine de quantite des Books
 
@@ -116,9 +149,20 @@ scan global du `.text` avant d'avoir epuise l'index et le projet Ghidra.
   `FillStoreInventory` dans `plugin-items`.
 - Le layout natif du panel declare deja `button_refresh` avec
   `VendorPanelMessage:RefreshAll`, le sprite gamble, le son natif et `@refresh`.
-  La configuration `0x2411E0` utilise `panel+0x168` : normal `0`, repair `1`,
-  gamble `2`. Les gates uniques `0x24137D`/`0x241391` identifient le widget
-  exclusif au gamble; `0x240E0D` garde le chemin d'entree direct sur le meme mode.
+  La configuration `0x2411E0` utilise `panel+0x168` : gamble `2`, tandis que les
+  vendeurs normaux couvrent les modes `0` et `1`. Charsi a `hcIdx=154`; l'index
+  `154 - 0x93` lit le selecteur `1` dans la table et saute a `0x2412DE`, qui
+  ecrit explicitement le mode `1`. Les gates uniques `0x24137D`/`0x241391`
+  identifient le widget exclusif au gamble; `0x240E0D` garde le chemin d'entree
+  direct sur le meme mode. La politique 0.1.1/0.1.2 `mode != 1` masquait donc
+  Charsi; 0.1.3 a prouve le trajet sur tous les modes en forcant ces gates, mais
+  deplacait aussi le bouton du gamble.
+- `0x856220` parcourt les enfants directs entre `panel+0x58` et `panel+0x60`,
+  compare leur nom et renvoie le widget correspondant. Les noms bruts du panel
+  sont confirmes en memoire runtime. Le hook 0.1.4 a `0x2411E0` appelle d'abord
+  la configuration originale, resout `button_refresh_normal`, puis utilise les
+  methodes vtable `+0x48`/`+0x50` pour le montrer uniquement hors gamble. Les
+  trois gates vanilla du `button_refresh` original ne sont plus patches.
 - Le handler de message `0x241B20` compare le hash RefreshAll
   `0xB7AA1748D66EFCAF` et rejoint `0x10F520`. Ce sender n'a que deux references
   dans le panel vendeur et emet l'action 2 via `0xEC730`.
@@ -126,25 +170,52 @@ scan global du `.text` avant d'avoir epuise l'index et le projet Ghidra.
   callers 92777 prouvent opcode `0x38`, action 1 normal, 2 gamble et 3 hire. Le
   callback serveur `0x4B0470` exige neuf octets, valide le NPC puis route normal
   et gamble vers `0x540850`; ne pas transposer les 13 octets D2MOO 1.10f.
-- `0x10CAC0` retourne l'etat gamble utilise par le panel. Le hook client peut
-  donc conserver l'action 2 en gamble et choisir l'action 1 en normal sans
-  nouveau protocole.
+- `0x10CAC0` retourne l'etat gamble utilise par le panel. Le hook client conserve
+  donc l'action 2 en gamble; le correctif 0.1.1 utilise le marqueur prive `VSRF`
+  en normal dans le meme paquet opcode `0x38` de neuf octets.
 - `0x502F60` recoit `(game, npc, player, mode)` juste avant `0x540850`. Il lit et
-  remplace `PlayerData+0x100`; mode 2 normal, 3 gamble, 4 hire. L'ancienne valeur
-  2, la classe stockee a `+0xFC`, la classe du NPC et une entree remplie a
-  `VendorChainEntry+0x34` forment le gate fail-closed du prototype avant d'armer
-  `+0x35`.
-- Cold start mod-local du 26 juillet 2026 : hashes source/runtime identiques,
-  JSON resolu depuis `mods/BKVince/BKVince.mpq`, hooks `0x10F520` et `0x502F60`
-  installes, trois patches UI acceptes avant le log `active`, demarrage graphique
-  complet et zero erreur/rejet/mismatch frais. Gameplay et reseau restent non
-  executes.
+  remplace `PlayerData+0x100`; mode 2 normal, 3 gamble, 4 hire. Le premier temoin
+  gameplay a invalide le discriminateur 0.1.0 fonde sur l'ancien mode et la
+  classe : bouton visible, mais aucun changement dans la grille Charsi.
+- Le correctif 0.1.1 hooke aussi le callback autoritaire `0x4B0470`. Il traduit
+  uniquement `VSRF` en action vanilla 1, laisse le callback original valider NPC,
+  acte et distance, puis arme `VendorChainEntry+0x35` dans la portee thread-local
+  exacte du `0x502F60` ainsi rejoint. Une ouverture normale reste hors de cette
+  portee et ne peut pas armer le refresh.
+- Le temoin 0.1.3 a produit neuf `sent`, neuf `armed` et zero rejet, prouvant le
+  trajet client/serveur. Sa capture a revele un centrage trop a droite et la
+  perte de la position vanilla en gamble.
+- Cold start mod-local 0.1.4 du 26 juillet 2026 : DLL source/runtime identique
+  (`12B6F035...D60CD`), layout identique (`2E59C9BE...A8FBEE`), JSON identique
+  (`B7510070...65C41`), hooks `0x2411E0`, `0x502F60`, `0x4B0470` et `0x10F520`
+  installes, `20/20` patchsets, 24 plugins actifs, zero rejet, zero echec et
+  demarrage `24/24`. La separation visuelle normal/gamble reste a confirmer.
+- `0x8562A0` lit le rectangle local d'un widget avec l'ABI
+  `(widget, rectOut) -> rectOut`. Pour un widget ordinaire, il copie les quatre
+  entiers signes `{x,y,width,height}` situes a `widget+0x70`; le drapeau
+  fill-parent `+0x52` suit le parent `+0x30`. Les chemins de hit-test et de rendu
+  relisent cette meme geometrie.
+- Le correctif 0.1.5 supprime le clone et toute dependance a un layout livre. Le
+  hook post-configuration retrouve le `button_refresh` natif et `StashWidget`,
+  calcule `x = anchor.x + (anchor.width - button.width) / 2`, puis place le
+  bouton sous l'ancre avec un espacement proportionnel a sa hauteur. Le repli
+  utilise l'union de `gold_icon` et `gold_amount`; sans geometrie exploitable,
+  le bouton normal reste masque. En gamble, la position exacte capturee depuis
+  le layout actif est restauree et les gates vanilla restent autoritaires.
+- Cold start mod-local 0.1.5 du 27 juillet 2026 sans override de layout : DLL
+  source/runtime identique (`21E75601...C09FE`), JSON inchange
+  (`B7510070...65C41`), quatre hooks acceptes, `20/20` patchsets, 24 plugins
+  actifs, zero rejet, zero echec et demarrage `24/24`. Chez Charsi, le placement
+  dynamique est logge a `519,1383` depuis l'ancre runtime
+  `421,1305,313,58`; le rendu est centre sous l'or sans chevauchement et un clic
+  renouvelle la grille avec `sent=1`, `armed=1`, `rejected=0`.
 
 Conclusion : le serveur fournit deja la primitive atomique nettoyage puis
 reconstruction et tout le trajet UI/reseau vanilla est maintenant prouve. Le
-prototype autonome 0.1.0 compile et ses tests statiques passent. Le prochain
-travail efficace est le cold start puis l'observation runtime de la
-resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
+correctif autonome 0.1.5 compile, son test statique passe et son placement normal
+est confirme sans override de layout. Le prochain travail efficace est la
+confirmation du rectangle original en gamble, puis un vendeur de mode 0 et un
+layout reellement modde avant la matrice multi-vendeur/manette.
 
 ## Cube Quick Move Bottom-Right
 
@@ -484,6 +555,15 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   est `(item, player) -> int32` et sa signature stricte de 32 octets est unique.
   CharmZone appelle d'abord l'original puis refuse seulement les charms qui ne
   tiennent pas entièrement dans la zone. Il ne modifie ni owner ni statlist.
+- `charstats.txt` BKVince reproduit byte-exactement BK pour les objets de départ :
+  chaque classe reçoit six `mfd`, un `mfc` et un `mff`. `ITEMS_GetItemCode
+  0x36EF50` retourne ce code compacté avec l'ABI `(item) -> uint32`; sa signature
+  stricte de 32 octets est unique, 94 callers directs sont indexés et le caller
+  serveur `0x4BB963` compare son retour à `box `. CharmZone 0.3.2 laisse donc ces
+  trois codes nativement éligibles actifs partout dans l'inventaire joueur avant
+  d'appliquer le containment aux autres charms. Les trois lignes `misc.txt` sont
+  de type `chms`, mesurent 1×1 et portent `spawnable=0`; l'exception ne couvre
+  donc pas un charm ordinaire droppable partageant accidentellement leur base.
 - `STATLIST_MergeStatLists 0x2F81A0`, `STATLIST_GetOwner 0x2F8120` et
   `STATLIST_ExpireUnitStatlist 0x2F8290` restent gouvernés, mais ne sont plus
   possédés par CharmZone. Le prédicat natif offre une surface plus étroite et
@@ -500,9 +580,11 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
 - Le constructeur de tooltip item `0x2BD480` reste volontairement intact : il
   appartient déjà à la chaîne Transmogrify, AdvancedItemTooltips et
   ExtendedItemStats. FloatingDamage demeure aussi l'unique propriétaire du
-  hook D3D12/ImGui. Son callback historique reste réservé à ExtendedItemStats;
-  une API de registre multi-overlay rétrocompatible fournit à CharmZone la
-  teinte rouge et le message de survol sans second renderer.
+  hook D3D12/ImGui. Son callback historique reste réservé à ExtendedItemStats.
+  CharmZone 0.3.2 conserve seulement les primitives rectangle de son registre
+  multi-overlay : l'appel et la chaîne `Inactive outside Charm Zone` ne sont plus
+  présents dans la DLL; l'ancienne clé TOML reste acceptée mais ignorée pour la
+  compatibilité de mise à niveau.
 - Le manifeste PluginPack épinglé au commit
   `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` ne hooke ni `0x36AE00`, ni
   `0x382D20`, ni `0x15BB80`. Le cold start mod-local 92777 charge huit plugins,
@@ -510,6 +592,15 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   `0 -> 20 -> 0` hors zone, dans la zone, puis hors zone. La version 0.3.1
   affiche le masque rouge aligné, le message au survol, et finit avec
   `classification failures=0`, `placement failures=0`, `drops=0`.
+- La version 0.3.2 compile en Release et passe `1/1` test. La DLL source,
+  package et runtime porte le SHA-256
+  `E07F37F102CC05DC1E7E468E4348EF03375D173EB1D50C28A917D61E9892DBD7`;
+  la configuration source/runtime porte
+  `C150DF2FA1614FF6A2FE2306066A7C23DD2163EC341EA71B2B8C4826C3FF3ABF`.
+  Le cold start du 2 août 2026 charge `11/11` plugins, zéro rejet, zéro échec,
+  atteint `24/24`, installe les deux hooks CharmZone et enregistre l'overlay.
+  L'observation gameplay des huit starters hors zone et de l'absence de tooltip
+  reste ouverte parce que Vincent a repris la fenêtre D2R pendant l'automatisation.
 
 ## Services de quête répétables — paiement et charges natives
 
@@ -561,16 +652,99 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   doit donc débiter l'or après la validation finale et avant `0x580F20`, puis
   sauter `0x5D9AE0`; la première récompense native doit garder ce bookkeeping
   strictement inchangé.
-- Le moteur serveur partagé de transaction NPC/item commence à `0x4FC230`. Il
-  résout l'item demandé et contient les chemins Charsi, Larzuk et Anya, mais sa
-  sélection d'opération et son ABI complet ne sont pas encore assez prouvés
-  pour en faire un hook. Le chemin opcode `0x34` est aussi partagé avec MassID.
-- La couture Akara est désormais prouvée, mais celle des trois services d'objet
-  reste à identifier après validation de l'objet et avant sa mutation : débiter
-  plus tôt pourrait facturer un objet refusé, et débiter plus tard permettrait
-  une mutation gratuite en cas d'échec. L'affichage dynamique et localisé du
-  prix reste aussi ouvert; modifier le string id global ne suffit pas, car le
-  prix dépend du niveau du joueur qui ouvre le menu.
+- Le moteur serveur partagé `D2GAME_NPC_HandleItemServiceTransaction 0x4FC230`
+  est rejoint par le callback opcode `0x34` à `0x4AE317` et par une continuation
+  interne à `0x4B6087`. Son prologue strict de 23 octets est unique. Le record
+  résolu dans `[rbp-0x78]` sélectionne Charsi, Larzuk ou Anya par son byte
+  `+0x0B` égal à `1`, `2` ou `4`.
+- Le byte `record+0x10` non nul déclenche le gate de disponibilité de quête à
+  `0x4FC5EC`; le même byte conditionne plus bas les appels de consommation
+  Charsi `0x5DA1C0`, Larzuk `0x548B60` et Anya `0x547C60`. Chacune de ces
+  routines pose le flag 0 et efface le flag 1 de sa quête courante : elles ne
+  sont donc pas idempotentes après une récompense consommée et doivent être
+  supprimées sur un repeat.
+- Les prédicats propres à chaque service sont suivis des validateurs serveur
+  d'état de paquet/inventaire `0x471E90` et `0x472590`. Tous ces contrôles ont
+  réussi lorsque le flux atteint `0x4FD442`; `0x4FD446` distribue ensuite vers
+  Anya `0x4FD461`, Larzuk `0x4FD4C6` ou Charsi `0x4FD5A2`. Le premier chemin
+  personnalise l'objet, le deuxième appelle `ITEMS_AddSockets 0x375560` à
+  `0x4FD57B`, et le troisième retire puis recrée l'objet à partir de `0x4FD71A`.
+  La signature stricte de 22 octets à `0x4FD442` est unique sous 92777 : c'est la
+  couture commune post-validation/pré-mutation recherchée.
+- Une insuffisance de fonds peut reprendre l'épilogue d'échec natif avec retour
+  `1` avant le dispatch, sans emprunter la finalisation commune qui modifie
+  encore flags, mode ou placement de l'objet. La conservation exacte de l'objet
+  et le déverrouillage de l'UI restent toutefois à confirmer en runtime.
+- Mettre `record+0x10=0` contourne à la fois le gate de quête et les trois appels
+  de consommation. Une copie par invocation du record est donc la candidate la
+  plus étroite; une mutation globale est interdite. Le cycle est désormais
+  prouvé statiquement : le callback opcode `0x34` passe phase `0`; si le record
+  natif porte une quête, le moteur consomme la récompense puis retourne `4` à
+  `0x4FD36B`. Le callback copie alors le player id, le game et le paquet dans un
+  job de `0x30` octets; `0x4B6050` résout de nouveau le player et rappelle
+  `0x4FC230` à `0x4B6087` avec phase `1`. Un record `+0x10=0` saute entièrement
+  le retour `4` et atteint la mutation dans l'appel initial : la couture de débit
+  ne peut s'exécuter qu'une fois pour un repeat.
+- Les onze rechargements du record local ne lisent ensuite que `+0x0B` et
+  `+0x10`. Une copie call-local de 17 octets est donc suffisante et n'a aucune
+  durée de vie à prolonger vers le worker; le chemin gratuit natif garde son
+  record original, sa consommation et ses deux phases.
+- La couture `0x4FD442` précède le callsite Larzuk déjà possédé par
+  ForceLarzukSockets et peut filtrer strictement les sélecteurs `1/2/4`; MassID
+  et les autres transactions opcode `0x34` restent délégués. L'affichage
+  dynamique possède aussi une couture étroite : `CLIENT_BuildNpcInteractionMenu`
+  traite Imbue `4017`, Add Sockets `22748` et Personalize `22749` par son chemin
+  générique; Akara `11168` passe d'abord par le gate unique `0x114C20`. À
+  `0x114CD7`, le builder charge le string id enregistré, appelle
+  `LANG_GetStringById 0x5F4A50` à `0x114CDC`, puis copie immédiatement le texte
+  dans un buffer local de `0x200` octets avant l'ajout UI `0x1E9030`. Un wrapper
+  de callsite peut donc retourner un texte formaté par joueur sans modifier le
+  string global. Le niveau est le stat 12 lu par les helpers client gouvernés;
+  le serveur reste seul autoritaire pour le prix et le débit.
+
+## BaseMod CPU Fix — GameUX legacy
+
+- Le seul artefact CPU de BaseMod est `Other/GameUX Rundll32 CPU Fix.txt`. Il
+  vide par registre la valeur système
+  `HKCR\Local Settings\Software\Microsoft\Windows\GameUX\ServiceLocation\Games`
+  et demande un redémarrage pour contourner le processus Game Explorer
+  `rundll32.exe` bloqué sur un cœur sous Windows 7. Il ne modifie aucun binaire
+  Diablo et ne règle aucune cadence de simulation.
+- Le runtime actuel est Windows 11 build 26200 et ne possède pas cette clé.
+  L'exécutable installé `D2R.exe` importe seulement `D2R_loader.dll`; les 39
+  imports de ce loader ne contiennent ni GameUX, ni Game Explorer, ni Rundll32.
+  Aucune friction ni chaîne d'appel ne justifie donc une modification globale
+  de HKCR : ce correctif est obsolète pour D2R 3.2.
+- `PotionAutoPickup` est indépendant. Son hook `0x4B9DF0` correspond par contrôle
+  de flux au callback serveur opcode `0x16` de ramassage d'un objet au sol : il
+  exige 17 octets, résout le GUID item puis rejoint le helper de pickup. La
+  référence sémantique D2MOO 1.10f porte le même rôle, avec un paquet legacy de
+  13 octets qui n'est pas transposé. Le compteur nommé
+  `minimum_interval_frames` avance donc par paquet de ramassage, jamais par frame,
+  et ne crée aucun polling au repos.
+- Le chemin de pickup rejoint `INVENTORY_GetFreeBeltSlot 0x3862D0` à
+  `0x471C31`. Son ABI prouvée est `(inventory, item, freeSlotOut,
+  allowAnyBeltable) -> int32` et sa signature stricte de 32 octets est unique.
+  Il résout la grille de ceinture par `INVENTORY_ResolveOccupancyGrid 0x38B070`
+  avec l’index 1 et le descripteur statique `0x237B638`; la grille expose largeur
+  `+0x10`, hauteur `+0x11` et tableau de pointeurs item `+0x18`.
+- PotionAutoPickup 1.1.1 lit cette grille avant chaque choix et arme un override
+  thread-local uniquement pour l’inventaire et l’objet exacts du pickup. Les
+  listes TOML `tiers` et `overflow_tiers` couvrent indépendamment les 12 codes;
+  aucun RVA, layout ou ABI 2.4 n’est transposé.
+- Une capture runtime contrôlée du build 92777 confirme les 18 pointeurs des
+  cases `0x01`–`0x12` de la table serveur `0x1D2A790`, de `0x4AC050` à
+  `0x4AD4F0`. La version 1.1.1 détourne ces cases vers un dispatcher qui appelle
+  d’abord chaque callback original puis scanne les potions; le callback pickup
+  `0x16` à `0x4B9DF0` reste intact. `ITEMS_GetBeltType 0x349720` lit le byte
+  ItemsTxt `+0x140` du belt équipé pour limiter la capacité à 4, 8, 12 ou 16
+  cases.
+- Cold start mod-local du 8 août 2026 : DLL build/source/runtime identique
+  (`60295EB5…D94D6A8`), TOML source/runtime identique
+  (`B32C9BB6…4ED3D`), hook belt accepté, les 18 cases d’action redirigées vers
+  une cible unique interne à la DLL, `18/18` patchsets, `14/14` plugins actifs,
+  zéro rejet/échec et startup `24/24`. Le log 1.1.1 confirme le preset exact;
+  les témoins gameplay de destination restent ouverts.
 
 ## RogueScoutMovement — suivi walk/run et vélocité absolue
 
@@ -637,9 +811,15 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
 ## Mechanics 2.0 MEC-00 — sous-graphe damage 92777
 
 - Le workbench vérifié ferme statiquement `D2Damage` à `0x180` octets. Les
-  constructeurs/destructeur `0x4494B0/0x4496E0` prouvent le conteneur SBO et le
+  constructeurs de copie/déplacement et le destructeur
+  `0x4494B0/0x449760/0x4496E0` prouvent le conteneur SBO et le
   sous-objet possédé; les offsets gameplay utiles sont consignés dans
   `Mission/mechanics-native-proof-92777.md`.
+- `D2Damage_MoveConstructor 0x449760` possède une signature stricte de 33
+  octets unique et quatre xrefs. Le linker de combat `0x4507B0` copie d'abord
+  le dommage vers un temporaire par `0x4494B0`, puis le déplace dans le nœud à
+  `0x450908`; toute provenance externe attachée au pointeur doit donc suivre
+  la copie **et** ce déplacement.
 - `SUNITDMG_FillDamageValues 0x44C030` résout Critical/Deadly dans l'ordre
   court-circuité weapon mastery, passive Critical Strike, Deadly Strike. Le
   succès double uniquement `damage+0x18` et pose le même bit
@@ -726,6 +906,22 @@ resynchronisation d'un panel normal ouvert, sans inventer d'overlay ni d'opcode.
   ce store, de sorte que le morceau de la zone de base reste actif tandis que
   les dix autres champs hérités continuent d'être copiés nativement.
 
+## Floating Damage — commit HP visible
+
+- La mutation principale des HP dans `SUNITDMG_ExecuteEvents` est inline à
+  `0x44D06C..0x44D093`. Le callsite final `0x44D093` appelle
+  `STATLIST_SetUnitStat 0x2F7D10` avec `(defender, stat 6, newHpFixed, layer 0)`.
+  Son appel de cinq octets `E8 78 AC EA FF` et son contexte de 21 octets à
+  `0x44D083` sont uniques sous le build 92777.
+- Les non-volatiles `R14=attacker` et `RDI=D2Damage` restent vivants au callsite.
+  FloatingDamage 1.2.1 les transporte par un relais proche, conserve les quatre
+  arguments natifs du setter et calcule seulement la différence des deux bornes
+  HP entières visibles. Il ne hooke pas l'entrée `0x44CE80`, qui reste possédée
+  par MeleeSplash.
+- Le témoin runtime `169472 -> 168480` correspond à `992/256 = 3.875`; le popup
+  produit vaut `4`, là où l'ancien décalage séparé `finalDamage >> 8` donnait
+  `3`. Le changement reste un observateur et ne modifie aucune valeur de combat.
+
 ## Aura Enchanted — pool et scaling PD2
 
 - La table runtime de callbacks à la RVA `0x2395FE0` contient exactement 43
@@ -763,384 +959,87 @@ La référence sémantique
 explique les champs et le flux historique; aucune adresse, structure ou ABI
 32 bits n'a été transposée.
 
-## FourthSkillTree Framework — persistance dynamique des skills de classe
+## Floating Damage — projection native des unités
 
-- La cible produit est D2R 3.3.93847 et réutilise le corpus natif gouverné de
-  provenance 92777. `DATATBLS_GetClassSkillCount 0x33CB30` retourne le compte
-  compilé par classe depuis le contexte actif; sa signature stricte de 32 octets
-  est unique. `DATATBLS_GetClassSkillIdByIndex 0x33DDE0` retourne l'identifiant
-  SkillsTxt d'un index de classe et possède également une signature stricte de
-  32 octets unique.
-- Le writer de l'en-tête D2S appelle `0x33CB30` à `0x534519`, puis stocke `AL`
-  dans le byte `NumSkills`. Le témoin à wildcards
-  `E8 ?? ?? ?? ?? 49 8B CF 88 45 9A E8` est unique.
-- Le writer de la section skills écrit le magic `if` (`0x6669`) à `0x52F557`,
-  puis boucle de zéro jusqu'au compte dynamique obtenu à
-  `0x52F58A/0x52F5D7`. Pour chaque index, il appelle `0x33DDE0`, résout le skill
-  par `SKILLS_GetSkillById 0x33DCD0`, lit son rang de base par
-  `SKILLS_GetBaseLevel 0x33D1E0` et écrit exactement un byte. Il n'existe donc
-  aucune constante 30 dans cette boucle native de sérialisation.
-- Le lecteur vérifie le même magic `if` à `0x52EC98`, utilise le compte sauvé
-  pour parcourir les bytes, borne chaque index contre le compte compilé courant,
-  ajoute les rangs par le chemin natif puis avance le curseur de `2 + count` à
-  `0x52ED52..0x52ED5A`. Une sauvegarde plus longue reste donc structurellement
-  délimitée sans section propriétaire.
-- La référence de format épinglée
-  `D2SSharp@f26f21897db5c0075e74defca1e31d1930080750` confirme séparément que
-  `Character.NumSkills` est un byte lu et écrit dans l'en-tête
-  (`src/D2SSharp/Model/Character.cs:32-33,102-104,143-145`) et que la section
-  `if` contient un tableau de rangs de longueur `skillCount`, un byte par skill
-  (`src/D2SSharp/Model/SkillsSection.cs:7-15,36-37,78-103`). Sa constante 30 est
-  le défaut vanilla de la bibliothèque, pas une borne présente dans le layout
-  sérialisé.
-- Cette preuve ferme l'hypothèse d'un format D2S intrinsèquement limité à 30 :
-  le chemin statique natif est déjà piloté par le compte de skills compilé et
-  peut représenter jusqu'à 255 entrées par le byte d'en-tête. Elle ne remplace
-  pas le gate runtime : un fixture de 31 skills doit encore prouver compilation,
-  allocation, Save and Exit, relecture, respec et hôte/joiner sous la pile
-  complète avant toute promesse publique.
-- Une lecture runtime contrôlée de D2R 3.3.93847 prouve que la case `0x3B` du
-  tableau serveur à `D2R+0x1D2A790` contient le pointeur
-  `D2GAME_PACKETCALLBACK_Rcv0x3B_AllocateSkillPoints 0x4B3EE0`. Le handler
-  exige cinq octets, lit l'identifiant de skill à `packet+1` et le marqueur de
-  ranks supplémentaires à `packet+3`, borne l'identifiant contre le nombre
-  total de lignes SkillsTxt compilées, résout le skill, son `MaxLvl` et son rang
-  de base, puis applique les rangs par le helper serveur `0x438670`.
-- Aucun accès à `SkillPage`, `SkillRow` ni `SkillColumn` n'existe dans ce
-  callback. L'autorité serveur d'allocation est donc démontrée indépendante de
-  la page UI; la validation dynamique du 31e skill reste requise pour fermer le
-  trajet complet client, sauvegarde et gameplay.
-- Le respec autoritaire `D2GAME_PLAYER_ResetStatsAndSkills 0x580F20`, reçu par
-  l'opcode `0x39`, appelle `D2GAME_PLAYER_ResetSkills 0x4360F0`. Cette fonction
-  parcourt la liste compilée complète des skills de la classe, retire chaque
-  rang de base et crédite leur somme dans le stat 5. Elle n'applique ni filtre
-  `SkillPage` ni borne 30; un 31e skill investi doit donc entrer dans le parcours
-  natif, sous réserve du témoin dynamique encore ouvert.
-- `UI_DispatchMessage 0x843D90` demeure la propriété unique du broker
-  `plugin-skills`; RemoteStash redirige seulement le callsite étroit
-  `UI_ButtonWidget_OnClick+0xE2`. FourthSkillTree doit composer avec ce broker
-  et ne pas installer un second hook sur l'entrée commune.
-- Le probe d'allocation du 25 août place le skill 456 sur une cellule native
-  Barbarian et étend une sauvegarde gameplay courante de 30 à 31 rangs, avec
-  en-tête, checksum et marqueur `JM` cohérents. D2R affiche le personnage level
-  99 au menu mais ferme pendant sa matérialisation; le `.d2s` reste
-  byte-identique. La greffe directe ne fournit donc aucune preuve d'allocation
-  investie et ne sera pas utilisée comme base du prochain témoin.
+- `RENDER_ProjectUnitToScreen 0x76A7D0` possède six appels directs sous le
+  build 92777. Le chemin natif `0x198F75` lui passe le contexte de rendu en
+  `RCX`, une `Unit*` en `RDX`, une sortie de deux `float` en `R8` et `R9B=1`,
+  puis teste `AL` et convertit les deux coordonnées.
+- Ce même caller borne ensuite Y avec `UI_GetNativeHeight 0x7F4A0` et X avec
+  `UI_GetNativeWidth 0x7F510`. La sortie est donc dans l'espace UI natif; un
+  overlay ImGui doit la convertir vers sa propre largeur et sa propre hauteur.
+- `RENDER_GetThreadContextRoot 0x685750` retourne la racine TLS du renderer;
+  les callers natifs lisent son contexte actif à `+0x20`. Sa signature stricte
+  de 37 octets est unique.
+- `CLIENT_GetUnitByIdAndType 0x9A5D0` résout `(unitId, unitType) -> Unit*`.
+  L'appel à `0x198D66` charge exactement ces deux champs depuis un paquet, et
+  la signature stricte de 32 octets distingue cette table client de la fonction
+  adjacente `0x9A5A0`.
+- Le test runtime invalide l'appel direct de Floating Damage 1.2.5 depuis sa
+  passe d'overlay : le hook HP capture bien les dégâts, mais le témoin de
+  projection n'est jamais atteint. La racine de contexte est liée au TLS du
+  thread de rendu et n'est pas une primitive appelable arbitrairement depuis
+  le thread DirectX/ImGui du plugin.
+- Floating Damage 1.2.6 observait l'entrée native `0x76A7D0` avec un
+  hook MinHook étroit. L'original s'exécute sur le thread choisi par D2R; après
+  un résultat réussi, le plugin copie seulement `(type, id, x, y, tick)` dans
+  un cache atomique borné. L'overlay ne conserve aucun pointeur `Unit` et ne
+  rappelle aucune primitive renderer. Une entrée absente, périmée ou hors des
+  bornes ImGui supprime le popup; aucun fallback sur le joueur n'est permis.
+- Le témoin gameplay invalide ce modèle passif : seuls les monstres que les
+  consommateurs UI de D2R projettent naturellement entrent dans le cache. Dans
+  un groupe, la cible principale apparaît seule; son popup peut ensuite être
+  masqué à l'expiration de 250 ms malgré une durée configurée de 850 ms.
+- Floating Damage 1.2.7 utilise le même propriétaire de hook, mais chaque hit
+  dépose l'identifiant de sa cible dans un registre atomique dédupliqué. Sur le
+  thread de rendu, le hook résout chaque demande avec
+  `CLIENT_GetUnitByIdAndType 0x9A5D0` et appelle le trampoline original avec le
+  contexte courant. Les projections échouées invalident explicitement le cache;
+  aucun pointeur client ni pixel périmé n'est conservé.
+- Le témoin gameplay invalide aussi ce rendez-vous conditionnel : pendant un
+  déplacement, seule la cible principale continue d'être rafraîchie et les
+  autres popups du groupe disparaissent avant leur durée configurée.
+- `CLIENT_UpdateCameraOffsets 0xB9B90` résout le joueur local, calcule les
+  offsets caméra depuis ses coordonnées et les dimensions natives, puis applique
+  le déplacement caméra optionnel. Son unique callsite `0x93D79` se trouve dans
+  la passe client principale; sa signature stricte de 33 octets est unique.
+- Floating Damage 1.2.8 appelle d'abord cette mise à jour originale, récupère la
+  racine TLS renderer et traite ensuite le registre multi-cibles à chaque passe
+  caméra. `RENDER_ProjectUnitToScreen` n'est plus hookée : elle est appelée
+  directement avec le contexte courant après la mise à jour de la caméra.
+- L'audit de collision ne trouve aucune référence à `0xB9B90` dans le
+  PluginPack épinglé et aucun propriétaire concurrent dans les logs installés.
+  Le cold start complet passe; le comportement gameplay reste à observer.
+- L'absence de `DPS` observée avec 1.2.8 est indépendante de `0xB9B90` : le
+  binaire runtime `plugin-items.dll` issu du fork expérimental
+  `RuffDood/D2RL-Plugins:codex/pluginpack-foundation` embarque le prototype
+  RuffnecKk ExtendedItemStats et un renderer D3D12/ImGui de repli. Cette
+  composition n'existe pas dans l'upstream officiel eezstreet. Le binaire ne
+  contient pas le nom d'export
+  `FloatingDamageRegisterExternalOverlay`; les deux renderers posaient donc
+  leurs detours concurrents selon le timing du démarrage.
+- Floating Damage 1.2.9 détecte les exports
+  `ExtendedItemStatsOwnsTooltipPipeline` et
+  `ExtendedItemStatsTransformTooltip`, laisse le renderer embarqué s'installer
+  d'abord, puis pose son detour en dernier. La preuve runtime observe la queue
+  DirectX 12, le premier `Present`, l'initialisation ImGui et la première frame
+  soumise. Vincent confirme le compteur `DPS`, l'ancrage sur les monstres et
+  les popups simultanés sur un groupe.
 
-## Discipline de promotion
+## Community Pack Item Durability - post-compilation des Items
 
-Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de
-controle, octets/signature, caller/callee ou validation runtime. Les simples
-ressemblances et les anciennes adresses 2.4 restent dans cette page avec une
-confiance explicite.
-
-## Hit Chance Bounds — clamp défensif de la fiche de personnage
-
-- Le runtime courant D2R 3.3.93847 réutilise le corpus natif vérifié provenant
-  du build 92777. Le patch BKVince initial appliquait bien ses sept écritures en
-  mémoire, mais la capture gameplay conservait `5%` pour
-  `Average chance %s will hit you`.
-- Le chemin offensif de la fiche de personnage passe par le calculateur
-  `0x1514700` puis son formateur à `0x14E7FE0`. Les opérandes déjà gouvernés à
-  `0x15149C2/0x15149CD` et `0x14E8068/0x14E8073` appartiennent à ce chemin; les
-  deux premiers ne constituent pas un second chemin gameplay autoritaire.
-- Le chemin défensif distinct appelle `0x15149F0` depuis `0x14E8242`, conserve
-  son résultat brut dans `EBX`, puis appelle le formateur `0x1514CA0` depuis
-  `0x14E8262` avec la chance en `ECX` et la sortie texte en `RDX`.
-- Le formateur défensif réappliquait le clamp vanilla dans la séquence unique
-  `83 F9 05 7D 07 BF 05 00 00 00 EB 0A B8 5F 00 00 00` à `0x1514CBD`.
-  L'opérande basse est `0x1514CBF`; l'opérande haute commence à `0x1514CCA`.
-- La même fonction sélectionne ensuite les chaînes localisées 10104
-  `charmontohit1X` et 10105 `charmontohit2X`. La signature stricte
-  `B9 78 27 00 00 E8 ?? ?? ?? ?? 4C 8B CB 89 7C 24 20` est unique à
-  `0x1514DBD`, ce qui rattache le clamp oublié au texte observé sans inférence
-  fondée sur la seule proximité.
-- Le correctif minimal ajoute `05 -> 00` à `0x1514CBF` et
-  `5F 00 00 00 -> 64 00 00 00` à `0x1514CCA`. Le jet gameplay gouverné à
-  `0x44BD56` reste distinct; la validation visuelle de l'infobulle ne remplace
-  pas une validation fonctionnelle du combat.
-
-## Cast Triggers — événement doactive et niveau source
-
-- Le handler serveur central `0x43ACB0` porte l'ABI observée
-  `(game, unit, skillId, skillLevel, a5, a6, a7) -> int32`. Ses huit callsites
-  directs distinguent les exécutions manuelles `a5=1,a6=0,a7=0` des casts
-  d'item `a6=1`. Le retour non nul est produit seulement après le SrvDoFunc ou
-  le missile serveur réussi; Cast Triggers dispatch donc après ce retour.
-- Le lookup contextuel `0x097790` utilise les tables `+0x11B0/+0x11B8` et le
-  stride SkillsTxt `0x2EC` à `0x09780B`. Les offsets `flags +0x24`,
-  `anim +0x30`, `seqtrans +0x32` conservent l'ordre sémantique D2MOO après les
-  champs modernes insérés. Le filtre accepte `SC=10` ou `SQ=18` transitant
-  vers `SC`, et rejette le bit `repeat` 11. Inferno reste donc exclu tandis que
-  Lightning/Chain Lightning sont des casts non répétitifs admis.
-- L'événement natif `doactive` est l'index 4. Aucun appel natif du dispatcher
-  n'a été trouvé avec cet index; le wrapper `0x44D570` accepte un dommage nul,
-  construit le contexte attendu et appelle `0x5881E0`. Le plugin ne remplace
-  aucune fonction de table d'événements.
-- EventFunc20 `0x583B30` lit l'identifiant de stat dans le high word de son
-  payload, obtient la chance sur l'unité, effectue le jet modulo 100, puis
-  décode le skill id et son niveau à l'aide du shift/masque contextuels. Il
-  appelle `0x5896E0` aux callsites `0x583C7F/0x583CB4` ou `0x589820` à
-  `0x583CE1`. Melee Splash reste propriétaire de l'entrée EventFunc20 et
-  transmet le chemin natif; Cast Triggers ne la hooke pas.
-- Les ABI des casters sont `(caster,skillId,skillLevel,target,flag)` pour
-  `0x5896E0` et `(caster,skillId,skillLevel,x,y,flag)` pour `0x589820`. Leurs
-  signatures strictes étendues à 45 et 43 octets sont uniques. Cast Triggers
-  substitue le niveau zéro uniquement dans son TLS `doactive`, puis suspend ce
-  contexte pendant le cast déclenché afin qu'aucun proc imbriqué ne l'hérite.
-- D2MOO PropertyFunc11 masque le niveau avec `63` avant de l'ajouter au skill
-  décalé de six bits. `max=64` devient donc le marqueur zéro sans prendre une
-  valeur fixe 1..63. Ce point est une preuve sémantique du format historique;
-  le round-trip exact par le compilateur ItemStatCost/Properties D2R 3.3 et le
-  niveau effectif observé restent des gates gameplay du fixture intermod.
-- Le patch PluginPack Whirlwind CTC à `0x589736` et son équivalent position à
-  `0x58986B` se trouvent dans les corps natifs, après les prologues possédés par
-  Cast Triggers. Aucun overlap de bytes n'est présent; le cold start pile
-  complète reste néanmoins le gate de coexistence autoritaire.
-- Références sémantiques uniquement :
-  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`,
-  `source/D2Game/src/SKILLS/Skills.cpp:2445-2582`,
-  `source/D2Game/src/SKILLS/SkillItem.cpp:1632-1680,1925-2040` et
-  `source/D2Common/src/Items/ItemMods.cpp:3634-3698`. Aucune adresse,
-  structure ni ABI 32 bits n'est transposée.
-
-## Burn Damage Fix — production générique et Fire Resistance
-
-- Le corpus commun aux cibles 92777 et 93847 contient à `0x44CB32` le témoin
-  unique `81 C3 3C 01 00 00 41 0F 48 DE`. Le chemin a déjà multiplié le Burn
-  existant dans `EBX` et avancé le seed unité dans `R8D`, puis additionne à
-  tort l'ID de stat `316` comme dommage plat.
-- Les stats `burningmin=316`, `burningmax=317` et
-  `passive_fire_mastery=329` sont identiques dans les tables 3.2 et 3.3. Le
-  producteur missile `0x465799/0x465B40` confirme qu'elles décrivent un range
-  de dommage et une maîtrise, pas une constante de DPS.
-- Le helper RNG natif `0x4501E0` avance le seed une seule fois puis réduit le
-  low32 courant par masque pour une puissance de deux ou modulo sinon. Le
-  relais Burn consomme donc `R8D` sans nouvel appel RNG et conserve la borne
-  maximum exclusive prouvée sémantiquement par
-  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`.
-- `SUNITDMG_ApplyBurnDamage 0x451380` stocke ensuite le Burn sous forme de
-  `HPREGEN` négatif. Le record Fire D2R de `0x40` octets porte résistance `39`,
-  maximum `40`, pierce `333`, pierce d'immunité `189`, absorb `%/plat`
-  `142/143`, index de réduction `2`, flag `+0x28=1` et log flag `8`.
-- Le troisième argument du résolveur `0x4523E0` est conservé dans `R13D`. Le
-  témoin unique `0x45251F` prouve qu'une valeur non nulle remplace toute
-  résistance positive par zéro via `min(résistance,0)`, puis `0x452658` saute
-  aussi l'absorb. La 2.0.0 appelait avec `1` et neutralisait donc par erreur
-  résistance positive et immunité. La 2.1.0 appelle avec `0`, utilise les
-  sentinelles absorb `-1/-1` et garde explicitement `reductions[2]=0` pour
-  exclure MDR sans supprimer les défenses Fire.
-- Cette fonction rejette une durée ou un dommage non positif, puis appelle
-  `STATES_ToggleState 0x3354C0` avec le défenseur, le state `burning` 115 et
-  `enable=1`. Les tables vanilla 3.2, vanilla 3.3 et BKVince relient toutes le
-  state 115 à l'overlay `burning` 224, dont l'asset est
-  `Expansion\\On_Fire`; l'absence d'overlay signalée n'est donc pas une absence
-  de mapping dans les données actuelles.
-- Le compilateur StatesTxt passe explicitement un stride `0x44` au callsite
-  unique `0x3083D7`, puis installe le vecteur résultant à
-  `DataTables+0x290` au témoin `0x30843C`. `STATES_ToggleState` appelle
-  `GetItemDataContext 0x34A0E0`, transmet le byte à
-  `GetDataTablesForContext 0x300A90` et lit le nombre de states à
-  `DataTables+0x298` dans le témoin unique `0x3354E0`.
-- Le premier cold start 2.2 a refusé proprement le chargement parce que le
-  témoin de stride englobait aussi le `CALL` suivant, que l'intégration du
-  compilateur TXT de D2RLoader peut rediriger avant le chargement des plugins.
-  Le préfixe instruction-aligné de 22 octets arrêté avant ce `CALL` reste unique
-  à `0x3083D7` et prouve intégralement l'argument `0x44`; la cible du `CALL`
-  n'est ni consommée ni possédée par Burn Damage Fix.
-- La séquence de descripteurs native à `0x307EB3` associe le type
-  name-to-word `0x16` à l'offset record `+0x02`, puis aux offsets
-  `+0x04/+0x06/+0x08`; le premier word d'overlay est donc directement prouvé à
-  `StateRecord+0x02`. L'initialiseur unique de records `0x44` à `0x394640`
-  écrit `0xFFFF0000` à `+0`, ce qui combine state id zéro à `+0` et sentinelle
-  d'overlay vide `0xFFFF` à `+2`. Ces offsets et cette sentinelle proviennent du
-  binaire D2R gouverné, pas d'une transposition de structure D2MOO.
-- Burn Damage Fix 2.2 réutilise le hook d'application déjà possédé à
-  `0x451380` et n'ajoute aucun hook exécutable. Juste avant le trampoline
-  original, il vérifie contexte, count, base, stride, id 115, alignement et page
-  writable, puis effectue un compare/exchange atomique strict
-  `overlay1 224 -> 0xFFFF`. Une valeur déjà vide est acceptée; toute valeur
-  custom est préservée. La mutation reste process-local, ne réécrit aucun
-  `states.txt` et est restaurée au déchargement seulement si la DLL possède
-  encore la même cellule inchangée.
-- Burn Damage Fix 2.0 utilisait `STATES_CheckState 0x3351B0` uniquement comme
-  témoin passif après une application positive : il ne créait aucun overlay.
-  Le gameplay BKVince du 26 août 2026 a confirmé le DoT, le kill-credit/XP et
-  deux states actifs (`resolved=2`, `burning-state=2/0`). Ce comportement est
-  conservé ici comme preuve historique, pas comme description de la branche
-  2.1.
-- Burn Damage Fix 2.1 emprunte `UNITS_SetOverlay 0x349020` sans le patcher et
-  rejoue l'overlay `fire_hit` 81 sur la couche 0. Il le fait une première fois
-  après une application Burn positive dont le state `burning` 115 est confirmé,
-  puis périodiquement pendant les événements de stat-regeneration. Chaque replay
-  exige encore le state 115 actif et `SUNIT_IsDead 0x34C2C0 == 0`; il cesse donc
-  naturellement à l'expiration du Burn ou à la mort. Aucun pointeur d'unité,
-  GUID ou état parallèle n'est conservé entre deux callbacks.
-- `D2GAME_EVENTS_PlayerEventDispatcher 0x42CE30` possède l'ABI native à six
-  arguments `(game, unit, eventType, callbackArg0, callbackArg1,
-  callbackArg2) -> void`. Il borne `eventType` à `0..14`, sélectionne
-  `0x42E600` pour le type 3 et possède deux xrefs directes, `0x48CB2F` et
-  `0x48CBC4`. Son entrée unique de 32 octets est `48 89 5C 24 08 48 89 6C 24
-  10 48 89 74 24 20 57 48 83 EC 30 49 63 D8 41 8B F9 48 8B F2 48 8B E9`.
-- `MONSTERMODE_EventHandler 0x447420` possède la même ABI native à six
-  arguments. Il vérifie le type monstre, borne l'événement à `0..14`,
-  sélectionne `D2GAME_MONSTER_ApplyStatRegen 0x448C00` pour le type 3 et possède
-  une seule xref directe, `0x48C83F`. Son entrée unique de 39 octets est `48 89
-  5C 24 10 48 89 6C 24 18 48 89 74 24 20 57 48 83 EC 50 80 3D 61 76 66 02
-  00 41 8B E9 49 63 F8 48 8B DA 48 8B F1`.
-- Ces deux dispatchers sont synchrones dans le chemin serveur de la file
-  d'événements. Le replay précède le callback original, vérifie explicitement le
-  type joueur 0 ou monstre 1, ne requiert ni résolution GUID, ni collection
-  globale, ni worker thread, puis transmet les six arguments originaux exactement
-  une fois.
-- Le témoin unique `0x42E615` lit le frame serveur à `Game+0x170`. Le témoin
-  unique de 38 octets à `0x44DF40` lit la difficulté à `Game+0x104`, le contexte
-  data à `Game+0x106`, puis appelle `GetDifficultyRecord(dataSet,difficulty)` à
-  `0x300830`. La 2.1.0 vérifie ces deux layouts avant toute lecture directe.
-- Les CALL uniques `0x42E634` et `0x448CA0` vers `EVENT_SetEvent` prouvent que
-  les callbacks reprogramment le type 3 à `gameFrame+1`, mais ne sont pas
-  retenus comme hooks : `plugin-misc` possède l'entrée monstre `0x448C00` et
-  peut court-circuiter son callsite interne. Les dispatchers sont en amont de
-  cette divergence.
-- `EVENT_SetEvent 0x48B720` possède sept arguments natifs, et non six :
-  `(game, unit, eventType, expireFrame, customId, customParam, arg7) -> void`.
-  Après `sub rsp,0x48`, son prologue lit les arguments entrants 5, 6 et 7 à
-  `[rsp+0x70]`, `[rsp+0x78]` et `[rsp+0x80]`. La sémantique du septième argument
-  reste inconnue; le prototype D2MOO à six arguments est sémantique seulement.
-- `UNITS_SetOverlay 0x349020` est confirmé par 39 appels directs, son
-  allocation/mise à jour d'une stat-list au flag `0x80`, son ABI
-  `(unit, overlayId, unusedLayer) -> void` et sa signature unique de 24 octets.
-  Le témoin interne unique de 30 octets à `0x34916C` prouve que le setter écrit
-  l'ID dans `unit_dooverlay` stat `178` (`0xB2`); `0x80` n'est pas un ID de stat.
-  Cette stat retient le dernier write direct et ne prouve pas qu'une animation
-  reste active. Burn Damage Fix 2.1 compte un overlay étranger puis applique
-  `fire_hit` selon l'arbitrage natif last-write-wins. Le setter cible bien
-  l'unité, mais une particule déjà émise peut rester à son emplacement; le replay
-  périodique émet les suivantes à la position courante.
-- `SUNITDMG_ApplyResistancesAndAbsorb 0x4523E0` reste un seam partagé que Burn
-  Damage Fix ne hooke pas. La 2.1.0 exige soit sa signature vanilla unique de
-  32 octets, soit exactement un inline hook suivi par DiagnosticsService et
-  possédé par `monsterdisplay`; tous les témoins internes de record, résistance,
-  pierce, réduction et absorb restent stricts. Toute modification inconnue,
-  non suivie ou multi-propriétaire refuse le chargement.
-- L'audit de coexistence ne trouve aucun propriétaire de `0x42CE30` ou
-  `0x447420` parmi Monster Display, Bind And Summon, Melee Splash et les autres
-  composants actifs de la Suite. Les ressemblances dans Bind And Summon sont
-  des entrées `.pdata`, pas du code. Monster Display partage seulement
-  `0x4523E0`; BKVCombat emprunte `UNITS_SetOverlay`; Melee Splash possède
-  `0x44C030`; et le seam `plugin-misc 0x448C00` est volontairement évité.
-
-## Player sequence tables — baseline D2R 3.3.93847
-
-- `SKILLS_GetSeqNumFromSkill` à `0x33DBC0` lit pour un joueur le byte
-  `SkillsTxt.seqnum` à `+0x33` au site `0x33DC42`. Le chemin monstre reste
-  distinct; aucune équivalence avec `monseq.txt` n'est inférée.
-- `DATATBLS_GetSeqRecordFromUnit` à `0x3CB890` indexe la table runtime
-  `0x2386650[seqnum]`, sélectionne une des 14 classes d'armes via la table
-  `0x2386730`, puis choisit le record selon le mode et la frame.
-- Le descripteur mesure 24 octets. La preuve native à `0x3CB987` construit
-  `index * 3 * 8`; les champs capturés sont pointeur de records, nombre de
-  frames de séquence, nombre de frames d'animation et QWORD auxiliaire `0x100`.
-- Un record mesure six octets : `uint16 sequence`, puis les bytes `mode`,
-  `frame`, `direction` et `event`. La baseline contient 808 records, 47
-  tableaux runtime et 44 contenus uniques.
-- La table contient un slot nul suivi de 25 groupes actifs et 14 classes
-  d'armes, soit 350 routes : 235 présentes et 115 nulles. Les groupes 24
-  `Cleave` et 25 `Mirrored Blades` sont propres au runtime courant par rapport
-  à l'oracle D2MOO utilisé.
-- Les 23 groupes legacy et 34 tableaux nommés par
-  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316` correspondent exactement aux
-  routes et octets courants qu'ils décrivent. D2MOO reste une preuve sémantique
-  seulement; aucune adresse, structure ou ABI 32 bits n'est transposée.
-- Tous les groupes, descripteurs et records capturés sous D2R 3.3.93847 ont un
-  témoin byte-exact dans l'image d'analyse gouvernée. Le groupe 6 `Inferno` a
-  deux seeds statiques identiques (`0x1992660` et `0x1992DF0`), mais une route
-  runtime unique; l'extracteur conserve explicitement cette ambiguïté au lieu
-  de fabriquer une unicité.
-- Le seed statique du mapping des 14 classes est unique à `0x19EAF70` et
-  concorde avec la table runtime `0x2386730`.
-- Les sorties normalisées, le manifeste de hashes, le captureur runtime et les
-  TSV déterministes sont gouvernés par
-  `Mission/player-sequence-tables-3.3.md`. Cette phase ne prouve pas encore le
-  contrat de propriété, la durée de vie, le remplacement de longueurs variables
-  ni l'autorité multijoueur; ces points bloquent toute implantation.
-
-## Scaling des monstres par area level en Normal — garde BKVince
-
-- Le chemin commun 92777/93847 dérive `r15d` de l'index de difficulté effectif :
-  zéro en Normal, un en Nightmare et deux en Hell. Le couple natif à
-  `0x543D32` est `test r15d,r15d; je 0x543D50`; le saut à `0x543D35` exclut
-  donc directement le chemin d'area level en Normal.
-- La room passe par le wrapper null-safe `0x2EFC10`, qui retourne zéro en
-  l'absence de room puis relaie `DRLGROOM_GetLevelId 0x360FC0`. L'appelant
-  conserve ce véritable `LevelId` dans `[rsp+0xB8]` à `0x543C60` avant les
-  tests d'éligibilité.
-- L'ancienne réécriture RuffnecKk `45 85 F6 7E 19` est invalidée. Le flux
-  `0x543CE3..0x543D14` écrase `r14d` avec un booléen avant le gate; il ne teste
-  pas le `LevelId` positif annoncé. Le cold start et le témoin mercenaire du
-  6 août prouvaient une absence de crash, pas l'effet de scaling.
-- La patch externe de `yinyin333333` neutralise correctement le saut Normal
-  avec `90 90` à `0x543D35`, mais le test pile complète BKVince du 27 août a
-  produit l'assertion `eLevelId > 0` de `LvlTbls.cpp:284` pendant le chargement.
-  Le même profil a ensuite chargé avec l'ancien garde, ce qui rend l'admission
-  d'un appel BKVince sans room par la version yinyin hautement probable; l'unité
-  exacte reste à identifier et ne doit pas être inventée.
-- Vincent retient donc une correction privée BKVince Expansion-only. La séquence
-  unique de dix octets à `0x543D2D`,
-  `80 FA 01 74 1E 45 85 FF 74 19`, devient
-  `83 BC 24 B8 00 00 00 00 7E 19`, soit
-  `cmp dword ptr [rsp+0xB8],0; jle 0x543D50`. Un `LevelId` positif rejoint le
-  chemin d'area level, y compris en Normal; zéro conserve le niveau monstre de
-  base. Les contrôles `noRatio`, boss, desecrate et monster-region suivants
-  restent natifs.
-- Ce remplacement retire volontairement le gate classic-game. Il appartient
-  seulement au profil BKVince Expansion et doit être absent de la RuffnecKk
-  D2RLoader Suite. Le cold start pile complète est passé le 27 août; un témoin
-  effectif Normal et le cas sans room restent requis avant qualification
-  gameplay.
-
-## Armageddon et Hurricane en chance-to-cast
-
-- Le helper serveur d'effet d'objet à `0x589930` refuse immédiatement une
-  ligne SkillsTxt dont le word `ItemEffect` à `+0x20A` vaut zéro. Une fixture
-  Fallen a reproduit l'assertion `ptSkill->nItemEffect != 0`; forcer
-  temporairement `ItemEffect=1` supprime cette assertion sans faire apparaître
-  Armageddon.
-- Le callback partagé `SrvDo124` à `0x575DE0` appelle
-  `UNITS_GetUsedSkill`, puis refuse le lancement si le noeud absent ou son
-  SkillsTxt ne désigne pas le skill demandé. C'est le second gate indépendant
-  du défaut CtC.
-- La liste de skills est à `Unit+0x100`, son premier noeud à `+0x00` et le
-  used skill à `+0x18`. Un noeud D2Skill porte son SkillsTxt à `+0x00`, son
-  suivant à `+0x08`, son seed `Param1` à `+0x24`, son niveau à `+0x40`, son
-  owner GUID à `+0x4C` et le filtre du resolver à `+0x54`.
-- L'active callback Armageddon à `0x574E90` résout obligatoirement le skill via
-  `SKILLS_GetHighestLevelSkillFromUnitAndId` à `0x33DD40`, puis consomme et
-  renouvelle `Param1`. L'active callback Hurricane à `0x575600` ne dépend plus
-  d'un noeud de skill une fois l'état initial créé.
-- Le mécanisme retenu dans `Mission/armageddon-ctc-fix.md` reste synchrone et
-  borné : `ItemEffect` est restauré après le helper, le used skill synthétique
-  est stack-local pendant SrvDo124, et le noeud Armageddon synthétique est lié
-  seulement pendant chaque active callback. Aucun noeud fabriqué n'est
-  persistant ni sérialisé.
-- Le témoin d'expiration à 250 frames a confirmé que l'état natif s'arrête, mais
-  a révélé que la table interne 0.1.0 conservait encore sa graine. La 0.1.1
-  emprunte sans le hooker `STATES_CheckState 0x3351B0`, dont la signature
-  stricte de 32 octets est unique, pour effacer l'entrée avant le callback si
-  l'état a disparu. Après un retour zéro, une seconde vérification efface
-  l'entrée seulement si le callback vient de retirer l'état.
-- Le retour du callback ne constitue pas seul une preuve d'expiration : la
-  référence sémantique D2MOO supprime l'événement et retourne zéro si l'état est
-  absent (`SkillDruid.cpp:1074-1081`), mais peut aussi retourner zéro après
-  avoir replanifié l'événement lorsque la pièce ou la création du missile ne
-  convient pas (`SkillDruid.cpp:1122-1150`). Le prédicat d'état est donc le
-  discriminateur correct; aucune adresse D2MOO n'est transposée.
-- La preuve sémantique est corroborée par
-  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`, fichiers
-  `D2Game/src/SKILLS/SkillItem.cpp` et
-  `D2Game/src/SKILLS/SkillDruid.cpp`. Aucune adresse ni structure 32 bits n'est
-  transposée. Les RVA et octets ci-dessus proviennent exclusivement du corpus
-  natif gouverné commun aux cibles 3.2.92777 et 3.3.93847.
+- `DATATBLS_CompileItemsTxt 0x315FD0` est appelee par l'orchestrateur gouverne
+  au callsite `0x301773`, apres la compilation d'ItemTypes.
+- La fonction compile trois tables de records de stride `0x1C0`, les concatene
+  dans le vecteur `DataTables+0x15A0`, puis construit les index associes.
+- Sa signature instruction-alignee de 32 octets est
+  `48 89 5C 24 10 48 89 74 24 18 48 89 7C 24 20 55 41 54 41 55 41 56 41 57 48 8D AC 24 C0 E6 FF FF`.
+- Le port Item Durability 1.2.1 appelle d'abord l'original, puis applique une
+  passe idempotente sur les records actifs. Le getter `0x314110` reste vanilla.
+- Deux cold starts de la pile complete ont valide les deux ordres : Pack avant
+  CubeOutputQuantity 1.0.2, puis Cube avant Pack. Cube charge ses trois hooks;
+  la passe Items traite les contextes 2 et 3, dont 800 items/117 item types et
+  42 records ranged/2 types reparables dans le contexte expansion.
 
 ## MapSense — premier marqueur d'unité dans l'automap native
 
@@ -1292,13 +1191,15 @@ confiance explicite.
   destinations mauves. Release `/W4 /WX`, quatre exports et CTest `1/1`
   passent; la DLL n'est ni déployée ni lancée.
 - La trace runtime 3.3.93847 du 29 août 2026 établit que les rafales
-  `sFillLocation()` ne sont pas propres à une route : elles sont émises pendant
-  la matérialisation native de rooms. Dans `sFillLocation 0x3E1DA0`, la branche
-  d'index négatif à `0x3E1F24` appelle uniquement le logger à `0x3E1F2B`, puis
-  rejoint à `0x3E1FD8` le chemin qui saute déjà le remplissage. Le CALL exact
-  `E8 60 FC 63 00` est unique dans le corpus commun. MapSense 0.12.3 NOPe ces
-  cinq octets via le service suivi de D2RLoader sans autoriser d'accès hors
-  limites ni modifier la construction des rooms.
+  `sFillLocation()` ne sont pas propres à la route du monastère : elles sont
+  émises pendant la matérialisation native de rooms demandée notamment par la
+  collision, les RoomTile, les waypoints et Reveal. Dans `sFillLocation
+  0x3E1DA0`, la branche d'index négatif à `0x3E1F24` appelle uniquement le
+  logger à `0x3E1F2B`, puis rejoint à `0x3E1FD8` le chemin qui saute déjà le
+  remplissage. Le CALL exact `E8 60 FC 63 00` est unique dans le corpus commun.
+  MapSense 0.12.3 peut donc NOPer ces cinq octets par le service suivi de
+  D2RLoader sans autoriser aucun accès hors limites ni modifier la construction
+  des rooms.
 - Références sémantiques uniquement :
   `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`, notamment
   `D2Common/src/Units/Units.cpp:283-323,582-594` et
@@ -1306,6 +1207,934 @@ confiance explicite.
   `D2RMH@32d55b8ab9a3e9b380103e73e3c8d328cd4f3ad4`,
   `d2mapapi/mapdata.cpp:55-168,240-380`, pour l'intersection des ouvertures de
   collision. Aucune adresse, structure ou ABI 32 bits n'est transposée.
+
+## Burn Damage Fix — production générique et Fire Resistance
+
+- Le corpus commun aux cibles 92777 et 93847 contient à `0x44CB32` le témoin
+  unique `81 C3 3C 01 00 00 41 0F 48 DE`. Le chemin a déjà multiplié le Burn
+  existant dans `EBX` et avancé le seed unité dans `R8D`, puis additionne à
+  tort l'ID de stat `316` comme dommage plat.
+- Les stats `burningmin=316`, `burningmax=317` et
+  `passive_fire_mastery=329` sont identiques dans les tables 3.2 et 3.3. Le
+  producteur missile `0x465799/0x465B40` confirme qu'elles décrivent un range
+  de dommage et une maîtrise, pas une constante de DPS.
+- Le helper RNG natif `0x4501E0` avance le seed une seule fois puis réduit le
+  low32 courant par masque pour une puissance de deux ou modulo sinon. Le
+  relais Burn consomme donc `R8D` sans nouvel appel RNG et conserve la borne
+  maximum exclusive prouvée sémantiquement par
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`.
+- `SUNITDMG_ApplyBurnDamage 0x451380` stocke ensuite le Burn sous forme de
+  `HPREGEN` négatif. Le record Fire D2R de `0x40` octets porte résistance `39`,
+  maximum `40`, pierce `333`, pierce d'immunité `189`, absorb `%/plat`
+  `142/143`, index de réduction `2`, flag `+0x28=1` et log flag `8`.
+- Le troisième argument du résolveur `0x4523E0` est conservé dans `R13D`. Le
+  témoin unique `0x45251F` prouve qu'une valeur non nulle remplace toute
+  résistance positive par zéro via `min(résistance,0)`, puis `0x452658` saute
+  aussi l'absorb. La 2.0.0 appelait avec `1` et neutralisait donc par erreur
+  résistance positive et immunité. La 2.1.0 appelle avec `0`, utilise les
+  sentinelles absorb `-1/-1` et garde explicitement `reductions[2]=0` pour
+  exclure MDR sans supprimer les défenses Fire.
+- Cette fonction rejette une durée ou un dommage non positif, puis appelle
+  `STATES_ToggleState 0x3354C0` avec le défenseur, le state `burning` 115 et
+  `enable=1`. Les tables vanilla 3.2, vanilla 3.3 et BKVince relient toutes le
+  state 115 à l'overlay `burning` 224, dont l'asset est
+  `Expansion\\On_Fire`; l'absence d'overlay signalée n'est donc pas une absence
+  de mapping dans les données actuelles.
+- Le compilateur StatesTxt passe explicitement un stride `0x44` au callsite
+  unique `0x3083D7`, puis installe le vecteur résultant à
+  `DataTables+0x290` au témoin `0x30843C`. `STATES_ToggleState` appelle
+  `GetItemDataContext 0x34A0E0`, transmet le byte à
+  `GetDataTablesForContext 0x300A90` et lit le nombre de states à
+  `DataTables+0x298` dans le témoin unique `0x3354E0`.
+- Le premier cold start 2.2 a refusé proprement le chargement parce que le
+  témoin de stride englobait aussi le `CALL` suivant, que l'intégration du
+  compilateur TXT de D2RLoader peut rediriger avant le chargement des plugins.
+  Le préfixe instruction-aligné de 22 octets arrêté avant ce `CALL` reste unique
+  à `0x3083D7` et prouve intégralement l'argument `0x44`; la cible du `CALL`
+  n'est ni consommée ni possédée par Burn Damage Fix.
+- La séquence de descripteurs native à `0x307EB3` associe le type
+  name-to-word `0x16` à l'offset record `+0x02`, puis aux offsets
+  `+0x04/+0x06/+0x08`; le premier word d'overlay est donc directement prouvé à
+  `StateRecord+0x02`. L'initialiseur unique de records `0x44` à `0x394640`
+  écrit `0xFFFF0000` à `+0`, ce qui combine state id zéro à `+0` et sentinelle
+  d'overlay vide `0xFFFF` à `+2`. Ces offsets et cette sentinelle proviennent du
+  binaire D2R gouverné, pas d'une transposition de structure D2MOO.
+- Burn Damage Fix 2.2 réutilise le hook d'application déjà possédé à
+  `0x451380` et n'ajoute aucun hook exécutable. Juste avant le trampoline
+  original, il vérifie contexte, count, base, stride, id 115, alignement et page
+  writable, puis effectue un compare/exchange atomique strict
+  `overlay1 224 -> 0xFFFF`. Une valeur déjà vide est acceptée; toute valeur
+  custom est préservée. La mutation reste process-local, ne réécrit aucun
+  `states.txt` et est restaurée au déchargement seulement si la DLL possède
+  encore la même cellule inchangée.
+- Burn Damage Fix 2.0 utilisait `STATES_CheckState 0x3351B0` uniquement comme
+  témoin passif après une application positive : il ne créait aucun overlay.
+  Le gameplay BKVince du 26 août 2026 a confirmé le DoT, le kill-credit/XP et
+  deux states actifs (`resolved=2`, `burning-state=2/0`). Ce comportement est
+  conservé ici comme preuve historique, pas comme description de la branche
+  2.1.
+- Burn Damage Fix 2.1 emprunte `UNITS_SetOverlay 0x349020` sans le patcher et
+  rejoue l'overlay `fire_hit` 81 sur la couche 0. Il le fait une première fois
+  après une application Burn positive dont le state `burning` 115 est confirmé,
+  puis périodiquement pendant les événements de stat-regeneration. Chaque replay
+  exige encore le state 115 actif et `SUNIT_IsDead 0x34C2C0 == 0`; il cesse donc
+  naturellement à l'expiration du Burn ou à la mort. Aucun pointeur d'unité,
+  GUID ou état parallèle n'est conservé entre deux callbacks.
+- `D2GAME_EVENTS_PlayerEventDispatcher 0x42CE30` possède l'ABI native à six
+  arguments `(game, unit, eventType, callbackArg0, callbackArg1,
+  callbackArg2) -> void`. Il borne `eventType` à `0..14`, sélectionne
+  `0x42E600` pour le type 3 et possède deux xrefs directes, `0x48CB2F` et
+  `0x48CBC4`. Son entrée unique de 32 octets est `48 89 5C 24 08 48 89 6C 24
+  10 48 89 74 24 20 57 48 83 EC 30 49 63 D8 41 8B F9 48 8B F2 48 8B E9`.
+- `MONSTERMODE_EventHandler 0x447420` possède la même ABI native à six
+  arguments. Il vérifie le type monstre, borne l'événement à `0..14`,
+  sélectionne `D2GAME_MONSTER_ApplyStatRegen 0x448C00` pour le type 3 et possède
+  une seule xref directe, `0x48C83F`. Son entrée unique de 39 octets est `48 89
+  5C 24 10 48 89 6C 24 18 48 89 74 24 20 57 48 83 EC 50 80 3D 61 76 66 02
+  00 41 8B E9 49 63 F8 48 8B DA 48 8B F1`.
+- Ces deux dispatchers sont synchrones dans le chemin serveur de la file
+  d'événements. Le replay précède le callback original, vérifie explicitement le
+  type joueur 0 ou monstre 1, ne requiert ni résolution GUID, ni collection
+  globale, ni worker thread, puis transmet les six arguments originaux exactement
+  une fois.
+- Le témoin unique `0x42E615` lit le frame serveur à `Game+0x170`. Le témoin
+  unique de 38 octets à `0x44DF40` lit la difficulté à `Game+0x104`, le contexte
+  data à `Game+0x106`, puis appelle `GetDifficultyRecord(dataSet,difficulty)` à
+  `0x300830`. La 2.1.0 vérifie ces deux layouts avant toute lecture directe.
+- Les CALL uniques `0x42E634` et `0x448CA0` vers `EVENT_SetEvent` prouvent que
+  les callbacks reprogramment le type 3 à `gameFrame+1`, mais ne sont pas
+  retenus comme hooks : `plugin-misc` possède l'entrée monstre `0x448C00` et
+  peut court-circuiter son callsite interne. Les dispatchers sont en amont de
+  cette divergence.
+- `EVENT_SetEvent 0x48B720` possède sept arguments natifs, et non six :
+  `(game, unit, eventType, expireFrame, customId, customParam, arg7) -> void`.
+  Après `sub rsp,0x48`, son prologue lit les arguments entrants 5, 6 et 7 à
+  `[rsp+0x70]`, `[rsp+0x78]` et `[rsp+0x80]`. La sémantique du septième argument
+  reste inconnue; le prototype D2MOO à six arguments est sémantique seulement.
+- `UNITS_SetOverlay 0x349020` est confirmé par 39 appels directs, son
+  allocation/mise à jour d'une stat-list au flag `0x80`, son ABI
+  `(unit, overlayId, unusedLayer) -> void` et sa signature unique de 24 octets.
+  Le témoin interne unique de 30 octets à `0x34916C` prouve que le setter écrit
+  l'ID dans `unit_dooverlay` stat `178` (`0xB2`); `0x80` n'est pas un ID de stat.
+  Cette stat retient le dernier write direct et ne prouve pas qu'une animation
+  reste active. Burn Damage Fix 2.1 compte un overlay étranger puis applique
+  `fire_hit` selon l'arbitrage natif last-write-wins. Le setter cible bien
+  l'unité, mais une particule déjà émise peut rester à son emplacement; le replay
+  périodique émet les suivantes à la position courante.
+- `SUNITDMG_ApplyResistancesAndAbsorb 0x4523E0` reste un seam partagé que Burn
+  Damage Fix ne hooke pas. La 2.1.0 exige soit sa signature vanilla unique de
+  32 octets, soit exactement un inline hook suivi par DiagnosticsService et
+  possédé par `monsterdisplay`; tous les témoins internes de record, résistance,
+  pierce, réduction et absorb restent stricts. Toute modification inconnue,
+  non suivie ou multi-propriétaire refuse le chargement.
+- L'audit de coexistence ne trouve aucun propriétaire de `0x42CE30` ou
+  `0x447420` parmi Monster Display, Bind And Summon, Melee Splash et les autres
+  composants actifs de la Suite. Les ressemblances dans Bind And Summon sont
+  des entrées `.pdata`, pas du code. Monster Display partage seulement
+  `0x4523E0`; BKVCombat emprunte `UNITS_SetOverlay`; Melee Splash possède
+  `0x44C030`; et le seam `plugin-misc 0x448C00` est volontairement évité.
+
+## Resistance Floor — plancher configurable et affichage natif
+
+- La cible produit D2R 3.3.93847 réutilise le corpus natif vérifié provenant du
+  build 92777. `SUNITDMG_ApplyResistancesAndAbsorb 0x4523E0` reçoit son contexte
+  en RCX et le record de dommage courant en RDX depuis l'unique callsite
+  `0x44EC5A`, au cœur d'une boucle de douze records de stride `0x40`.
+- Deux chemins distincts appliquent le plancher vanilla. `0x4524C4` porte
+  `B9 9C FF FF FF 3B D9 0F 4F CB EB 51`; `0x4524E7` porte
+  `B9 9C FF FF FF 3B D9 0F 4F CB 8B D8`. Le préfixe de dix octets apparaît
+  exactement deux fois et chaque témoin étendu est unique.
+- Le contexte conservé dans RSI expose le défenseur `Unit*` à `+0x10`, réutilisé
+  par `STATES_CheckState` à `0x452508`. Le record conservé dans R14 expose son
+  stat de résistance à `+0x08`. Un relais interne peut donc sélectionner un
+  plancher par défenseur et limiter l'effet aux stats 36, 37, 39, 41, 43 et 45
+  sans posséder l'entrée partagée du résolveur.
+- Les plafonds Physical et Elemental/Magic à `0x4524D6` et `0x4524DE` restent
+  distincts et possédés par plugin-items. L'ancien A/B Burn Fire Resistance a
+  déjà prouvé qu'un hook d'entrée à `0x4523E0` empêchait Monster Display de
+  charger; Resistance Floor ne modifie donc que les deux `MOV ECX,-100`.
+- `D2GAME_GetMinionOwner 0x4A53C0` fournit l'ABI gouvernée
+  `Unit* (Unit* monster)`. Une chaîne propriétaire bornée distingue joueur,
+  unité possédée par un joueur et monstre sans propriétaire; les types inconnus
+  ou cycles reviennent au plancher vanilla.
+- La fiche de personnage applique séparément un `MOV EAX,-100` dont l'opérande
+  commence à `0x14E729A`. Le témoin unique depuis `0x14E728C` est
+  `8D 4F 4B 83 F9 5F 7C 05 B9 5F 00 00 00 B8 9C FF FF FF`; les quatre branches
+  lisent les max-resists 40, 42, 44 et 46 avant de rejoindre ce même clamp. Ce
+  site gouverne donc l'affichage natif Fire, Lightning, Cold et Poison.
+- Physical et Magic n'ont pas de slot numérique natif. Ils restent couverts par
+  le plancher gameplay, sans affichage personnalisé ni dépendance inter-plugin.
+
+## Skill Trees Revamp (anciennement FourthSkillTree Framework) — persistance dynamique des skills de classe
+
+- La cible produit est D2R 3.3.93847 et réutilise le corpus natif gouverné de
+  provenance 92777. `DATATBLS_GetClassSkillCount 0x33CB30` retourne le compte
+  compilé par classe depuis le contexte actif; sa signature stricte de 32 octets
+  est unique. `DATATBLS_GetClassSkillIdByIndex 0x33DDE0` retourne l'identifiant
+  SkillsTxt d'un index de classe et possède également une signature stricte de
+  32 octets unique.
+- Le writer de l'en-tête D2S appelle `0x33CB30` à `0x534519`, puis stocke `AL`
+  dans le byte `NumSkills`. Le témoin à wildcards
+  `E8 ?? ?? ?? ?? 49 8B CF 88 45 9A E8` est unique.
+- Le writer de la section skills écrit le magic `if` (`0x6669`) à `0x52F557`,
+  puis boucle de zéro jusqu'au compte dynamique obtenu à
+  `0x52F58A/0x52F5D7`. Pour chaque index, il appelle `0x33DDE0`, résout le skill
+  par `SKILLS_GetSkillById 0x33DCD0`, lit son rang de base par
+  `SKILLS_GetBaseLevel 0x33D1E0` et écrit exactement un byte. Il n'existe donc
+  aucune constante 30 dans cette boucle native de sérialisation.
+- Le lecteur vérifie le même magic `if` à `0x52EC98`, utilise le compte sauvé
+  pour parcourir les bytes, borne chaque index contre le compte compilé courant,
+  ajoute les rangs par le chemin natif puis avance le curseur de `2 + count` à
+  `0x52ED52..0x52ED5A`. Une sauvegarde plus longue reste donc structurellement
+  délimitée sans section propriétaire.
+- La référence de format épinglée
+  `D2SSharp@f26f21897db5c0075e74defca1e31d1930080750` confirme séparément que
+  `Character.NumSkills` est un byte lu et écrit dans l'en-tête
+  (`src/D2SSharp/Model/Character.cs:32-33,102-104,143-145`) et que la section
+  `if` contient un tableau de rangs de longueur `skillCount`, un byte par skill
+  (`src/D2SSharp/Model/SkillsSection.cs:7-15,36-37,78-103`). Sa constante 30 est
+  le défaut vanilla de la bibliothèque, pas une borne présente dans le layout
+  sérialisé.
+- Cette preuve ferme l'hypothèse d'un format D2S intrinsèquement limité à 30 :
+  le chemin statique natif est déjà piloté par le compte de skills compilé et
+  peut représenter jusqu'à 255 entrées par le byte d'en-tête. Elle ne remplace
+  pas le gate runtime. Le témoin 3.3 ferme désormais compilation, allocation,
+  Save and Exit, relecture investie et respec immédiat; rank-zero sauvegardé,
+  hôte/joiner et la matrice 3.2 restent ouverts avant toute promesse publique.
+- Une lecture runtime contrôlée de D2R 3.3.93847 prouve que la case `0x3B` du
+  tableau serveur à `D2R+0x1D2A790` contient le pointeur
+  `D2GAME_PACKETCALLBACK_Rcv0x3B_AllocateSkillPoints 0x4B3EE0`. Le handler
+  exige cinq octets, lit l'identifiant de skill à `packet+1` et le marqueur de
+  ranks supplémentaires à `packet+3`, borne l'identifiant contre le nombre
+  total de lignes SkillsTxt compilées, résout le skill, son `MaxLvl` et son rang
+  de base, puis applique les rangs par le helper serveur `0x438670`.
+- Aucun accès à `SkillPage`, `SkillRow` ni `SkillColumn` n'existe dans ce
+  callback. L'autorité serveur d'allocation est donc démontrée indépendante de
+  la page UI; le témoin runtime-native ferme aussi allocation et relecture
+  investie du 31e skill sous 3.3.93847.
+- Le respec autoritaire `D2GAME_PLAYER_ResetStatsAndSkills 0x580F20`, reçu par
+  l'opcode `0x39`, appelle `D2GAME_PLAYER_ResetSkills 0x4360F0`. Cette fonction
+  parcourt la liste compilée complète des skills de la classe, retire chaque
+  rang de base et crédite leur somme dans le stat 5. Elle n'applique ni filtre
+  `SkillPage` ni borne 30; le témoin dynamique confirme le retour immédiat du
+  31e skill à zéro sous 3.3.93847. Sa sauvegarde rank-zero reste à observer.
+- `UI_DispatchMessage 0x843D90` demeure la propriété unique du broker
+  `plugin-skills`; RemoteStash redirige seulement le callsite étroit
+  `UI_ButtonWidget_OnClick+0xE2`. Skill Trees Revamp doit composer avec ce broker
+  et ne pas installer un second hook sur l'entrée commune.
+- Le probe d'allocation du 25 août place le skill 456 sur une cellule native
+  Barbarian et étend une sauvegarde gameplay courante de 30 à 31 rangs, avec
+  en-tête, checksum et marqueur `JM` cohérents. D2R affiche le personnage level
+  99 au menu mais ferme pendant sa matérialisation; le `.d2s` reste
+  byte-identique. La greffe directe ne fournit donc aucune preuve d'allocation
+  investie et ne sera pas utilisée comme base du prochain témoin.
+- Un témoin Amazon 31-rangs entièrement écrit par le runtime courant se
+  matérialise, investit le skill 456, conserve son rang 1 après Save and Exit et
+  relecture, puis revient immédiatement à zéro par Akara. Vincent réinvestit
+  avant la sauvegarde finale : son 31e byte à 1 est attendu; la persistance
+  rank-zero post-respec reste NOT RUN.
+- Le mode `native-allocation` de ce témoin vidait explicitement
+  `reqskill1/2/3`. Le nouveau mode `native-prerequisite` prépare séparément le
+  même skill 456 Amazon avec `reqskill1 = Inner Sight`, afin de demander le
+  refus parent-zéro puis l'acceptation parent-rang-1 sans confondre ce gate avec
+  l'UI page 4. Vincent a confirmé le refus à parent zéro, l'acceptation après
+  investissement d'Inner Sight et le même comportement après Akara. Le save
+  final réinvesti conserve les deux rangs à 1; une répétition sauvegardée à
+  rank-zero a été retirée du gate par décision produit.
+- `SKILLTREE_SetPageState 0x14C3B10..0x14C3B86` porte l'ABI observée
+  `void(panel, requestedPage)`. Il borne la demande à 0..3, écrit le `int32`
+  global `SKILLTREE_CurrentPageState 0x3BBDCBC`, puis appelle la reconstruction.
+  Son empreinte stricte de 32 octets est unique. Ses quatre callers couvrent le
+  payload `ActivateTab` à `0x14C699D`, l'avance avec wrap à
+  `0x14C6BBC..0x14C6BE6` et le recul avec wrap à
+  `0x14C6BED..0x14C6C07`.
+- `SKILLTREE_RebuildPageWidgets 0x14C7720..0x14C826E` porte l'ABI observée
+  `void(panel)` et une empreinte stricte unique de 32 octets. Il active et
+  recolore exactement quatre paires Tab/Text dans la boucle
+  `0x14C7850..0x14C789E`. Le scan exhaustif des comparaisons RIP-relatives
+  contre `3` trouve sept références au même global `0x3BBDCBC` : interaction
+  widget `0x14C4084`, allocation `0x14C7428`, puis gates de reconstruction
+  `0x14C7907`, `0x14C7986`, `0x14C7BC0`, `0x14C820B` et `0x14C822B`. Elles
+  réservent ensemble l'état 3 à General Skills; seule la branche différente de
+  3 énumère les widgets ordinaires et leurs identifiants de skill.
+- Le layout manette confirme `Tab3`, `TextTab3 = @GeneralSkills`,
+  `CommonSkillsContainer` et `ItemSkillsContainer`. Le passage à cinq états
+  doit donc étendre ensemble le setter, les deux wraps, la boucle à quatre et
+  chaque gate General Skills, puis déplacer General Skills à 4.
+- Les résolveurs `SKILLTREE_FindTextTabWidget 0x14C5EA0` et
+  `SKILLTREE_FindTabWidget 0x14C5F60` prennent l'ABI observée `(panel, index)`
+  et cherchent respectivement le nom TextTab/index et Tab/index. Leurs
+  signatures strictes de 32 octets, qui diffèrent par leur source de format et
+  leur helper de type de widget, sont uniques dans le corpus commun.
+- FourthSkillTree 0.2.0 applique onze changements d'immédiats via D2RLoader :
+  maximum setter `3 -> 4`, deux wraps `3 -> 4`, boucle Tab/Text `4 -> 5` et les
+  sept gates de page `3 -> 4`. Avant toute écriture, une empreinte fail-closed
+  couvre les sept témoins natifs de 32 octets, les onze instructions exactes,
+  la plage de l'image PE et la valeur signée courante `0..3`. Les noms de build
+  sont seulement diagnostiques; `UI_DispatchMessage` n'est ni appelé ni hooké.
+  Le build et les checks statiques passent, mais le démarrage et le parcours des
+  cinq états restent NOT RUN jusqu'au test humain de Vincent.
+- `CounterTemplate` est un `TextBoxWidget` sans fond dans les layouts souris et
+  manette. Les carrés sombres de rang, cadres d'icônes et flèches sont contenus
+  dans les `skillBackgroundFile` de classe; le fond Amazon prouve que la cellule
+  synthétique choisie n'a aucun carré peint. Le chiffre flottant observé est
+  donc une limitation attendue du validator 0.1.0, pas un défaut du renderer.
+  Le framework devra créer un chrome générique de cellule après preuve de son
+  constructeur et de son asset, sans réécrire les fonds propres aux mods.
+
+## Discipline de promotion
+
+Une adresse n'entre dans `known-rvas.json` qu'apres preuve par structure de
+controle, octets/signature, caller/callee ou validation runtime. Les simples
+ressemblances et les anciennes adresses 2.4 restent dans cette page avec une
+confiance explicite.
+
+## Scaling des monstres par area level en Normal — garde BKVince
+
+- Le chemin commun 92777/93847 dérive `r15d` de l'index de difficulté effectif :
+  zéro en Normal, un en Nightmare et deux en Hell. Le couple natif à
+  `0x543D32` est `test r15d,r15d; je 0x543D50`; le saut à `0x543D35` exclut
+  donc directement le chemin d'area level en Normal.
+- La room passe par le wrapper null-safe `0x2EFC10`, qui retourne zéro en
+  l'absence de room puis relaie `DRLGROOM_GetLevelId 0x360FC0`. L'appelant
+  conserve ce véritable `LevelId` dans `[rsp+0xB8]` à `0x543C60` avant les
+  tests d'éligibilité.
+- L'ancienne réécriture RuffnecKk `45 85 F6 7E 19` est invalidée. Le flux
+  `0x543CE3..0x543D14` écrase `r14d` avec un booléen avant le gate; il ne teste
+  pas le `LevelId` positif annoncé. Le cold start et le témoin mercenaire du
+  6 août prouvaient une absence de crash, pas l'effet de scaling.
+- La patch externe de `yinyin333333` neutralise correctement le saut Normal
+  avec `90 90` à `0x543D35`, mais le test pile complète BKVince du 27 août a
+  produit l'assertion `eLevelId > 0` de `LvlTbls.cpp:284` pendant le chargement.
+  Le même profil a ensuite chargé avec l'ancien garde, ce qui rend l'admission
+  d'un appel BKVince sans room par la version yinyin hautement probable; l'unité
+  exacte reste à identifier et ne doit pas être inventée.
+- Vincent retient donc une correction privée BKVince Expansion-only. La séquence
+  unique de dix octets à `0x543D2D`,
+  `80 FA 01 74 1E 45 85 FF 74 19`, devient
+  `83 BC 24 B8 00 00 00 00 7E 19`, soit
+  `cmp dword ptr [rsp+0xB8],0; jle 0x543D50`. Un `LevelId` positif rejoint le
+  chemin d'area level, y compris en Normal; zéro conserve le niveau monstre de
+  base. Les contrôles `noRatio`, boss, desecrate et monster-region suivants
+  restent natifs.
+- Ce remplacement retire volontairement le gate classic-game. Il appartient
+  seulement au profil BKVince Expansion et doit être absent de la RuffnecKk
+  D2RLoader Suite. Le cold start pile complète est passé le 27 août; un témoin
+  effectif Normal et le cas sans room restent requis avant qualification
+  gameplay.
+
+## Shadow Master AI Fix — sélection de cible indépendante
+
+- `AITHINK_ShadowMaster 0x5CD740` est le gestionnaire moderne identifié pour
+  la cible D2R 3.3.93847. Son flux natif récupère le propriétaire et sa cible,
+  conserve le leash à distance carrée 144, énumère les candidats par
+  `AITHINK_TargetCallback_ShadowMaster 0x5D1360`, puis exécute la sélection
+  non-combat centrée sur le propriétaire et le fallback à distance carrée
+  1024. Les signatures d'entrée strictes de 32 octets des deux fonctions sont
+  uniques dans `.text`.
+- `0x5CDBB3` porte `74 25`, un `JE` qui contourne normalement le bloc seulement
+  lorsque la cible du propriétaire est nulle. Le bloc validé affecte la cible
+  du propriétaire à la Shadow à `0x5CDBD3`. Écrire `EB 25` contourne toujours
+  cette affectation tout en rejoignant le chemin natif de leash. Le témoin de
+  16 octets commençant à `0x5CDBA8` est unique.
+- `0x5CDD55` porte `75 74`, un `JNE` qui contourne la sélection non-combat
+  seulement lorsqu'un combat est déjà actif. Le fallthrough préfère la cible
+  du propriétaire, puis le candidat le plus proche du propriétaire. Écrire
+  `EB 74` conserve systématiquement la cible acquise indépendamment. Le témoin
+  de 16 octets commençant à `0x5CDD50` est unique.
+- Le helper courant `SKILLS_SrvDo049_ApplyShadowSummonBonuses 0x56D770` prouve
+  que les deux défauts historiques de SrvDoFunc 49 sont déjà corrigés. Le gate
+  `CMP skillLevel,1` suivi de `JL` accepte le niveau 1; les boucles avancent
+  ensemble six couples AuraStat/AuraStatCalc et quatorze couples
+  PassiveStat/PassiveCalc. Aucun patch SrvDoFunc 49 n'est ajouté.
+- Le port ne modifie aucune table TSV. Le conseil historique Attack/NU et grand
+  MeleeRng visait des minions purement distants et ne convient pas aux Shadow
+  Warrior/Master natives capables d'attaques de mêlée.
+- La référence sémantique est
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`,
+  `source/D2Game/src/AI/AiThink.cpp:14302-14482,14959-15038` et
+  `source/D2Game/src/SKILLS/SkillAss.cpp:1975-2043`. Aucune adresse, structure
+  ou ABI 32 bits n'est transposée vers D2R.
+# Currency Stash Deposit — routage Advanced Stash natif (D2R 3.3.93847)
+
+- Le corpus natif gouverné provenant du build `92777` reste l'image d'analyse
+  autoritaire réutilisée pour la cible courante `D2R.exe 3.3.93847`.
+- Les handlers inventaire legacy `0x228AB0` et moderne `0x2C7540` suivent la
+  même branche Ctrl-clic : si le stash `0x18` est ouvert, ils appellent
+  `0x15A0B0(item)` puis dispatchent `0x2AAAA0(widget,event)` lorsque le résultat
+  est vrai. La branche de stash grille ordinaire est distincte.
+- `0x15A0B0` obtient le class id de l'objet et le passe à `0x15F320`, qui cherche
+  cette clé dans une table de hachage runtime. Le prédicat prouve donc une
+  inscription Advanced Stash active; lire seulement le byte
+  `AdvancedStashStackable` ne prouverait pas qu'une destination existe.
+- `0x2AAAA0` requiert d'abord que `0x1C7360(item)` retourne zéro. Cette garde
+  refuse notamment une condition stat-list mode 2 ou l'état joueur `0x36`.
+  Elle fait partie du contrat de sécurité reproduit par Currency Stash Deposit.
+- L'action résout ensuite le joueur local, appelle `0x46DA50(player)` pour le
+  proxy de destination, lit la page source et invoque
+  `CLIENT_TransferItemToInventoryPage` `0x15F8B0` avec page destination `4`,
+  page source dans `R9B`, mode `1` et une sortie de placement. Elle termine par
+  `0x1A0780(3,null,0,0,false)`.
+- `0x46DA50` obtient l'inventaire du joueur et traverse sa chaîne auxiliaire de
+  corps jusqu'au record accepté par les deux prédicats natifs. Son retour est
+  passé sans transformation comme destination du transfert Advanced Stash.
+- Currency Stash Deposit ne doit donc ni synthétiser un widget, ni parser les noms
+  d'onglets, indices ou coordonnées d'un layout. Il énumère l'inventaire,
+  revalide parent/page/GUID/code et les deux gardes natives, puis appelle un
+  transfert par étape sur le thread UI.
+- `ITEMS_GetInvPage` `0x36CFE0` demeure possédé par Cube Output Quantity. Le
+  plugin lit `ItemData+0x55` via `UNITS_GetItemData`, conformément à la preuve
+  MassID, afin de ne pas dépendre du prologue d'un autre propriétaire.
+- Les signatures strictes de `0x15A0B0`, `0x15F8B0`, `0x1A0780`, `0x1C7360` et
+  `0x46DA50` sont chacune uniques dans `.text`. Le gameplay, RemoteStash distant
+  et la matrice hôte/joiner restent des gates ouverts avant toute revendication
+  fonctionnelle publique.
+
+## Hit Chance Bounds — clamp défensif de la fiche de personnage
+
+- Le runtime courant D2R 3.3.93847 réutilise le corpus natif vérifié provenant
+  du build 92777. Le patch BKVince initial appliquait bien ses sept écritures en
+  mémoire, mais la capture gameplay conservait `5%` pour
+  `Average chance %s will hit you`.
+- Le chemin offensif de la fiche de personnage passe par le calculateur
+  `0x1514700` puis son formateur à `0x14E7FE0`. Les opérandes déjà gouvernés à
+  `0x15149C2/0x15149CD` et `0x14E8068/0x14E8073` appartiennent à ce chemin; les
+  deux premiers ne constituent pas un second chemin gameplay autoritaire.
+- Le chemin défensif distinct appelle `0x15149F0` depuis `0x14E8242`, conserve
+  son résultat brut dans `EBX`, puis appelle le formateur `0x1514CA0` depuis
+  `0x14E8262` avec la chance en `ECX` et la sortie texte en `RDX`.
+- Le formateur défensif réappliquait le clamp vanilla dans la séquence unique
+  `83 F9 05 7D 07 BF 05 00 00 00 EB 0A B8 5F 00 00 00` à `0x1514CBD`.
+  L'opérande basse est `0x1514CBF`; l'opérande haute commence à `0x1514CCA`.
+- La même fonction sélectionne ensuite les chaînes localisées 10104
+  `charmontohit1X` et 10105 `charmontohit2X`. La signature stricte
+  `B9 78 27 00 00 E8 ?? ?? ?? ?? 4C 8B CB 89 7C 24 20` est unique à
+  `0x1514DBD`, ce qui rattache le clamp oublié au texte observé sans inférence
+  fondée sur la seule proximité.
+- Le correctif minimal ajoute `05 -> 00` à `0x1514CBF` et
+  `5F 00 00 00 -> 64 00 00 00` à `0x1514CCA`. Le jet gameplay gouverné à
+  `0x44BD56` reste distinct; la validation visuelle de l'infobulle ne remplace
+  pas une validation fonctionnelle du combat.
+
+## Revive Overhaul 2.1 — sélection client, aura active et marqueur IA natif
+
+- `SKILLS_ValidateReviveTarget 0x55A510` porte l'ABI observée
+  `(game, caster, target) -> int32`. `SKILLS_SrvDo058_Revive 0x55E7E0`
+  l'appelle à `0x55E8EC`; `SKILLS_SrvSt21_Revive 0x560470` rejoint le même
+  validateur à `0x5604A8`. Le plugin conserve donc `SrvStFunc 21`,
+  `SrvDoFunc 58`, `CltStFunc 24`, `CltDoFunc` vide et `SelectProc 3`; aucun
+  edit TSV ni remplacement par les callbacks legacy 39/36 n'est requis.
+- Le test externe de 2.0.1 a compté sept admissions serveur et deux couples
+  aura capturés/restaurés, mais `SelectProc 3` ne surlignait pas le corps de
+  haut rang, l'aura restait inactive et les compteurs IA demeuraient à zéro.
+  Cette preuve runtime invalide deux hypothèses de 2.0 : écrire seulement le
+  right-skill pointer ne réactive pas l'aura, et l'état spécial IA 7 n'est pas
+  un classificateur suffisant pour tous les Revives admis.
+- `CLIENT_ValidateReviveTarget 0x96600` est le prédicat de sélection client. Il
+  vérifie d'abord le cadavre, puis appelle `AIUTIL_CanUnitSwitchAi 0x34C730`
+  avec les quatre gates optionnels à vrai au site unique `0x96635`, retour
+  `0x9664D`, avant de poursuivre ses restrictions natives. Revive Overhaul
+  hooke l'entrée partagée `0x34C730`, mais remplace `checkUnique` par faux
+  uniquement pour ce return-site et uniquement pour le masque de rang
+  `0x000E`. Tous les autres callers et tous les contrôles suivant l'appel
+  restent natifs.
+- Le fallback serveur continue d'appeler le validateur vanilla en premier. En
+  cas de refus il se limite au même masque de rang, revalide `CorpseSel`,
+  `Revive`, mort et consommation, puis appelle l'original
+  `0x34C730(target,true,false,true,true)`. Les états, modes, flags,
+  boss/prime-evil, unités scriptées et `SwitchAI` demeurent fail-closed; les
+  act bosses ne sont toujours pas admis dans 2.1.
+- Le helper de transformation appelé à `0x55E91B` obtient le right skill à
+  `0x55FAE1`, puis le vide avec `SKILLS_SetRightActiveSkill 0x33EF10`. La
+  version 2.0 rappelait seulement ce setter après succès. Or ce setter résout
+  le skill et écrit `skillList+0x10`; il n'exécute pas le reste du chemin
+  d'activation.
+- `MONSTERUNIQUE_UMod30_AuraEnchanted 0x495CD0` crée le skill choisi à
+  `0x495F4B`, puis appelle `D2GAME_AssignSkill 0x438A70` à `0x495F64` avec
+  `(monster,0,skillId,-1)`. L'entrée `0x438A70` appelle elle-même
+  `SKILLS_SetRightActiveSkill` à `0x438B09`, puis poursuit l'activation et la
+  synchronisation natives. Sa signature stricte de 32 octets est unique.
+- Revive Overhaul 2.1 capture toujours exclusivement le tuple déjà choisi par
+  MonUMod 30 via `MONSTERUNIQUE_GetUMods 0x38E310` et
+  `UNITS_GetRightSkill 0x34B400`. Après un `SrvDoFunc 58` réussi il rejette un
+  skill droit concurrent, puis rejoue `0x438A70(target,0,skillId,ownerGuid)`.
+  Aucun skill, aura, niveau ni tirage n'est inventé ou relancé.
+- Le témoin unique `0x55EB48` prouve que le chemin natif Revive active d'abord
+  le unit flag `0x80000000`, puis appelle
+  `STATES_ToggleState(monster,96,true)` à `0x55EB6E`. L'état 96 est donc un
+  marqueur D2R direct du Revive, indépendant de `pettype` et de l'état spécial
+  de la table IA.
+- Le hook `D2GAME_MONSTERS_AiFunction03 0x4A3A20` classe désormais l'unité par
+  `STATES_CheckState 0x3351B0(monster,96)`. Les hooks distance, vitesse et
+  marche restent doublement bornés par ce scope TLS et leurs return-sites
+  exacts. La pile conserve ainsi les réglages de leash même pour un skill
+  custom utilisant un autre `pettype`, sans toucher les autres familiers.
+- La politique courante supprime toute allowlist de build-name. L'identité
+  annoncée par D2RLoader est seulement journalisée; avant tout hook, 2.1
+  vérifie les entrées natives et les trois témoins uniques client, marqueur
+  Revive et Aura Enchanted. Une empreinte différente refuse proprement le
+  chargement. Les qualifications 92777 et 93847 restent deux matrices runtime
+  distinctes; l'une ne prouve pas l'autre.
+- L'audit du PluginPack épinglé et de la Suite ne trouve aucun propriétaire
+  concurrent pour `0x55A510`, `0x55E7E0` ou `0x34C730`. La compilation Release
+  et le test de politique 2.1 passent; les cold starts pile complète et les
+  témoins gameplay frais demeurent requis avant release.
+- Références sémantiques uniquement :
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`,
+  `source/D2Game/src/SKILLS/SkillNec.cpp:1490-1623`,
+  `source/D2Game/src/AI/AiUtil.cpp:1324-1348` et
+  `source/D2Game/src/MONSTER/MonsterUnique.cpp:84-92,601-652`. Aucune adresse,
+  structure ni ABI 32 bits n'est transposée.
+
+## Cast Triggers — événement doactive et niveau source
+
+- Le handler serveur central `0x43ACB0` porte l'ABI observée
+  `(game, unit, skillId, skillLevel, a5, a6, a7) -> int32`. Ses huit callsites
+  directs distinguent les exécutions manuelles `a5=1,a6=0,a7=0` des casts
+  d'item `a6=1`. Le retour non nul est produit seulement après le SrvDoFunc ou
+  le missile serveur réussi; Cast Triggers dispatch donc après ce retour.
+- Le lookup contextuel `0x097790` utilise les tables `+0x11B0/+0x11B8` et le
+  stride SkillsTxt `0x2EC` à `0x09780B`. Les offsets `flags +0x24`,
+  `anim +0x30`, `seqtrans +0x32` conservent l'ordre sémantique D2MOO après les
+  champs modernes insérés. Un record non répétitif accepte `SC=10` ou `SQ=18`
+  transitant vers `SC`. Un record portant le bit `repeat` 11 accepte également
+  `SQ -> SQ`, forme compilée d'Inferno dans BKVince 3.3, et emprunte la cadence
+  channeling gouvernée sans exception par skill ID.
+- L'événement natif `doactive` est l'index 4. Aucun appel natif du dispatcher
+  n'a été trouvé avec cet index; le wrapper `0x44D570` accepte un dommage nul,
+  construit le contexte attendu et appelle `0x5881E0`. Le plugin ne remplace
+  aucune fonction de table d'événements.
+- EventFunc20 `0x583B30` lit l'identifiant de stat dans le high word de son
+  payload, obtient la chance sur l'unité, effectue le jet modulo 100, puis
+  décode le skill id et son niveau à l'aide du shift/masque contextuels. Il
+  appelle `0x5896E0` aux callsites `0x583C7F/0x583CB4` ou `0x589820` à
+  `0x583CE1`. Melee Splash reste propriétaire de l'entrée EventFunc20 et
+  transmet le chemin natif; Cast Triggers ne la hooke pas.
+- La branche `ItemTgtDo` de EventFunc20 exige une unité cible à `0x583C50`; si
+  elle est nulle, le callback retourne succès à `0x583CF6` sans caster. Avec
+  une cible, elle appelle `0x5896E0(target,skill,level,target,0)`. La branche
+  ordinaire appelle `0x5896E0(source,skill,level,target,1)` ou, sans unité,
+  prend les coordonnées de premier point par `0x34B940/0x34B8F0` avant
+  `0x589820(source,skill,level,x,y,1)`. Cela explique génériquement pourquoi un
+  proc auto/subject comme Frost Nova disparaissait après une source sans cible
+  comme Teleport; aucune paire de skills particulière n'est en cause.
+- Les helpers D2R `UNITS_GetDynamicPath 0x34AE80`, `PATH_GetX 0x341A20`,
+  `PATH_GetY 0x341A30` et `PATH_GetDirection 0x341990` portent respectivement
+  les ABI `(Unit*) -> DynamicPath*`, `(DynamicPath*) -> int32`,
+  `(DynamicPath*) -> int32` et `(DynamicPath*) -> uint8`. Leurs signatures
+  strictes de 68, 16, 16 et 16 octets sont chacune uniques. Le premier retourne
+  `Unit+0x38`; les trois autres lisent le X courant `+0x02`, le Y courant
+  `+0x06` et un byte directionnel brut `+0xBD`. Le callsite D2R `0x47B1F0`
+  sérialise ce byte avec les coordonnées courantes. Le setter `0x342860` borne
+  les valeurs à `0x4D`, et le test Cast Triggers du 27 août a observé `73` : le
+  domaine 0..63 de D2MOO n'est donc pas transposable au D2R actuel.
+- Le premier candidat Cast Triggers avait quantifié ce byte avec la table
+  D2MOO; Chain Lightning visait haut-gauche pendant que Fire Ball partait vers
+  le bas. Cette route est rejetée. Le candidat suivant capturait seulement
+  `UNITS_GetPathFirstPointX/Y 0x34B8F0/0x34B940` avant le handler source. Il a
+  produit un faux positif puis une instabilité directionnelle reproductible :
+  un point accepté par le caster de position ne constitue pas à lui seul un
+  contrat de facing fiable.
+- `PATH_SetDirection 0x342860` a l'ABI observée
+  `void (DynamicPath*, uint8)`. Son corps exact de 34 octets est unique, possède
+  20 xrefs natives, retourne sur path nul, borne toute valeur `>= 0x4D` à
+  `0x4D`, puis écrit le byte obtenu à `path+0xBD` et `path+0xBC`. Le premier
+  candidat setter a correctement restauré son entrée, mais cette entrée était
+  périmée : 16 Chain Lightning différemment visées ont toutes journalisé la
+  direction pré-handler `73`, et le kiting a reproduit le décalage Fire Ball.
+  Le remplacement post-handler a lui aussi observé `73` malgré des points visés
+  différents et a échoué en gameplay. Cast Triggers rejette donc les deux
+  timings et retire `PATH_GetDirection`/`PATH_SetDirection` de son chemin actif
+  et de son empreinte.
+- `SKILLITEM_HandleItemEffectSkill 0x589930` démontre le contrat natif utile :
+  il sauvegarde l'unité cible et le premier point courants, installe
+  temporairement soit l'unité reçue soit les coordonnées reçues, exécute le
+  handler central, puis restaure la cible ou le point original. Le candidat
+  Cast Triggers qui échantillonnait ce descripteur avant le handler a échoué :
+  les coordonnées courantes de l'unité ne sont pas censées égaler le premier
+  point, et tous les casts Chain Lightning observés ont produit
+  `target-matches-aim=0` malgré des cibles visibles valides.
+- Les mêmes logs donnent à Chain Lightning les flags compilés
+  `0x280C00A0400` et `unit-target-semantics=0`. Les flags Skills.txt ne peuvent
+  donc pas décider génériquement si le handler a consommé une unité. La
+  référence sémantique D2MOO confirme que `SKILLS_SrvDo026_ChainLightning`
+  délègue sa destination au créateur de missile : celui-ci utilise
+  `SUNIT_GetTargetUnit` lorsqu'une unité existe, sinon le premier point X/Y.
+  Aucune adresse ni ABI D2MOO n'est transposée.
+- Le candidat qui observait les wrappers
+  `UNITS_GetPathFirstPointX/Y 0x34B8F0/0x34B940` a amélioré les clics sur unité,
+  mais les logs 93847 ont compté 29 descripteurs unité, 34 self/none et zéro
+  position. Le désassemblage explique ce résultat : les wrappers tail-jumpent
+  vers `PATH_GetFirstPointX/Y 0x341CC0/0x341CD0`, tandis que le chemin
+  Shift-ground de Chain Lightning appelle directement ces accesseurs bas
+  niveau et contourne donc les deux hooks. Les accesseurs lisent les words
+  `DynamicPath+0x10/+0x12` et possèdent respectivement 29 et 26 xrefs natives.
+- Le candidat intermédiaire capture d'abord le `DynamicPath*` exact du joueur avec
+  `UNITS_GetDynamicPath 0x34AE80`, puis observe dans un scope TLS
+  `SUNIT_GetTargetUnit 0x48FE20` et les accesseurs bas niveau
+  `PATH_GetFirstPointX/Y 0x341CC0/0x341CD0`. Les appels X/Y ne sont retenus que
+  lorsque leur pointeur est exactement celui du joueur source. Une unité
+  retournée devient le descripteur unité; une résolution nulle suivie d'une
+  paire X/Y complète devient position; aucun accès devient self/none. Les
+  wrappers et `PATH_GetX/Y` ne sont plus hookés ni fingerprintés. Aucun facing
+  n'est reconstruit ou écrit, et aucun repli vers une autre cible n'est essayé.
+- La matrice BKVince du 28 août a invalidé ce contrat comme source principale :
+  War Cry arrivait systématiquement au handler sans aucun appel aux trois
+  accesseurs observés, et Taunt y arrivait parfois sans appel malgré une cible
+  valide. Le handler d'un skill ne consomme donc pas nécessairement le
+  descripteur d'entrée qui a déclenché ce cast. Cette observation reste utile
+  comme repli pour les ticks de channeling exécutés hors du scope d'entrée,
+  mais elle ne constitue plus la visée autoritaire d'un cast manuel initial.
+- Les callbacks serveur des actions joueur, référencés par la table
+  `0x1D2A790` pour les opcodes `0x01..0x12`, convergent vers deux exécuteurs
+  communs. Les actions de position, Shift et maintien compris, atteignent
+  `0x4FDB40` avec l'ABI observée
+  `int32 (game, player, x, y, argument, activeSkill)`. Les actions sur unité
+  atteignent `0x4F8DE0` avec l'ABI observée
+  `int32 (game, player, targetType, targetGuid, activeSkill, argument6,
+  argument7)`; cette fonction résout elle-même la cible par
+  `SUNIT_GetServerUnit 0x48FE80`. Les prologues stricts de 36 et 28 octets, et
+  le témoin strict de 50 octets du resolver, sont chacun uniques dans le corpus
+  gouverné.
+- Les deux exécuteurs appellent synchroniquement la finalisation du mode joueur
+  à `0x42D2C0`, mais la finalisation ne contient aucun appel direct au handler
+  central. Le runtime 3.3.93847 confirme cette séparation : sur 64 handlers
+  admissibles, aucun n'a exécuté pendant le scope TLS de l'exécuteur d'entrée.
+  La position ou l'identité d'unité doit donc survivre à son retour dans un
+  record borné par `(game, player, skill)`; l'unité est conservée comme
+  type/GUID et résolue de nouveau seulement au handler correspondant. Le record
+  d'un channel reste disponible pour les ticks suivants et tout nouvel input du
+  joueur le remplace. L'observation dans le handler demeure le repli.
+- Le témoin strict de 24 octets à `0x33DBA0` lit `D2Skill+0x00` comme pointeur
+  SkillsTxt et teste le word du record à `+0x00`. Cast Triggers valide cette
+  séquence avant de lire ce word comme identifiant natif du skill actif afin
+  d'associer l'input au handler différé.
+- Les ABI des casters sont `(caster,skillId,skillLevel,target,flag)` pour
+  `0x5896E0` et `(caster,skillId,skillLevel,x,y,flag)` pour `0x589820`. Leurs
+  signatures strictes étendues à 45 et 43 octets sont uniques. Cast Triggers
+  substitue son marqueur positif réservé uniquement dans son TLS `doactive`,
+  puis suspend ce contexte pendant le cast déclenché afin qu'aucun proc
+  imbriqué ne l'hérite.
+- D2MOO PropertyFunc11 masque le niveau avec `63` avant de l'ajouter au skill
+  décalé de six bits. Le premier contrat `max=64` produisait donc un niveau
+  interne zéro : le proc fonctionnait, mais le testeur a observé que la ligne
+  `descfunc=15` disparaissait complètement. Le chemin D2R `descfunc=15` commence
+  à `0x2D7F38`, décode le même layer skill/niveau et suit des branches de
+  présentation jamais prévues pour un niveau de proc nul. Le contrat 0.1.0
+  réserve désormais `max=63`, valeur positive que le plugin remplace pendant
+  son seul dispatch; les niveaux fixes disponibles sont 1..62. Le fixture doit
+  encore fournir la preuve visuelle fraîche de la ligne et du niveau effectif.
+- Le patch PluginPack Whirlwind CTC à `0x589736` et son équivalent position à
+  `0x58986B` se trouvent dans les corps natifs, après les prologues possédés par
+  Cast Triggers. Aucun overlap de bytes n'est présent; le cold start pile
+  complète reste néanmoins le gate de coexistence autoritaire.
+- La politique du 25 août 2026 retire toute allowlist de build-name/version.
+  Cast Triggers journalise l'identité reçue puis vérifie 26 témoins exacts
+  avant le premier hook, dont les deux exécuteurs d'entrée, le resolver serveur,
+  la séquence unique à `0x43ACEC` qui encode `game+0x106` et l'appel SkillsTxt,
+  et la séquence unique à `0x09780B` qui encode le stride `0x2EC`.
+  Toute différence refuse le chargement; une correspondance n'est pas une
+  revendication de qualification pour un build qui n'a pas sa propre matrice.
+- Références sémantiques uniquement :
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`,
+  `source/D2Game/src/SKILLS/Skills.cpp:2445-2582`,
+  `source/D2Game/src/SKILLS/SkillItem.cpp:1632-1680,1925-2040` et
+  `source/D2Common/src/Items/ItemMods.cpp:3634-3698`. Aucune adresse,
+  structure ni ABI 32 bits n'est transposée.
+
+## Player sequence tables — baseline D2R 3.3.93847
+
+- `SKILLS_GetSeqNumFromSkill` à `0x33DBC0` lit pour un joueur le byte
+  `SkillsTxt.seqnum` à `+0x33` au site `0x33DC42`. Le chemin monstre reste
+  distinct; aucune équivalence avec `monseq.txt` n'est inférée.
+- `DATATBLS_GetSeqRecordFromUnit` à `0x3CB890` indexe la table runtime
+  `0x2386650[seqnum]`, sélectionne une des 14 classes d'armes via la table
+  `0x2386730`, puis choisit le record selon le mode et la frame.
+- Le descripteur mesure 24 octets. La preuve native à `0x3CB987` construit
+  `index * 3 * 8`; les champs capturés sont pointeur de records, nombre de
+  frames de séquence, nombre de frames d'animation et QWORD auxiliaire `0x100`.
+- Un record mesure six octets : `uint16 sequence`, puis les bytes `mode`,
+  `frame`, `direction` et `event`. La baseline contient 808 records, 47
+  tableaux runtime et 44 contenus uniques.
+- La table contient un slot nul suivi de 25 groupes actifs et 14 classes
+  d'armes, soit 350 routes : 235 présentes et 115 nulles. Les groupes 24
+  `Cleave` et 25 `Mirrored Blades` sont propres au runtime courant par rapport
+  à l'oracle D2MOO utilisé.
+- Les 23 groupes legacy et 34 tableaux nommés par
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316` correspondent exactement aux
+  routes et octets courants qu'ils décrivent. D2MOO reste une preuve sémantique
+  seulement; aucune adresse, structure ou ABI 32 bits n'est transposée.
+- Tous les groupes, descripteurs et records capturés sous D2R 3.3.93847 ont un
+  témoin byte-exact dans l'image d'analyse gouvernée. Le groupe 6 `Inferno` a
+  deux seeds statiques identiques (`0x1992660` et `0x1992DF0`), mais une route
+  runtime unique; l'extracteur conserve explicitement cette ambiguïté au lieu
+  de fabriquer une unicité.
+- Le seed statique du mapping des 14 classes est unique à `0x19EAF70` et
+  concorde avec la table runtime `0x2386730`.
+- Les sorties normalisées, le manifeste de hashes, le captureur runtime et les
+  TSV déterministes sont gouvernés par
+  `Mission/player-sequence-tables-3.3.md`. Cette phase ne prouve pas encore le
+  contrat de propriété, la durée de vie, le remplacement de longueurs variables
+  ni l'autorité multijoueur; ces points bloquent toute implantation.
+
+## Gear Swap Inventory — BodyLoc étendus autonomes
+
+- Le handler serveur `D2GAME_SERVER_HandleWeaponSwap` à `0x4BEA50` porte l'ABI
+  observée `(game, player, packet, packetSize) -> int32` et exige exactement
+  30 octets. Il est atteint après la résolution du binding joueur : un plugin
+  l'observant conserverait donc un remapping de `W` vers `X` sans prendre un
+  second hook de `UI_DispatchMessage`.
+- Le handler appelle le batch commun de changement d'état d'objets à
+  `0x471E90`. Le validateur final à `0x474700` accepte les emplacements vanilla
+  utiles au weapon set, au body, au cursor et au stash, mais refuse la page
+  physique protégée 6. Cela invalide une seconde page, pas le mapping BodyLoc
+  autonome maintenant retenu.
+- Le binaire D2RCore exact de la baseline implémente
+  `InventoryServiceV1::registerPlayerPage` à sa RVA privée `0x2A5620` avec un
+  état global single-provider. La première inscription possède la page
+  physique 6; toute inscription suivante est refusée comme conflit.
+- La pile BKVince active contient `d2rl-charm-inv.dll`. Ses références de
+  services et son log frais prouvent qu'il possède déjà cette page protégée,
+  son panneau, son bouton et une grille `10 x 4`. Une seconde page Gear Swap ne
+  peut donc pas coexister avec Charm Inventory sous V1.
+- La collision V1 reste une preuve gouvernée, mais Vincent rejette cette
+  dépendance. L'architecture sélectionnée utilise les BodyLoc secondaires
+  13–20 et laisse Charm Inventory actif sans consommer son service de page.
+- Le sérialiseur lit `ItemData+0x54`, borne le BodyLoc à 15 et écrit quatre bits
+  au witness unique `0x37CB37`. Les lecteurs quatre bits uniques commencent à
+  `0x3781F7` et `0x3789A4`, puis rangent le résultat dans `ItemData+0x54`.
+  Le format expérimental conserve `0..12`; `15` devient le sentinel suivi de
+  trois bits donnant `13..20`. Le même chemin étant partagé avec les paquets
+  d'items, le prototype doit refuser le multijoueur.
+- `INVENTORY_GetItemFromBodyLoc` à `0x3886D0` et
+  `INVENTORY_PlaceItemInBodyLoc` à `0x3891E0` ont des prologues uniques et deux
+  gardes `<=12`. `INVENTORY_ResolveOccupancyGrid` à `0x38B070` copie width et
+  height du descripteur, alloue `width*height` pointeurs et refuse ensuite des
+  dimensions différentes. Le descripteur body runtime `0x237B620` doit donc
+  être vérifié à `13 x 1` puis étendu à `21 x 1` avant toute allocation joueur.
+- Aucune corruption de sauvegarde n'a été observée. Le risque est une hypothèse
+  acceptée qui sera testée uniquement sur des personnages jetables hashés;
+  retirer le plugin avec des objets en 13–20 est interdit jusqu'à preuve d'une
+  procédure de récupération.
+
+## Armageddon et Hurricane en chance-to-cast
+
+- Le helper serveur d'effet d'objet à `0x589930` refuse immédiatement une
+  ligne SkillsTxt dont le word `ItemEffect` à `+0x20A` vaut zéro. Une fixture
+  Fallen a reproduit l'assertion `ptSkill->nItemEffect != 0`; forcer
+  temporairement `ItemEffect=1` supprime cette assertion sans faire apparaître
+  Armageddon.
+- Le callback partagé `SrvDo124` à `0x575DE0` appelle
+  `UNITS_GetUsedSkill`, puis refuse le lancement si le noeud absent ou son
+  SkillsTxt ne désigne pas le skill demandé. C'est le second gate indépendant
+  du défaut CtC.
+- La liste de skills est à `Unit+0x100`, son premier noeud à `+0x00` et le
+  used skill à `+0x18`. Un noeud D2Skill porte son SkillsTxt à `+0x00`, son
+  suivant à `+0x08`, son seed `Param1` à `+0x24`, son niveau à `+0x40`, son
+  owner GUID à `+0x4C` et le filtre du resolver à `+0x54`.
+- L'active callback Armageddon à `0x574E90` résout obligatoirement le skill via
+  `SKILLS_GetHighestLevelSkillFromUnitAndId` à `0x33DD40`, puis consomme et
+  renouvelle `Param1`. L'active callback Hurricane à `0x575600` ne dépend plus
+  d'un noeud de skill une fois l'état initial créé.
+- Le mécanisme retenu dans `Mission/armageddon-ctc-fix.md` reste synchrone et
+  borné : `ItemEffect` est restauré après le helper, le used skill synthétique
+  est stack-local pendant SrvDo124, et le noeud Armageddon synthétique est lié
+  seulement pendant chaque active callback. Aucun noeud fabriqué n'est
+  persistant ni sérialisé.
+- Le témoin d'expiration à 250 frames a confirmé que l'état natif s'arrête, mais
+  a révélé que la table interne 0.1.0 conservait encore sa graine. La 0.1.1
+  emprunte sans le hooker `STATES_CheckState 0x3351B0`, dont la signature
+  stricte de 32 octets est unique, pour effacer l'entrée avant le callback si
+  l'état a disparu. Après un retour zéro, une seconde vérification efface
+  l'entrée seulement si le callback vient de retirer l'état.
+- Le retour du callback ne constitue pas seul une preuve d'expiration : la
+  référence sémantique D2MOO supprime l'événement et retourne zéro si l'état est
+  absent (`SkillDruid.cpp:1074-1081`), mais peut aussi retourner zéro après
+  avoir replanifié l'événement lorsque la pièce ou la création du missile ne
+  convient pas (`SkillDruid.cpp:1122-1150`). Le prédicat d'état est donc le
+  discriminateur correct; aucune adresse D2MOO n'est transposée.
+- La preuve sémantique est corroborée par
+  `D2MOO@19019806df7f3e877fa105b05395d1e3597e2316`, fichiers
+  `D2Game/src/SKILLS/SkillItem.cpp` et
+  `D2Game/src/SKILLS/SkillDruid.cpp`. Aucune adresse ni structure 32 bits n'est
+  transposée. Les RVA et octets ci-dessus proviennent exclusivement du corpus
+  natif gouverné commun aux cibles 3.2.92777 et 3.3.93847.
+
+## Skill Trees Revamp — constructeur page IV et positions libres
+
+- Le constructeur logique des widgets de classe est borné à
+  `0x14C4520..0x14C5E96`. Le wrapper unique `0x14C6C70` l'appelle avant
+  `SKILLTREE_RebuildPageWidgets 0x14C7720`; ce dernier rafraîchit donc des
+  enfants existants et ne constitue pas leur factory.
+- La boucle native du constructeur émet les couples `(Tab0, SkillPage 1)` à
+  `(Tab2, SkillPage 3)`. Modifier son seed `3 -> 4` déplacerait ces pages et
+  contaminerait un état réutilisé. Le seed exact à `0x14C488A` porte un
+  témoin unique de 28 octets qui initialise `R14D`, `R13D` et `[rsp+0x3C]` à
+  3, puis `EAX` et `[rsp+0x38]` à 0. La couture minimale prouvée est son tail à
+  `0x14C5325` : neuf octets uniques, couverts par un témoin unique de 34 octets
+  commençant à `0x14C5313`.
+- Après la troisième page, un relais feuille peut installer `R13D=4` et
+  `[rsp+0x3C]=4`, puis reprendre le corps à `0x14C48B0`. Après cette itération
+  `(EAX=4,R13D=3)`, il restaure `R13D=0`, `[rsp+0x3C]=0`, `EAX=3` et
+  `[rsp+0x38]=3` avant la continuation `0x14C532E`. Désactivé, il reproduit
+  exactement le test et la branche vanilla.
+- L'entrée ciblée `0x14C48B0` possède un témoin exact unique de 22 octets :
+  elle résout d'abord `TabEAX` par `SKILLTREE_FindTabWidget`, puis rejoint le
+  tail si le tab manque. Le relais ne peut pas viser ce corps sans que ce témoin
+  et la continuation aient tous deux passé l'empreinte fail-closed.
+- Après cette boucle, la factory General Skills reste historiquement fixée à
+  `Tab3` : le bloc unique de 15 octets à `0x14C536C` charge le nom littéral,
+  conserve `RCX=SkillTreePanel` et appelle `UI_FindChildWidgetByName`. Le
+  remplacement 0.8.0, désassemblé byte-exact, fait `push 4; pop r14; mov
+  edx,r14d; mov rcx,r12; call SKILLTREE_FindTabWidget 0x14C5F60`. Il est
+  stack-neutral, ne modifie aucun flag, sélectionne `Tab4` par une ABI déjà
+  gouvernée et laisse `R14D=4` alimenter naturellement
+  `SKILLTREE_FindTextTabWidget` pour `TextTab4`. Le patch complet de 15 octets
+  et son contexte successeur unique à `0x14C537B` sont fingerprintés. Le témoin
+  unique de 19 octets à `0x14C53B9` prouve ensuite `mov edx,r14d; mov rcx,r12;
+  call SKILLTREE_FindTextTabWidget` et ferme la chaîne fail-closed jusqu'à
+  `TextTab4`; aucun troisième hook renderer n'est requis.
+- Le parent résolu est sauvegardé à `[rsp+0x68]`, puis rechargé dans `RSI` sous
+  le témoin unique `0x14C5854`. Le bloc unique `0x14C59D0` cherche ensuite
+  `CommonSkillsContainer` et `ItemSkillsContainer` sous ce même tab. Le guard
+  unique `0x14C59F6` abandonne la population si l'un des deux manque ou si le
+  root du panel ne fournit pas son `ButtonTemplate` à `panel+0x8F8`. Le contrat
+  softcode clavier/souris exige donc `Tab4`, `TextTab4`, `ActivateTab:4`, les
+  deux conteneurs et un `SkillSelectButtonWidget` racine nommé
+  `ButtonTemplate`.
+- Le chemin General/Item conserve les catégories natives : le conteneur Common
+  reçoit la catégorie 3, tandis que les catégories 4 à 6 alimentent le
+  conteneur Item. Les oskills font partie de ce second ensemble, mais le corpus
+  ne justifie pas de le décrire comme un filtre « oskills seulement ». L'onglet
+  combiné reste non investissable et ne crée aucun sixième état.
+- Au rebuild, le témoin unique de 33 octets à `0x14C7BA6` lit l'état courant et
+  passe dynamiquement cet index à `SKILLTREE_FindTabWidget` avant le gate
+  General. Les gates déjà déplacés de 3 à 4 font donc naturellement reconstruire
+  `Tab4`; aucune seconde retargetisation de lookup n'est nécessaire.
+- Chaque skill est obtenu depuis le compte dynamique de classe, alloué sur
+  `0xB88` octets, construit par `UI_ButtonWidget_Constructor 0x86E920`, reçoit
+  son payload natif, clone son `CounterTemplate` par
+  `UI_CloneWidgetTree 0x855010`, puis est attaché par
+  `UI_Widget_AddChild 0x854DE0`. Rejouer la boucle pour la page IV conserve
+  donc les vrais clics, tooltips, compteurs et chemins d'allocation D2R.
+- Le callsite unique `0x14C50F1` appelle
+  `UI_SetWidgetLocalPosition 0x856FB0`. Son témoin contextuel unique commence à
+  `0x14C50D8`; le setter a l'ABI observée `(widget, PointI*)` et écrit seulement
+  les coordonnées locales `widget+0x70/+0x74`. Skill Trees Revamp peut ainsi
+  remplacer `x/y` à ce seul callsite et laisser ses 98 autres consommateurs
+  natifs intacts.
+- Deux chemins indépendants à `0x14C7536` et `0x14C7D28` lisent le pointeur de
+  payload à `SkillWidget+0x668`, puis l'identifiant signé 32 bits à
+  `payload+0`. Cet identifiant correspond à l'ordinal physique zéro-based de
+  la ligne `skills.txt`; la colonne documentaire `*Id` n'est pas autoritaire.
+- Côté producteur, le témoin exact unique de 21 octets à `0x14C5020`
+  contient le `LEA` de `SkillWidget+0x668` à `0x14C5027`; le `LEA` nu n'est pas
+  unique. Le bloc exact unique de 20 octets à `0x14C50A0` publie ensuite le
+  pointeur temporaire dans ce slot avant le call de position. Le contexte
+  successeur de 21 octets à `0x14C50F6` est également unique.
+- La boucle accepte un nombre dynamique de lignes de skill et construit chaque
+  record correspondant à la page active. Le bloc exact unique de 59 octets à
+  `0x14C4A9A` prouve les clamps `SkillColumn 1..3` et `SkillRow 1..6`. Le témoin
+  unique de 26 octets à `0x14C4B0A` passe ensuite `SkillPage` dans `R8D`, la
+  colonne clampée moins un dans `R9D` et la rangée clampée moins un comme
+  cinquième argument au formatter; plusieurs cellules étendues peuvent donc
+  partager un nom dynamique.
+- La table locale historique est remise à zéro par neuf stores XMM à
+  `0x14C4992..0x14C49D1`, puis le widget complété est écrit à `0x14C529F` selon
+  `6 * clampedColumnIndex + clampedRow`, soit un des 18 slots. L'audit exhaustif
+  des 1 435 instructions du corps borné trouve uniquement cette initialisation
+  et cette écriture : aucune lecture, comparaison, fuite d'adresse, transmission
+  à un callee, destruction ou cleanup. Un alias écrase donc un pointeur jamais
+  consommé; cette table n'impose aucune limite fonctionnelle démontrée à 18.
+- Le rebuild lit le nombre réel d'enfants à `0x14C7CDF`, les énumère par index
+  avec `UI_GetChildWidgetByIndex` à `0x14C7CF5`, puis charge le payload à
+  `SkillWidget+0x668` et son Skill ID signé à `payload+0` dans le témoin
+  `0x14C7D28`. Le chemin d'interaction indépendant à `0x14C7536` consomme la
+  même identité. Les noms clampés et la table locale ne sont donc pas l'identité
+  opérationnelle des skills.
+- La source 0.5.0 retire le plafond artificiel et le refus d'alias sans nouveau
+  hook. Une page étendue, une page de plus de 18 skills ou une page contenant un
+  alias clampé exige une position résolue pour chaque skill; les collisions X/Y
+  finales restent refusées. Cette conclusion est une preuve statique commune
+  aux builds gouvernés 3.2.92777 et 3.3.93847, pas une qualification runtime.
+- Les carrés sombres, cadres et flèches vanilla sont peints dans le fond de
+  page; `CounterTemplate` est textuel. Ce lot ne déplace ni ne synthétise ce
+  chrome, les connexions, les titres ou les fonds. Ces surfaces restent un lot
+  distinct avant toute qualification visuelle générique.
+- Le callsite unique `0x14C5214` clone précisément ce `CounterTemplate` par
+  `UI_CloneWidgetTree 0x855010`. `RCX=RDI` porte le SkillWidget dont le payload
+  `+0x668` est déjà publié, `RDX=[rsp+0x60]` porte le template et le clone attaché
+  revient dans `RAX`. Un wrapper étroit pourrait donc appeler l'original une
+  fois, filtrer l'ordinal Skill ID puis déplacer seulement le clone avec
+  `UI_SetWidgetLocalPosition 0x856FB0`. Le setter de rectangle complet
+  `UI_SetWidgetLocalRect 0x857000` copie `{x,y,w,h}` dans `+0x70..+0x7C`. Cette
+  couture ne produit cependant aucun carré ni aucune flèche, et n'est pas
+  requise lorsque l'empreinte composite tient déjà dans la zone utile.
+- L'audit de l'overlay automatique identifie le page container créé/finalisé à
+  `0x14C4904`, attaché à `TabN` par le callsite unique `0x14C4925`, puis utilisé
+  comme parent de chaque SkillWidget à `0x14C5284`. Un overlay ajouté comme son
+  premier enfant hériterait de la visibilité native de `TabN` à
+  `0x14C7850..0x14C786B`, du thread UI de
+  `SKILLTREE_InitializePanelWidgets 0x14C6C70` et de la destruction récursive de
+  `UI_Widget_AddChild 0x854DE0`/`UI_Widget`.
+- `UI_ImageWidget_SetFilename 0x859B20` est identifié à haute confiance par son
+  appel `0x14C4979` sur le `TabN/Background` layout-backed. Son ABI observée
+  `(ImageWidget*, StringView*)` copie le chemin logique à `+0x108`, charge via
+  `0x858990`, puis met à jour l'asset et sa géométrie intrinsèque par
+  `0x859710/0x8574D0`. Le candidat factory `0x859BF0` reste à confiance moyenne
+  et n'est pas appelé. Le contrat 0.8.0 exige plutôt un dernier enfant softcodé
+  `ChromeContainer` sous le Tab, avec six templates `ImageWidget` déjà typés et
+  non interactifs. Le wrapper de `0x14C4925` clone ces templates avec le helper
+  gouverné `UI_CloneWidgetTree 0x855010`, pose leurs rectangles avec
+  `UI_SetWidgetLocalRect 0x857000`, puis délègue à `UI_Widget_AddChild
+  0x854DE0`. Le ChromeContainer précède ainsi le page container natif et ses
+  SkillWidgets dans l'ordre des enfants, sans factory ni cast nouveau.
+- `UI_GetCumulativeWidgetScale 0x1E6750`, identifié par une signature d'entrée
+  unique de 31 octets, suit récursivement le parent `Widget+0x30` et multiplie
+  chaque `Widget+0x80`. Le factory `UI_ButtonWidget_Factory 0x86EE60`, lui aussi
+  identifié par une signature unique, alloue exactement `0xB88` octets et
+  tail-call le constructeur `0x86E920` avec le nom et le parent préservés.
+- Le rendu du ButtonWidget à `0x8F07BD..0x8F0853` multiplie explicitement le
+  scale parental par son propre `+0x80` avant de dimensionner son image. Le
+  `CounterTemplate` est cloné à `0x14C5214` avec ce SkillWidget comme parent et
+  les enfants sont rendus par `0x855B00`; la propagation parentale est donc
+  fermée, mais le renderer texte concret du compteur reste à lier byte-exact.
+- Le tooltip de compétence à `0x14C42BA..0x14C4429` calcule la position écran,
+  multiplie le scale parental par `SkillWidget+0x80`, applique ce produit à la
+  largeur et à la hauteur, puis transmet le rectangle obtenu au dessin. Le
+  placement du tooltip suit donc un SkillWidget compacté.
+- Le hit-test générique `0x8566E0..0x8567E8` et la conversion inverse des
+  coordonnées parentes à `0x8572B0..` consomment eux aussi les scales. La vtable
+  ButtonWidget `0x1CE4148` est toutefois nulle dans les deux images PE statiques
+  gouvernées : aucun slot concret ne peut encore être attribué honnêtement au
+  SkillWidget. Skill Trees Revamp ne compacte donc pas douze rangées par un
+  write direct de scale et conserve le refus des chevauchements réels.
+- Le candidat diagnostic 0.7.1 embarque une sonde passive, activée
+  seulement avec les diagnostics existants. La couture de position déjà
+  possédée publie le dernier SkillWidget géré de la page IV; la couture de fin
+  de page déjà possédée ne l'inspecte qu'à `RestoreTerminal`, donc après le
+  clone `CounterTemplate 0x14C5214` et l'attachement `0x14C5284`. Elle
+  journalise une fois la vtable du SkillWidget, ses slots `+0x18/+0x80`, puis
+  jusqu'à soixante-quatre enfants avec vtable, rectangle et scale; le rectangle connu
+  `{148,82,52,52}` identifie le compteur. Aucun widget n'est muté et aucun hook
+  n'est ajouté. La sonde 0.7.1 est compilée et déployée, mais non exécutée comme
+  témoin runtime autorisé. Ce témoin doit encore lier le slot de hit-test et le
+  renderer du CounterTemplate avant implantation.
+- `UI_DispatchMessage 0x843D90` demeure exclu et reste sous son propriétaire
+  existant. Aucun propriétaire concurrent des coutures `0x14C5325` et
+  `0x14C50F1` n'a été trouvé dans la Suite ou les cinq plugins eezstreet.
+- Toutes les surfaces ci-dessus sont byte-exact dans le corpus gouverné commun
+  aux builds `3.2.92777` et `3.3.93847`. La source 0.8.0 conserve l'empreinte
+  fail-closed et les deux hooks renderer, puis ajoute seulement le retarget
+  factory `0x14C536C` aux onze mutations de panneau historiques. Build, tests,
+  audit DLL, déploiement et runtime 0.8.0 ne sont pas exécutés dans ce lot.
+- Les deux hooks renderer sont installés pass-through avant les douze patches de
+  panneau, le retarget factory étant le dernier, et leur gate ne s'ouvre
+  qu'après le commit complet des quatorze mutations. Le SDK courant ne
+  fournit ni transaction atomique ni unpatch : tout commit partiel demeure
+  chargé, inactif, comptabilisé et exige un cold restart. La baseline gouvernée
+  D2RLoader 1.1 conserve les DLL chargées pendant la vie du processus et appelle
+  l'unload seulement au shutdown; le hot reload n'est pas revendiqué.
 
 ## MapSense 0.12.0 — table cliente complète et tombe correcte de Duriel
 
@@ -1974,23 +2803,255 @@ confiance explicite.
   active libère le runtime; aucune sauvegarde ni action gameplay ISC12 n'a
   encore été exécutée.
 
-## ISC12 — disposition runtime du conteneur persistant
+## 2026-08-31 — MapSense 0.13.21 : frontière statique des noms distants
 
-- Le premier write réel du candidat à enveloppe a produit exactement 499
-  octets : 96 octets d'enveloppe ISC12 suivis d'un D2S valide de 403 octets.
-  Le writer et la primitive atomique ont donc rempli leur contrat local.
-- D2RLoader 1.2 a néanmoins annulé le lancement au frontend avec
-  `route=prepare result=invalid-character`. Une enveloppe externe opaque est
-  incompatible avec ce trajet même lorsque son payload interne est valide.
-- La DLL runtime conserve désormais les conteneurs D2S/D2I standards. Le hook
-  reader valide le buffer inchangé; le hook writer valide puis retourne à la
-  continuation native avant `CREATE_ALWAYS`, afin que le couple D2RCore
-  writer/closer compose normalement `.d2rl`, backups et environnement.
-- Vincent accepte la persistance native non atomique et fixe le clean-sheet
-  comme contrat de support : nouveau personnage ou migration externe future,
-  backups obligatoires, aucun chargement direct d'une save vanilla/non-ISC12.
-  L'enveloppe et l'atomic writer restent des composants unit-testés réservés à
-  l'outillage de migration.
+- La cause vérifiée des libellés 0.13.20 décalés était interne à MapSense :
+  le collecteur fabriquait un point au centre de l'enveloppe des `DrlgRoom`
+  de chaque `Level`, sans preuve native d'une sortie ou d'un waypoint. Ce
+  producteur générique est supprimé; un nom distant ne peut plus être publié
+  qu'avec un `RoomTile` ou un `PresetUnit` exact.
+- `DRLGROOM_CreateActiveRoom 0x3289A0` sépare trois préconditions statiques
+  et la création complète. Son témoin strict à `0x3289B3` teste le bit 24
+  avant `DRLGROOM_LoadTileLibraries 0x3F3970`, le bit 25 et le type 2 avant
+  `DRLGPRESET_AddPresetUnitDescriptors 0x3DE0E0`, puis le bit 20 avant
+  `DRLGROOM_BuildRoomAndActiveRoom 0x328FD0`.
+- Le corps strict de `0x328FD0` prouve la frontière recherchée : il assure
+  d'abord les liens statiques par `0x3608A0`, appelle
+  `DRLGROOM_InitializeStaticRoomGrids 0x3F38D0`, puis
+  `DRLGROOM_AddStaticMapTiles 0x3F3930`, et seulement après appelle
+  l'allocateur d'`ActiveRoom 0x326480`. MapSense 0.13.21 résout et appelle les
+  quatre phases statiques nécessaires, mais ne résout jamais `0x326480` dans
+  le nouveau chemin de capture.
+- `DRLGROOM_AddStaticMapTiles` pose le bit `HAS_ROOM` 20 à `DrlgRoom+0x50`.
+  Après copie bornée des descripteurs exacts, MapSense appelle
+  `DRLGROOM_ReleaseRoomData 0x3F3AA0(room, 0)` seulement pour les rooms dont
+  il possède le lease statique, seulement si `DrlgRoom+0x58` est toujours
+  nul. Le témoin strict à `0x3F3ADC` prouve l'effacement de `+0x58` puis le
+  test et l'effacement du bit 20.
+- Le sélecteur est borné aux rooms dont les flags `+0x50` portent les bits
+  de warp `0x00000FF0` ou de waypoint `0x00030000` et dont le descripteur
+  requis manque. Une room déjà active ou déjà marquée `HAS_ROOM` n'est ni
+  reprise ni nettoyée. Le scheduler existant reste progressif, un `Level` par
+  callback UI; aucun travail en masse n'est réintroduit au clic ou au
+  changement d'acte.
+- D2MOO reste une référence sémantique pour la distinction entre
+  descripteurs statiques `RoomTile`/`PresetUnit` et unités actives; tous les
+  RVA, signatures, flags, offsets et ABI x64 ci-dessus proviennent du corpus
+  gouverné commun 92777/93847. La build Release `/W4 /WX` et CTest `1/1`
+  passent avant qualification runtime; la preuve gameplay et FPS reste à
+  produire.
+
+## 2026-08-31 — MapSense 0.13.22 : témoin seed et atlas externe fail-closed
+
+- Le chemin statique 0.13.21 restait un producteur de données D2R éloignées et
+  conservait donc un coût gameplay observable. Le candidat 0.13.22 ne démarre
+  plus ce scheduler : le clic Reveal Act/All ne matérialise aucune room
+  distante, aucun `ActiveRoom`, aucune collision, unité ou table de monstre.
+- Le témoin strict de 129 octets à `D2R+0x326E89` prouve la relation native du
+  seed. Le constructeur initialise `{mapSeed, 0x29A}`, calcule
+  `mapSeed * 0x6AC690C5 + 0x29A`, stocke le seed original à `Drlg+0x840` et le
+  mot bas du résultat à `Drlg+0x860`. MapSense lit les deux et refuse la
+  requête si cette relation ne correspond pas; les constantes sont couvertes
+  par trois vecteurs de test, dont le seed `0x12345678` de la preuve libd2.
+- Un worker privé lance `RuffnecKkMapSenseMapgen.exe` caché, hors des threads
+  gameplay/UI/render. Le protocole texte versionné transporte uniquement les
+  niveaux, sorties, waypoints exacts et rectangles de rooms. Avant toute
+  publication, MapSense exige une égalité exacte entre l'origine et tous les
+  rectangles du niveau courant déjà généré par D2R et ceux produits pour le
+  même seed, la même difficulté et le même acte.
+- Les réponses tardives sont rejetées par génération de session et numéro de
+  requête. Le graphe publié est borné à la composante connectée du niveau
+  courant, ce qui exclut les branches spéciales déconnectées. Toute absence,
+  erreur, divergence géométrique, dépassement ou timeout échoue fermé et
+  laisse le Reveal natif actif sans réactiver l'ancien chargement distant.
+- Le générateur prototype repose sur le commit libd2
+  `ac4d735e57fcab6a3c356f810bb256da95a93716`. Un benchmark Release antérieur
+  a généré les cinq actes en environ 45–48 ms et l'acte III en environ 6–7 ms;
+  cette mesure est celle du processus externe et ne constitue pas encore une
+  qualification FPS en jeu. Le build MapSense Release `/W4 /WX` et CTest
+  `1/1` passent; la preuve live doit encore confirmer le seed, les coordonnées,
+  l'exhaustivité des noms et l'absence de chute FPS.
+- La qualification live sur le runtime officiel D2R 3.3.93847 confirme le
+  témoin exact pour le seed `1395822899`, difficulté 2, acte 2, niveau 75 : le
+  helper publie 28 niveaux connectés, 60 sorties canoniques, 9 waypoints et le
+  témoin byte-exact des 48 rectangles courants en 22–34 ms. Aucun échec de
+  seed, de protocole ou de géométrie n'est observé.
+- Cette même preuve invalide toutefois la publication label-only par le
+  projecteur natif local. Avec un clip natif `3840x2160`, le catalogue complet
+  `60/9/28` n'admet que `1/1/0` sortie/waypoint/fallback dans le viewport de
+  Kurast Docks; un déplacement manuel de l'automap supérieur à 1 000 pixels ne
+  rend aucun autre waypoint distant visible. Le projecteur D2R fonctionne
+  donc comme un projecteur du viewport local, pas comme un atlas d'acte.
+- Le chemin 0.13.22 arrête correctement la boucle de replay illimitée observée
+  auparavant, mais le clic `revealmap` natif coûte encore 937–953 ms et une
+  passe de réconciliation déjà en vol ajoute 828–829 ms. Avant toute
+  productisation, cette passe redondante doit être supprimée et l'atlas
+  externe doit posséder sa propre projection/présentation gouvernée; republier
+  davantage de points dans le projecteur local ne peut pas satisfaire
+  l'exhaustivité visible.
+
+## 2026-09-01 — MapSense : spike des cellules automap natives
+
+- Le callback automap standard `0xD2240` reçoit une `ActiveRoom*`, résout le
+  LevelId par `0x2EFC10`, lit le record `Levels` par
+  `DATATBLS_GetLevelDefRecord 0x32C200`, prend son `Layer` à `record+0x08`,
+  obtient le propriétaire avec `AUTOMAP_GetOrCreateLayer 0xD5360`, puis appelle
+  `AUTOMAP_RevealActiveRoom 0xD6550`. Le champ `Levels.Layer` est donc bien
+  l'identité de sauvegarde automap du niveau, et non l'index de sprite DC6
+  transporté par le prototype libd2.
+- Un propriétaire de layer mesure `0xB0` octets. `0xD5360` le place dans la
+  chaîne globale issue de `D2R+0x2A2CF60`, conserve le pointeur courant à
+  `D2R+0x2A2CF68` et initialise quatre arbres natifs à `+0x08`, `+0x30`,
+  `+0x58` et `+0x80`. `0xD6550` envoie respectivement les tiles floor et wall
+  vers les deux premiers arbres par `AUTOMAP_BuildTileCell 0xD5160`; les
+  objets admissibles rejoignent le troisième par `0xD52B0`. La nomenclature
+  floor/wall/object/extra de D2MOO 1.10f confirme seulement la sémantique; les
+  tailles, offsets et ABI ci-dessus proviennent exclusivement du x64 gouverné.
+- La valeur copiée dans chaque nœud est une clé exacte de 12 octets :
+  `{uint16_t zero, int16_t frame, int32_t x, int32_t y}`. La conversion native
+  `COORD_ConvertGameTileToAutomap 0x334EF0`, suivie de la division par dix de
+  `0xD5160`, donne `x=(tileX-tileY)*8` et `y=(tileX+tileY)*4`; une orientation
+  d'au moins `0x10` ajoute ensuite `24` à Y. Cette élévation est indépendante
+  du choix d'arbre : `0xD6550` choisit `owner+0x08` ou `owner+0x30` selon que
+  la tile provient du tableau floor ou wall. MSA1 v2 transporte donc séparément
+  `wallTree` et `raised`; aucune orientation ne peut remplacer la provenance.
+- `AUTOMAP_InsertCell 0xD1460` recherche d'abord la clé par `0xD4B70`. Une clé
+  existante ne provoque aucune allocation; sinon le jeu alloue un nœud de
+  `0x30` octets avec son allocateur, copie les 12 octets à `node+0x20`, met à
+  jour le compteur `tree+0x20` et équilibre l'arbre par `0xA8EF0`. Les strictes
+  signatures d'entrée de `0xD1460`, `0xD4B70`, `0xD5160`, `0xD5360`,
+  `0xD6550`, `0x32C200` et `0x334EF0` sont chacune uniques dans `.text`.
+- Le cycle de vie est également natif. Lors d'un changement de layer, le trajet
+  démarré à `0xD1710` appelle `0xD6230`; `0xD7CE0` parcourt les quatre arbres et
+  sérialise frame/X/Y en mots dans le format automap du jeu, puis `0xD4D60`
+  libère les nœuds. Le teardown à `0xD3120` vide de la même manière les quatre
+  arbres de chaque propriétaire, libère le bloc `0xB0` et remet les globals à
+  zéro. Une implantation correcte ne doit donc conserver ni libérer elle-même
+  aucun pointeur de nœud.
+- **Verdict statique : PASS borné.** Des cellules seed-exactes peuvent être
+  publiées dans l'automap native sans `DrlgRoom`, `ActiveRoom`, collision,
+  monstre ni objet actif, à condition d'exécuter l'insertion sur le thread UI
+  natif, d'utiliser les primitives natives et d'envoyer chaque niveau dans son
+  propre `Levels.Layer`. Le dessin terrain ImGui 0.13.22 doit être supprimé :
+  garder les deux terrains reproduirait nécessairement le doublon et le flash
+  observés.
+- Deux limites empêchent de transformer ce PASS statique en promesse gameplay.
+  Premièrement, fusionner tout un acte dans chaque layer courant dupliquerait
+  des dizaines de milliers de cellules dans plusieurs entrées de sidecar et
+  viole donc le contrat retenu. Deuxièmement, ce spike ne prouve pas encore les
+  noms distants : labels et waypoints restent un consommateur distinct au-dessus
+  de l'automap native. Les montages spéciaux Lut Gholein/Pandemonium/Harrogath
+  utilisent aussi les sheets libd2 1–3 et doivent rester sur leur chemin town
+  natif tant qu'un contrat x64 équivalent n'est pas établi.
+- Aucune injection ni qualification runtime n'a été exécutée. Le prochain gate
+  autorisé est un prototype fail-closed qui publie progressivement les seules
+  cellules MaxiMap d'un niveau vers son `Levels.Layer`, vérifie la déduplication
+  native et mesure temps d'insertion, taille du sidecar et FPS Tab ouvert avant
+  toute généralisation aux cinq actes. Les 30 276 cellules de l'acte III sont
+  une charge à mesurer, pas une preuve de performance.
+
+### Correction du propriétaire actif après le témoin runtime
+
+- Le témoin gameplay suivant a invalidé l'appel actif à
+  `AUTOMAP_GetOrCreateLayer 0xD5360` pour prépublier des layers étrangers : un
+  changement par waypoint est resté plus de 40 secondes au chargement, le
+  processus a atteint environ 17,65 Go de mémoire privée et les logs ont
+  enregistré 38 202 pompes `native-atlas-replay`. Cette corrélation runtime ne
+  prouve pas seule l'allocation causale exacte, mais elle rencontre le trajet
+  destructif déjà prouvé statiquement.
+- `D2R+0x2A2CF68` est le pointeur du propriétaire automap actuellement actif.
+  Le témoin à `0xD541E` le compare au propriétaire candidat et appelle
+  `0xD1710` en cas de différence; ce dernier sérialise les arbres courants par
+  `0xD6230` et libère leurs nœuds par `0xD4D60`. Une boucle qui demande des
+  layers étrangers peut donc provoquer des cycles de changement, sauvegarde et
+  libération que MapSense ne possède pas.
+- La frontière corrigée est stricte : `0xD5360` demeure uniquement un témoin de
+  signature; MapSense lit `D2R+0x2A2CF68` à chaque pompe UI, exige que
+  `owner+0x00 == Levels.Layer(currentLevel)`, écrit seulement les niveaux de ce
+  layer dans les arbres `+0x08/+0x30`, puis oublie immédiatement le pointeur.
+  Un owner nul ou différent attend de façon bornée et échoue fermé; aucune
+  création, commutation, restauration ni conservation de propriétaire n'est
+  permise.
+
+### Limite signée du sérialiseur et crash de transition 0.13.24
+
+- Le crash du 1er septembre 2026 lors du waypoint Acte III vers Dry Hills est
+  un accès invalide de première chance à `D2R+0x12D399E`, dans la copie
+  optimisée appelée par le trajet de sérialisation. Le dernier log MapSense
+  complet attestait exactement `19202/7556/11646` cellules
+  tentées/insérées/dédupliquées dans le layer 57; la requête Acte II avait
+  commencé, mais aucune complétion de son layer n'avait pu suivre. L'automap
+  demeurait donc visuellement sur l'Acte III parce que la commutation avait
+  échoué avant le remplacement du propriétaire.
+- `AUTOMAP_SerializeLayerOwner 0xD6230` délègue chaque arbre à
+  `AUTOMAP_SerializeCellTree 0xD7CE0`. La lecture instruction par instruction
+  corrige ici l'interprétation initiale : le walker saute un nœud lorsque le
+  premier octet de sa clé à `node+0x20` est non nul. Chaque clé de tag zéro
+  émise ajoute trois mots, soit six octets. L'épilogue `0xD7E3F` lit à
+  `[output+0x08]` le nombre de mots émis, le double en 16 bits et sign-étend la
+  longueur. La limite sûre est donc `floor(32767/6)=5461` **records tag-zéro
+  émis**, et non 5 461 nœuds totaux par arbre. Le registre de crash
+  `RBP=0xFFFFB118` ferme toujours la causalité pour les clés MapSense, toutes
+  de tag zéro : `0xB118=45336=7556*6`, puis cette valeur sign-étendue a été
+  consommée comme une taille de copie non bornée.
+- Le générateur 0.13.24 avait jeté `PlacedTile.pass` et utilisé
+  `orientation>0x0F` à la fois comme arbre et comme élévation. Sur les quatre
+  seeds gouvernés, aucune cellule générée n'est `raised`, ce qui envoyait donc
+  toute la géométrie dans l'arbre floor. MSA1 v2 conserve maintenant
+  `wallTree=(pass!=0)` pour les outdoors et la provenance DS1 floor/wall pour
+  les presets, tandis que `raised` reste exclusivement l'offset Y natif.
+- La preuve ABI de `AUTOMAP_FindCellInsertionPoint 0xD4B70` donne
+  `(tree, FindResult*, key) -> FindResult*`, avec un résultat de 16 octets
+  `{node, insertionSlot}`. Un `insertionSlot` nul prouve un doublon; MapSense
+  peut alors avancer sans allocation, même lorsque `tree+0x20` dépasse 5 461.
+  Pour une clé absente seulement, la DLL parcourt l'arbre de façon bornée,
+  compte les records tag-zéro réellement sérialisables et refuse l'appel à
+  `AUTOMAP_InsertCell` s'il ferait dépasser 5 461 records émis. Elle conserve
+  en plus la vérification SEH de la variation exacte du compteur total avant et
+  après une vraie insertion. Ce garde-fou ne rend pas une géométrie incomplète
+  acceptable; il garantit seulement qu'une régression future échoue fermé au
+  lieu de corrompre la transition d'acte. La matrice helper MSA1 v2 passe les
+  cinq actes et quatre seeds avec des cellules floor et wall distinctes et des
+  artefacts byte-déterministes.
+
+### Correction du garde de parcours MapSense 0.13.29
+
+- Le témoin runtime 0.13.28 a acquis correctement le propriétaire actif et lu
+  `636/197` nœuds floor/wall, puis a échoué avant de publier un maximum émis.
+  La comparaison avec le walker gouverné `0xD7D10..0xD7E1A` a identifié une
+  erreur dans le garde MapSense, pas dans le layout natif : les remontées de
+  parents étaient ajoutées au nombre de nœuds déjà visités.
+- Sur le dernier nœud d'un arbre non trivial, `visited == total`; la première
+  remontée devenait artificiellement `total + 1` et déclenchait le fail-closed.
+  La version 0.13.29 borne désormais séparément les nœuds visités et les liens
+  suivis pour calculer le successeur. Le layout reste inchangé : minimum à
+  `tree+0x08`, liens parent/left/right à `node+0x00/+0x08/+0x10`, sentinelle
+  égale à l'adresse du tree et compteur total à `tree+0x20`.
+
+### Cellules restaurées non resérialisées MapSense 0.13.30
+
+- Le runtime 0.13.29 ferme le faux négatif du walker et atteint ensuite la
+  vraie limite native : `4691/5461` records tag-zéro émis dans les arbres
+  floor/wall de Kurast Docks. La géométrie reste donc incomplète si MapSense
+  traite ses cellules synthétiques comme de nouvelles cellules explorées.
+- Le chargeur sidecar natif `0xD5C3E..0xD5C75` relit frame/X/Y, écrit
+  explicitement `uint16 1` à `AutomapCellKey+0x00` au témoin `0xD5C6F`, puis
+  appelle `AUTOMAP_InsertCell 0xD1460`. Ces cellules tag-1 appartiennent au
+  même arbre rendu que les cellules ordinaires. Le comparateur
+  `AUTOMAP_FindCellInsertionPoint 0xD4B70` ignore ce tag et ordonne seulement
+  Y, X et frame; la déduplication reste donc exacte face à une cellule native
+  déjà présente.
+- `AUTOMAP_SerializeCellTree 0xD7CE0` saute précisément les clés dont le
+  premier octet à `node+0x20` est non nul. MapSense 0.13.30 réutilise donc le
+  tag natif restauré `1` pour son atlas synthétique : rendu natif conservé,
+  zéro ajout au payload sidecar signé 16 bits et suppression du scan complet
+  de l'arbre sur le thread UI. L'intention persistante seed/difficulté de
+  MapSense demeure la source de reconstruction.
+- Le switch natif détruit les arbres actifs et les cellules tag-1 ne sont pas
+  ajoutées de nouveau au sidecar. Une complétion MapSense n'est donc réutilisée
+  que tant que son `Levels.Layer` reste le dernier layer actif. Après un vrai
+  changement de layer, revenir au précédent invalide sa complétion et republie
+  sa géométrie depuis le cache exact, par pompes bornées.
 
 ## 2026-09-01 — ISC12 G9 : invariant du walker et qualification runtime finale
 
@@ -2127,6 +3188,79 @@ confiance explicite.
   l’empreinte fail-closed complète. Aucune DLL ni injection n’est créée par ce
   lot statique.
 
+## 2026-09-01 — Scripted Domains RE-AI-3 : lifecycle V1, ownership, autorité et budgets
+
+- Le lifecycle le plus sûr ne consiste finalement pas à reproduire la table
+  GUID de Harvest. La V1 ne publie aucun GUID, pointeur ou identifiant stable et
+  ne conserve aucun état par unité. Son userdata porte seulement la génération
+  de session et un token de think, puis est invalidé sur tous les retours du
+  `lua_pcall`. Mort, despawn et réutilisation de GUID ne peuvent donc laisser
+  d’entrée fantôme; un blackboard par unité rouvrira un gate distinct s’il
+  devient un besoin mesuré.
+- PluginSDK API v3
+  `4933e2c42cb2592958cd0df3b6dc5003102252d1` fournit les frontières nécessaires.
+  Les événements `GameJoined/GameLeft` publient un `sessionGeneration` depuis
+  le thread UI; le callback ne touche pas la VM et publie seulement une valeur
+  atomique, puis demande une activation `runOnGameThread`. Son callback réclame
+  l’ancienne VM, initialise la nouvelle génération et capture le thread
+  autoritaire; tout think antérieur ou provenant d’un autre thread reste stock.
+  `PluginFlags::Server | NativeHooks` borne la DLL au rôle gameplay et
+  `runOnGameThread` est explicitement indisponible sur le client TCP/IP distant.
+  Aucun channel ou accord de hash client n’est requis pour une IA dont l’hôte
+  demeure l’unique autorité.
+- Le census textuel de toutes les sources, patches JSON/TOML et missions du
+  workspace ne trouve aucun propriétaire de `AITHINK_GetAiTableRecord
+  0x4A36C0`. Un snapshot read-only du D2R officiel 3.3.93847 déjà lancé avec 36
+  plugins, les cinq eezstreet et 17 patches retrouve les préfixes vanilla du
+  résolveur, du dispatch, de la catégorie 2, du handoff, du sélecteur et des
+  sept helpers. `DiagnosticsServiceV1` permet de transformer ce constat en
+  invariant : exiger `Unchanged/0 owner` avant l’installation gérée, puis
+  `Tracked/InlineHook/1 owner/self` au premier think de chaque session. Toute
+  autre réponse désactive Lua et délègue à l’original.
+- L’empreinte V1 compte 22 fenêtres exactes, instruction-aligned et uniques :
+  type/class d’unité; construction du tick `0x4A2ADA/117`; dispatch/catégorie/
+  handoff; entrée et branches special/normal du résolveur; sélecteur; puis
+  entrée et témoin terminal de chaque action. Le témoin tick vaut
+  `85EE58C57F0381F78B286B2B05B9636883A408CB508EBFCF51BA07F4600F5FA9`;
+  les branches special et normal valent respectivement `0916D113…B38193` et
+  `77EB5135…C44BFD`.
+- Ce recensement corrige une erreur documentaire du lot précédent. Les anciens
+  préfixes attaque/cast/errance de 31/26/32 octets finissaient au milieu d’une
+  instruction et deviennent 32/28/34. Le préfixe chase de 28 octets avait deux
+  matches et devient la fonction complète de 39 octets; celui du mouvement de
+  22 octets avait cinq matches et devient un garde aligné unique de 62 octets.
+  Les témoins terminaux attaque/cast/retraite/errance de 40/70/35/64 octets et
+  le reschedule idle de 16 octets sont également uniques.
+- Les limites de sécurité V1 sont fixées avant code : source texte `256 KiB`,
+  arbre `256` nodes/profondeur `32`, heap session `16 MiB`, croissance par think
+  `64 KiB`, `25 000` instructions contrôlées toutes les `500`, une seule action
+  terminale, quarantine après trois erreurs ou trois thinks Lua au-delà de
+  `2 ms`, et un log détaillé par script toutes les cinq secondes. Les critères
+  de release, encore non mesurés, sont p99 hors helper natif `<=50 us/think` et
+  enveloppe agrégée `<=2 ms` par update serveur de 40 ms dans la densité retenue.
+- Le gate RE est fermé sans source de DLL, sans déploiement et sans gameplay.
+  Le prochain lot doit utiliser l’incubation RuffnecKk Suite, matérialiser ces
+  contrats dans les tests et conserver `aiscript` vide/default-off avant tout
+  prototype runtime.
+
+## 2026-09-02 — Revive Overhaul 2.1.2 : propriété du gate client
+
+- Le test gameplay BKVince 93847 de 2.1.1 chargeait la pile complète, mais les
+  corps Champion, Unique et SuperUnique restaient identifiables sans produire
+  d'action Revive au clic droit. Rakanishu conservait pourtant
+  `corpseSel=1`, `revive=1`, `switchai=1` et aucun flag boss/prime-evil.
+- Le `CALL` direct `E8 E3 60 2B 00` à `0x96648` est la surface minimale : il
+  transmet les cinq arguments vrais à `AIUTIL_CanUnitSwitchAi 0x34C730`, puis
+  le sélecteur reprend à `0x9664D` et conserve toutes ses restrictions
+  ultérieures.
+- Revive Overhaul 2.1.2 ne hooke plus l'entrée partagée `0x34C730` et ne dépend
+  plus de `_ReturnAddress()`. Il possède uniquement `0x96648` par
+  `PatchCallRel32`; son relais change `checkUnique` seulement pour le masque de
+  rang `0x000E`. Le fallback serveur continue d'appeler directement la fonction
+  native non hookée avec `(true,false,true,true)`.
+- Cette correction est compilée et testée statiquement, mais sa qualification
+  gameplay reste ouverte jusqu'au redéploiement et au nouveau test complet.
+
 ## 2026-09-01 — Extended Act Level IDs : résolveur central et layout `Levels.Act`
 
 - `DRLG_ResolveActFromLevelId 0x326710` suit l'ABI x64 observée
@@ -2221,3 +3355,359 @@ confiance explicite.
 - Le build Release et les tests de codec passent hors jeu. Aucun déploiement,
   cold start ou gameplay 2.0.0 n'a été exécuté : ces actions restent soumises
   au gate séparé `d2r-runtime-validation` et la publication demeure bloquée.
+
+## 2026-09-04 — Extended Act Level IDs 2.0.2 : barrière Town Portal à huit bits
+
+- Le gate runtime officiel 3.3.93847 conserve la pile complète et la fixture
+  same-act `109 ↔ 256`. MapSense observe successivement
+  `109 → 256 → 109 → 256 → 109 → 256`, toujours Act 4, avec
+  `room-witness=35` au niveau 256. Les voyages physiques aller et retour sont
+  donc fermés indépendamment du Town Portal.
+- Deux secondes après la dernière entrée au niveau 256, la création du Town
+  Portal déclenche exactement `BC_ASSERT: eLevelIdLocal <= 255` dans
+  `D2Game\src\Skills\Skills.cpp:4120`. La pile fraîche passe par les retours
+  `0x436075`, `0x432F27`, `0x46FD81`, `0x581965`, `0x4F52CB`, `0x4C144C` et
+  `0x4F30BD`. Le processus a été arrêté sans choisir Continue; aucun test
+  d'entrée dans le portail n'est revendiqué.
+- `D2GAME_CreateLinkPortal 0x435DD0` possède un préfixe strict unique de
+  32 octets. Son témoin intérieur unique à `0x436061` appelle d'abord
+  `DUNGEON_GetLevelIdFromRoom 0x2EFC10`, compare le DWORD retourné à `0xFF`,
+  produit l'assertion puis exécute `movzx edx,dil` avant
+  `UNITS_SetObjectInteractType 0x34E9D0`. Ce setter écrit exactement un octet à
+  `ObjectData+0x08`. Supprimer seulement l'assertion transformerait donc
+  Level 256 en destination `0`; ce n'est pas une correction acceptable.
+- La troncature persiste en aval. `SUNIT_GetPortalOwner 0x490070` relit
+  `InteractType` par le getter `uint8` `0x34AD40`, le zéro-étend pour
+  `DRLG_ResolveActFromLevelId`, puis utilise les coordonnées de room distante à
+  `ObjectData+0x24/+0x28` pour trouver ou streamer le propriétaire. Son entrée
+  stricte de 32 octets est unique.
+- Le transport de l'état portail est lui aussi étroit. Le corps serveur unique
+  à `0x47F650` range `UNITS_GetObjectInteractType` à l'octet `+2` du paquet
+  `0x60`; le consommateur client unique `0x1CB1C0` lit ce même octet et appelle
+  le setter byte. Le codec v2 existant des paquets room-visibility `0x07/0x08`
+  ne couvre donc ni la construction, ni l'état, ni la consommation d'un Town
+  Portal étendu.
+- D2MOO au commit
+  `19019806df7f3e877fa105b05395d1e3597e2316` confirme uniquement la sémantique
+  dans `Skills.cpp:3030-3074`, `SUnit.cpp:1365-1386` et
+  `SCmd.cpp:2057-2068`; aucune adresse, structure ni ABI 32 bits n'est
+  transposée.
+- Le mécanisme candidat sûr n'est pas un élargissement global
+  d'`ObjectData.InteractType`, champ partagé par de nombreuses classes
+  d'objets. Il exige au minimum un sidecar de session autoritaire et strictement
+  limité aux portails, une identité/lifecycle de portail gouvernée, tous les
+  producteurs et consommateurs concernés, puis un codec compatible-peer pour
+  les paquets portails. Avant tout code, il reste à fermer le census création,
+  interaction, destruction, réutilisation de GUID, paquet initial `0x51`,
+  paquet d'état `0x60`, host/joiner et refus Battle.net/incompatible.
+- Les tables, la DLL et les neuf fichiers `QtyTester` ont été restaurés
+  byte-exact; aucun processus ne demeure. Le rapport local complet est sous
+  `analysis-cache/extended-act-level-ids-v2/runtime/20260904-gameplay-level-256-return-portal-2.0.2/`.
+
+## 2026-09-04 — Extended Act Level IDs : census Town Portal 1023
+
+- Le gate autorisé `GO reverse engineering Town Portal 1023` est strictement
+  read-only : aucun hook, patch, build, déploiement, lancement du jeu ou accès
+  aux sauvegardes n'a été exécuté. Le workbench commun 92777/93847, son image,
+  son index et les deux références épinglées D2MOO/D2RL-Plugins ont été
+  revérifiés avant l'analyse.
+- Le constructeur central `D2GAME_CreatePortalObject 0x432CE0` couvre les
+  portails de skills, d'objets, de missiles et de quêtes. Ses quatorze appels
+  directs sont `0x4649BD`, `0x46FD7C`, `0x4F2F67`, `0x548DD8`, `0x550668`,
+  `0x591040`, `0x5A67F7`, `0x5D9526`, `0x5DA3E8`, `0x5DA52E`, `0x5DA758`,
+  `0x5DA8F8`, `0x5DD341` et `0x5E24C4`; les patcher individuellement serait
+  plus fragile que qualifier le constructeur central. L'appel Town Portal à
+  `0x46FD7C` fournit la classe objet `0x3B`, conserve la destination complète
+  en registre et mémorise le GUID du portail source dans PlayerData après
+  succès.
+- `D2GAME_CreatePortalObject` appelle `D2GAME_CreateLinkPortal 0x435DD0` à
+  `0x432F22`. Le second constructeur conserve la destination complète pour la
+  résolution de l'acte, de la room et du spawn, mais son garde `0x436061`
+  refuse la room source au-dessus de 255 puis réduit son Level ID au byte écrit
+  dans `ObjectData+0x08`. Ses deux seuls appels directs sont le constructeur
+  central et l'initialiseur statique Act V à `0x593D40`; ce dernier n'est pas
+  une preuve du mécanisme Legacy de retarget.
+- L'opération autoritaire est `OBJECTS_OperateFunction15_Portal 0x58F680`.
+  Elle vérifie le joueur et les permissions, appelle
+  `SUNIT_GetPortalOwner 0x490070` à `0x58F7CB`, relit le byte `InteractType`
+  pour les records de niveau à `0x58F803`/`0x58F8D8`, obtient les Level IDs
+  complets des rooms à `0x58F9DB`/`0x58F9F2`, déclenche le changement de niveau
+  à `0x58FA06` puis le déplacement à `0x58FA2E`. Quand le joueur possède le
+  portail dynamique, les deux moitiés sont retirées à `0x58FB9B` et
+  `0x58FBF6`. La découpe PDATA fragmente artificiellement cette fonction; son
+  entrée stricte unique et ces callsites servent de témoins gouvernés.
+- Le paquet initial objet `0x51` est construit par
+  `D2GAME_PACKETS_SendPacket0x51_ObjectSpawn 0x47CE40`, appelé une seule fois
+  à `0x53885E`. Son format exact reste long de 14 octets : opcode `+0`, type
+  `+1`, GUID DWORD `+2`, object ID WORD `+6`, X WORD `+8`, Y WORD `+0x0A`,
+  animation `+0x0C` et `InteractType` byte `+0x0D`. Le client
+  `CLIENT_HandlePacket0x51_ObjectSpawn 0x129D70` transmet ce dernier byte à la
+  création de l'objet; `CLIENT_CreateObjectFromPacket 0x99510` n'est pas
+  promu, son préfixe de 32 octets n'étant pas unique.
+- Le paquet d'état portail est construit par la fonction complète
+  `D2GAME_PACKETS_SendPacket0x60_PortalState 0x47F620`, dont le corps déjà
+  identifié à `0x47F650` est conservé comme témoin intérieur. Le paquet mesure
+  12 octets : opcode `+0`, flags `+1`, destination `InteractType` byte `+2`,
+  GUID DWORD `+3`, X/Y WORD propriétaire `+7/+9` et Level ID byte de la room
+  courante du joueur propriétaire à `+0x0B`. Le producteur à `0x5388A8`
+  obtient ce dernier ID comme DWORD mais n'en transmet que l'octet bas à
+  `0x5388E4`. Le client
+  `CLIENT_HandlePacket0x60_PortalState 0x1CB1C0` applique `+2` au setter,
+  `+7/+9` aux coordonnées propriétaire et `+0x0B` à son champ room. Le gate
+  runtime 2.1.0 prouve ensuite que les deux valeurs huit bits sont distinctes
+  et ne portent aucun invariant d'égalité.
+- Le lifecycle inactif est fermé nativement. Dans
+  `SUNITINACTIVE_CompressUnitIfNeeded 0x504260`, le test exact à `0x5042ED`
+  force les classes `59/60` dans le chemin spécial de compression. La fonction
+  `SUNITINACTIVE_CompressInactiveUnit 0x5045D0` alloue pour un objet un nœud
+  de `0x38` octets; pour ces portails, il conserve le GUID à `+0x20` mais
+  seulement le byte `InteractType` à `+0x28`. Lors du streaming inverse,
+  `SUNITINACTIVE_RestoreInactiveUnits 0x503790` recrée l'objet avec ce même
+  GUID et remet le byte par `UNITS_SetObjectInteractType` à
+  `0x5039A6`/`0x503AA2`. Un pointeur `Unit*` n'est donc jamais une identité
+  sidecar sûre et la compression ne constitue pas une destruction logique.
+- `D2GAME_RemovePlayerPortal 0x4C8650` efface le GUID PlayerData, résout la
+  paire puis retire les deux moitiés par `SUNIT_RemoveUnit 0x48FAA0` à
+  `0x4C8718` et `0x4C8726`. Le constructeur lié retire aussi sa source sur
+  échec à `0x435EBB`. Un hook global de `SUNIT_RemoveUnit` ne peut cependant
+  pas gouverner seul la durée de vie du sidecar, car la compression inactive
+  peut emprunter ce même retrait physique sans supprimer l'identité logique.
+- Le corpus D2R statique ne contient aucune implantation démontrée du retarget
+  Legacy par opcode `0x45`. `D2GAME_CreateLinkPortal` n'a que les deux appels
+  précités et les sept xrefs directs de `SUNIT_GetPortalOwner` correspondent à
+  la création, la synchronisation, l'opération et le nettoyage déjà recensés.
+  La table hydratée ne permet pas de qualifier son slot réseau. Il serait donc
+  incorrect de promouvoir le chemin D2MOO `PlrMsg.cpp:3271-3308` comme preuve
+  D2R; toute prise en charge future exige une preuve séparée de la table de
+  dispatch vivante.
+- Trois architectures ont été comparées. Supprimer l'assertion est rejeté car
+  `256` devient `0`. Élargir `ObjectData`, les nœuds inactifs et les paquets est
+  rejeté car ces ABI sont partagées, accroissent fortement le rayon de
+  régression et rompent le protocole stock. L'architecture retenue pour un
+  prochain gate est un sidecar de paire indexé par
+  `{génération de session, Game*, GUID}`, limité d'abord à la classe dynamique
+  `59`, avec hooks centraux et scopes TLS très étroits.
+- Dans ce contrat, la création capture atomiquement les deux GUID, les deux
+  Level IDs complets, leur relation et leurs témoins low-byte. Un scope autour
+  de `D2GAME_CreateLinkPortal` autorise le getter de room à présenter seulement
+  le low byte au garde stock; le sidecar conserve l'identité complète. Des
+  scopes autour de `SUNIT_GetPortalOwner` et de
+  `OBJECTS_OperateFunction15_Portal` permettent aux résolveurs d'acte et de
+  record d'utiliser le full ID seulement pour le portail validé. Toute absence,
+  incohérence de classe, de GUID, de paire, de génération ou de low byte échoue
+  fermée sans repli tronqué.
+- Les paquets `0x51` et `0x60` peuvent conserver leurs tailles en réutilisant le
+  codec coordonnée déjà gouverné pour `0x07/0x08` : les bits hauts du Level ID
+  sont marqués dans X uniquement pour un destinataire compatible, puis le
+  client décode une copie locale, restaure X et publie/rafraîchit son sidecar.
+  La compression survit par GUID/session; la création peut remplacer une
+  entrée, les suppressions autoritaires peuvent l'effacer opportunément et la
+  sortie de session doit tout invalider.
+- Aucun propriétaire de hook concurrent n'a été trouvé pour les seams portail
+  proposées dans les add-ons RuffnecKk, BKVince, TCP ou la référence épinglée
+  D2RL-Plugins. Extended Act Level IDs possède déjà le canal privé, le mapping
+  peer→joueur, la génération de session et le codec coordonnée requis; aucun
+  fichier de configuration supplémentaire n'est justifié.
+- `NetworkServiceV1` ne permet pas d'énumérer tous les clients actifs d'une
+  partie. Une simple décision par destinataire empêcherait un paquet étendu
+  invalide, mais ne prouverait pas que tous les joiners étaient compatibles
+  avant la mutation serveur du portail. L'implantation peut donc être qualifiée
+  localement/offline en premier, mais la revendication TCP hôte/joiner reste
+  bloquée jusqu'à un census natif de la liste clients ou un service SDK
+  gouverné. Sur Battle.net ou sans preuve complète de compatibilité, un portail
+  `>255` doit être refusé avant toute mutation native.
+- Le portail et son sidecar sont strictement de session. Aucun format D2S/D2I,
+  bitset de waypoint ou codec de sauvegarde n'est impliqué; retirer la DLL ou
+  redémarrer élimine cet état éphémère. Cette conclusion ne vaut pas encore
+  qualification gameplay : implantation et runtime exigent chacun un `GO`
+  distinct.
+- D2MOO au commit épinglé
+  `19019806df7f3e877fa105b05395d1e3597e2316` sert uniquement de référence
+  sémantique pour `Skills.cpp:3006-3149`, `ObjMode.cpp:3125-3278`,
+  `Player.cpp:510-550`, `SUnit.cpp:1335-1384`, `SUnitMsg.cpp:72-83`,
+  `SCmd.cpp:2057-2068` et `SUnitInactive.cpp:49-999`; aucune adresse, structure
+  ou ABI 32 bits n'est transposée.
+
+## 4 septembre 2026 — implantation Town Portal 1023 local/offline
+
+- Extended Act Level IDs `2.1.0` implante le sidecar de session retenu pour les
+  seuls portails dynamiques classe `59`. Chaque endpoint conserve
+  `{sessionGeneration, Game*, GUID, counterpartGUID, destinationLevelId,
+  nativeLowLevelId}` dans une publication copy-on-write; chaque lookup exige
+  la paire réciproque, la classe, le `Game*`, la génération et le low byte.
+- `D2GAME_CreateLinkPortal 0x435DD0` possède l'ABI D2R vérifiée
+  `(Game*, owner, sourcePortal, destinationLevelId, sourceLevelId) ->
+  linkedPortal`. Le caller witness unique `0x432F12` prouve le cinquième
+  argument sur la pile. Pendant cet appel seulement,
+  `DUNGEON_GetLevelIdFromRoom 0x2EFC10` rend le low byte uniquement au retour
+  exact `0x43605F`; tous ses autres appels conservent le Level ID complet. La
+  création exige le propriétaire `LocalPlayerReady` et un contrat sain; tout
+  rejet ou échec de publication du sidecar survient avant un appel natif non
+  scopé et empoisonne le trafic classe `59` restant pour la session.
+- `SUNIT_GetPortalOwner 0x490070` réinjecte le full ID dans le résolveur d'acte
+  sous TLS, puis exige que l'owner réellement résolu soit le GUID réciproque.
+  `OBJECTS_OperateFunction15_Portal 0x58F680` autorise ensuite les records
+  complets uniquement pour le joueur local et après cette validation.
+- L'implantation initiale voulait hooker les entrées partagées
+  `DATATBLS_GetLevelsTxtRecord 0x32C4A0` et
+  `DATATBLS_GetLevelDefRecord 0x32C200`. L'audit de coexistence a montré que
+  MapSense vérifie et appelle directement `0x32C200`; ce mécanisme aurait donc
+  été dépendant de l'ordre de chargement. La version retenue laisse les deux
+  entrées byte-exactes et redirige uniquement les calls portail uniques
+  `0x58F819` et `0x58F8EE` vers deux relays proches.
+- Les builders et handlers `0x51`/`0x60` conservent leurs tailles natives de
+  14/12 octets. Le serveur encode les deux bits hauts du Level ID dans X
+  uniquement pour le `LocalPlayerReady`; le client valide le marqueur, les low
+  bytes et le record connu, restaure X dans une copie locale et délègue au
+  handler stock. Une opération ou un paquet distant est refusé : TCP
+  hôte/joiner et Battle.net ne sont pas revendiqués par ce gate.
+- Toutes les signatures de fonctions, de callsites et de layouts utilisées
+  ont exactement une occurrence dans le corpus commun 92777/93847. Deux builds
+  Release propres passent `CTest 1/1` sans warning et sont byte-identiques :
+  78 336 octets, SHA-256
+  `1803A73E0894C2A8916DD5BD32793525E4F795B13652CFC488786247AB6045B6`.
+  Les exports restent les trois points D2RLoader et les métadonnées portent
+  `RuffnecKk / 2.1.0`.
+- Aucun hook de save, changement D2S/D2I, déploiement, lancement du jeu,
+  paquet de release ni push n'appartient à ce gate. La validation runtime
+  Level 256 → Harrogath → Level 256 exige un prochain `GO` distinct.
+
+## 4 septembre 2026 — échec runtime Town Portal 2.1.0 avant retour
+
+- Le cold start local/offline 2.1.0 avec 1023 records ferme les prérequis :
+  empreintes acceptées, `RotW=1023`, pile complète et startup `24/24`. La
+  création depuis Level 256 puis la première traversée vers Harrogath passent.
+  Avant la tentative de retour, le client assert dans
+  `DATATBLS_GetLevelsTxtRecord` avec `eLevelId > 0` violé.
+- La pile fraîche place l'adresse de retour à `0xC1893`. Le callsite exact
+  `0xC188E`, dans le chemin client de texte/nom d'objet, appelle d'abord
+  `UNITS_GetObjectInteractType 0x34AD40`, zéro-étend le résultat byte, puis
+  appelle `DATATBLS_GetLevelsTxtRecord 0x32C4A0`. Il lit ensuite la clé de nom
+  du record à `+0xFD` et passe par `LANG_GetStringByKey`. Pour un portail vers
+  Level 256, le lookup reçoit donc `0`, ce qui explique directement l'assert.
+- Le caller serveur du paquet `0x60` à `0x5388CA` appelle auparavant
+  `SUNIT_GetPortalOwner 0x490070`. Ce dernier retourne l'unité propriétaire
+  stockée — le joueur — et non le portail réciproque, conformément à la
+  référence sémantique D2MOO épinglée. Le code prend alors le Level ID de la
+  room actuelle de ce joueur à `0x5388A8`, son low byte en R8B, et ses
+  coordonnées en R9W/stack avant l'appel `0x5388E4`.
+- Le builder `0x47F620` place séparément l'`InteractType` destination du
+  portail à `packet[2]` et l'argument R8B, niveau de room du propriétaire, à
+  `packet[0x0B]`. Ces octets peuvent légitimement différer. Le send hook 2.1.0
+  les confond via `linkedLevelId == endpoint.nativeLowLevelId`; le receive
+  hook renforce l'erreur via `packet[0x0B] == packet[2]`. Le refus frais du
+  codec juste avant l'assertion est cohérent avec cette mauvaise invariant.
+- Les handlers clients `0x51` et `0x60` décodent le full ID, restaurent X dans
+  une copie puis appellent le handler stock, mais ne publient pas de sidecar
+  client par GUID/session. Le consommateur `0xC188E` n'a donc aucun moyen de
+  retrouver 256 après le store natif huit bits.
+- L'entrée partagée `0x32C4A0` possède 44 callsites directs. Elle reste une
+  mauvaise seam globale, notamment à cause de MapSense. La correction doit
+  d'abord gouverner un sidecar client alimenté par `0x51/0x60`, puis recenser
+  et rediriger seulement les consommateurs portail nécessaires, en commençant
+  par l'appel UI `0xC188E`; les garde-fous stock et les autres callsites doivent
+  rester byte-exacts.
+- Ce gate runtime est **FAIL** et n'autorise aucune correction. La DLL 2.1.0,
+  les fixtures et les sauvegardes ont été restaurées; aucun processus ne
+  demeure. Les preuves locales sont sous
+  `analysis-cache/extended-act-level-ids-v2/runtime/20260904-town-portal-1023-local-offline-2.1.0/`.
+
+## 2026-09-04 — Potion Auto Pickup 2.0.0 stacking contract
+
+- `ITEMS_GetMinStack` at `0x371AB0` resolves the concrete compiled
+  `ItemsTxt` row and reads the `minstack` DWORD at `+0xEC`.
+- `ITEMS_GetTotalMaxStack` at `0x3719E0` reads `maxstack` at `+0xF0`, adds
+  item stat 254, and caps the effective result at the 9-bit limit of 511.
+- `ITEMS_GetSpawnStack` at `0x372AD0` reads the `spawnstack` DWORD at
+  `+0xF4`. Setting `minstack=1`, `spawnstack=1`, and the configured
+  `maxstack` after `DataTablesLoaded` makes one generated potion represent
+  one bottle while enabling persistent native quantity stacks.
+- `GetDataTablesForContext` at `0x300A90` accepts the four native context
+  values `0..3`, while `DataTableServiceV1` exposes the three supported banks
+  as Classic `1`, LoD `2`, and RotW `3`. BKVince gameplay has already been
+  observed on RotW context `3`; a compiled-row mutation must therefore
+  validate and cover all three banks `1..3`, not the non-authoritative range
+  `0..2`.
+- `ITEMS_GetAutoStack` at `0x36A850` returns the resolved `ItemTypesTxt`
+  `AutoStack` byte at `+0x13`. Its two direct callers are the authoritative
+  pickup/stack path (`0x475C5B`) and an item-interaction path (`0x53DE4B`).
+- `INVENTORY_FindBackPackItemForStack` at `0x386E00` has ABI
+  `(inventory, item, excludedItem) -> item`. It uses the native equality
+  predicate at `0x375960`, reads `STAT_QUANTITY`, compares the result with
+  `ITEMS_GetTotalMaxStack`, and returns only a compatible partial stack.
+- `D2GAME_StackItemIntoInventory` at `0x4754C0` transfers quantity through
+  native server synchronization and repeats until the source is exhausted
+  or no compatible partial stack remains. `D2GAME_TryAutoStackPickedItem` at
+  `0x4759E0` reaches it for generic items only after both native stackable and
+  auto-stack gates pass.
+- `ITEMS_CheckIfAutoBeltable` at `0x373D70` has ABI `(inventory, item) ->
+  int32`; the pickup path calls it at `0x471C06`, then calls
+  `INVENTORY_GetFreeBeltSlot` at `0x471C31`.
+- `D2GAME_ExecuteItemUseEffect` at `0x581680` has ABI
+  `(game, player, item, target) -> void`. Its only direct caller is
+  `0x4F591E`, returning at `0x4F5923`. The routine decrements quantity only
+  for Book type `0x12`; after it returns, caller byte `packet[1] == 0` takes
+  the native retain-object branch at `0x4F592C -> 0x4F5A23`. Therefore a
+  stacked potion can be consumed authoritatively by calling
+  `SynchronizeItemAndBoundSkillQuantity` (`0x46F090`) with delta `-1` and
+  clearing that byte only when the pre-use potion quantity is greater than
+  one and the original effect leaves the consume request nonzero.
+- D2R save format 105 carries an explicit per-item quantity-present bit. Old
+  non-stackable potions can consequently load without bitstream
+  reinterpretation, but their absent `STAT_QUANTITY` must be treated as one
+  and normalized before their first native merge. Newly saved stacks carry
+  the normal 9-bit quantity value.
+
+## 2026-09-04 — Extended Act Level IDs : sidecar client Town Portal
+
+- Le census direct de `UNITS_GetObjectInteractType 0x34AD40` compte 28
+  lecteurs. Les seuls lecteurs clients sont `0x9A39E` (test du bit de signe
+  pour le verrouillage), `0x1CB118` (index de shrine) et `0xC1882`. Ce dernier
+  est le seul qui alimente `DATATBLS_GetLevelsTxtRecord 0x32C4A0`, à l'appel
+  exact `0xC188E`; aucune autre lecture client `Levels` issue de l'InteractType
+  byte n'est présente dans le corpus commun.
+- Le helper UI à `0xC17E0` reçoit `(outputString, Unit*)`, conserve l'unité en
+  RSI, récupère sa classe et son contexte, exige `ObjectsTxt+0x127 & 4`, puis
+  appelle le getter byte et le record `Levels`. Le motif de contexte
+  `48 8B CE E8 B9 94 28 00 0F B6 D0 40 0F B6 CF E8 0D AC 26 00 48 C7 C3 FF FF FF FF`
+  n'a qu'une occurrence à `0xC187F`. Après `0xC188E`, le record non nul fournit
+  la clé de nom à `+0xFD`; un record nul emprunte le fallback stock string ID
+  `0x150D`.
+- `CLIENT_HandlePacket0x51_ObjectSpawn 0x129D70` lit GUID `+2`, classe `+6`,
+  X/Y `+8/+0x0A` et InteractType `+0x0D`, puis appelle
+  `CLIENT_CreateObjectFromPacket 0x99510` à `0x129DD8`. Ce helper crée l'objet
+  puis écrit explicitement le byte réseau par
+  `UNITS_SetObjectInteractType 0x34E9D0` à `0x99582`.
+- `CLIENT_HandlePacket0x60_PortalState 0x1CB1C0` résout le GUID `+3` par
+  `CLIENT_GetUnitByIdAndType 0x9A5D0` avec le type objet `2`, écrit la
+  destination low byte `+2`, puis conserve séparément les coordonnées
+  propriétaire `+7/+9` et son niveau de room `+0x0B`. Ce dernier byte n'est
+  ni une seconde destination ni un témoin d'égalité.
+- Les 30 xrefs du setter n'exposent que trois écritures clientes : `0x99582`,
+  `0x1CB1E9` et `0x1CB5D3`. La troisième est dans le constructeur d'objet à
+  `0x1CB410`, où les classes 59/60 reçoivent une valeur initiale avant que le
+  helper de création réseau n'applique le byte du paquet. Elle ne justifie pas
+  un hook supplémentaire.
+- Le contrat statique retenu ajoute un sidecar client distinct de la paire
+  serveur : `{sessionGeneration, portalGuid, destinationLevelId,
+  nativeLowLevelId}`. Les handlers `0x51/0x60` déjà possédés restaurent X et
+  délèguent d'abord au stock, puis publient une copie immuable. `0x51` évince
+  toujours le même GUID avant un spawn classe 59; `0x60` revalide immédiatement
+  l'unité vivante, sa classe, son GUID et son low byte avec `0x9A5D0`. Aucun
+  `Unit*` n'est conservé.
+- Le sidecar doit être limité à 1024 entrées, effacé à chaque génération de
+  session et empoisonné sur overflow, allocation ou incohérence. Le relay exact
+  `0xC188E` peut placer RSI dans R8 puis tail-jumper vers un résolveur qui
+  n'emploie le full ID que pour une entrée classe 59 parfaitement concordante
+  et connue dans le contexte courant. Le chemin nul stock évite l'assertion en
+  cas de `low=0` sans entrée ou de contrat empoisonné; les objets ordinaires et
+  portails vanilla gardent l'appel original.
+- Hooker globalement `0x32C4A0`, élargir ObjectData/les paquets ou ignorer
+  l'assertion restent rejetés. Le callsite relay est le seam au plus petit
+  rayon, conserve MapSense et les 43 autres callers, et réutilise sans nouveau
+  propriétaire les hooks clients `0x51/0x60` de la DLL.
+- Références : D2MOO épinglé
+  `19019806df7f3e877fa105b05395d1e3597e2316` pour la sémantique uniquement;
+  D2RL-Plugins épinglé `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`
+  sans propriétaire concurrent trouvé. Le gate est un PASS statique read-only;
+  implantation et runtime demeurent séparés.
