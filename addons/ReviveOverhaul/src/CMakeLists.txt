@@ -31,6 +31,8 @@ endif()
 
 add_library(ReviveOverhaul SHARED plugin.cpp plugin.rc)
 target_compile_features(ReviveOverhaul PRIVATE cxx_std_20)
+target_include_directories(ReviveOverhaul PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../RuffnecKkScriptedAI/src")
 target_link_libraries(ReviveOverhaul PRIVATE
     D2RLPlugin::D2RLPlugin
     tomlplusplus::tomlplusplus
@@ -46,13 +48,15 @@ d2rlplugin_embed_config(
 )
 
 if(MSVC)
-    target_compile_options(ReviveOverhaul PRIVATE /utf-8 /W4 /permissive-)
+    target_compile_options(ReviveOverhaul PRIVATE /utf-8 /W4 /WX /permissive-)
     target_link_options(ReviveOverhaul PRIVATE /INCREMENTAL:NO /Brepro)
 endif()
 
 if(BUILD_TESTING)
     add_executable(ReviveOverhaulTests policy_tests.cpp)
     target_compile_features(ReviveOverhaulTests PRIVATE cxx_std_20)
+    target_include_directories(ReviveOverhaulTests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../RuffnecKkScriptedAI/src")
     target_link_libraries(
         ReviveOverhaulTests PRIVATE tomlplusplus::tomlplusplus)
     target_compile_definitions(ReviveOverhaulTests PRIVATE
@@ -61,7 +65,7 @@ if(BUILD_TESTING)
     )
     if(MSVC)
         target_compile_options(
-            ReviveOverhaulTests PRIVATE /utf-8 /W4 /permissive-)
+            ReviveOverhaulTests PRIVATE /utf-8 /W4 /WX /permissive-)
     endif()
     add_test(NAME revive-overhaul-policy COMMAND ReviveOverhaulTests)
 endif()

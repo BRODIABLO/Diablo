@@ -12,14 +12,14 @@ disable_owner_scatter = true
 
 # Forces native catch-up behavior beyond this owner distance.
 # Accepted range: 2 to 20.
-catch_up_distance = 12
+catch_up_distance = 8
 
 # Native follow distance used after catch-up. It must remain lower than
 # catch_up_distance. Accepted range: 1 to 19.
-follow_distance = 8
+follow_distance = 4
 
 # Native catch-up velocity bonus. Accepted range: 0 to 255.
-velocity_bonus = 40
+velocity_bonus = 80
 
 [revive]
 # Allows eligible Champions, Uniques and SuperUniques. Native boss, scripted,

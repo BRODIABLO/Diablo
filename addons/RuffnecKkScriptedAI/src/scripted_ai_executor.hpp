@@ -11,6 +11,14 @@ enum class ActionKind : std::uint8_t {
     ChaseTarget,
     RetreatFromTarget,
     CastOnTarget,
+    FollowOwner,
+};
+
+enum class TacticalProfile : std::uint8_t {
+    None,
+    MeleeVanguard,
+    RangedSkirmisher,
+    CasterArtillery,
 };
 
 struct ActionIntent {
@@ -41,6 +49,14 @@ struct ThinkSnapshot {
     bool hasTarget{};
     bool inCombat{};
     std::uint32_t targetDistance{};
+    bool hasOwner{};
+    std::uint32_t ownerDistance{};
+    std::uint32_t targetOwnerDistance{};
+    TacticalProfile tacticalProfile{TacticalProfile::None};
+    bool hasLastAction{};
+    ActionKind lastAction{ActionKind::Idle};
+    bool hasPreferredSkill{};
+    std::uint16_t preferredSkill{};
 };
 
 using MicrosecondClock = std::uint64_t (*)(void* userData) noexcept;
@@ -62,6 +78,7 @@ struct ThinkTiming {
         return intent.argument >= 1U && intent.argument <= 255U;
     case ActionKind::AttackTarget:
     case ActionKind::ChaseTarget:
+    case ActionKind::FollowOwner:
         return intent.argument == 0U;
     case ActionKind::CastOnTarget:
         return intent.argument <= 65'535U;

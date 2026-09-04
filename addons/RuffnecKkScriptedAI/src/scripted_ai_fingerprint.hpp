@@ -19,7 +19,7 @@ struct NativeWindow {
     bool hookTarget;
 };
 
-inline constexpr std::size_t NativeWindowCount = 22U;
+inline constexpr std::size_t NativeWindowCount = 29U;
 inline constexpr std::uintptr_t ResolverHookRva = 0x4A36C0U;
 
 [[nodiscard]] auto NativeFingerprint() noexcept

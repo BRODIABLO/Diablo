@@ -1,11 +1,11 @@
 # RuffnecKk Scripted AI
-# Lets configured monsters run bounded Lua behavior trees.
+# Keeps the ordinary Scripted AI domain active while disabling the Revive lab.
 
 schema_version = 1
 
 # Master switch. false loads the plugin without validating native surfaces,
 # creating a Lua VM, or installing a hook.
-enabled = false
+enabled = true
 
 # Relative to the active mod support directory when a mod is active, otherwise
 # relative to the selected D2RLoader scope. Backslashes and parent traversal are
@@ -13,15 +13,11 @@ enabled = false
 script_directory = "scripts/ruffneckk-scripted-ai"
 
 # Adds bounded diagnostic details. Repeated script errors remain rate-limited.
-diagnostics = false
+diagnostics = true
 
 [domains.revive]
-# Lets Revive Overhaul ask this plugin for bounded target-combat decisions.
-# The provider remains optional and every non-action delegates to native AI.
+# The production fallback leaves Revive behavior entirely native.
 enabled = false
-
-# Relative to script_directory. The source is copied at DataTablesLoaded,
-# compiled once on the authoritative game thread, and never read during ticks.
 script = "revive-companion.lua"
 
 [sandbox]

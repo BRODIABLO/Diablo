@@ -2,6 +2,66 @@
 
 Date: 2026-08-31
 
+## 2.1.4 automatic callback bridge — 2026-09-02
+
+The live 2.1.3 test returned `selector high-rank calls=44943`,
+`selector accepts=37560`, `selector rejects=7383` and
+`server admissions=0`. The complete client selection predicate therefore
+accepts high-rank corpses, but the stock `CltStFunc 24` route still submits no
+Revive action. This closes the selector hypothesis and invalidates the retained
+assumption that `21/58/24/blank/3` could support high-rank casting through a
+predicate-only hook.
+
+Version 2.1.4 automatically applies the externally proven callback route after
+each data-table load. It uses PluginSDK lifecycle and table services to locate
+Revive id 95 in the Classic, LoD and RotW compiled Skills banks, requires row
+size `0x2EC` and an exact native or already-bridged tuple, then changes only
+`21/58/24/blank/3` to `blank/58/39/36/2` in memory. Source TXT files remain
+untouched. Unknown tuples and partial writes fail closed; the authoritative
+`SrvDoFunc 58` validator hook retains the high-rank eligibility checks.
+
+Two independent Release builds are byte-identical at 195,072 bytes, SHA-256
+`31B2FFC30F90540C37C6B9222DB4D022E3500E9CE917DFCC1A228D5E24F63508`,
+and the policy suite passes 1/1. The first complete-stack 93847 cold start
+passes with 38 plugins, 17 patches and startup 24/24. The lifecycle callback
+accepted revision 1 and logged that the automatic route is active without a
+`Skills.txt` edit. Champion/Unique gameplay remains pending.
+
+## 2.1.2 client admission correction — 2026-09-02
+
+The live BKVince 3.3.93847 test proved that normal corpse selection still
+works, while Champions, Uniques and SuperUniques can be identified under the
+cursor but right-click submits no Revive action. Rakanishu's active `fallen2`
+records independently retain `corpseSel=1`, `revive=1` and `switchai=1`, with
+no boss or prime-evil flag. The failure is therefore assigned to the common
+client high-rank admission path, not to monster softcode.
+
+Revive Overhaul remains an autonomous hybrid RuffnecKk D2RLoader Suite DLL.
+Version 2.1.2 will replace the shared `AIUTIL_CanUnitSwitchAi 0x34C730` entry
+hook and `_ReturnAddress()` discriminator with a managed `PatchCallRel32`
+redirect owned only at the proven Revive client callsite `0x96648`. Its relay
+changes only `checkUnique` for the rank mask `0x000E`; every other native
+selector restriction and the independent authoritative server fallback remain
+unchanged. The existing TOML remains justified by its AI distance, velocity,
+high-rank and aura policy settings. No TXT/TSV edit, save migration,
+PluginPack modification or eezstreet redistribution is introduced.
+
+The first 2.1.2 BKVince cold start on 2026-09-02 passed with the complete
+active stack: 38 plugins, 17 memory patches, startup 24/24 and no Revive hook
+rejection. The plugin loaded mod-local with diagnostics enabled and generated
+the full multiplayer environment fingerprint. Champion, Unique, SuperUnique,
+aura and AI gameplay gates remain open for Vincent's live test.
+
+The subsequent Champion and Unique attempts failed despite
+`client gate calls=738056`, `client high-rank candidates=157480` and
+`client selections=157480`, while `server admissions=0`. This proves the
+owned `0x96648` relay is reached, recognizes both tested ranks and receives a
+successful result from `AIUTIL_CanUnitSwitchAi`, but does not prove the final
+return of `CLIENT_ValidateReviveTarget`. Version 2.1.3 therefore adds a
+pass-through diagnostic hook on the complete selector entry `0x96600` and
+counts final high-rank accepts/rejects. It changes no additional admission
+policy and performs no TXT or compiled-table mutation.
+
 ## Autonomous Suite decision
 
 Revive Overhaul remains an independent RuffnecKk D2RLoader Suite plugin with
@@ -58,8 +118,8 @@ does not cover the observed custom pet-type path.
 
 1. Keep vanilla D2R `SrvStFunc 21` and `SrvDoFunc 58`; do not require the
    legacy `CltStFunc 39` / `CltDoFunc 36` workaround.
-2. Own the narrow client corpse-eligibility decision needed to make eligible
-   high-rank corpses targetable while retaining server authority.
+2. Bridge the proven high-rank client callback route automatically after table
+   compilation while retaining `SrvDoFunc 58` server authority.
 3. Preserve the exact pre-Revive Aura Enchanted skill without rerolling the
    aura pool, and reactivate it through the proven high-level assignment path.
 4. Scope AI improvements to a native Revive marker set by `SrvDoFunc 58`, not

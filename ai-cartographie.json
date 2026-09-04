@@ -2602,6 +2602,28 @@
                                                                                                                           "name":  "production.toml",
                                                                                                                           "path":  "addons/ReviveOverhaul/testing/config/production.toml",
                                                                                                                           "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "scripted-ai-lab.toml",
+                                                                                                                          "path":  "addons/ReviveOverhaul/testing/config/scripted-ai-lab.toml",
+                                                                                                                          "kind":  "file"
+                                                                                                                      },
+                                                                                                                      {
+                                                                                                                          "name":  "scripted-ai-production.toml",
+                                                                                                                          "path":  "addons/ReviveOverhaul/testing/config/scripted-ai-production.toml",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripts",
+                                                                                                     "path":  "addons/ReviveOverhaul/testing/scripts",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "revive-companion.lua",
+                                                                                                                          "path":  "addons/ReviveOverhaul/testing/scripts/revive-companion.lua",
+                                                                                                                          "kind":  "file"
                                                                                                                       }
                                                                                                                   ]
                                                                                                  },
@@ -3050,6 +3072,16 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "scripted_ai_d2r.cpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_d2r.cpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "scripted_ai_d2r.hpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_d2r.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "scripted_ai_executor.cpp",
                                                                                                      "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_executor.cpp",
                                                                                                      "kind":  "file"
@@ -3090,6 +3122,11 @@
                                                                                                      "kind":  "file"
                                                                                                  },
                                                                                                  {
+                                                                                                     "name":  "scripted_ai_revive_abi.hpp",
+                                                                                                     "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_revive_abi.hpp",
+                                                                                                     "kind":  "file"
+                                                                                                 },
+                                                                                                 {
                                                                                                      "name":  "scripted_ai_sandbox.cpp",
                                                                                                      "path":  "addons/RuffnecKkScriptedAI/src/scripted_ai_sandbox.cpp",
                                                                                                      "kind":  "file"
@@ -3114,6 +3151,11 @@
                                                                             {
                                                                                 "name":  "README.md",
                                                                                 "path":  "addons/RuffnecKkScriptedAI/README.md",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "revive-companion.lua",
+                                                                                "path":  "addons/RuffnecKkScriptedAI/revive-companion.lua",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

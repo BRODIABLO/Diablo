@@ -90,6 +90,42 @@ return function(root, m)
         if kind == "target_distance_gte" then
             return m:targetDistance() >= node.distance and SUCCESS or FAILURE
         end
+        if kind == "has_owner" then
+            return m:hasOwner() and SUCCESS or FAILURE
+        end
+        if kind == "owner_distance_lte" then
+            return m:ownerDistance() <= node.distance and SUCCESS or FAILURE
+        end
+        if kind == "owner_distance_gte" then
+            return m:ownerDistance() >= node.distance and SUCCESS or FAILURE
+        end
+        if kind == "target_owner_distance_lte" then
+            return m:targetOwnerDistance() <= node.distance and SUCCESS or FAILURE
+        end
+        if kind == "target_owner_distance_gte" then
+            return m:targetOwnerDistance() >= node.distance and SUCCESS or FAILURE
+        end
+        if kind == "is_melee" then
+            return m:isMelee() and SUCCESS or FAILURE
+        end
+        if kind == "is_ranged" then
+            return m:isRanged() and SUCCESS or FAILURE
+        end
+        if kind == "is_caster" then
+            return m:isCaster() and SUCCESS or FAILURE
+        end
+        if kind == "last_action_attack" then
+            return m:lastActionWasAttack() and SUCCESS or FAILURE
+        end
+        if kind == "last_action_retreat" then
+            return m:lastActionWasRetreat() and SUCCESS or FAILURE
+        end
+        if kind == "last_action_cast" then
+            return m:lastActionWasCast() and SUCCESS or FAILURE
+        end
+        if kind == "has_preferred_skill" then
+            return m:hasPreferredSkill() and SUCCESS or FAILURE
+        end
         if kind == "idle" then
             return action(m:idle(node.frames or 1))
         end
@@ -108,6 +144,12 @@ return function(root, m)
         if kind == "cast" then
             return action(m:castOnTarget(node.skill))
         end
+        if kind == "cast_preferred" then
+            return action(m:castPreferredSkill())
+        end
+        if kind == "follow_owner" then
+            return action(m:followOwner())
+        end
         if kind == "fallback" then
             return FALLBACK
         end
@@ -122,12 +164,24 @@ enum class HandleOperation : int {
     HasTarget,
     InCombat,
     TargetDistance,
+    HasOwner,
+    OwnerDistance,
+    TargetOwnerDistance,
+    IsMelee,
+    IsRanged,
+    IsCaster,
+    LastActionWasAttack,
+    LastActionWasRetreat,
+    LastActionWasCast,
+    HasPreferredSkill,
     Idle,
     Wander,
     AttackTarget,
     ChaseTarget,
     RetreatFromTarget,
     CastOnTarget,
+    CastPreferredSkill,
+    FollowOwner,
     ToString,
 };
 
@@ -138,9 +192,18 @@ enum class HandleOperation : int {
 [[nodiscard]] auto IsKnownLeafKind(std::string_view kind) noexcept -> bool {
     return kind == "has_target" || kind == "in_combat"
         || kind == "target_distance_lte" || kind == "target_distance_gte"
+        || kind == "has_owner" || kind == "owner_distance_lte"
+        || kind == "owner_distance_gte"
+        || kind == "target_owner_distance_lte"
+        || kind == "target_owner_distance_gte"
+        || kind == "is_melee" || kind == "is_ranged"
+        || kind == "is_caster" || kind == "last_action_attack"
+        || kind == "last_action_retreat" || kind == "last_action_cast"
+        || kind == "has_preferred_skill"
         || kind == "idle" || kind == "wander" || kind == "attack"
         || kind == "chase" || kind == "retreat" || kind == "cast"
-        || kind == "fallback";
+        || kind == "cast_preferred"
+        || kind == "follow_owner" || kind == "fallback";
 }
 
 [[nodiscard]] auto IsAllowedNodeField(
@@ -149,6 +212,10 @@ enum class HandleOperation : int {
     if (field == "kind") return true;
     if (IsCompositeKind(kind)) return field == "children";
     if (kind == "target_distance_lte" || kind == "target_distance_gte"
+            || kind == "owner_distance_lte"
+            || kind == "owner_distance_gte"
+            || kind == "target_owner_distance_lte"
+            || kind == "target_owner_distance_gte"
             || kind == "retreat") {
         return field == "distance";
     }
@@ -351,12 +418,24 @@ auto Sandbox::Initialize(std::string& error) -> bool {
         std::pair{"hasTarget", HandleOperation::HasTarget},
         std::pair{"inCombat", HandleOperation::InCombat},
         std::pair{"targetDistance", HandleOperation::TargetDistance},
+        std::pair{"hasOwner", HandleOperation::HasOwner},
+        std::pair{"ownerDistance", HandleOperation::OwnerDistance},
+        std::pair{"targetOwnerDistance", HandleOperation::TargetOwnerDistance},
+        std::pair{"isMelee", HandleOperation::IsMelee},
+        std::pair{"isRanged", HandleOperation::IsRanged},
+        std::pair{"isCaster", HandleOperation::IsCaster},
+        std::pair{"lastActionWasAttack", HandleOperation::LastActionWasAttack},
+        std::pair{"lastActionWasRetreat", HandleOperation::LastActionWasRetreat},
+        std::pair{"lastActionWasCast", HandleOperation::LastActionWasCast},
+        std::pair{"hasPreferredSkill", HandleOperation::HasPreferredSkill},
         std::pair{"idle", HandleOperation::Idle},
         std::pair{"wander", HandleOperation::Wander},
         std::pair{"attackTarget", HandleOperation::AttackTarget},
         std::pair{"chaseTarget", HandleOperation::ChaseTarget},
         std::pair{"retreatFromTarget", HandleOperation::RetreatFromTarget},
         std::pair{"castOnTarget", HandleOperation::CastOnTarget},
+        std::pair{"castPreferredSkill", HandleOperation::CastPreferredSkill},
+        std::pair{"followOwner", HandleOperation::FollowOwner},
     };
     for (const auto& [name, operation] : methods) {
         lua_pushinteger(state_, static_cast<lua_Integer>(operation));
@@ -482,6 +561,60 @@ auto Sandbox::ThinkHandleDispatch(lua_State* state) -> int {
             state,
             valid ? static_cast<lua_Integer>(snapshot.targetDistance) : 0);
         return 1;
+    case HandleOperation::HasOwner:
+        lua_pushboolean(state, valid && snapshot.hasOwner);
+        return 1;
+    case HandleOperation::OwnerDistance:
+        lua_pushinteger(
+            state,
+            valid ? static_cast<lua_Integer>(snapshot.ownerDistance) : 0);
+        return 1;
+    case HandleOperation::TargetOwnerDistance:
+        lua_pushinteger(
+            state,
+            valid
+                ? static_cast<lua_Integer>(snapshot.targetOwnerDistance)
+                : 0);
+        return 1;
+    case HandleOperation::IsMelee:
+        lua_pushboolean(
+            state,
+            valid && snapshot.tacticalProfile
+                == TacticalProfile::MeleeVanguard);
+        return 1;
+    case HandleOperation::IsRanged:
+        lua_pushboolean(
+            state,
+            valid && snapshot.tacticalProfile
+                == TacticalProfile::RangedSkirmisher);
+        return 1;
+    case HandleOperation::IsCaster:
+        lua_pushboolean(
+            state,
+            valid && snapshot.tacticalProfile
+                == TacticalProfile::CasterArtillery);
+        return 1;
+    case HandleOperation::LastActionWasAttack:
+        lua_pushboolean(
+            state,
+            valid && snapshot.hasLastAction
+                && snapshot.lastAction == ActionKind::AttackTarget);
+        return 1;
+    case HandleOperation::LastActionWasRetreat:
+        lua_pushboolean(
+            state,
+            valid && snapshot.hasLastAction
+                && snapshot.lastAction == ActionKind::RetreatFromTarget);
+        return 1;
+    case HandleOperation::LastActionWasCast:
+        lua_pushboolean(
+            state,
+            valid && snapshot.hasLastAction
+                && snapshot.lastAction == ActionKind::CastOnTarget);
+        return 1;
+    case HandleOperation::HasPreferredSkill:
+        lua_pushboolean(state, valid && snapshot.hasPreferredSkill);
+        return 1;
     case HandleOperation::ToString:
         break;
     default:
@@ -535,9 +668,32 @@ auto Sandbox::ThinkHandleDispatch(lua_State* state) -> int {
                 2, 0, 65'535, "skill must be 0..65535"),
         };
         break;
+    case HandleOperation::CastPreferredSkill:
+        if (!valid || !snapshot.hasPreferredSkill) {
+            lua_pushinteger(state, LuaCapabilityRejected);
+            return 1;
+        }
+        intent = {
+            .kind = ActionKind::CastOnTarget,
+            .argument = snapshot.preferredSkill,
+        };
+        break;
+    case HandleOperation::FollowOwner:
+        intent = {.kind = ActionKind::FollowOwner, .argument = 0U};
+        break;
     case HandleOperation::HasTarget:
     case HandleOperation::InCombat:
     case HandleOperation::TargetDistance:
+    case HandleOperation::HasOwner:
+    case HandleOperation::OwnerDistance:
+    case HandleOperation::TargetOwnerDistance:
+    case HandleOperation::IsMelee:
+    case HandleOperation::IsRanged:
+    case HandleOperation::IsCaster:
+    case HandleOperation::LastActionWasAttack:
+    case HandleOperation::LastActionWasRetreat:
+    case HandleOperation::LastActionWasCast:
+    case HandleOperation::HasPreferredSkill:
     case HandleOperation::ToString:
         return luaL_error(state, "invalid Scripted AI think-handle operation");
     }
@@ -766,6 +922,10 @@ auto Sandbox::ValidateTree(
 
         if ((kindValue == "target_distance_lte"
                 || kindValue == "target_distance_gte"
+                || kindValue == "owner_distance_lte"
+                || kindValue == "owner_distance_gte"
+                || kindValue == "target_owner_distance_lte"
+                || kindValue == "target_owner_distance_gte"
                 || kindValue == "cast")
                 && !sawRequiredParameter) {
             error = "behavior-tree node is missing its required V1 parameter";

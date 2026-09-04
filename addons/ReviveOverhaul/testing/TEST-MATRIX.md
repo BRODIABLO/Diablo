@@ -1,4 +1,4 @@
-# Revive Overhaul 2.1.1 — BKVince / D2R 3.3.93847
+# Revive Overhaul 2.3.0 + Scripted AI 0.7.0 — BKVince / D2R 3.3.93847
 
 Initial state: `NOT_RUN`.
 
@@ -16,6 +16,15 @@ Initial state: `NOT_RUN`.
 | A7 | Catch-up | Move beyond 12 units | Native catch-up activates, then settles near follow distance 8 | NOT RUN |
 | A8 | Stability | Change area, use a portal and fight several groups | No crash, stuck pet, invalid corpse or corrupted ownership | NOT RUN |
 | A9 | Diagnostics | Run `revive-overhaul` before and after | Counters match the performed cases and no fingerprint failed | NOT RUN |
+| A10 | Scripted domain disabled | Keep the complete stack and disable only `[domains.revive]` through its supported configuration | Revive Overhaul loads and native Revive behavior remains unchanged | NOT RUN |
+| A11 | Peaceful follow baseline | Enable Scripted AI and `[domains.revive]`, keep five Revives without a target, then move through doors and narrow paths | Revive Overhaul/native AI owns the tick; pets close distance and native catch-up recovers obstacles without a Scripted target action | NOT RUN |
+| A12 | Melee tactical profile | Revive a melee monster, expose one enemy at a time, then move while the fight continues | It closes to melee range, keeps the same live target inside the owner combat radius and does not break off merely to hug the owner | NOT RUN |
+| A13 | Ranged physical tactical profile | Revive an archer or other missile attacker, then let a melee enemy approach it | It attacks at range, retreats after close attacks, reacquires its locked live target and does not wander while the target remains valid | NOT RUN |
+| A14 | Caster tactical profile | Revive a monster with two or more valid cast-mode MonStats skills and fight several durable enemies | It rotates valid native spell slots, kites at close range and stays within the owner-centered combat radius | NOT RUN |
+| A15 | Hard leash and invalid target | Pull the owner beyond the tactical radius, kill the locked target, then repeat with a disappearing target across an area edge | Tactical handling delegates immediately; native follow resumes and no stale target is attacked | NOT RUN |
+| A16 | ABI load orders and lifecycle | Exercise both relevant plugin load orders and a leave/rejoin cycle with the complete stack | Discovery is safe, the active session and tactical blackboard are renewed, and absence/incompatibility delegates to native AI | NOT RUN |
+| A17 | Town/combat transitions | With ProcDump hang capture armed, cross town-to-field and field-to-town boundaries repeatedly with five Revives before, during and after combat | No hang or crash, no stale-target action, every transition remains responsive and no dump is emitted | NOT RUN |
+| A18 | Tactical diagnostics | Run `revive-overhaul` before and after A12-A17 and retain the relevant Scripted AI log lines | Callback route applications, tactical calls and handled counts match observed actions; failures stay zero | NOT RUN |
 
 For A4, retain at least one capture before death and one after Revive. Record
 the monster name, rank, modifiers and observed aura.

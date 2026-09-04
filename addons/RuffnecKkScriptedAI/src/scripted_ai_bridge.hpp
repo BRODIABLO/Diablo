@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <span>
 #include <string>
@@ -23,6 +24,8 @@ inline constexpr std::size_t MaximumUniqueAiScripts = 1'024U;
 inline constexpr std::size_t MaximumTotalAiScriptBytes = 16U * 1024U * 1024U;
 inline constexpr std::uint16_t StockAiCount = 155U;
 inline constexpr std::uint8_t ResolverTargetProfile = 2U;
+inline constexpr std::size_t InvalidPreparedScriptIndex =
+    std::numeric_limits<std::size_t>::max();
 
 struct AiScriptTableRow {
     std::uint32_t monStatsId{};
@@ -64,6 +67,11 @@ struct PreparedBundle {
     std::filesystem::path scriptRoot;
     std::vector<PreparedScript> scripts;
     std::array<PreparedBank, 2U> banks;
+    std::size_t reviveScriptIndex{InvalidPreparedScriptIndex};
+};
+
+struct DomainScriptSelection {
+    std::string revive;
 };
 
 struct BindingRuntimeState {
@@ -79,6 +87,19 @@ using SourceReader = std::function<bool(
     std::string& source,
     std::string& error)>;
 
+enum class OptionalTextFileStatus : std::uint8_t {
+    Absent,
+    Loaded,
+    Error,
+};
+
+[[nodiscard]] auto ReadOptionalBoundedTextFile(
+    const std::filesystem::path& root,
+    const std::filesystem::path& fileName,
+    std::size_t maximumBytes,
+    std::string& text,
+    std::string& error) -> OptionalTextFileStatus;
+
 [[nodiscard]] auto ReadScriptSource(
     const std::filesystem::path& path,
     std::size_t maximumBytes,
@@ -90,6 +111,7 @@ using SourceReader = std::function<bool(
     TableRowsView base,
     TableRowsView rotw,
     const std::filesystem::path& scriptRoot,
+    const DomainScriptSelection& domains,
     const SandboxLimits& limits,
     const SourceReader& reader,
     std::string& error) -> std::shared_ptr<const PreparedBundle>;
@@ -106,6 +128,7 @@ public:
     [[nodiscard]] auto LifecycleRevision() const noexcept -> std::uint64_t;
     [[nodiscard]] auto HasLuaVm() const noexcept -> bool;
     [[nodiscard]] auto ScriptCount() const noexcept -> std::size_t;
+    [[nodiscard]] auto HasReviveScript() const noexcept -> bool;
     [[nodiscard]] auto BindingCount(ScriptBank bank) const noexcept
         -> std::size_t;
     [[nodiscard]] auto InspectBinding(
@@ -114,6 +137,13 @@ public:
     [[nodiscard]] auto EvaluateThink(
         ScriptBank bank,
         std::uint32_t monStatsId,
+        std::uint64_t sessionId,
+        std::uint64_t thinkToken,
+        ThinkSnapshot snapshot,
+        ThinkCapabilities& capabilities,
+        ThinkTiming timing,
+        std::string& error) const -> ThinkDecision;
+    [[nodiscard]] auto EvaluateReviveThink(
         std::uint64_t sessionId,
         std::uint64_t thinkToken,
         ThinkSnapshot snapshot,
@@ -139,12 +169,23 @@ private:
 
     SessionGeneration() = default;
 
+    [[nodiscard]] auto EvaluateScript(
+        std::size_t scriptIndex,
+        std::uint16_t fallbackAi,
+        std::uint64_t sessionId,
+        std::uint64_t thinkToken,
+        ThinkSnapshot snapshot,
+        ThinkCapabilities& capabilities,
+        ThinkTiming timing,
+        std::string& error) const -> ThinkDecision;
+
     std::uint64_t sessionId_{};
     std::uint64_t lifecycleRevision_{};
     SandboxLimits limits_{};
     std::unique_ptr<Sandbox> sandbox_;
     std::vector<CompiledScript> scripts_;
     std::array<std::vector<PreparedBinding>, 2U> banks_;
+    std::size_t reviveScriptIndex_{InvalidPreparedScriptIndex};
 };
 
 [[nodiscard]] auto CompileSessionGeneration(

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(RuffnecKkScriptedAI VERSION 0.4.0 LANGUAGES C CXX RC)
+project(RuffnecKkScriptedAI VERSION 0.7.0 LANGUAGES C CXX RC)
 
 include(CTest)
 include(FetchContent)
@@ -63,6 +63,7 @@ endif()
 add_library(RuffnecKkScriptedAICore STATIC
     scripted_ai_bridge.cpp
     scripted_ai_config.cpp
+    scripted_ai_d2r.cpp
     scripted_ai_executor.cpp
     scripted_ai_fingerprint.cpp
     scripted_ai_native.cpp
@@ -107,8 +108,10 @@ if(BUILD_TESTING)
         RuffnecKkScriptedAITests PRIVATE RuffnecKkScriptedAICore)
     target_compile_definitions(RuffnecKkScriptedAITests PRIVATE
         SCRIPTED_AI_CONFIG_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../ruffneckk-scripted-ai.toml"
+        SCRIPTED_AI_REVIVE_SAMPLE_FILE="${CMAKE_CURRENT_SOURCE_DIR}/../revive-companion.lua"
         SCRIPTED_AI_PLUGIN_SOURCE_FILE="${CMAKE_CURRENT_SOURCE_DIR}/plugin.cpp"
         SCRIPTED_AI_BRIDGE_SOURCE_FILE="${CMAKE_CURRENT_SOURCE_DIR}/scripted_ai_bridge.cpp"
+        SCRIPTED_AI_D2R_SOURCE_FILE="${CMAKE_CURRENT_SOURCE_DIR}/scripted_ai_d2r.cpp"
         SCRIPTED_AI_NATIVE_SOURCE_FILE="${CMAKE_CURRENT_SOURCE_DIR}/scripted_ai_native.cpp"
     )
     if(MSVC)
@@ -122,16 +125,16 @@ if(BUILD_TESTING)
         SCRIPTED_AI_CANONICAL_IMAGE
         "${CMAKE_CURRENT_SOURCE_DIR}/../../../reverse-engineering/d2r-3.2.92777/analysis-cache/images/D2R-3.2.92777-decrypted.exe"
         CACHE FILEPATH
-        "Governed canonical image used by the optional 22-window uniqueness test"
+        "Governed canonical image used by the optional 24-window uniqueness test"
     )
     if(EXISTS "${SCRIPTED_AI_CANONICAL_IMAGE}")
         add_test(
-            NAME ruffneckk-scripted-ai-native-ai-1
+            NAME ruffneckk-scripted-ai-hook-ai-1
             COMMAND RuffnecKkScriptedAITests "${SCRIPTED_AI_CANONICAL_IMAGE}"
         )
     else()
         add_test(
-            NAME ruffneckk-scripted-ai-native-ai-1
+            NAME ruffneckk-scripted-ai-hook-ai-1
             COMMAND RuffnecKkScriptedAITests
         )
     endif()

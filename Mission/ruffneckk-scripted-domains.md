@@ -7,14 +7,14 @@ Chantier **actif en parallèle d’ISC12** depuis le `GO` de Vincent du
 sa priorité de livraison; ce chantier ouvre seulement une seconde ligne de
 travail gouvernée.
 
-La première verticale est `Scripted AI`. Aucun hook runtime ni chemin gameplay
-n’est encore implanté. Les gates de conception natifs, d’incubation, de
-transaction données/lifecycle, d’évaluation et d’adaptation native simulée sont
-fermés. RuffnecKk Scripted AI `0.4.0` enregistre sa table privée `aiscript`,
-publie sa génération Lua sur le thread hôte, ticke les arbres par un handle
-éphémère et mappe les intentions vers six adaptateurs typés injectables. Aucune
-implémentation D2R de ces adaptateurs n’est encore liée; le résolveur demeure
-intact jusqu’au gate `HOOK-AI-1`.
+La première verticale est `Scripted AI`. Les gates de conception natifs,
+d’incubation, de transaction données/lifecycle, d’évaluation, d’adaptation et de
+hook statique sont fermés. RuffnecKk Scripted AI `0.5.1` enregistre sa table
+privée `aiscript`, publie sa génération Lua sur le thread hôte et route seulement
+les monstres liés vers un record category 2 statique par son unique hook géré du
+résolveur. Les six actions appellent maintenant les helpers D2R gouvernés; aucun
+chemin gameplay n’est encore revendiqué. Son premier cold start pile complète,
+default-off puis opt-in sémantiquement vide, est qualifié dans `RUN-AI`.
 
 ## Objectif
 
@@ -29,6 +29,73 @@ dures — autorité serveur, cycle `AITHINK`, ciblage, pathfinding, coût par ti
 combat, actions d’objets, règles de monde ou extensions UI — mais jamais sous la
 forme d’un pont mémoire universel. Chaque domaine conserve sa propre DLL, son
 API Lua bornée, ses permissions, sa configuration, ses gates et son rollback.
+
+## Décision Revive consumer — 2 septembre 2026
+
+- `Revive Overhaul` demeure l’unique propriétaire du hook
+  `D2GAME_MONSTERS_AiFunction03 0x4A3A20`, de l’admission des cadavres de haut
+  rang et de la restauration des auras natives. `Scripted AI` demeure l’unique
+  propriétaire du résolveur `AITHINK_GetAiTableRecord 0x4A36C0`, de la VM Lua,
+  de la sandbox et des adaptateurs d’action.
+- Le consommateur Revive utilise une ABI C privée V1, optionnelle et interrogée
+  dynamiquement. Aucun service D2RLoader/PluginSDK, lien statique ou chargement
+  forcé de DLL n’est ajouté. Fournisseur absent, ABI incompatible, client non
+  autoritaire, session périmée, erreur Lua ou action refusée délèguent à l’AI
+  native exactement une fois.
+- Le routage exige le marqueur natif Revive `state 96` et limite le premier
+  contrat aux special states `0` et `7`. Une action Lua acceptée fait retourner
+  `1` au préambule AI03 et empêche le dispatch natif pour ce tick; la décision
+  `fallback` conserve intégralement le chemin AI03 puis le record natif.
+- Le premier domaine charge directement un script Lua borné depuis le
+  `script_directory` de Scripted AI. Il ne dépend ni de `Skills.txt`, ni de la
+  table custom `AIScript`, ni de son cache BIN. Le script est copié lors de la
+  transaction DataTables, compilé une fois sur le thread serveur et n’effectue
+  aucun accès disque pendant un tick.
+- La V1 expose seulement des faits copiés (`has_owner`, distance propriétaire,
+  cible et combat) et l’action `follow_owner`, en plus des primitives V1 déjà
+  gouvernées. Les pointeurs natifs restent synchrones dans l’ABI C et ne sont
+  jamais conservés ni exposés à Lua.
+- Cette coopération étend deux DLL autonomes existantes; elle ne crée aucune
+  nouvelle DLL. Le test runtime demeure un gate séparé et attend un `GO`
+  explicite de Vincent.
+
+## Décision corrective Revive 2.2.1 / Scripted AI 0.6.1 — 2 septembre 2026
+
+- Le test BKVince 3.3.93847 prouve le suivi paisible de cinq Revives, mais
+  reproduit deux gels lors des transitions ville/zone de combat. Les sessions
+  ont journalisé des actions directes `follow-owner` aux distances 23 et 27,
+  au-delà du seuil natif de rattrapage 20. Windows classe les deux sorties en
+  `AppHangB1` puis `AppHangTransient`; aucun dump ni stack ne permet encore
+  d'attribuer une instruction précise.
+- La V1 est retirée avant release : Scripted AI ne doit plus appeler directement
+  le pathfinding vers le propriétaire ni retourner `Handled` pour remplacer
+  AI03. La coopération privée V2 transporte seulement une décision
+  `RequestNativeFollow`; Revive Overhaul demeure l'unique propriétaire du
+  mouvement, de la vitesse, du leash et du callback AI03 natif.
+- Hors combat et sans cible, Revive Overhaul appelle AI03 exactement une fois
+  sous son scope paisible. La configuration de laboratoire retient
+  `catch_up_distance=8`, `follow_distance=4` et `velocity_bonus=80`, afin que
+  le chemin natif marche, accélère ou téléporte autour des obstacles.
+- Dès que `D2AiTickParam.target` est non nul ou que son témoin de combat vaut
+  non-zéro, AI03 est appelé exactement une fois sans transformation de
+  distance, de vitesse ou de follow distance. L'AI native conserve donc son
+  engagement et son leash de combat ordinaires.
+- Un fournisseur absent, désactivé, V1 seulement, incompatible, non autoritaire
+  ou en erreur délègue proprement. Une transition, un special state non admis
+  ou un propriétaire invalide ne lance jamais de chase Scripted AI direct.
+- Aucun TXT, `SrvDoFunc 49`, service D2RLoader/SDK, nouveau hook ou nouvelle DLL
+  n'est ajouté. Le prochain test runtime doit employer la pile complète et
+  armer ProcDump avant de répéter les obstacles et transitions.
+- Implantation source fermée : ABI V2 expose
+  `RuffnecKkScriptedAIQueryRevivePolicyV2`; `TryFollowOwner` est entièrement
+  retiré de l'adaptateur natif Scripted AI. Les tests prouvent un seul
+  `RequestNativeFollow`, zéro helper natif dans ce chemin, la délégation combat
+  et les quatre combinaisons cible/combat du scope paisible.
+- Deux builds indépendants de chaque DLL sont byte-identiques et passent CTest
+  `1/1` : Revive Overhaul `2.2.1`, `198144` octets,
+  `CEBFA6EA…39F9CA8F`; Scripted AI `0.6.1`, `461312` octets,
+  `D520EF88…7A62E6F7`. Les candidats restent dans `analysis-cache`; aucun
+  déploiement ni lancement D2R n'est inclus dans ce gate.
 
 ## Décision produit et séquencement
 
@@ -616,16 +683,33 @@ déploiement ou démarrage du jeu n’a eu lieu.
 
 ### HOOK-AI-1 — Résolveur, record bridge et ownership, sans déploiement
 
-- [ ] implémenter l’adaptateur D2R des six méthodes derrière les ABI et les
+- [x] implémenter l’adaptateur D2R des six méthodes derrière les ABI et les
   fenêtres gouvernées, sans exposer de mode, pointeur ou helper brut à Lua;
-- [ ] installer un unique hook gouverné sur le résolveur `0x4A36C0` seulement
+- [x] installer un unique hook gouverné sur le résolveur `0x4A36C0` seulement
   après vérification complète de son empreinte native et de l’ABI utilisée;
-- [ ] déléguer byte-for-byte à l’original pour special state, binding absent,
+- [x] déléguer byte-for-byte à l’original pour special state, binding absent,
   génération indisponible, client non autoritaire et tout refus fail-closed;
-- [ ] fournir un record category 2 statique uniquement aux unités liées et
+- [x] fournir un record category 2 statique uniquement aux unités liées et
   garantir sa durée de vie au-delà de chaque callback;
-- [ ] prouver l’ownership post-install, la désinstallation et la coexistence
+- [x] prouver l’ownership post-install, la désinstallation et la coexistence
   sans déployer D2R; la qualification gameplay reste réservée à `RUN-AI`.
+
+Gate fermé le 1er septembre 2026 par RuffnecKk Scripted AI `0.5.0`. La DLL
+installe exactement un hook D2RLoader géré à `0x4A36C0` après empreinte complète
+et ownership vanilla, puis exige l’ownership exclusif `ruffneckk-scripted-ai` à
+l’installation et à la première résolution de chaque session. Un record statique
+category 2 est retourné seulement pour un binding admis dans la banque
+Classic/LoD/RotW correspondant exactement au `MonStats` actif. Tous les autres
+cas délèguent à l’original; le teardown désarme le bridge avant que D2RLoader ne
+restaure son hook géré. L’adaptateur appelle les six helpers gouvernés. Un cast
+doit en plus retrouver son skill parmi les huit slots `MonStats+0x1C4` et utilise
+le mode correspondant à `+0x1DC`; un skill absent ou un mode hors `0..15` échoue
+avant l’appel. L’empreinte versionless couvre désormais 24 fenêtres exactes et
+uniques. Deux builds Release x64 indépendants produisent une DLL byte-identique
+de `442880` octets, SHA-256
+`020B30A373CE816BC0FB14AC57837C320BA936DCBBC2C391A4CB6F02D40EC1F9`,
+et les deux suites CTest passent `1/1`. Aucun déploiement ou démarrage D2R n’a eu
+lieu; cette preuve runtime appartient au gate `RUN-AI`.
 
 ### RUN-AI — Qualification
 
@@ -666,11 +750,90 @@ répertoire de preuves `reverse-engineering/d2r-3.2.92777/scripted-domains/**`.
 `ROADMAP.html`, `Mission/WORKSTREAMS.json`, `known-rvas.json`, `findings.md` et
 le cadastre restent des registres partagés.
 
-**Prochain gate : `HOOK-AI-1`.** Matérialiser l’adaptateur D2R derrière le
-contrat désormais testé, installer le hook géré unique du résolveur `0x4A36C0`
-et publier le record category 2 statique uniquement pour les bindings admis.
-Special states, unités non liées et tout refus doivent déléguer à l’original;
-ownership post-install, désinstallation et doubles de coexistence sont prouvés
-avant tout déploiement. Gameplay et qualification runtime restent réservés à
-`RUN-AI`. Aucun commit, push, déploiement ou test runtime n’est autorisé
-implicitement par ce document.
+Le 2 septembre 2026, `FIX-AISCRIPT-EMPTY-DEFAULT` ferme le premier sous-gate
+runtime de `RUN-AI`. D2RLoader `1.2.0-beta` refusait uniquement la ressource
+virtuelle header-only; une ligne compilateur désactivée conserve la table
+sémantiquement vide. RuffnecKk Scripted AI `0.5.1` produit deux builds Release
+x64 byte-identiques de `442880` octets, SHA-256
+`335903E976A24DD1D7BC0BA344FC1A2F935D7B53E6F098AC95555BBB11EC7C78`, et
+les deux CTest passent `1/1`. Le cold start default-off puis le cold start opt-in
+vide chargent `38` plugins, les cinq eezstreet et `17` patches jusqu’à `24/24`.
+Base et RotW compilent chacune `1 x 76` octets; le bridge s’installe, publie
+`0 unique scripts` et ne crée aucune VM Lua. Le runtime final conserve la DLL
+`0.5.1` mod-locale et le TOML default-off byte-exact.
+
+**Prochain gate : `RUN-AI-ENTITY`.** Ajouter un binding de test réversible,
+prouver un monstre puis un hireling opt-in, la délégation des unités non liées,
+le fallback sans gel et l’ownership au premier think. Reload/despawn,
+performance, portée globale et TCP/IP demeurent ensuite à qualifier. Aucun
+commit, push ou packaging n’est inclus.
+
+Diagnostic du 2 septembre 2026 : le candidat `0.5.2` ajoute une preuve positive
+bornée de l’ownership et du premier think, compile deux fois byte-identique à
+`444416` octets (`A07B0140…F2694C8`) et passe deux fois CTest `1/1`. Le témoin
+physique Base/RotW n’atteint toutefois jamais Lua : D2RLoader `1.2.0-beta`
+refuse d’écrire un TXT Excel du mod dans son cache BIN de base, les deux custom
+tables échouent et le fingerprint reste incomplet à `182/184`. La pile complète
+reste active (`38` plugins, cinq eezstreet, `17` patches, `24/24`), mais ce
+démarrage est classé diagnostic échoué, jamais preuve de compatibilité. Les TXT
+et le Lua temporaires sont retirés; la DLL runtime `0.5.1` et le TOML default-off
+sont restaurés byte-exact.
+
+Décision recommandée avant de reprendre `RUN-AI-ENTITY` : charger un AIScript
+texte borné depuis le dossier de support propre au plugin, puis enregistrer ses
+octets via `ResourceServiceV1` pour conserver la compilation stricte de
+`CustomTableServiceV1`. Cela reste éditable sans rebuild et évite le cache BIN
+interdit. Attendre une correction loader bloque le gate; embarquer les bindings
+dans la DLL ne prouverait pas le workflow moddeur.
+
+### TACTICAL-REVIVE-AI — Directeur tactique Lua des Revives
+
+Décision approuvée le 3 septembre 2026 : remplacer la politique Lua de suivi
+sans effet gameplay par une ABI privée v3 entre Revive Overhaul et RuffnecKk
+Scripted AI. Revive Overhaul demeure l’unique propriétaire du hook
+`D2GAME_MONSTERS_AiFunction03 0x4A3A20`; Scripted AI ne reçoit que des valeurs
+copiées et des unités opaques synchrones, revalide la session, le thread, le
+MonStats, l’identité GUID/type, la mort et les distances, puis engage au plus
+une action native déjà gouvernée. Un résultat `Handled` interdit l’appel de
+l’AI03 originale; toute indisponibilité, erreur, cible absente ou contexte hors
+leash délègue exactement une fois à l’originale.
+
+Le profil est dérivé automatiquement du MonStats compilé, sans TXT/TSV :
+`isMelee` choisit le vanguard, l’absence de ce bit choisit le skirmisher, et la
+présence d’au moins un skill à mode cast/skill choisit le caster en priorité.
+Le script Revive fourni applique trois comportements : verrouillage agressif
+dans un rayon du propriétaire pour les mêlées, alternance attaque/retraite pour
+les ranged physiques, et rotation bornée des slots de sorts avec kiting pour
+les casters. Aucun profil ne wander lorsqu’une cible est présente.
+
+Le blackboard est natif, éphémère, borné et vidé à chaque génération de partie.
+Il conserve seulement l’identité serveur de la cible, la dernière action et le
+prochain slot de sort; aucun pointeur, RVA, helper, scan mémoire ou primitive
+FFI n’est exposé à Lua. La cible verrouillée est re-résolue par
+`SUNIT_GetServerUnit 0x48FE80`, comparée à son pointeur initial sans le
+déréférencer, contrôlée par `SUNIT_IsDead 0x34C2C0`, puis abandonnée hors du
+rayon propriétaire. Les actions utilisent uniquement les helpers d’attaque,
+chase, escape et cast déjà gouvernés par Scripted AI. Le suivi hors combat,
+les transitions de ville et le hard leash restent le chemin natif Revive
+Overhaul; aucun chase direct du propriétaire n’est réintroduit.
+
+Portée arrêtée pour les candidats RuffnecKk Scripted AI `0.7.0` et Revive
+Overhaul `2.3.0` : aucune modification de `SrvDoFunc 49`, aucun port TCP/TSV,
+aucun nouveau format de sauvegarde, aucune persistance multijoueur et aucun
+déploiement ou lancement D2R dans ce gate. Validation exigée avant runtime :
+tests unitaires des trois profils, du lock, de la rotation, des fallbacks et de
+l’ABI; empreinte byte-exact de toutes les nouvelles surfaces; deux builds
+Release reproductibles; inspection des exports et des métadonnées. Le rollback
+reste le retrait de Scripted AI ou la désactivation de son domaine Revive,
+auquel cas Revive Overhaul délègue à son AI native actuelle.
+
+Gate statique fermé le 3 septembre 2026 : deux builds Release indépendants
+passent chacun CTest `1/1` pour les deux projets. Scripted AI `0.7.0` produit
+deux DLL byte-identiques de `476160` octets, SHA-256
+`F633EFACEABFB0DB1BAA96CF31D71A37F7EFA343B8566155F259F2E0239E7F39`;
+Revive Overhaul `2.3.0` produit deux DLL byte-identiques de `200192` octets,
+SHA-256
+`B4C6D3BEDBB798D2553935F25D528A80F03CBAD8FE87255BDA058E9E4A6931CC`.
+Les exports, métadonnées et 29 fenêtres natives sont conformes. Aucun résultat
+runtime n’est revendiqué; le prochain gate demeure le déploiement BKVince et
+la matrice A0-A18 après autorisation distincte.

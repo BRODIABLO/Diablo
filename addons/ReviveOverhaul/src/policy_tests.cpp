@@ -1,29 +1,85 @@
 #include "revive_overhaul_policy.hpp"
+#include "scripted_ai_revive_abi.hpp"
 
 #include <cassert>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <iostream>
 #include <string>
 #include <vector>
 
 using namespace ruffneckk::revive_overhaul;
 
+namespace {
+
+int TestFailures = 0;
+
+void RecordAssertion(
+        const bool passed,
+        const char* expression,
+        const char* file,
+        const int line) {
+    if (passed) {
+        return;
+    }
+
+    ++TestFailures;
+    std::cerr << file << ':' << line << ": assertion failed: " << expression
+              << '\n';
+}
+
+#undef assert
+#define assert(expression) \
+    RecordAssertion(static_cast<bool>(expression), #expression, __FILE__, __LINE__)
+
+auto __cdecl DummyRevivePolicy(
+        const ruffneckk::scripted_ai::revive_v2::Context*) noexcept
+        -> ruffneckk::scripted_ai::revive_v2::Result {
+    return ruffneckk::scripted_ai::revive_v2::Result::DelegateNative;
+}
+
+auto __cdecl DummyReviveTactics(
+        const ruffneckk::scripted_ai::revive_v3::Context*) noexcept
+        -> ruffneckk::scripted_ai::revive_v3::Result {
+    return ruffneckk::scripted_ai::revive_v3::Result::DelegateNative;
+}
+
+} // namespace
+
 int main() {
     static_assert(NativeReviveState == 96);
+
+    const ruffneckk::scripted_ai::revive_v2::Interface revivePolicy{
+        .capabilities =
+            ruffneckk::scripted_ai::revive_v2::CapabilityRequestNativeFollow,
+        .evaluate = DummyRevivePolicy,
+    };
+    assert(ruffneckk::scripted_ai::revive_v2::IsCompatible(&revivePolicy));
+    const ruffneckk::scripted_ai::revive_v3::Interface reviveTactics{
+        .capabilities =
+            ruffneckk::scripted_ai::revive_v3::CapabilityTacticalActions,
+        .evaluate = DummyReviveTactics,
+    };
+    assert(ruffneckk::scripted_ai::revive_v3::IsCompatible(&reviveTactics));
 
     constexpr AiPolicy defaults{};
     static_assert(TransformLeashDistance(0, defaults) == 2);
     static_assert(TransformLeashDistance(1, defaults) == 2);
     static_assert(TransformLeashDistance(2, defaults) == 2);
-    static_assert(TransformLeashDistance(12, defaults) == 12);
+    static_assert(TransformLeashDistance(8, defaults) == 8);
     static_assert(
-        TransformLeashDistance(13, defaults) == ForcedCatchUpDistance);
+        TransformLeashDistance(9, defaults) == ForcedCatchUpDistance);
     static_assert(
         TransformLeashDistance(20, defaults) == ForcedCatchUpDistance);
     static_assert(TransformLeashDistance(21, defaults) == 21);
-    static_assert(TransformFollowDistance(19, defaults) == 8);
-    static_assert(TransformVelocityBonus(40, defaults) == 40);
+    static_assert(TransformFollowDistance(19, defaults) == 4);
+    static_assert(TransformVelocityBonus(40, defaults) == 80);
+
+    static_assert(IsPeacefulReviveTick(false, false));
+    static_assert(!IsPeacefulReviveTick(true, false));
+    static_assert(!IsPeacefulReviveTick(false, true));
+    static_assert(!IsPeacefulReviveTick(true, true));
 
     static_assert(NeedsReviveTargetValidator({true, true}));
     static_assert(NeedsReviveTargetValidator({true, false}));
@@ -144,9 +200,63 @@ enabled = true
     const std::string pluginText{
         std::istreambuf_iterator<char>(pluginSource),
         std::istreambuf_iterator<char>()};
+    const auto countText = [&pluginText](std::string_view needle) {
+        std::size_t count{};
+        for (auto position = pluginText.find(needle);
+                position != std::string::npos;
+                position = pluginText.find(
+                    needle,
+                    position + needle.size())) {
+            ++count;
+        }
+        return count;
+    };
     assert(pluginText.find("GetTargetUnitRva") == std::string::npos);
     assert(pluginText.find("GetTargetUnitExpected") == std::string::npos);
     assert(pluginText.find("GetTargetUnit(") == std::string::npos);
     assert(pluginText.find("ActiveAuraCaptureFrame") != std::string::npos);
     assert(pluginText.find("CaptureNativeAura(target)") != std::string::npos);
+    assert(pluginText.find("ClientReviveAiGateCallRva") != std::string::npos);
+    assert(pluginText.find("PatchCallRel32(") != std::string::npos);
+    assert(pluginText.find("HookClientCanUnitSwitchAi") != std::string::npos);
+    assert(pluginText.find("ClientReviveAiGateReturnRva") == std::string::npos);
+    assert(pluginText.find("HookCanUnitSwitchAi") == std::string::npos);
+    assert(pluginText.find("BridgedReviveCltStFunc = 39")
+        != std::string::npos);
+    assert(pluginText.find("BridgedReviveCltDoFunc = 36")
+        != std::string::npos);
+    assert(pluginText.find("BridgedReviveSelectProc = 2")
+        != std::string::npos);
+    assert(pluginText.find("OnDataTablesLoaded") != std::string::npos);
+    assert(pluginText.find("DataTableServiceV1") != std::string::npos);
+    assert(pluginText.find("LifecycleServiceV1") != std::string::npos);
+    assert(pluginText.find("constexpr char Version[] = \"2.3.0\"")
+        != std::string::npos);
+    assert(pluginText.find("AiSpecialStateDispatchReadRva")
+        != std::string::npos);
+    assert(pluginText.find("GetMinionOwnerRva") != std::string::npos);
+    assert(pluginText.find("ResolveScriptedAiReviveProvider")
+        != std::string::npos);
+    assert(pluginText.find("GetModuleHandleW(") != std::string::npos);
+    assert(pluginText.find("GetModuleHandleExW(") != std::string::npos);
+    assert(pluginText.find("GetProcAddress(") != std::string::npos);
+    assert(pluginText.find("ScriptedAiProviderLogged.exchange(")
+        != std::string::npos);
+    assert(pluginText.find("LoadLibraryW(") == std::string::npos);
+    assert(pluginText.find("LoadLibraryA(") == std::string::npos);
+    assert(pluginText.find("ExecuteScriptedAiReviveTactics")
+        != std::string::npos);
+    assert(pluginText.find("const ReviveAiScope scope(peaceful)")
+        != std::string::npos);
+    assert(pluginText.find("IsPeacefulReviveTick(") != std::string::npos);
+    assert(countText("OriginalAiFunction03(game, monster, tickParam)") == 1U);
+    assert(pluginText.find("Result::Handled")
+        != std::string::npos);
+    assert(pluginText.find("case Result::DelegateNative:")
+        != std::string::npos);
+    assert(pluginText.find("case Result::Unavailable:")
+        != std::string::npos);
+    assert(pluginText.find("case Result::Error:") != std::string::npos);
+
+    return TestFailures == 0 ? 0 : 1;
 }

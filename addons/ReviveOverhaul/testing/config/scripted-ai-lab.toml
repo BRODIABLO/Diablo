@@ -1,0 +1,36 @@
+# RuffnecKk Scripted AI
+# Enables the bounded Revive tactical tree for the BKVince test laboratory.
+
+schema_version = 1
+
+# The laboratory exercises the native resolver and the optional Revive ABI.
+enabled = true
+
+# Relative to the active BKVince support directory.
+script_directory = "scripts/ruffneckk-scripted-ai"
+
+# Keep bounded diagnostics enabled so the live test leaves usable evidence.
+diagnostics = true
+
+[domains.revive]
+# Lets Revive Overhaul request bounded target-combat decisions.
+enabled = true
+
+# Relative to script_directory.
+script = "revive-companion.lua"
+
+[sandbox]
+# These values may be lowered, but never raised above the compiled hard limits.
+max_source_bytes = 262144
+max_tree_nodes = 256
+max_tree_depth = 32
+max_children_per_node = 32
+session_heap_bytes = 16777216
+per_think_heap_growth_bytes = 65536
+max_instructions_per_think = 25000
+instruction_hook_interval = 500
+max_load_instructions = 250000
+max_script_errors_per_session = 3
+max_slow_strikes_per_session = 3
+slow_think_microseconds = 2000
+detailed_log_interval_milliseconds = 5000

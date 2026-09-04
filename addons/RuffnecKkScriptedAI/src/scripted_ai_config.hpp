@@ -13,10 +13,16 @@ inline constexpr std::int64_t CurrentConfigSchemaVersion = 1;
 inline constexpr wchar_t ConfigFileName[] =
     L"ruffneckk-scripted-ai.toml";
 
+struct ReviveDomainConfig {
+    bool enabled{};
+    std::string script{"revive-companion.lua"};
+};
+
 struct Config {
     bool enabled{};
     bool diagnostics{};
     std::string scriptDirectory{"scripts/ruffneckk-scripted-ai"};
+    ReviveDomainConfig revive{};
     SandboxLimits limits{};
 };
 

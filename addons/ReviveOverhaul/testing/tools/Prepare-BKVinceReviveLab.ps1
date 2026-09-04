@@ -15,4 +15,16 @@ Copy-Item -LiteralPath (Join-Path $harnessRoot 'config\lab.toml') `
     -Destination (Join-Path $bkvinceRoot 'd2rloader\config\ruffneckk-revive-overhaul.toml') `
     -Force
 
+Copy-Item -LiteralPath (Join-Path $harnessRoot 'config\scripted-ai-lab.toml') `
+    -Destination (Join-Path $bkvinceRoot 'd2rloader\config\ruffneckk-scripted-ai.toml') `
+    -Force
+
+$scriptDirectory = Join-Path $bkvinceRoot 'd2rloader\scripts\ruffneckk-scripted-ai'
+if (-not (Test-Path -LiteralPath $scriptDirectory -PathType Container)) {
+    New-Item -ItemType Directory -Path $scriptDirectory | Out-Null
+}
+Copy-Item -LiteralPath (Join-Path $harnessRoot 'scripts\revive-companion.lua') `
+    -Destination (Join-Path $scriptDirectory 'revive-companion.lua') `
+    -Force
+
 & (Join-Path $PSScriptRoot 'Get-BKVinceReviveLabStatus.ps1')

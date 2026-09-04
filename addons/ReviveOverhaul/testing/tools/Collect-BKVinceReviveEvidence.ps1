@@ -27,8 +27,10 @@ $status = & (Join-Path $PSScriptRoot 'Get-BKVinceReviveLabStatus.ps1') -AsObject
 $sources = @(
     (Join-Path $bkvinceRoot 'd2rloader\logs\d2rloader.log'),
     (Join-Path $bkvinceRoot 'd2rloader\logs\revive-overhaul.log'),
+    (Join-Path $bkvinceRoot 'd2rloader\logs\ruffneckk-scripted-ai.log'),
     (Join-Path $gameRoot 'd2rloader\logs\d2rloader.log'),
-    (Join-Path $gameRoot 'd2rloader\logs\revive-overhaul.log')
+    (Join-Path $gameRoot 'd2rloader\logs\revive-overhaul.log'),
+    (Join-Path $gameRoot 'd2rloader\logs\ruffneckk-scripted-ai.log')
 )
 foreach ($source in $sources) {
     if (Test-Path -LiteralPath $source -PathType Leaf) {

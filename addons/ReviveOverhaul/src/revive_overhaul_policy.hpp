@@ -24,9 +24,9 @@ inline constexpr std::size_t MaximumUModCount = 9;
 struct AiPolicy {
     bool enabled{true};
     bool disableOwnerScatter{true};
-    std::int32_t catchUpDistance{12};
-    std::int32_t followDistance{8};
-    std::int32_t velocityBonus{NativeVelocityBonus};
+    std::int32_t catchUpDistance{8};
+    std::int32_t followDistance{4};
+    std::int32_t velocityBonus{80};
 };
 
 struct RevivePolicy {
@@ -44,6 +44,12 @@ struct Config {
 constexpr bool NeedsReviveTargetValidator(
         const RevivePolicy& policy) noexcept {
     return policy.allowHighRankMonsters || policy.preserveNativeAuras;
+}
+
+constexpr bool IsPeacefulReviveTick(
+        bool hasTarget,
+        bool inCombat) noexcept {
+    return !hasTarget && !inCombat;
 }
 
 constexpr std::int32_t TransformLeashDistance(
@@ -129,6 +135,10 @@ inline bool ParseToml(
         const auto readRootBool = [&](const char* key, bool& destination) {
             const auto* node = root.get(key);
             if (!node) return true;
+            if (!node->is_boolean()) {
+                error = std::string(key) + " must be true or false";
+                return false;
+            }
             const auto value = node->value<bool>();
             if (!value) {
                 error = std::string(key) + " must be true or false";
@@ -165,6 +175,11 @@ inline bool ParseToml(
             const auto readBool = [&](const char* key, bool& destination) {
                 const auto* node = ai->get(key);
                 if (!node) return true;
+                if (!node->is_boolean()) {
+                    error = std::string("ai.") + key
+                        + " must be true or false";
+                    return false;
+                }
                 const auto value = node->value<bool>();
                 if (!value) {
                     error = std::string("ai.") + key
@@ -244,6 +259,11 @@ inline bool ParseToml(
             const auto readBool = [&](const char* key, bool& destination) {
                 const auto* node = revive->get(key);
                 if (!node) return true;
+                if (!node->is_boolean()) {
+                    error = std::string("revive.") + key
+                        + " must be true or false";
+                    return false;
+                }
                 const auto value = node->value<bool>();
                 if (!value) {
                     error = std::string("revive.") + key
@@ -278,6 +298,10 @@ inline bool ParseToml(
                 }
             }
             if (const auto* node = diagnostics->get("enabled")) {
+                if (!node->is_boolean()) {
+                    error = "diagnostics.enabled must be true or false";
+                    return false;
+                }
                 const auto value = node->value<bool>();
                 if (!value) {
                     error = "diagnostics.enabled must be true or false";

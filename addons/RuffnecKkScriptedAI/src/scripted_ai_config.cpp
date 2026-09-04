@@ -128,6 +128,29 @@ template<class T>
     return true;
 }
 
+[[nodiscard]] auto IsSafeRelativeLuaScript(
+        std::string_view value) noexcept -> bool {
+    if (value.empty() || value.size() > 160U || value.front() == '/'
+            || value.front() == '\\' || value.find(':') != value.npos
+            || value.find('\\') != value.npos) {
+        return false;
+    }
+    std::size_t start{};
+    while (start <= value.size()) {
+        const auto end = value.find('/', start);
+        const auto segment = value.substr(
+            start,
+            end == value.npos ? value.size() - start : end - start);
+        if (segment.empty() || segment == "." || segment == "..") {
+            return false;
+        }
+        if (end == value.npos) break;
+        start = end + 1U;
+    }
+    return value.size() >= 4U
+        && value.substr(value.size() - 4U) == ".lua";
+}
+
 } // namespace
 
 auto ParseConfig(std::string_view text) -> Config {
@@ -135,7 +158,7 @@ auto ParseConfig(std::string_view text) -> Config {
     RejectUnknownKeys(
         root,
         {"schema_version", "enabled", "script_directory", "diagnostics",
-         "sandbox"},
+         "domains", "sandbox"},
         "root");
 
     const auto* schemaNode = root.get("schema_version");
@@ -165,6 +188,32 @@ auto ParseConfig(std::string_view text) -> Config {
                 "Scripted AI script_directory must be a safe relative path using forward slashes");
         }
         result.scriptDirectory = *value;
+    }
+
+    if (const auto* domains = ReadOptionalTable(root, "domains")) {
+        RejectUnknownKeys(*domains, {"revive"}, "domains");
+        if (const auto* revive = ReadOptionalTable(*domains, "revive")) {
+            RejectUnknownKeys(
+                *revive,
+                {"enabled", "script"},
+                "domains.revive");
+            result.revive.enabled = ReadOptional(
+                *revive,
+                "enabled",
+                result.revive.enabled);
+            if (const auto* node = revive->get("script")) {
+                if (!node->is_string()) {
+                    throw std::runtime_error(
+                        "Scripted AI domains.revive.script must be a string");
+                }
+                const auto value = node->value<std::string>();
+                if (!value || !IsSafeRelativeLuaScript(*value)) {
+                    throw std::runtime_error(
+                        "Scripted AI domains.revive.script must be a safe relative .lua path using forward slashes");
+                }
+                result.revive.script = *value;
+            }
+        }
     }
 
     if (const auto* sandbox = ReadOptionalTable(root, "sandbox")) {

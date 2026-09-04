@@ -2,6 +2,7 @@
 #include <D2RLPlugin/api.h>
 
 #include "revive_overhaul_policy.hpp"
+#include "scripted_ai_revive_abi.hpp"
 
 #include <Windows.h>
 #include <intrin.h>
@@ -14,6 +15,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -25,7 +27,7 @@ using namespace ruffneckk::revive_overhaul;
 
 constexpr wchar_t ConfigFileName[] = L"ruffneckk-revive-overhaul.toml";
 constexpr wchar_t LegacyConfigFileName[] = L"ReviveOverhaul.toml";
-constexpr char Version[] = "2.1.1";
+constexpr char Version[] = "2.3.0";
 
 constexpr char DefaultConfig[] = R"toml(# Revive Overhaul
 # Improves Revive following and safely expands eligible high-rank corpses.
@@ -42,14 +44,14 @@ disable_owner_scatter = true
 
 # Forces native catch-up behavior beyond this owner distance.
 # Accepted range: 2 to 20.
-catch_up_distance = 12
+catch_up_distance = 8
 
 # Native follow distance used after catch-up. It must remain lower than
 # catch_up_distance. Accepted range: 1 to 19.
-follow_distance = 8
+follow_distance = 4
 
 # Native catch-up velocity bonus. Accepted range: 0 to 255.
-velocity_bonus = 40
+velocity_bonus = 80
 
 [revive]
 # Allows eligible Champions, Uniques and SuperUniques. Native boss, scripted,
@@ -74,12 +76,14 @@ constexpr std::uintptr_t SetVelocityReturnRva = 0x4A3C4F;
 constexpr std::uintptr_t WalkToOwnerReturnRva = 0x4A3C66;
 constexpr std::uintptr_t StatesCheckStateRva = 0x3351B0;
 constexpr std::uintptr_t ReviveStateMarkerWitnessRva = 0x55EB48;
+constexpr std::uintptr_t AiSpecialStateDispatchReadRva = 0x4A2BC8;
+constexpr std::uintptr_t GetMinionOwnerRva = 0x4A53C0;
 
 constexpr std::uintptr_t ValidateReviveTargetRva = 0x55A510;
 constexpr std::uintptr_t SrvDo58ReviveRva = 0x55E7E0;
 constexpr std::uintptr_t ClientReviveSelectorRva = 0x096600;
 constexpr std::uintptr_t ClientReviveAiGateRva = 0x096635;
-constexpr std::uintptr_t ClientReviveAiGateReturnRva = 0x09664D;
+constexpr std::uintptr_t ClientReviveAiGateCallRva = 0x096648;
 constexpr std::uintptr_t GetUnitTypeRva = 0x34B9D0;
 constexpr std::uintptr_t GetMonStats2Rva = 0x0975B0;
 constexpr std::uintptr_t IsUnitDeadRva = 0x34C2C0;
@@ -97,6 +101,22 @@ constexpr std::uint8_t MonStats2CorpseSelMask = 0x80;
 constexpr std::uint8_t MonStats2ReviveMask = 0x01;
 constexpr std::size_t SkillRecordOffset = 0x00;
 constexpr std::size_t SkillOwnerGuidOffset = 0x4C;
+constexpr std::uint32_t ReviveSkillId = 95;
+constexpr std::uint32_t SkillsRecordSize = 0x2EC;
+constexpr std::size_t SkillsSelectProcOffset = 0x35;
+constexpr std::size_t SkillsSrvStFuncOffset = 0x4C;
+constexpr std::size_t SkillsSrvDoFuncOffset = 0x4E;
+constexpr std::size_t SkillsCltStFuncOffset = 0x148;
+constexpr std::size_t SkillsCltDoFuncOffset = 0x14A;
+constexpr std::uint8_t NativeReviveSelectProc = 3;
+constexpr std::int16_t NativeReviveSrvStFunc = 21;
+constexpr std::int16_t NativeReviveSrvDoFunc = 58;
+constexpr std::int16_t NativeReviveCltStFunc = 24;
+constexpr std::int16_t NativeReviveCltDoFunc = 0;
+constexpr std::uint8_t BridgedReviveSelectProc = 2;
+constexpr std::int16_t BridgedReviveSrvStFunc = 0;
+constexpr std::int16_t BridgedReviveCltStFunc = 39;
+constexpr std::int16_t BridgedReviveCltDoFunc = 36;
 
 constexpr auto AiFunction03Expected = std::to_array<std::uint8_t>({
     0x40,0x53,0x57,0x41,0x56,0x48,0x81,0xEC,0xD0,0x00,0x00,0x00,
@@ -138,6 +158,17 @@ constexpr auto ReviveStateMarkerWitnessExpected =
         0x8B,0xC3,0x8D,0x53,0x5F,0x48,0x8B,0xCD,0xE8,0x4D,
         0x69,0xDD,0xFF,
     });
+constexpr auto AiSpecialStateDispatchReadExpected =
+    std::to_array<std::uint8_t>({
+        0x48,0x8B,0x45,0xAF,0x49,0x8B,0xCE,0x8B,0x10,0xE8,
+        0xEA,0x0A,0x00,0x00,0x48,0x63,0x10,0x83,0xFA,0x06,
+    });
+constexpr auto GetMinionOwnerExpected = std::to_array<std::uint8_t>({
+    0x40,0x53,0x48,0x83,0xEC,0x20,0x48,0x8B,0xD9,0xE8,
+    0x02,0x66,0xEA,0xFF,0x83,0xF8,0x01,0x0F,0x85,0x9E,
+    0x00,0x00,0x00,0x48,0x85,0xDB,0x74,0x0D,0x48,0x8B,
+    0xCB,0xE8,0xEC,0x65,0xEA,0xFF,
+});
 
 constexpr auto ValidateReviveTargetExpected = std::to_array<std::uint8_t>({
     0x48,0x89,0x5C,0x24,0x08,0x57,0x48,0x83,0xEC,0x30,
@@ -162,6 +193,8 @@ constexpr auto ClientReviveAiGateExpected = std::to_array<std::uint8_t>({
     0xB6,0xC1,0x41,0x0F,0xB6,0xD1,0x48,0x8B,0xCB,0xE8,
     0xE3,0x60,0x2B,0x00,
 });
+constexpr auto ClientReviveAiGateCallExpected =
+    std::to_array<std::uint8_t>({0xE8,0xE3,0x60,0x2B,0x00});
 constexpr auto GetUnitTypeExpected = std::to_array<std::uint8_t>({
     0x48,0x83,0xEC,0x28,0x48,0x85,0xC9,0x75,0x1D,0x88,
     0x4C,0x24,0x30,0x48,0x8D,0x4C,0x24,0x30,0xE8,0x39,
@@ -223,10 +256,13 @@ using WalkToOwnerFn = std::int32_t(__fastcall*)(
     void*, void*, void*, std::uint8_t, std::uint16_t) noexcept;
 using StatesCheckStateFn = std::int32_t(__fastcall*)(
     void*, std::int32_t) noexcept;
+using GetMinionOwnerFn = void*(__fastcall*)(void*) noexcept;
 using ValidateReviveTargetFn = std::int32_t(__fastcall*)(
     void*, void*, void*) noexcept;
 using SrvDo58ReviveFn = std::int32_t(__fastcall*)(
     void*, void*, std::int32_t, std::int32_t) noexcept;
+using ClientValidateReviveTargetFn = bool(__fastcall*)(
+    void*, void*) noexcept;
 using GetUnitTypeFn = std::int32_t(__fastcall*)(void*) noexcept;
 using GetMonStats2Fn = const std::uint8_t*(__fastcall*)(
     std::uint8_t, std::int32_t) noexcept;
@@ -253,9 +289,9 @@ AiFunction03Fn OriginalAiFunction03{};
 SetVelocityFn OriginalSetVelocity{};
 DistanceFn OriginalDistance{};
 WalkToOwnerFn OriginalWalkToOwner{};
-CanUnitSwitchAiFn OriginalCanUnitSwitchAi{};
 ValidateReviveTargetFn OriginalValidateReviveTarget{};
 SrvDo58ReviveFn OriginalSrvDo58Revive{};
+ClientValidateReviveTargetFn OriginalClientValidateReviveTarget{};
 GetUnitTypeFn GetUnitType{};
 GetMonStats2Fn GetMonStats2{};
 IsUnitDeadFn IsUnitDead{};
@@ -265,7 +301,9 @@ CheckMonsterTypeFlagFn CheckMonsterTypeFlag{};
 GetMonsterUModsFn GetMonsterUMods{};
 GetRightSkillFn GetRightSkill{};
 StatesCheckStateFn StatesCheckState{};
+GetMinionOwnerFn GetMinionOwner{};
 AssignSkillFn AssignSkill{};
+void* ClientReviveAiGateRelay{};
 
 thread_local std::uint32_t ReviveAiDepth{};
 std::atomic_uint64_t ReviveTicks{};
@@ -274,10 +312,32 @@ std::atomic_uint64_t CatchUpsForced{};
 std::atomic_uint64_t FollowAdjustments{};
 std::atomic_uint64_t VelocityAdjustments{};
 std::atomic_uint64_t HighRankAdmissions{};
+std::atomic_uint64_t ClientGateCalls{};
+std::atomic_uint64_t ClientHighRankCandidates{};
 std::atomic_uint64_t ClientHighRankSelections{};
+std::atomic_uint64_t ClientSelectorHighRankCalls{};
+std::atomic_uint64_t ClientSelectorHighRankAccepts{};
+std::atomic_uint64_t ClientSelectorHighRankRejects{};
 std::atomic_uint64_t NativeAuraCaptures{};
 std::atomic_uint64_t NativeAuraReactivations{};
+std::atomic_uint64_t CallbackRouteApplications{};
+std::atomic_uint64_t CallbackRouteFailures{};
+std::atomic_uint64_t CallbackRouteRevision{};
+std::atomic_bool CallbackRouteReady{};
+const D2RL::DataTableServiceV1* DataTables{};
+const D2RL::LifecycleServiceV1* Lifecycle{};
+D2RL::Lifecycle::ListenerHandle DataTablesListener{
+    D2RL::Lifecycle::InvalidHandle};
 std::atomic_uint64_t NativeAuraConflicts{};
+thread_local std::uint32_t ScriptedAiProbeCooldown{};
+std::atomic_bool ScriptedAiAbiWarningLogged{};
+std::atomic_bool ScriptedAiProviderLogged{};
+std::atomic_uint64_t ScriptedAiProviderProbes{};
+std::atomic_uint64_t ScriptedAiTacticalCalls{};
+std::atomic_uint64_t ScriptedAiTacticalHandled{};
+std::atomic_uint64_t ScriptedAiTacticalDelegates{};
+std::atomic_uint64_t ScriptedAiTacticalUnavailable{};
+std::atomic_uint64_t ScriptedAiTacticalErrors{};
 
 constexpr D2RL::PluginInfo Info{
     .infoSize = D2RL::PluginInfoSize,
@@ -442,6 +502,163 @@ bool IsNativeRevive(void* monster) noexcept {
         && StatesCheckState(monster, NativeReviveState) != 0;
 }
 
+struct AiTickView {
+    void* aiControl{};
+    std::uint64_t reserved08{};
+    void* target{};
+    std::uint64_t reserved18{};
+    std::int32_t targetDistance{};
+    std::int32_t inCombat{};
+    const void* monStats{};
+    const void* monStats2{};
+};
+
+static_assert(offsetof(AiTickView, aiControl) == 0U);
+static_assert(offsetof(AiTickView, target) == 16U);
+static_assert(offsetof(AiTickView, targetDistance) == 32U);
+static_assert(offsetof(AiTickView, inCombat) == 36U);
+static_assert(sizeof(void*) != 8U || sizeof(AiTickView) == 56U);
+
+[[nodiscard]] std::int32_t ReadAiSpecialState(void* tickParam) noexcept {
+    if (!tickParam) return -1;
+    const auto* const tick = static_cast<const AiTickView*>(tickParam);
+    if (!tick->aiControl) return -1;
+    return *static_cast<const std::int32_t*>(tick->aiControl);
+}
+
+struct ScriptedAiModuleLease {
+    HMODULE module{};
+
+    ScriptedAiModuleLease() = default;
+    ScriptedAiModuleLease(const ScriptedAiModuleLease&) = delete;
+    auto operator=(const ScriptedAiModuleLease&)
+        -> ScriptedAiModuleLease& = delete;
+    ~ScriptedAiModuleLease() noexcept {
+        if (module != nullptr) ::FreeLibrary(module);
+    }
+};
+
+[[nodiscard]] auto ResolveScriptedAiReviveProvider(
+        ScriptedAiModuleLease& lease) noexcept
+        -> const ruffneckk::scripted_ai::revive_v3::Interface* {
+    using namespace ruffneckk::scripted_ai::revive_v3;
+    if (ScriptedAiProbeCooldown != 0U) {
+        --ScriptedAiProbeCooldown;
+        return nullptr;
+    }
+    ScriptedAiProbeCooldown = 255U;
+    ScriptedAiProviderProbes.fetch_add(1U, std::memory_order_relaxed);
+    if (::GetModuleHandleW(ProviderModuleName) == nullptr
+            || !::GetModuleHandleExW(0U, ProviderModuleName, &lease.module)) {
+        return nullptr;
+    }
+    const auto query = reinterpret_cast<QueryFunction>(
+        ::GetProcAddress(lease.module, QueryExportName));
+    if (query == nullptr) {
+        if (!ScriptedAiAbiWarningLogged.exchange(
+                true,
+                std::memory_order_acq_rel)
+                && Context != nullptr) {
+            Context->LogWarn(
+                "ReviveOverhaul: Scripted AI was found without a compatible Revive tactics ABI v3; native AI remains active.");
+        }
+        ::FreeLibrary(lease.module);
+        lease.module = nullptr;
+        return nullptr;
+    }
+    const auto* const candidate = query(AbiVersion, sizeof(Interface));
+    if (candidate == nullptr) {
+        ::FreeLibrary(lease.module);
+        lease.module = nullptr;
+        return nullptr;
+    }
+    if (!IsCompatible(candidate)) {
+        if (!ScriptedAiAbiWarningLogged.exchange(
+                true,
+                std::memory_order_acq_rel)
+                && Context != nullptr) {
+            Context->LogWarn(
+                "ReviveOverhaul: Scripted AI returned an incompatible Revive tactics ABI v3; native AI remains active.");
+        }
+        ::FreeLibrary(lease.module);
+        lease.module = nullptr;
+        return nullptr;
+    }
+    ScriptedAiProbeCooldown = 0U;
+    if (Settings.diagnostics && Context != nullptr
+            && !ScriptedAiProviderLogged.exchange(
+                true,
+                std::memory_order_acq_rel)) {
+        Context->LogInfo(
+            "ReviveOverhaul: compatible Scripted AI Revive tactics ABI v3 discovered; Revive Overhaul remains the sole AiFunction03 hook owner.");
+    }
+    return candidate;
+}
+
+[[nodiscard]] bool ExecuteScriptedAiReviveTactics(
+        void* game,
+        void* monster,
+        void* tickParam) noexcept {
+    using namespace ruffneckk::scripted_ai::revive_v3;
+    const auto specialState = ReadAiSpecialState(tickParam);
+    if (specialState != 0 && specialState != 7) return false;
+    if (!GetMinionOwner || !OriginalDistance) return false;
+    ScriptedAiModuleLease lease;
+    const auto* const provider = ResolveScriptedAiReviveProvider(lease);
+    if (!provider) return false;
+    auto* const owner = GetMinionOwner(monster);
+    if (!owner) return false;
+    const auto ownerDistance = OriginalDistance(monster, owner);
+    if (ownerDistance < 0) return false;
+    const auto* const tick = static_cast<const AiTickView*>(tickParam);
+    if (!tick) return false;
+    const auto targetOwnerDistance = tick->target != nullptr
+        ? OriginalDistance(tick->target, owner)
+        : -1;
+    if (tick->target != nullptr && (tick->targetDistance < 0
+            || targetOwnerDistance < 0)) {
+        return false;
+    }
+
+    const ruffneckk::scripted_ai::revive_v3::Context request{
+        .structSize = sizeof(
+            ruffneckk::scripted_ai::revive_v3::Context),
+        .abiVersion = AbiVersion,
+        .game = game,
+        .monster = monster,
+        .target = tick->target,
+        .owner = owner,
+        .monStats = tick->monStats,
+        .ownerDistance = ownerDistance,
+        .targetDistance = tick->target != nullptr
+            ? tick->targetDistance
+            : -1,
+        .targetOwnerDistance = targetOwnerDistance,
+        .specialState = specialState,
+        .inCombat = tick->inCombat,
+    };
+    ScriptedAiTacticalCalls.fetch_add(1U, std::memory_order_relaxed);
+    const auto result = provider->evaluate(&request);
+    switch (result) {
+    case Result::Handled:
+        ScriptedAiTacticalHandled.fetch_add(
+            1U,
+            std::memory_order_relaxed);
+        return true;
+    case Result::DelegateNative:
+        ScriptedAiTacticalDelegates.fetch_add(1U, std::memory_order_relaxed);
+        return false;
+    case Result::Unavailable:
+        ScriptedAiTacticalUnavailable.fetch_add(1U, std::memory_order_relaxed);
+        return false;
+    case Result::Error:
+        ScriptedAiTacticalErrors.fetch_add(1U, std::memory_order_relaxed);
+        return false;
+    }
+    ScriptedAiTacticalErrors.fetch_add(1U, std::memory_order_relaxed);
+    return false;
+}
+
 class ReviveAiScope {
 public:
     explicit ReviveAiScope(const bool active) noexcept : active_(active) {
@@ -483,8 +700,8 @@ bool IsEligibleHighRankCorpse(void* game, void* target) noexcept {
 
     // Preserve native state, mode, boss/prime-evil and SwitchAI checks. Only
     // the native Unique|SuperUnique rejection is disabled (third argument).
-    return OriginalCanUnitSwitchAi
-        && OriginalCanUnitSwitchAi(target, true, false, true, true);
+    return CanUnitSwitchAi
+        && CanUnitSwitchAi(target, true, false, true, true);
 }
 
 struct AuraSnapshot {
@@ -562,31 +779,329 @@ __declspec(noinline) std::int32_t __fastcall HookAiFunction03(
         && Settings.ai.enabled
         && IsNativeRevive(monster);
     if (revived) ++ReviveTicks;
-    const ReviveAiScope scope(revived);
+    const auto* const tick = static_cast<const AiTickView*>(tickParam);
+    if (revived && tick != nullptr
+            && ExecuteScriptedAiReviveTactics(game, monster, tickParam)) {
+        return 1;
+    }
+    const bool peaceful = revived && tick != nullptr
+        && IsPeacefulReviveTick(tick->target != nullptr, tick->inCombat != 0);
+    const ReviveAiScope scope(peaceful);
     return OriginalAiFunction03(game, monster, tickParam);
 }
 
-__declspec(noinline) bool __fastcall HookCanUnitSwitchAi(
+__declspec(noinline) bool __fastcall HookClientCanUnitSwitchAi(
         void* monster,
         bool checkState143,
         bool checkUnique,
         bool checkBoss,
         bool checkSwitchAi) noexcept {
+    ++ClientGateCalls;
     const bool clientReviveHighRank =
         Operational.load(std::memory_order_acquire)
         && Settings.revive.allowHighRankMonsters
+        && CallbackRouteReady.load(std::memory_order_acquire)
         && checkUnique
-        && IsExpectedReturnAddress(
-            _ReturnAddress(), ClientReviveAiGateReturnRva)
         && CheckMonsterTypeFlag(
             monster, ChampionUniqueSuperUniqueMask);
-    const auto result = OriginalCanUnitSwitchAi(
+    if (clientReviveHighRank) ++ClientHighRankCandidates;
+    const auto result = CanUnitSwitchAi(
         monster,
         checkState143,
         clientReviveHighRank ? false : checkUnique,
         checkBoss,
         checkSwitchAi);
     if (clientReviveHighRank && result) ++ClientHighRankSelections;
+    return result;
+}
+
+void* AllocateNear(void* hint, const std::size_t size) noexcept {
+    SYSTEM_INFO systemInfo{};
+    GetSystemInfo(&systemInfo);
+    const auto granularity = static_cast<std::uintptr_t>(
+        systemInfo.dwAllocationGranularity);
+    const auto base = reinterpret_cast<std::uintptr_t>(hint)
+        & ~(granularity - 1);
+    for (std::uintptr_t delta = granularity;
+            delta < 0x70000000ULL;
+            delta += granularity) {
+        if (base > std::numeric_limits<std::uintptr_t>::max() - delta) break;
+        if (auto* memory = VirtualAlloc(
+                reinterpret_cast<void*>(base + delta),
+                size,
+                MEM_COMMIT | MEM_RESERVE,
+                PAGE_READWRITE)) {
+            return memory;
+        }
+    }
+    return nullptr;
+}
+
+bool InstallClientReviveAiGateRedirect() noexcept {
+    constexpr std::size_t RelaySize = 14;
+    ClientReviveAiGateRelay = AllocateNear(
+        Base + ClientReviveAiGateCallRva, RelaySize);
+    if (!ClientReviveAiGateRelay) return false;
+
+    auto* relay = static_cast<std::uint8_t*>(ClientReviveAiGateRelay);
+    const std::array<std::uint8_t, 6> absoluteJump{
+        0xFF,0x25,0x00,0x00,0x00,0x00,
+    };
+    std::memcpy(relay, absoluteJump.data(), absoluteJump.size());
+    const auto target = reinterpret_cast<std::uint64_t>(
+        &HookClientCanUnitSwitchAi);
+    std::memcpy(relay + absoluteJump.size(), &target, sizeof(target));
+
+    DWORD previousProtection{};
+    if (!VirtualProtect(
+            relay, RelaySize, PAGE_EXECUTE_READ, &previousProtection)) {
+        return false;
+    }
+    FlushInstructionCache(GetCurrentProcess(), relay, RelaySize);
+
+    const auto relayAddress = reinterpret_cast<std::uintptr_t>(relay);
+    const auto baseAddress = reinterpret_cast<std::uintptr_t>(Base);
+    if (relayAddress < baseAddress) return false;
+    const auto relayRva = relayAddress - baseAddress;
+    const auto nextInstruction = baseAddress
+        + ClientReviveAiGateCallRva
+        + ClientReviveAiGateCallExpected.size();
+    const auto displacement = static_cast<std::int64_t>(relayAddress)
+        - static_cast<std::int64_t>(nextInstruction);
+    if (displacement < std::numeric_limits<std::int32_t>::min()
+            || displacement > std::numeric_limits<std::int32_t>::max()) {
+        return false;
+    }
+    return Context->PatchCallRel32(
+        ClientReviveAiGateCallRva,
+        ClientReviveAiGateCallExpected.data(),
+        static_cast<std::uint32_t>(
+            ClientReviveAiGateCallExpected.size()),
+        relayRva,
+        static_cast<std::uint32_t>(
+            ClientReviveAiGateCallExpected.size()));
+}
+
+template <typename T>
+T ReadCompiledField(const void* row, const std::size_t offset) noexcept {
+    T value{};
+    std::memcpy(
+        &value,
+        static_cast<const std::uint8_t*>(row) + offset,
+        sizeof(value));
+    return value;
+}
+
+template <typename T>
+bool WriteCompiledField(
+        void* row,
+        const std::size_t offset,
+        const T value) noexcept {
+    auto* destination = static_cast<std::uint8_t*>(row) + offset;
+    DWORD previousProtection{};
+    if (!VirtualProtect(
+            destination,
+            sizeof(value),
+            PAGE_READWRITE,
+            &previousProtection)) {
+        return false;
+    }
+    std::memcpy(destination, &value, sizeof(value));
+    DWORD ignored{};
+    return VirtualProtect(
+        destination,
+        sizeof(value),
+        previousProtection,
+        &ignored) != FALSE;
+}
+
+struct ReviveCallbackRouteSnapshot {
+    void* row{};
+    std::uint8_t selectProc{};
+    std::int16_t srvStFunc{};
+    std::int16_t srvDoFunc{};
+    std::int16_t cltStFunc{};
+    std::int16_t cltDoFunc{};
+    bool needsPatch{};
+};
+
+bool IsNativeReviveCallbackRoute(
+        const ReviveCallbackRouteSnapshot& row) noexcept {
+    return row.selectProc == NativeReviveSelectProc
+        && row.srvStFunc == NativeReviveSrvStFunc
+        && row.srvDoFunc == NativeReviveSrvDoFunc
+        && row.cltStFunc == NativeReviveCltStFunc
+        && row.cltDoFunc == NativeReviveCltDoFunc;
+}
+
+bool IsBridgedReviveCallbackRoute(
+        const ReviveCallbackRouteSnapshot& row) noexcept {
+    return row.selectProc == BridgedReviveSelectProc
+        && row.srvStFunc == BridgedReviveSrvStFunc
+        && row.srvDoFunc == NativeReviveSrvDoFunc
+        && row.cltStFunc == BridgedReviveCltStFunc
+        && row.cltDoFunc == BridgedReviveCltDoFunc;
+}
+
+bool WriteReviveCallbackRoute(
+        const ReviveCallbackRouteSnapshot& row,
+        const bool bridge) noexcept {
+    return WriteCompiledField(
+            row.row,
+            SkillsSelectProcOffset,
+            bridge ? BridgedReviveSelectProc : row.selectProc)
+        && WriteCompiledField(
+            row.row,
+            SkillsSrvStFuncOffset,
+            bridge ? BridgedReviveSrvStFunc : row.srvStFunc)
+        && WriteCompiledField(
+            row.row,
+            SkillsCltStFuncOffset,
+            bridge ? BridgedReviveCltStFunc : row.cltStFunc)
+        && WriteCompiledField(
+            row.row,
+            SkillsCltDoFuncOffset,
+            bridge ? BridgedReviveCltDoFunc : row.cltDoFunc);
+}
+
+void __cdecl OnDataTablesLoaded(
+        const D2RL::PluginContext* context,
+        const D2RL::Lifecycle::DataTablesLoadedEvent* event,
+        void*) noexcept {
+    CallbackRouteReady.store(false, std::memory_order_release);
+    ScriptedAiProbeCooldown = 0U;
+    ScriptedAiAbiWarningLogged.store(false, std::memory_order_release);
+    ScriptedAiProviderLogged.store(false, std::memory_order_release);
+    if (!context || context != Context || !event || !DataTables
+            || !Operational.load(std::memory_order_acquire)
+            || !Settings.revive.allowHighRankMonsters
+            || !D2RL::Lifecycle::HasDataTablesLoadedEventField(
+                event,
+                D2RL::Lifecycle::DataTablesLoadedEventRequiredSize)) {
+        return;
+    }
+
+    constexpr std::array banks{
+        D2RL::DataTables::Bank::Classic,
+        D2RL::DataTables::Bank::Lod,
+        D2RL::DataTables::Bank::Rotw,
+    };
+    std::array<ReviveCallbackRouteSnapshot, banks.size()> rows{};
+    bool valid = true;
+    for (std::size_t index = 0; index < banks.size(); ++index) {
+        D2RL::DataTables::RowView view{
+            .structSize = D2RL::DataTables::RowViewSize,
+        };
+        if (DataTables->findRowById(
+                context,
+                banks[index],
+                D2RL::DataTables::TableId::Skills,
+                ReviveSkillId,
+                &view) != D2RL::DataTables::Result::Success
+                || view.revision != event->revision
+                || view.row == nullptr
+                || view.rowSize != SkillsRecordSize
+                || ReadCompiledField<std::uint16_t>(view.row, 0)
+                    != ReviveSkillId) {
+            valid = false;
+            break;
+        }
+        auto& row = rows[index];
+        row.row = const_cast<void*>(view.row);
+        row.selectProc = ReadCompiledField<std::uint8_t>(
+            view.row, SkillsSelectProcOffset);
+        row.srvStFunc = ReadCompiledField<std::int16_t>(
+            view.row, SkillsSrvStFuncOffset);
+        row.srvDoFunc = ReadCompiledField<std::int16_t>(
+            view.row, SkillsSrvDoFuncOffset);
+        row.cltStFunc = ReadCompiledField<std::int16_t>(
+            view.row, SkillsCltStFuncOffset);
+        row.cltDoFunc = ReadCompiledField<std::int16_t>(
+            view.row, SkillsCltDoFuncOffset);
+        row.needsPatch = IsNativeReviveCallbackRoute(row);
+        if (!row.needsPatch && !IsBridgedReviveCallbackRoute(row)) {
+            valid = false;
+            break;
+        }
+    }
+
+    std::size_t patched{};
+    if (valid) {
+        for (const auto& row : rows) {
+            if (!row.needsPatch) continue;
+            if (!WriteReviveCallbackRoute(row, true)) {
+                valid = false;
+                break;
+            }
+            ++patched;
+        }
+    }
+    if (!valid) {
+        for (const auto& row : rows) {
+            if (row.row && row.needsPatch) {
+                (void)WriteReviveCallbackRoute(row, false);
+            }
+        }
+        ++CallbackRouteFailures;
+        context->LogError(
+            "ReviveOverhaul: automatic Revive callback route rejected; compiled Skills contract drifted or could not be updated.");
+        return;
+    }
+
+    CallbackRouteApplications.fetch_add(
+        patched, std::memory_order_relaxed);
+    CallbackRouteRevision.store(
+        event->revision, std::memory_order_release);
+    CallbackRouteReady.store(true, std::memory_order_release);
+    context->LogInfo(
+        "ReviveOverhaul: automatic high-rank Revive callback route active; no Skills.txt edit is required.");
+}
+
+bool RegisterDataTableRoute() noexcept {
+    if (!Settings.revive.allowHighRankMonsters) return true;
+    if (Context->QueryService(
+            D2RL::ServiceId::DataTable,
+            D2RL::DataTableServiceV1Version,
+            &DataTables) != D2RL::ServiceQueryResult::Success
+            || !D2RL::HasDataTableServiceV1Field(
+                DataTables,
+                D2RL::DataTableServiceV1RequiredSize)
+            || Context->QueryService(
+                D2RL::ServiceId::Lifecycle,
+                D2RL::LifecycleServiceV1Version,
+                &Lifecycle) != D2RL::ServiceQueryResult::Success
+            || !D2RL::HasLifecycleServiceV1Field(
+                Lifecycle,
+                D2RL::LifecycleServiceV1RequiredSize)) {
+        Context->LogError(
+            "ReviveOverhaul: DataTableServiceV1 and LifecycleServiceV1 are required for automatic Revive callback routing.");
+        return false;
+    }
+    const D2RL::Lifecycle::DataTablesLoadedListener listener{
+        .structSize = D2RL::Lifecycle::DataTablesLoadedListenerSize,
+        .flags = 0,
+        .callback = OnDataTablesLoaded,
+        .userData = nullptr,
+    };
+    return Lifecycle->registerDataTablesLoadedListener(
+            Context,
+            &listener,
+            &DataTablesListener) == D2RL::Lifecycle::Result::Success
+        && DataTablesListener != D2RL::Lifecycle::InvalidHandle;
+}
+
+__declspec(noinline) bool __fastcall HookClientValidateReviveTarget(
+        void* caster,
+        void* target) noexcept {
+    const bool highRank = Operational.load(std::memory_order_acquire)
+        && Settings.revive.allowHighRankMonsters
+        && CheckMonsterTypeFlag(target, ChampionUniqueSuperUniqueMask);
+    const auto result = OriginalClientValidateReviveTarget(caster, target);
+    if (highRank) {
+        ++ClientSelectorHighRankCalls;
+        if (result) ++ClientSelectorHighRankAccepts;
+        else ++ClientSelectorHighRankRejects;
+    }
     return result;
 }
 
@@ -650,6 +1165,7 @@ __declspec(noinline) std::int32_t __fastcall HookValidateReviveTarget(
     if (result == 0
             && Operational.load(std::memory_order_acquire)
             && Settings.revive.allowHighRankMonsters
+            && CallbackRouteReady.load(std::memory_order_acquire)
             && IsEligibleHighRankCorpse(game, target)) {
         ++HighRankAdmissions;
         result = 1;
@@ -695,6 +1211,14 @@ bool ValidateAiRuntime() noexcept {
             ReviveStateMarkerWitnessRva,
             ReviveStateMarkerWitnessExpected,
             "native Revive state marker")
+        && Check(
+            AiSpecialStateDispatchReadRva,
+            AiSpecialStateDispatchReadExpected,
+            "AI special-state dispatch read")
+        && Check(
+            GetMinionOwnerRva,
+            GetMinionOwnerExpected,
+            "minion owner resolver")
         && Check(DistanceRva, DistanceExpected, "unit distance helper")
         && Check(SetVelocityRva, SetVelocityExpected, "SetVelocity")
         && Check(WalkToOwnerRva, WalkToOwnerExpected, "WalkToOwner")
@@ -786,6 +1310,7 @@ void ResolveNativeFunctions() noexcept {
     GetMonsterUMods = At<GetMonsterUModsFn>(GetMonsterUModsRva);
     GetRightSkill = At<GetRightSkillFn>(GetRightSkillRva);
     StatesCheckState = At<StatesCheckStateFn>(StatesCheckStateRva);
+    GetMinionOwner = At<GetMinionOwnerFn>(GetMinionOwnerRva);
     AssignSkill = At<AssignSkillFn>(AssignSkillRva);
 }
 
@@ -839,13 +1364,19 @@ bool InstallReviveHooks() noexcept {
     }
     if (Settings.revive.allowHighRankMonsters) {
         if (!Context->InstallInlineHook(
-                CanUnitSwitchAiRva,
-                CanUnitSwitchAiExpected.data(),
-                static_cast<std::uint32_t>(CanUnitSwitchAiExpected.size()),
-                HookCanUnitSwitchAi,
-                &OriginalCanUnitSwitchAi)) {
+                ClientReviveSelectorRva,
+                ClientReviveSelectorExpected.data(),
+                static_cast<std::uint32_t>(
+                    ClientReviveSelectorExpected.size()),
+                HookClientValidateReviveTarget,
+                &OriginalClientValidateReviveTarget)) {
             return false;
         }
+        AnyHookInstalled.store(true, std::memory_order_release);
+        if (!InstallClientReviveAiGateRedirect()) {
+            return false;
+        }
+        AnyHookInstalled.store(true, std::memory_order_release);
     }
     if (!Settings.revive.preserveNativeAuras) return true;
     if (!Context->InstallInlineHook(
@@ -880,14 +1411,22 @@ D2RL::ConsoleCommandResult Status(
     if (!command || !command->plugin) {
         return D2RL::ConsoleCommandResult::Failed;
     }
-    char message[1024]{};
+    char message[1600]{};
     std::snprintf(
         message,
         sizeof(message),
         "Revive Overhaul %s: enabled=%d, AI=%d, high-rank=%d, "
         "native auras=%d, ticks=%llu, scatter fixes=%llu, catch-ups=%llu, "
         "follow adjustments=%llu, velocity adjustments=%llu, "
-        "server admissions=%llu, client selections=%llu, aura captures=%llu, "
+        "scripted provider probes=%llu, scripted tactical calls=%llu, "
+        "scripted handled=%llu, scripted delegates=%llu, "
+        "scripted unavailable=%llu, scripted errors=%llu, "
+        "server admissions=%llu, client gate calls=%llu, "
+        "client high-rank candidates=%llu, client selections=%llu, "
+        "selector high-rank calls=%llu, selector accepts=%llu, "
+        "selector rejects=%llu, callback route ready=%d, "
+        "callback route applications=%llu, callback route failures=%llu, "
+        "callback route revision=%llu, aura captures=%llu, "
         "aura reactivations=%llu, aura conflicts=%llu, config=%s",
         Version,
         Settings.enabled ? 1 : 0,
@@ -899,8 +1438,24 @@ D2RL::ConsoleCommandResult Status(
         static_cast<unsigned long long>(CatchUpsForced.load()),
         static_cast<unsigned long long>(FollowAdjustments.load()),
         static_cast<unsigned long long>(VelocityAdjustments.load()),
+        static_cast<unsigned long long>(ScriptedAiProviderProbes.load()),
+        static_cast<unsigned long long>(ScriptedAiTacticalCalls.load()),
+        static_cast<unsigned long long>(
+            ScriptedAiTacticalHandled.load()),
+        static_cast<unsigned long long>(ScriptedAiTacticalDelegates.load()),
+        static_cast<unsigned long long>(ScriptedAiTacticalUnavailable.load()),
+        static_cast<unsigned long long>(ScriptedAiTacticalErrors.load()),
         static_cast<unsigned long long>(HighRankAdmissions.load()),
+        static_cast<unsigned long long>(ClientGateCalls.load()),
+        static_cast<unsigned long long>(ClientHighRankCandidates.load()),
         static_cast<unsigned long long>(ClientHighRankSelections.load()),
+        static_cast<unsigned long long>(ClientSelectorHighRankCalls.load()),
+        static_cast<unsigned long long>(ClientSelectorHighRankAccepts.load()),
+        static_cast<unsigned long long>(ClientSelectorHighRankRejects.load()),
+        CallbackRouteReady.load(std::memory_order_acquire) ? 1 : 0,
+        static_cast<unsigned long long>(CallbackRouteApplications.load()),
+        static_cast<unsigned long long>(CallbackRouteFailures.load()),
+        static_cast<unsigned long long>(CallbackRouteRevision.load()),
         static_cast<unsigned long long>(NativeAuraCaptures.load()),
         static_cast<unsigned long long>(NativeAuraReactivations.load()),
         static_cast<unsigned long long>(NativeAuraConflicts.load()),
@@ -936,6 +1491,13 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     Base = reinterpret_cast<std::uint8_t*>(context->exeBase);
     Operational.store(false, std::memory_order_release);
     AnyHookInstalled.store(false, std::memory_order_release);
+    CallbackRouteReady.store(false, std::memory_order_release);
+    ScriptedAiProbeCooldown = 0U;
+    ScriptedAiAbiWarningLogged.store(false, std::memory_order_release);
+    ScriptedAiProviderLogged.store(false, std::memory_order_release);
+    DataTables = nullptr;
+    Lifecycle = nullptr;
+    DataTablesListener = D2RL::Lifecycle::InvalidHandle;
     if (!Base || !LoadConfig()) return false;
     RegisterStatusCommand();
 
@@ -972,6 +1534,11 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
         context->LogError(message);
         return false;
     }
+    if (!RegisterDataTableRoute()) {
+        context->LogError(
+            "ReviveOverhaul: automatic Revive callback route registration failed.");
+        return false;
+    }
     ResolveNativeFunctions();
     if (!InstallHooks()) {
         Operational.store(false, std::memory_order_release);
@@ -1000,5 +1567,12 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
 
 D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
     Operational.store(false, std::memory_order_release);
+    CallbackRouteReady.store(false, std::memory_order_release);
+    ClientReviveAiGateRelay = nullptr;
+    ScriptedAiProbeCooldown = 0U;
+    ScriptedAiProviderLogged.store(false, std::memory_order_release);
+    DataTables = nullptr;
+    Lifecycle = nullptr;
+    DataTablesListener = D2RL::Lifecycle::InvalidHandle;
     Context = nullptr;
 }

@@ -1,8 +1,10 @@
 #include "scripted_ai_config.hpp"
 #include "scripted_ai_bridge.hpp"
+#include "scripted_ai_d2r.hpp"
 #include "scripted_ai_fingerprint.hpp"
 #include "scripted_ai_native.hpp"
 #include "scripted_ai_ownership.hpp"
+#include "scripted_ai_revive_abi.hpp"
 #include "scripted_ai_sandbox.hpp"
 
 #include <algorithm>
@@ -162,6 +164,10 @@ void TestConfig() {
         config.scriptDirectory == "scripts/ruffneckk-scripted-ai",
         "shipped script directory must be stable");
     Expect(
+        !config.revive.enabled
+            && config.revive.script == "revive-companion.lua",
+        "the shipped Revive domain must be explicit and disabled by default");
+    Expect(
         config.limits.maxSourceBytes == HardSandboxLimits.maxSourceBytes,
         "shipped source cap must equal the compiled hard cap");
     Expect(
@@ -197,6 +203,13 @@ void TestConfig() {
     Expect(
         rejects("schema_version='1'\n"),
         "wrong TOML types must be rejected");
+    Expect(
+        rejects(
+            "schema_version=1\n[domains.revive]\nscript='../escape.lua'\n"),
+        "Revive domain script traversal must be rejected");
+    Expect(
+        rejects("schema_version=1\n[domains.unknown]\nenabled=true\n"),
+        "unknown Scripted AI domains must be rejected");
 
     const auto candidates = BuildConfigCandidates(
         L"C:/game/mods/Test/d2rloader/config",
@@ -228,7 +241,7 @@ struct MockFingerprint {
 
 void TestFingerprintDefinitions() {
     const auto& windows = NativeFingerprint();
-    Expect(windows.size() == NativeWindowCount, "fingerprint needs 22 windows");
+    Expect(windows.size() == NativeWindowCount, "fingerprint needs 29 windows");
     std::set<std::string_view> names;
     std::set<std::uintptr_t> rvas;
     std::size_t hookTargets{};
@@ -372,6 +385,19 @@ void TestSandbox() {
     Expect(summary.nodeCount == 3U, "tree summary must count every node");
     Expect(summary.maximumDepth == 2U, "tree summary must report depth");
     Expect(summary.maximumChildren == 2U, "tree summary must report fanout");
+    Expect(
+        sandbox->LoadBehaviorTree(
+            "return {kind='sequence',children={{kind='has_owner'},"
+            "{kind='owner_distance_gte',distance=13},{kind='follow_owner'}}}",
+            summary,
+            error),
+        "Revive owner facts and follow-owner action must be valid declarative nodes");
+    Expect(
+        !sandbox->LoadBehaviorTree(
+            "return {kind='owner_distance_gte'}",
+            summary,
+            error),
+        "owner-distance conditions must require a bounded distance");
     Expect(
         sandbox->MemoryUsed() <= HardSandboxLimits.sessionHeapBytes,
         "session allocator must remain inside its hard cap");
@@ -566,13 +592,15 @@ void WriteTestScript(
         std::span<const AiScriptTableRow> rotw,
         const std::filesystem::path& root,
         std::string& error,
-        const SandboxLimits& limits = HardSandboxLimits)
+        const SandboxLimits& limits = HardSandboxLimits,
+        const DomainScriptSelection& domains = {})
         -> std::shared_ptr<const PreparedBundle> {
     return StagePreparedBundle(
         revision,
         {.revision = revision * 10U + 1U, .rows = base},
         {.revision = revision * 10U + 2U, .rows = rotw},
         root,
+        domains,
         limits,
         ReadScriptSource,
         error);
@@ -585,6 +613,37 @@ void TestAiScriptTransaction() {
         "AIScript fallback offset must remain frozen");
 
     TemporaryScriptTree scripts;
+    std::string optionalText;
+    std::string optionalError;
+    Expect(
+        ReadOptionalBoundedTextFile(
+            scripts.root,
+            "aiscript-base.txt",
+            128U,
+            optionalText,
+            optionalError) == OptionalTextFileStatus::Absent,
+        "an absent optional AIScript support file must preserve the embedded default");
+    WriteTestScript(
+        scripts.root / "aiscript-base.txt",
+        "MonStatsId\tScript\tFallbackAi\tTargetProfile\tEnabled\n");
+    Expect(
+        ReadOptionalBoundedTextFile(
+            scripts.root,
+            "aiscript-base.txt",
+            128U,
+            optionalText,
+            optionalError) == OptionalTextFileStatus::Loaded
+            && optionalText.find("MonStatsId") == 0U,
+        "a bounded regular AIScript support file must be copied exactly");
+    Expect(
+        ReadOptionalBoundedTextFile(
+            scripts.root,
+            "aiscript-base.txt",
+            8U,
+            optionalText,
+            optionalError) == OptionalTextFileStatus::Error
+            && optionalError.find("compiled byte limit") != optionalError.npos,
+        "an oversized AIScript support file must fail closed");
     WriteTestScript(
         scripts.root / "nested" / "beast.lua",
         "return {kind='selector', children={{kind='attack'}, {kind='wander'}}}");
@@ -653,11 +712,17 @@ void TestAiScriptTransaction() {
     const auto empty = StageTestBundle(
         5U,
         disabled,
-        {},
+        disabled,
         scripts.root / "missing-root-is-safe-when-empty",
         error);
-    Expect(empty != nullptr, "disabled rows must not require a script directory");
+    Expect(
+        empty != nullptr,
+        "disabled Base+RotW sentinel rows must not require a script directory");
     if (empty) {
+        Expect(
+            empty->banks[BankIndex(ScriptBank::Base)].bindings.empty()
+                && empty->banks[BankIndex(ScriptBank::Rotw)].bindings.empty(),
+            "disabled default sentinels must create zero bindings in both banks");
         const auto generation = CompileSessionGeneration(
             *empty,
             45U,
@@ -1203,6 +1268,12 @@ struct MockNativeActionAdapter final : NativeActionAdapter {
         return targetValid;
     }
 
+    [[nodiscard]] auto IsValidOwner(
+            const NativeThinkContext&) noexcept -> bool override {
+        ++ownerChecks;
+        return ownerValid;
+    }
+
     [[nodiscard]] auto IsValidMode(
             const NativeThinkContext&,
             ActionKind action) noexcept -> bool override {
@@ -1276,11 +1347,13 @@ struct MockNativeActionAdapter final : NativeActionAdapter {
     std::vector<NativeCallResult> results;
     NativeCallResult defaultResult{NativeCallResult::Rejected};
     std::array<ActionIntent, 32U> calls{};
-    std::array<bool, 6U> validModes{true, true, true, true, true, true};
+    std::array<bool, 7U> validModes{
+        true, true, true, true, true, true, true};
     std::size_t callCount{};
     std::uint32_t authorityChecks{};
     std::uint32_t unitChecks{};
     std::uint32_t targetChecks{};
+    std::uint32_t ownerChecks{};
     std::uint32_t modeChecks{};
     std::uint32_t skillChecks{};
     std::uint32_t idleCalls{};
@@ -1294,8 +1367,288 @@ struct MockNativeActionAdapter final : NativeActionAdapter {
     bool authoritative{true};
     bool unitValid{true};
     bool targetValid{true};
+    bool ownerValid{true};
     bool skillValid{true};
 };
+
+struct FakeD2Unit {
+    std::int32_t type{};
+    std::int32_t classId{};
+};
+
+struct FakeD2Calls {
+    std::uint32_t idle{};
+    std::uint32_t wander{};
+    std::uint32_t attack{};
+    std::uint32_t chase{};
+    std::uint32_t retreat{};
+    std::uint32_t cast{};
+    std::int32_t lastMode{};
+    std::uint16_t lastSkill{};
+    std::uint16_t lastFlags{};
+    void* lastChaseTarget{};
+    std::uint8_t lastScalar{};
+    std::int32_t lastDeleteEvent{};
+    std::int32_t accepted{1};
+};
+
+FakeD2Calls FakeCalls{};
+
+auto __fastcall FakeGetClassId(const void* unit) noexcept -> std::int32_t {
+    return unit != nullptr ? static_cast<const FakeD2Unit*>(unit)->classId : -1;
+}
+
+auto __fastcall FakeGetUnitType(const void* unit) noexcept -> std::int32_t {
+    return unit != nullptr ? static_cast<const FakeD2Unit*>(unit)->type : 6;
+}
+
+auto __fastcall FakeIsUnitDead(const void*) noexcept -> std::int32_t {
+    return 0;
+}
+
+void __fastcall FakeIdle(void*, void*, std::int32_t frames) noexcept {
+    ++FakeCalls.idle;
+    FakeCalls.lastScalar = static_cast<std::uint8_t>(frames);
+}
+
+auto __fastcall FakeWander(void*, void*, std::uint8_t radius) noexcept
+        -> std::int32_t {
+    ++FakeCalls.wander;
+    FakeCalls.lastScalar = radius;
+    return FakeCalls.accepted;
+}
+
+auto __fastcall FakeAttack(
+        void*, void*, std::int32_t mode, void*) noexcept -> std::int32_t {
+    ++FakeCalls.attack;
+    FakeCalls.lastMode = mode;
+    return FakeCalls.accepted;
+}
+
+auto __fastcall FakeChase(
+        void*, void*, void* target, std::uint16_t flags) noexcept -> std::int32_t {
+    ++FakeCalls.chase;
+    FakeCalls.lastFlags = flags;
+    FakeCalls.lastChaseTarget = target;
+    return FakeCalls.accepted;
+}
+
+auto __fastcall FakeRetreat(
+        void*, void*, void*, std::uint8_t distance,
+        std::int32_t deleteEvent) noexcept -> std::int32_t {
+    ++FakeCalls.retreat;
+    FakeCalls.lastScalar = distance;
+    FakeCalls.lastDeleteEvent = deleteEvent;
+    return FakeCalls.accepted;
+}
+
+auto __fastcall FakeCast(
+        void*, void*, std::uint8_t mode, std::int32_t skillId, void*,
+        std::int32_t, std::int32_t, std::uint8_t) noexcept -> std::int32_t {
+    ++FakeCalls.cast;
+    FakeCalls.lastMode = mode;
+    FakeCalls.lastSkill = static_cast<std::uint16_t>(skillId);
+    return FakeCalls.accepted;
+}
+
+auto FakeThreadId() noexcept -> std::uint32_t {
+    return 77U;
+}
+
+void TestD2NativeBoundary() {
+    alignas(void*) std::array<std::byte, 0x20U> unitBytes{};
+    std::array<std::byte, 0x400U> monStatsRows{};
+    const void* monStatsRecord = monStatsRows.data() + 0x200U;
+    std::array<const void*, 1U> monsterData{monStatsRecord};
+    auto* monsterDataPointer = static_cast<void*>(monsterData.data());
+    std::memcpy(
+        unitBytes.data() + UnitMonsterDataOffset,
+        &monsterDataPointer,
+        sizeof(monsterDataPointer));
+    Expect(
+        ReadUnitMonStatsRecord(unitBytes.data()) == monStatsRecord,
+        "resolver view must read only the governed unit+0x10 MonStats pointer");
+
+    const std::array banks{
+        NativeTableBankView{
+            .rows = monStatsRows.data(),
+            .rowCount = 2U,
+            .rowSize = 0x200U,
+            .skillRowCount = 500U,
+            .scriptBank = ScriptBank::Rotw,
+        },
+    };
+    const auto bank = ClassifyMonStatsRecord(monStatsRecord, 1U, banks);
+    Expect(
+        bank.found && bank.scriptBank == ScriptBank::Rotw
+            && bank.skillRowCount == 500U && bank.monStats == monStatsRecord,
+        "exact MonStats row identity must select its governed script bank");
+    Expect(
+        !ClassifyMonStatsRecord(monStatsRecord, 0U, banks).found,
+        "a MonStats pointer for another class id must fail closed");
+    Expect(
+        StockAiRecord(0x10000000U, 154U)
+            == reinterpret_cast<const D2AiTableRecord*>(
+                0x10000000U + NormalAiTableRva
+                + 154U * sizeof(D2AiTableRecord)),
+        "FallbackAi must address exactly one of the 155 stock records");
+    Expect(
+        StockAiRecord(0x10000000U, StockAiCount) == nullptr,
+        "FallbackAi index 155 must be rejected");
+
+    alignas(void*) std::array<std::byte, 0x20U> monsterStorage{};
+    const FakeD2Unit monsterHeader{.type = 1, .classId = 90};
+    std::memcpy(monsterStorage.data(), &monsterHeader, sizeof(monsterHeader));
+    std::memcpy(
+        monsterStorage.data() + UnitMonsterDataOffset,
+        &monsterDataPointer,
+        sizeof(monsterDataPointer));
+    auto* const monster = monsterStorage.data();
+    const std::uint16_t skillId = 42U;
+    const std::int16_t skillMode = 10;
+    std::memcpy(
+        static_cast<std::byte*>(const_cast<void*>(monStatsRecord))
+            + MonStatsSkillIdsOffset,
+        &skillId,
+        sizeof(skillId));
+    std::memcpy(
+        static_cast<std::byte*>(const_cast<void*>(monStatsRecord))
+            + MonStatsSkillModesOffset,
+        &skillMode,
+        sizeof(skillMode));
+    const std::uint32_t meleeFlags = MonStatsIsMeleeFlag;
+    std::memcpy(
+        static_cast<std::byte*>(const_cast<void*>(monStatsRecord))
+            + MonStatsFlagsOffset,
+        &meleeFlags,
+        sizeof(meleeFlags));
+    auto loadout = SelectReviveTacticalLoadout(
+        monStatsRecord,
+        500U,
+        0U);
+    Expect(
+        loadout.profile == TacticalProfile::CasterArtillery
+            && loadout.hasPreferredSkill
+            && loadout.preferredSkill == skillId
+            && loadout.preferredSlot == 0U,
+        "a cast-mode MonStats skill must select the caster profile before isMelee");
+    const std::int16_t attackMode = MonsterAttack1Mode;
+    std::memcpy(
+        static_cast<std::byte*>(const_cast<void*>(monStatsRecord))
+            + MonStatsSkillModesOffset,
+        &attackMode,
+        sizeof(attackMode));
+    loadout = SelectReviveTacticalLoadout(monStatsRecord, 500U, 0U);
+    Expect(
+        loadout.profile == TacticalProfile::MeleeVanguard
+            && !loadout.hasPreferredSkill,
+        "isMelee without a cast-mode skill must select the melee profile");
+    const std::uint32_t rangedFlags{};
+    std::memcpy(
+        static_cast<std::byte*>(const_cast<void*>(monStatsRecord))
+            + MonStatsFlagsOffset,
+        &rangedFlags,
+        sizeof(rangedFlags));
+    loadout = SelectReviveTacticalLoadout(monStatsRecord, 500U, 0U);
+    Expect(
+        loadout.profile == TacticalProfile::RangedSkirmisher
+            && !loadout.hasPreferredSkill,
+        "non-melee MonStats without a cast-mode skill must select ranged");
+    std::memcpy(
+        static_cast<std::byte*>(const_cast<void*>(monStatsRecord))
+            + MonStatsSkillModesOffset,
+        &skillMode,
+        sizeof(skillMode));
+    FakeD2Unit target{.type = 0, .classId = 0};
+    FakeD2Unit owner{.type = 0, .classId = 0};
+    int game{};
+    const NativeThinkContext context{
+        .game = &game,
+        .unit = monster,
+        .target = &target,
+        .owner = &owner,
+        .sessionGeneration = 44U,
+        .thinkToken = 1U,
+        .monStatsId = 90U,
+        .targetDistance = 3,
+        .ownerDistance = 14,
+        .inCombat = true,
+    };
+    const D2NativeFunctions functions{
+        .getClassId = FakeGetClassId,
+        .getUnitType = FakeGetUnitType,
+        .isUnitDead = FakeIsUnitDead,
+        .idle = FakeIdle,
+        .wander = FakeWander,
+        .attack = FakeAttack,
+        .chase = FakeChase,
+        .retreat = FakeRetreat,
+        .cast = FakeCast,
+    };
+    D2NativeActionAdapter adapter{
+        functions, 44U, 77U, 500U, monStatsRecord, FakeThreadId};
+    Expect(
+        adapter.IsAuthoritativeContext(context)
+            && adapter.IsValidMonster(context)
+            && adapter.IsValidTarget(context)
+            && adapter.IsValidOwner(context)
+            && adapter.IsValidSkill(context, skillId)
+            && !adapter.IsValidSkill(context, 499U)
+            && !adapter.IsValidSkill(context, 500U),
+        "D2 adapter must require a declared monster skill and its native mode");
+    const std::int16_t invalidMode = MonsterModeCount;
+    std::memcpy(
+        static_cast<std::byte*>(const_cast<void*>(monStatsRecord))
+            + MonStatsSkillModesOffset,
+        &invalidMode,
+        sizeof(invalidMode));
+    Expect(
+        !adapter.IsValidSkill(context, skillId),
+        "a declared skill with an out-of-domain monster mode must fail closed");
+    std::memcpy(
+        static_cast<std::byte*>(const_cast<void*>(monStatsRecord))
+            + MonStatsSkillModesOffset,
+        &skillMode,
+        sizeof(skillMode));
+    auto stale = context;
+    stale.sessionGeneration = 45U;
+    Expect(
+        !adapter.IsAuthoritativeContext(stale),
+        "a stale session must be rejected before every native helper");
+
+    Expect(
+        adapter.TryCastOnTarget(context, skillId) == NativeCallResult::Error,
+        "cast must require a matching immediately validated monster skill");
+
+    FakeCalls = {};
+    Expect(
+        adapter.TryIdle(context, 10U) == NativeCallResult::Accepted
+            && adapter.TryWander(context, 7U) == NativeCallResult::Accepted
+            && adapter.TryAttackTarget(context) == NativeCallResult::Accepted
+            && adapter.TryChaseTarget(context) == NativeCallResult::Accepted
+            && adapter.TryRetreatFromTarget(context, 8U)
+                == NativeCallResult::Accepted
+            && adapter.IsValidSkill(context, skillId)
+            && adapter.TryCastOnTarget(context, skillId)
+                == NativeCallResult::Accepted,
+        "all six executable actions must map to their governed D2 helpers");
+    Expect(
+        FakeCalls.idle == 1U && FakeCalls.wander == 1U
+            && FakeCalls.attack == 1U && FakeCalls.chase == 1U
+            && FakeCalls.retreat == 1U && FakeCalls.cast == 1U
+            && FakeCalls.lastMode == static_cast<std::uint8_t>(skillMode)
+            && FakeCalls.lastSkill == skillId && FakeCalls.lastFlags == 0U
+            && FakeCalls.lastChaseTarget == &target
+            && FakeCalls.lastDeleteEvent == 1,
+        "fixed modes, target chase, zero flags and retreat deletion must stay frozen");
+    FakeCalls.accepted = 0;
+    Expect(
+        adapter.TryAttackTarget(context) == NativeCallResult::Rejected
+            && adapter.IsValidSkill(context, skillId)
+            && adapter.TryCastOnTarget(context, skillId)
+                == NativeCallResult::FallbackScheduled,
+        "cast rejection must preserve its internal idle while other helpers reject plainly");
+}
 
 void TestNativeActionBoundary() {
     TemporaryScriptTree scripts;
@@ -1676,8 +2029,206 @@ void TestNativeActionBoundary() {
         "a negative distance paired with a target must fail before Lua and adapters");
 }
 
+auto __cdecl DummyRevivePolicy(
+        const revive_v2::Context*) noexcept -> revive_v2::Result {
+    return revive_v2::Result::DelegateNative;
+}
+
+auto __cdecl DummyReviveTactics(
+        const revive_v3::Context*) noexcept -> revive_v3::Result {
+    return revive_v3::Result::DelegateNative;
+}
+
+void TestReviveDomainOverlay() {
+    const revive_v2::Interface compatible{
+        .capabilities = revive_v2::CapabilityRequestNativeFollow,
+        .evaluate = DummyRevivePolicy,
+    };
+    Expect(
+        revive_v2::IsCompatible(&compatible),
+        "the versioned Revive provider ABI must accept its exact V2 contract");
+    auto incompatible = compatible;
+    incompatible.abiVersion = revive_v2::AbiVersion + 1U;
+    Expect(
+        !revive_v2::IsCompatible(&incompatible),
+        "the Revive provider ABI must reject an incompatible version");
+    const revive_v3::Interface tactical{
+        .capabilities = revive_v3::CapabilityTacticalActions,
+        .evaluate = DummyReviveTactics,
+    };
+    Expect(
+        revive_v3::IsCompatible(&tactical),
+        "the Revive tactical ABI must accept its exact V3 contract");
+    auto incompatibleTactical = tactical;
+    incompatibleTactical.capabilities = 0U;
+    Expect(
+        !revive_v3::IsCompatible(&incompatibleTactical),
+        "the Revive tactical ABI must require its action capability");
+
+    TemporaryScriptTree scripts;
+    WriteTestScript(
+        scripts.root / "revive.lua",
+        ReadText(SCRIPTED_AI_REVIVE_SAMPLE_FILE));
+
+    std::string error;
+    const auto prepared = StageTestBundle(
+        40U,
+        {},
+        {},
+        scripts.root,
+        error,
+        HardSandboxLimits,
+        {.revive = "revive.lua"});
+    Expect(
+        prepared != nullptr,
+        "the Revive domain script must stage without any AIScript TXT binding");
+    if (!prepared) return;
+    Expect(
+        prepared->scripts.size() == 1U
+            && prepared->reviveScriptIndex == 0U
+            && prepared->banks[BankIndex(ScriptBank::Base)].bindings.empty()
+            && prepared->banks[BankIndex(ScriptBank::Rotw)].bindings.empty(),
+        "the Revive domain must remain independent from both AIScript banks");
+
+    const auto generation = CompileSessionGeneration(
+        *prepared,
+        2'000U,
+        HardSandboxLimits,
+        error);
+    Expect(
+        generation != nullptr && generation->HasReviveScript(),
+        "the session generation must publish the dedicated Revive script");
+    if (!generation) return;
+
+    int game{};
+    int monster{};
+    int owner{};
+    FixedClock fixed{};
+    const ThinkTiming timing{
+        .now = FixedClock::Now,
+        .userData = &fixed,
+    };
+    int target{};
+    NativeThinkContext context{
+        .game = &game,
+        .unit = &monster,
+        .target = &target,
+        .owner = &owner,
+        .sessionGeneration = 2'000U,
+        .thinkToken = 1U,
+        .monStatsId = 90U,
+        .targetDistance = 8,
+        .ownerDistance = 6,
+        .targetOwnerDistance = 10,
+        .tacticalProfile = TacticalProfile::MeleeVanguard,
+        .inCombat = true,
+    };
+
+    MockNativeActionAdapter melee;
+    melee.defaultResult = NativeCallResult::Accepted;
+    auto execution = ExecuteReviveTacticalThink(
+        *generation,
+        context,
+        melee,
+        timing,
+        error);
+    Expect(
+        execution.continuation
+                == ReviveTacticalContinuation::Handled
+            && execution.decision.action.kind == ActionKind::ChaseTarget
+            && melee.chaseCalls == 1U && melee.wanderCalls == 0U,
+        "a melee Revive must chase an in-radius target without wandering");
+
+    context.thinkToken = 2U;
+    context.tacticalProfile = TacticalProfile::RangedSkirmisher;
+    context.hasLastAction = true;
+    context.lastAction = ActionKind::AttackTarget;
+    context.targetDistance = 10;
+    MockNativeActionAdapter ranged;
+    ranged.defaultResult = NativeCallResult::Accepted;
+    execution = ExecuteReviveTacticalThink(
+        *generation,
+        context,
+        ranged,
+        timing,
+        error);
+    Expect(
+        execution.continuation
+                == ReviveTacticalContinuation::Handled
+            && execution.decision.action.kind
+                == ActionKind::RetreatFromTarget
+            && execution.decision.action.argument == 5U
+            && ranged.retreatCalls == 1U && ranged.wanderCalls == 0U,
+        "a ranged Revive must retreat after an in-band attack");
+
+    context.thinkToken = 3U;
+    context.tacticalProfile = TacticalProfile::CasterArtillery;
+    context.hasLastAction = false;
+    context.targetDistance = 15;
+    context.hasPreferredSkill = true;
+    context.preferredSkill = 42U;
+    MockNativeActionAdapter caster;
+    caster.defaultResult = NativeCallResult::Accepted;
+    execution = ExecuteReviveTacticalThink(
+        *generation,
+        context,
+        caster,
+        timing,
+        error);
+    Expect(
+        execution.continuation
+                == ReviveTacticalContinuation::Handled
+            && execution.decision.action.kind == ActionKind::CastOnTarget
+            && execution.decision.action.argument == 42U
+            && caster.castCalls == 1U && caster.lastSkill == 42U,
+        "a caster Revive must use the C++-selected native MonStats skill");
+
+    auto outsideRadius = context;
+    outsideRadius.thinkToken = 4U;
+    outsideRadius.targetOwnerDistance = 29;
+    MockNativeActionAdapter delegated;
+    delegated.defaultResult = NativeCallResult::Accepted;
+    execution = ExecuteReviveTacticalThink(
+        *generation,
+        outsideRadius,
+        delegated,
+        timing,
+        error);
+    Expect(
+        execution.continuation
+                == ReviveTacticalContinuation::DelegateOriginal
+            && execution.decision.fallbackReason
+                == FallbackReason::ExplicitFallback
+            && delegated.callCount == 0U,
+        "a target outside the owner combat radius must delegate without a synthetic idle");
+
+    auto missingOwner = context;
+    missingOwner.thinkToken = 5U;
+    missingOwner.owner = nullptr;
+    MockNativeActionAdapter invalid;
+    execution = ExecuteReviveTacticalThink(
+        *generation,
+        missingOwner,
+        invalid,
+        timing,
+        error);
+    Expect(
+        execution.continuation == ReviveTacticalContinuation::InvalidContext
+            && !execution.decision.enteredLua,
+        "a missing owner must fail closed before tactical Lua evaluation");
+}
+
 void TestPluginPolicy() {
     const auto source = ReadText(SCRIPTED_AI_PLUGIN_SOURCE_FILE);
+    const auto countText = [](std::string_view haystack, std::string_view needle) {
+        std::size_t count{};
+        for (auto position = haystack.find(needle);
+                position != std::string_view::npos;
+                position = haystack.find(needle, position + needle.size())) {
+            ++count;
+        }
+        return count;
+    };
     Expect(
         source.find("PluginFlags::Server | D2RL::PluginFlags::NativeHooks")
             != source.npos,
@@ -1693,8 +2244,10 @@ void TestPluginPolicy() {
             && source.find("3.3.93847") == source.npos,
         "plugin source must not contain a build allowlist");
     Expect(
-        source.find("InstallInlineHook") == source.npos,
-        "bridge build must not install its future hook");
+        countText(source, "InstallInlineHook(") == 1U
+            && source.find("HookAiTableResolver") != source.npos
+            && source.find("ValidateResolverOwnership(true)") != source.npos,
+        "HOOK gate must install and attest exactly its managed resolver hook");
     Expect(
         source.find("CustomTableServiceV1") != source.npos
             && source.find("AiScriptTableName") != source.npos,
@@ -1705,12 +2258,38 @@ void TestPluginPolicy() {
             && source.find("GameLeft") != source.npos,
         "bridge build must route lifecycle publication through the game thread");
     Expect(
-        source.find("D2_AI_Attack") == source.npos
-            && source.find("D2MonUseSkill") == source.npos,
-        "EXEC gate must not contain D2R gameplay action helpers");
+        source.find("DataTableServiceV1") != source.npos
+            && source.find("ClassifyMonStatsRecord") != source.npos
+            && source.find("ScriptedAiRecord") != source.npos,
+        "resolver routing must use governed table views and one static category-2 record");
     Expect(
-        source.find("constexpr char Version[] = \"0.4.0\"") != source.npos,
-        "NATIVE-AI-1 build must advertise component version 0.4.0");
+        source.find("constexpr char Version[] = \"0.7.0\"") != source.npos,
+        "Revive tactical integration must advertise component version 0.7.0");
+    Expect(
+        source.find("FirstRoutedThinkSession") != source.npos
+            && source.find("confirmed exclusive resolver ownership before its first routed lookup")
+                != source.npos
+            && source.find("routed its first scripted think") != source.npos,
+        "diagnostics must prove ownership and exactly one first routed think per session");
+    Expect(
+        source.find("\"0\\t\\t0\\t0\\t0\\n\"") != source.npos
+            && source.find("DefaultAiScriptTable") != source.npos,
+        "virtual Base+RotW defaults must contain one disabled compiler sentinel");
+    Expect(
+        source.find("aiscript-base.txt") != source.npos
+            && source.find("aiscript-rotw.txt") != source.npos
+            && source.find("ReadOptionalBoundedTextFile") != source.npos
+            && source.find("external AIScript text must be printable ASCII TSV")
+                != source.npos,
+        "external AIScript resources must be bounded, fixed-name, and fail closed");
+    Expect(
+        source.find("RuffnecKkScriptedAIQueryReviveTacticsV3") != source.npos
+            && source.find("EvaluateReviveTactics") != source.npos
+            && source.find("ExecuteReviveTacticalThink") != source.npos
+            && source.find("getServerUnit") != source.npos
+            && source.find("ClearReviveTacticalMemories") != source.npos
+            && source.find("!Settings.revive.enabled") != source.npos,
+        "the plugin must expose the bounded optional Revive tactical provider");
 
     const auto bridgeSource = ReadText(SCRIPTED_AI_BRIDGE_SOURCE_FILE);
     Expect(
@@ -1736,6 +2315,21 @@ void TestPluginPolicy() {
             && nativeSource.find("D2GAME_AICORE_") == nativeSource.npos
             && nativeSource.find("0x4A36C0") == nativeSource.npos,
         "NATIVE-AI-1 must contain no resolver hook or direct D2R helper call");
+
+    const auto d2rSource = ReadText(SCRIPTED_AI_D2R_SOURCE_FILE);
+    Expect(
+        d2rSource.find("ResolveD2NativeFunctions") != d2rSource.npos
+            && d2rSource.find("TryCastOnTarget") != d2rSource.npos
+            && d2rSource.find("TryFollowOwner") == d2rSource.npos
+            && d2rSource.find("FallbackScheduled") != d2rSource.npos
+            && d2rSource.find("MonStatsSkillIdsOffset") != d2rSource.npos
+            && d2rSource.find("MonStatsSkillModesOffset") != d2rSource.npos,
+        "D2 adapter must map executable actions without an owner-follow helper");
+    Expect(
+        d2rSource.find("GetBuildName") == d2rSource.npos
+            && d2rSource.find("3.2.92777") == d2rSource.npos
+            && d2rSource.find("3.3.93847") == d2rSource.npos,
+        "native adapter activation must never use a build allowlist");
 }
 
 } // namespace
@@ -1749,7 +2343,9 @@ int main(int argc, char** argv) {
         TestAiScriptTransaction();
         TestBridgeLifecycle();
         TestBehaviorTreeEvaluator();
+        TestD2NativeBoundary();
         TestNativeActionBoundary();
+        TestReviveDomainOverlay();
         TestPluginPolicy();
         if (argc > 1) {
             TestCanonicalImage(argv[1]);
@@ -1762,9 +2358,9 @@ int main(int argc, char** argv) {
     }
 
     if (Failures != 0) {
-        std::cerr << Failures << " Scripted AI NATIVE-AI-1 assertion(s) failed\n";
+        std::cerr << Failures << " Scripted AI HOOK-AI-1 assertion(s) failed\n";
         return 1;
     }
-    std::cout << "Scripted AI NATIVE-AI-1 tests PASS\n";
+    std::cout << "Scripted AI HOOK-AI-1 tests PASS\n";
     return 0;
 }

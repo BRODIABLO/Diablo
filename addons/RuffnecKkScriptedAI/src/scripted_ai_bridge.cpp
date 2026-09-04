@@ -41,22 +41,22 @@ namespace {
         std::string_view name,
         std::string& error) -> bool {
     if (name.empty()) {
-        error = "enabled AIScript rows require a script name";
+        error = "enabled Scripted AI bindings require a script name";
         return false;
     }
     if (name.find('\\') != name.npos || name.find(':') != name.npos) {
-        error = "AIScript.Script must use a relative forward-slash path";
+        error = "Scripted AI scripts must use relative forward-slash paths";
         return false;
     }
     const std::filesystem::path relative(name);
     if (relative.is_absolute() || relative.has_root_name()
             || relative.has_root_directory()) {
-        error = "AIScript.Script cannot be absolute";
+        error = "Scripted AI script paths cannot be absolute";
         return false;
     }
     for (const auto& component : relative) {
         if (component.empty() || component == L"." || component == L"..") {
-            error = "AIScript.Script cannot contain empty, dot, or parent components";
+            error = "Scripted AI script paths cannot contain empty, dot, or parent components";
             return false;
         }
     }
@@ -67,7 +67,7 @@ namespace {
         extension.begin(),
         [](unsigned char value) { return static_cast<char>(std::tolower(value)); });
     if (extension != ".lua") {
-        error = "AIScript.Script must name a .lua source";
+        error = "Scripted AI script paths must name a .lua source";
         return false;
     }
     return true;
@@ -116,18 +116,18 @@ namespace {
         canonicalRoot / std::filesystem::path(name),
         canonicalError);
     if (canonicalError) {
-        error = "AIScript.Script could not be canonicalized: "
+        error = "Scripted AI script path could not be canonicalized: "
             + canonicalError.message();
         return false;
     }
     if (!IsStrictDescendant(canonicalRoot, resolved)) {
-        error = "AIScript.Script escapes the configured script root";
+        error = "Scripted AI script escapes the configured script root";
         return false;
     }
     std::error_code statusError;
     if (!std::filesystem::is_regular_file(resolved, statusError)
             || statusError) {
-        error = "AIScript.Script does not resolve to a regular file";
+        error = "Scripted AI script does not resolve to a regular file";
         return false;
     }
     return true;
@@ -141,6 +141,54 @@ namespace {
         [](wchar_t value) { return static_cast<wchar_t>(std::towlower(value)); });
 #endif
     return key;
+}
+
+[[nodiscard]] auto StageUniqueScript(
+        const std::filesystem::path& canonicalRoot,
+        std::string_view scriptName,
+        const SandboxLimits& limits,
+        const SourceReader& reader,
+        std::unordered_map<std::wstring, std::size_t>& scriptIndices,
+        std::size_t& totalSourceBytes,
+        PreparedBundle& candidate,
+        std::size_t& scriptIndex,
+        std::string& error) -> bool {
+    std::filesystem::path resolved;
+    if (!ResolveScriptPath(canonicalRoot, scriptName, resolved, error)) {
+        return false;
+    }
+    const auto key = PathKey(resolved);
+    const auto found = scriptIndices.find(key);
+    if (found != scriptIndices.end()) {
+        scriptIndex = found->second;
+        return true;
+    }
+    if (candidate.scripts.size() >= MaximumUniqueAiScripts) {
+        error = "Scripted AI exceeds the compiled unique-script limit";
+        return false;
+    }
+    std::string source;
+    if (!reader(resolved, limits.maxSourceBytes, source, error)) {
+        return false;
+    }
+    if (source.find('\0') != source.npos) {
+        error = "Lua source contains a NUL byte";
+        return false;
+    }
+    if (source.size() > MaximumTotalAiScriptBytes - std::min(
+            MaximumTotalAiScriptBytes,
+            totalSourceBytes)) {
+        error = "Scripted AI sources exceed the compiled aggregate byte limit";
+        return false;
+    }
+    totalSourceBytes += source.size();
+    scriptIndex = candidate.scripts.size();
+    candidate.scripts.push_back({
+        .name = std::string(scriptName),
+        .source = std::move(source),
+    });
+    scriptIndices.emplace(key, scriptIndex);
+    return true;
 }
 
 [[nodiscard]] auto ValidateAndStageBank(
@@ -183,41 +231,18 @@ namespace {
             return false;
         }
 
-        std::filesystem::path resolved;
-        if (!ResolveScriptPath(canonicalRoot, scriptName, resolved, error)) {
-            return false;
-        }
-        const auto key = PathKey(resolved);
-        auto found = scriptIndices.find(key);
         std::size_t scriptIndex{};
-        if (found == scriptIndices.end()) {
-            if (candidate.scripts.size() >= MaximumUniqueAiScripts) {
-                error = "AIScript exceeds the compiled unique-script limit";
-                return false;
-            }
-            std::string source;
-            if (!reader(resolved, limits.maxSourceBytes, source, error)) {
-                return false;
-            }
-            if (source.find('\0') != source.npos) {
-                error = "Lua source contains a NUL byte";
-                return false;
-            }
-            if (source.size() > MaximumTotalAiScriptBytes - std::min(
-                    MaximumTotalAiScriptBytes,
-                    totalSourceBytes)) {
-                error = "AIScript sources exceed the compiled aggregate byte limit";
-                return false;
-            }
-            totalSourceBytes += source.size();
-            scriptIndex = candidate.scripts.size();
-            candidate.scripts.push_back({
-                .name = scriptName,
-                .source = std::move(source),
-            });
-            scriptIndices.emplace(key, scriptIndex);
-        } else {
-            scriptIndex = found->second;
+        if (!StageUniqueScript(
+                canonicalRoot,
+                scriptName,
+                limits,
+                reader,
+                scriptIndices,
+                totalSourceBytes,
+                candidate,
+                scriptIndex,
+                error)) {
+            return false;
         }
         bank.bindings.push_back({
             .monStatsId = row.monStatsId,
@@ -245,6 +270,82 @@ static_assert(offsetof(AiScriptTableRow, fallbackAi) == 70U);
 static_assert(offsetof(AiScriptTableRow, targetProfile) == 72U);
 static_assert(offsetof(AiScriptTableRow, enabled) == 73U);
 static_assert(sizeof(AiScriptTableRow) == 76U);
+
+auto ReadOptionalBoundedTextFile(
+        const std::filesystem::path& root,
+        const std::filesystem::path& fileName,
+        std::size_t maximumBytes,
+        std::string& text,
+        std::string& error) -> OptionalTextFileStatus {
+    text.clear();
+    error.clear();
+    if (root.empty() || fileName.empty() || fileName.has_parent_path()
+            || maximumBytes == 0U) {
+        error = "optional text-file request is invalid";
+        return OptionalTextFileStatus::Error;
+    }
+    const auto candidate = root / fileName;
+    std::error_code statusError;
+    const auto status = std::filesystem::symlink_status(
+        candidate,
+        statusError);
+    if (statusError == std::errc::no_such_file_or_directory
+            || status.type() == std::filesystem::file_type::not_found) {
+        return OptionalTextFileStatus::Absent;
+    }
+    if (statusError) {
+        error = "optional text file could not be inspected: "
+            + statusError.message();
+        return OptionalTextFileStatus::Error;
+    }
+    if (!std::filesystem::is_regular_file(status)) {
+        error = "optional text file must be a regular file, not a symlink";
+        return OptionalTextFileStatus::Error;
+    }
+    std::error_code rootError;
+    const auto canonicalRoot = std::filesystem::weakly_canonical(
+        root,
+        rootError);
+    std::error_code fileError;
+    const auto canonicalFile = std::filesystem::canonical(
+        candidate,
+        fileError);
+    if (rootError || fileError || !IsStrictDescendant(
+            canonicalRoot,
+            canonicalFile)) {
+        error = "optional text file escapes its support directory";
+        return OptionalTextFileStatus::Error;
+    }
+    try {
+        const auto size = std::filesystem::file_size(canonicalFile);
+        if (size > maximumBytes) {
+            error = "optional text file exceeds its compiled byte limit";
+            return OptionalTextFileStatus::Error;
+        }
+        std::ifstream input(canonicalFile, std::ios::binary);
+        if (!input.is_open()) {
+            error = "optional text file cannot be opened";
+            return OptionalTextFileStatus::Error;
+        }
+        text.assign(
+            std::istreambuf_iterator<char>(input),
+            std::istreambuf_iterator<char>());
+        if ((!input.eof() && input.fail()) || text.size() != size) {
+            text.clear();
+            error = "optional text file changed or failed during its bounded copy";
+            return OptionalTextFileStatus::Error;
+        }
+        return OptionalTextFileStatus::Loaded;
+    } catch (const std::exception& exception) {
+        text.clear();
+        error = exception.what();
+        return OptionalTextFileStatus::Error;
+    } catch (...) {
+        text.clear();
+        error = "unknown optional text-file read failure";
+        return OptionalTextFileStatus::Error;
+    }
+}
 
 auto ReadScriptSource(
         const std::filesystem::path& path,
@@ -289,6 +390,7 @@ auto StagePreparedBundle(
         TableRowsView base,
         TableRowsView rotw,
         const std::filesystem::path& scriptRoot,
+        const DomainScriptSelection& domains,
         const SandboxLimits& limits,
         const SourceReader& reader,
         std::string& error) -> std::shared_ptr<const PreparedBundle> {
@@ -298,7 +400,7 @@ auto StagePreparedBundle(
             return {};
         }
         if (!reader) {
-            error = "AIScript source reader is unavailable";
+            error = "Scripted AI source reader is unavailable";
             return {};
         }
         if (base.rows.size() + rotw.rows.size() > MaximumAiScriptRows) {
@@ -315,7 +417,8 @@ auto StagePreparedBundle(
             });
         };
         std::filesystem::path canonicalRoot = scriptRoot;
-        if (hasEnabledRow(base.rows) || hasEnabledRow(rotw.rows)) {
+        if (hasEnabledRow(base.rows) || hasEnabledRow(rotw.rows)
+                || !domains.revive.empty()) {
             std::error_code rootError;
             canonicalRoot = std::filesystem::weakly_canonical(
                 scriptRoot,
@@ -358,13 +461,26 @@ auto StagePreparedBundle(
                     error)) {
             return {};
         }
+        if (!domains.revive.empty()
+                && !StageUniqueScript(
+                    canonicalRoot,
+                    domains.revive,
+                    limits,
+                    reader,
+                    scriptIndices,
+                    totalSourceBytes,
+                    *candidate,
+                    candidate->reviveScriptIndex,
+                    error)) {
+            return {};
+        }
         error.clear();
         return candidate;
     } catch (const std::exception& exception) {
         error = exception.what();
         return {};
     } catch (...) {
-        error = "unknown AIScript staging failure";
+        error = "unknown Scripted AI staging failure";
         return {};
     }
 }
@@ -383,6 +499,10 @@ auto SessionGeneration::HasLuaVm() const noexcept -> bool {
 
 auto SessionGeneration::ScriptCount() const noexcept -> std::size_t {
     return scripts_.size();
+}
+
+auto SessionGeneration::HasReviveScript() const noexcept -> bool {
+    return reviveScriptIndex_ < scripts_.size() && sandbox_ != nullptr;
 }
 
 auto SessionGeneration::BindingCount(ScriptBank bank) const noexcept
@@ -426,7 +546,6 @@ auto SessionGeneration::EvaluateThink(
         ThinkCapabilities& capabilities,
         ThinkTiming timing,
         std::string& error) const -> ThinkDecision {
-    ThinkDecision decision{};
     const auto& bindings = banks_[BankIndex(bank)];
     const auto binding = std::lower_bound(
         bindings.begin(),
@@ -436,23 +555,69 @@ auto SessionGeneration::EvaluateThink(
             return candidate.monStatsId < id;
         });
     if (binding == bindings.end() || binding->monStatsId != monStatsId) {
+        ThinkDecision decision{};
         decision.fallbackReason = FallbackReason::MissingBinding;
         error.clear();
         return decision;
     }
-    decision.fallbackAi = binding->fallbackAi;
+    return EvaluateScript(
+        binding->scriptIndex,
+        binding->fallbackAi,
+        sessionId,
+        thinkToken,
+        snapshot,
+        capabilities,
+        timing,
+        error);
+}
+
+auto SessionGeneration::EvaluateReviveThink(
+        std::uint64_t sessionId,
+        std::uint64_t thinkToken,
+        ThinkSnapshot snapshot,
+        ThinkCapabilities& capabilities,
+        ThinkTiming timing,
+        std::string& error) const -> ThinkDecision {
+    if (reviveScriptIndex_ == InvalidPreparedScriptIndex) {
+        ThinkDecision decision{};
+        decision.fallbackReason = FallbackReason::MissingBinding;
+        error.clear();
+        return decision;
+    }
+    return EvaluateScript(
+        reviveScriptIndex_,
+        0U,
+        sessionId,
+        thinkToken,
+        snapshot,
+        capabilities,
+        timing,
+        error);
+}
+
+auto SessionGeneration::EvaluateScript(
+        std::size_t scriptIndex,
+        std::uint16_t fallbackAi,
+        std::uint64_t sessionId,
+        std::uint64_t thinkToken,
+        ThinkSnapshot snapshot,
+        ThinkCapabilities& capabilities,
+        ThinkTiming timing,
+        std::string& error) const -> ThinkDecision {
+    ThinkDecision decision{};
+    decision.fallbackAi = fallbackAi;
     if (sessionId == 0U || sessionId != sessionId_ || thinkToken == 0U) {
         decision.fallbackReason = FallbackReason::StaleHandle;
         error = "think session or token does not match the active generation";
         return decision;
     }
-    if (binding->scriptIndex >= scripts_.size() || sandbox_ == nullptr) {
+    if (scriptIndex >= scripts_.size() || sandbox_ == nullptr) {
         decision.fallbackReason = FallbackReason::InternalError;
         error = "compiled Scripted AI binding is incomplete";
         return decision;
     }
 
-    const auto& script = scripts_[binding->scriptIndex];
+    const auto& script = scripts_[scriptIndex];
     decision.scriptErrors = script.errors;
     decision.slowStrikes = script.slowStrikes;
     decision.quarantined = script.quarantined;
@@ -562,6 +727,7 @@ auto CompileSessionGeneration(
             prepared.banks[BankIndex(ScriptBank::Base)].bindings;
         candidate->banks_[BankIndex(ScriptBank::Rotw)] =
             prepared.banks[BankIndex(ScriptBank::Rotw)].bindings;
+        candidate->reviveScriptIndex_ = prepared.reviveScriptIndex;
 
         if (prepared.scripts.empty()) {
             error.clear();
@@ -616,7 +782,7 @@ auto BridgeCoordinator::PublishPrepared(
         std::shared_ptr<const PreparedBundle> candidate,
         std::string& error) -> bool {
     if (!candidate) {
-        error = "prepared AIScript candidate is null";
+        error = "prepared Scripted AI candidate is null";
         return false;
     }
     pending_ = std::move(candidate);
@@ -638,7 +804,7 @@ auto BridgeCoordinator::ReconcileAuthoritativeSession(std::string& error)
     const auto candidate = pending_ ? pending_ : prepared_;
     if (!candidate) {
         if (active_ && active_->SessionId() != desired) active_.reset();
-        error = "no prepared AIScript table snapshot is available";
+        error = "no prepared Scripted AI snapshot is available";
         return false;
     }
     if (!pending_ && active_ && active_->SessionId() == desired

@@ -13,10 +13,18 @@ struct NativeThinkContext {
     void* game{};
     void* unit{};
     void* target{};
+    void* owner{};
     std::uint64_t sessionGeneration{};
     std::uint64_t thinkToken{};
     std::uint32_t monStatsId{};
     std::int32_t targetDistance{};
+    std::int32_t ownerDistance{};
+    std::int32_t targetOwnerDistance{};
+    TacticalProfile tacticalProfile{TacticalProfile::None};
+    bool hasLastAction{};
+    ActionKind lastAction{ActionKind::Idle};
+    bool hasPreferredSkill{};
+    std::uint16_t preferredSkill{};
     bool inCombat{};
 };
 
@@ -36,6 +44,8 @@ public:
     [[nodiscard]] virtual auto IsValidMonster(
         const NativeThinkContext& context) noexcept -> bool = 0;
     [[nodiscard]] virtual auto IsValidTarget(
+        const NativeThinkContext& context) noexcept -> bool = 0;
+    [[nodiscard]] virtual auto IsValidOwner(
         const NativeThinkContext& context) noexcept -> bool = 0;
     [[nodiscard]] virtual auto IsValidMode(
         const NativeThinkContext& context,
@@ -94,6 +104,33 @@ struct NativeThinkExecution {
     bool fallbackAttempted{};
 };
 
+enum class RevivePolicyContinuation : std::uint8_t {
+    DelegateOriginal,
+    RequestNativeFollow,
+    InvalidContext,
+};
+
+struct RevivePolicyExecution {
+    ThinkDecision decision;
+    RevivePolicyContinuation continuation{
+        RevivePolicyContinuation::InvalidContext};
+    std::uint32_t policyRequests{};
+};
+
+enum class ReviveTacticalContinuation : std::uint8_t {
+    DelegateOriginal,
+    Handled,
+    InvalidContext,
+};
+
+struct ReviveTacticalExecution {
+    ThinkDecision decision;
+    ReviveTacticalContinuation continuation{
+        ReviveTacticalContinuation::InvalidContext};
+    ActionIntent attemptedAction{};
+    std::uint32_t adapterCalls{};
+};
+
 [[nodiscard]] auto ExecuteNativeThink(
     const SessionGeneration& generation,
     ScriptBank bank,
@@ -101,5 +138,18 @@ struct NativeThinkExecution {
     NativeActionAdapter& adapter,
     ThinkTiming timing,
     std::string& error) -> NativeThinkExecution;
+
+[[nodiscard]] auto EvaluateRevivePolicyThink(
+    const SessionGeneration& generation,
+    const NativeThinkContext& context,
+    ThinkTiming timing,
+    std::string& error) -> RevivePolicyExecution;
+
+[[nodiscard]] auto ExecuteReviveTacticalThink(
+    const SessionGeneration& generation,
+    const NativeThinkContext& context,
+    NativeActionAdapter& adapter,
+    ThinkTiming timing,
+    std::string& error) -> ReviveTacticalExecution;
 
 } // namespace ruffneckk::scripted_ai
