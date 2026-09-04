@@ -2793,3 +2793,95 @@ Les deux ordres de chargement passent sur Battle.net D2R `3.3.93847` avec
 `39` plugins, `17` patches, les cinq DLL eezstreet et zéro erreur fraîche.
 Le runtime BKVince est ensuite restauré byte-exact à MapSense `0.13.41`; le
 candidat `1.0.0` n'y reste pas déployé.
+
+## Maintenance 1.0.2 — crash de fermeture DirectX 12
+
+Le 4 septembre 2026, Vincent autorise par `GO` le correctif immédiat du crash
+de fermeture MapSense prouvé par un rapport externe sur D2R `3.2.92777`, tout
+en différant l'attribution du conflit MapSense/Floating Damage d'un premier
+essai jusqu'à réception des versions, hashes, inventaires globale/mod-locale et
+logs Floating Damage/D2RLoader du reporter. Les builds `92777` et Battle.net
+`93847` restent couverts par le corpus natif commun vérifié; cette équivalence
+de `D2R.exe` ne couvre pas le cycle de vie de `D3D12Core.dll`, du pilote GPU ni
+la séquence de terminaison du Loader.
+
+Le rapport de crash de 10 625 octets, SHA-256
+`1CDD1226827E5173CE6B616068400646CD0F061D7EF5200FA83C80C5E270FD52`,
+montre `FatalExit -> RtlExitUserProcess -> LdrShutdownProcess`, puis le
+destructeur CRT MapSense à `+0xEDE23`, son helper à `+0x1C53` et une violation
+d'accès dans `D3D12Core.dll`. Le désassemblage de l'artefact public MapSense
+`1.0.1` de SHA-256
+`ECFC729CB41A0ECF71C5FF4FFA43135B9680D05D711D46109D408103F235D921`
+relie exactement ces offsets au destructeur du vecteur global
+`SwapChainQueueBindings` et à son appel `IUnknown::Release` sur chaque command
+queue. Ce vecteur propriétaire était resté hors de `RendererStorage`, malgré
+le contrat existant qui place les autres références COM/DX12 dans un stockage
+alloué pour la durée du processus afin d'éviter leur destruction après le
+démontage de D3D12Core.
+
+La décision retenue déplace le registre complet des bindings dans le même
+`RendererStorage` process-lifetime et conserve son `clear()` déterministe dans
+le chemin normal `ShutdownD3D12ImGuiHost`. Aucun nettoyage D3D/COM n'est ajouté
+à `DllMain`, où le loader lock rendrait cette stratégie dangereuse. Le gate
+statique doit prouver qu'aucun conteneur propriétaire de `ComPtr` ne subsiste à
+durée statique hors de ce stockage, que le build Release x64 et les tests
+MapSense/Suite passent, et que le nouveau PE ne possède plus le destructeur
+tardif observé à l'offset fautif. Déploiement, cold start, fermeture normale et
+trajet `FatalExit` restent `not run` jusqu'à une autorisation runtime séparée.
+
+Le correctif source est qualifié statiquement. Deux arbres Release x64 propres,
+stricts `/W4 /WX`, produisent la même DLL MapSense `1.0.2` de `3 552 256`
+octets, SHA-256
+`D7CBA865D672D01FFDF3A6BAFE91FF5C704A76A7FC1EFB3C8EAED243C7D6838C`.
+CTest passe `1/1` dans chaque arbre et `scripts/Test-Suite.ps1` retourne
+`VALID` pour les 18 plugins présents. Un gate permanent refuse maintenant la
+source si `SwapChainQueueBindings` redevient un vecteur statique ou quitte
+`RendererStorage` process-lifetime.
+
+L'audit COFF du nouvel objet montre seulement un initialiseur de référence qui
+copie `ProcessRendererStorage` vers l'alias `SwapChainQueueBindings` puis
+retourne; il n'appelle pas `atexit`. Aucun symbole de destructeur dynamique
+`??__FSwapChainQueueBindings` n'est émis. Le destructeur CRT propriétaire qui,
+dans `1.0.1`, parcourait les bindings et appelait les deux `Release()` après le
+démontage D3D12 est donc éliminé. Les quatre exports publics sont préservés.
+La correction est build-qualified, pas runtime-qualified : aucun binaire n'a
+été déployé et aucun processus Diablo n'a été lancé ou fermé.
+
+### Qualification runtime locale du correctif de fermeture
+
+Vincent autorise la matrice runtime le 4 septembre 2026 avec les deux états de
+Floating Damage. Le candidat MapSense `1.0.2` exact est déployé en portée
+mod-locale BKVince par `Sync-SuiteRelease.ps1`; le reçu conserve la DLL
+MapSense `1.0.1` précédente. Le runtime testé est Battle.net D2R `3.3.93847`,
+Build Key `623f7a1f73eabb08ccb2b2046e3f9164`, D2R.exe SHA-256
+`E1F5436E3D9687F644EF16938B1B183D1FDEF434F18CF66D852CF68F48CC8936`,
+avec D2RLoader `1.2.1-beta` SHA-256
+`27A79CCD61360CC03E7C623D20A46546E5732B9997C41DC185B5EFC335B5C084`.
+
+Le cas diagnostique sans Floating Damage charge MapSense `1.0.2`, accepte son
+empreinte native complète, installe les hooks DX12, capture la command queue et
+initialise son hôte ImGui. Le démarrage atteint `24/24` avec `37` plugins,
+`17` patches et un doublon global correctement ignoré. `CloseMainWindow`
+termine le processus en moins de 30 secondes, sans rapport de crash, événement
+Windows Application Error/WER ni processus restant. L'assertion TACT
+D2RLoader déjà documentée réapparaît après le startup, mais MapSense initialise
+ensuite son renderer et aucune faute MapSense/D3D12 ne suit.
+
+Floating Damage `1.4.3`, SHA-256
+`1F6BAE0AAC61FEA227E221719F0B7260C581EFC0F342A26039F4CA54D4E7FE2B`,
+est ensuite restauré byte-exact dans sa portée globale. Le second cold start
+charge `38` plugins, applique `17` patches et atteint `24/24`. Floating Damage
+accepte son empreinte, sélectionne l'hôte prioritaire MapSense puis rend sa
+première frame par celui-ci. La même fermeture normale termine sans crash,
+événement Windows ni processus résiduel. MapSense `1.0.2` reste finalement
+déployé mod-local, Floating Damage est restauré globalement, et aucune
+configuration n'a été copiée ou modifiée.
+
+La correction est donc runtime-qualified pour cold start, ownership renderer,
+coexistence Floating Damage et fermeture normale sur Battle.net `93847`. Le
+trajet `FatalExit` exact du reporter sous `92777` avec le mod `zyb` reste
+`not run` localement; il n'existe pas de déclencheur sûr et gouverné dans cette
+matrice. La preuve COFF demeure l'assurance directe que son destructeur CRT
+fautif n'est plus présent. Les journaux, hashes et le reçu rollbackable sont
+conservés sous
+`analysis-cache/runtime-deployments/suite/mapsense-1.0.2-shutdown/20260904T171136375Z/`.
