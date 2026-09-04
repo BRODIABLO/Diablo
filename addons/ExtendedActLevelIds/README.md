@@ -1,80 +1,131 @@
-# Extended Act Level IDs 0.1.0
+# Extended Act Level IDs 2.0.0
 
-Extended Act Level IDs allows new level rows to belong to any act through the
-`Act` value in `levels.txt`.
+Extended Act Level IDs makes `levels.txt` usable up to D2R's native limit of
+1023 compiled records: canonical Level IDs `0` through `1022`.
 
 D2R normally resolves an act from the contiguous ranges compiled from
 `actinfo.txt`. As a result, a new Level ID appended after the Act V range is
 treated as Act V even when its `levels.txt` row declares another act. This
-plugin replaces that one decision with the authoritative compiled
-`Levels.Act` value while preserving the original resolver as a fail-safe.
+Version 2.0.0 keeps that fix and extends the two six-byte room-visibility
+packets whose stock Level ID field is only one byte. It preserves the original
+packet size and carries the two high Level ID bits in a versioned coordinate
+marker understood only by another compatible 2.0.0 instance.
 
 ## Installation
 
-Install the DLL and configuration in one scope only.
+Install the DLL in one scope only.
 
 Global installation:
 
 ```text
 <D2R>/d2rloader/plugins/d2rl-ruffneckk-extended-act-level-ids.dll
-<D2R>/d2rloader/config/ruffneckk-extended-act-level-ids.json
 ```
 
 Mod-local installation:
 
 ```text
 <D2R>/mods/<mod>/d2rloader/plugins/d2rl-ruffneckk-extended-act-level-ids.dll
-<D2R>/mods/<mod>/d2rloader/config/ruffneckk-extended-act-level-ids.json
 ```
 
 The plugin supports both scopes but refuses a duplicate global and mod-local
-installation in the same process. When a mod is active, its configuration has
-priority over the global configuration.
-
-## Configuration
-
-```json
-{
-  "enabled": true
-}
-```
-
-The file is optional and the built-in default is enabled. A present file must
-be valid JSON, contain only `enabled`, and use a Boolean value. Invalid or
-unknown settings cause the plugin to refuse loading before it installs a hook.
-Restart D2RLoader after changing the DLL or configuration.
+installation in the same process. It has no configuration file because it has
+no modder-facing setting: the installed DLL is active, and removing it disables
+the plugin. Restart D2RLoader after adding, removing, or replacing the DLL.
 
 ## Runtime contract
 
-The plugin owns one central native hook. After each `DataTablesLoaded` event it
-uses PluginSDK API v4 to copy the Classic, LoD, and RotW `Levels` tables into
-plugin-owned immutable caches. It validates all of the following before using
-them:
+The plugin owns five native hooks: the central Act resolver, the server packet
+0x07/0x08 builders, and the matching client room-in-sight/out-of-sight paths.
+After each `DataTablesLoaded` event it uses PluginSDK API v3 to copy the
+Classic, LoD, and RotW `Levels` tables into plugin-owned immutable caches. It
+validates all of the following before using them:
 
 - the complete 48-byte native resolver fingerprint;
+- the native `< 0x400` compiled-record guard, which admits at most 1023 rows;
+- all four room-visibility hook fingerprints and the `D2Client` identity
+  layout witness;
 - the PluginSDK service versions;
 - compiled `Levels` row size `0x18C`;
+- a record count between `1` and `1023` in every bank;
+- canonical contiguous IDs, where every `Id` equals its physical row index;
 - the `Id` field through a service lookup round-trip for every row;
 - the `Act` field at `+0x0D`, including the five vanilla act boundaries;
 - every act value is between `0` and `4`.
 
-An unsupported data context, table revision, missing Level ID, invalid act,
-incomplete cache, signature mismatch, or hook ownership conflict never guesses
-an answer. The original D2R resolver remains authoritative in those cases.
-Build names are logged for diagnostics only and are not an allowlist.
+For Level IDs `0..255`, packet bytes and coordinates stay on the original
+vanilla path. For IDs `256..1022`, the private PluginSDK channel first matches
+the receiving D2R client to the `LocalPlayerReady` player ID. Only a compatible
+peer receives an encoded packet. The codec preserves all six packet bytes,
+uses X coordinates `0..8191`, and restores the full Level ID and X coordinate
+before the original client function runs.
+
+An unsupported data context, table revision, Level ID, coordinate, peer,
+signature, service ABI, or hook owner never triggers a truncated fallback.
+Extended packets fail closed. Build names are logged for diagnostics only and
+are not an allowlist.
 
 The console command `extended-act-level-ids` reports cache state, table
-revision, row counts, resolutions, fallbacks, configuration path, and the
-diagnostic build name. `extended-act-level-ids resolve <level-id>
+revision, row counts, compatible peers, encoded/decoded/refused packets,
+resolutions, fallbacks, and the diagnostic build name.
+`extended-act-level-ids resolve <level-id>
 [data-context]` calls the hooked central resolver and reports the zero-based
 Act index; the optional data context defaults to RotW (`3`).
 
+## Saves, portals, and waypoints
+
+Version 2.0.0 does not hook save loading or writing and does not change the
+D2S/D2I format. It is therefore unlike ISC12: installing or removing this DLL
+does not widen a serialized field. Existing saves remain structurally
+compatible. A character or mod that depends on custom level rows still needs
+the same data and plugin to revisit those areas, so use disposable characters
+until the gameplay matrix is complete.
+
+The plugin does not enlarge the fixed waypoint bitset, invent waypoint slots,
+or enlarge portal-flag storage. Extended Level IDs may use the stock wider
+travel requests only within those existing capacities and semantics. Version
+2.0.0 creates no level, transition, waypoint, portal, or quest by itself.
+
+## Release candidate
+
+`RuffnecKk-Extended-Act-Level-IDs-2.0.0.zip` is the planned public archive,
+not a public release. Packaging remains blocked until the v2 runtime matrix is
+complete. The archive will contain only the DLL; keep this README beside it.
+
+Back up saves and use a disposable character for tests involving custom level
+data. Start D2RLoader with the normal complete plugin stack, then run:
+
+```text
+extended-act-level-ids
+```
+
+The status must report `active` and `cache=ready`. The decisive test requires a
+real playable area whose canonical ID is above 255. Run:
+
+```text
+extended-act-level-ids resolve <new-level-id>
+```
+
+The reported Act must match the row's zero-based `Act` value and the source
+must be `Levels.txt`. Then test room streaming, travel in both directions, Town
+Portal, automap, save/reload, and host/joiner behavior.
+
+Please report the D2R and D2RLoader versions, installation scope, mod name,
+Level ID and declared Act, both console outputs, gameplay result, and the fresh
+D2RLoader/plugin logs. A successful cold start without an out-of-range level is
+useful compatibility evidence but does not close the playable-area release
+gate.
+
 ## Compatibility
 
-Version 0.1.0 is built against D2RLoader 1.2.0-beta and PluginSDK API v4 commit
+Version 2.0.0 is built against D2RLoader 1.2.0-beta and PluginSDK API v3 commit
 `4933e2c42cb2592958cd0df3b6dc5003102252d1`. Runtime qualification targets the
 official D2R `3.3.93847` build. D2R `3.2.92777` is covered only by governed
 byte-exact equivalence of every native surface used by the plugin.
+
+Local games and private TCP/IP games are the supported extended-ID network
+modes. Every peer must run the same v2 protocol. PluginSDK private channels are
+unavailable on Battle.net, so Level IDs above 255 deliberately fail closed
+there; this plugin does not alter Battle.net's protocol.
 
 The DLL is an autonomous member of the RuffnecKk D2RLoader Suite. It does not
 modify, link, merge, or redistribute any eezstreet plugin.

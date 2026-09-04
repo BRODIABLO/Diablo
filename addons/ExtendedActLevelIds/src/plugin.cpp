@@ -13,12 +13,8 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <filesystem>
-#include <fstream>
-#include <iterator>
 #include <memory>
 #include <span>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -29,12 +25,21 @@ namespace {
 
 using namespace ruffneckk::extended_act_level_ids;
 
-constexpr wchar_t ConfigFileName[] =
-    L"ruffneckk-extended-act-level-ids.json";
 constexpr wchar_t SingletonName[] =
     L"Local\\RuffnecKk.ExtendedActLevelIds.Singleton";
 
 constexpr std::uintptr_t ResolveActFromLevelIdRva = 0x326710;
+constexpr std::uintptr_t LevelsCapacityGuardRva = 0x330446;
+constexpr std::uintptr_t SendRoomInSightPacketRva = 0x47D2D0;
+constexpr std::uintptr_t SendRoomOutOfSightPacketRva = 0x47EAF0;
+constexpr std::uintptr_t SetClientInSightRva = 0x328680;
+constexpr std::uintptr_t UnsetClientInSightRva = 0x328780;
+constexpr std::uintptr_t D2ClientLayoutWitnessRva = 0x485B51;
+constexpr std::size_t D2ClientPlayerIdOffset = 0x270;
+constexpr std::uint32_t InvalidPlayerId = 0xFFFFFFFFU;
+constexpr std::uint16_t CompatibilityHandshakeMessage = 1;
+constexpr std::uint16_t NetworkLocalChannelId = 1;
+constexpr std::uint64_t NetworkCompatibilityToken = 0x454C494456320001ULL;
 constexpr auto ResolveActFromLevelIdExpected = std::to_array<std::uint8_t>({
     0x48,0x89,0x5C,0x24,0x08,0x48,0x89,0x74,
     0x24,0x10,0x57,0x48,0x83,0xEC,0x30,0x8B,
@@ -43,32 +48,110 @@ constexpr auto ResolveActFromLevelIdExpected = std::to_array<std::uint8_t>({
     0x5C,0xA3,0xFD,0xFF,0x8B,0x98,0x08,0x01,
     0x00,0x00,0x83,0xEB,0x01,0x78,0x43,0x90,
 });
+constexpr auto LevelsCapacityGuardExpected = std::to_array<std::uint8_t>({
+    0x48,0x81,0xBE,0x68,0x14,0x00,0x00,0x00,
+    0x04,0x00,0x00,0x72,0x0F,0x48,0x8D,0x4C,
+    0x24,0x40,0xE8,0x83,0x9F,0xFF,0xFF,0x84,
+    0xC0,0x74,0x01,0xCC,0x4C,0x69,0x7F,0x08,
+    0x8C,0x01,0x00,0x00,
+});
+constexpr auto SendRoomInSightPacketExpected = std::to_array<std::uint8_t>({
+    0x40,0x57,0x48,0x83,0xEC,0x40,0xC6,0x44,
+    0x24,0x20,0x07,0x48,0x8B,0xF9,0x66,0x44,
+    0x89,0x44,0x24,0x21,0x66,0x44,0x89,0x4C,
+    0x24,0x23,0x88,0x54,0x24,0x25,0x48,0x85,
+    0xC9,
+});
+constexpr auto SendRoomOutOfSightPacketExpected = std::to_array<std::uint8_t>({
+    0x40,0x57,0x48,0x83,0xEC,0x40,0xC6,0x44,
+    0x24,0x20,0x08,0x48,0x8B,0xF9,0x66,0x44,
+    0x89,0x44,0x24,0x21,0x66,0x44,0x89,0x4C,
+    0x24,0x23,0x88,0x54,0x24,0x25,0x48,0x85,
+    0xC9,
+});
+constexpr auto SetClientInSightExpected = std::to_array<std::uint8_t>({
+    0x48,0x89,0x5C,0x24,0x08,0x48,0x89,0x6C,
+    0x24,0x10,0x48,0x89,0x74,0x24,0x18,0x57,
+    0x48,0x83,0xEC,0x30,0x41,0x8B,0xE9,0x41,
+    0x8B,0xF8,0x48,0x8B,0xF2,0x0F,0xB6,0xD9,
+});
+constexpr auto UnsetClientInSightExpected = std::to_array<std::uint8_t>({
+    0x48,0x89,0x5C,0x24,0x08,0x48,0x89,0x6C,
+    0x24,0x10,0x48,0x89,0x74,0x24,0x18,0x57,
+    0x48,0x83,0xEC,0x30,0x41,0x8B,0xE9,0x41,
+    0x8B,0xD8,0x48,0x8B,0xF2,
+});
+constexpr auto D2ClientLayoutWitnessExpected = std::to_array<std::uint8_t>({
+    0xF6,0x87,0xE0,0x04,0x00,0x00,0x01,0x74,
+    0x09,0x48,0x8B,0x87,0x78,0x02,0x00,0x00,
+    0xEB,0x2E,0x4C,0x39,0xA7,0x78,0x02,0x00,
+    0x00,0x74,0x3F,0x44,0x8B,0x87,0x70,0x02,
+    0x00,0x00,0x8B,0x97,0x6C,0x02,0x00,0x00,
+    0x48,0x8B,0x8F,0xB0,0x02,0x00,0x00,0xE8,
+    0xFB,0xA2,0x00,0x00,
+});
 
 using ResolveActFromLevelIdFn = std::uint8_t(__fastcall*)(
     std::uint8_t dataContext,
     std::int32_t levelId) noexcept;
+
+using SendRoomVisibilityPacketFn = void(__fastcall*)(
+    void* client,
+    std::int32_t levelId,
+    std::uint16_t x,
+    std::uint16_t y) noexcept;
+
+using UpdateClientSightFn = void(__fastcall*)(
+    std::uint8_t dataContext,
+    void* act,
+    std::int32_t levelId,
+    std::int32_t x,
+    std::int32_t y,
+    void* room) noexcept;
 
 struct ActMap {
     std::uint64_t revision{};
     std::vector<ActEntry> entries;
 };
 
+struct CompatiblePeerEntry {
+    D2RL::Network::PeerHandle peer{};
+    std::uint32_t playerId{};
+};
+
+struct CompatiblePeerMap {
+    std::vector<CompatiblePeerEntry> entries;
+};
+
 const D2RL::PluginContext* Context{};
 const D2RL::DataTableServiceV1* DataTables{};
-Config Settings{};
-std::string LoadedConfigPath{"built-in defaults"};
+const D2RL::NetworkServiceV1* Network{};
+D2RL::Network::ChannelHandle NetworkChannel{
+    D2RL::Network::InvalidChannelHandle};
 std::string RuntimeBuildName{"unknown"};
 HANDLE SingletonHandle{};
 ResolveActFromLevelIdFn OriginalResolveActFromLevelId{};
+SendRoomVisibilityPacketFn OriginalSendRoomInSightPacket{};
+SendRoomVisibilityPacketFn OriginalSendRoomOutOfSightPacket{};
+UpdateClientSightFn OriginalSetClientInSight{};
+UpdateClientSightFn OriginalUnsetClientInSight{};
 
 std::atomic_bool Operational{};
 std::atomic_bool CacheReady{};
 std::atomic_uint64_t PublishedRevision{};
 std::atomic_uint64_t ResolvedFromLevels{};
 std::atomic_uint64_t OriginalFallbacks{};
+std::atomic_uint64_t EncodedVisibilityPackets{};
+std::atomic_uint64_t DecodedVisibilityPackets{};
+std::atomic_uint64_t RefusedVisibilityPackets{};
+std::atomic_uint64_t CompatiblePeerAnnouncements{};
+std::atomic_uint64_t NetworkWarnings{};
+std::atomic_uint32_t LocalPlayerId{InvalidPlayerId};
+std::atomic_uint64_t SessionGeneration{};
 std::atomic<std::shared_ptr<const ActMap>> ClassicCache{};
 std::atomic<std::shared_ptr<const ActMap>> LodCache{};
 std::atomic<std::shared_ptr<const ActMap>> RotwCache{};
+std::atomic<std::shared_ptr<const CompatiblePeerMap>> CompatiblePeers{};
 
 template <typename Value>
 Value ReadValue(const void* base, std::size_t offset) noexcept {
@@ -117,66 +200,6 @@ void ResetCaches() noexcept {
     PublishedRevision.store(0, std::memory_order_release);
 }
 
-std::vector<std::filesystem::path> ConfigCandidates() {
-    std::filesystem::path activeModConfigDirectory;
-    std::filesystem::path scopeConfigDirectory;
-    if (Context && Context->activeMod && Context->activeMod[0] != '\0'
-            && Context->modSupportDirectory
-            && Context->modSupportDirectory[0] != L'\0') {
-        activeModConfigDirectory =
-            std::filesystem::path(Context->modSupportDirectory) / L"config";
-    }
-    if (Context && Context->pluginConfigPath
-            && Context->pluginConfigPath[0] != L'\0') {
-        scopeConfigDirectory =
-            std::filesystem::path(Context->pluginConfigPath).parent_path();
-    }
-    std::error_code currentPathError;
-    const auto currentPath = std::filesystem::current_path(currentPathError);
-    const auto globalConfigDirectory = currentPathError
-        ? std::filesystem::path{}
-        : currentPath / L"d2rloader" / L"config";
-    return BuildConfigCandidates(
-        activeModConfigDirectory,
-        scopeConfigDirectory,
-        globalConfigDirectory,
-        ConfigFileName);
-}
-
-bool LoadConfig() noexcept {
-    Settings = {};
-    LoadedConfigPath = "built-in defaults";
-    try {
-        for (const auto& path : ConfigCandidates()) {
-            std::error_code error;
-            if (!std::filesystem::is_regular_file(path, error)) continue;
-            std::ifstream input(path, std::ios::binary);
-            if (!input.is_open()) {
-                throw std::runtime_error(
-                    "configuration file cannot be opened");
-            }
-            const std::string text{
-                std::istreambuf_iterator<char>(input),
-                std::istreambuf_iterator<char>()};
-            Config parsed{};
-            std::string parseError;
-            if (!ParseConfig(text, parsed, parseError)) {
-                throw std::runtime_error(parseError);
-            }
-            Settings = parsed;
-            LoadedConfigPath = path.string();
-            return true;
-        }
-        return true;
-    } catch (const std::exception& exception) {
-        const auto message = std::string(
-            "ExtendedActLevelIds: invalid config (")
-            + exception.what() + ").";
-        Context->LogError(message.c_str());
-        return false;
-    }
-}
-
 bool AcquireSingleton() noexcept {
     SingletonHandle = CreateMutexW(nullptr, FALSE, SingletonName);
     if (!SingletonHandle) {
@@ -205,15 +228,40 @@ bool ValidateRuntime() noexcept {
     const auto* base = Context
         ? reinterpret_cast<const std::uint8_t*>(Context->exeBase)
         : nullptr;
-    if (base && std::memcmp(
-            base + ResolveActFromLevelIdRva,
-            ResolveActFromLevelIdExpected.data(),
-            ResolveActFromLevelIdExpected.size()) == 0) {
-        return true;
+    const auto matches = [base](
+            std::uintptr_t rva,
+            const auto& expected) noexcept {
+        return base && std::memcmp(
+            base + rva,
+            expected.data(),
+            expected.size()) == 0;
+    };
+    if (!matches(ResolveActFromLevelIdRva, ResolveActFromLevelIdExpected)) {
+        Context->LogError(
+            "ExtendedActLevelIds: central act resolver fingerprint mismatch; plugin refused.");
+        return false;
     }
-    Context->LogError(
-        "ExtendedActLevelIds: central act resolver fingerprint mismatch; plugin refused.");
-    return false;
+    if (!matches(LevelsCapacityGuardRva, LevelsCapacityGuardExpected)) {
+        Context->LogError(
+            "ExtendedActLevelIds: native 1023-record capacity witness mismatch; plugin refused.");
+        return false;
+    }
+    if (!matches(SendRoomInSightPacketRva, SendRoomInSightPacketExpected)
+            || !matches(
+                SendRoomOutOfSightPacketRva,
+                SendRoomOutOfSightPacketExpected)
+            || !matches(SetClientInSightRva, SetClientInSightExpected)
+            || !matches(UnsetClientInSightRva, UnsetClientInSightExpected)) {
+        Context->LogError(
+            "ExtendedActLevelIds: room-visibility codec fingerprint mismatch; plugin refused.");
+        return false;
+    }
+    if (!matches(D2ClientLayoutWitnessRva, D2ClientLayoutWitnessExpected)) {
+        Context->LogError(
+            "ExtendedActLevelIds: D2Client player identity witness mismatch; plugin refused.");
+        return false;
+    }
+    return true;
 }
 
 bool QueryServices(
@@ -245,6 +293,20 @@ bool QueryServices(
         return false;
     }
     lifecycle = lifecycleService;
+
+    const D2RL::NetworkServiceV1* networkService{};
+    if (Context->QueryService(
+            D2RL::ServiceId::Network,
+            D2RL::NetworkServiceV1Version,
+            &networkService) != D2RL::ServiceQueryResult::Success
+            || !D2RL::HasNetworkServiceV1Field(
+                networkService,
+                D2RL::NetworkServiceV1RequiredSize)) {
+        Context->LogError(
+            "ExtendedActLevelIds: NetworkServiceV1 is unavailable or incompatible.");
+        return false;
+    }
+    Network = networkService;
     return true;
 }
 
@@ -264,7 +326,7 @@ std::shared_ptr<const ActMap> BuildBankCache(
     if (tableResult != D2RL::DataTables::Result::Success
             || table.revision != revision
             || table.rows == nullptr
-            || table.rowCount == 0
+            || !HasValidLevelRecordCount(table.rowCount)
             || table.rowSize != LevelsRowSize) {
         error = "invalid Levels table view";
         return {};
@@ -297,8 +359,9 @@ std::shared_ptr<const ActMap> BuildBankCache(
         const auto act = ReadValue<std::uint8_t>(
             physical.row,
             LevelsActOffset);
-        if (levelId < 0 || act > MaximumAct) {
-            error = "Levels row contains an invalid Id or Act";
+        if (!IsCanonicalLevelId(levelId, rowIndex)
+                || act > MaximumAct) {
+            error = "Levels rows must use contiguous Id values 0..1022 and Act values 0..4";
             return {};
         }
 
@@ -413,7 +476,6 @@ std::uint8_t __fastcall HookResolveActFromLevelId(
         std::int32_t levelId) noexcept {
     if (Operational.load(std::memory_order_acquire)
             && CacheReady.load(std::memory_order_acquire)
-            && Settings.enabled
             && IsSupportedDataContext(dataContext)
             && BankForContext(dataContext)
                 != static_cast<D2RL::DataTables::Bank>(0)) {
@@ -430,6 +492,386 @@ std::uint8_t __fastcall HookResolveActFromLevelId(
     }
     OriginalFallbacks.fetch_add(1, std::memory_order_relaxed);
     return OriginalResolveActFromLevelId(dataContext, levelId);
+}
+
+bool IsKnownExtendedLevelId(std::int32_t levelId) noexcept {
+    if (levelId <= MaximumVanillaNetworkLevelId
+            || levelId > MaximumLevelId
+            || !CacheReady.load(std::memory_order_acquire)) {
+        return false;
+    }
+    for (std::uint8_t dataContext = MinimumDataContext;
+            dataContext <= MaximumDataContext;
+            ++dataContext) {
+        const auto cache = LoadCache(dataContext);
+        if (cache && FindAct(
+                std::span<const ActEntry>(cache->entries),
+                levelId)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool IsCompatiblePlayer(std::uint32_t playerId) noexcept {
+    if (playerId == InvalidPlayerId) return false;
+    const auto localPlayerId = LocalPlayerId.load(std::memory_order_acquire);
+    if (localPlayerId != InvalidPlayerId && localPlayerId == playerId) {
+        return true;
+    }
+    const auto peers = CompatiblePeers.load(std::memory_order_acquire);
+    return peers && std::any_of(
+        peers->entries.begin(),
+        peers->entries.end(),
+        [playerId](const CompatiblePeerEntry& entry) {
+            return entry.playerId == playerId;
+        });
+}
+
+std::size_t CompatiblePeerCount() noexcept {
+    const auto peers = CompatiblePeers.load(std::memory_order_acquire);
+    return peers ? peers->entries.size() : 0;
+}
+
+void PublishCompatiblePeer(
+        D2RL::Network::PeerHandle peer,
+        std::uint32_t playerId) noexcept {
+    if (peer == D2RL::Network::InvalidPeerHandle) return;
+    try {
+        auto current = CompatiblePeers.load(std::memory_order_acquire);
+        for (;;) {
+            auto mutableNext = std::make_shared<CompatiblePeerMap>();
+            if (current) mutableNext->entries = current->entries;
+            std::erase_if(
+                mutableNext->entries,
+                [peer](const CompatiblePeerEntry& entry) {
+                    return entry.peer == peer;
+                });
+            mutableNext->entries.push_back({peer, playerId});
+            std::shared_ptr<const CompatiblePeerMap> next{mutableNext};
+            if (CompatiblePeers.compare_exchange_weak(
+                    current,
+                    next,
+                    std::memory_order_release,
+                    std::memory_order_acquire)) {
+                CompatiblePeerAnnouncements.fetch_add(
+                    1,
+                    std::memory_order_relaxed);
+                return;
+            }
+        }
+    } catch (...) {
+        if (Context) Context->LogError(
+            "ExtendedActLevelIds: compatible peer map update failed.");
+    }
+}
+
+void RemoveCompatiblePeer(D2RL::Network::PeerHandle peer) noexcept {
+    if (peer == D2RL::Network::InvalidPeerHandle) return;
+    try {
+        auto current = CompatiblePeers.load(std::memory_order_acquire);
+        while (current) {
+            auto mutableNext = std::make_shared<CompatiblePeerMap>();
+            mutableNext->entries = current->entries;
+            std::erase_if(
+                mutableNext->entries,
+                [peer](const CompatiblePeerEntry& entry) {
+                    return entry.peer == peer;
+                });
+            std::shared_ptr<const CompatiblePeerMap> next =
+                mutableNext->entries.empty()
+                    ? std::shared_ptr<const CompatiblePeerMap>{}
+                    : std::shared_ptr<const CompatiblePeerMap>{mutableNext};
+            if (CompatiblePeers.compare_exchange_weak(
+                    current,
+                    next,
+                    std::memory_order_release,
+                    std::memory_order_acquire)) {
+                return;
+            }
+        }
+    } catch (...) {
+        if (Context) Context->LogError(
+            "ExtendedActLevelIds: compatible peer removal failed.");
+    }
+}
+
+void ResetNetworkSession(std::uint64_t sessionGeneration = 0) noexcept {
+    CompatiblePeers.store({}, std::memory_order_release);
+    LocalPlayerId.store(InvalidPlayerId, std::memory_order_release);
+    SessionGeneration.store(sessionGeneration, std::memory_order_release);
+}
+
+void WarnNetworkUnavailableOnce(const char* message) noexcept {
+    if (NetworkWarnings.fetch_add(1, std::memory_order_relaxed) == 0
+            && Context) {
+        Context->LogWarn(message);
+    }
+}
+
+void SendCompatibilityHandshake(
+        const D2RL::PluginContext* context) noexcept {
+    if (!context
+            || !Network
+            || NetworkChannel == D2RL::Network::InvalidChannelHandle) {
+        return;
+    }
+    const auto playerId = LocalPlayerId.load(std::memory_order_acquire);
+    if (playerId == InvalidPlayerId) return;
+    const auto result = Network->sendToHost(
+        context,
+        NetworkChannel,
+        CompatibilityHandshakeMessage,
+        &playerId,
+        sizeof(playerId));
+    if (result != D2RL::Network::Result::Success
+            && result != D2RL::Network::Result::WrongRole
+            && result != D2RL::Network::Result::NotConnected) {
+        WarnNetworkUnavailableOnce(
+            "ExtendedActLevelIds: compatibility handshake is unavailable; Level IDs above 255 will fail closed.");
+    }
+}
+
+void ConnectOrAnnounce(const D2RL::PluginContext* context) noexcept {
+    if (!context
+            || !Network
+            || NetworkChannel == D2RL::Network::InvalidChannelHandle) {
+        return;
+    }
+    D2RL::Network::ChannelInfo info{
+        .structSize = D2RL::Network::ChannelInfoSize,
+    };
+    if (Network->getChannelInfo(
+            context,
+            NetworkChannel,
+            &info) == D2RL::Network::Result::Success
+            && info.connectionState
+                == D2RL::Network::ConnectionState::Connected) {
+        SendCompatibilityHandshake(context);
+        return;
+    }
+    const auto result = Network->connectToHost(context, NetworkChannel);
+    if (result != D2RL::Network::Result::Success
+            && result != D2RL::Network::Result::Busy
+            && result != D2RL::Network::Result::NotConnected) {
+        WarnNetworkUnavailableOnce(
+            "ExtendedActLevelIds: no compatible private game channel; Level IDs above 255 will fail closed.");
+    }
+}
+
+void __cdecl OnHostCompatibilityMessage(
+        const D2RL::PluginContext* context,
+        D2RL::Network::ChannelHandle channel,
+        D2RL::Network::PeerHandle peer,
+        std::uint16_t messageId,
+        const void* data,
+        std::uint32_t size,
+        void*) noexcept {
+    if (!context
+            || channel != NetworkChannel
+            || messageId != CompatibilityHandshakeMessage
+            || !data
+            || size != sizeof(std::uint32_t)) {
+        return;
+    }
+    std::uint32_t playerId{};
+    std::memcpy(&playerId, data, sizeof(playerId));
+    PublishCompatiblePeer(peer, playerId);
+}
+
+void __cdecl OnClientCompatibilityMessage(
+        const D2RL::PluginContext*,
+        D2RL::Network::ChannelHandle,
+        std::uint16_t,
+        const void*,
+        std::uint32_t,
+        void*) noexcept {
+}
+
+void __cdecl OnNetworkConnectionState(
+        const D2RL::PluginContext* context,
+        const D2RL::Network::ConnectionEvent* event,
+        void*) noexcept {
+    if (!context
+            || !D2RL::Network::HasConnectionEventField(
+                event,
+                D2RL::Network::ConnectionEventRequiredSize)
+            || event->channel != NetworkChannel) {
+        return;
+    }
+    if (event->state == D2RL::Network::ConnectionState::Connected) {
+        SendCompatibilityHandshake(context);
+    } else if (event->state
+            == D2RL::Network::ConnectionState::Disconnected
+            || event->state == D2RL::Network::ConnectionState::Rejected) {
+        RemoveCompatiblePeer(event->peer);
+    }
+}
+
+void __cdecl OnGameplayEvent(
+        const D2RL::PluginContext* context,
+        const D2RL::Lifecycle::GameplayEvent* event,
+        void*) noexcept {
+    if (!context
+            || !D2RL::Lifecycle::HasGameplayEventField(
+                event,
+                D2RL::Lifecycle::GameplayEventRequiredSize)) {
+        return;
+    }
+    if (event->kind == D2RL::Lifecycle::GameplayEventKind::GameLeft) {
+        ResetNetworkSession();
+        return;
+    }
+    if (event->sessionGeneration
+            != SessionGeneration.load(std::memory_order_acquire)) {
+        ResetNetworkSession(event->sessionGeneration);
+    }
+    if (event->kind
+            == D2RL::Lifecycle::GameplayEventKind::LocalPlayerReady) {
+        LocalPlayerId.store(event->playerId, std::memory_order_release);
+    }
+    if (event->kind
+                == D2RL::Lifecycle::GameplayEventKind::LocalPlayerReady
+            || event->kind == D2RL::Lifecycle::GameplayEventKind::ActChanged
+            || event->kind == D2RL::Lifecycle::GameplayEventKind::LevelChanged
+            || event->kind
+                == D2RL::Lifecycle::GameplayEventKind::PlayerResurrected) {
+        ConnectOrAnnounce(context);
+    }
+}
+
+void RefuseVisibilityPacketOnce(const char* reason) noexcept {
+    if (RefusedVisibilityPackets.fetch_add(1, std::memory_order_relaxed) == 0
+            && Context) {
+        Context->LogError(reason);
+    }
+}
+
+void SendRoomVisibilityPacket(
+        SendRoomVisibilityPacketFn original,
+        void* client,
+        std::int32_t levelId,
+        std::uint16_t x,
+        std::uint16_t y) noexcept {
+    if (!original) return;
+    if (levelId <= MaximumVanillaNetworkLevelId) {
+        original(client, levelId, x, y);
+        return;
+    }
+    if (!Operational.load(std::memory_order_acquire)
+            || !client
+            || !IsKnownExtendedLevelId(levelId)) {
+        RefuseVisibilityPacketOnce(
+            "ExtendedActLevelIds: unknown extended Level ID refused before packet encoding.");
+        return;
+    }
+    const auto playerId = ReadValue<std::uint32_t>(
+        client,
+        D2ClientPlayerIdOffset);
+    if (!IsCompatiblePlayer(playerId)) {
+        RefuseVisibilityPacketOnce(
+            "ExtendedActLevelIds: extended Level ID refused for a peer without the compatible v2 channel.");
+        return;
+    }
+    const auto encoded = EncodeLevelCoordinate(levelId, x);
+    if (!encoded) {
+        RefuseVisibilityPacketOnce(
+            "ExtendedActLevelIds: extended Level ID or room X coordinate exceeds the v2 codec contract.");
+        return;
+    }
+    EncodedVisibilityPackets.fetch_add(1, std::memory_order_relaxed);
+    original(client, levelId, encoded->x, y);
+}
+
+void __fastcall HookSendRoomInSightPacket(
+        void* client,
+        std::int32_t levelId,
+        std::uint16_t x,
+        std::uint16_t y) noexcept {
+    SendRoomVisibilityPacket(
+        OriginalSendRoomInSightPacket,
+        client,
+        levelId,
+        x,
+        y);
+}
+
+void __fastcall HookSendRoomOutOfSightPacket(
+        void* client,
+        std::int32_t levelId,
+        std::uint16_t x,
+        std::uint16_t y) noexcept {
+    SendRoomVisibilityPacket(
+        OriginalSendRoomOutOfSightPacket,
+        client,
+        levelId,
+        x,
+        y);
+}
+
+void UpdateClientSight(
+        UpdateClientSightFn original,
+        std::uint8_t dataContext,
+        void* act,
+        std::int32_t levelId,
+        std::int32_t x,
+        std::int32_t y,
+        void* room) noexcept {
+    if (!original) return;
+    if ((static_cast<std::uint32_t>(x) & CodecMarkerMask) == 0) {
+        original(dataContext, act, levelId, x, y, room);
+        return;
+    }
+    const auto decoded = DecodeLevelCoordinate(levelId, x);
+    if (!Operational.load(std::memory_order_acquire)
+            || !decoded
+            || !IsKnownExtendedLevelId(decoded->levelId)) {
+        RefuseVisibilityPacketOnce(
+            "ExtendedActLevelIds: malformed or unknown v2 room-visibility packet refused.");
+        return;
+    }
+    DecodedVisibilityPackets.fetch_add(1, std::memory_order_relaxed);
+    original(
+        dataContext,
+        act,
+        decoded->levelId,
+        decoded->x,
+        y,
+        room);
+}
+
+void __fastcall HookSetClientInSight(
+        std::uint8_t dataContext,
+        void* act,
+        std::int32_t levelId,
+        std::int32_t x,
+        std::int32_t y,
+        void* room) noexcept {
+    UpdateClientSight(
+        OriginalSetClientInSight,
+        dataContext,
+        act,
+        levelId,
+        x,
+        y,
+        room);
+}
+
+void __fastcall HookUnsetClientInSight(
+        std::uint8_t dataContext,
+        void* act,
+        std::int32_t levelId,
+        std::int32_t x,
+        std::int32_t y,
+        void* room) noexcept {
+    UpdateClientSight(
+        OriginalUnsetClientInSight,
+        dataContext,
+        act,
+        levelId,
+        x,
+        y,
+        room);
 }
 
 std::string_view Trim(std::string_view text) noexcept {
@@ -479,11 +921,11 @@ auto ResolveProbe(
                 && !ParseInteger(contextText, parsedContext))
             || parsedContext < MinimumDataContext
             || parsedContext > MaximumDataContext
-            || levelId < 0) {
+            || levelId < 0
+            || levelId > MaximumLevelId) {
         return D2RL::ConsoleCommandResult::InvalidArguments;
     }
-    if (!Settings.enabled
-            || !Operational.load(std::memory_order_acquire)
+    if (!Operational.load(std::memory_order_acquire)
             || !CacheReady.load(std::memory_order_acquire)
             || !Context
             || !Context->exeBase) {
@@ -531,25 +973,29 @@ auto Status(
     const auto classic = ClassicCache.load(std::memory_order_acquire);
     const auto lod = LodCache.load(std::memory_order_acquire);
     const auto rotw = RotwCache.load(std::memory_order_acquire);
-    char message[768]{};
+    char message[1024]{};
     std::snprintf(
         message,
         sizeof(message),
-        "Extended Act Level IDs 0.1.0: %s; cache=%s; revision=%llu; rows=%zu/%zu/%zu; Levels resolutions=%llu; original fallbacks=%llu; config=%s; build=%s.",
-        Settings.enabled
-            ? (Operational.load(std::memory_order_acquire) ? "active" : "inactive")
-            : "disabled",
+        "Extended Act Level IDs 2.0.0: %s; cache=%s; revision=%llu; rows=%zu/%zu/%zu; compatible peers=%zu; encoded=%llu; decoded=%llu; refused=%llu; Levels resolutions=%llu; original fallbacks=%llu; build=%s.",
+        Operational.load(std::memory_order_acquire) ? "active" : "inactive",
         CacheReady.load(std::memory_order_acquire) ? "ready" : "not ready",
         static_cast<unsigned long long>(
             PublishedRevision.load(std::memory_order_acquire)),
         classic ? classic->entries.size() : 0,
         lod ? lod->entries.size() : 0,
         rotw ? rotw->entries.size() : 0,
+        CompatiblePeerCount(),
+        static_cast<unsigned long long>(
+            EncodedVisibilityPackets.load(std::memory_order_relaxed)),
+        static_cast<unsigned long long>(
+            DecodedVisibilityPackets.load(std::memory_order_relaxed)),
+        static_cast<unsigned long long>(
+            RefusedVisibilityPackets.load(std::memory_order_relaxed)),
         static_cast<unsigned long long>(
             ResolvedFromLevels.load(std::memory_order_relaxed)),
         static_cast<unsigned long long>(
             OriginalFallbacks.load(std::memory_order_relaxed)),
-        LoadedConfigPath.c_str(),
         RuntimeBuildName.c_str());
     command->plugin->WriteConsoleMessage(message);
     return D2RL::ConsoleCommandResult::Handled;
@@ -558,10 +1004,22 @@ auto Status(
 void ResetState() noexcept {
     Operational.store(false, std::memory_order_release);
     ResetCaches();
+    ResetNetworkSession();
     ResolvedFromLevels.store(0, std::memory_order_relaxed);
     OriginalFallbacks.store(0, std::memory_order_relaxed);
+    EncodedVisibilityPackets.store(0, std::memory_order_relaxed);
+    DecodedVisibilityPackets.store(0, std::memory_order_relaxed);
+    RefusedVisibilityPackets.store(0, std::memory_order_relaxed);
+    CompatiblePeerAnnouncements.store(0, std::memory_order_relaxed);
+    NetworkWarnings.store(0, std::memory_order_relaxed);
     DataTables = nullptr;
+    Network = nullptr;
+    NetworkChannel = D2RL::Network::InvalidChannelHandle;
     OriginalResolveActFromLevelId = nullptr;
+    OriginalSendRoomInSightPacket = nullptr;
+    OriginalSendRoomOutOfSightPacket = nullptr;
+    OriginalSetClientInSight = nullptr;
+    OriginalUnsetClientInSight = nullptr;
 }
 
 } // namespace
@@ -574,9 +1032,9 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "ruffneckk-extended-act-level-ids",
     .name = "Extended Act Level IDs",
-    .version = "0.1.0",
+    .version = "2.0.0",
     .author = "RuffnecKk",
-    .description = "Allows new levels to belong to any act.",
+    .description = "Extends functional level IDs to the native 1023-record limit.",
     .flags = D2RL::PluginFlags::Shared | D2RL::PluginFlags::NativeHooks,
 };
 
@@ -597,23 +1055,12 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
 
     const auto* runtimeBuild = D2RL::GetBuildName(Context);
     RuntimeBuildName = runtimeBuild ? runtimeBuild : "unknown";
-    if (!LoadConfig()) {
-        ReleaseSingleton();
-        return false;
-    }
     if (!Context->RegisterConsoleCommand(
             "extended-act-level-ids",
             Status,
             "Show status or resolve a cached Level ID.")) {
         Context->LogWarn(
             "ExtendedActLevelIds: status command could not be registered.");
-    }
-    if (!Settings.enabled) {
-        const auto message = std::string(
-            "Extended Act Level IDs 0.1.0 by RuffnecKk loaded disabled; config=")
-            + LoadedConfigPath + "; build=" + RuntimeBuildName + ".";
-        Context->LogInfo(message.c_str());
-        return true;
     }
     if (!ValidateRuntime()) {
         ReleaseSingleton();
@@ -622,6 +1069,28 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
 
     const D2RL::LifecycleServiceV1* lifecycle{};
     if (!QueryServices(lifecycle)) {
+        ReleaseSingleton();
+        return false;
+    }
+    const D2RL::Network::ChannelRegistration channelRegistration{
+        .structSize = D2RL::Network::ChannelRegistrationSize,
+        .flags = 0,
+        .localChannelId = NetworkLocalChannelId,
+        .reserved = 0,
+        .reserved2 = 0,
+        .compatibilityToken = NetworkCompatibilityToken,
+        .hostMessage = OnHostCompatibilityMessage,
+        .clientMessage = OnClientCompatibilityMessage,
+        .connectionState = OnNetworkConnectionState,
+        .userData = nullptr,
+    };
+    if (Network->registerChannel(
+            Context,
+            &channelRegistration,
+            &NetworkChannel) != D2RL::Network::Result::Success
+            || NetworkChannel == D2RL::Network::InvalidChannelHandle) {
+        Context->LogError(
+            "ExtendedActLevelIds: v2 compatibility channel registration failed.");
         ReleaseSingleton();
         return false;
     }
@@ -640,8 +1109,43 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
             || listenerHandle == D2RL::Lifecycle::InvalidHandle) {
         Context->LogError(
             "ExtendedActLevelIds: DataTablesLoaded listener registration failed.");
+        (void)Network->unregisterChannel(Context, NetworkChannel);
+        NetworkChannel = D2RL::Network::InvalidChannelHandle;
         ReleaseSingleton();
         return false;
+    }
+
+    constexpr std::array gameplayKinds{
+        D2RL::Lifecycle::GameplayEventKind::GameJoined,
+        D2RL::Lifecycle::GameplayEventKind::GameLeft,
+        D2RL::Lifecycle::GameplayEventKind::LocalPlayerReady,
+        D2RL::Lifecycle::GameplayEventKind::ActChanged,
+        D2RL::Lifecycle::GameplayEventKind::LevelChanged,
+        D2RL::Lifecycle::GameplayEventKind::PlayerResurrected,
+    };
+    for (const auto kind : gameplayKinds) {
+        const D2RL::Lifecycle::GameplayEventListener gameplayListener{
+            .structSize = D2RL::Lifecycle::GameplayEventListenerSize,
+            .flags = 0,
+            .kind = kind,
+            .reserved = 0,
+            .callback = OnGameplayEvent,
+            .userData = nullptr,
+        };
+        D2RL::Lifecycle::ListenerHandle gameplayHandle{
+            D2RL::Lifecycle::InvalidHandle};
+        if (lifecycle->registerGameplayEventListener(
+                Context,
+                &gameplayListener,
+                &gameplayHandle) != D2RL::Lifecycle::Result::Success
+                || gameplayHandle == D2RL::Lifecycle::InvalidHandle) {
+            Context->LogError(
+                "ExtendedActLevelIds: gameplay listener registration failed.");
+            (void)Network->unregisterChannel(Context, NetworkChannel);
+            NetworkChannel = D2RL::Network::InvalidChannelHandle;
+            ReleaseSingleton();
+            return false;
+        }
     }
 
     if (!Context->InstallInlineHook(
@@ -653,14 +1157,52 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
             &OriginalResolveActFromLevelId)) {
         Context->LogError(
             "ExtendedActLevelIds: central resolver hook is already owned or unavailable.");
+        (void)Network->unregisterChannel(Context, NetworkChannel);
+        NetworkChannel = D2RL::Network::InvalidChannelHandle;
+        ReleaseSingleton();
+        return false;
+    }
+
+    if (!Context->InstallInlineHook(
+            SendRoomInSightPacketRva,
+            SendRoomInSightPacketExpected.data(),
+            static_cast<std::uint32_t>(
+                SendRoomInSightPacketExpected.size()),
+            HookSendRoomInSightPacket,
+            &OriginalSendRoomInSightPacket)
+            || !Context->InstallInlineHook(
+                SendRoomOutOfSightPacketRva,
+                SendRoomOutOfSightPacketExpected.data(),
+                static_cast<std::uint32_t>(
+                    SendRoomOutOfSightPacketExpected.size()),
+                HookSendRoomOutOfSightPacket,
+                &OriginalSendRoomOutOfSightPacket)
+            || !Context->InstallInlineHook(
+                SetClientInSightRva,
+                SetClientInSightExpected.data(),
+                static_cast<std::uint32_t>(
+                    SetClientInSightExpected.size()),
+                HookSetClientInSight,
+                &OriginalSetClientInSight)
+            || !Context->InstallInlineHook(
+                UnsetClientInSightRva,
+                UnsetClientInSightExpected.data(),
+                static_cast<std::uint32_t>(
+                    UnsetClientInSightExpected.size()),
+                HookUnsetClientInSight,
+                &OriginalUnsetClientInSight)) {
+        Context->LogError(
+            "ExtendedActLevelIds: a v2 room-visibility hook is already owned or unavailable.");
+        (void)Network->unregisterChannel(Context, NetworkChannel);
+        NetworkChannel = D2RL::Network::InvalidChannelHandle;
         ReleaseSingleton();
         return false;
     }
 
     Operational.store(true, std::memory_order_release);
     const auto message = std::string(
-        "Extended Act Level IDs 0.1.0 by RuffnecKk active; native fingerprint accepted; config=")
-        + LoadedConfigPath + "; build=" + RuntimeBuildName + ".";
+        "Extended Act Level IDs 2.0.0 by RuffnecKk active; native fingerprints and private compatibility channel accepted; build=")
+        + RuntimeBuildName + ".";
     Context->LogInfo(message.c_str());
     return true;
 }
@@ -668,6 +1210,10 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
 D2RL_PLUGIN_EXPORT void D2RLoaderUnloadPlugin() noexcept {
     using namespace RuffnecKk::ExtendedActLevelIds;
     Operational.store(false, std::memory_order_release);
-    ResetCaches();
+    if (Network
+            && NetworkChannel != D2RL::Network::InvalidChannelHandle) {
+        (void)Network->unregisterChannel(Context, NetworkChannel);
+    }
+    ResetState();
     ReleaseSingleton();
 }

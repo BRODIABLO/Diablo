@@ -2172,3 +2172,52 @@ confiance explicite.
   `A46B5438164ADB1FB9540890103594EA48A79AFA2478CB6865D2E6DB5795EB04`.
   Preuve locale :
   `analysis-cache/extended-act-level-ids-product/evidence/20260901-1947-functional-fixture/ruffneckk-extended-act-level-ids.fixture.log`.
+
+## 2026-09-04 — Extended Act Level IDs 2.0.0 : limite 1023 et codec de visibilité
+
+- Le témoin `0x330446` porte la comparaison exacte
+  `cmp qword ptr [rsi+0x1468],0x400` suivie d'un `jb`. Sa signature stricte de
+  36 octets est unique : le runtime admet donc au plus **1023 records Levels**,
+  soit les IDs canoniques contigus `0..1022`. La DLL ne patch pas cette garde;
+  elle la vérifie et refuse un cache vide, non contigu ou supérieur à 1023.
+- Les constructeurs serveur `0x47D2D0` (paquet `0x07`, room in sight) et
+  `0x47EAF0` (`0x08`, room out of sight) suivent tous deux l'ABI observée
+  `void (D2Client*, int32 levelId, uint16 x, uint16 y)`. Leurs appelants
+  fournissent le Level ID complet dans `EDX`, mais les constructeurs stockent
+  seulement `DL` à l'octet `+5`; X et Y restent des WORD à `+1/+3`. Leurs
+  signatures strictes de 33 octets sont uniques dans le corpus commun.
+- Les consommateurs client `0x129B80` et `0x129C30` relisent symétriquement
+  X/Y comme WORD et le Level ID `+5` comme BYTE, puis appellent les bridges
+  `0x2EF320` et `0x2EF700`. Ces bridges conservent R8D et terminent dans
+  `DUNGEON_SetClientIsInSight 0x328680` et
+  `DUNGEON_UnsetClientIsInSight 0x328780`. Les deux fonctions cibles ont l'ABI
+  observée `void (uint8 dataContext, Act*, int32 levelId, int32 x, int32 y,
+  Room*)`, passent le Level ID complet à `DRLG_GetLevel` et possèdent des
+  signatures d'entrée uniques de 32 et 29 octets.
+- La v2 préserve le framing six octets. Pour les IDs `256..1022` seulement,
+  elle place un marqueur dans X bit 15, les deux bits hauts du Level ID dans X
+  bits 14..13 et conserve la coordonnée dans X bits 12..0. Le décodeur restaure
+  l'ID et X avant le consommateur natif. Le contrat exige donc X `0..8191`;
+  l'audit TSV BKVince courant mesure un maximum de fin de monde X=5200 et
+  Y=4100. Les IDs `0..255` appellent strictement le producteur original avec
+  leurs arguments inchangés.
+- `D2Client+0x270` fournit le GUID joueur utilisé pour l'autorisation du
+  destinataire. Le témoin intérieur unique `0x485B51` couvre simultanément ce
+  GUID, le type d'unité `+0x26C`, le cache joueur `+0x278`, le jeu `+0x2B0`,
+  les flags `+0x4E0` et l'appel à `SUNIT_GetServerUnit`. Le joueur local annoncé
+  par `LocalPlayerReady` est autorisé directement; chaque joiner doit avoir
+  réussi le channel privé PluginSDK avec le token exact
+  `0x454C494456320001`, puis annoncer son GUID. Une absence, incompatibilité,
+  déconnexion ou destination inconnue supprime le paquet étendu au lieu
+  d'envoyer un ID tronqué.
+- La source 2.0.0 ne possède aucun hook ni codec D2S/D2I, ne redimensionne ni
+  bitset de waypoint ni portal flags et n'introduit aucune migration de save.
+  D2MOO confirme seulement la sémantique historique et les tailles six octets
+  des paquets `0x07/0x08`; aucune adresse, structure ou ABI Legacy n'est
+  transférée. Les requêtes client Town Portal `0x45` et waypoint `0x49`
+  transportent historiquement un Level ID sur 32 bits, mais leurs handlers D2R
+  exacts et leur comportement avec un vrai niveau `>255` restent un gate de
+  qualification, pas une preuve de release.
+- Le build Release et les tests de codec passent hors jeu. Aucun déploiement,
+  cold start ou gameplay 2.0.0 n'a été exécuté : ces actions restent soumises
+  au gate séparé `d2r-runtime-validation` et la publication demeure bloquée.

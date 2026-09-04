@@ -1,11 +1,83 @@
 # Extended Act Level IDs — D2R 3.3.93847
 
-Dernière mise à jour : 1er septembre 2026
+Dernière mise à jour : 4 septembre 2026
 
-Statut : **implantation et qualification technique terminées**. Vincent a
-donné `GO` le 1er septembre 2026 pour le plan autonome fondé sur
-`Levels.txt → Act`. Le résolveur hors plage est prouvé au runtime; seule la
-matrice d'une véritable nouvelle zone jouable reste ouverte avant release.
+Statut : **v2 implantée et validée hors jeu; qualification runtime ouverte**.
+Vincent a donné `GO` le 4 septembre 2026 pour étendre le produit existant à la
+limite native de 1023 records. La source 2.0.0, ses cinq hooks fail-closed et
+son codec réseau compatible sont compilés; les preuves statiques sont
+gouvernées. Aucun binaire v2 n'a été déployé ni exécuté dans D2R. La matrice
+d'une véritable zone jouable d'ID supérieur à 255, Town Portal, waypoint,
+save/reload et host/joiner reste ouverte avant toute archive ou release. Les
+résultats 0.1.1 ci-dessous demeurent l'historique qualifié de la première
+fonction `Levels.txt → Act`, pas une preuve runtime de la v2.
+
+## Décision v2 — extension fonctionnelle à 1023 records — 4 septembre 2026
+
+- Vincent a explicitement autorisé `GO implantation Extended Level IDs v2` le
+  4 septembre 2026 après la revue read-only `$plugin-architect`.
+- Le produit reste la DLL autonome RuffnecKk existante, hybride globale ou
+  mod-locale, membre de la RuffnecKk D2RLoader Suite. La v2 conserve une seule
+  identité de plugin, sa version indépendante et l'absence de configuration :
+  aucun réglage moddeur réel distinct de la présence de la DLL n'est démontré.
+- L'effet joueur retenu est de rendre fonctionnels jusqu'à 1023 records
+  `Levels` compilés, soit les Level IDs contigus `0..1022`. L'ID `1023` et un
+  1024e record restent hors contrat; la ligne de séparation texte `Expansion`
+  n'est pas comptée comme un niveau jouable.
+- La garde native `0x330446` accepte déjà au plus `0x3FF` records et ne sera
+  pas patchée. La v2 doit plutôt supprimer les troncatures à huit bits prouvées
+  dans les constructeurs serveur des paquets `0x07` et `0x08`, tout en
+  conservant les chemins internes déjà en `int32`.
+- Le mécanisme candidat retenu est un codec natif session-wide portant le Level
+  ID sur 16 bits uniquement lorsque producteurs et consommateurs compatibles
+  sont tous présents. Le protocole vanilla doit rester inchangé sur Battle.net
+  et devant tout pair incompatible; aucune identité de build ou de canal ne
+  peut sélectionner un profil natif.
+- La v2 ne doit modifier aucun codec, taille de section ni schéma D2S/D2I, ne
+  doit pas étendre le bitset de waypoints ni la représentation persistante des
+  portal flags, et ne doit jamais exiger un convertisseur de sauvegarde. Toute
+  preuve contraire arrête l'implantation avant release.
+- Avant le premier nouveau hook, le reverse engineering doit gouverner les
+  dispatchers et consommateurs client `0x07/0x08`, les handlers exacts des
+  requêtes Town Portal/waypoint, la sélection atomique du protocole et les
+  surfaces de persistance Automap/waypoint/portal/dernier niveau réellement
+  nécessaires. Chaque RVA, signature, ABI et témoin de layout utilisé doit
+  appartenir à l'empreinte fail-closed.
+- L'incubation, les builds et les tests hors jeu sont autorisés. Tout arrêt,
+  lancement, redémarrage, déploiement ou cold start du runtime attend une
+  confirmation explicite séparée selon `d2r-runtime-validation`.
+
+## Résultat d'implantation v2 — 4 septembre 2026
+
+- `addons/ExtendedActLevelIds/src/plugin.cpp` porte maintenant cinq hooks : le
+  résolveur `Levels.Act`, les constructeurs serveur des paquets room-in-sight
+  `0x07` et room-out-of-sight `0x08`, puis leurs deux consommateurs client.
+  Chaque RVA, signature, ABI et témoin de layout effectivement utilisé est
+  couvert par l'empreinte fail-closed; aucun numéro de build ne choisit le
+  chargement.
+- Le cache refuse plus de 1023 lignes et exige `Id == index` pour chaque record,
+  donc le contrat fonctionnel exact est `0..1022`. La garde native `<0x400` à
+  `0x330446` est seulement vérifiée, jamais modifiée.
+- Le protocole `0x07/0x08` vanilla reste byte-for-byte inchangé pour les IDs
+  `0..255`. Pour `256..1022`, un codec v2 conserve les six octets, transporte
+  les deux bits hauts de l'ID dans une partie réservée du WORD X et restaure X
+  avant `DUNGEON_Set/UnsetClientIsInSight`. Le domaine démontré est X
+  `0..8191`; BKVince reste actuellement sous cette borne.
+- Le `NetworkServiceV1` impose le token exact `0x454C494456320001`. Le joueur
+  local est identifié par `LocalPlayerReady`; un joiner doit en plus annoncer
+  son GUID via le channel compatible. Un pair inconnu, absent ou incompatible
+  reçoit zéro paquet étendu plutôt qu'un ID tronqué. Battle.net conserve le
+  protocole vanilla et les IDs `>255` y échouent volontairement en mode fermé.
+- Aucun fichier de configuration n'est ajouté. La DLL reste autonome, hybride
+  globale/mod-locale et active par sa présence. Elle ne touche aucun codec ni
+  layout D2S/D2I, et ne redimensionne ni waypoints ni portal flags.
+- Les tests de codec couvrent les frontières `256/511/512/767/768/1021/1022`,
+  les entrées invalides et la limite de records. Le premier build Release MSVC
+  passe CTest `1/1`; reproductibilité, inspection PE et matrice runtime sont
+  consignées séparément dans `addons/ExtendedActLevelIds/VALIDATION.md`.
+- Les handlers D2R exacts Town Portal/waypoint et le test d'une véritable zone
+  `>255` restent des gates de qualification. La v2 ne les hooke pas et ne
+  revendique encore ni support gameplay complet ni release.
 
 ## Décision de reprise autoritaire — 1er septembre 2026
 
@@ -21,12 +93,13 @@ matrice d'une véritable nouvelle zone jouable reste ouverte avant release.
   `Levels` autoritaire par Level ID et retourne son champ `Act` lorsque la
   valeur est comprise entre `0` et `4`. Une ligne absente ou invalide reprend
   le résultat original au lieu d'inventer un acte.
-- Le contrat Suite actuel exige une configuration indépendante. Le candidat
-  utilise donc `ruffneckk-extended-act-level-ids.json` avec le seul booléen
-  anglais `enabled`; l'absence du fichier active le comportement retenu et un
-  fichier présent mais invalide refuse le chargement avant le premier hook.
+- La configuration JSON `enabled` de `0.1.0` est supersédée. Elle n'exposait
+  aucun réglage moddeur réel et dupliquait la présence de la DLL; `0.1.1` retire
+  donc le fichier, le parseur, la dépendance `nlohmann/json`, les chemins de
+  recherche et la branche `enabled`. La présence de la DLL active le plugin;
+  son retrait le désactive au prochain démarrage.
 - La baseline d'incubation est D2R `3.3.93847`, D2RLoader `1.2.0-beta` et
-  PluginSDK API v4 au commit
+  PluginSDK API v3 au commit
   `4933e2c42cb2592958cd0df3b6dc5003102252d1`. Le build `3.2.92777` est couvert
   seulement par l'équivalence byte-exact gouvernée de toutes les surfaces
   natives effectivement utilisées.
@@ -82,7 +155,7 @@ la sauvegarde ni la synchronisation client/serveur.
   friction est donc observée dans le mod actuel.
 - La table BKVince `levels.txt` passe le lecteur TSV gouverné en CRLF avec un
   round-trip byte-exact; son champ `Act` autoritaire vaut actuellement `0..4`.
-- PluginSDK API v4 expose officiellement `DataTableServiceV1`,
+- PluginSDK API v3 expose officiellement `DataTableServiceV1`,
   `TableId::Levels`, `findRowById` et l'événement `DataTablesLoaded`. Un plugin
   peut donc copier les actes dans une mémoire dont il reste propriétaire au
   chargement des tables, sans conserver un pointeur de ligne éphémère.
@@ -90,28 +163,27 @@ la sauvegarde ni la synchronisation client/serveur.
   `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`; la baseline SDK retenue reste le
   commit `4933e2c42cb2592958cd0df3b6dc5003102252d1`.
 
-## Résultat livré et preuves — 1er septembre 2026
+## Résultat livré et preuves — 2 septembre 2026
 
 - Le produit autonome réside sous `addons/ExtendedActLevelIds/`; son binaire
   livré à BKVince est
-  `data-BKVince/d2rloader/plugins/d2rl-ruffneckk-extended-act-level-ids.dll`
-  et sa configuration indépendante est
-  `data-BKVince/d2rloader/config/ruffneckk-extended-act-level-ids.json`.
+  `data-BKVince/d2rloader/plugins/d2rl-ruffneckk-extended-act-level-ids.dll`.
+  Aucun fichier de configuration n'appartient désormais au produit.
 - La DLL finale porte le SHA-256
-  `5A61181135A18039E3362ECDBD2A8972155C904A6B7B09AABC5611BE49E1FCD4`.
+  `16805ACA4207015729516687D1A869226569A64BCCEC0BED318E453CD08E7775`
+  pour 48 640 octets.
   Deux builds Release propres sont byte-identiques; CTest passe `1/1`; les
-  trois exports D2RLoader, les métadonnées PE `RuffnecKk / 0.1.0` et les
+  trois exports D2RLoader, les métadonnées PE `RuffnecKk / 0.1.1` et les
   dépendances MSVC attendues sont vérifiés.
 - Le cache immuable est reconstruit après `DataTablesLoaded` pour Classic,
   LoD et RotW. Chaque ligne physique doit réussir un aller-retour
   `findRowById(Id)` vers le même pointeur et le même index; les ancres vanilla
   `1/40/75/103/109`, la taille `0x18C`, `Act=+0x0D`, les actes `0..4` et
   l'unicité des IDs sont exigés avant publication.
-- La matrice du hash final passe avec la pile complète : portée mod-locale,
-  portée globale, arbitrage du doublon, `enabled=false`, JSON invalide et
-  restauration mod-locale. Les cold starts valides chargent 37 plugins et 17
-  memory patches jusqu'à `24/24`; le JSON invalide refuse seulement cette DLL
-  et D2R termine quand même son démarrage.
+- La DLL seule passe les cold starts mod-local puis global sur le runtime
+  officiel `3.3.93847`, avec la pile complète courante : 38 plugins, 17 memory
+  patches et `24/24`. L'arbitrage du doublon avait été prouvé sur `0.1.0` mais
+  n'a pas été rejoué sur `0.1.1`; il reste `not run` pour cette version.
 - Un fixture TSV temporaire a ajouté `Id=147 / Act=0` hors des sources
   livrées. D2R l'a compilé (`RotW=148`) et l'entrée native hookée a journalisé
   `Level Id 147 resolved to Act index 0 (Act 1), data context 3,
@@ -121,7 +193,23 @@ la sauvegarde ni la synchronisation client/serveur.
 - Les preuves locales résident sous
   `analysis-cache/extended-act-level-ids-product/evidence/`, notamment
   `20260901-1947-functional-fixture/` et
-  `20260901-1949-final-matrix/`.
+  `20260902-0851-v0.1.1-configless-matrix/`. Le fixture exact `Id=147` demeure
+  une preuve `0.1.0`; son code de résolution est inchangé, mais son rejeu
+  `0.1.1` attend une future autorisation de lancement.
+
+## Handoff de test externe — 2 septembre 2026
+
+- Vincent a autorisé la préparation d'un ZIP destiné à des testeurs externes.
+  Cette archive reste explicitement une build de test et ne ferme aucun gate de
+  zone jouable ni de release publique.
+- L'archive locale gitignorée
+  `addons/ExtendedActLevelIds/RuffnecKk-Extended-Act-Level-IDs-0.1.1-test.zip`
+  contient uniquement, à sa racine, la DLL autonome.
+  Le README anglais créditant D2MOO demeure à côté du ZIP et n'est pas inclus.
+- Le SHA-256 du ZIP est
+  `370FB1934ED6EA68CF26E9FB703A9294ABF7D7E320A5C9FE7470F6F5673DC874`.
+  Son unique entrée a été relue depuis l'archive : DLL de 48 640 octets,
+  SHA-256 `16805ACA4207015729516687D1A869226569A64BCCEC0BED318E453CD08E7775`.
 
 ## Risques résiduels à tester
 
@@ -142,7 +230,7 @@ la sauvegarde ni la synchronisation client/serveur.
 2. **Passé** — promouvoir dans `known-rvas.json` et `findings.md` le résolveur `0x326710`,
    son ABI, sa signature unique, son corps utile et le layout `Levels.Act`
    uniquement après cette preuve.
-3. **Passé** — implanter la DLL autonome, sa configuration JSON stricte, le cache publié
+3. **Passé** — implanter la DLL autonome sans configuration, le cache publié
    après `DataTablesLoaded`, le fallback original et les tests unitaires des
    chemins valides, absents, précoces et invalides.
 4. **Passé** — produire deux builds Release indépendants et comparer les DLL après
