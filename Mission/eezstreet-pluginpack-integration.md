@@ -1385,3 +1385,138 @@ runtime. Les dossiers `*-src` sont conservés comme témoins de développement e
 les plugins autonomes hors du lot restent inchangés. Ce nettoyage du dépôt ne
 constitue pas une nouvelle validation runtime et n'infère toujours aucune
 acceptation amont par eezstreet.
+
+## Maintenance Bulk Skill Point Allocation — 11 août 2026
+
+La PR amont ouverte `eezstreet/D2RL-Plugins#6` n'a encore reçu aucune review ni
+aucun thread. Une reproduction BKVince a cependant découvert une régression de
+localisation dans le port `plugin-skills` : une clé personnalisée absente est
+résolue vers la traduction native de `strMissingString`, que le filtre 1.2.4
+acceptait à tort comme prompt valide.
+
+Le correctif 1.2.5 reste portable entre mods et langues. Il résout
+`strMissingString` par `LANG_GetStringByKey` dans la langue active et utilise le
+fallback configuré lorsque le résultat personnalisé est nul, vide, identique à
+la clé ou égal à cette sentinelle localisée. Aucun RVA, hook, ABI, paquet ou
+propriétaire du manifeste ne change. Le test de politique couvre notamment les
+sentinelles anglaise et coréenne.
+
+Le build Release des cinq DLL réussit, le manifeste reste valide à `139/139` et
+les `26/26` CTest passent. La DLL `plugin-skills.dll` déployée porte le SHA-256
+`36E9C542875C47BDF51B496F7BA0E9310CCAF1997BA55412B87953DC7B10EC8E`.
+Le cold start BKVince ciblé charge `19/19` plugins et `15/15` patchsets, sans
+désactivation, rejet ni échec, valide la transaction PluginPack `5/5` et atteint
+`24/24`. Le rendu visuel et les callbacks `Yes`/`No` restent `not run` jusqu'au
+témoin joueur. Le correctif source et son test doivent être poussés sur
+`RuffDood:codex/pluginpack-foundation` afin de mettre à jour la PR #6 existante,
+sans inclure la modification locale indépendante de `COMMUNITY-INTEGRATION.md`.
+
+## Dépôt autonome privé du Community Pack — 13 août 2026
+
+Vincent retient la voie sécurité-first : le Community Pack doit vivre dans un
+dépôt GitHub privé autonome et aucun collaborateur de ce dépôt ne doit recevoir
+par ce biais un accès au workspace `BRODIABLO/Diablo`. La cible retenue est
+`RuffDood/D2RLoader-Community-Pack`, avec un historique neuf plutôt qu'un split
+de l'historique privé.
+
+La copie locale indépendante est préparée sous
+`analysis-cache/community-pack-public/` depuis le snapshot source
+`3aeeb557722c25ebdd47bc3e8b7c9c8ec278cade`. Son parent direct est le suivi du
+correctif Remote Stash demandé
+`a930bcb397a39d7605d6f6c4ae211b551718393d`; le fichier public
+`SOURCE-PROVENANCE.md` consigne explicitement cette inclusion. Les 169 fichiers
+hérités hors README racine sont byte-identiques au snapshot. Le README racine
+est volontairement remplacé par la documentation Community Pack 1.0.0 et ses
+liens de licence sont adaptés à la racine du nouveau dépôt.
+
+L'audit public ne détecte aucun chemin `C:\Workspaces`, `analysis-cache`,
+`Mission/`, `data-BKVince`, identifiant personnel ou motif de credential dans
+l'arbre destiné à Git. Les outputs de build sont ignorés. Les cinq DLL sont
+construites en Debug et Release depuis ce dépôt seul, avec la source vanilla
+3.2 read-only fournie comme input externe; le manifeste et la couverture des
+écritures sont valides à `197/197`, et les `29/29` CTest passent dans les deux
+configurations.
+
+Le dépôt `RuffDood/D2RLoader-Community-Pack` est créé avec une visibilité
+**Private**. Son commit racine est
+`527e8929df2e184f356a47c9a299c51559affb11`; `main` pointe finalement sur
+`6ae7b040379f779fbbf3edec59796719a747c42f` après l'ajout de la documentation
+de build et du support CI. Le push emploie une clé de déploiement locale en
+écriture, limitée à ce seul dépôt et conservée uniquement dans le répertoire
+`.git` de la copie autonome. La visibilité privée, les 171 fichiers suivis et
+le contenu distant ont été vérifiés dans la session GitHub authentifiée.
+
+Le premier run GitHub Actions a confirmé que les tables vanilla externes ne
+devaient pas être supposées présentes sur un runner vierge. Le workflow final
+génère donc 15 placeholders de compilation explicitement réservés au CI, ne
+publie aucun DLL ni artefact et exige toujours les vraies tables D2R 3.2 pour
+un build de production. Le run
+`https://github.com/RuffDood/D2RLoader-Community-Pack/actions/runs/31715107523`
+est vert : configuration, builds Debug et Release, couverture des écritures
+`197/197`, puis `29/29` CTest dans chaque configuration, dont
+`remote-stash-policy`. Aucun contenu du workspace privé n'a été transmis au
+dépôt autonome.
+
+### Release installable privée v1.0.0 — 13 août 2026
+
+Le README autonome dirige maintenant explicitement les joueurs vers
+`Releases/latest` et précise que les archives automatiques **Source code** de
+GitHub ne contiennent jamais les DLL compilées. Le commit
+`baec6ae0f5bb0d96e2bbaeee0e7f419acc02f89f` est poussé sur `main` et le tag
+annoté `v1.0.0` pointe sur ce commit. Les runs GitHub Actions de la branche
+`main` (`31717168758`) et du tag (`31717169719`) sont tous deux verts.
+
+La Release privée `v1.0.0`, marquée **Latest**, est publiée à
+`https://github.com/RuffDood/D2RLoader-Community-Pack/releases/tag/v1.0.0`.
+Elle joint `Community-Pack-1.0.0-Windows-x64.zip` et `SHA256SUMS.txt`. Le ZIP
+de 5 528 004 octets porte le SHA-256
+`90401847CC5EF42512B38CBCD03F7484295A7659F1423638BB6C68BC75D86384` et
+contient strictement huit fichiers : les cinq DLL, le `D2RPlugins.json`, la
+licence et les notices tierces, sous le layout `d2rloader` attendu. Il ne
+contient ni source, ni logs, ni symboles, ni README; le README révisable reste
+à côté du ZIP dans le dossier local de livraison.
+
+Les cinq DLL exactes de cette archive ont été déployées temporairement dans le
+profil BKVince avec sa configuration complète active. Le cold start frais
+valide `17/17` memory patches, `15/15` plugins, zéro désactivation, rejet ou
+échec, et le frontend atteint `24/24`; RemoteStash 1.2.1 est actif avec le
+dispatcher PluginPack. Cette preuve est technique : aucune nouvelle conclusion
+gameplay, réseau, manette ou visuelle n'en est déduite. Les cinq DLL et la
+configuration d'origine du runtime sont ensuite restaurées byte-exactement et
+aucun processus D2R ne reste ouvert. Le rapport local est conservé sous
+`analysis-cache/community-pack-release-runtime-validation/20260813-autonomous-v1.0.0/report.md`.
+
+### Correction documentaire one-shot préparée — 13 août 2026
+
+Vincent corrige le récit public de Community Pack 1.0.0 : le produit n'est pas
+une première intégration suivie d'une vague spéciale de quatre fonctions. Il
+réunit en une seule livraison le PluginPack original d'eezstreet, les **21
+fonctions RuffnecKk intégrées** dans ses cinq DLL, et deux corrections de
+comportements originaux. L'ordre historique des commits reste une surface de
+revue interne et ne définit aucun lot public.
+
+Le README autonome, `COMMUNITY-INTEGRATION.md`, `SOURCE-PROVENANCE.md`, le
+README local de livraison et les notes GitHub préparées emploient désormais ce
+modèle unique. Les inventaires README/intégration couvrent les mêmes 21 noms et
+les anciennes mentions contradictoires de 16, 17 ou « four additions » sont
+retirées. Les crédits distinguent le PluginPack original d'eezstreet des 21
+intégrations RuffnecKk sans donner un statut privilégié aux quatre derniers
+commits d'intégration.
+
+Le `D2RPlugins.json` source et celui du ZIP publié étaient déjà réglés sur
+`items.magicFindFormula.mode = "vanilla"`; aucune activation Linear erronée
+n'était livrée. Le commentaire public précise maintenant les deux seules
+valeurs sensibles à la casse : `vanilla` conserve le calcul MF D2R normal et
+ses rendements décroissants Unique/Set/Rare; `linear` applique directement le
+MF positif à ces trois qualités. Magic et le MF non positif conservent leur
+comportement normal dans les deux modes. Le JSON commenté porte le SHA-256
+`17DE7DB84FC3995E560CD14226CD8434AD3718AD68D1D1D802AC83B2589DC525` et les
+`29/29` CTest Release sont verts, dont `magic-find-formula-policy`.
+
+Le ZIP local reconstruit conserve exactement les cinq DLL déjà validées et
+huit fichiers autorisés; seul le JSON commenté change. Il mesure 5 528 084
+octets et porte le SHA-256
+`497571D329A3AE042589CF36FE00FD0AA70F1499828F082E32B0347F9112E936`.
+Le commit, le déplacement du tag annoté `v1.0.0`, le remplacement des assets et
+des notes de Release GitHub restent explicitement en attente de
+`Community Pack : commit push go`.
