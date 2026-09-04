@@ -4,9 +4,9 @@ Dernière mise à jour : 4 septembre 2026
 
 ## Priorité active
 
-[RuffnecKk D2RLoader Suite — hotfix publique v1.3.2](ruffneckk-suite-next-release.md)
+[RuffnecKk D2RLoader Suite — préparation v1.3.3](ruffneckk-suite-next-release.md)
 
-État : **le hotfix `v1.3.2` est publié et vérifié sur GitHub**. MapSense
+État : **`v1.3.2` est publié et vérifié; `v1.3.3` est ouvert en brouillon**. MapSense
 `1.0.1` ne dépend plus du hook
 `UNITS_GetClassId` possédé par Bind And Summon `1.4.4`; Floating Damage `1.4.3`
 et MapSense négocient le propriétaire DirectX 12 avec leurs noms publics;
@@ -41,10 +41,21 @@ vers les sources `suite:` promues.
 
 Le contrôle post-publication a aussi trouvé que le binaire Resistance Floor
 `1.0.1` de l'asset immuable `v1.3.2` contient encore une allowlist de numéros de
-build. La source canonique publique est corrigée et testée, mais sa
-republication exige une future autorisation de release distincte. Demander une
-autorisation séparée avant tout commit ou push du dépôt Diablo ou du dépôt
-Suite, toute nouvelle release ou toute synchronisation vers un runtime installé.
+build. La source canonique publique est corrigée et testée. Le `GO` du 4
+septembre ferme aussi le trou d'automatisation : le générateur exige maintenant
+le gate source complet avant toute sortie, puis inspecte les DLL des ZIP
+individuels et du bundle `All Plugins`. L'asset fautif réel est rejeté, la DLL
+corrigée est acceptée et un refus synthétique sur un futur build est rejeté.
+Resistance Floor est maintenant versionné `1.0.2` dans sa source autoritaire :
+les métadonnées concordent, le build Release vaut
+`28B1B934E180C3863077B478017A310D0880212A50CCC1B0CB557B7ABF6540B6`, le scan
+binaire et la politique Suite sont `VALID`, et le CTest ciblé passe `3/3`.
+Le registre complet `1.3.3` est ouvert en `draft`, `releaseReady=false`, avec
+MapSense `1.0.2` et Resistance Floor `1.0.2`. Sa structure et ses références
+Suite sont valides; la qualification runtime exacte et le packaging restent
+`pending`. Demander une autorisation séparée avant tout commit ou push du dépôt
+Diablo ou du dépôt Suite, toute nouvelle release ou toute synchronisation vers
+un runtime installé.
 L'ancien dépôt privé Governance reste un repli temporaire non autoritaire.
 
 ## Priorité précédente conservée — ISC12

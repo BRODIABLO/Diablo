@@ -791,10 +791,10 @@
     {
       "id": "ruffneckk-suite-next-release",
       "name": "RuffnecKk Suite Next Public Release",
-      "status": "maintenance",
+      "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/ruffneckk-suite-next-release.md",
-      "nextGate": "Preserve the published v1.3.2 evidence and exact 43-asset catalogue while versioning public Governance in Diablo, outside the Suite product repository; commit or push Diablo and Suite only after separate explicit authorization.",
+      "nextGate": "Qualify the exact Resistance Floor 1.0.2 and MapSense 1.0.2 artifacts with the full active Suite on Battle.net 3.3.93847, then generate the reproducible 1.3.3 archives and exact artifact allowlist before advancing the draft beyond releaseReady=false; commit, push and publication still require separate explicit authorization.",
       "include": [
         "Mission/ruffneckk-suite-next-release.md",
         "governance/d2rloader-suite/**"

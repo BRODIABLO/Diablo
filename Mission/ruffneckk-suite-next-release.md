@@ -93,6 +93,65 @@ l'empreinte native fail-closed; son build Release et son test de politique
 passent. Le tag et les 43 assets immuables de `v1.3.2` ne sont pas modifiés :
 une future republication de ce correctif constitue un gate séparé.
 
+Vincent donne `GO` le 4 septembre 2026 pour fermer le trou d'automatisation qui
+avait permis cet écart. Le générateur `scripts/New-Release.ps1` appelle désormais
+obligatoirement `scripts/Test-Suite.ps1 -RequireAll` avec l'allowlist exacte avant
+de créer le dossier de sortie. Après création des archives individuelles et du
+bundle `All Plugins`, il appelle le nouveau gate
+`scripts/Test-PackagedPluginBuildPolicy.ps1`, qui inspecte chaque DLL RuffnecKk
+réellement archivée et refuse les identifiants de builds connus ou tout message
+de restriction D2R par version. Le gate source couvre aussi les comparaisons
+directes, conversions numériques et helpers de type `AllowedBuild` ou
+`SupportedBuild` autour du build-name; l'API PluginSDK reste un contrat ABI
+distinct et autorisé.
+
+L'auto-test du gate prouve trois cas : un build-name purement diagnostique est
+`VALID`, la régression publiée `92777`/`93847` est `REJECTED`, et un refus futur
+synthétique sur `99999` est également `REJECTED`. L'asset GitHub réel
+`RuffnecKk-resistance-floor-v1.0.1.zip`, SHA-256
+`F34683BD32502D41F66B42F3A0B403EF334CF6D5C0D49392C0C2AC42FAE3A436`,
+est refusé. La DLL corrigée rebâtie depuis la source canonique, SHA-256
+`D5875B81A2DD857E8504FC0D0DA27E8448D219AF8793B7136B79423EA5598454`,
+est `VALID`. Le bundle public complet `v1.3.2`, SHA-256
+`6282AF9AD1B8B2775E87EB9FB2255ED32818F834BA3448A71E4045017B2E5F0C`,
+est refusé avec Resistance Floor comme unique plugin fautif.
+
+Le CTest ciblé passe `2/2` pour la politique source et le nouveau gate binaire;
+le test propre à Resistance Floor passe après reconstruction. La matrice CTest
+globale n'est pas déclarée verte : le build de travail ne contient pas encore
+plusieurs exécutables de tests, le catalogue `shadow-master-ai-fix` diverge et
+la configuration MapSense en chantier ne correspond pas encore à son schéma
+courant. Aucun asset, tag, commit, push ou runtime installé n'est modifié. La
+republication de Resistance Floor sous une nouvelle version reste un gate de
+release distinct.
+
+## Préparation Suite 1.3.3 — Resistance Floor 1.0.2
+
+Vincent fixe explicitement Resistance Floor à `1.0.2` le 4 septembre 2026.
+La source autoritaire demeure `suite:plugins/resistance-floor`; le dossier
+historique divergent sous `addons/ResistanceFloor` n'est pas resynchronisé et
+le registre publié `1.3.2` reste immuable.
+
+Les cinq porteurs de version concordent maintenant : projet CMake, manifeste
+`PluginInfo`, messages runtime, ressource Windows et documentation. Le test de
+politique vérifie cette cohérence pour empêcher un prochain bump partiel. Le
+build Release produit une DLL de `178 176` octets dont `FileVersion` et
+`ProductVersion` valent `1.0.2`, SHA-256
+`28B1B934E180C3863077B478017A310D0880212A50CCC1B0CB557B7ABF6540B6`.
+Le scan binaire de compatibilité est `VALID`, la politique Suite complète est
+`VALID` pour `18/18` sources et le CTest ciblé passe `3/3` : politique source,
+scan des DLL archivées et politique propre à Resistance Floor.
+
+Le registre gouverné `releases/1.3.3/next-release.json` est ouvert comme
+`draft`, avec `latestPublicVersion=1.3.2`, `releaseReady=false` et les 46
+composants du catalogue. Il planifie MapSense `1.0.2` et Resistance Floor
+`1.0.2`; le schéma de release et la cohérence croisée avec le dépôt Suite sont
+valides. Pour ne pas recycler les preuves d'artefacts de `1.3.2`, les gates de
+la future release restent en attente; seuls les gates source et build de
+Resistance Floor sont fermés. La qualification Battle.net de sa DLL exacte,
+l'allowlist d'artefacts, les archives reproductibles et le packaging demeurent
+`pending`. Aucun runtime installé, asset, tag, commit ou push n'est modifié.
+
 ## Statut final — hotfix 1.3.1 publié
 
 La Suite `v1.3.1` est publique depuis le 3 septembre 2026. Elle pointe sur le
