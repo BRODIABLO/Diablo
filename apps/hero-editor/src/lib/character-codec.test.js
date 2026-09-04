@@ -3834,6 +3834,52 @@ test('builds Rare and Crafted names, six affix slots, and governed properties th
   }
 });
 
+test('exports BKVince-only Rare names without treating derived labels as payload changes', async () => {
+  const document = await createBlankCharacter({ name: 'BkRareName', className: 'Amazon' });
+  let editable = addItemBatchSnapshot(editableSnapshot(document.model), document.model.items, {
+    type: 'hax',
+    containerId: 'stash',
+    x: 0,
+    y: 0,
+    count: 1,
+    itemLevel: 99,
+  });
+  const itemIndex = editable.itemEdits.length - 1;
+  editable = editItemSnapshot(editable, document.model.items, itemIndex, { quality: 6 });
+  editable = editItemSnapshot(editable, document.model.items, itemIndex, {
+    rareNamePrefixId: 160,
+    rareNameSuffixId: 1,
+  });
+
+  const exported = await exportCharacter(document, editable);
+  const rare = exported.reparsed.items.find(({ type }) => type === 'hax');
+  assert.equal(rare.rare_name_id, 160);
+  assert.equal(rare.rare_name_id2, 1);
+  assert.equal(rare.rare_name, undefined);
+  assert.equal(describeItem(rare, itemIndex).name, 'GhoulRI Bite');
+
+  const reopened = await openCharacter(exported.bytes, 'BkRareName.d2s');
+  const reopenedRareIndex = reopened.model.items.findIndex(({ type }) => type === 'hax');
+  assert.notEqual(reopenedRareIndex, -1);
+  const reopenedEditable = editableSnapshot(reopened.model);
+  const moved = moveItemPlacement(
+    reopenedEditable.itemPlacements,
+    reopened.model.items,
+    reopenedRareIndex,
+    'cube',
+    1,
+    1,
+  );
+  const movedExport = await exportCharacter(reopened, {
+    ...reopenedEditable,
+    itemPlacements: moved,
+  });
+  assert.equal(movedExport.reparsed.items[reopenedRareIndex].rare_name_id, 160);
+  assert.equal(movedExport.reparsed.items[reopenedRareIndex].position_x, 1);
+  assert.equal(movedExport.reparsed.items[reopenedRareIndex].position_y, 1);
+  assert.equal(containerForPlacement(moved[reopenedRareIndex]), 'cube');
+});
+
 test('rebuilds every governed Low quality variant and preserves its native 3-bit ID', async () => {
   const document = await createBlankCharacter({ name: 'LowAxes', className: 'Amazon' });
   let editable = addItemBatchSnapshot(editableSnapshot(document.model), document.model.items, {

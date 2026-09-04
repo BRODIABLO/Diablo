@@ -257,6 +257,13 @@ const DERIVED_ITEM_FIELDS = Object.freeze([
   'displayed_runeword_attributes',
   'combined_magic_attributes',
   'displayed_combined_magic_attributes',
+  // Human-readable Rare/Crafted names are resolved from rare_name_id and
+  // rare_name_id2 after parsing. BKVince contains native IDs that are absent
+  // from d2s' inherited vanilla rare_names array, so these labels may be
+  // present in the written model and absent in the reparsed model even though
+  // the serialized item payload is unchanged.
+  'rare_name',
+  'rare_name2',
 ]);
 
 const SHARED_STASH_SIGNATURE = 0xaa55aa55;
@@ -3885,8 +3892,8 @@ function validateRoundTrip(model, editable, byteLength, writtenModel) {
     throw new Error('The exported D2S changed the number of root item records.');
   }
   model.items.forEach((item, index) => {
-    const reparsedPayload = itemPayloadSnapshot(item);
-    const writtenPayload = itemPayloadSnapshot(writtenModel.items[index]);
+    const reparsedPayload = portableItemPayloadSnapshot(item);
+    const writtenPayload = portableItemPayloadSnapshot(writtenModel.items[index]);
     const fields = [...new Set([...Object.keys(reparsedPayload), ...Object.keys(writtenPayload)])]
       .filter((key) => !snapshotsEqual(reparsedPayload[key], writtenPayload[key]));
     if (fields.length > 0) {
@@ -3897,8 +3904,8 @@ function validateRoundTrip(model, editable, byteLength, writtenModel) {
     throw new Error('The exported D2S changed the number of mercenary item records.');
   }
   model.merc_items.forEach((item, index) => {
-    const reparsedPayload = itemPayloadSnapshot(item);
-    const writtenPayload = itemPayloadSnapshot(writtenModel.merc_items[index]);
+    const reparsedPayload = portableItemPayloadSnapshot(item);
+    const writtenPayload = portableItemPayloadSnapshot(writtenModel.merc_items[index]);
     const fields = [...new Set([...Object.keys(reparsedPayload), ...Object.keys(writtenPayload)])]
       .filter((key) => !snapshotsEqual(reparsedPayload[key], writtenPayload[key]));
     if (fields.length > 0) {
