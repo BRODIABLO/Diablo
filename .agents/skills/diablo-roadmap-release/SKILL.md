@@ -29,7 +29,7 @@ description: Maintenir la mission courante et ROADMAP.html, séquencer une nouve
 
 ## Gouverner la prochaine release de la Suite
 
-1. Résoudre le dépôt privé Governance par `workspace-repositories.json`, puis mettre à jour son registre versionné `releases/<version>/next-release.json` dès qu'une décision ajoute, retire, renomme, reporte ou change la version d'un composant. Conserver la formulation de la décision, le statut des gates et une note de release; ne pas attendre la création des ZIP.
+1. Résoudre le dossier public gouverné `governance/d2rloader-suite/` par `workspace-repositories.json`, puis mettre à jour son registre versionné `releases/<version>/next-release.json` dès qu'une décision ajoute, retire, renomme, reporte ou change la version d'un composant. Conserver la formulation de la décision, le statut des gates et une note de release; ne pas attendre la création des ZIP. Ne jamais copier ces documents dans le dépôt produit de la Suite.
 2. Lorsqu'un composant inclus pointe encore vers `workspace:`, appliquer automatiquement le skill `d2rloader-suite-promotion` avant d'autoriser `package-ready`. Le dépôt public Suite est l'unique source de packaging d'un composant promu.
 3. Traiter ce registre comme source de vérité du périmètre et des comptes dérivés. L'allowlist de release reste la source de vérité des chemins, versions finales et SHA-256 des artefacts, mais elle doit correspondre exactement au registre avant packaging.
 4. Distinguer pour chaque composant les gates source, build, runtime Battle.net, runtime Steam et packaging. Une ancienne preuve ou un candidat admissible ne ferme pas le gate de l'artefact final.

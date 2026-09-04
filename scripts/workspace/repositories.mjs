@@ -21,22 +21,46 @@ export function resolveRepository(entry, workspaceRoot, environment = process.en
   if (!configuredPath) throw new Error(`Repository '${entry.id}' has no path.`);
   const resolvedPath = path.resolve(workspaceRoot, configuredPath);
   const cacheRoot = path.resolve(workspaceRoot, 'analysis-cache');
-  const authoritative = entry.role === 'public-product-source' || entry.role === 'private-release-governance';
+  const authoritative = entry.role === 'public-product-source';
   if (authoritative && (resolvedPath === cacheRoot || resolvedPath.startsWith(`${cacheRoot}${path.sep}`))) {
     throw new Error(`Authoritative repository '${entry.id}' cannot live under analysis-cache.`);
   }
   return { ...entry, path: resolvedPath, pathSource: override ? 'environment' : 'config' };
 }
 
-export function loadWorkspaceRepositories(workspaceRoot, environment = process.env) {
+export function resolveWorkspaceLocation(entry, workspaceRoot) {
+  if (!entry.path) throw new Error(`Workspace location '${entry.id}' has no path.`);
+  const resolvedRoot = path.resolve(workspaceRoot);
+  const resolvedPath = path.resolve(resolvedRoot, entry.path);
+  if (resolvedPath === resolvedRoot || !resolvedPath.startsWith(`${resolvedRoot}${path.sep}`)) {
+    throw new Error(`Workspace location '${entry.id}' must stay inside the Diablo repository.`);
+  }
+  const cacheRoot = path.resolve(resolvedRoot, 'analysis-cache');
+  if (resolvedPath === cacheRoot || resolvedPath.startsWith(`${cacheRoot}${path.sep}`)) {
+    throw new Error(`Workspace location '${entry.id}' cannot live under analysis-cache.`);
+  }
+  return { ...entry, path: resolvedPath, pathSource: 'config' };
+}
+
+function loadWorkspaceConfiguration(workspaceRoot) {
   const configFile = path.join(workspaceRoot, repositoryConfigPath);
   const config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
-  if (config.schemaVersion !== 1 || !Array.isArray(config.repositories)) {
-    throw new Error(`${repositoryConfigPath} requires schemaVersion 1 and a repositories array.`);
+  if (config.schemaVersion !== 2 || !Array.isArray(config.repositories) || !Array.isArray(config.locations)) {
+    throw new Error(`${repositoryConfigPath} requires schemaVersion 2 plus repositories and locations arrays.`);
   }
-  const ids = config.repositories.map((entry) => entry.id);
-  if (new Set(ids).size !== ids.length) throw new Error('Repository ids must be unique.');
+  const ids = [...config.repositories, ...config.locations].map((entry) => entry.id);
+  if (new Set(ids).size !== ids.length) throw new Error('Workspace repository and location ids must be unique.');
+  return config;
+}
+
+export function loadWorkspaceRepositories(workspaceRoot, environment = process.env) {
+  const config = loadWorkspaceConfiguration(workspaceRoot);
   return config.repositories.map((entry) => resolveRepository(entry, workspaceRoot, environment));
+}
+
+export function loadWorkspaceLocations(workspaceRoot) {
+  const config = loadWorkspaceConfiguration(workspaceRoot);
+  return config.locations.map((entry) => resolveWorkspaceLocation(entry, workspaceRoot));
 }
 
 export function inspectGitRepository(repository) {

@@ -791,12 +791,13 @@
     {
       "id": "ruffneckk-suite-next-release",
       "name": "RuffnecKk Suite Next Public Release",
-      "status": "active",
+      "status": "maintenance",
       "owner": "Vincent + Codex",
       "mission": "Mission/ruffneckk-suite-next-release.md",
-      "nextGate": "Keep the governed 1.3.0 registry valid at 22 plugins, 17 patches, one standalone tool and two bundles; synchronize the selected components, reconcile the MassID maintenance version, then qualify the complete Steam stack before setting package-ready or promoting the 42-asset allowlist.",
+      "nextGate": "Preserve the published v1.3.2 evidence and exact 43-asset catalogue while versioning public Governance in Diablo, outside the Suite product repository; commit or push Diablo and Suite only after separate explicit authorization.",
       "include": [
-        "Mission/ruffneckk-suite-next-release.md"
+        "Mission/ruffneckk-suite-next-release.md",
+        "governance/d2rloader-suite/**"
       ]
     },
     {

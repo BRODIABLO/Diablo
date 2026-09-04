@@ -10,12 +10,12 @@ description: Promouvoir de manière gouvernée un composant RuffnecKk depuis le 
 1. Appliquer ce skill sans attendre que Vincent le nomme lorsqu'un composant incubé est retenu pour la Suite ou une prochaine release.
 2. Une demande d'analyse autorise seulement l'audit read-only. Exiger le `GO` du workspace avant toute copie, suppression ou modification de registre.
 3. Ne pas confondre cette promotion avec `d2rloader-plugin-incubation`, `d2rloader-release-intake` ou `d2r-runtime-validation` : elle transfère l'autorité de source entre dépôts.
-4. Résoudre les dépôts par `workspace-repositories.json` et ses variables d'environnement. Refuser un dépôt produit ou Governance situé sous `analysis-cache/`.
+4. Résoudre le dépôt public de la Suite et le dossier Governance par `workspace-repositories.json`. Governance doit rester dans le dépôt Diablo, hors du dépôt produit et hors de `analysis-cache/`; seuls les dépôts externes acceptent un override d'environnement.
 
 ## Établir la transaction
 
 1. Exécuter `npm run checkpoint` et lire `analysis-cache/checkpoint/state.json`.
-2. Capturer pour `workspace`, `suite` et `suite-governance` : chemin, remote, branche, HEAD et statut Git. Préserver tous les changements étrangers au composant.
+2. Capturer pour `workspace` et `suite` : chemin, remote, branche, HEAD et statut Git; vérifier séparément le chemin et l'intégrité du dossier Governance versionné par `workspace`. Préserver tous les changements étrangers au composant dans les deux dépôts et dans Governance.
 3. Identifier exactement :
    - la source d'incubation sous `addons/`;
    - la destination canonique `plugins/<slug>/`, `patches/<name>.json` ou `tools/<slug>/`;
@@ -44,4 +44,4 @@ description: Promouvoir de manière gouvernée un composant RuffnecKk depuis le 
 
 ## Rendre compte
 
-Rapporter les trois états Git avant/après, les fichiers promus, les divergences résolues, les validations exécutées, la nouvelle source autoritaire et les gates encore ouverts. Rafraîchir le checkpoint après toute mutation.
+Rapporter les deux états Git avant/après et l'état du dossier Governance, les fichiers promus, les divergences résolues, les validations exécutées, la nouvelle source autoritaire et les gates encore ouverts. Rafraîchir le checkpoint après toute mutation.

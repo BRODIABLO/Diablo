@@ -31,19 +31,21 @@ catalogue local sous `analysis-cache/ruffneckk-suite-release-1.3.2/`. La Suite
 
 ## Prochain gate
 
-La réorganisation des dépôts est implantée sans modification de la ROADMAP :
-la Suite publique et sa gouvernance privée vivent désormais comme dépôts
-frères hors de `analysis-cache`, le checkpoint du workspace les agrège, et la
-promotion incubation → Suite ainsi que la synchronisation release → runtime
-sont gouvernées par des procédures dédiées. Le registre privé `1.3.2` pointe
-maintenant uniquement vers les sources `suite:` promues.
+La réorganisation est implantée sans modification de la ROADMAP : la Suite
+publique reste dans son dépôt produit frère, tandis que sa gouvernance publique
+est versionnée dans Diablo sous `governance/d2rloader-suite/`, hors du dépôt
+produit et hors de `analysis-cache`. Le checkpoint agrège les deux dépôts Git;
+la promotion incubation → Suite et la synchronisation release → runtime sont
+gouvernées par des procédures dédiées. Le registre `1.3.2` pointe uniquement
+vers les sources `suite:` promues.
 
 Le contrôle post-publication a aussi trouvé que le binaire Resistance Floor
 `1.0.1` de l'asset immuable `v1.3.2` contient encore une allowlist de numéros de
 build. La source canonique publique est corrigée et testée, mais sa
 republication exige une future autorisation de release distincte. Demander une
-autorisation séparée avant tout commit ou push des trois dépôts, toute nouvelle
-release ou toute synchronisation vers un runtime installé.
+autorisation séparée avant tout commit ou push du dépôt Diablo ou du dépôt
+Suite, toute nouvelle release ou toute synchronisation vers un runtime installé.
+L'ancien dépôt privé Governance reste un repli temporaire non autoritaire.
 
 ## Priorité précédente conservée — ISC12
 

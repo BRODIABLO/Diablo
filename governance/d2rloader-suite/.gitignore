@@ -1,0 +1,4 @@
+# Local release outputs and transient validation files
+artifacts/
+logs/
+*.tmp

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "repositories": [
     {
       "id": "workspace",
@@ -15,13 +15,13 @@
       "environmentVariable": "RUFFNECKK_SUITE_ROOT",
       "workstreamId": "ruffneckk-suite-next-release",
       "required": true
-    },
+    }
+  ],
+  "locations": [
     {
       "id": "suite-governance",
-      "role": "private-release-governance",
-      "path": "../RuffnecKk-D2RLoader-Suite-Governance",
-      "environmentVariable": "RUFFNECKK_SUITE_GOVERNANCE_ROOT",
-      "workstreamId": "ruffneckk-suite-next-release",
+      "role": "public-release-governance",
+      "path": "governance/d2rloader-suite",
       "required": true
     }
   ]

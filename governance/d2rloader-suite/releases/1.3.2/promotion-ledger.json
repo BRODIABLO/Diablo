@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "suiteVersion": "1.3.2",
+  "normalizedOn": "2026-09-04",
+  "publicReleaseCommit": "3ee22db64b3f4d4738ad391c7a7241029a383f18",
+  "publicReleaseUrl": "https://github.com/RuffDood/RuffnecKk-D2RLoader-Suite/releases/tag/v1.3.2",
+  "authorityStatus": "suite-working-tree-awaiting-checkpoint",
+  "treeDigestContract": "SHA-256 over ordinally sorted repository-relative UTF-8 path, NUL, lowercase file SHA-256 and LF records; ignored files excluded.",
+  "decision": "Normalize post-publication source authority after moving the public and Governance repositories out of analysis-cache. The v1.3.2 release assets and tag remain unchanged.",
+  "entries": [
+    {
+      "id": "ruffneckk-bulk-currency-deposit",
+      "originRef": "workspace:addons/BulkCurrencyDeposit",
+      "sourceRef": "suite:plugins/bulk-currency-deposit",
+      "fileCount": 11,
+      "treeSha256": "F7D5DBB9253D2564BB8DFC3215C4AD72E52AD970F0266E0C5A8B114F63913F66",
+      "releaseCommitContainsCanonicalSource": true
+    },
+    {
+      "id": "ruffneckk-burn-damage-fix",
+      "originRef": "workspace:addons/BurnDamageFix",
+      "sourceRef": "suite:plugins/burn-damage-fix",
+      "fileCount": 7,
+      "treeSha256": "98692F8B003800E5B4070153BB9596C0521F772A4F8FC6EDC2BFCAC69BBDCB99",
+      "releaseCommitContainsCanonicalSource": true
+    },
+    {
+      "id": "ruffneckk-cast-triggers",
+      "originRef": "workspace:addons/CastTriggers",
+      "sourceRef": "suite:plugins/cast-triggers",
+      "fileCount": 11,
+      "treeSha256": "932ABB54AF210F462F035D411ACC4045A75BDF995EC2C00F847B69E43CC21441",
+      "releaseCommitContainsCanonicalSource": true
+    },
+    {
+      "id": "ruffneckk-remote-stash",
+      "originRef": "workspace:addons/RemoteStash",
+      "sourceRef": "suite:plugins/remote-stash",
+      "fileCount": 10,
+      "treeSha256": "E378D451A874F8BE36E7D709E4B4023BF4F0BB4ED9D393DA5FCB0790FC7F48A6",
+      "releaseCommitContainsCanonicalSource": true
+    },
+    {
+      "id": "ruffneckk-armageddon-hurricane-ctc-fix",
+      "originRef": "workspace:addons/ArmageddonCtCFix",
+      "sourceRef": "suite:plugins/armageddon-hurricane-ctc-fix",
+      "fileCount": 8,
+      "treeSha256": "56EF3FC49A12E62774C27BA565116B4FE824A007D4B44B9F99CFEE752E3BFC79",
+      "releaseCommitContainsCanonicalSource": true
+    },
+    {
+      "id": "ruffneckk-resistance-floor",
+      "originRef": "workspace:addons/ResistanceFloor",
+      "sourceRef": "suite:plugins/resistance-floor",
+      "fileCount": 10,
+      "treeSha256": "F9723FD3551D6870B93BF2BF958A56A249CD17F1639256362DB7C5F60B43E6EB",
+      "releaseCommitContainsCanonicalSource": false,
+      "postReleaseCorrection": "Removed the build-number allowlist from the canonical source; the immutable v1.3.2 asset remains unchanged."
+    },
+    {
+      "id": "ruffneckk-shadow-master-ai-fix",
+      "originRef": "workspace:addons/ShadowMasterAIFix/ruffneckk-shadow-master-ai-fix.json",
+      "sourceRef": "suite:patches/ruffneckk-shadow-master-ai-fix.json",
+      "fileCount": 1,
+      "treeSha256": "2A97467E8CAA8CA0AD49A18D480235FBDDFBDA5A188DF91B377364D1505E9B36",
+      "releaseCommitContainsCanonicalSource": false
+    },
+    {
+      "id": "ruffneckk-extended-act-level-ids",
+      "originRef": "workspace:addons/ExtendedActLevelIds",
+      "sourceRef": "suite:plugins/extended-act-level-ids",
+      "fileCount": 7,
+      "treeSha256": "334D8E87494778675A1837D09C9EDAEA5F1AC37752975394F066D7A123FCA289",
+      "releaseCommitContainsCanonicalSource": true
+    },
+    {
+      "id": "ruffneckk-isc12",
+      "originRef": "workspace:addons/ISC12",
+      "sourceRef": "suite:plugins/isc12",
+      "fileCount": 42,
+      "treeSha256": "7A00956735704F35782ACD7F053FC53ED02C727816B69687F360D7C99C7C0176",
+      "releaseCommitContainsCanonicalSource": true
+    },
+    {
+      "id": "ruffneckk-d2r-save-converter",
+      "originRef": "workspace:addons/D2RSaveConverter",
+      "sourceRef": "suite:tools/d2r-save-converter",
+      "fileCount": 30,
+      "treeSha256": "E2B86C7079AB2A443394B98B5C503AA5332A7088D01D69A72DDA5CCF5069F15E",
+      "releaseCommitContainsCanonicalSource": false
+    },
+    {
+      "id": "ruffneckk-mapsense",
+      "originRef": "workspace:addons/RuffnecKkMapSense",
+      "sourceRef": "suite:plugins/mapsense",
+      "fileCount": 67,
+      "treeSha256": "66E38EC9DE703851EB4A508DFBBE7DCB010A41A60DB9E932E5DC54567F9FD19A",
+      "releaseCommitContainsCanonicalSource": true
+    }
+  ]
+}

@@ -54,23 +54,23 @@ La release contient exactement 24 plugins, 17 patches et deux bundles, soit 43
 assets; leurs 43 digests GitHub correspondent byte-exact au catalogue local.
 Les deux constructions du catalogue complet sont identiques. Le bundle plugins
 vaut `6282AF9A…B2E5F0C` et le bundle patches `288090AE…4547C8`. Le registre
-privé est `published`, `releaseReady=true`, et son allowlist verrouille 68
+gouverné est `published`, `releaseReady=true`, et son allowlist verrouille 68
 entrées. `v1.3.1` demeure intacte comme rollback.
 
 ## Réorganisation post-publication
 
-Les deux dépôts de produit ne sont plus hébergés dans le cache jetable du
-workspace. Le dépôt public autoritaire est
-`C:\Workspaces\RuffnecKk-D2RLoader-Suite`; le dépôt privé de gouvernance est
-`C:\Workspaces\RuffnecKk-D2RLoader-Suite-Governance`. Le fichier
-`workspace-repositories.json` centralise ces relations et permet des overrides
-par environnement. `npm run checkpoint` inventorie désormais les trois dépôts
-et attribue leurs changements au workstream actif.
+La source produit n'est plus hébergée dans le cache jetable du workspace. Le
+dépôt public autoritaire reste `C:\Workspaces\RuffnecKk-D2RLoader-Suite`; la
+gouvernance publique est maintenant versionnée dans le dépôt Diablo sous
+`governance/d2rloader-suite/`, sans entrer dans le dépôt produit ni dans ses
+assets. `workspace-repositories.json` centralise le dépôt externe et ce dossier
+gouverné. `npm run checkpoint` inventorie les deux dépôts Git; les changements
+Governance appartiennent naturellement au workstream Diablo actif.
 
 Le skill `d2rloader-suite-promotion` est implicitement applicable dès qu'un
 composant incubé devient qualifié, entre dans la prochaine release ou change
 de source autoritaire. Il promeut une copie filtrée dans le dépôt produit,
-préserve la provenance dans le registre privé et refuse un état
+préserve la provenance dans le registre Governance de Diablo et refuse un état
 `package-ready` ou `published` qui dépend encore d'une source `workspace:`.
 Le registre `releases/1.3.2/next-release.json` référence maintenant les onze
 composants concernés sous `suite:`; `promotion-ledger.json` conserve leurs
@@ -99,7 +99,8 @@ La Suite `v1.3.1` est publique depuis le 3 septembre 2026. Elle pointe sur le
 commit produit `c63ac0c`, contient exactement 24 plugins, 17 patches et deux
 bundles (43 assets), et conserve `v1.3.0` intacte comme rollback. Les 43
 digests GitHub correspondent byte-exact aux deux générations locales
-reproductibles. Le registre privé final est au commit `47df4a4`.
+reproductibles. Le registre alors privé était au commit `47df4a4`; son contenu
+est maintenant conservé dans `governance/d2rloader-suite/`.
 
 Le cold start final sous D2R `3.3.93847` et D2RLoader `1.2.1-beta preview 10`
 a atteint `24/24`; ISC12 `1.0.1`, Vendor Stock Refresh `2.0.1` et Remote Stash
@@ -120,13 +121,13 @@ reste donc `1.3.0`; l'ancien candidat local non publié ne constitue pas une
 release publique.
 
 Le registre autoritaire est désormais
-`releases/1.3.0/next-release.json` dans le dépôt privé versionné
-`RuffDood/RuffnecKk-D2RLoader-Suite-Governance`. Il gouverne les décisions,
-versions cibles, retraits, reports et gates. L'allowlist privée voisine conserve
-un rôle distinct : chemins et SHA-256 exacts des artefacts finalisés. Le dépôt
-produit public ne conserve que les données techniques reproductibles sous
-`tests/data/compatibility/`; le packaging doit recevoir les trois chemins
-privés explicitement et refuser toute absence ou divergence.
+`governance/d2rloader-suite/releases/1.3.0/next-release.json` dans le dépôt
+public `BRODIABLO/Diablo`. Il gouverne les décisions, versions cibles, retraits,
+reports et gates. L'allowlist voisine conserve un rôle distinct : chemins et
+SHA-256 exacts des artefacts finalisés. Le dépôt produit public ne conserve que
+les données techniques reproductibles sous `tests/data/compatibility/`; le
+packaging doit recevoir explicitement les trois chemins Governance et refuser
+toute absence ou divergence.
 
 ## Périmètre verrouillé
 
@@ -183,18 +184,19 @@ qualification Steam ou multijoueur n'est revendiquée.
 
 ## Outillage gouverné
 
-Le dépôt privé contient le schéma, le registre et l'allowlist propres à la
-release. Le dépôt produit public contient :
+Le dossier public `governance/d2rloader-suite/` du dépôt Diablo contient le
+schéma, le registre et l'allowlist propres à la release. Le dépôt produit public
+contient :
 
 - `scripts/Test-NextRelease.ps1`, qui exige des chemins externes explicites,
   dérive les comptes, vérifie les décisions, versions, gates,
   inclusions/retraits/reports et peut produire les notes;
 - un gate dans `scripts/New-Release.ps1` qui exige le plan, le schéma et
-  l'allowlist privés, puis refuse le packaging avant `package-ready` ou en cas
+  l'allowlist Governance, puis refuse le packaging avant `package-ready` ou en cas
   de divergence;
 - des tests CMake publics autonomes fondés sur les catalogues techniques sous
   `tests/data/compatibility/`, plus les tests de release activés seulement
-  lorsque les trois chemins privés sont configurés.
+  lorsque les trois chemins Governance sont configurés.
 
 Les configurations de plugin deviennent optionnelles par contrat : zéro ou une
 configuration justifiée par composant. Un simple booléen `enabled` ne doit pas
@@ -358,16 +360,21 @@ La qualification Steam n'est plus un gate de release. Le packaging final de la
 Suite reste ouvert tant que MassID, l'allowlist exacte et les archives
 reproductibles ne sont pas fermés.
 
-## Séparation publique/privée vérifiée le 3 septembre 2026
+## Séparation produit/Governance — historique du 3 septembre 2026
 
-Le dépôt privé de gouvernance est établi sur `main` au commit `01eb929` avec les
+Le dépôt alors privé de gouvernance est établi sur `main` au commit `01eb929` avec les
 trois fichiers copiés byte-exact avant leur retrait public. Le dépôt produit
 public est synchronisé sur `main` au commit `661ed43` : le dossier racine
 `manifests/` a disparu, les catalogues techniques ont été déplacés sans
 modification sous `tests/data/compatibility/`, et les scripts refusent les
-entrées de release privées absentes. Les quatre tests CTest publics autonomes
-passent. Le registre privé reste volontairement `scope-locked` et l'allowlist
+entrées de release externes absentes. Les quatre tests CTest publics autonomes
+passent. Le registre reste volontairement `scope-locked` et l'allowlist
 actuelle est rejetée comme obsolète jusqu'à sa future promotion.
+
+Le 4 septembre 2026, ces documents sont migrés byte-exact dans le dossier
+public `governance/d2rloader-suite/` de `BRODIABLO/Diablo`. L'ancien dépôt privé
+reste intact comme repli temporaire, mais n'est plus une source autoritaire. Le
+dépôt produit de la Suite demeure exempt de ces documents de travail.
 
 ## Métadonnées de vérification multijoueur — 3 septembre 2026
 
@@ -407,4 +414,6 @@ toml++ et déjà employé par les autres plugins toml++ de la Suite.
 Les releases et tags `v1.0.0`, `v1.1.0` et `v1.2.0` restent intacts. Tant que
 le registre vaut `releaseReady=false`, aucun artefact 1.3.0 ne peut être généré
 par le chemin canonique. Le rollback consiste à rétablir le commit public
-précédent sans supprimer le dépôt privé ni modifier les anciennes releases.
+précédent sans modifier les anciennes releases. Pendant la stabilisation de la
+migration, l'ancien dépôt Governance reste intact comme copie de repli non
+autoritaire.
