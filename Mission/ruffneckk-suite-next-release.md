@@ -1,6 +1,6 @@
 # RuffnecKk D2RLoader Suite — prochaine release publique
 
-Dernière mise à jour : 2 septembre 2026
+Dernière mise à jour : 3 septembre 2026
 
 ## Décision et priorité
 
@@ -13,12 +13,14 @@ La dernière release GitHub publique vérifiée est `v1.2.0`. Le prochain numér
 reste donc `1.3.0`; l'ancien candidat local non publié ne constitue pas une
 release publique.
 
-Le registre autoritaire est
-`manifests/next-release.json` dans le dépôt produit
-`RuffDood/RuffnecKk-D2RLoader-Suite`. Il gouverne les décisions, versions
-cibles, retraits, reports et gates. `manifests/release-allowlist.json` conserve
-un rôle distinct : chemins et SHA-256 exacts des artefacts finalisés. Le
-packaging doit refuser toute divergence entre les deux.
+Le registre autoritaire est désormais
+`releases/1.3.0/next-release.json` dans le dépôt privé versionné
+`RuffDood/RuffnecKk-D2RLoader-Suite-Governance`. Il gouverne les décisions,
+versions cibles, retraits, reports et gates. L'allowlist privée voisine conserve
+un rôle distinct : chemins et SHA-256 exacts des artefacts finalisés. Le dépôt
+produit public ne conserve que les données techniques reproductibles sous
+`tests/data/compatibility/`; le packaging doit recevoir les trois chemins
+privés explicitement et refuser toute absence ou divergence.
 
 ## Périmètre verrouillé
 
@@ -63,15 +65,18 @@ compatibilité multijoueur reste un gate distinct lorsqu'elle est revendiquée.
 
 ## Outillage gouverné
 
-Le dépôt produit contient :
+Le dépôt privé contient le schéma, le registre et l'allowlist propres à la
+release. Le dépôt produit public contient :
 
-- `manifests/next-release.schema.json`, contrat lisible du registre;
-- `scripts/Test-NextRelease.ps1`, qui dérive les comptes, vérifie les décisions,
-  versions, gates, inclusions/retraits/reports et peut produire les notes;
-- un gate dans `scripts/New-Release.ps1` qui exige `package-ready`, Steam
-  qualifié et concordance exacte avec l'allowlist avant tout asset;
-- un test CMake dédié afin que le registre reste validé même pendant la phase
-  `scope-locked`.
+- `scripts/Test-NextRelease.ps1`, qui exige des chemins externes explicites,
+  dérive les comptes, vérifie les décisions, versions, gates,
+  inclusions/retraits/reports et peut produire les notes;
+- un gate dans `scripts/New-Release.ps1` qui exige le plan, le schéma et
+  l'allowlist privés, puis refuse le packaging avant `package-ready` ou en cas
+  de divergence;
+- des tests CMake publics autonomes fondés sur les catalogues techniques sous
+  `tests/data/compatibility/`, plus les tests de release activés seulement
+  lorsque les trois chemins privés sont configurés.
 
 Les configurations de plugin deviennent optionnelles par contrat : zéro ou une
 configuration justifiée par composant. Un simple booléen `enabled` ne doit pas
@@ -96,9 +101,20 @@ forcer la création d'un fichier.
    son archive et hors des assets générés, puis obtenir l'autorisation séparée
    avant commit, push, tag ou publication GitHub.
 
+## Séparation publique/privée vérifiée le 3 septembre 2026
+
+Le dépôt privé de gouvernance est établi sur `main` au commit `01eb929` avec les
+trois fichiers copiés byte-exact avant leur retrait public. Le dépôt produit
+public est synchronisé sur `main` au commit `661ed43` : le dossier racine
+`manifests/` a disparu, les catalogues techniques ont été déplacés sans
+modification sous `tests/data/compatibility/`, et les scripts refusent les
+entrées de release privées absentes. Les quatre tests CTest publics autonomes
+passent. Le registre privé reste volontairement `scope-locked` et l'allowlist
+actuelle est rejetée comme obsolète jusqu'à sa future promotion.
+
 ## Rollback
 
 Les releases et tags `v1.0.0`, `v1.1.0` et `v1.2.0` restent intacts. Tant que
 le registre vaut `releaseReady=false`, aucun artefact 1.3.0 ne peut être généré
-par le chemin canonique. Le rollback de cette gouvernance consiste à restaurer
-les scripts et manifests du dépôt produit sans modifier les anciennes releases.
+par le chemin canonique. Le rollback consiste à rétablir le commit public
+précédent sans supprimer le dépôt privé ni modifier les anciennes releases.
