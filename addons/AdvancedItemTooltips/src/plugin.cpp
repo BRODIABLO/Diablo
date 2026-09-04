@@ -51,7 +51,6 @@ std::size_t EnhanceTooltipForVisibility(
 ) noexcept;
 
 namespace {
-constexpr std::uint32_t SupportedBuild = 92777;
 constexpr wchar_t ConfigFileName[] = L"AdvancedItemTooltips.json";
 constexpr std::uintptr_t BuildItemTooltipRva = 0x2BD480;
 constexpr std::uintptr_t EnsureStringCapacityRva = 0x076210;
@@ -194,7 +193,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "advanced-item-tooltips",
     .name = "Advanced Item Tooltips",
-    .version = "3.3.0",
+    .version = "3.4.0",
     .author = "RuffnecKk",
     .description = "Shows maximum sockets and exact item roll ranges.",
     .flags = D2RL::PluginFlags::None,
@@ -379,9 +378,14 @@ bool CaptureAffixState(void* item, CachedAffixState& state) noexcept {
 }
 
 bool RangesVisibleNow() noexcept {
-    const auto shiftDown = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+    if (Settings.rangeDisplayMode
+        == ruffneckk::advanced_item_tooltips::RangeDisplayMode::Always) {
+        return true;
+    }
+    const auto hotkeyDown = (GetAsyncKeyState(
+        static_cast<int>(Settings.holdToDisplayHotkey.virtualKey)) & 0x8000) != 0;
     return ruffneckk::advanced_item_tooltips::ShouldDisplayRanges(
-        Settings.rangeDisplayMode, shiftDown);
+        Settings.rangeDisplayMode, hotkeyDown);
 }
 
 bool CaptureTooltipCacheState(
@@ -713,7 +717,7 @@ auto Status(
     std::snprintf(
         message,
         sizeof(message),
-        "AdvancedItemTooltips 3.3.0: enabled=%s; maxSockets=%s; maxSocketsOnSocketed=%s; baseDefense=%s; propertyRanges=%s; rangeDisplayMode=%s; rangeColor=%s; socketContributions=%s; cubeMutations=ignored; catalog=%s; config=%s.",
+        "AdvancedItemTooltips 3.4.0: enabled=%s; maxSockets=%s; maxSocketsOnSocketed=%s; baseDefense=%s; propertyRanges=%s; rangeDisplayMode=%s; holdToDisplayHotkey=%s; rangeColor=%s; socketContributions=%s; cubeMutations=ignored; catalog=%s; config=%s.",
         Settings.enabled ? "yes" : "no",
         Settings.showMaxSockets ? "yes" : "no",
         Settings.showMaxSocketsOnSocketedItems ? "yes" : "no",
@@ -721,6 +725,7 @@ auto Status(
         Settings.showPropertyRanges ? "yes" : "no",
         ruffneckk::advanced_item_tooltips::RangeDisplayModeName(
             Settings.rangeDisplayMode).data(),
+        Settings.holdToDisplayHotkey.name.c_str(),
         ruffneckk::advanced_item_tooltips::PropertyRangeColorName(
             Settings.propertyRangeColor).data(),
         Settings.includeSocketedContributionsInRanges ? "included" : "intrinsic only",
@@ -867,8 +872,12 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         context->LogError("AdvancedItemTooltips: configuration is invalid; plugin refused.");
         return false;
     }
-    if (context->modDataVersionBuild != 0 && context->modDataVersionBuild != SupportedBuild) {
-        context->LogError("AdvancedItemTooltips: only D2R build 92777 is supported.");
+    const auto* runtimeBuild = D2RL::GetBuildName(context);
+    if (runtimeBuild == nullptr
+        || (std::strcmp(runtimeBuild, "92777") != 0
+            && std::strcmp(runtimeBuild, "93847") != 0)) {
+        context->LogError(
+            "AdvancedItemTooltips: only D2R builds 92777 and 93847 are supported.");
         return false;
     }
 
@@ -880,7 +889,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         context->LogWarn("AdvancedItemTooltips: status command could not be registered.");
     }
     if (!Settings.enabled) {
-        context->LogInfo("AdvancedItemTooltips 3.3.0 disabled by JSON config; no hooks installed.");
+        context->LogInfo("AdvancedItemTooltips 3.4.0 disabled by JSON config; no hooks installed.");
         return true;
     }
 
@@ -1047,7 +1056,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         return false;
     }
     const auto activation = std::string(
-        "AdvancedItemTooltips 3.3.0 active for D2R 3.2.92777 (7/7 call-sites); catalog=")
+        "AdvancedItemTooltips 3.4.0 active for D2R 3.2.92777 (7/7 call-sites); catalog=")
         + CatalogSource
         + "; config="
         + LoadedConfigPath
@@ -1059,6 +1068,8 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(const D2RL::PluginContext* context) 
         + "; rangeDisplayMode="
         + std::string(ruffneckk::advanced_item_tooltips::RangeDisplayModeName(
             Settings.rangeDisplayMode))
+        + "; holdToDisplayHotkey="
+        + Settings.holdToDisplayHotkey.name
         + "; socketContributions="
         + (Settings.includeSocketedContributionsInRanges ? "included" : "intrinsic only")
         + "; cubeMutations=ignored"

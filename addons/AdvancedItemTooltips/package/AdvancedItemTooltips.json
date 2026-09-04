@@ -5,8 +5,10 @@
   "showBaseDefenseRange": true,
   "showPropertyRanges": true,
   "includeSocketedContributionsInRanges": false,
-  "_rangeDisplayModeHelp": "Always shows property and Base Defense ranges. HoldShift shows them only while Shift is held. Max Sockets is unaffected.",
+  "_rangeDisplayModeHelp": "Always shows property and Base Defense ranges. HoldHotkey shows them only while the configured hotkey is held. Legacy HoldShift is also accepted. Max Sockets is unaffected.",
   "rangeDisplayMode": "Always",
+  "_holdToDisplayHotkeyHelp": "Key held to show ranges in HoldHotkey mode. Accepts Shift, LeftShift, RightShift, Ctrl, LeftCtrl, RightCtrl, Alt, LeftAlt, RightAlt, A-Z, 0-9, F1-F12, Mouse4, or Mouse5.",
+  "holdToDisplayHotkey": "shift",
   "_propertyRangeColorHelp": "ChronicleColor uses the default Chronicle teal/light blue color. BHDarkGreen uses BH's dark green color (the one that came with the first iterations of this plugin).",
   "propertyRangeColor": "ChronicleColor"
 }

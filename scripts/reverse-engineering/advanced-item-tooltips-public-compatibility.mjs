@@ -16,14 +16,22 @@ const spacedSlots = (count) => Array.from({ length: count }, (_, index) => {
   return [`mod ${slot}`, `mod ${slot} param`, `mod ${slot} min`, `mod ${slot} max`];
 }).flat();
 
+const setConditionalSlots = Array.from({ length: 5 }, (_, index) => {
+  const group = index + 1;
+  return ['a', 'b'].flatMap((side) => [
+    `aprop${group}${side}`, `apar${group}${side}`,
+    `amin${group}${side}`, `amax${group}${side}`,
+  ]);
+}).flat();
+
 const normalizedMagicHeaders = ['name', ...Array.from({ length: 3 }, (_, index) => {
   const slot = index + 1;
   return [`mod${slot}code`, `mod${slot}param`, `mod${slot}min`, `mod${slot}max`];
 }).flat()];
 
 const contracts = {
-  'itemstatcost.txt': ['stat', '*id', 'descpriority', 'save bits', 'send bits'],
-  'properties.txt': ['code', '*tooltip', 'func1', 'stat1'],
+  'itemstatcost.txt': ['stat', 'descpriority', 'save bits', 'send bits'],
+  'properties.txt': ['code', ...slots(['func', 'stat', 'val'], 7)],
   'magicsuffix.txt': normalizedMagicHeaders,
   'magicprefix.txt': normalizedMagicHeaders,
   'automagic.txt': normalizedMagicHeaders,
@@ -31,8 +39,9 @@ const contracts = {
     const slot = index + 1;
     return [`mod${slot}code`, `mod${slot}param`, `mod${slot}min`, `mod${slot}max`];
   }).flat(),
-  'uniqueitems.txt': ['*id', ...slots(['prop', 'par', 'min', 'max'], 12)],
-  'setitems.txt': ['*id', ...slots(['prop', 'par', 'min', 'max'], 9)],
+  'uniqueitems.txt': ['index', ...slots(['prop', 'par', 'min', 'max'], 12)],
+  'setitems.txt': ['index', 'add func', ...slots(['prop', 'par', 'min', 'max'], 9),
+    ...setConditionalSlots],
   'armor.txt': ['code', 'type', 'minac', 'maxac'],
   'itemtypes.txt': ['code', 'equiv1', 'equiv2'],
   'weapons.txt': ['code', 'type'],
@@ -99,7 +108,8 @@ function duplicateKeys(rows, key, predicate = () => true) {
     const value = (row[key] ?? '').trim();
     if (!value) continue;
     const normalized = value.toLowerCase();
-    if (!seen.add(normalized)) duplicates.add(normalized);
+    if (seen.has(normalized)) duplicates.add(normalized);
+    else seen.add(normalized);
   }
   return [...duplicates].sort();
 }
@@ -132,6 +142,8 @@ function semanticStatus(file, rows) {
   if (file === 'uniqueitems.txt' || file === 'setitems.txt') {
     const ids = new Set();
     let blankIds = 0;
+    let invalidIds = 0;
+    let duplicateIds = 0;
     for (const row of rows) {
       const text = (row['*id'] ?? '').trim();
       if (!text) {
@@ -140,25 +152,29 @@ function semanticStatus(file, rows) {
       }
       const id = strictInteger(text);
       if (id === null || id < 0) {
-        result.ready = false;
-        result.issues.push(`invalid *ID: ${text}`);
+        invalidIds += 1;
       } else if (ids.has(id)) {
-        result.ready = false;
-        result.issues.push(`duplicate *ID: ${id}`);
+        duplicateIds += 1;
       } else {
         ids.add(id);
       }
     }
+    result.observations.compiledRows = rows.filter((row) =>
+      (row.index ?? '').trim().toLowerCase() !== 'expansion').length;
     result.observations.explicitIds = ids.size;
     result.observations.blankSectionRows = blankIds;
+    result.observations.invalidCommentIds = invalidIds;
+    result.observations.duplicateCommentIds = duplicateIds;
   }
   if (file === 'runes.txt') {
     const active = (row) => {
       const complete = strictInteger(row.complete);
       return complete !== null && complete !== 0;
     };
-    rejectDuplicates('name', active);
-    result.observations.activeRows = rows.filter(active).length;
+    const activeRows = rows.filter(active);
+    result.observations.activeRows = activeRows.length;
+    result.observations.duplicateLocalizationKeys = duplicateKeys(
+      activeRows, 'name').length;
   }
   return result;
 }
@@ -226,7 +242,25 @@ function selfTest() {
   assert.equal(propertyFailure.baseDefense, true);
   assert.equal(propertyFailure.magicAffixes, false);
   assert.equal(propertyFailure.uniques, false);
-  return { passed: true, cases: 12 };
+
+  const commentIds = semanticStatus('uniqueitems.txt', [
+    { index: 'Existing', '*id': '0' },
+    { index: '', '*id': '' },
+    { index: 'New Public Unique', '*id': '0' },
+    { index: 'Expansion', '*id': 'not-an-id' },
+  ]);
+  assert.equal(commentIds.ready, true);
+  assert.equal(commentIds.observations.compiledRows, 3);
+  assert.equal(commentIds.observations.duplicateCommentIds, 1);
+  assert.equal(commentIds.observations.invalidCommentIds, 1);
+
+  const runewordAliases = semanticStatus('runes.txt', [
+    { name: 'Runeword13', complete: '1' },
+    { name: 'Runeword13', complete: '1' },
+  ]);
+  assert.equal(runewordAliases.ready, true);
+  assert.equal(runewordAliases.observations.duplicateLocalizationKeys, 1);
+  return { passed: true, cases: 18 };
 }
 
 const requestedRoots = [];
@@ -252,7 +286,7 @@ const report = {
     reorderedHeaders: 'accepted',
     extraHeaders: 'accepted',
     duplicateNormalizedHeaders: 'reject table',
-    duplicateStableKeys: 'reject table',
+    duplicateStableKeys: 'reject real lookup keys; accept comment ids and runeword localization aliases',
     rowCounts: 'informational only',
   },
   selfTest: selfTest(),

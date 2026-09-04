@@ -488,6 +488,18 @@ masqué sur les objets socketed. Le résumé reste à
 `scanned=13 active=12 disabled=0 rejected=0 failed=1`; l'échec unique demeure
 le problème préexistant et distinct de `RepeatableServices.dll`.
 
+## Archive publique 3.2.3
+
+L'archive publique autonome
+`addons/AdvancedItemTooltips/AdvancedItemTooltips-3.2.3.zip` contient uniquement
+`AdvancedItemTooltips.dll` et `AdvancedItemTooltips.json`. Son SHA-256 est
+`E6813DF237745AFB7C744A120E1BD85886AB7BCB94A847AA3BB78C4C786B2A97`.
+La DLL embarquée conserve le SHA-256 runtime validé
+`5906A7876CC191677C9D20B4F9785518B2A846CF66B73375262A6DD1910C712A`;
+la configuration publique par défaut a le SHA-256
+`B2C3E3B268FBDE4F5538DA053B3833ECA9D257E9FCEE2D4E829F667F2D1F3DB7`.
+La suite CTest Release repasse à 4/4 le 2026-08-07 avant livraison.
+
 ## Extension 3.3.0 — affichage des plages avec Shift
 
 La configuration publique accepte désormais `rangeDisplayMode` avec les

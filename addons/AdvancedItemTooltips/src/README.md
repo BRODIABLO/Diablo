@@ -5,10 +5,11 @@ global `d2rloader/plugins` directory or in a mod-local plugin directory. This
 public release is autonomous: it does not depend on BKVince, Transmogrify, or
 any eezstreet PluginPack DLL.
 
-Version 3.3.0 adds an optional hold-Shift display mode while preserving the
+Version 3.4.0 makes the hold-to-display key configurable while preserving the
 validated intrinsic item-range pipeline and the existing always-visible
 behavior by default. Property and `Base Defense` ranges can now appear only
-while Shift is held; `Max Sockets` remains independently configurable.
+while the configured key is held; `Shift` remains the default and `Max Sockets`
+remains independently configurable.
 
 The plugin caches exact, unchanged tooltip transformations per UI thread.
 Repeated hover frames reuse the validated result while any native tooltip text,
@@ -16,12 +17,13 @@ affix identity, defense, socket count, or socket filler change invalidates the
 entry automatically. Later `useitem` and non-crafted `usetype` mutations are
 not reconstructed or combined on a cache miss.
 
-`rangeDisplayMode` accepts `Always` (the default) or `HoldShift`. In
-`HoldShift`, both property ranges and the `Base Defense` line are hidden until
-either Shift key is held, then disappear again when Shift is released. The
-pressed state is part of the tooltip cache key, so the visible and hidden
-variants cannot contaminate each other. `Max Sockets` is not a roll range and
-is unaffected by this mode.
+`rangeDisplayMode` accepts `Always` (the default) or `HoldHotkey`. In
+`HoldHotkey`, both property ranges and the `Base Defense` line are hidden until
+the key selected by `holdToDisplayHotkey` is held, then disappear again when it
+is released. `Shift` is the default key. Legacy `HoldShift` configuration is
+accepted as an alias for `HoldHotkey`. The pressed state is part of the tooltip
+cache key, so the visible and hidden variants cannot contaminate each other.
+`Max Sockets` is not a roll range and is unaffected by this mode.
 
 It also derives unique-item, set-item, property, and stat identities from the
 same compiled row order used by D2R. Modder comment columns such as `*ID` and
@@ -188,9 +190,12 @@ avoids competing for the builder's strict prologue when another plugin owns it.
 The strict `AdvancedItemTooltips.json` keys are `enabled`, `showMaxSockets`,
 `showMaxSocketsOnSocketedItems`, `showBaseDefenseRange`, `showPropertyRanges`,
 `includeSocketedContributionsInRanges`, `_rangeDisplayModeHelp`,
-`rangeDisplayMode`, `_propertyRangeColorHelp`, and `propertyRangeColor`. Help
+`rangeDisplayMode`, `_holdToDisplayHotkeyHelp`, `holdToDisplayHotkey`,
+`_propertyRangeColorHelp`, and `propertyRangeColor`. Help
 keys are optional, must be strings when present, and are ignored at runtime.
-`rangeDisplayMode` accepts exactly `Always` or `HoldShift`;
+`rangeDisplayMode` accepts `Always` or `HoldHotkey`; legacy `HoldShift` is also
+accepted. `holdToDisplayHotkey` accepts Shift, left/right Shift, Ctrl or Alt,
+A-Z, 0-9, F1-F12, Mouse4, or Mouse5, and defaults to `Shift`;
 `propertyRangeColor` accepts exactly `ChronicleColor` or `BHDarkGreen`. The
 mod-local file takes priority over the global file. Missing configuration uses
 built-in defaults; a present but malformed configuration refuses the plugin
