@@ -3711,3 +3711,37 @@ confiance explicite.
   D2RL-Plugins épinglé `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`
   sans propriétaire concurrent trouvé. Le gate est un PASS statique read-only;
   implantation et runtime demeurent séparés.
+
+## 2026-09-04 — consolidation publique du corpus natif gouverné
+
+- Le checkpoint compare le registre public antérieur `0dd02e7f` au corpus
+  consolidé : 180 nouvelles identités natives sont promues, dont 177 en
+  confiance `high` et 3 en confiance `medium`. Elles couvrent 101 fonctions,
+  37 patch-sites, 23 call-sites, 14 témoins de layout, 3 anciens objets
+  `callsite` et 2 données.
+- Les 180 identités satisfont le contrat minimal du registre : `rva`, `name`,
+  `kind`, `confidence`, `source` et `notes` sont présents et non vides; chaque
+  RVA respecte la syntaxe hexadécimale gouvernée et chaque note conserve une
+  description technique substantielle. Aucun objet à confiance `low` n'est
+  promu par ce checkpoint.
+- L'audit de provenance a trouvé 118 citations non publiques réparties sur 72
+  entrées : chemins `analysis-cache`, missions encore non versionnées et
+  contrats de plugins encore locaux. Ces citations ont été retirées du
+  registre public et remplacées par le présent `findings.md`, qui conserve les
+  conclusions compactes par chantier. Les missions déjà versionnées et les
+  références externes épinglées restent citées.
+- Après normalisation, aucune entrée du registre ne dépend d'un chemin local ou
+  non suivi pour sa provenance publique. Les images, index SQLite, projets
+  Ghidra, clones, logs et corpus bruts restent volontairement sous
+  `analysis-cache` et ne sont pas distribués.
+- Quatre identités apparaissent dans plusieurs objets avec des sources et notes
+  de consommateurs distinctes : `DATATBLS_GetObjectsTxtRecordCount`,
+  `DATATBLS_GetObjectsTxtRecord`, `UNITS_GetUnitType` et
+  `INVENTORY_ResolveOccupancyGrid`. Elles ne sont pas fusionnées par ce
+  checkpoint afin de ne pas perdre les contrats spécifiques déjà consignés;
+  leurs RVA, noms et kinds concordent exactement.
+- Cette consolidation est une promotion documentaire et statique du corpus
+  commun 3.2.92777/3.3.93847. Elle ne remplace ni les empreintes fail-closed de
+  chaque plugin ni leur qualification runtime. Steam 3.3.93787 reste un
+  candidat admissible non qualifié tant que les surfaces réellement utilisées
+  ne sont pas prouvées byte-exact.

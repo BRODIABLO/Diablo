@@ -672,7 +672,7 @@
       "name": "DRLG_ResolveActFromLevelId",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; analysis-cache/extended-act-level-ids-probe/evidence/20260901-1918/ruffneckk-extended-act-level-ids-probe.log; analysis-cache/extended-act-level-ids-product/evidence/20260901-1947-functional-fixture/ruffneckk-extended-act-level-ids.fixture.log; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/Drlg/DrlgDrlg.cpp:854-872",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Common/src/Drlg/DrlgDrlg.cpp:854-872",
       "notes": "Central act resolver with observed Windows x64 ABI uint8 (uint8 dataContext, int32 levelId). It obtains the context ActInfo vector through 0x3006E0, reads its count at DataTables+0x108, walks records backward with stride 0x8C, compares levelId against the signed range start at record+0x04 and returns the selected zero-based act index; an empty or unmatched vector returns zero. The governed index contains 113 direct calls. Its strict 48-byte entry signature is unique in the common 92777/93847 corpus. A D2R 3.3.93847 runtime probe with the complete active stack observed dataContext 3 in BKVince and independently proved through PluginSDK DataTableServiceV1 that all three compiled Levels banks use row size 0x18C and the unique Act byte at row+0x0D. Extended Act Level IDs validates the service ABI, row size and anchor acts on every table revision, copies bank-owned rows into plugin-owned immutable caches and falls back to the original whenever a context, row or Act value is unavailable or invalid. Its final 0.1.0 runtime fixture compiled a temporary RotW Levels row Id 147 / Act 0 and the hooked entry resolved it to Act index 0 from Levels.txt before byte-exact restoration. Version 2.0.0 retains this hook and adds separately fingerprinted room-visibility producers and consumers. D2MOO supplies semantic provenance only and no legacy address, structure or ABI."
     },
     {
@@ -752,7 +752,7 @@
       "name": "D2GAME_CreateLinkPortal",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; analysis-cache/extended-act-level-ids-v2/runtime/20260904-gameplay-level-256-return-portal-2.0.2/native-portal-analysis.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/SKILLS/Skills.cpp:3030-3074",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/SKILLS/Skills.cpp:3030-3074",
       "notes": "Authoritative linked-portal constructor reached by the Level 256 Town Portal runtime assertion. The observed D2R calling convention carries Game* in RCX, the owning unit in RDX, the source portal in R8, the destination Level ID in R9D and the source Level ID as the fifth stack argument; caller witness 0x432F12 is strict and unique. Its strict 32-byte entry is unique in the common 92777/93847 corpus. It uses the full R9D destination to resolve act, room and spawn, but the interior witness at 0x436052 proves that it obtains the source portal room Level ID as a full DWORD, asserts above 255, then stores only its low byte in the linked portal ObjectData.InteractType. Extended Act Level IDs 2.1.0 hooks this constructor only for validated dynamic class-59 pairs owned by LocalPlayerReady, refuses an incomplete extended contract before any unscoped native call, and scopes the room getter at the exact 0x43605F return address."
     },
     {
@@ -760,7 +760,7 @@
       "name": "D2GAME_CreateLinkPortal_LevelIdByteGuard",
       "kind": "layout-witness",
       "confidence": "high",
-      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; analysis-cache/extended-act-level-ids-v2/runtime/20260904-gameplay-level-256-return-portal-2.0.2/d2rloader-at-assertion.log; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/SKILLS/Skills.cpp:3060-3067",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/SKILLS/Skills.cpp:3060-3067",
       "notes": "Strict unique 37-byte creation witness. After DUNGEON_GetLevelIdFromRoom returns the source portal room Level ID in EAX, the native code compares it with 0xFF, reaches the exact runtime assertion when greater, then executes MOVZX EDX,DIL and calls UNITS_SetObjectInteractType. Continuing or merely suppressing the assertion would therefore truncate Level 256 to zero; the gate cannot be fixed by removing the assertion alone."
     },
     {
@@ -768,7 +768,7 @@
       "name": "DUNGEON_GetLevelIdFromRoom",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; analysis-cache/extended-act-level-ids-v2/runtime/20260904-gameplay-level-256-return-portal-2.0.2/native-portal-analysis.md",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Null-safe active-room wrapper with observed ABI int32 (ActiveRoom*). It follows ActiveRoom+0x18 to DrlgRoom and tail-jumps to DRLGROOM_GetLevelId 0x360FC0; null returns zero. Its exact 17-byte body including the tail target is unique in the common 92777/93847 corpus. D2GAME_CreateLinkPortal calls it immediately before the Level-ID byte guard."
     },
     {
@@ -776,7 +776,7 @@
       "name": "SUNIT_GetPortalOwner",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; analysis-cache/extended-act-level-ids-v2/runtime/20260904-gameplay-level-256-return-portal-2.0.2/native-portal-analysis.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/UNIT/SUnit.cpp:1365-1386",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/UNIT/SUnit.cpp:1365-1386",
       "notes": "Portal-owner resolver with observed ABI Unit* (Game*, Portal*). Its strict 32-byte entry is unique in the common corpus. It reads ObjectData.InteractType through the uint8 getter 0x34AD40, zero-extends that byte into DRLG_ResolveActFromLevelId, reads destination-room coordinates at ObjectData+0x24/+0x28, finds or streams that room, then resolves the stored owner identity. A full Level ID sidecar must therefore cover this consumer; bypassing only the constructor assertion leaves the destination act truncated."
     },
     {
@@ -800,7 +800,7 @@
       "name": "CLIENT_PortalLabel_GetLevelsTxtRecordCall",
       "kind": "callsite",
       "confidence": "high",
-      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; analysis-cache/extended-act-level-ids-v2/runtime/20260904-town-portal-1023-local-offline-2.1.0/RESULT.md",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Exact client call from the object label/text path to DATATBLS_GetLevelsTxtRecord. The helper entry at 0xC17E0 receives the output string in RCX and Unit* in RDX, preserves that Unit* in nonvolatile RSI, resolves ObjectsTxt, requires subclass bit 0x04, calls UNITS_GetObjectInteractType at 0xC1882, zero-extends the returned byte into EDX and uses the unit data context in ECX. Its 27-byte context witness at 0xC187F (48 8B CE E8 B9 94 28 00 0F B6 D0 40 0F B6 CF E8 0D AC 26 00 48 C7 C3 FF FF FF FF) has exactly one common-corpus match. On success it reads the Levels name key at record+0xFD and resolves it through LANG_GetStringByKey; a null record takes the existing string-ID 0x150D fallback. The 2.1.0 local runtime stack returned here at 0xC1893 and asserted because a Town Portal destination Level ID 256 had become byte value zero. The complete 28-reader InteractType census makes this the only client Levels lookup driven by that byte. A future relay may pass RSI as a third resolver argument, but must remain exact-callsite scoped and backed by a generation/GUID/class/low-byte validated client sidecar; globally replacing 0x32C4A0 is unsafe."
     },
     {
@@ -864,7 +864,7 @@
       "name": "D2GAME_PACKETS_BuildPortalState0x60",
       "kind": "layout-witness",
       "confidence": "high",
-      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; analysis-cache/extended-act-level-ids-v2/runtime/20260904-gameplay-level-256-return-portal-2.0.2/native-portal-analysis.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/GAME/SCmd.cpp:2057-2068",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/GAME/SCmd.cpp:2057-2068",
       "notes": "Strict unique interior witness within the now-promoted sender entry at 0x47F620. It reads the portal flags and ObjectData.InteractType byte into packet offset +2; the complete 12-byte layout also carries GUID at +3, owner-player coordinates at +7/+9 and the owner-player current-room Level ID byte at +0x0B. This proves the stock 0x60 representation cannot transport either full Level ID above 255 and that +2 and +0x0B are semantically independent."
     },
     {
@@ -872,7 +872,7 @@
       "name": "CLIENT_HandlePacket0x60_PortalState",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; analysis-cache/extended-act-level-ids-v2/runtime/20260904-gameplay-level-256-return-portal-2.0.2/native-portal-analysis.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/GAME/SCmd.cpp:2057-2068",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/GAME/SCmd.cpp:2057-2068",
       "notes": "Stock client consumer for portal-state packet 0x60. Its strict 29-byte entry witness is unique in the common corpus. It resolves the client object by packet GUID at +3 through CLIENT_GetUnitByIdAndType(unitType=2), reads destination byte +2 and calls UNITS_SetObjectInteractType, then stores owner-player coordinates +7/+9 and owner-player current-room Level ID byte +0x0B in the client unit. Version 2.1.0 incorrectly required the two Level bytes to agree and, even after decoding a marked packet, did not publish the recovered destination to a client GUID/session sidecar. The corrected client contract restores only X in a packet copy, delegates first, resolves the live object again, requires class 59, GUID and destination low-byte agreement, and then refreshes the separate client sidecar. Packet +0x0B is never part of destination validation."
     },
     {
@@ -968,7 +968,7 @@
       "name": "DATATBLS_GetClassSkillCount",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; Mission/staffmods-portage-3.2.json",
+      "source": "Mission/staffmods-portage-3.2.json; reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Returns the compiled runtime skill count for class ids 0 through 7 from the active data context. The unique 32-byte entry signature is 48 89 5C 24 08 57 48 83 EC 30 48 63 DA 0F B6 F9 83 FB 07 76 19 48 8D 4C 24 48 C6 44 24 48 00. The D2S header writer calls it at 0x534519 and stores AL as NumSkills; the skills-section writer calls it at 0x52F58A/0x52F5D7 and emits one base-level byte per returned class skill."
     },
     {
@@ -992,7 +992,7 @@
       "name": "DATATBLS_GetClassSkillIdByIndex",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; Mission/staffmods-portage-3.2.json",
+      "source": "Mission/staffmods-portage-3.2.json; reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Returns the compiled SkillsTxt id for a zero-based class-skill index in the active data context. Its observed ABI is (uint8 context, int32 classId, int32 index) -> int32 skillId, and its unique 32-byte entry signature is 48 89 5C 24 08 48 89 74 24 18 57 48 83 EC 20 48 63 DA 41 8B F8 0F B6 F1 83 FB 07 76 19 48 8D 4C. The D2S load and save loops pair it with DATATBLS_GetClassSkillCount; the writer resolves each returned id through SKILLS_GetSkillById before serializing its base level."
     },
     {
@@ -2200,7 +2200,7 @@
       "name": "UI_FindChildWidgetByName",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/vendor-stock-refresh-3.2.md; Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md",
+      "source": "Mission/vendor-stock-refresh-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Finds a direct child widget by name with ABI (panel, const char* name) -> widget*. The 92777 implementation walks the pointer range at panel+0x58/panel+0x60, compares each child name through 0x12277A0 and returns the first matching widget or null. Runtime memory at the native VendorPanel callsites confirms raw names such as button_repair, button_repair_all and button_refresh. VendorStockRefresh 0.1.5 pins its strict 32-byte entry and resolves button_refresh plus the runtime anchors StashWidget, gold_icon and gold_amount without shipping a vendor layout. Skill-tree rebuild and interaction do not resolve dynamic skill children by their generated names; they enumerate children and use payload Skill IDs."
     },
     {
@@ -2248,7 +2248,7 @@
       "name": "SKILLTREE_ClassPageInteractionGate",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique RIP-relative comparison of SKILLTREE_CurrentPageState against General Skills state 3 in the skill-widget interaction path. FourthSkillTree 0.2.0 changes only the final immediate to 4 after fingerprinting the complete containing surface."
     },
     {
@@ -2256,7 +2256,7 @@
       "name": "SKILLTREE_FindTextTabWidget",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Observed ABI (skillTreePanel, tabIndex) -> text widget. It formats the indexed TextTab widget name, resolves the child and validates the expected widget type. Its strict 32-byte entry signature is unique in the governed common corpus and is a layout/ABI witness for FourthSkillTree 0.2.0."
     },
     {
@@ -2264,7 +2264,7 @@
       "name": "SKILLTREE_FindTabWidget",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Observed ABI (skillTreePanel, tabIndex) -> tab widget. It formats the indexed Tab widget name, resolves the child and validates the expected widget type. Its strict 32-byte entry signature is unique in the governed common corpus and is a layout/ABI witness for FourthSkillTree 0.2.0."
     },
     {
@@ -2272,7 +2272,7 @@
       "name": "SKILLTREE_AdvancePageWithWrap",
       "kind": "call-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Reads SKILLTREE_CurrentPageState, increments below the terminal state and otherwise wraps to zero before calling SKILLTREE_SetPageState. FourthSkillTree 0.2.0 fingerprints the strict 32-byte path and changes the CMP immediate at 0x14C6BC2 from 3 to 4."
     },
     {
@@ -2280,7 +2280,7 @@
       "name": "SKILLTREE_RewindPageWithWrap",
       "kind": "call-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Reads SKILLTREE_CurrentPageState, decrements above zero and otherwise loads the terminal state before calling SKILLTREE_SetPageState. FourthSkillTree 0.2.0 fingerprints the strict 32-byte path and changes the MOV immediate at 0x14C6BFA from 3 to 4."
     },
     {
@@ -2288,7 +2288,7 @@
       "name": "SKILLTREE_ClassPageAllocationGate",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique RIP-relative comparison of SKILLTREE_CurrentPageState against General Skills state 3 in the allocation path. FourthSkillTree 0.2.0 changes only the final immediate to 4 so page 3 remains an ordinary class page."
     },
     {
@@ -2296,7 +2296,7 @@
       "name": "SKILLTREE_TabTextRefreshLoop",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Refresh loop that resolves TabN and TextTabN, applies active state and text color, then compares EBX against 4 at 0x14C789B. The strict 32-byte loop witness is unique. FourthSkillTree 0.2.0 changes that terminal count to 5; missing layout widgets are already null-checked by the native loop."
     },
     {
@@ -2304,7 +2304,7 @@
       "name": "SKILLTREE_GeneralSkillsPrimaryGate",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "First General Skills branch in SKILLTREE_RebuildPageWidgets. It compares the same current-page global against 3; FourthSkillTree 0.2.0 changes only that terminal immediate to 4."
     },
     {
@@ -2312,7 +2312,7 @@
       "name": "SKILLTREE_GeneralSkillsFallbackGate",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Fallback General Skills branch in SKILLTREE_RebuildPageWidgets. It targets SKILLTREE_CurrentPageState and is one of seven exhaustive page-3 comparisons changed to 4 by FourthSkillTree 0.2.0."
     },
     {
@@ -2320,7 +2320,7 @@
       "name": "SKILLTREE_GeneralSkillsContainerGate",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Selects the CommonSkillsContainer and ItemSkillsContainer branch for General Skills. FourthSkillTree 0.2.0 moves its current-page comparison from state 3 to state 4."
     },
     {
@@ -2328,7 +2328,7 @@
       "name": "SKILLTREE_GeneralSkillsEnabledStateGate",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Late General Skills enabled-state comparison against SKILLTREE_CurrentPageState. FourthSkillTree 0.2.0 moves the terminal immediate from 3 to 4."
     },
     {
@@ -2336,7 +2336,7 @@
       "name": "SKILLTREE_GeneralSkillsVisibilityGate",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Final General Skills visibility comparison against SKILLTREE_CurrentPageState. FourthSkillTree 0.2.0 moves the terminal immediate from 3 to 4."
     },
     {
@@ -2344,7 +2344,7 @@
       "name": "SKILLTREE_SetPageState",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Observed ABI void (skillTreePanel, requestedPage). The independently bounded body at 0x14C3B10..0x14C3B86 clamps negative values to 0 and values above 3 to 3, writes SKILLTREE_CurrentPageState at 0x3BBDCBC, then calls SKILLTREE_RebuildPageWidgets. Its strict 32-byte entry signature is unique in the governed common corpus for D2R 3.2.92777 and 3.3.93847. FourthSkillTree 0.2.0 changes the MOV immediate at 0x14C3B27 from 3 to 4 after a complete fail-closed preflight. Four direct callers cover the decoded ActivateTab payload and both wraparound navigation directions."
     },
     {
@@ -2352,7 +2352,7 @@
       "name": "SKILLTREE_RebuildPageWidgets",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Observed ABI void (skillTreePanel), independently bounded at 0x14C7720..0x14C826E. The routine refreshes the current skill-tree page, loops over exactly four tab/text pairs at 0x14C7850..0x14C789E and handles state 3 as General Skills through seven exhaustive gates at 0x14C4084, 0x14C7428, 0x14C7907, 0x14C7986, 0x14C7BC0, 0x14C820B and 0x14C822B. Only the non-General branch enumerates ordinary class-skill widgets. Its strict 32-byte entry signature is unique in the governed common corpus. FourthSkillTree 0.2.0 extends the loop to five and moves every General gate to state 4."
     },
     {
@@ -2360,7 +2360,7 @@
       "name": "SKILLTREE_PopulateClassSkillWidgets",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Logical population body for a SkillTreePanel, independently bounded at 0x14C4520..0x14C5E96 despite the larger compiler unwind range. It enumerates the runtime class skill count, selects SkillPage rows, constructs each 0xB88 ButtonWidget, installs its skill payload, clones the rank counter and attaches the finished child. The native page loop remains limited to pages 1..3 until Skill Trees Revamp re-enters its proven loop body at 0x14C48B0 once for SkillPage 4; the exact 22-byte destination witness is unique in the governed common corpus."
     },
     {
@@ -2368,7 +2368,7 @@
       "name": "SKILLTREE_ClassPagePopulateLoopSeed",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Exact unique 28-byte loop-initialization witness. It seeds R14D, R13D and [rsp+0x3C] to three native class pages, clears the first tab byte and seeds EAX/[rsp+0x38] to zero. Skill Trees Revamp fingerprints this ABI because its page-IV leaf relay deliberately adds one iteration and later restores these terminal values."
     },
     {
@@ -2376,7 +2376,7 @@
       "name": "SKILLTREE_ClassPagePopulateLoopBody",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Entry destination of each native class-page population iteration. The exact unique 22-byte witness begins by resolving TabEAX through SKILLTREE_FindTabWidget and branches to the loop tail when the tab is absent. Skill Trees Revamp fingerprints this destination before its page-IV leaf relay may jump here with EAX=3 and R13D=4."
     },
     {
@@ -2384,7 +2384,7 @@
       "name": "SKILLTREE_AttachPageContainerCall",
       "kind": "call-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique rel32 call to UI_Widget_AddChild that attaches the freshly created class-page container to TabN before the skill loop appends SkillWidgets to that container at 0x14C5284. The surrounding context keeps the page container in R15, TabN in RBX and the real SkillPage in R13D; the class byte remains at caller stack +0x30. Skill Trees Revamp 0.8.0 owns only this callsite to populate an explicitly softcoded ChromeContainer that already contains typed, noninteractive ImageWidget templates, then delegates to UI_Widget_AddChild. This avoids the unresolved direct ImageWidget factory entirely and keeps generated chrome before the native page container in Tab child/render order."
     },
     {
@@ -2392,7 +2392,7 @@
       "name": "SKILLTREE_NativeWidgetIdentityClamps",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Exact unique 59-byte block clamping SkillColumn to 1..3 and SkillRow to 1..6 before native name formatting and local table indexing. The unique context at 0x14C4B0A passes SkillPage, clamped column-minus-one and clamped row-minus-one to the formatter, so expanded cells can duplicate an internal widget name. Rebuild and interaction instead consume the payload Skill ID; the clamped name and local slot are not the operational skill identity. Skill Trees Revamp fingerprints the clamp block without patching it."
     },
     {
@@ -2400,7 +2400,7 @@
       "name": "SKILLTREE_SkillWidgetPayloadAddressWitness",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Exact unique 21-byte producer-side witness containing the LEA at 0x14C5027 that selects SkillWidget+0x668 as the payload destination during construction. The bare seven-byte LEA has three corpus matches and is therefore not used alone."
     },
     {
@@ -2408,7 +2408,7 @@
       "name": "SKILLTREE_PublishSkillWidgetPayload",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Exact unique 20-byte producer-side witness moving the temporary skill payload pointer into the selected SkillWidget+0x668 slot before the position call at 0x14C50F1. Independent consumers at 0x14C7536 and 0x14C7D28 prove that payload+0 is the signed runtime Skill ID ordinal."
     },
     {
@@ -2416,7 +2416,7 @@
       "name": "SKILLTREE_SetSkillWidgetPositionCall",
       "kind": "call-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique five-byte rel32 call to UI_SetWidgetLocalPosition inside class-skill widget construction. The strict 30-byte witness at 0x14C50D8 pins the surrounding SkillColumn and SkillRow coordinate loads. Skill Trees Revamp owns only this narrow callsite so its validated Skill-ID mapping can substitute x/y while every unrelated UI caller remains native."
     },
     {
@@ -2424,7 +2424,7 @@
       "name": "SKILLTREE_SetSkillWidgetPositionSuccessorContext",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Exact unique 21-byte context immediately after the position CALL. The return address is naturally callsite+5 rather than a hardcoded plugin jump target; Skill Trees Revamp fingerprints this successor context as an additional fail-closed control-flow witness."
     },
     {
@@ -2432,7 +2432,7 @@
       "name": "SKILLTREE_CloneCounterTemplateCall",
       "kind": "call-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique five-byte rel32 call to UI_CloneWidgetTree for CounterTemplate. RCX is the SkillWidget whose +0x668 payload is already published, RDX is the template cached at rsp+0x60 and R8 is the override name. UI_CloneWidgetTree returns the attached clone in RAX although this caller ignores it. A narrow wrapper could reposition only managed rank counters after cloning, but it cannot create dark squares or prerequisite arrows and is unnecessary when the governed full node footprint already fits the usable area."
     },
     {
@@ -2440,7 +2440,7 @@
       "name": "SKILLTREE_LegacyCellWidgetTableWrite",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Writes the completed SkillWidget into a zero-initialized 18-pointer stack table using 6*clampedColumnIndex+clampedRow (1..18). The strict 33-byte witness beginning at 0x14C5289 is unique: 48 8B 95 00 03 00 00 4B 8D 04 7F 48 8D 0C 45 00 00 00 00 49 03 CD 48 89 BC CD 28 04 00 00 48 85 D2. A complete 1,435-instruction audit of SKILLTREE_PopulateClassSkillWidgets 0x14C4520..0x14C5E96 finds only the table zero-initialization at 0x14C4992..0x14C49D1 and this write: no read, address escape, consumer or cleanup. Clamped-cell aliases therefore overwrite an unused local slot and do not establish a functional eighteen-widget ceiling."
     },
     {
@@ -2448,7 +2448,7 @@
       "name": "SKILLTREE_ClassPagePopulateLoopTail",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique nine-byte terminal test and backward branch of the native class-page population loop. The strict 34-byte witness beginning at 0x14C5313 proves the loop state updates and branch target 0x14C48B0. A leaf relay can add exactly one (Tab3, SkillPage 4) iteration and restore the vanilla terminal state before continuing at 0x14C532E; changing the original page seed would instead shift the vanilla pages and is rejected."
     },
     {
@@ -2456,7 +2456,7 @@
       "name": "SKILLTREE_GeneralSkillsTabFactoryTarget",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique 15-byte block in SKILLTREE_PopulateClassSkillWidgets that resolves the factory parent from the literal Tab3 name through UI_FindChildWidgetByName. Skill Trees Revamp 0.8.0 replaces the complete block with a stack-neutral sequence that loads index 4 into R14D, preserves RCX=SkillTreePanel and calls the already-governed SKILLTREE_FindTabWidget 0x14C5F60. R14D=4 then drives the existing TextTab resolver, so Tab4 and TextTab4 are selected without a new hook."
     },
     {
@@ -2464,7 +2464,7 @@
       "name": "SKILLTREE_GeneralSkillsTextTabResolverCall",
       "kind": "call-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique 19-byte witness 41 8B D6 49 8B CC E8 DC 0A 00 00 48 8B D8 48 85 C0 74 2B proving that R14D is copied to EDX and passed with RCX=SkillTreePanel to SKILLTREE_FindTextTabWidget. Fingerprinting this consumer closes the fail-closed chain from the 0x14C536C Tab4 retarget to TextTab4."
     },
     {
@@ -2472,7 +2472,7 @@
       "name": "SKILLTREE_GeneralItemContainerLookups",
       "kind": "call-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique 38-byte block that resolves CommonSkillsContainer and ItemSkillsContainer beneath the General Skills tab saved by the factory. The native population path retains both containers and categorizes non-investable common and item-granted skills, including oskills; Skill Trees Revamp fingerprints this block without replacing either lookup."
     },
     {
@@ -2480,7 +2480,7 @@
       "name": "SKILLTREE_GeneralSkillsFactoryRequirements",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique 41-byte guard requiring panel+0x8F8 ButtonTemplate, CommonSkillsContainer and ItemSkillsContainer before General/Item skill population continues. A keyboard/mouse softcode layout that omits any of these three dependencies produces an empty fifth tab even when native Tab4 routing succeeds."
     },
     {
@@ -2488,7 +2488,7 @@
       "name": "SKILLTREE_DynamicGeneralSkillsRebuildTabLookup",
       "kind": "call-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique 33-byte witness showing SKILLTREE_RebuildPageWidgets reads SKILLTREE_CurrentPageState, passes that dynamic index to SKILLTREE_FindTabWidget and then enters the General Skills branch when the state matches the terminal gate. Moving the gate from 3 to 4 therefore makes the rebuild consume Tab4 without an additional lookup patch."
     },
     {
@@ -2496,7 +2496,7 @@
       "name": "SKILLTREE_InitializePanelWidgets",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Observed ABI void (SkillTreePanel*). Its unique 35-byte body calls SKILLTREE_PopulateClassSkillWidgets, then SKILLTREE_RebuildPageWidgets, and finally tail-jumps to the common UI continuation. This ordering proves that the page-IV loop seam creates widgets before the refresh path enumerates them."
     },
     {
@@ -2504,7 +2504,7 @@
       "name": "SKILLTREE_SkillWidgetPayloadRead",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique layout witness loading the skill payload pointer from SkillWidget+0x668, null-checking it and reading the signed 32-bit Skill ID at payload+0. Skill Trees Revamp fingerprints this witness before its position wrapper uses the same established payload contract."
     },
     {
@@ -2512,7 +2512,7 @@
       "name": "SKILLTREE_RebuildSkillWidgetPayloadRead",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique rebuild-path witness loading the same payload pointer from SkillWidget+0x668 and sign-extending its 32-bit Skill ID. The parent child count is read at 0x14C7CDF and every child is fetched by index through UI_GetChildWidgetByIndex at 0x14C7CF5 before this payload lookup. It confirms that dynamically populated and expanded-page children retain the Skill-ID identity consumed by refresh, allocation-state and rank rendering."
     },
     {
@@ -2520,7 +2520,7 @@
       "name": "SKILLTREE_CurrentPageState",
       "kind": "data",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Signed 32-bit current skill-tree page state. SKILLTREE_SetPageState compares and writes it; the forward/backward input paths read it; SKILLTREE_RebuildPageWidgets consumes it for tab activation, class-page enumeration and the General Skills branches. Vanilla owns domain 0..3. FourthSkillTree 0.2.0 validates that live pre-patch range and then establishes class pages 0..3 plus General Skills state 4."
     },
     {
@@ -2592,7 +2592,7 @@
       "name": "UI_CloneWidgetTree",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Generic recursive widget-tree clone with observed ABI (parent, source, overrideNameOrNull) -> cloned root. The skill-tree population path uses it for CounterTemplate on every SkillWidget and for the optional controller HotkeyText child. Skill Trees Revamp reuses the native population loop rather than calling this helper directly; its unique 44-byte entry remains a governed lifecycle witness."
     },
     {
@@ -2600,7 +2600,7 @@
       "name": "UI_GetChildWidgetByIndex",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Returns one direct child widget by index from the parent child-vector contract at +0x58/+0x60. SKILLTREE_RebuildPageWidgets reads the live child count at 0x14C7CDF and calls this function at 0x14C7CF5 for every child before consuming its payload Skill ID. The loop is not bounded to the legacy 18-cell scratch table and includes page-IV and expanded-page children appended by the native constructor."
     },
     {
@@ -2608,7 +2608,7 @@
       "name": "UI_SetWidgetLocalPosition",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Observed ABI void (widget, const PointI*). Its unique 55-byte body copies signed x/y to widget+0x70/+0x74 while preserving width and height. It has 99 native xrefs and therefore remains unhooked globally; Skill Trees Revamp redirects only the class-skill construction callsite at 0x14C50F1 and always delegates to this original function."
     },
     {
@@ -2616,7 +2616,7 @@
       "name": "UI_SetWidgetLocalRect",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Observed ABI void (Widget*, const RectI*) with signed RectI {x,y,width,height}. Its unique body copies the four dwords to Widget+0x70/+0x74/+0x78/+0x7C and has 29 native callsites. Skill Trees Revamp does not hook this generic setter; it is a governed witness for any future page-overlay or CounterTemplate geometry."
     },
     {
@@ -2624,7 +2624,7 @@
       "name": "UI_ImageWidget_SetFilename",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Observed ABI (ImageWidget*, StringView{pointer,length}*) for replacing an ImageWidget logical resource filename. It copies the path to +0x108, loads through 0x858990 into +0x130 and refreshes the image and intrinsic geometry through 0x859710/0x8574D0. SKILLTREE_PopulateClassSkillWidgets calls it at 0x14C4979 on the layout-backed TabN/Background ImageWidget, independently anchoring its identity."
     },
     {
@@ -2632,7 +2632,7 @@
       "name": "UI_ImageWidget_FactoryCandidate",
       "kind": "function",
       "confidence": "medium",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Factory-shaped routine with observed callback ABI (typeContext, const char* name, Widget* parent) -> 0x158-byte derived Widget*. It allocates through the UI allocator, calls UI_Widget_Constructor 0x854710, initializes image state and installs a derived vtable. Zero direct xrefs are consistent with indirect type registration, but no registration or live-vtable witness yet proves that this exact factory is ImageWidget; native mutation remains forbidden until that identity and child render/hit-test order are promoted to high confidence."
     },
     {
@@ -2640,7 +2640,7 @@
       "name": "UI_ButtonWidget_Constructor",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Constructor used by the native skill-tree population path after allocating 0xB88 bytes for each skill button. Skill Trees Revamp does not replace the factory: the additional SkillPage 4 loop iteration executes this same constructor and native payload/counter/finalization sequence."
     },
     {
@@ -2648,7 +2648,7 @@
       "name": "UI_ButtonWidget_Factory",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Factory callback with observed ABI (ignored type descriptor, const char* name, Widget* parent) -> ButtonWidget*. Its unique 27-byte entry signature allocates exactly 0xB88 bytes through the UI allocator and tail-calls UI_ButtonWidget_Constructor 0x86E920 with the name and parent preserved. The Skill Trees Revamp scale probe does not call or replace this factory; it uses the identification only to govern the live SkillWidget type."
     },
     {
@@ -2656,7 +2656,7 @@
       "name": "UI_GetCumulativeWidgetScale",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md; addons/SkillTreesRevamp/NATIVE-CONTRACT.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Observed ABI float (Widget*). The unique 31-byte entry recursively follows Widget+0x30 to the parent, multiplies every Widget+0x80 scale and uses the native root scale when no parent exists. ButtonWidget rendering, generic scaled-rectangle hit testing and the skill-tree tooltip placement path all call it. This proves scale propagation through a widget subtree, but the concrete ButtonWidget hit-test vtable slot remains runtime-gated because vtable 0x1CE4148 is zero in both governed static PE images."
     },
     {
@@ -3912,7 +3912,7 @@
       "name": "D2GAME_PACKETCALLBACK_Rcv0x3B_AllocateSkillPoints",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/skill-trees-revamp.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Authoritative server callback with observed ABI (game, player, packet, packetSize) -> int32. A controlled D2R 3.3.93847 runtime read proved slot 0x3B of the server callback table at D2R+0x1D2A790 points here. It requires exactly five bytes, decodes the skill id at +1 and additional-rank marker at +3, validates the id against the compiled SkillsTxt count, resolves the skill and its MaxLvl, reads the current base rank, then applies ranks through the native server mutation helper at 0x438670 until the request is exhausted or a validation/cap/mutation fails. The callback never reads SkillPage, SkillRow or SkillColumn, so authoritative allocation is independent of the UI page number."
     },
     {
@@ -4768,7 +4768,7 @@
       "name": "UI_CanQuickMoveItemToAdvancedStash",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/currency-stash-deposit-3.3.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Native Advanced Stash eligibility predicate with observed ABI bool (item). It first requires stash UI state 0x18, validates the local client context, resolves UNITS_GetClassId and queries UI_HasAdvancedStashRegistrationForItemClass at 0x15F320. Both legacy and modern inventory Ctrl-click handlers call it before routing to UI_QuickMoveItemToAdvancedStash. Its strict 32-byte entry signature is unique in the governed build-92777 corpus reused for current D2R 3.3.93847."
     },
     {
@@ -4776,7 +4776,7 @@
       "name": "UI_HasAdvancedStashRegistrationForItemClass",
       "kind": "function",
       "confidence": "medium",
-      "source": "Mission/currency-stash-deposit-3.3.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Receives an item class id in ECX, searches the runtime hash-map chain rooted at the Advanced Stash registry and returns true when the class key is present. UI_CanQuickMoveItemToAdvancedStash is the proven caller. The lookup behavior is static-proof; the exact ownership and compiler path of the backing registry remain to be promoted after runtime validation."
     },
     {
@@ -4784,7 +4784,7 @@
       "name": "UI_IsItemInteractionBlocked",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/currency-stash-deposit-3.3.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Native item-interaction gate with observed ABI int (item). It returns one when the item has the queried mode-2 stat-list condition or when the local player has state 0x36, and zero otherwise. UI_QuickMoveItemToAdvancedStash requires zero before transferring. Its strict 32-byte entry signature is unique in the governed corpus."
     },
     {
@@ -4792,7 +4792,7 @@
       "name": "CLIENT_GetAdvancedStashDestination",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/currency-stash-deposit-3.3.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Receives the local player, obtains its inventory and traverses the auxiliary corpse-linked records until the two native predicates select the destination used by Advanced Stash quick move. UI_QuickMoveItemToAdvancedStash passes the returned pointer directly as the destination argument to CLIENT_TransferItemToInventoryPage. The strict 32-byte entry signature is unique in the governed corpus."
     },
     {
@@ -4800,7 +4800,7 @@
       "name": "UI_QuickMoveItemToAdvancedStash",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/currency-stash-deposit-3.3.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Native Advanced Stash widget action. It resolves the item through widget vtable +0xC8, requires UI_IsItemInteractionBlocked to return zero, resolves the local player and CLIENT_GetAdvancedStashDestination, reads the source page and calls CLIENT_TransferItemToInventoryPage at 0x15F8B0 with destination page 4 and transfer mode 1, then finishes the inventory interaction at 0x1A0780. Legacy and modern inventory Ctrl-click handlers dispatch here only after the 0x15A0B0 eligibility predicate succeeds."
     },
     {
@@ -4808,7 +4808,7 @@
       "name": "UI_FinishInventoryInteraction",
       "kind": "function",
       "confidence": "medium",
-      "source": "Mission/currency-stash-deposit-3.3.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Called by UI_QuickMoveItemToAdvancedStash after every attempted transfer with arguments (3, null, 0, 0, false). Currency Stash Deposit reproduces that exact call on D2R's UI thread after invoking CLIENT_TransferItemToInventoryPage. The role name reflects the observed call context; broader semantics remain unclaimed. Its strict 32-byte entry signature is unique in the governed corpus."
     },
     {
@@ -5080,7 +5080,7 @@
       "name": "ShadowMasterOwnerTargetOverrideGate",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "addons/ShadowMasterAIFix/ruffneckk-shadow-master-ai-fix.json; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Two-byte JE +0x25 (74 25) after the owner-target null check. The skipped block validates the owner's target and assigns it to the Shadow's active target at 0x5CDBD3; the branch destination keeps the native owner-distance and catch-up path. Shadow Master AI Fix writes EB 25. The strict 16-byte context E8 73 22 EC FF 48 8B D8 48 85 C0 74 25 48 8B C8 is unique in the governed D2R 3.3.93847 corpus."
     },
     {
@@ -5088,7 +5088,7 @@
       "name": "ShadowMasterOwnerCenteredReselectionGate",
       "kind": "patch-site",
       "confidence": "high",
-      "source": "addons/ShadowMasterAIFix/ruffneckk-shadow-master-ai-fix.json; reverse-engineering/d2r-3.2.92777/findings.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Two-byte JNE +0x74 (75 74) following the combat-state comparison after target enumeration. The fallthrough non-combat block prioritizes the owner's target, then the owner-relative callback candidate and a bounded fallback. Shadow Master AI Fix writes EB 74 so the Shadow keeps its independently acquired target. The strict 16-byte context 83 7C 24 68 00 75 74 48 85 DB 74 05 4C 8B EB EB is unique in the governed D2R 3.3.93847 corpus."
     },
     {
@@ -5376,7 +5376,7 @@
       "name": "D2GAME_SERVER_HandleWeaponSwap",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/gear-swap-inventory.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Authoritative server handler with observed x64 ABI (game, player, packet, packetSize) -> int32. It requires exactly 30 bytes and routes the native weapon-set transition through the shared item-state batch at 0x471E90. Gear Swap Inventory observes this seam after the player's normal input mapping has already produced the vanilla request, preserving remapped weapon-swap bindings without owning UI_DispatchMessage."
     },
     {
@@ -5384,7 +5384,7 @@
       "name": "ITEMS_WriteBodyLocFourBitCallSite",
       "kind": "call-site",
       "confidence": "high",
-      "source": "Mission/gear-swap-inventory.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique witness BA 0F 00 00 00 85 C0 8B CE 41 B8 04 00 00 00 0F 45 C8 3B CA 0F 42 D1 49 8B CE E8 BA EB 69 00. The path loads ItemData+0x54, clamps the BodyLoc to 15 and writes exactly four bits. Gear Swap must preserve 0..12 and encode memory BodyLoc 13..20 as sentinel 15 plus a three-bit extension."
     },
     {
@@ -5392,7 +5392,7 @@
       "name": "ITEMS_ReadBodyLocFourBitCallSite_A",
       "kind": "call-site",
       "confidence": "high",
-      "source": "Mission/gear-swap-inventory.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique witness BA 04 00 00 00 E8 BF 34 6A 00 44 8B F0 48 85 FF. Reads the four-bit BodyLoc and later stores it at ItemData+0x54. The experimental decoder consumes three additional bits only for sentinel 15."
     },
     {
@@ -5400,7 +5400,7 @@
       "name": "ITEMS_ReadBodyLocFourBitCallSite_B",
       "kind": "call-site",
       "confidence": "high",
-      "source": "Mission/gear-swap-inventory.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique witness B8 04 00 00 00 F7 C1 FD FF FF FF 48 8B CE 0F 84 ?? ?? ?? ?? 8B D0 E8 ?? ?? ?? ??. Second four-bit BodyLoc reader that later stores at ItemData+0x54; it requires the same sentinel-aware decoder as path A."
     },
     {
@@ -5408,7 +5408,7 @@
       "name": "INVENTORY_GetItemFromBodyLoc",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/gear-swap-inventory.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique prologue 48 89 5C 24 10 57 48 83 EC 20 48 63 FA 48 8B D9 48 85 C9 75 20. The function guards BodyLoc <= 12 before resolving and indexing the body occupancy grid; Gear Swap requires an exact guarded extension to <=20."
     },
     {
@@ -5416,7 +5416,7 @@
       "name": "INVENTORY_PlaceItemInBodyLoc",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/gear-swap-inventory.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique prologue 48 89 5C 24 10 48 89 74 24 18 57 48 83 EC 40 41 8B D8 48 8B F2 48 8B F9. The function performs two BodyLoc <= 12 guards before calling the general occupancy placement routine; Gear Swap requires both guards to accept <=20."
     },
     {
@@ -5424,7 +5424,7 @@
       "name": "INVENTORY_ResolveOccupancyGrid",
       "kind": "function",
       "confidence": "high",
-      "source": "Mission/gear-swap-inventory.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Unique prologue 4C 8B DC 49 89 5B 20 57 48 83 EC 30 49 8B F8 48 39 51 28. On first use it copies descriptor width/height and allocates width*height pointers; later calls validate the stored dimensions. The body descriptor must be verified and expanded before any player grid is created."
     },
     {
@@ -5432,7 +5432,7 @@
       "name": "INVENTORY_PlayerBodyGridDescriptor",
       "kind": "data",
       "confidence": "high",
-      "source": "Mission/gear-swap-inventory.md",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Runtime BSS descriptor referenced by body-grid resolution paths. The 93847 mod-local probe observed exact startup bytes 0D 01 00 00 00 00 00 00 before character creation. Gear Swap fails closed unless it observes exactly 13x1 before changing the width to 21; the separate 92777 runtime probe remains required."
     },
     {
@@ -6299,30 +6299,30 @@
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
       "notes": "Exact unique 102-byte inventory-walk window calls INVENTORY_GetFirstItem, checks the result, derives child temporary flags as parentTemporaryFlags | 0x08, sends the child through D2GAME_SendItemAction9D at 0x481BFE with action 0x12 and gamble zero, calls INVENTORY_GetNextItem and branches back to the same send path while one remains. Because each 0x9D producer captures its node then recursively invokes this walker before returning to the parent's GetNextItem, the native sequence is depth-first preorder. The G9-A transaction models and now runtime-qualifies this order and nesting on a real three-node socket tree; pre-flush rejection is all-or-none."
     },
-  {
-    "rva": "0x3B5307",
-    "name": "DATATBLS_BBEConditionCalcCompilerWiring",
+    {
+      "rva": "0x3B5307",
+      "name": "DATATBLS_BBEConditionCalcCompilerWiring",
       "kind": "call-site",
       "confidence": "high",
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-    "notes": "Exact unique compiler setup passes resolver 0x3B54E0, parameter-count callback 0x3B57A0 and keyword mapper 0x3B58A0 to generic expression compiler 0xA24290, then appends the bytecode to the shared condition-calc pool at DataTables+0xD90. It is one representative of an exhaustive seven-callsite native census and is verification-only."
-  },
-  {
-    "rva": "0x1CFA68C",
-    "name": "DATATBLS_BBEStatKeywordLiteral",
-    "kind": "data",
-    "confidence": "high",
-    "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-    "notes": "Protected static RDATA recovered by a governed read-only D2R 3.3.93847 runtime capture on 2026-08-31. The exact mapper anchor at 0x3B59CA resolved here and the captured NUL-terminated ASCII value is 'stat'. The captured 16-byte window 73746174000000000000000073657466 has SHA-256 83626D991B1A0AD789DDB50D993623989AB1C1257879530005CEE0CA411F0E4F."
-  },
-  {
-    "rva": "0x1D09C50",
-    "name": "DATATBLS_BBEEvaluatorCallbackTable",
-    "kind": "data-table",
-    "confidence": "high",
-    "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-    "notes": "Protected static RDATA recovered by a governed read-only D2R 3.3.93847 runtime capture on 2026-08-31. The table contains nine 16-byte records {callback VA qword, arity dword, zero padding dword}; callback RVAs are 0x3B3200, 0x3B3210, 0x3B3220, 0x3B32F0, 0x3B33A0, 0x3B33F0, 0x3B3500, 0x3B3590 and 0x3B3640. Record 5 at 0x1D09CA0 is the stat callback 0x3B33F0 with arity 2. The ASLR-normalized 144-byte table SHA-256 is E8B9B76F9D7320BDFA8129F8D22B0CB19B450AC4D655F53A8D2E56E47CF224ED."
-  },
+      "notes": "Exact unique compiler setup passes resolver 0x3B54E0, parameter-count callback 0x3B57A0 and keyword mapper 0x3B58A0 to generic expression compiler 0xA24290, then appends the bytecode to the shared condition-calc pool at DataTables+0xD90. It is one representative of an exhaustive seven-callsite native census and is verification-only."
+    },
+    {
+      "rva": "0x1CFA68C",
+      "name": "DATATBLS_BBEStatKeywordLiteral",
+      "kind": "data",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Protected static RDATA recovered by a governed read-only D2R 3.3.93847 runtime capture on 2026-08-31. The exact mapper anchor at 0x3B59CA resolved here and the captured NUL-terminated ASCII value is 'stat'. The captured 16-byte window 73746174000000000000000073657466 has SHA-256 83626D991B1A0AD789DDB50D993623989AB1C1257879530005CEE0CA411F0E4F."
+    },
+    {
+      "rva": "0x1D09C50",
+      "name": "DATATBLS_BBEEvaluatorCallbackTable",
+      "kind": "data-table",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md; reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Protected static RDATA recovered by a governed read-only D2R 3.3.93847 runtime capture on 2026-08-31. The table contains nine 16-byte records {callback VA qword, arity dword, zero padding dword}; callback RVAs are 0x3B3200, 0x3B3210, 0x3B3220, 0x3B32F0, 0x3B33A0, 0x3B33F0, 0x3B3500, 0x3B3590 and 0x3B3640. Record 5 at 0x1D09CA0 is the stat callback 0x3B33F0 with arity 2. The ASLR-normalized 144-byte table SHA-256 is E8B9B76F9D7320BDFA8129F8D22B0CB19B450AC4D655F53A8D2E56E47CF224ED."
+    },
     {
       "rva": "0x3B5B58",
       "name": "DATATBLS_BBEResolverKeywordDispatchWitness",
@@ -6371,197 +6371,197 @@
       "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
       "notes": "Exact unique token-5 evaluator bounds-checks two bytes, sign-extends the WORD into EDX, calls the parameter callback and advances two bytes. ISC12 IDs 0..4094 remain positive and exact."
     },
-  {
-    "rva": "0x3B33F0",
-    "name": "DATATBLS_BBEWideStatAccessorCallback",
-    "kind": "function",
-    "confidence": "high",
-    "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-    "notes": "Exact unique function body copies EDX to full-width EDI, checks DataTables+0x1260 and forwards the same DWORD ordinal to the base, item-value or total-stat accessor. A governed read-only D2R 3.3.93847 capture proves callback-table record 5 at 0x1D09CA0 points here with arity 2, closing native stat-slot membership."
-  },
-  {
-    "rva": "0x3B54A3",
+    {
+      "rva": "0x3B33F0",
+      "name": "DATATBLS_BBEWideStatAccessorCallback",
+      "kind": "function",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique function body copies EDX to full-width EDI, checks DataTables+0x1260 and forwards the same DWORD ordinal to the base, item-value or total-stat accessor. A governed read-only D2R 3.3.93847 capture proves callback-table record 5 at 0x1D09CA0 points here with arity 2, closing native stat-slot membership."
+    },
+    {
+      "rva": "0x3B54A3",
       "name": "SKILLS_BBEEvaluatorCallbackTableWiringWitness",
       "kind": "call-site",
       "confidence": "high",
-    "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
-    "notes": "Exact unique callsite passes callback table 0x1D09C50 with count 9 to generic evaluator 0xA234B0. Seven D2R table-wired evaluator xrefs use the same table/count; an eighth generic call passes no callback table. A governed read-only D2R 3.3.93847 capture proves the table is nine 16-byte records and that record 5 contains callback RVA 0x3B33F0 with arity 2."
-  },
-  {
-    "rva": "0x328FD0",
-    "name": "DRLGROOM_BuildRoomAndActiveRoom",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Observed Windows x64 ABI (uint8 dataContext, DrlgRoom*) -> void. The strict pipeline witness at +0x0F conditionally calls 0x3608A0, calls static grid initializer 0x3F38D0 and static map-tile builder 0x3F3930, then separately calls ActiveRoom allocator 0x326480. MapSense 0.13.21 fingerprints this control flow but deliberately calls only the static phases for distant POI descriptors."
-  },
-  {
-    "rva": "0x326480",
-    "name": "ACTIVEROOM_AllocateForDrlgRoom",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "ActiveRoom allocator called only after DRLGROOM_BuildRoomAndActiveRoom has completed the static room phases. MapSense 0.13.21 uses this RVA only as a negative control-flow witness and never resolves or calls it from passive distant-name capture."
-  },
-  {
-    "rva": "0x3608A0",
-    "name": "DRLGROOM_BuildNearRoomLinks",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Observed Windows x64 ABI (uint8 dataContext, DrlgRoom*) -> void. DRLGROOM_BuildRoomAndActiveRoom calls it only when the room's near-room vector state at +0x18 is zero; the function first delegates to the governed near-room-vector builder at 0x3614C0 and completes static room-link preparation."
-  },
-  {
-    "rva": "0x3DE0E0",
-    "name": "DRLGPRESET_AddPresetUnitDescriptors",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO semantic reference",
-    "notes": "Observed Windows x64 ABI (uint8 dataContext, DrlgRoom*) -> void. DRLGROOM_CreateActiveRoom calls it for room type 2 when DrlgRoom flag bit 25 is clear. It materializes static PresetUnit descriptors used by exact waypoint discovery; MapSense never traverses or creates gameplay Unit or monster instances in this path."
-  },
-  {
-    "rva": "0x3F38D0",
-    "name": "DRLGROOM_InitializeStaticRoomGrids",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Observed Windows x64 ABI (uint8 dataContext, DrlgRoom*) -> void. This is the first unconditional static phase in DRLGROOM_BuildRoomAndActiveRoom and precedes both static map-tile generation and the separate ActiveRoom allocation."
-  },
-  {
-    "rva": "0x3F3930",
-    "name": "DRLGROOM_AddStaticMapTiles",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Observed Windows x64 ABI (uint8 dataContext, DrlgRoom*) -> void. Dispatches by room type, creates static map-tile/RoomTile state and sets DrlgRoom HAS_ROOM bit 20. It returns before ActiveRoom allocation, allowing MapSense 0.13.21 to copy exact exit and waypoint descriptors without loading live room units."
-  },
-  {
-    "rva": "0x3F3970",
-    "name": "DRLGROOM_LoadTileLibraries",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Observed Windows x64 ABI (uint8 dataContext, DrlgRoom*) -> void. DRLGROOM_CreateActiveRoom calls it only when DrlgRoom flag bit 24 is clear; completion sets that tile-library-loaded bit before preset and static-room phases."
-  },
-  {
-    "rva": "0x3F3AA0",
-    "name": "DRLGROOM_ReleaseRoomData",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Observed Windows x64 ABI (DrlgRoom*, int32 keepRoom) -> void. With keepRoom=0 it clears DrlgRoom+0x58, tests and clears HAS_ROOM bit 20, and releases transient static room grids while retaining the lightweight descriptor chains required by normal DRLG lifecycle. MapSense calls it only for a static lease it created and only while +0x58 remains null."
-  },
-  {
-    "rva": "0x326E89",
-    "name": "DRLG_SeedInitializationWitness",
-    "kind": "layout-witness",
-    "confidence": "high",
-    "source": "reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Strict 129-byte interior witness in the governed DRLG allocation path. It initializes the native seed pair as {mapSeed, 0x29A}, advances the 64-bit LCG with multiplier 0x6AC690C5, stores the original mapSeed at Drlg+0x840 and the low 32-bit result at Drlg+0x860. MapSense 0.13.22 reads both fields and accepts an external label-atlas request only when the pair satisfies this exact native relation; build names remain diagnostic only."
-  },
-  {
-    "rva": "0x4782B0",
-    "name": "NET_SendFixedStatPacket1D1F",
-    "kind": "function",
-    "confidence": "high",
-    "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; Mission/isc12-3.3.md",
-    "notes": "Builds packet 0x1D, 0x1E or 0x1F according to the value width. Every stat-identifier field is stored as a WORD, including the R9W field in all three layouts; no ISC12 byte-to-word packet expansion is required."
-  },
-  {
-    "rva": "0x47BE00",
-    "name": "NET_SendPrivateStatPacket9EA0",
-    "kind": "function",
-    "confidence": "high",
-    "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; Mission/isc12-3.3.md",
-    "notes": "Builds the 0x9E/0x9F/0xA0 private-stat packet family and stores the stat identifier from R8W in both compact layouts. The governed consumer switch at 0x12B070 reads the paired field with MOVZX WORD."
-  },
-  {
-    "rva": "0x47BED0",
-    "name": "NET_SendPrivateStatPacketA1A2",
-    "kind": "function",
-    "confidence": "high",
-    "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; Mission/isc12-3.3.md",
-    "notes": "Builds the 0xA1/0xA2 private-stat packet family and stores the stat identifier from R8W in both compact layouts. The governed consumer switch at 0x12B070 preserves the complete WORD field."
-  },
-  {
-    "rva": "0x47DFD0",
-    "name": "NET_SendStatPacket20",
-    "kind": "function",
-    "confidence": "high",
-    "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; Mission/isc12-3.3.md",
-    "notes": "Builds the fixed 13-byte packet 0x20 layout: opcode byte +0, stat ID WORD +1 from R9W, layer WORD +3, unit GUID DWORD +5 and value DWORD +9. Consumer 0x12B5A0 reads the same WORD stat and layer fields."
-  },
-  {
-    "rva": "0x53A9FA",
-    "name": "MercenaryPrivateUpdateWordStatWitness",
-    "kind": "layout-witness",
-    "confidence": "high",
-    "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; Mission/isc12-3.3.md",
-    "notes": "Exact unique dispatcher window zero-extends the queued stat identifier from WORD [RBX+0x14] before calling the 0x9E producer; the sibling 0xA2 branch repeats the WORD load at 0x53AA19. This closes the upstream uint8-stat suspicion without a mutation."
-  },
-  {
-    "rva": "0x36A850",
-    "name": "ITEMS_GetAutoStack",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Observed Windows x64 ABI (item) -> int32. Resolves the concrete item's ItemTypesTxt record and returns its AutoStack byte at +0x13. Potion Auto Pickup 2.0.0 overrides only configured potion calls after its compiled ItemsTxt mutations are ready."
-  },
-  {
-    "rva": "0x371AB0",
-    "name": "ITEMS_GetMinStack",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Observed Windows x64 ABI (item) -> int32. Resolves the compiled ItemsTxt row and returns the minstack DWORD at +0xEC."
-  },
-  {
-    "rva": "0x372AD0",
-    "name": "ITEMS_GetSpawnStack",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Observed Windows x64 ABI (item) -> int32. Resolves the compiled ItemsTxt row and returns the spawnstack DWORD at +0xF4. Together with minstack=1, Potion Auto Pickup uses this field to keep each generated ground potion equal to one bottle."
-  },
-  {
-    "rva": "0x373D70",
-    "name": "ITEMS_CheckIfAutoBeltable",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Observed Windows x64 ABI (inventory, item) -> int32. Reads compiled ItemsTxt autobelt at +0x141 and falls back to the native inventory/item eligibility helper. The authoritative pickup path calls it at 0x471C06 before asking for a free belt slot."
-  },
-  {
-    "rva": "0x386E00",
-    "name": "INVENTORY_FindBackPackItemForStack",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Observed Windows x64 ABI (inventory, item, excludedItem) -> item pointer. Searches the backpack grid for an exact native stack-compatible item whose STAT_QUANTITY is below ITEMS_GetTotalMaxStack. Potion Auto Pickup redirects only its scoped pickup to a chosen belt stack or suppresses backpack merging until an empty belt row is tried."
-  },
-  {
-    "rva": "0x4754C0",
-    "name": "D2GAME_StackItemIntoInventory",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Observed Windows x64 ABI (game, player, item) -> bool. Finds native-compatible partial stacks, transfers STAT_QUANTITY up to ITEMS_GetTotalMaxStack, synchronizes source and destination packets, and repeats until the source is empty or no destination remains."
-  },
-  {
-    "rva": "0x4759E0",
-    "name": "D2GAME_TryAutoStackPickedItem",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Observed Windows x64 ABI (game, player, item) -> bool. Handles book and ammunition families first, then gates the generic path through ITEMS_CheckIfStackable and ITEMS_GetAutoStack before calling D2GAME_StackItemIntoInventory. The pickup caller removes the ground unit only when this routine reports complete handling."
-  },
-  {
-    "rva": "0x581680",
-    "name": "D2GAME_ExecuteItemUseEffect",
-    "kind": "function",
-    "confidence": "high",
-    "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
-    "notes": "Observed Windows x64 ABI (game, player, item, target) -> void. Dispatches the ItemsTxt use function and decrements quantity itself only for Book type 0x12. Its sole direct caller returns at 0x4F5923 and conditionally deletes the item according to parsed packet byte +1, enabling Potion Auto Pickup to preserve a potion object only after an authoritative -1 quantity synchronization."
-  }
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json",
+      "notes": "Exact unique callsite passes callback table 0x1D09C50 with count 9 to generic evaluator 0xA234B0. Seven D2R table-wired evaluator xrefs use the same table/count; an eighth generic call passes no callback table. A governed read-only D2R 3.3.93847 capture proves the table is nine 16-byte records and that record 5 contains callback RVA 0x3B33F0 with arity 2."
+    },
+    {
+      "rva": "0x328FD0",
+      "name": "DRLGROOM_BuildRoomAndActiveRoom",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed Windows x64 ABI (uint8 dataContext, DrlgRoom*) -> void. The strict pipeline witness at +0x0F conditionally calls 0x3608A0, calls static grid initializer 0x3F38D0 and static map-tile builder 0x3F3930, then separately calls ActiveRoom allocator 0x326480. MapSense 0.13.21 fingerprints this control flow but deliberately calls only the static phases for distant POI descriptors."
+    },
+    {
+      "rva": "0x326480",
+      "name": "ACTIVEROOM_AllocateForDrlgRoom",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "ActiveRoom allocator called only after DRLGROOM_BuildRoomAndActiveRoom has completed the static room phases. MapSense 0.13.21 uses this RVA only as a negative control-flow witness and never resolves or calls it from passive distant-name capture."
+    },
+    {
+      "rva": "0x3608A0",
+      "name": "DRLGROOM_BuildNearRoomLinks",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed Windows x64 ABI (uint8 dataContext, DrlgRoom*) -> void. DRLGROOM_BuildRoomAndActiveRoom calls it only when the room's near-room vector state at +0x18 is zero; the function first delegates to the governed near-room-vector builder at 0x3614C0 and completes static room-link preparation."
+    },
+    {
+      "rva": "0x3DE0E0",
+      "name": "DRLGPRESET_AddPresetUnitDescriptors",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO semantic reference",
+      "notes": "Observed Windows x64 ABI (uint8 dataContext, DrlgRoom*) -> void. DRLGROOM_CreateActiveRoom calls it for room type 2 when DrlgRoom flag bit 25 is clear. It materializes static PresetUnit descriptors used by exact waypoint discovery; MapSense never traverses or creates gameplay Unit or monster instances in this path."
+    },
+    {
+      "rva": "0x3F38D0",
+      "name": "DRLGROOM_InitializeStaticRoomGrids",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed Windows x64 ABI (uint8 dataContext, DrlgRoom*) -> void. This is the first unconditional static phase in DRLGROOM_BuildRoomAndActiveRoom and precedes both static map-tile generation and the separate ActiveRoom allocation."
+    },
+    {
+      "rva": "0x3F3930",
+      "name": "DRLGROOM_AddStaticMapTiles",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed Windows x64 ABI (uint8 dataContext, DrlgRoom*) -> void. Dispatches by room type, creates static map-tile/RoomTile state and sets DrlgRoom HAS_ROOM bit 20. It returns before ActiveRoom allocation, allowing MapSense 0.13.21 to copy exact exit and waypoint descriptors without loading live room units."
+    },
+    {
+      "rva": "0x3F3970",
+      "name": "DRLGROOM_LoadTileLibraries",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed Windows x64 ABI (uint8 dataContext, DrlgRoom*) -> void. DRLGROOM_CreateActiveRoom calls it only when DrlgRoom flag bit 24 is clear; completion sets that tile-library-loaded bit before preset and static-room phases."
+    },
+    {
+      "rva": "0x3F3AA0",
+      "name": "DRLGROOM_ReleaseRoomData",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-mapsense.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed Windows x64 ABI (DrlgRoom*, int32 keepRoom) -> void. With keepRoom=0 it clears DrlgRoom+0x58, tests and clears HAS_ROOM bit 20, and releases transient static room grids while retaining the lightweight descriptor chains required by normal DRLG lifecycle. MapSense calls it only for a static lease it created and only while +0x58 remains null."
+    },
+    {
+      "rva": "0x326E89",
+      "name": "DRLG_SeedInitializationWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Strict 129-byte interior witness in the governed DRLG allocation path. It initializes the native seed pair as {mapSeed, 0x29A}, advances the 64-bit LCG with multiplier 0x6AC690C5, stores the original mapSeed at Drlg+0x840 and the low 32-bit result at Drlg+0x860. MapSense 0.13.22 reads both fields and accepts an external label-atlas request only when the pair satisfies this exact native relation; build names remain diagnostic only."
+    },
+    {
+      "rva": "0x4782B0",
+      "name": "NET_SendFixedStatPacket1D1F",
+      "kind": "function",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; Mission/isc12-3.3.md",
+      "notes": "Builds packet 0x1D, 0x1E or 0x1F according to the value width. Every stat-identifier field is stored as a WORD, including the R9W field in all three layouts; no ISC12 byte-to-word packet expansion is required."
+    },
+    {
+      "rva": "0x47BE00",
+      "name": "NET_SendPrivateStatPacket9EA0",
+      "kind": "function",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; Mission/isc12-3.3.md",
+      "notes": "Builds the 0x9E/0x9F/0xA0 private-stat packet family and stores the stat identifier from R8W in both compact layouts. The governed consumer switch at 0x12B070 reads the paired field with MOVZX WORD."
+    },
+    {
+      "rva": "0x47BED0",
+      "name": "NET_SendPrivateStatPacketA1A2",
+      "kind": "function",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; Mission/isc12-3.3.md",
+      "notes": "Builds the 0xA1/0xA2 private-stat packet family and stores the stat identifier from R8W in both compact layouts. The governed consumer switch at 0x12B070 preserves the complete WORD field."
+    },
+    {
+      "rva": "0x47DFD0",
+      "name": "NET_SendStatPacket20",
+      "kind": "function",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; Mission/isc12-3.3.md",
+      "notes": "Builds the fixed 13-byte packet 0x20 layout: opcode byte +0, stat ID WORD +1 from R9W, layer WORD +3, unit GUID DWORD +5 and value DWORD +9. Consumer 0x12B5A0 reads the same WORD stat and layer fields."
+    },
+    {
+      "rva": "0x53A9FA",
+      "name": "MercenaryPrivateUpdateWordStatWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "reverse-engineering/d2r-3.2.92777/isc12/native-sites.json; Mission/isc12-3.3.md",
+      "notes": "Exact unique dispatcher window zero-extends the queued stat identifier from WORD [RBX+0x14] before calling the 0x9E producer; the sibling 0xA2 branch repeats the WORD load at 0x53AA19. This closes the upstream uint8-stat suspicion without a mutation."
+    },
+    {
+      "rva": "0x36A850",
+      "name": "ITEMS_GetAutoStack",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed Windows x64 ABI (item) -> int32. Resolves the concrete item's ItemTypesTxt record and returns its AutoStack byte at +0x13. Potion Auto Pickup 2.0.0 overrides only configured potion calls after its compiled ItemsTxt mutations are ready."
+    },
+    {
+      "rva": "0x371AB0",
+      "name": "ITEMS_GetMinStack",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed Windows x64 ABI (item) -> int32. Resolves the compiled ItemsTxt row and returns the minstack DWORD at +0xEC."
+    },
+    {
+      "rva": "0x372AD0",
+      "name": "ITEMS_GetSpawnStack",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed Windows x64 ABI (item) -> int32. Resolves the compiled ItemsTxt row and returns the spawnstack DWORD at +0xF4. Together with minstack=1, Potion Auto Pickup uses this field to keep each generated ground potion equal to one bottle."
+    },
+    {
+      "rva": "0x373D70",
+      "name": "ITEMS_CheckIfAutoBeltable",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed Windows x64 ABI (inventory, item) -> int32. Reads compiled ItemsTxt autobelt at +0x141 and falls back to the native inventory/item eligibility helper. The authoritative pickup path calls it at 0x471C06 before asking for a free belt slot."
+    },
+    {
+      "rva": "0x386E00",
+      "name": "INVENTORY_FindBackPackItemForStack",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed Windows x64 ABI (inventory, item, excludedItem) -> item pointer. Searches the backpack grid for an exact native stack-compatible item whose STAT_QUANTITY is below ITEMS_GetTotalMaxStack. Potion Auto Pickup redirects only its scoped pickup to a chosen belt stack or suppresses backpack merging until an empty belt row is tried."
+    },
+    {
+      "rva": "0x4754C0",
+      "name": "D2GAME_StackItemIntoInventory",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed Windows x64 ABI (game, player, item) -> bool. Finds native-compatible partial stacks, transfers STAT_QUANTITY up to ITEMS_GetTotalMaxStack, synchronizes source and destination packets, and repeats until the source is empty or no destination remains."
+    },
+    {
+      "rva": "0x4759E0",
+      "name": "D2GAME_TryAutoStackPickedItem",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed Windows x64 ABI (game, player, item) -> bool. Handles book and ammunition families first, then gates the generic path through ITEMS_CheckIfStackable and ITEMS_GetAutoStack before calling D2GAME_StackItemIntoInventory. The pickup caller removes the ground unit only when this routine reports complete handling."
+    },
+    {
+      "rva": "0x581680",
+      "name": "D2GAME_ExecuteItemUseEffect",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed Windows x64 ABI (game, player, item, target) -> void. Dispatches the ItemsTxt use function and decrements quantity itself only for Book type 0x12. Its sole direct caller returns at 0x4F5923 and conditionally deletes the item according to parsed packet byte +1, enabling Potion Auto Pickup to preserve a potion object only after an authoritative -1 quantity synchronization."
+    }
   ]
 }
