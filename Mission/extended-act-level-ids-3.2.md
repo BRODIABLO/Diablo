@@ -2,21 +2,32 @@
 
 Dernière mise à jour : 4 septembre 2026
 
-Statut : **cache physique deux passes implanté en 2.0.2 et qualifié statiquement;
-runtime exact 1023 à exécuter**.
+Statut : **cache physique deux passes qualifié avec 1023 records; voyage
+physique Harrogath ↔ Level 256 validé; correction Town Portal 2.1.1 avec
+sidecars serveur/client et relay UI `0xC188E` implantée et qualifiée
+statiquement; runtime 2.1.1 non exécuté et release bloquée**.
 Vincent a donné `GO` le 4 septembre 2026 pour étendre le produit existant à la
-limite native de 1023 records. La source 2.0.2, ses cinq hooks fail-closed et
-son codec réseau compatible sont compilés; les preuves statiques sont
-gouvernées. Le premier cold start 2.0.0 sur Battle.net D2R 3.3.93847 et
-D2RLoader public 1.2.1 passe avec la pile complète. La matrice d'une véritable
-zone jouable d'ID supérieur à 255, Town Portal, waypoint, save/reload et
-host/joiner reste ouverte avant toute archive ou release. Un fixture exact de
-1023 records démontre que le round-trip `findRowById` du service s'arrête au
-premier ID étendu : `256` retourne `NotFound`, alors que sa ligne physique est
-valide. La DLL refuse son cache RotW et conserve le résolveur original. Les
-résultats 0.1.1 ci-dessous demeurent
-l'historique qualifié de la première fonction `Levels.txt → Act`, pas une
-preuve gameplay du codec v2.
+limite native de 1023 records. La source 2.1.1 conserve le cache deux passes et
+le codec room-visibility qualifiés, puis ajoute le contrat Town Portal
+local/offline sous empreintes fail-closed. Le
+diagnostic 2.0.1 a montré que `findRowById(256)` retourne `NotFound` malgré une
+ligne physique valide; la 2.0.2 contourne cette limite par un cache strict en
+deux passes. Son cold start exact de 1023 records sur Battle.net D2R 3.3.93847
+et D2RLoader public 1.2.1 publie `RotW=1023` avec la pile complète. Une fixture
+same-act relie maintenant Harrogath `109 / Act 4` au Level `256 / Act 4` :
+Vincent apparaît normalement dans la zone et MapSense observe le graphe de
+rooms du niveau 256 sans crash. Le retour répété est validé et la création d'un
+Town Portal depuis Level 256 atteint le garde natif
+`eLevelIdLocal <= 255` avant une troncature réelle vers
+`ObjectData.InteractType:uint8`. Le census natif complet ferme maintenant la
+création, l'opération, les paquets `0x51/0x60`, la compression/réactivation par
+GUID et les suppressions. La 2.1.1 retient un sidecar éphémère par paire de
+GUID côté serveur et un sidecar GUID/session borné côté client, sans `Unit*`
+persistant; le multijoueur TCP reste bloqué faute d'énumération autoritaire de
+tous les clients actifs. Le waypoint, automap visuel, save/reload et
+host/joiner restent ouverts avant toute archive ou release. Les résultats
+0.1.1 ci-dessous demeurent l'historique qualifié de la première fonction
+`Levels.txt → Act`, pas une preuve gameplay complète du codec v2.
 
 ## Décision v2 — extension fonctionnelle à 1023 records — 4 septembre 2026
 
@@ -222,10 +233,275 @@ preuve gameplay du codec v2.
 - Aucun RVA, octet `Expected`, hook, ABI, codec, canal privé, format D2S/D2I,
   configuration ou dépendance inter-plugin n'a changé. Le runtime n'a pas été
   touché pendant ce gate.
-- **Prochain gate :** déployer temporairement le binaire exact 2.0.2 avec le
-  fixture exact de 1023 records sous la pile complète, exiger
-  `Classic=137 / LoD=137 / RotW=1023`, puis restaurer byte-exact avant toute
-  matrice avec personnage.
+- Le gate runtime suivant exigeait le binaire exact 2.0.2 avec le fixture exact
+  de 1023 records sous la pile complète, la publication
+  `Classic=137 / LoD=137 / RotW=1023` et un rollback byte-exact. Il est fermé
+  par le résultat ci-dessous.
+
+### Runtime exact 1023 du cache deux passes — 4 septembre 2026
+
+- Vincent a autorisé ce cold start avec `GO runtime 1023 cache deux passes`.
+  Le profil réellement testé est BKVince mod-local avec `-mod BKVince -txt`
+  sous Battle.net D2R `3.3.93847` et D2RLoader public `1.2.1`; les hashes du
+  build installé concordent avec la baseline déjà gouvernée.
+- La DLL exacte 2.0.2
+  `FDAF884B69AB879D8F3946E2CF036FF25AF3C03C7CBE479803761A19B13A6EC1`
+  et le fixture exact
+  `6D6756E03911C2BA531F007AE9E97EEC6E81C879800182964AF6BCB3E69C3FAF`
+  ont été déployés temporairement uniquement dans la portée mod-locale.
+- La pile complète compile 192 tables TXT, charge 38 plugins, conserve les cinq
+  DLL eezstreet, saute la copie globale dupliquée, applique 17 memory patches
+  et atteint `24/24`, sans erreur fraîche.
+- Extended Act Level IDs 2.0.2 accepte ses empreintes natives et son canal
+  privé, puis publie atomiquement `Levels revision 1` avec `Classic=137`,
+  `LoD=137` et `RotW=1023`. Le balayage physique `0..1022` et le round-trip
+  keyed limité à `0..255` passent donc ensemble sur le runtime officiel.
+- Aucun personnage ni save n'a été ouvert. Zone jouable `>255`, résolveur,
+  room streaming, voyage retour, Town Portal, waypoint, automap, save/reload,
+  hôte/joiner et pair incompatible restent `not run`.
+- Après capture des logs, l'unique processus a été arrêté. La source et le
+  runtime ont été restaurés byte-exact à la table normale
+  `A46B5438…795EB04` et à la DLL mod-locale 2.0.0 `1874623D…10C508`; la copie
+  globale 1.0.0 est restée intacte et aucun processus Diablo ne demeure.
+- Les preuves, copies avant test et reçus de déploiement/rollback sont sous
+  `analysis-cache/extended-act-level-ids-v2/runtime/20260904-capacity-1023-two-pass-2.0.2/`.
+- **Prochain gate :** avec un personnage jetable et une véritable zone d'ID
+  supérieur à 255, valider l'acte résolu, le room streaming, les voyages aller
+  et retour, Town Portal, waypoint et automap. Save/reload et hôte/joiner
+  restent des autorisations runtime distinctes.
+
+### Gate gameplay Level 256 same-act — 4 septembre 2026
+
+- Vincent a autorisé ce gate avec `go next gate`, puis a confirmé après le
+  trajet Harrogath → `To Rift Level 7` : « j'apparais normalement dans le
+  level ».
+- La fixture gouvernée conserve 1023 records numériques contigus `0..1022`
+  plus l'unique séparateur texte historique `Expansion`. Son SHA-256 est
+  `5C9B604E0D9A595D8DDB24699D91AEF0C564E7956BE7DBAA7CC5B8B92928B2DF`.
+  Par rapport à la fixture précédente, une seule cellule change : `Id=256`,
+  `Act 0 → 4`. Harrogath `Id=109 / Act=4 / Vis0=256` et le Level 256
+  `Act=4 / Vis0=109 / DrlgType=2` forment donc un lien same-act. Le preset
+  `LevelId=256 / Def=1095` reste présent dans `lvlprest.txt`, SHA-256
+  `4EF8B404DB5E54C0C676E7C57D290CF142ED5C8B158D9A11056FB7975869EC39`.
+- La DLL candidate exacte reste la 2.0.2 de 61 440 octets, SHA-256
+  `FDAF884B69AB879D8F3946E2CF036FF25AF3C03C7CBE479803761A19B13A6EC1`.
+  Le cold start BKVince complet compile 192 tables, charge 38 plugins dont les
+  cinq DLL eezstreet, applique 17 patches et atteint `24/24`; le cache publie
+  `Classic=137 / LoD=137 / RotW=1023`.
+- Après l'entrée, MapSense journalise `current-level=256`, `act=4`,
+  `room-witness=35` et `external labels: PASS`. Le personnage et la scène sont
+  rendus normalement; aucun nouveau rapport de crash D2RLoader n'est créé.
+  Cela ferme l'entrée locale same-act et fournit un témoin runtime du graphe de
+  rooms au-delà de 255. Les compteurs explicites du codec, le retour, Town
+  Portal, waypoint, automap visuel, save/reload et le réseau restent ouverts.
+- La session a modifié les fichiers ordinaires de position/session
+  `QtyTester.d2s` et `QtyTester.d2rl`; aucune conclusion de format persistant
+  n'en est déduite. Après capture, l'unique processus a été arrêté et les neuf
+  fichiers `QtyTester` ont été restaurés à leurs SHA-256 pré-gate, 9/9 exacts.
+- `levels.txt`, `lvlprest.txt` et la DLL ont aussi été restaurés byte-exact dans
+  la source et le runtime aux hashes normaux `A46B5438…795EB04`,
+  `AE719711…5EB04` et `1874623D…10C508`. Aucun processus Diablo ne demeure.
+- Les fixtures, logs avant/après, témoins MapSense, copies de sauvegarde et
+  reçus de déploiement/rollback sont conservés sous
+  `analysis-cache/extended-act-level-ids-v2/runtime/20260904-gameplay-level-256-same-act-2.0.2/`.
+- **Prochain gate recommandé :** rejouer la même fixture et valider d'abord le
+  retour Level 256 → Harrogath puis Town Portal aller/retour. Le waypoint,
+  save/reload, manette et hôte/joiner restent ensuite des gates séparés.
+
+### Gate retour physique et Town Portal Level 256 — 4 septembre 2026
+
+- Vincent a autorisé `retour Level 256 → Harrogath, puis Town Portal
+  aller/retour` avec `Go`. La DLL 2.0.2 et les deux fixtures exactes du gate
+  same-act ont été redéployées dans le profil BKVince mod-local après backup
+  des tables, de la DLL et des neuf fichiers `QtyTester`.
+- Le cold start complet reste vert : 192 tables TXT, 38 plugins, les cinq DLL
+  eezstreet, 17 patches et startup `24/24`. Extended Act Level IDs publie
+  `Classic=137 / LoD=137 / RotW=1023`.
+- La chronologie MapSense ferme sans ambiguïté le voyage physique. Elle observe
+  `109 → 256 → 109 → 256 → 109 → 256`, toujours Act 4; chaque observation du
+  Level 256 porte `room-witness=35` et `external labels: PASS`. Le retour
+  Level 256 → Harrogath est donc **PASS**, y compris deux répétitions avant le
+  test du portail.
+- À `12:03:39.462`, la création d'un Town Portal depuis Level 256 déclenche
+  `BC_ASSERT: eLevelIdLocal <= 255` dans
+  `D2Game\src\Skills\Skills.cpp:4120`. La pile fraîche revient par
+  `0x436075 → 0x432F27 → 0x46FD81 → 0x581965 → 0x4F52CB → 0x4C144C →
+  0x4F30BD`. Le test s'arrête avant l'entrée dans le portail; aucun aller ou
+  retour Town Portal n'est revendiqué.
+- L'analyse du corpus commun identifie `D2GAME_CreateLinkPortal 0x435DD0` et
+  son témoin strict unique `0x436061`. Après avoir obtenu le Level ID complet
+  de la room source, le code compare `EAX` à `0xFF`, assert, puis exécute
+  `movzx edx,dil` avant `UNITS_SetObjectInteractType 0x34E9D0`. Ce setter écrit
+  un byte à `ObjectData+0x08`; ignorer ou NOPer l'assertion stockerait donc
+  Level 256 comme `0`.
+- La largeur huit bits est également prouvée chez le consommateur
+  `SUNIT_GetPortalOwner 0x490070`, dans le producteur serveur du paquet portail
+  `0x60` à `0x47F650` et dans son consommateur client à `0x1CB1C0`. La v2 ne
+  couvre actuellement que les paquets room-visibility `0x07/0x08`; le Town
+  Portal exige un sidecar/session et un codec portail distincts, pas la
+  suppression d'un assert.
+- Le processus a été arrêté sans Continue. Le rollback combiné a rencontré un
+  verrou DLL tardif après avoir restauré les deux tables; son retry borné a
+  restauré uniquement la DLL. Source/runtime reviennent byte-exact aux hashes
+  normaux `A46B5438…795EB04`, `AE719711…5EB04` et
+  `1874623D…10C508`. Les neuf fichiers `QtyTester` concordent 9/9 avec le
+  backup pré-gate et aucun processus ne demeure.
+- La capture, les logs, les sauvegardes avant/assertion, les reçus et le rapport
+  sont conservés sous
+  `analysis-cache/extended-act-level-ids-v2/runtime/20260904-gameplay-level-256-return-portal-2.0.2/`.
+- **Décision de gate :** voyage physique qualifié; Town Portal **bloqué** et
+  release toujours interdite. Aucun nouveau hook, codec, sidecar ou changement
+  de sauvegarde n'est implanté sans nouvelle autorisation.
+- **Prochain gate recommandé :** reverse engineering strictement read-only du
+  pipeline portail complet — créations/destructions, interaction/téléport,
+  lifecycle/GUID, paquet initial `0x51`, paquet d'état `0x60`, autorité
+  host/joiner et fail-closed incompatible/Battle.net — puis choix explicite du
+  contrat sidecar avant code. Waypoint, save/reload, manette et réseau runtime
+  restent séparés.
+
+### Gate reverse engineering Town Portal 1023 — 4 septembre 2026
+
+- Vincent a autorisé `GO reverse engineering Town Portal 1023`. Le workbench
+  natif commun 92777/93847, son image et son index ont été validés avant un
+  census strictement read-only; aucun code, build, déploiement, runtime ou save
+  n'a été touché.
+- La création centrale passe par `D2GAME_CreatePortalObject 0x432CE0`, puis
+  `D2GAME_CreateLinkPortal 0x435DD0`. Le premier centralise quatorze callsites;
+  le second a seulement deux appels directs et conserve le full destination
+  ID jusqu'à ce que le Level ID de la room source soit asserté puis réduit au
+  low byte à `0x436061`.
+- L'usage est centralisé par `OBJECTS_OperateFunction15_Portal 0x58F680` :
+  permissions, propriétaire distant, records de niveau, changement de room,
+  déplacement, puis suppression des deux moitiés si le joueur possède le
+  portail. `D2GAME_RemovePlayerPortal 0x4C8650` fournit l'autre suppression
+  autoritaire de la paire.
+- Le paquet initial `0x51`, produit à `0x47CE40` et consommé à `0x129D70`,
+  transporte `InteractType` sur un byte à `+0x0D`. Le paquet d'état `0x60`,
+  produit à `0x47F620` et consommé à `0x1CB1C0`, porte deux témoins huit bits :
+  destination à `+2` et Level ID de la room courante du joueur propriétaire à
+  `+0x0B`; les coordonnées propriétaire restent des words à `+7/+9`. Le gate
+  runtime 2.1.0 ci-dessous prouve que ces champs sont indépendants.
+- La compression inactive est explicitement spéciale pour les classes portail
+  `59/60` dans `SUNITINACTIVE_CompressUnitIfNeeded 0x504260`. Le nœud de
+  `SUNITINACTIVE_CompressInactiveUnit 0x5045D0` conserve le GUID à `+0x20`
+  mais seulement le low byte à `+0x28`; la restauration `0x503790` recrée une
+  nouvelle `Unit*` avec ce même GUID. Le sidecar doit donc être indexé par
+  `{génération de session, Game*, GUID}`, survivre à la compression et vérifier
+  classe, paire et low-byte contre la réutilisation d'un GUID périmé.
+- Aucun retarget D2R par opcode `0x45` n'est démontré dans le corpus statique;
+  la sémantique D2MOO ne peut pas être promue sans preuve séparée de la table de
+  dispatch vivante. Aucun autre plugin recensé ne possède les seams portail
+  retenues.
+- L'option « ignorer l'assertion » est rejetée car `256` deviendrait `0`.
+  L'élargissement global d'`ObjectData`, des nœuds inactifs et des paquets est
+  rejeté à cause des ABI partagées et de la rupture réseau. L'architecture
+  retenue est un sidecar atomique par paire de GUID/session, limité d'abord au
+  Town Portal dynamique classe `59`, avec hooks centraux, scopes TLS étroits,
+  validation fail-closed et codecs `0x51/0x60` sans changement de taille.
+- Le codec peut réutiliser le marqueur coordonnée de la v2 pour porter les deux
+  bits hauts uniquement entre pairs compatibles. La création, la résolution
+  du propriétaire et l'opération doivent cependant refuser tout lookup sidecar
+  incohérent; aucun repli vers le low byte n'est admis pour un portail étendu.
+- Le canal privé actuel sait identifier les pairs compatibles, mais
+  `NetworkServiceV1` n'énumère pas tous les clients actifs. L'implantation peut
+  viser un premier contrat local/offline; toute revendication TCP hôte/joiner
+  exige d'abord un census natif de la liste clients ou un service SDK gouverné.
+  Battle.net et toute partie à compatibilité non prouvée doivent refuser un
+  portail `>255` avant la mutation serveur.
+- Cet état portail est éphémère et ne touche aucun codec D2S/D2I : aucune
+  migration de sauvegarde n'est requise. Le gate reverse engineering est
+  **PASS**; implantation, runtime et release restent **non autorisés** sans des
+  gates `GO` séparés.
+
+### Gate implantation Town Portal 1023 local/offline — 4 septembre 2026
+
+- Vincent a autorisé `GO implantation Town Portal 1023 local/offline`.
+  Extended Act Level IDs passe à `2.1.0`; aucun déploiement, lancement du jeu,
+  save, archive, commit ou push n'appartient à ce gate.
+- Le hook `D2GAME_CreateLinkPortal 0x435DD0` capture la paire dynamique classe
+  `59`. Le sidecar copy-on-write enregistre pour chaque moitié la génération,
+  le `Game*`, son GUID, le GUID réciproque, le full destination ID et le low
+  byte natif. Les lookups refusent toute paire périmée, non réciproque ou
+  incohérente.
+- Le getter `DUNGEON_GetLevelIdFromRoom 0x2EFC10` présente le low byte au code
+  stock uniquement pendant cette création et seulement au retour exact
+  `0x43605F`. Le garde et le setter byte restent intacts; aucun assert n'est
+  NOPé et aucune structure native n'est élargie. La création étendue exige
+  aussi le propriétaire `LocalPlayerReady` et un contrat de session sain; tout
+  prérequis manquant ou échec de publication du sidecar refuse avant l'appel
+  natif non scopé et empoisonne le trafic portail classe `59` de cette session.
+- `SUNIT_GetPortalOwner 0x490070` réinjecte le full ID dans le résolveur d'acte
+  sous TLS, puis vérifie le GUID owner réellement obtenu. L'opération
+  `0x58F680` n'utilise ensuite le full ID qu'après cette validation et seulement
+  pour l'identité `LocalPlayerReady`.
+- L'audit de coexistence a rejeté les hooks globaux envisagés sur
+  `DATATBLS_GetLevelsTxtRecord 0x32C4A0` et
+  `DATATBLS_GetLevelDefRecord 0x32C200`, car MapSense vérifie et appelle
+  directement `0x32C200`. Les entrées restent byte-exactes; seuls les deux
+  calls portail uniques `0x58F819` et `0x58F8EE` sont redirigés par des relays
+  proches.
+- Les paquets `0x51` et `0x60` gardent leurs tailles stock. Le full ID est
+  marqué dans X uniquement pour le client local, puis décodé dans une copie
+  avec X restauré avant le handler original. Les opérations et paquets
+  distants sont refusés; TCP hôte/joiner et Battle.net ne sont pas revendiqués.
+- Les treize hooks, deux callsites et témoins ABI/layout ont chacun une seule
+  occurrence exacte dans le corpus commun. Deux builds Release propres passent
+  `CTest 1/1` sans warning et sont byte-identiques : 78 336 octets, SHA-256
+  `1803A73E0894C2A8916DD5BD32793525E4F795B13652CFC488786247AB6045B6`.
+  Les métadonnées sont `RuffnecKk / 2.1.0`; les exports restent les trois points
+  D2RLoader et les dépendances Windows/MSVC attendues.
+- **Verdict : implantation statique PASS.** Le prochain gate recommandé est le
+  runtime local/offline exact : création depuis Level 256, traversée Level 256
+  → Harrogath, retour Harrogath → Level 256, nettoyage de la paire et lecture
+  des nouveaux compteurs. Save/reload et réseau restent séparés.
+
+### Gate runtime Town Portal 1023 local/offline 2.1.0 — 4 septembre 2026
+
+- Vincent a autorisé `Go runtime town portal 123 local - offline`, corrigé
+  immédiatement en `1023`, puis a confirmé la séquence présentée avec `go`.
+  La DLL exacte 2.1.0 `1803A73E…AB6045B6` et les fixtures Level 256/1023 ont
+  été déployées temporairement dans le profil BKVince mod-local.
+- Le cold start officiel Battle.net D2R `3.3.93847` sous D2RLoader public
+  `1.2.1` est **PASS** avec la pile complète : 192 tables TXT, 38 plugins, les
+  cinq DLL eezstreet, 17 patches et startup `24/24`. Le plugin accepte ses
+  empreintes et publie `Classic=137 / LoD=137 / RotW=1023`.
+- La création du portail depuis Level 256 et le premier trajet vers Harrogath
+  sont **PASS**. Vincent signale ensuite, avant de tenter de reprendre le
+  portail, `BC_ASSERT: eLevelId > 0 && eLevelId <
+  DataTablesGetNumLevels(ver)` dans `D2Common/src/DataTbls/LvlTbls.cpp:284`.
+  Le retour Harrogath → Level 256, le nettoyage et les compteurs finaux sont
+  donc **NOT RUN**.
+- La pile native place le retour de `DATATBLS_GetLevelsTxtRecord 0x32C4A0` à
+  `0xC1893`. Le callsite client exact `0xC188E` récupère auparavant
+  `UNITS_GetObjectInteractType`, zéro-étend son byte puis demande le record
+  `Levels`; pour la destination 256, le client stock reçoit donc `0`.
+- Le log frais précède l'assertion par
+  `extended Town Portal state packet refused outside the local codec
+  contract`. Le caller `0x5388CA` prouve que l'argument R8B du sender `0x60`
+  est le low byte du niveau de la room du **joueur propriétaire**, alors que
+  le paquet `+2` vient de l'`InteractType` destination du portail. Ces deux
+  valeurs ne sont pas un invariant d'égalité. Les gardes 2.1.0
+  `linkedLevelId == endpoint.nativeLowLevelId` et client
+  `packet[0x0B] == packet[2]` sont donc invalides.
+- Les handlers clients 2.1.0 décodent le full ID et restaurent X dans une copie
+  du paquet, mais ne publient aucun sidecar client. Le consommateur UI
+  `0xC188E` reste ainsi hors des scopes serveur et déclenche l'assertion sur le
+  low byte tronqué. Hooker globalement `0x32C4A0` demeure rejeté; MapSense et
+  les 43 autres callsites doivent conserver l'entrée partagée byte-exacte.
+- Le jeu a été fermé sans `Continue`. Les neuf fichiers `QtyTester` sont
+  restaurés 9/9 à leurs hashes pré-gate; les deux tables et la DLL sont
+  restaurées byte-exact dans la source et le runtime, la copie globale est
+  restée intacte et aucun processus Diablo ne demeure.
+- Les preuves fraîches sont sous
+  `analysis-cache/extended-act-level-ids-v2/runtime/20260904-town-portal-1023-local-offline-2.1.0/`.
+  Le sous-dossier `historical-crash-not-current` contient uniquement deux
+  rapports anciens relabellisés; aucun crash report frais n'a été généré par
+  l'assertion courante.
+- **Verdict : FAIL.** La 2.1.0 ne doit pas être redéployée. Le prochain gate
+  recommandé est un census strictement read-only du sidecar client alimenté
+  par `0x51/0x60` et des consommateurs portail, en commençant par le callsite
+  UI `0xC188E`; aucune implantation ni nouvelle relance n'est autorisée par ce
+  résultat.
 
 ## Décision de reprise autoritaire — 1er septembre 2026
 
@@ -361,10 +637,14 @@ la sauvegarde ni la synchronisation client/serveur.
 
 ## Risques résiduels à tester
 
-- Le hook central couvre les 113 appels directs recensés et le fixture 147
-  prouve la correction du résolveur lui-même. Une vraie zone jouable doit
-  encore vérifier qu'aucun consommateur critique ne recalcule directement
-  l'acte depuis les plages `ActInfo`.
+- Le hook central couvre les 113 appels directs recensés; la fixture jouable
+  Level 256 prouve maintenant l'acte, le graphe de rooms et les transitions
+  physiques same-act. D'autres consommateurs spécialisés restent néanmoins à
+  qualifier séparément, notamment waypoint, automap visuel et quêtes.
+- Town Portal ne dépend pas seulement du résolveur d'acte. Sa construction,
+  son propriétaire et son paquet d'état reposent sur
+  `ObjectData.InteractType:uint8`; sans sidecar gouverné, un ID 256 est rejeté
+  puis serait tronqué à zéro. NOPer le garde est explicitement interdit.
 - Des appels précoces peuvent précéder la première publication du cache
   `Levels`; le code reprend alors l'original. Le test d'une zone réelle doit
   confirmer que ce repli ne crée pas de divergence observable pendant les
@@ -387,17 +667,150 @@ la sauvegarde ni la synchronisation client/serveur.
 5. **Passé** — déployer sur une allowlist fermée dans la portée mod-locale puis globale,
    avec la pile D2RLoader complète, tous les plugins eezstreet et RuffnecKk
    actifs; exécuter les cold starts et collecter des logs frais.
-6. **Partiel** — le fixture technique `Id=147 / Act=0`, sa compilation et sa
-   résolution centrale vers l'acte 1 sont passés et restaurés. Reste à créer
-   une zone réellement jouable, puis valider génération, transitions aller/retour,
-   town/start, waypoints, automap, quêtes, portails, sauvegarde/rechargement,
-   souris/manette, solo, hôte et joiner.
+6. **Partiel** — la fixture Level 256 Act 4 compile 1023 records, entre en jeu,
+   rend son graphe de rooms et passe les transitions physiques répétées avec
+   Harrogath. Le census puis l'implantation statique `2.1.0` du sidecar serveur
+   sont passés; son runtime passe la création et Level 256 → Harrogath, puis
+   échoue avant le retour sur le lookup client tronqué. Le census du sidecar
+   client est maintenant passé, mais sa correction n'est pas implantée.
+   Waypoints, automap visuel, quêtes, sauvegarde/rechargement, souris/manette,
+   solo réseau, hôte et joiner restent ouverts.
 7. **Bloqué par le gate 6** — générer le ZIP public uniquement après les gates; conserver le README
    anglais créditant D2MOO à côté du ZIP et hors de l'archive.
 
+## 4 septembre 2026 — reverse engineering du sidecar client Town Portal
+
+- Vincent a autorisé le census read-only exact des handlers clients `0x51`,
+  `0x60` et du callsite UI `0xC188E`. Le workbench commun 92777/93847, son
+  image, son index et les références D2MOO/D2RL-Plugins épinglées ont été
+  revérifiés. Aucun code de plugin, table, profil runtime, processus ou save
+  n'a été modifié pendant ce gate.
+- Le census des 28 lecteurs directs de
+  `UNITS_GetObjectInteractType 0x34AD40` ne trouve que trois chemins clients.
+  `0x9A39E` teste le bit de signe pour le comportement de verrouillage d'un
+  objet; `0x1CB118` transmet la valeur au résolveur de shrine; seul `0xC1882`
+  l'envoie à `DATATBLS_GetLevelsTxtRecord 0x32C4A0`. Le callsite UI
+  `0xC188E` est donc l'unique consommateur client `Levels` directement
+  alimenté par ce byte dans le corpus gouverné.
+- La fonction UI réelle commence à `0xC17E0` avec l'ABI observée
+  `(outputString, Unit*)`. Elle conserve `Unit*` dans le registre non volatil
+  RSI, récupère la classe et le contexte de données, exige le bit de sous-classe
+  `ObjectsTxt+0x127 & 4`, puis appelle le getter byte et le lookup `Levels`.
+  Son contexte de 27 octets à `0xC187F` n'a qu'une occurrence. Un record valide
+  fournit la clé de nom à `Levels+0xFD`; un retour nul emprunte déjà le fallback
+  stock `LANG_GetStringById(0x150D)`. Le relay recommandé peut donc ajouter
+  `R8=RSI` et tail-jumper vers un résolveur C++ sans toucher l'entrée partagée
+  `0x32C4A0` ni ses 43 autres callsites.
+- `CLIENT_HandlePacket0x51_ObjectSpawn 0x129D70` lit le GUID à `+2`, la classe
+  à `+6`, X/Y à `+8/+0x0A` et l'`InteractType` à `+0x0D`, puis appelle
+  `CLIENT_CreateObjectFromPacket 0x99510` à `0x129DD8`. Ce helper termine la
+  création native avant d'écrire le byte réseau par
+  `UNITS_SetObjectInteractType` à `0x99582`. La future interception doit donc
+  évincer toute ancienne entrée du même GUID pour chaque spawn classe `59`,
+  restaurer X dans une copie marquée, déléguer au handler stock, puis publier
+  le full ID décodé.
+- `CLIENT_HandlePacket0x60_PortalState 0x1CB1C0` résout le GUID `+3` avec
+  `CLIENT_GetUnitByIdAndType 0x9A5D0` et le type objet `2`, écrit la destination
+  low-byte `+2`, puis conserve séparément les coordonnées du propriétaire
+  `+7/+9` et son niveau de room `+0x0B`. Le wrapper corrigé doit restaurer
+  seulement X, appeler le handler stock, résoudre immédiatement l'unité vivante
+  et exiger type `2`, classe `59`, GUID et low byte concordants avant de
+  rafraîchir le sidecar. `packet[0x0B]` ne participe jamais à ce contrat.
+- Le census des 30 écritures directes de
+  `UNITS_SetObjectInteractType 0x34E9D0` ne révèle que trois écritures clientes :
+  la création réseau `0x99582`, l'état `0x60` à `0x1CB1E9` et l'initialisation
+  générique d'objet à `0x1CB5D3`. Cette dernière appartient au constructeur
+  commençant à `0x1CB410` et précède l'écriture explicite du paquet dans
+  `CLIENT_CreateObjectFromPacket`; elle n'impose pas un troisième hook.
+- Le sidecar client retenu est séparé de la paire serveur et contient seulement
+  `{sessionGeneration, portalGuid, destinationLevelId, nativeLowLevelId}`.
+  Sa publication copy-on-write reste bornée à 1024 entrées, ses lectures sont
+  lock-free, toute allocation ou incohérence empoisonne le contrat portail de
+  la session, et `GameJoined`/`GameLeft` effacent tout. Aucun `Unit*` n'est
+  conservé : `CLIENT_GetUnitByIdAndType` sert uniquement à une revalidation
+  immédiate.
+- Au callsite UI, un portail classe `59` avec une entrée saine et concordante
+  appelle le lookup stock avec le full ID, après validation du record dans le
+  contexte courant. Une entrée présente mais incohérente, un contrat empoisonné
+  ou le cas `low=0` sans sidecar retourne `nullptr` afin d'emprunter le fallback
+  stock plutôt que d'asserter. Une classe non portail, ou un portail vanilla
+  non marqué avec low byte non nul et sans sidecar, garde exactement le lookup
+  original.
+- L'architecture globale sur `0x32C4A0` reste rejetée : elle modifierait 44
+  callsites et entrerait en conflit avec MapSense. Élargir `ObjectData` ou les
+  paquets reste rejeté pour incompatibilité ABI/protocole. Masquer seulement
+  l'assertion reste rejeté parce que `256 -> 0` ne restaure aucune identité.
+  Le sidecar client et le relay exact `0xC188E` sont le mécanisme le plus étroit,
+  réversible et compatible avec les hooks `0x51/0x60` déjà possédés par le
+  plugin.
+- D2MOO au commit `19019806df7f3e877fa105b05395d1e3597e2316` confirme
+  seulement la sémantique historique du paquet `0x51`, du paquet `0x60` et de
+  `SUNIT_GetPortalOwner`; aucune adresse ni ABI 32 bits n'est transposée. La
+  référence D2RL-Plugins épinglée à
+  `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` ne contient aucun propriétaire
+  de `DATATBLS_GetLevelsTxtRecord`, `0xC188E` ou d'un hook portail concurrent.
+- Verdict du gate : **PASS statique**. Il ferme le mécanisme client
+  local/offline, mais ne corrige pas la DLL 2.1.0 et ne qualifie aucun runtime,
+  réseau ou save. Le retrait des faux invariants `0x60`, l'implantation du
+  sidecar client et le relay UI exigent un nouveau `GO`.
+
+## Autorisation d'implantation du sidecar client — 4 septembre 2026
+
+- Vincent a donné explicitement
+  `GO implantation sidecar client Town Portal 0x51/0x60 + UI 0xC188E local/offline`.
+- Le lot reste la DLL autonome RuffnecKk Extended Act Level IDs, hybride
+  globale/mod-locale et sans configuration. Il est strictement borné au
+  sidecar client, à la correction des deux faux invariants `0x60`, au relay UI
+  exact et à leurs tests/builds statiques.
+- Ce `GO` n'autorise ni déploiement, ni lancement du jeu, ni accès aux saves,
+  ni qualification TCP/Battle.net, ni packaging, ni commit/push.
+
+## Résultat de l'implantation du sidecar client — 4 septembre 2026
+
+- Extended Act Level IDs passe à `2.1.1`. Les comparaisons fautives entre le
+  champ destination `0x60 +2` et le low byte de room propriétaire en R8B / à
+  `+0x0B` sont retirées; ce dernier champ reste transmis sans altération.
+- Un cache client immutable distinct publie
+  `{sessionGeneration, portalGuid, destinationLevelId, nativeLowLevelId}`
+  après délégation des copies `0x51/0x60` au handler stock. Il est copy-on-write,
+  lu sans verrou, borné à 1024 entrées, évince tout GUID classe `59` réutilisé,
+  se vide au changement de session et ne conserve jamais de `Unit*`.
+- Le wrapper `0x60` re-résout immédiatement le portail avec
+  `CLIENT_GetUnitByIdAndType 0x9A5D0` et exige type `2`, classe `59`, GUID et
+  low byte concordants avant publication. Allocation, overflow, paquet marqué
+  malformé ou incohérence vivante empoisonnent le contrat portail de la
+  session.
+- Le troisième relay proche cible uniquement le call UI `0xC188E`; ses octets
+  `49 89 F0` transmettent `R8=RSI`, donc le `Unit*` vivant, avant le saut vers
+  le résolveur client. L'entrée partagée `0x32C4A0` et ses 43 autres callsites
+  restent inchangés. Le lookup UI valide génération, GUID, type/classe, low
+  byte, contexte et record complet; sinon il renvoie `nullptr` vers le fallback
+  stock au lieu d'asserter.
+- Les nouvelles empreintes exactes de `0x9A5D0`, `0xC187F` et `0xC188E` ont
+  chacune une seule occurrence dans le corpus commun 92777/93847 et sont
+  vérifiées fail-closed au chargement.
+- Les tests couvrent récupération des IDs `256` et `1022`, repli vanilla,
+  `low=0` sans sidecar, mismatch, génération périmée, réutilisation/éviction de
+  GUID, capacité exacte 1024, overflow, purge de session et passthrough hors
+  portail. Ils interdisent aussi le retour des deux faux invariants `0x60`.
+- Deux builds Release propres MSVC 19.44 / Windows SDK 10.0.26100.0 passent
+  `CTest 1/1` sans warning et sont byte-identiques : 88 576 octets, SHA-256
+  `DC1DEFC82D8B62F3F33859D2D57B621F8802CFEFAE14644D5B5884179E5887F6`.
+  Les métadonnées portent `RuffnecKk / 2.1.1`, avec exactement les trois
+  exports D2RLoader et les dépendances Windows/MSVC attendues.
+- Les candidats restent locaux sous
+  `analysis-cache/extended-act-level-ids-v2/town-portal-client-final-a/Release/`
+  et `town-portal-client-final-b/Release/`. Aucun déploiement, processus D2R,
+  table, save, ZIP, commit ou push n'a été touché. La ROADMAP reste inchangée
+  faute de confirmation spécifique.
+
 ## Prochain gate
 
-Auteur une nouvelle zone de test réellement navigable avec un ID supérieur à
-146 et `Act=0`, puis exécuter la matrice transitions/town/waypoint/automap/
-quêtes/portails/save-reload/souris-manette/solo-hôte-joiner. La release et son
-ZIP restent volontairement absents tant que cette matrice n'est pas fermée.
+Après un `GO` runtime séparé, déployer temporairement la candidate 2.1.1 et la
+fixture Level 256 dans le profil BKVince mod-local complet : créer le portail
+depuis Level 256, traverser vers Harrogath, vérifier le label sans assertion,
+reprendre le portail vers Level 256, nettoyer la paire et capturer les compteurs
+client publication/éviction/full lookup/fallback/refus. Restaurer ensuite DLL,
+tables et personnage byte-exact. Save/reload, waypoint, automap et tous les
+rôles réseau restent des gates distincts; la release et son ZIP restent
+bloqués.

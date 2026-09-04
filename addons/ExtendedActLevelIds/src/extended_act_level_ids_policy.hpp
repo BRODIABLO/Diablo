@@ -22,6 +22,9 @@ inline constexpr std::int32_t MaximumLevelId =
     static_cast<std::int32_t>(MaximumCompiledLevelRecords - 1);
 inline constexpr std::uint32_t MaximumKeyedValidationLevelId = 0xFF;
 inline constexpr std::int32_t MaximumVanillaNetworkLevelId = 0xFF;
+inline constexpr std::uint32_t DynamicTownPortalClassId = 59;
+inline constexpr std::uint32_t InvalidUnitGuid = 0xFFFFFFFFU;
+inline constexpr std::size_t MaximumClientPortalEntries = 1024;
 inline constexpr std::uint16_t CoordinateValueMask = 0x1FFF;
 inline constexpr std::uint16_t CodecMarkerMask = 0x8000;
 inline constexpr std::uint16_t LevelIdPayloadMask = 0x6000;
@@ -73,6 +76,158 @@ struct DecodedLevelCoordinate {
 
     auto operator<=>(const DecodedLevelCoordinate&) const noexcept = default;
 };
+
+struct PortalEndpointDescriptor {
+    std::uint64_t sessionGeneration{};
+    std::uintptr_t gameIdentity{};
+    std::uint32_t guid{InvalidUnitGuid};
+    std::uint32_t counterpartGuid{InvalidUnitGuid};
+    std::uint32_t classId{};
+    std::int32_t destinationLevelId{};
+    std::uint8_t nativeLowLevelId{};
+
+    auto operator<=>(const PortalEndpointDescriptor&) const noexcept = default;
+};
+
+struct ClientPortalDescriptor {
+    std::uint64_t sessionGeneration{};
+    std::uint32_t guid{InvalidUnitGuid};
+    std::int32_t destinationLevelId{};
+    std::uint8_t nativeLowLevelId{};
+
+    auto operator<=>(const ClientPortalDescriptor&) const noexcept = default;
+};
+
+enum class ClientPortalLookupDecision : std::uint8_t {
+    Original,
+    FullLevelId,
+    Refuse,
+};
+
+struct ClientPortalLookupResult {
+    ClientPortalLookupDecision decision{ClientPortalLookupDecision::Refuse};
+    std::int32_t levelId{};
+
+    auto operator<=>(const ClientPortalLookupResult&) const noexcept = default;
+};
+
+constexpr bool IsExtendedLevelId(std::int32_t levelId) noexcept {
+    return levelId > MaximumVanillaNetworkLevelId
+        && levelId <= MaximumLevelId;
+}
+
+constexpr std::uint8_t LowLevelId(std::int32_t levelId) noexcept {
+    return static_cast<std::uint8_t>(levelId);
+}
+
+constexpr bool IsValidPortalEndpoint(
+        const PortalEndpointDescriptor& endpoint) noexcept {
+    return endpoint.gameIdentity != 0
+        && endpoint.guid != InvalidUnitGuid
+        && endpoint.counterpartGuid != InvalidUnitGuid
+        && endpoint.guid != endpoint.counterpartGuid
+        && endpoint.classId == DynamicTownPortalClassId
+        && endpoint.destinationLevelId >= 0
+        && endpoint.destinationLevelId <= MaximumLevelId
+        && endpoint.nativeLowLevelId
+            == LowLevelId(endpoint.destinationLevelId);
+}
+
+constexpr bool IsValidClientPortalDescriptor(
+        const ClientPortalDescriptor& descriptor) noexcept {
+    return descriptor.guid != InvalidUnitGuid
+        && IsExtendedLevelId(descriptor.destinationLevelId)
+        && descriptor.nativeLowLevelId
+            == LowLevelId(descriptor.destinationLevelId);
+}
+
+inline bool UpsertClientPortalDescriptor(
+        std::vector<ClientPortalDescriptor>& entries,
+        const ClientPortalDescriptor& descriptor,
+        std::size_t maximumEntries = MaximumClientPortalEntries) {
+    if (!IsValidClientPortalDescriptor(descriptor)
+            || maximumEntries == 0) {
+        return false;
+    }
+    std::erase_if(
+        entries,
+        [&](const ClientPortalDescriptor& entry) {
+            return entry.sessionGeneration != descriptor.sessionGeneration
+                || entry.guid == descriptor.guid;
+        });
+    if (entries.size() >= maximumEntries) return false;
+    entries.push_back(descriptor);
+    return true;
+}
+
+inline std::size_t EraseClientPortalGuid(
+        std::vector<ClientPortalDescriptor>& entries,
+        std::uint32_t guid) noexcept {
+    const auto previousSize = entries.size();
+    std::erase_if(
+        entries,
+        [guid](const ClientPortalDescriptor& entry) {
+            return entry.guid == guid;
+        });
+    return previousSize - entries.size();
+}
+
+inline ClientPortalLookupResult DecideClientPortalLookup(
+        std::span<const ClientPortalDescriptor> entries,
+        std::uint64_t sessionGeneration,
+        std::uint32_t guid,
+        std::uint8_t nativeLowLevelId,
+        std::int32_t requestedLevelId,
+        bool isDynamicTownPortal,
+        bool sessionPoisoned,
+        bool fullLevelIdKnown) noexcept {
+    if (!isDynamicTownPortal) {
+        return {ClientPortalLookupDecision::Original, requestedLevelId};
+    }
+    if (sessionPoisoned
+            || requestedLevelId < 0
+            || requestedLevelId > MaximumVanillaNetworkLevelId
+            || nativeLowLevelId != requestedLevelId) {
+        return {ClientPortalLookupDecision::Refuse, requestedLevelId};
+    }
+    const auto found = std::find_if(
+        entries.begin(),
+        entries.end(),
+        [&](const ClientPortalDescriptor& descriptor) {
+            return descriptor.sessionGeneration == sessionGeneration
+                && descriptor.guid == guid;
+        });
+    if (found == entries.end()) {
+        return nativeLowLevelId == 0
+            ? ClientPortalLookupResult{
+                ClientPortalLookupDecision::Refuse,
+                requestedLevelId}
+            : ClientPortalLookupResult{
+                ClientPortalLookupDecision::Original,
+                requestedLevelId};
+    }
+    if (!IsValidClientPortalDescriptor(*found)
+            || found->nativeLowLevelId != nativeLowLevelId
+            || !fullLevelIdKnown) {
+        return {ClientPortalLookupDecision::Refuse, requestedLevelId};
+    }
+    return {
+        ClientPortalLookupDecision::FullLevelId,
+        found->destinationLevelId};
+}
+
+constexpr bool IsReciprocalPortalPair(
+        const PortalEndpointDescriptor& first,
+        const PortalEndpointDescriptor& second) noexcept {
+    return IsValidPortalEndpoint(first)
+        && IsValidPortalEndpoint(second)
+        && first.sessionGeneration == second.sessionGeneration
+        && first.gameIdentity == second.gameIdentity
+        && first.guid == second.counterpartGuid
+        && first.counterpartGuid == second.guid
+        && (IsExtendedLevelId(first.destinationLevelId)
+            || IsExtendedLevelId(second.destinationLevelId));
+}
 
 constexpr std::optional<EncodedLevelCoordinate> EncodeLevelCoordinate(
         std::int32_t levelId,

@@ -19,6 +19,14 @@ int main() {
     static_assert(MaximumCompiledLevelRecords == 1023);
     static_assert(MaximumLevelId == 1022);
     static_assert(MaximumKeyedValidationLevelId == 255);
+    static_assert(DynamicTownPortalClassId == 59);
+    static_assert(MaximumClientPortalEntries == 1024);
+    static_assert(!IsExtendedLevelId(255));
+    static_assert(IsExtendedLevelId(256));
+    static_assert(IsExtendedLevelId(1022));
+    static_assert(!IsExtendedLevelId(1023));
+    static_assert(LowLevelId(256) == 0);
+    static_assert(LowLevelId(1022) == 254);
     static_assert(!HasValidLevelRecordCount(0));
     static_assert(HasValidLevelRecordCount(1));
     static_assert(HasValidLevelRecordCount(1023));
@@ -55,6 +63,192 @@ int main() {
     assert(!DecodeLevelCoordinate(0, 5200));
     assert(!DecodeLevelCoordinate(0, 0x8000));
     assert(!DecodeLevelCoordinate(0xFF, 0xFFFF));
+
+    constexpr PortalEndpointDescriptor sourcePortal{
+        .sessionGeneration = 7,
+        .gameIdentity = 0x1234,
+        .guid = 100,
+        .counterpartGuid = 101,
+        .classId = DynamicTownPortalClassId,
+        .destinationLevelId = 109,
+        .nativeLowLevelId = 109,
+    };
+    constexpr PortalEndpointDescriptor linkedPortal{
+        .sessionGeneration = 7,
+        .gameIdentity = 0x1234,
+        .guid = 101,
+        .counterpartGuid = 100,
+        .classId = DynamicTownPortalClassId,
+        .destinationLevelId = 256,
+        .nativeLowLevelId = 0,
+    };
+    static_assert(IsValidPortalEndpoint(sourcePortal));
+    static_assert(IsValidPortalEndpoint(linkedPortal));
+    static_assert(IsReciprocalPortalPair(sourcePortal, linkedPortal));
+    constexpr auto stalePortal = PortalEndpointDescriptor{
+        .sessionGeneration = 8,
+        .gameIdentity = linkedPortal.gameIdentity,
+        .guid = linkedPortal.guid,
+        .counterpartGuid = linkedPortal.counterpartGuid,
+        .classId = linkedPortal.classId,
+        .destinationLevelId = linkedPortal.destinationLevelId,
+        .nativeLowLevelId = linkedPortal.nativeLowLevelId,
+    };
+    static_assert(!IsReciprocalPortalPair(sourcePortal, stalePortal));
+    constexpr auto truncatedPortal = PortalEndpointDescriptor{
+        .sessionGeneration = linkedPortal.sessionGeneration,
+        .gameIdentity = linkedPortal.gameIdentity,
+        .guid = linkedPortal.guid,
+        .counterpartGuid = linkedPortal.counterpartGuid,
+        .classId = linkedPortal.classId,
+        .destinationLevelId = linkedPortal.destinationLevelId,
+        .nativeLowLevelId = 1,
+    };
+    static_assert(!IsValidPortalEndpoint(truncatedPortal));
+
+    constexpr ClientPortalDescriptor clientPortal256{
+        .sessionGeneration = 7,
+        .guid = 200,
+        .destinationLevelId = 256,
+        .nativeLowLevelId = 0,
+    };
+    constexpr ClientPortalDescriptor clientPortal1022{
+        .sessionGeneration = 7,
+        .guid = 201,
+        .destinationLevelId = 1022,
+        .nativeLowLevelId = 254,
+    };
+    static_assert(IsValidClientPortalDescriptor(clientPortal256));
+    static_assert(IsValidClientPortalDescriptor(clientPortal1022));
+    constexpr auto invalidClientPortal = ClientPortalDescriptor{
+        .sessionGeneration = 7,
+        .guid = 202,
+        .destinationLevelId = 1022,
+        .nativeLowLevelId = 253,
+    };
+    static_assert(!IsValidClientPortalDescriptor(invalidClientPortal));
+
+    std::vector<ClientPortalDescriptor> clientPortals;
+    assert(UpsertClientPortalDescriptor(clientPortals, clientPortal256));
+    assert(clientPortals.size() == 1);
+    auto clientLookup = DecideClientPortalLookup(
+        clientPortals,
+        7,
+        200,
+        0,
+        0,
+        true,
+        false,
+        true);
+    assert(clientLookup.decision
+        == ClientPortalLookupDecision::FullLevelId);
+    assert(clientLookup.levelId == 256);
+
+    clientLookup = DecideClientPortalLookup(
+        {},
+        7,
+        300,
+        109,
+        109,
+        true,
+        false,
+        false);
+    assert(clientLookup.decision == ClientPortalLookupDecision::Original);
+    assert(clientLookup.levelId == 109);
+    clientLookup = DecideClientPortalLookup(
+        {},
+        7,
+        300,
+        0,
+        0,
+        true,
+        false,
+        false);
+    assert(clientLookup.decision == ClientPortalLookupDecision::Refuse);
+    clientLookup = DecideClientPortalLookup(
+        {},
+        7,
+        300,
+        0,
+        0,
+        false,
+        true,
+        false);
+    assert(clientLookup.decision == ClientPortalLookupDecision::Original);
+    clientLookup = DecideClientPortalLookup(
+        clientPortals,
+        7,
+        200,
+        1,
+        1,
+        true,
+        false,
+        true);
+    assert(clientLookup.decision == ClientPortalLookupDecision::Refuse);
+    clientLookup = DecideClientPortalLookup(
+        clientPortals,
+        8,
+        200,
+        0,
+        0,
+        true,
+        false,
+        true);
+    assert(clientLookup.decision == ClientPortalLookupDecision::Refuse);
+
+    auto reusedClientPortal = clientPortal1022;
+    reusedClientPortal.guid = clientPortal256.guid;
+    assert(UpsertClientPortalDescriptor(clientPortals, reusedClientPortal));
+    assert(clientPortals.size() == 1);
+    clientLookup = DecideClientPortalLookup(
+        clientPortals,
+        7,
+        200,
+        254,
+        254,
+        true,
+        false,
+        true);
+    assert(clientLookup.decision
+        == ClientPortalLookupDecision::FullLevelId);
+    assert(clientLookup.levelId == 1022);
+    assert(EraseClientPortalGuid(clientPortals, 200) == 1);
+    assert(clientPortals.empty());
+
+    std::vector<ClientPortalDescriptor> boundedClientPortals;
+    for (std::size_t index = 0;
+            index < MaximumClientPortalEntries;
+            ++index) {
+        const auto levelId = static_cast<std::int32_t>(
+            256 + (index % (MaximumLevelId - 255)));
+        assert(UpsertClientPortalDescriptor(
+            boundedClientPortals,
+            ClientPortalDescriptor{
+                .sessionGeneration = 9,
+                .guid = static_cast<std::uint32_t>(index + 1),
+                .destinationLevelId = levelId,
+                .nativeLowLevelId = LowLevelId(levelId),
+            }));
+    }
+    assert(boundedClientPortals.size() == MaximumClientPortalEntries);
+    assert(!UpsertClientPortalDescriptor(
+        boundedClientPortals,
+        ClientPortalDescriptor{
+            .sessionGeneration = 9,
+            .guid = 5000,
+            .destinationLevelId = 256,
+            .nativeLowLevelId = 0,
+        }));
+    assert(boundedClientPortals.size() == MaximumClientPortalEntries);
+    assert(UpsertClientPortalDescriptor(
+        boundedClientPortals,
+        ClientPortalDescriptor{
+            .sessionGeneration = 10,
+            .guid = 5001,
+            .destinationLevelId = 256,
+            .nativeLowLevelId = 0,
+        }));
+    assert(boundedClientPortals.size() == 1);
     static_assert(!IsSupportedDataContext(0));
     static_assert(IsSupportedDataContext(1));
     static_assert(IsSupportedDataContext(2));
@@ -123,7 +317,38 @@ int main() {
     assert(pluginText.find("localPlayerId == playerId") != std::string::npos);
     assert(pluginText.find("EncodeLevelCoordinate") != std::string::npos);
     assert(pluginText.find("DecodeLevelCoordinate") != std::string::npos);
-    assert(pluginText.find("2.0.2") != std::string::npos);
+    assert(pluginText.find("D2GAME_CreateLinkPortal") != std::string::npos);
+    assert(pluginText.find("CLIENT_HandlePacket0x51") != std::string::npos);
+    assert(pluginText.find("CLIENT_HandlePacket0x60") != std::string::npos);
+    assert(pluginText.find("CLIENT_GetUnitByIdAndTypeRva")
+        != std::string::npos);
+    assert(pluginText.find("ClientPortalLabelLevelsRecordCallRva")
+        != std::string::npos);
+    assert(pluginText.find("ClientPortalLabelContextWitnessExpected")
+        != std::string::npos);
+    assert(pluginText.find("PortalEndpointDescriptor") != std::string::npos);
+    assert(pluginText.find("ClientPortalDescriptor") != std::string::npos);
+    assert(pluginText.find("ClientPortalEndpoints") != std::string::npos);
+    assert(pluginText.find(
+        "event->kind == D2RL::Lifecycle::GameplayEventKind::GameJoined")
+        != std::string::npos);
+    assert(pluginText.find("MaximumClientPortalEntries")
+        != std::string::npos);
+    assert(pluginText.find("InstallPortalRecordCallRedirects")
+        != std::string::npos);
+    assert(pluginText.find("WriteClientPortalLabelRelay")
+        != std::string::npos);
+    assert(pluginText.find("0x49,0x89,0xF0") != std::string::npos);
+    assert(pluginText.find("PatchCallRel32") != std::string::npos);
+    assert(pluginText.find("PortalSessionPoisoned") != std::string::npos);
+    assert(pluginText.find("if (needsExtension && !eligible)")
+        != std::string::npos);
+    assert(pluginText.find("IsLocalPlayerUnit(owner)") != std::string::npos);
+    assert(pluginText.find("native behavior retained") == std::string::npos);
+    assert(pluginText.find("packet[11] != packet[2]") == std::string::npos);
+    assert(pluginText.find("linkedLevelId != endpoint->nativeLowLevelId")
+        == std::string::npos);
+    assert(pluginText.find("2.1.1") != std::string::npos);
     assert(pluginText.find("KeyedValidationRowCount") != std::string::npos);
     assert(pluginText.find("serviceResult=%u") != std::string::npos);
     assert(pluginText.find("rowIndex=%u, levelId=%d") != std::string::npos);
