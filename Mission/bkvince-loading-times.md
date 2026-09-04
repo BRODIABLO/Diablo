@@ -95,9 +95,33 @@ Sounds of Variation, les extensions D2RLoader et un éventuel profil de jeu sans
 `-txt`. Toute évolution de préchargement natif reste hors périmètre tant qu'un
 goulot d'étranglement résiduel n'est pas démontré.
 
+## Jalon technique — A/B des plaques de PNJ (3 août 2026)
+
+- L'ajout de `24` descripteurs conformes aux plaques `npcname_*.texture`
+  supprime les `5` fallbacks de plaque observés dans le processus témoin Acte I,
+  mais ne réduit pas le temps d'entrée chaud : médiane `3 298 ms` avec le cache
+  d'origine contre `3 299 ms` avec le candidat; p95 `3 377 ms` contre
+  `3 396 ms`. Le candidat est rejeté et le cache original est restauré.
+- Les séries froides ordonnées donnent `4 120 ms` contre `2 966 ms`, mais ce
+  delta n'est pas causal : un passage de contrôle du cache original effectué
+  après le candidat atteint lui aussi `3 046 ms`. Le cache de fichiers de l'OS
+  explique donc la baisse apparente des derniers processus froids.
+- Un second candidat a réduit les `24` plaques de `1024×1024` à `512×512` : le
+  volume passe de `96 MiB` à `24 MiB` et le rendu Warriv/Kashya reste lisible en
+  jeu, mais la médiane chaude régresse à `3 570 ms` et le p95 à `8 600 ms`.
+  Les `24` textures originales ont été restaurées byte-exactement en source et
+  dans le profil actif.
+- Désactiver temporairement ReShade ne produit pas non plus de gain : médiane
+  chaude `3 323 ms`, p95 `3 405 ms`. Le `dxgi.dll` ReShade 6.8 original est
+  restauré avec son SHA-256 `B2945C29…D08DA`; deux crashes au stade graphique
+  lui restent corrélés et constituent une piste de stabilité distincte.
+- État final : cache source/runtime original SHA-256 `CD52ECD…FB1`, plaques
+  source/runtime à `100 664 352` octets, D2R fermé. Aucun candidat n'ayant passé
+  le gate, aucune optimisation non démontrée n'est conservée.
+
 ## Gates
 
-- [ ] Baseline de cinq passages froids et cinq passages chauds pour chaque
+- [x] Baseline de cinq passages froids et cinq passages chauds pour chaque
   scénario retenu.
 - [ ] Couverture sémantique complète des textures mod-locales et validateur
   reproductible.
@@ -117,6 +141,9 @@ goulot d'étranglement résiduel n'est pas démontré.
 
 ## Prochain gate
 
-Capturer la baseline reproductible froid/chaud du démarrage, de l'entrée en
-partie et des transitions d'acte, puis auditer les 210 textures mod-locales
-contre `texture_desc_cache.json` avant toute modification d'asset.
+Instrumenter l'entrée en partie pour séparer compilation des `50` tables TXT,
+chargement de scène et travail de rendu. Le profil ne contient actuellement
+aucun `.bin` Excel permettant de retirer `-txt` sans perdre les données BKVince :
+prouver d'abord une chaîne de compilation `.txt` vers `.bin` reproductible et
+byte-gouvernée, puis comparer `-txt` au profil binaire. Ne plus modifier de
+texture tant qu'une trace n'attribue pas un coût mesurable à un asset précis.
