@@ -794,7 +794,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/ruffneckk-suite-next-release.md",
-      "nextGate": "Qualify the exact Resistance Floor 1.0.2 and MapSense 1.0.2 artifacts with the full active Suite on Battle.net 3.3.93847, then generate the reproducible 1.3.3 archives and exact artifact allowlist before advancing the draft beyond releaseReady=false; commit, push and publication still require separate explicit authorization.",
+      "nextGate": "MapSense 1.0.2 exact source, reproducible builds and Battle.net 3.3.93847 full-stack runtime now pass, including Reveal Map on custom LevelId 256. Qualify the exact Resistance Floor 1.0.2 artifact, then generate the reproducible 1.3.3 archives and exact artifact allowlist before advancing the draft beyond releaseReady=false; commit, push and publication still require separate explicit authorization.",
       "include": [
         "Mission/ruffneckk-suite-next-release.md",
         "governance/d2rloader-suite/**"

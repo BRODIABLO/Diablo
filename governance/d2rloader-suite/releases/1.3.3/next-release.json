@@ -1054,22 +1054,22 @@
       "asset": "RuffnecKk-mapsense-v1.0.2.zip",
       "sourceRef": "suite:plugins/mapsense",
       "releaseNoteCategory": "Fixed",
-      "releaseNote": "Fixes shutdown, renderer coexistence, menu scaling and portable map generation.",
-      "decision": "Prepare MapSense 1.0.2 for Suite 1.3.3 while its exact source, runtime and packaging gates remain open.",
+      "releaseNote": "Fixes shutdown, renderer coexistence, menu scaling, portable map generation and exact reveal for custom levels.",
+      "decision": "MapSense 1.0.2 source, reproducible builds and Battle.net full-stack runtime pass on the exact custom-level reveal candidate; final packaging remains open.",
       "archiveCompanions": [
         {
           "kind": "plugin-companion-exe",
           "source": "plugins/RuffnecKkMapSenseMapgen.exe",
           "destination": "plugins/RuffnecKkMapSenseMapgen.exe",
-          "sha256": "434E60B83AE0865B1AE911294AC9F2CC6DB0ADDEF8B678CE8202B932407BE1D6",
+          "sha256": "74CC1DACA28E836C53E10FDB43EE7B37883E73F0894A06E14AA2A8287B138A43",
           "requiredForRuntime": true,
           "decision": "MapSense requires its map generator beside the DLL; the plugins path is required for direct D2RLoader extraction and D2RMM Custom 1.9.6 import."
         }
       ],
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
         "packaging": "pending"
       }

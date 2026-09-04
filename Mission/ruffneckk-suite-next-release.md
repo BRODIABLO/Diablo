@@ -2,6 +2,169 @@
 
 Dernière mise à jour : 4 septembre 2026
 
+## MapSense 1.0.2 — Reveal Map exact pour les niveaux custom
+
+Le 4 septembre 2026, le Rift Level 7 de BKVince, `LevelId 256`, révèle un
+défaut d'identité dans l'atlas natif de MapSense. Ce niveau custom utilise le
+`Layer 98`, également employé par le niveau standard `131`. Le format MSA1 v2,
+le cache et l'état de complétion étaient indexés par acte, difficulté et layer;
+les 443 cellules déjà connues du niveau 131 pouvaient donc satisfaire à tort la
+requête du niveau 256 sans produire sa géométrie propre. Le défaut n'est lié ni
+à Floating Damage, ni à une troncature du LevelId sur huit bits.
+
+Le candidat MapSense `1.0.2` porte maintenant MSA1 v3 et sépare explicitement
+la portée campagne standard (`scopeLevelId = 0`) de la portée custom exacte
+(`scopeLevelId = LevelId`). Le générateur primaire custom ne publie qu'un seul
+niveau exact; le parseur, les clés et chemins du cache révision `r5`, le
+catalogue natif, la readiness, la complétion et la persistance refusent toute
+géométrie dont la portée ne correspond pas au niveau courant. Le comportement
+des niveaux standards demeure inchangé. Aucun hook, RVA, témoin ABI, réglage
+TOML ou contrat ImGui/Floating Damage n'est ajouté.
+
+Deux builds MSVC Release indépendants produisent la même DLL de 3 562 496
+octets, SHA-256
+`3E0D23173A44354FE6ECDFCA770A3411F627629CB66C5D2FD8FFEB536A7C764B`, et
+CTest passe `1/1` dans chaque arbre. Deux builds Zig ReleaseSafe indépendants
+produisent le même compagnon portable de 11 786 240 octets, SHA-256
+`74CC1DACA28E836C53E10FDB43EE7B37883E73F0894A06E14AA2A8287B138A43`.
+La matrice mapgen passe quatre seeds dans les cinq actes, le dataset BKVince et
+un LevelId synthétique `733` dont la sortie contient exactement ce niveau et
+654 cellules; l'audit CPU demeure sans VEX/EVEX, YMM, ZMM ni opmask.
+
+Le candidat exact passe ensuite un cold start mod-local Battle.net
+`3.3.93847` avec la pile complète : 38 plugins, 17 patches, Floating Damage
+`1.4.3`, Extended Act Level IDs `2.0.2` et `24/24`. Dans le vrai niveau 256,
+MapSense journalise `current-level=256`, puis complète le `Layer 98` avec
+`scope-level=256` et `5678/5485/193` cellules
+tentées/insérées/dupliquées. Le cache exact
+`act-4-level-256-r5.msa` mesure 7 136 octets et contient les 443 cellules du
+niveau custom, SHA-256
+`736B287CB320A9CBCA6F1FD7EE9A4A9B33B66CDEF5AA783B5E44EEF8AF13553C`.
+Vincent confirme visuellement que `Reveal Map` révèle le custom level. Aucun
+crash ni processus résiduel n'apparaît; les tables BKVince, les neuf fichiers
+QtyTester, Extended Act Level IDs `2.0.0` et les binaires MapSense précédents
+sont ensuite restaurés byte-exact. Les gates encore ouverts sont le packaging
+final et, séparément, les résolutions 1080p/1440p/ultrawide ainsi que le
+changement de résolution en direct du menu.
+
+## MapSense 1.0.2 — échelle automatique et contrôle manuel autorisés
+
+Le 4 septembre 2026, Vincent retient l'intégration dans le candidat MapSense
+`1.0.2` d'une mise à l'échelle automatique, limitée au menu ImGui. Le facteur
+est dérivé une seule fois de la hauteur réelle du backbuffer D2R selon
+`clamp(height / 1080, 1.0, 2.0)`, puis recalculé lors de la reconstruction déjà
+déclenchée par `ResizeBuffers`. La police du menu doit être rasterisée à sa
+taille réelle et ses dimensions, espacements et zones cliquables doivent suivre
+le même facteur.
+
+Le contrat interdit `FontGlobalScale`, toute réutilisation de
+`[overlay].scale` et toute modification des polices, marqueurs, labels ou lignes
+de l'automap. Floating Damage conserve ses propres polices dans le contexte
+ImGui partagé. MapSense ajoute donc des polices localisées dédiées, dont une
+pour chaque choix fixe et une pour le ratio automatique exact lorsqu'il est
+distinct. La police sélectionnée est poussée uniquement pendant le callback du
+panneau puis retirée avant les overlays MapSense et les clients externes. Pour
+borner l'atlas, ces polices contiennent les glyphes réellement employés par le
+menu dans les douze langues, pas une copie des plages CJK complètes.
+
+La baseline D2RLoader `1.2.1` publique promue, le pin PluginSDK v3
+`4933e2c42cb2`, la référence D2RL-Plugins
+`dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a` et le corpus natif commun vérifié
+pour Battle.net `3.3.93847` restent inchangés. Aucun hook, RVA ou contrat ABI
+natif n'est ajouté; le schéma TOML 17 ajoute seulement
+`[menu].interface_scale`, avec migration automatique des schémas 1 à 16 vers
+`automatic`. Le candidat auto-seul
+`32C1525A…73013A85` demeure le premier témoin runtime 4K, mais il est supersédé
+comme candidat courant. Les tests couvrent les bornes 720p/1080p, le ratio
+1440p, un intermédiaire exact à 150 %, le plafond 2160p/4320p, les six choix,
+leur sérialisation, la migration du schéma 16 et les libellés localisés. Deux
+builds Release x64 propres avec warnings-as-errors produisent la même DLL
+MapSense `1.0.2` de 3 559 424 octets, SHA-256
+`64A69F7CC065C503141FF238CD5309368F5C43BCB87168D19D53AE85BC6A3B4D`;
+CTest passe `1/1` dans chaque arbre et le validateur Suite est `VALID`. Il exige
+le sélecteur actif, le défaut automatique du schéma 17 et le libellé anglais
+exact `Menu Appearance and Size`, tout en interdisant le retour de
+`FontGlobalScale` ou de `config.overlay.scale` dans le panneau actif. Gates
+ouverts : matrice visuelle 1080p, 1440p, ultrawide et 4K, choix manuel en
+direct et après rechargement, changement de résolution, automap inchangée,
+diagnostic sans Floating Damage et coexistence finale avec Floating Damage
+`1.4.3`.
+
+Le premier témoin runtime du 4 septembre 2026 ferme le chemin automatique sur
+le vrai backbuffer `3840×2160` : MapSense sélectionne `2.000`, rasterise sa
+police dédiée à `30.0 px`, initialise l'hôte ImGui et termine le cold start
+`24/24` sans Floating Damage avec 37 plugins et 17 patches. Vincent confirme
+visuellement que le menu est bien agrandi, mais constate qu'aucun contrôle
+cliquable ne permet d'en corriger la taille. La fermeture est normale, aucun
+nouveau crash report n'apparaît et Floating Damage `1.4.3` est ensuite restauré
+globalement byte-exact à
+`1F6BAE0AAC61FEA227E221719F0B7260C581EFC0F342A26039F4CA54D4E7FE2B`.
+
+Vincent autorise donc le même jour un réglage moddeur réel limité au menu. La
+section active est renommée exactement `Menu Appearance and Size` en anglais et
+offre un sélecteur cliquable `Automatic`, `100 %`, `125 %`, `150 %`, `175 %`
+ou `200 %`. `Automatic` demeure la valeur par défaut et conserve la formule du
+backbuffer; un choix fixe la remplace sans jamais réutiliser
+`[overlay].scale`. Chaque taille sélectionnable emploie une police dédiée
+rasterisée à sa vraie taille afin d'éviter `FontGlobalScale`; la géométrie, les
+espacements et les zones cliquables suivent le même facteur. Le choix persiste
+dans `[menu]`, ne touche ni l'automap ni Floating Damage et doit être modifiable
+en direct sans reconstruction du contexte partagé. Cette extension reste dans
+MapSense `1.0.2` et ne change aucun hook, RVA ou contrat ABI natif.
+
+Le candidat exact `64A69F7…6A3B4D` passe ensuite la matrice runtime 4K. Sans
+Floating Damage, le cold start charge 37 plugins et 17 patches, atteint
+`24/24`, initialise cinq tailles de police pour le backbuffer `3840×2160`,
+puis les six choix passent en direct : `Automatic` à `2.000`, `100 %` à
+`1.000`, `125 %` à `1.250`, `150 %` à `1.500`, `175 %` à `1.750` et `200 %`
+à `2.000`. Le TOML joueur migre du schéma 16 au schéma 17 sans perdre son
+thème ni sa position et termine sur `interface_scale = "automatic"`. La
+fermeture est normale.
+
+Avec Floating Damage `1.4.3` restauré byte-exact, le second cold start charge
+38 plugins et 17 patches, atteint `24/24`, négocie l'hôte MapSense, rend sa
+première frame partagée et capture son premier dommage visible. Le passage
+`150 %` vers `Automatic` sélectionne respectivement les polices `22.5 px` et
+`30.0 px`; le second processus ferme normalement. Aucun nouveau crash report
+ni événement Windows Application `1000/1001` n'apparaît. Les gates encore
+ouverts sont les résolutions 1080p, 1440p et ultrawide ainsi que le changement
+de résolution en direct.
+
+## MapSense 1.0.2 — correctif de portabilité CPU prêt en source
+
+Le 4 septembre 2026, l'analyse byte-exact de l'asset public MapSense `1.0.1`
+confirme que `d2rl-ruffneckk-mapsense.dll` ne contient pas d'instruction
+AVX-512, mais que son compagnon obligatoire
+`RuffnecKkMapSenseMapgen.exe` a été compilé avec la cible CPU native du poste de
+build. L'EXE public contient des instructions VEX/EVEX, dont des instructions
+AVX-512 exécutables avant tout dispatch CPU; le crash signalé sur Ryzen 9 5900X
+est donc expliqué.
+
+La source canonique publique prépare MapSense `1.0.2`. `build.zig` verrouille
+maintenant `x86_64-windows-gnu` avec le modèle Zig `baseline`, retire toute
+option de cible native, produit un artefact stripped avec seed de build fixe et
+désactive le build ID sélectionné par le linker. Le helper courant, incluant la
+portée exacte MSA1 v3, vaut
+`74CC1DACA28E836C53E10FDB43EE7B37883E73F0894A06E14AA2A8287B138A43`
+pour 11 786 240 octets. Deux builds ReleaseSafe à caches indépendants sont
+byte-identiques. Son audit désassemblé retourne zéro instruction VEX/EVEX et
+zéro registre YMM/ZMM/opmask; l'ancien EXE public est refusé par ce même gate.
+
+La matrice `verify-labels.ps1` passe les quatre seeds gouvernés dans les cinq
+actes, la géométrie et les labels déterministes, le dataset BKVince actif et le
+LevelId synthétique arbitraire `733`. Le test synthétique est désormais
+autonome dans le dépôt Suite au lieu de dépendre du module TSV du laboratoire.
+La DLL MapSense `1.0.2` passe son test CTest et vaut désormais
+`3E0D23173A44354FE6ECDFCA770A3411F627629CB66C5D2FD8FFEB536A7C764B`.
+Le packaging appelle maintenant l'audit CPU sur le compagnon MapSense exact
+avant de créer un ZIP.
+
+Aucun asset GitHub, tag, registre publié ni runtime installé n'est modifié à ce
+stade. Les gates encore ouverts sont la création gouvernée d'une prochaine
+release Suite, la synchronisation runtime explicitement autorisée et la
+confirmation externe sur un CPU dépourvu d'AVX-512, notamment le Ryzen 9
+5900X du rapporteur.
+
 ## Statut final — hotfix 1.3.2 publié
 
 Le 4 septembre 2026, Vincent autorise un hotfix rapide contre le D2RLoader

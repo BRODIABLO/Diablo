@@ -29,7 +29,42 @@ plugins, 17 patches et deux bundles. Les 43 digests GitHub correspondent au
 catalogue local sous `analysis-cache/ruffneckk-suite-release-1.3.2/`. La Suite
 `v1.3.1` et ses 43 assets restent le rollback intact.
 
+Une maintenance MapSense `1.0.2` corrige maintenant en source le crash de
+fermeture DX12 rapporté hors de notre profil : le registre propriétaire de
+command queues quitte la durée statique CRT et rejoint `RendererStorage`
+process-lifetime. Deux builds stricts byte-identiques de `3 552 256` octets
+valent `D7CBA865…D6838C`; CTest passe `1/1` deux fois, la politique Suite est
+`VALID` et l'objet COFF n'émet plus le destructeur `atexit` fautif. Les cold
+starts Battle.net `93847` sans puis avec Floating Damage `1.4.3` atteignent
+respectivement `37` et `38` plugins, `17` patches et `24/24`. Dans le second,
+Floating Damage rend sa première frame par l'hôte MapSense; les deux fermetures
+normales terminent sans crash, événement Windows ni processus résiduel.
+Le profil MapSense mod-local et Floating Damage global est ensuite restauré
+byte-exact. Le refus MapSense/Floating Damage du premier reporter reste un
+incident distinct en attente de ses versions, hashes, inventaires et logs
+complets; son trajet `FatalExit` sous `92777`/`zyb` n'est pas reproduit ici.
+
+Le même candidat `1.0.2` corrige aussi `Reveal Map` dans les niveaux custom.
+Le Rift Level 7 `LevelId 256` partage le `Layer 98` avec le niveau standard
+`131`; MSA1 v3, le cache `r5` et le catalogue natif distinguent désormais la
+portée campagne de chaque custom LevelId exact. Deux builds reproductibles
+donnent la DLL `3E0D2317…C764B` et le helper portable `74CC1DAC…38A43`.
+Le cold start Battle.net `93847` pile complète atteint `24/24` avec 38 plugins,
+17 patches, Floating Damage `1.4.3` et Extended Act Level IDs `2.0.2`.
+MapSense complète `Layer 98 scope-level=256`, et Vincent confirme que Reveal
+Map révèle le niveau custom. Le runtime et les données de test sont ensuite
+restaurés byte-exact, sans crash ni processus résiduel.
+
 ## Prochain gate
+
+Pour MapSense `1.0.2`, source, builds reproductibles, cold start, renderer,
+coexistence Floating Damage, fermeture normale et Reveal Map du vrai custom
+LevelId 256 sont fermés sur Battle.net `93847`. Le packaging final, la matrice
+menu 1080p/1440p/ultrawide et le changement de résolution en direct restent
+ouverts. Le trajet fatal exact reste `not run` faute de déclencheur local sûr;
+la preuve binaire élimine néanmoins le destructeur fautif. L'incident Floating
+Damage du premier reporter reste en attente de ses preuves de version et
+d'inventaire.
 
 La réorganisation est implantée sans modification de la ROADMAP : la Suite
 publique reste dans son dépôt produit frère, tandis que sa gouvernance publique
@@ -52,8 +87,9 @@ les métadonnées concordent, le build Release vaut
 binaire et la politique Suite sont `VALID`, et le CTest ciblé passe `3/3`.
 Le registre complet `1.3.3` est ouvert en `draft`, `releaseReady=false`, avec
 MapSense `1.0.2` et Resistance Floor `1.0.2`. Sa structure et ses références
-Suite sont valides; la qualification runtime exacte et le packaging restent
-`pending`. Demander une autorisation séparée avant tout commit ou push du dépôt
+Suite sont valides; MapSense passe son runtime exact, tandis que Resistance
+Floor et le packaging restent `pending`. Demander une autorisation séparée
+avant tout commit ou push du dépôt
 Diablo ou du dépôt Suite, toute nouvelle release ou toute synchronisation vers
 un runtime installé.
 L'ancien dépôt privé Governance reste un repli temporaire non autoritaire.
