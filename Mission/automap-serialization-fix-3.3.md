@@ -182,6 +182,44 @@ Après la matrice, le profil est restauré à son état initial : MapSense
 `14` DLL mod-locales et `24` globales, aucun correctif installé et aucun
 processus D2R/D2RLoader actif.
 
+## Qualification D2RLoader 1.2.1 preview 10
+
+Vincent confirme par `GO` le 3 septembre 2026 la matrice bornée de
+compatibilité avec le ZIP fourni `D2RLoader-1.2.1-beta-preview.10.zip`, de
+SHA-256
+`D61230B250A0A3D94DD80EB2511822642F1ACA0353E981FCCB6214FA6243FEB3`.
+Le runtime contenait déjà les trois binaires exacts du ZIP :
+
+- `D2RLoader.exe` `1.2.1-beta+preview.10`, SHA-256
+  `F566D30ED5D41C7079D21E82BA9A2129EC8B0DA5472B50996D0D185D2D7BB4AF`;
+- `D2RCore.dll` `1.2.1-beta+preview.10`, SHA-256
+  `667241D494F6A73E940E9EE89544872482B6083A08060BB539CFCDE5FADE7125`;
+- `d2rloader.mpq`, SHA-256
+  `2130F4FF3FED8E78C92D6E547BAB4F445A02B24E3F0A074679E0EDCE6E9E6008`.
+
+Le TOML runtime personnalisé différait volontairement du fichier stock et a
+été conservé byte-exact. Deux cold starts avec la pile complète ont ensuite
+chargé le même correctif `0.1.0` de SHA-256
+`C7193FADB024236136E241B79164EFF4CF86C0ED5C0E7CA77454D1BD7CD8CE17`
+et MapSense `1.0.0` de SHA-256
+`2B71748E53084FDE72E36731293251C9776072F690AA7224F4E579AE7CC624A1` :
+
+1. correctif mod-local : `PASS`;
+2. correctif global avec MapSense mod-local : `PASS`.
+
+Les deux démarrages atteignent `D2R startup complete` avec `39 plugins
+loaded`, `1 global duplicate skipped`, `17 memory patches`, les cinq DLL
+eezstreet et aucune erreur fraîche du loader, du correctif ou du témoin
+MapSense. Les preuves sont conservées localement sous
+`analysis-cache/runtime-validation/automap-serialization-fix-d2rloader-1.2.1-preview10-20260903/`.
+
+Après la matrice, l'état plugin antérieur est restauré exactement : MapSense
+`0.13.41` au SHA-256
+`25B18515A47B121C4F5905E8D16A8FA8560370519028A6BA31C11E35A8D9E24A`,
+`14` DLL mod-locales, `25` DLL globales, aucun correctif installé et aucun
+processus D2R/D2RLoader. D2RLoader 1.2.1 preview 10 reste la baseline déjà
+installée; sa configuration personnalisée n'a pas changé.
+
 ## Gate courant
 
 Le candidat config-free `0.1.0` est implanté. Le build Release x64 strict
@@ -190,9 +228,41 @@ les métadonnées PE/PluginInfo et deux builds reproductibles passent. L'artefac
 statique mesure `25 600` octets et porte le SHA-256
 `C7193FADB024236136E241B79164EFF4CF86C0ED5C0E7CA77454D1BD7CD8CE17`.
 
-La matrice de cold start et de coexistence est fermée sur Battle.net
-`3.3.93847`. Le prochain gate est une preuve gameplay sur un payload supérieur
-à 32 767 octets : changement de layer sans crash, retour sur le layer et
-persistance de l'automap. Steam `3.3.93787` et la compatibilité multijoueur
-croisée restent `not run` et non revendiqués. Aucun ZIP ni ajout au registre
-Suite `1.3.0` n'est autorisé avant une décision de release séparée.
+La matrice de cold start, de coexistence et le gate gameplay sont fermés sur
+Battle.net `3.3.93847` avec D2RLoader `1.2.0-beta` et
+`1.2.1-beta+preview.10`. Le témoin gameplay a sérialisé un arbre de `6 000`
+cellules tag-zéro, soit `36 000` octets, puis a traversé
+`layer 0 → layer 1 → layer 0` sans crash. Au retour, les `6 000/6 000` clés
+étaient restaurées avec le tag natif `1` et aucune avec le tag `0`.
+
+Le release candidate config-free
+`AutomapSerializationFix-0.1.0-rc.1.zip` contient seulement la DLL testée à la
+racine. Il mesure `11 465` octets et porte le SHA-256
+`5D76BC7B9FC66D61CB5D843D187E076C2F480C40FC279352C5F9793235778131`.
+Le README reste à côté du ZIP et n'y est pas inclus. Steam `3.3.93787` et la
+compatibilité multijoueur croisée restent `not run` et non revendiqués; le RC
+n'ajoute pas automatiquement le plugin au registre Suite `1.3.0`.
+
+## Preuve gameplay déterministe et restauration
+
+Le 3 septembre 2026, un harnais diagnostique local et gitignoré a exigé
+l'empreinte exacte du correctif de release avant de charger. Sous la pile
+complète, D2RLoader a rapporté `40 plugins loaded`, `1 global duplicate
+skipped`, `17 memory patches`, les cinq DLL eezstreet et `D2R startup
+complete`. Le harnais a ensuite fait croître l'arbre floor du layer `0` de
+`2 654` à `8 654` nœuds avec exactement `6 000` clés tag-zéro et un payload
+attendu de `36 000` octets.
+
+Le contrôle Rogue Encampment → Blood Moor est resté volontairement sur le
+layer `0` et a retrouvé les clés encore tag-zéro. Le vrai aller-retour par le
+Den of Evil a forcé `0 → 1 → 0`; la vérification finale a donné
+`found=6000/6000`, `tags=0:0,1:6000,other:0`. Le sidecar témoin
+`Helena.ma0` est passé de `50 310` à `86 348` octets, SHA-256 final
+`D0D2A0184E08CC2DC51468859AE98A1415ABC860AF3C26333DF169DD68EC4EB2`.
+Les captures, le sidecar et les logs sont conservés sous
+`analysis-cache/runtime-validation/automap-serialization-fix-gameplay-20260903-220747/`.
+
+Après capture, les six fichiers de la famille `Helena` ont été restaurés à
+leurs hashes initiaux, l'inventaire original de `39` DLL a été retrouvé, les
+deux DLL de test ont été sorties du runtime et aucun processus D2R/D2RLoader
+n'est resté actif.

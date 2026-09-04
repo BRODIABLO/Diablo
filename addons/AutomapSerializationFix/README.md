@@ -37,9 +37,14 @@ path or sidecar commit witness differs. Build names and distribution channels
 are logged for diagnosis only and never decide compatibility.
 
 The same native evidence covers D2R 3.2.92777 and Battle.net D2R 3.3.93847.
-The initial runtime qualification targets the current official Battle.net
-runtime. Steam D2R 3.3.93787 remains untested until every used surface is
-proved byte-identical or qualified separately.
+The plugin has completed full-stack cold starts on Battle.net D2R 3.3.93847
+with D2RLoader 1.2.0-beta and 1.2.1-beta preview 10, in both mod-local and
+global plugin scopes. On D2RLoader 1.2.1 preview 10, a deterministic gameplay
+test also serialized a 36,000-byte single-tree payload, changed from automap
+layer 0 to layer 1, returned to layer 0 and verified all 6,000 witness cells
+restored through the native sidecar without a crash. Steam D2R 3.3.93787
+remains untested until every used surface is proved byte-identical or qualified
+separately.
 
 MapSense 1.0.0 remains optional. Its generated atlas cells already use D2R's
 restored-cell tag and are excluded from this sidecar. MapSense accepts both the

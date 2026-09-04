@@ -700,7 +700,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/automap-serialization-fix-3.3.md",
-      "nextGate": "Reproduce a sidecar payload above 32767 bytes on Battle.net 3.3.93847, verify layer transition and automap persistence, then keep Steam, cross-build multiplayer, packaging and Suite 1.3.0 promotion explicitly separate.",
+      "nextGate": "Battle.net 3.3.93847 gameplay passes with a deterministic 36000-byte single-tree payload and 6000/6000 cells restored after layer 0→1→0; the DLL-only 0.1.0-rc.1 ZIP is built. Keep Steam, cross-build multiplayer, public promotion and Suite 1.3.0 inclusion explicitly separate.",
       "include": [
         "Mission/automap-serialization-fix-3.3.md",
         "addons/AutomapSerializationFix/**",
