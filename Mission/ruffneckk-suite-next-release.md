@@ -2,12 +2,27 @@
 
 Dernière mise à jour : 3 septembre 2026
 
+## Statut final — hotfix 1.3.1 publié
+
+La Suite `v1.3.1` est publique depuis le 3 septembre 2026. Elle pointe sur le
+commit produit `c63ac0c`, contient exactement 24 plugins, 17 patches et deux
+bundles (43 assets), et conserve `v1.3.0` intacte comme rollback. Les 43
+digests GitHub correspondent byte-exact aux deux générations locales
+reproductibles. Le registre privé final est au commit `47df4a4`.
+
+Le cold start final sous D2R `3.3.93847` et D2RLoader `1.2.1-beta preview 10`
+a atteint `24/24`; ISC12 `1.0.1`, Vendor Stock Refresh `2.0.1` et Remote Stash
+`2.3.1` sont actifs. L'absence du fichier optionnel de skin MPQ de Remote Stash
+retombe correctement sur le TOML D2RLoader. Les sections ci-dessous conservent
+les décisions et preuves de préparation historiques.
+
 ## Décision et priorité
 
-Vincent choisit le 2 septembre 2026 de ne plus retarder la mise à jour publique
-de la Suite pour attendre MapSense. Il autorise l'option **registre et outillage
-d'abord** : le périmètre de la prochaine release doit être enregistré avant les
-migrations, builds, qualifications et archives finales.
+Vincent choisit le 2 septembre 2026 l'option **registre et outillage d'abord** :
+le périmètre de la prochaine release doit être enregistré avant les migrations,
+builds, qualifications et archives finales. Le 3 septembre, il élargit ce
+périmètre à MapSense et Extended Act Level IDs, tous deux en `1.0.0`, et fixe
+également ISC12 et D2R Save Converter à `1.0.0`.
 
 La dernière release GitHub publique vérifiée est `v1.2.0`. Le prochain numéro
 reste donc `1.3.0`; l'ancien candidat local non publié ne constitue pas une
@@ -24,8 +39,10 @@ privés explicitement et refuser toute absence ou divergence.
 
 ## Périmètre verrouillé
 
-Le catalogue visé contient **22 plugins, 17 memory patches, un outil autonome
-et deux bundles**, soit **42 assets GitHub**.
+Le catalogue visé contient **24 plugins, 17 memory patches et deux bundles**,
+soit **43 assets GitHub**. D2R Save Converter demeure un outil hors-jeu
+versionné `1.0.0`, mais il est inclus uniquement dans le ZIP individuel ISC12
+et ne possède plus son propre asset GitHub.
 
 Décisions explicites de Vincent :
 
@@ -33,35 +50,45 @@ Décisions explicites de Vincent :
 - le produit fonctionnel Armageddon devient
   `Armageddon-Hurricane CtC Fix 1.0.0`;
 - `Resistance Floor 1.0.0` entre dans cette release;
-- `Remote Stash 2.3.0` entre dans cette release;
-- `Vendor Stock Refresh 2.0.0` entre dans cette release;
+- `MapSense 1.0.0` entre dans cette release; son candidat `0.13.41` doit être
+  reversionné, rebâti et requalifié sous cette identité publique;
+- `Remote Stash 2.3.0` entre avec ses corrections d'incohérences et de
+  comportement ainsi qu'avec la personnalisation du bouton depuis le MPQ du
+  mod actif;
+- `Vendor Stock Refresh 2.0.0` entre avec sa compatibilité D2RLoader 1.2 et
+  1.2.1;
 - `Shadow Master AI Fix` entre comme memory patch;
-- `ISC12 0.2.1` entre comme plugin et `D2R Save Converter 0.2.1`
-  accompagne la même release comme EXE autonome;
-- les deux presets `Ground Item Label Limit` sont retirés;
-- `Normal Area Scaling` reste retiré conformément au candidat 1.3.0 existant;
-- `Extended Act Level IDs` est reporté;
+- `ISC12 1.0.0` entre comme plugin et son ZIP individuel contient
+  `D2R Save Converter 1.0.0` ainsi que les README d'ISC12 et du Converter;
+- `Extended Act Level IDs 1.0.0` entre comme plugin;
+- les deux presets `Ground Item Label Limit` 64 et 128 sont retirés parce que
+  D2RLoader 1.2 fournit désormais la fonction native équivalente;
+- `Normal Area Scaling` reste retiré parce que Yinyin possède un patch
+  fonctionnel et que celui de RuffnecKk ne fonctionnait apparemment pas;
 - la feature update MassID PluginSDK v4 est reportée; Vincent l'a nommée
   `1.2.0`, tandis que le candidat du dépôt est `2.1.0`, donc ce numéro devra
-  être réconcilié avant une future promotion;
-- MapSense reste hors release et ne la bloque pas.
+  être réconcilié avant une future promotion.
 
 Le composant MassID de base demeure dans la Suite et doit recevoir seulement
 la migration de compatibilité nécessaire. Son prochain numéro de maintenance
 reste volontairement non verrouillé dans le registre afin d'empêcher un
 packaging prématuré.
 
-## Contrat Steam
+Les seuls artefacts publics Ground Item Label Limit des releases précédentes
+étaient les deux memory patches JSON 64 et 128. Aucune instruction de migration
+ne doit demander le retrait d'une `GroundItemLabelLimit.dll` inexistante dans
+ces releases.
 
-D2R `3.3.93787` Steam est admissible, mais pas encore qualifié. Aucun plugin ne
-peut autoriser ou refuser son chargement d'après son canal, son build-name ou
-son numéro de version. Chaque DLL doit valider avant mutation la totalité de ses
-RVA, signatures, témoins de layout/ABI et plages possédées.
+## Compatibilité Steam
 
-La release ne peut revendiquer Steam qu'après identification de l'exécutable,
-logs frais de chaque empreinte et matrice runtime complète avec tous les
-composants actifs de la Suite ainsi que les cinq plugins eezstreet. La
-compatibilité multijoueur reste un gate distinct lorsqu'elle est revendiquée.
+D2R `3.3.93787` Steam n'est pas testé pour cette release. Vincent décide le
+3 septembre 2026 que ce test ne bloque ni le packaging ni la publication. Aucun
+plugin ne peut autoriser ou refuser son chargement d'après son canal, son
+build-name ou son numéro de version. Chaque DLL conserve sa validation native
+fail-closed avant mutation afin d'éviter un hook sur des octets incompatibles.
+
+Les notes publiques indiquent simplement que Steam n'a pas été testé. Aucune
+qualification Steam ou multijoueur n'est revendiquée.
 
 ## Outillage gouverné
 
@@ -84,22 +111,161 @@ forcer la création d'un fichier.
 
 ## Gates ouverts
 
-1. Importer ou synchroniser dans le dépôt produit ISC12, le convertisseur,
-   Cast Triggers, Armageddon-Hurricane CtC Fix, Resistance Floor, Shadow Master
-   AI Fix, Bulk Currency Deposit 1.1.1, Burn Damage Fix 1.0.0 et Remote Stash
-   2.3.0 sans perdre les changements locaux existants.
+### Compatibilité ISC12 avec D2RLoader 1.2.1
+
+Vincent autorise le 3 septembre 2026 l'adaptation du candidat public
+`ISC12 1.0.0` à `D2RLoader 1.2.1-beta preview 10`. La version publique reste
+`1.0.0` puisqu'elle n'a pas encore été publiée. L'implantation doit ajouter une
+nouvelle empreinte native complète des fournisseurs `D2RCore` utilisés par
+ISC12, conserver les générations déjà admises et sélectionner une génération
+uniquement par ses octets et témoins ABI, jamais par le numéro ou le canal du
+runtime. Le convertisseur autonome reste `1.0.0` et ne dépend pas de
+`D2RCore.dll`.
+
+La qualification runtime sur D2R officiel `3.3.93847` a révélé que le premier
+rebuild du cache compilateur de D2RLoader 1.2.1 produit quatre captures
+ItemStatCost avant la publication RotW, contre deux avec un cache valide. ISC12
+conserve maintenant jusqu'à huit captures bornées. Les cinq tests ISC12
+passent. Un cold start avec le cache `3.3.0` absent a publié le schéma de 400
+lignes avec `G0-builds=4` et atteint le démarrage `24/24`; le cold start suivant
+a validé le cache, publié le même schéma avec `G0-builds=2` et atteint de nouveau
+`24/24`. Le candidat déployé mesure 334 848 octets et porte le SHA-256
+`59C46E13158C1E03D54BC378AF27E78333FD692F6D648B9AA200EE25DC3B7767`.
+
+### Compatibilité Vendor Stock Refresh avec D2RLoader 1.2.1
+
+Vincent autorise le 3 septembre 2026 l'adaptation de
+`Vendor Stock Refresh 2.0.0` à `D2RLoader 1.2.1-beta preview 10`. La version
+publique reste `2.0.0`. Le plugin conserve le profil D2RCore 1.2 déjà admis et
+ajoute une empreinte complète du nouveau provider
+`SendClientGameplayPacket` : corps, PDATA/unwind, export, slot de forwarding et
+destination native. La sélection repose uniquement sur les octets et témoins
+ABI observés; aucun numéro de version, canal ou build-name ne décide du
+chargement.
+
+L'audit statique confirme byte-exact les deux profils du provider
+`SendClientGameplayPacket` : D2RCore 1.2 à `0x630D90`, taille `0x19A`, et
+D2RCore 1.2.1 preview 10 à `0x693E70`, taille `0x170`. Pour chacun, l'export,
+le corps SHA-256, PDATA/unwind, FuncInfo et le forwarding witness correspondent
+au binaire source. Le build Release final de Vendor Stock Refresh 2.0.0, incluant
+la section réservée `[d2rl]`, mesure 48 640 octets et porte le SHA-256
+`A6E67D11B2B675F2B31F38D1A2F98C45915956838C1852F73603D638D3CB306D`;
+les 36 tests de la Suite passent après rebuild complet. Le cold start pile
+complète sous D2RLoader 1.2.1 preview 10 vérifie le relais paquet de ce binaire,
+le charge et atteint le démarrage `24/24`; le démarrage natif 1.2.1 est fermé.
+Le clic du bouton chez un marchand reste une vérification fonctionnelle
+manuelle.
+
+1. Importer ou synchroniser dans le dépôt produit ISC12 1.0.0, le convertisseur
+   1.0.0, Cast Triggers 1.0.0, Armageddon-Hurricane CtC Fix 1.0.0, Resistance
+   Floor 1.0.0, MapSense 1.0.0, Extended Act Level IDs 1.0.0, Shadow Master AI
+   Fix, Bulk Currency Deposit 1.1.1, Burn Damage Fix 1.0.0 et Remote Stash 2.3.0
+   sans perdre les changements locaux existants.
 2. Verrouiller le numéro de maintenance MassID compatible avec cette release et
    confirmer que la feature PluginSDK v4 reportée n'y entre pas.
-3. Fermer les gates source/build/package des nouveaux composants et les gates
-   runtime exacts encore ouverts pour Vendor Stock Refresh et Remote Stash.
-4. Qualifier les 22 plugins et 17 patches sur Steam avec la pile complète,
-   puis consigner l'exécutable, les logs et les hashes réellement testés.
-5. Promouvoir une allowlist de 42 assets exactement concordante, passer deux
+3. Fermer les gates source/build/package des nouveaux composants.
+4. Promouvoir une allowlist de 43 assets exactement concordante, passer deux
    générations reproductibles, comparer les catalogues et inspecter chaque ZIP
-   ou EXE.
-6. Actualiser README et notes publiques, laisser chaque README humain à côté de
-   son archive et hors des assets générés, puis obtenir l'autorisation séparée
-   avant commit, push, tag ou publication GitHub.
+   ou JSON.
+5. Actualiser le README central et les notes publiques avec une formulation
+   courte orientée joueur, puis obtenir l'autorisation séparée avant commit,
+   push, tag ou publication GitHub.
+
+## Préparation vérifiée le 3 septembre 2026
+
+Les versions publiques `1.0.0` de Cast Triggers, Armageddon-Hurricane CtC Fix,
+Resistance Floor, MapSense, Extended Act Level IDs et ISC12 ont été rebâties en
+Release. Tous leurs tests CTest passent et leurs DLL exportent seulement les
+trois points d'entrée D2RLoader attendus. Le convertisseur hors-jeu `1.0.0`
+passe ses 64 tests et sa génération EXE.
+
+SHA-256 des candidats rebâtis :
+
+- Cast Triggers : `FCC8993377349C8FC4B7CE8C7C48C78092F39E19E7A800FA611B1AEF2E7ED343`;
+- Armageddon-Hurricane CtC Fix : `FBF449062EF06D1693B9E268C6EA2637757BFC472CCA648C7BEF27AD57C3A56D`;
+- Resistance Floor : `D4014A5A0185FC83256EF51F13AD1CA0B9E98E278A1D1E2F1369FDA468A1C844`;
+- MapSense : `A5A441EF434A8901153388A1158D2E3BA4E4BD7C17C6F07FFB0234F0FEECC753`;
+- Extended Act Level IDs : `979DC79C6CF791B58728178B48B44B9F8A141528E7BE51F038DDC8CF2F24F8F0`;
+- ISC12 : `59C46E13158C1E03D54BC378AF27E78333FD692F6D648B9AA200EE25DC3B7767`;
+- D2R Save Converter : `5BC08306B1A165641383D991AC430CF135126E5FB034667B34DE2A00FB95FD48`.
+
+Vincent choisit le 3 septembre 2026 de supprimer l'asset EXE séparé du
+Converter. Le ZIP individuel ISC12 devient l'unique téléchargement public de
+l'outil et doit contenir :
+
+```text
+plugins/d2rl-ruffneckk-isc12.dll
+README.md
+D2R Save Converter/D2RSaveConverter.exe
+D2R Save Converter/README.md
+```
+
+Le candidat local `addons/ISC12/RuffnecKk-isc12-v1.0.0.zip` a été généré le
+3 septembre 2026 avec exactement ces quatre entrées. Sa taille est de
+`95034618` octets et son SHA-256 est
+`EFCAB702CDD58F24CF008028D3E4C817F9AA55B7CEECAFDD06498A2AE36827BA`; chaque
+entrée extraite correspondait alors byte-exact à sa source gouvernée. Cette
+archive est maintenant obsolète depuis le correctif de compatibilité 1.2.1
+d'ISC12 et doit être régénérée avant publication.
+
+Le Converter et son README sont exclus du bundle `All Plugins`. Son README
+public a été ramené à un guide joueur sans référence à BKVince; il conserve les
+avertissements de sauvegarde, les formats 9-bit/12-bit, la sélection des données
+de mod, les limites de conversion et les consignes de chargement. Son SHA-256
+est `A18BB77D7244D69BF504278B4159D938FB79D4163B3C9B806C15A9C8B9EF83A8` dans
+le dépôt produit; la copie de travail du projet Converter a le même contenu
+normalisé en LF.
+
+Le package source de Cast Triggers contient désormais sa DLL `1.0.0` exacte.
+Son README public fournit également le parcours moddeur complet : réservation
+des IDs, rows ItemStatCost/Properties, tooltips JSON, liaison TOML, exemples,
+validation et dépannage. Vincent a relu et modifié ce README, SHA-256
+`D48016BF499B95FFB7038039FFEF4B885975C5DC99A9386526156FA417B69252`, puis a
+demandé le 3 septembre 2026 qu'il soit inclus comme `README.md` dans le ZIP
+individuel Cast Triggers 1.0.0. Le registre et les validateurs rendent cette
+exception obligatoire; le README reste exclu du bundle `All Plugins`.
+
+Le package MapSense utilise désormais le nom canonique
+`d2rl-ruffneckk-mapsense.dll`; l'ancien `RuffnecKkMapSense.dll` a été sorti du
+package et conservé localement comme rollback dans `analysis-cache/`. Son
+README public et le `THIRD_PARTY_NOTICES.md` central créditent maintenant
+libd2, Joffreybesos/PrimeMH, Dear ImGui, MinHook, toml++, D2MOO et D2RMH. Les
+textes de licence libd2 et toml++ sont conservés byte-exact avec leur SHA-256;
+la limite explicite de la licence libd2 sur les données dérivées de Diablo reste
+un gate de provenance distinct.
+
+`RuffnecKkMapSenseMapgen.exe` demeure un composant runtime obligatoire lancé
+automatiquement par MapSense. L'ancien
+`RuffnecKkMapSenseAutomapSprites.msp` a été déplacé hors de `package/` vers
+`test-fixtures/`; il reste disponible pour CTest, mais ne fait pas partie des
+fichiers publics.
+
+L'archive `D2RMM Custom 1.9.6` inspectée le 3 septembre 2026 porte le SHA-256
+`E7BFFFB81B69AB4C278A01ABE8AD6AA5A177531FDC64A2D1110D03760BE8E311`.
+Son importeur accepte les ZIPs D2RLoader et route les entrées explicites
+`plugins/`, `config/` et `patches/`. L'audit de la Suite confirme que les deux
+configurations plugin JSON, Bulk Skill Point Allocation et Larzuk Sockets,
+sont déjà sous `config/`; les TOML et memory patches utilisent également leurs
+racines canoniques. Aucun autre plugin ne possède un compagnon runtime externe
+obligatoire.
+
+Le vieux sous-arbre de travail `addons/RemoteStash/package/d2rloader/` contient
+encore un `RemoteStash.json` et des snippets de merge, mais ils ne sont pas
+distribués par l'archive publique actuelle : celle-ci contient uniquement la DLL
+sous `plugins/` et le TOML sous `config/`. Ils ne constituent donc pas un second
+cas de pathing D2RMM pour la prochaine release.
+
+MapSense constitue l'unique exception : son générateur SHA-256
+`7E176D2317EEAD60D1DBD543CC375B0B8BEEFA452DC0246642F4F8B7247E2120` doit être
+archivé comme `plugins/RuffnecKkMapSenseMapgen.exe` à côté de la DLL. Le
+registre gouverne désormais ce contrat et les validateurs refusent les DLL,
+compagnons EXE, configurations ou bundles qui ne respectent pas les chemins
+importables par D2RMM Custom. Cette preuve est statique; l'import UI puis le
+lancement en jeu restent à rejouer sur l'archive finale avant publication.
+
+La qualification Steam n'est plus un gate de release. Le packaging final de la
+Suite reste ouvert tant que MassID, l'allowlist exacte et les archives
+reproductibles ne sont pas fermés.
 
 ## Séparation publique/privée vérifiée le 3 septembre 2026
 
@@ -111,6 +277,39 @@ modification sous `tests/data/compatibility/`, et les scripts refusent les
 entrées de release privées absentes. Les quatre tests CTest publics autonomes
 passent. Le registre privé reste volontairement `scope-locked` et l'allowlist
 actuelle est rejetée comme obsolète jusqu'à sa future promotion.
+
+## Métadonnées de vérification multijoueur — 3 septembre 2026
+
+Les configurations publiées de Bulk Currency Deposit, Burn Damage Fix,
+Charm Aura Trigger Fix, Cube Quick Move, Enhanced Damage Min/Max Fix,
+Item Durability, MassID, Potion Auto Pickup, Remote Stash, Repair Costs Cap,
+Resistance Floor et Vendor Stock Refresh déclarent désormais la section
+réservée D2RLoader suivante :
+
+```toml
+[d2rl]
+match = true
+```
+
+D2RLoader peut ainsi inclure leurs réglages dans sa vérification multijoueur.
+Cette métadonnée reste optionnelle pour le chargement : une ancienne
+configuration sans `[d2rl]` demeure acceptée par le plugin, mais ne fournit pas
+au Loader cette attestation. Les parseurs ignorent la section réservée au
+Loader tout en continuant de refuser les sections et réglages inconnus dans
+leur propre espace de configuration.
+
+La validation Release ciblée rebâtit les 12 DLL et leurs 12 exécutables de
+test. Les 12 tests de politique passent; chacun accepte la configuration
+publiée avec la section réservée, et les cas historiques sans `[d2rl]`
+continuent également de passer. L'audit statique confirme exactement une
+section `[d2rl]` et un `match = true` dans chacun des 12 TOML. Les contrôles
+globaux `ruffneckk-suite-source-policy` et de propriété des écritures natives
+passent aussi. Aucun test runtime en jeu n'est requis pour ce changement de
+métadonnée et de tolérance de parseur.
+
+La même validation a corrigé l'option de compilation de Bulk Currency Deposit :
+ses cibles DLL et test activent maintenant `/EHsc`, requis par leur parseur
+toml++ et déjà employé par les autres plugins toml++ de la Suite.
 
 ## Rollback
 
