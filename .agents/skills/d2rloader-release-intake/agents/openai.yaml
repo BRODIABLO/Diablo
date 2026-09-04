@@ -1,0 +1,7 @@
+interface:
+  display_name: "D2RLoader Release Intake"
+  short_description: "Auditer et promouvoir une baseline D2RLoader"
+  default_prompt: "Utilise $d2rloader-release-intake pour auditer cette nouvelle release D2RLoader et mettre à jour la baseline gouvernée."
+
+policy:
+  allow_implicit_invocation: true

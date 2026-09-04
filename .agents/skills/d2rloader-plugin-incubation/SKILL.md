@@ -21,13 +21,15 @@ description: Auditer, implanter, qualifier et emballer une nouvelle DLL D2RLoade
 
 ## Auditer avant de coder
 
-1. Pour le runtime officiel courant et tout build couvert par équivalence native, exécuter le skill `d2r33-reverse-engineering` et franchir son gate `status`. Réutiliser le corpus commun lorsqu'il prouve byte-exact chaque surface employée, sans workbench ni matrice runtime duplicatifs.
-2. Relever la baseline gouvernée du runtime effectivement qualifié : version D2RLoader, version d'API/SDK, versions et hashes des composants RuffnecKk, plugins tiers actifs et contrats inter-DLL partagés. Nommer séparément les builds couverts uniquement par équivalence native.
-3. Vérifier la référence PluginPack épinglée et inventorier les surfaces nécessaires à la coexistence avec tous les composants actifs de la Suite et les cinq DLL eezstreet : structures, callbacks, ABI, RVA, plages de hooks, configurations et assets partagés.
-4. Réutiliser les contrats gouvernés de la Suite lorsqu'ils couvrent réellement le besoin; versionner toute nouvelle coopération inter-DLL, tolérer l'absence du fournisseur et refuser proprement une version d'ABI incompatible.
-5. Identifier chaque collision potentielle et désigner un propriétaire unique pour tout hook ou structure canonique.
-6. Si une incompatibilité avec la Suite ou le PluginPack est envisagée, arrêter l'implantation et présenter la collision à Vincent; ne pas réduire silencieusement la matrice de coexistence.
-7. Refuser toute implantation native dont les surfaces utilisées ne sont pas intégralement prouvées. Ne jamais traiter le `build-name`, le canal, le numéro de version, le hash global du PE ni le statut connu ou inconnu du runtime comme une preuve ou un gate de chargement.
+1. Exécuter `npm run baseline:d2rloader -- status` et utiliser uniquement l'entrée `promoted` comme baseline autoritaire. Si une release officielle plus récente reste candidate, ne pas l'ignorer : appliquer `d2rloader-release-intake` et bloquer toute revendication de livraison sur cette version tant que ses gates requis ne sont pas fermés.
+2. Pour le runtime officiel courant et tout build couvert par équivalence native, exécuter le skill `d2r33-reverse-engineering` et franchir son gate `status`. Réutiliser le corpus commun lorsqu'il prouve byte-exact chaque surface employée, sans workbench ni matrice runtime duplicatifs.
+3. Relever depuis le registre la version D2RLoader, les artefacts et hashes, les pins API/SDK, les contrats loader, les impacts connus, puis compléter avec les versions et hashes des composants RuffnecKk, les plugins tiers actifs et les contrats inter-DLL partagés. Nommer séparément les builds couverts uniquement par équivalence native.
+4. Choisir le pin PluginSDK minimal qui expose les capabilities réellement consommées. Ne pas migrer vers le dernier SDK uniquement parce qu'il est plus récent.
+5. Vérifier la référence PluginPack épinglée et inventorier les surfaces nécessaires à la coexistence avec tous les composants actifs de la Suite et les cinq DLL eezstreet : structures, callbacks, ABI, RVA, plages de hooks, configurations et assets partagés.
+6. Réutiliser les contrats gouvernés de la Suite lorsqu'ils couvrent réellement le besoin; versionner toute nouvelle coopération inter-DLL, tolérer l'absence du fournisseur et refuser proprement une version d'ABI incompatible.
+7. Identifier chaque collision potentielle et désigner un propriétaire unique pour tout hook ou structure canonique.
+8. Si une incompatibilité avec la Suite ou le PluginPack est envisagée, arrêter l'implantation et présenter la collision à Vincent; ne pas réduire silencieusement la matrice de coexistence.
+9. Refuser toute implantation native dont les surfaces utilisées ne sont pas intégralement prouvées. Ne jamais traiter le `build-name`, le canal, le numéro de version, le hash global du PE ni le statut connu ou inconnu du runtime comme une preuve ou un gate de chargement.
 
 ## Incuber de façon autonome
 

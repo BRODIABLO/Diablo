@@ -1,6 +1,6 @@
 {
     "schemaVersion":  "1.1.0",
-    "generatedAt":  "2026-09-03T23:27:00.9059101+00:00",
+    "generatedAt":  "2026-09-04T13:34:17.9560290+00:00",
     "root":  {
                  "name":  "ci-cadastre-head-b2f122a6de9c43ec85a936611a9afd43",
                  "path":  ".",
@@ -99,6 +99,48 @@
                                                                                                  {
                                                                                                      "name":  "SKILL.md",
                                                                                                      "path":  ".agents/skills/d2rloader-plugin-incubation/SKILL.md",
+                                                                                                     "kind":  "file"
+                                                                                                 }
+                                                                                             ]
+                                                                            },
+                                                                            {
+                                                                                "name":  "d2rloader-release-intake",
+                                                                                "path":  ".agents/skills/d2rloader-release-intake",
+                                                                                "kind":  "directory",
+                                                                                "meta":  {
+                                                                                             "role":  "x-d2rloader-release-intake",
+                                                                                             "summary":  "Procédure gouvernée d'admission d'une nouvelle release D2RLoader ou PluginSDK, de sa preuve source à sa promotion comme baseline consommable par l'architecture, l'incubation et la validation runtime.",
+                                                                                             "agentAccess":  "read-write",
+                                                                                             "status":  "active"
+                                                                                         },
+                                                                                "children":  [
+                                                                                                 {
+                                                                                                     "name":  "agents",
+                                                                                                     "path":  ".agents/skills/d2rloader-release-intake/agents",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "openai.yaml",
+                                                                                                                          "path":  ".agents/skills/d2rloader-release-intake/agents/openai.yaml",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "references",
+                                                                                                     "path":  ".agents/skills/d2rloader-release-intake/references",
+                                                                                                     "kind":  "directory",
+                                                                                                     "children":  [
+                                                                                                                      {
+                                                                                                                          "name":  "release-intake-checklist.md",
+                                                                                                                          "path":  ".agents/skills/d2rloader-release-intake/references/release-intake-checklist.md",
+                                                                                                                          "kind":  "file"
+                                                                                                                      }
+                                                                                                                  ]
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "SKILL.md",
+                                                                                                     "path":  ".agents/skills/d2rloader-release-intake/SKILL.md",
                                                                                                      "kind":  "file"
                                                                                                  }
                                                                                              ]
@@ -41319,6 +41361,16 @@
                                                            "kind":  "file"
                                                        },
                                                        {
+                                                           "name":  "d2rloader-baselines.json",
+                                                           "path":  "reverse-engineering/d2rloader-baselines.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
+                                                           "name":  "d2rloader-baselines.schema.json",
+                                                           "path":  "reverse-engineering/d2rloader-baselines.schema.json",
+                                                           "kind":  "file"
+                                                       },
+                                                       {
                                                            "name":  "README.md",
                                                            "path":  "reverse-engineering/README.md",
                                                            "kind":  "file"
@@ -42143,6 +42195,16 @@
                                                                             {
                                                                                 "name":  "d2r33-datatables-generate.test.mjs",
                                                                                 "path":  "scripts/reverse-engineering/d2r33-datatables-generate.test.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "d2rloader-baseline.mjs",
+                                                                                "path":  "scripts/reverse-engineering/d2rloader-baseline.mjs",
+                                                                                "kind":  "file"
+                                                                            },
+                                                                            {
+                                                                                "name":  "d2rloader-baseline.test.mjs",
+                                                                                "path":  "scripts/reverse-engineering/d2rloader-baseline.test.mjs",
                                                                                 "kind":  "file"
                                                                             },
                                                                             {

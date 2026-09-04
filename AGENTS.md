@@ -81,6 +81,12 @@ En clair : `addons/`, `reverse-engineering/` et les procédures natives portent 
 - **Runtime Diablo** : utiliser le skill `d2r-runtime-validation`. Si des fichiers sont verrouillés, fermer soi-même les instances concernées; ne jamais demander à Vincent de fermer le jeu. Relancer ensuite une seule instance si la validation l’exige.
 - **Compatibilité des plugins** : ne désactiver aucun plugin installé ni aucune fonctionnalité du PluginPack pendant un cold start ou un test déclaré de compatibilité. La matrice de qualification doit utiliser la pile complète active et activer toutes les fonctionnalités du pack; un démarrage obtenu en retirant, neutralisant ou laissant désactivé un composant ne prouve aucune compatibilité. Une isolation temporaire est permise uniquement comme diagnostic explicitement étiqueté, puis la pile complète doit être restaurée et retestée avant toute conclusion ou livraison.
 
+## Baseline D2RLoader et PluginSDK
+
+Lorsqu'une nouvelle version D2RLoader ou PluginSDK est annoncée, utiliser automatiquement le skill `d2rloader-release-intake` et commencer par `npm run baseline:d2rloader -- status`. Une annonce seule autorise l'analyse read-only, jamais la promotion silencieuse d'une baseline ni l'adaptation de code; le gate `GO` reste requis avant toute mutation. `reverse-engineering/d2rloader-baselines.json` est la source gouvernée des releases annoncées, auditées, qualifiées, promues et supersédées. Les autres skills lisent ce registre au lieu de contenir un numéro courant en dur.
+
+Une version, un canal ou un nom de build D2RLoader ne prouve jamais la compatibilité et ne peut jamais autoriser, refuser ou sélectionner le chargement d'une DLL. Une nouvelle release reste candidate jusqu'à vérification de sa provenance, des hashes de `D2RLoader.exe`, `D2RCore.dll` et `d2rloader.mpq`, du pin PluginSDK, des contrats API/ABI, des impacts sur la Suite et de la qualification pile complète. La baseline précédente demeure autoritaire jusqu'à promotion explicite. Chaque plugin choisit le SDK minimal couvrant ses capabilities réelles; une nouvelle version de SDK ne déclenche aucune migration sans consommateur ni gain démontré.
+
 ## Skills spécialisés
 
 Les procédures répétables résident sous `.agents/skills/`. Utilise le skill correspondant dès que son domaine est engagé :
@@ -88,6 +94,7 @@ Les procédures répétables résident sous `.agents/skills/`. Utilise le skill 
 - `diablo-tsv` — cadastre, schémas, tables TXT, CRLF et round-trip byte-exact;
 - `plugin-architect` — revue d'architecture explicite, approfondie et strictement read-only avant le choix d'un mécanisme;
 - `workspace-improvement-radar` — radar transversal des lacunes réutilisables et démontrées de méthode, planning, réflexion, automatisation ou validation; émettre le signal « Hey buddy » seulement lorsqu'un nouveau skill est réellement justifié;
+- `d2rloader-release-intake` — admission automatique des annonces D2RLoader/PluginSDK, audit des artefacts et contrats, matrice d'impact et promotion de la baseline;
 - `d2rloader-service-governance` — gate automatique « no consumer, no service » pour auditer, prioriser, formuler et mesurer les demandes de services D2RLoader/PluginSDK;
 - `d2r33-reverse-engineering` — preuves natives du runtime courant D2R 3.3.93847, fonctions, xrefs, signatures, ABI et RVA;
 - `d2rloader-plugin-incubation` — implantation d'une DLL retenue, autonomie RuffnecKk Suite, audit SDK/ABI/hooks, coexistence complète, configuration indépendante, crédits et ZIP;

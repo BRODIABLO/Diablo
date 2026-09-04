@@ -7,10 +7,11 @@ description: Déployer un changement Diablo ou D2RLoader dans le profil runtime 
 
 ## Préparer une validation traçable
 
-1. Identifier la source gouvernée, le profil runtime exact, le build D2R et la portée globale ou mod-locale. Ne jamais supposer un chemin d'installation à partir d'un autre poste.
-2. Définir avant copie la liste fermée des fichiers autorisés et les résultats attendus.
-3. Relever les hashes source et l'état des logs avant le test. Ne pas mélanger des logs anciens avec le démarrage courant.
-4. Établir la matrice fonctionnelle depuis la mission; séparer les gates statiques, cold-start, visuels, gameplay et multijoueur.
+1. Exécuter `npm run baseline:d2rloader -- status`. Si le loader ciblé n'est ni la baseline promue ni un candidat enregistré, appliquer `d2rloader-release-intake` avant toute revendication de compatibilité.
+2. Identifier la source gouvernée, le profil runtime exact, le build D2R et la portée globale ou mod-locale. Ne jamais supposer un chemin d'installation à partir d'un autre poste.
+3. Définir avant copie la liste fermée des fichiers autorisés et les résultats attendus.
+4. Relever les hashes source et l'état des logs avant le test. Ne pas mélanger des logs anciens avec le démarrage courant.
+5. Établir la matrice fonctionnelle depuis la mission; séparer les gates statiques, cold-start, visuels, gameplay et multijoueur.
 
 ## Détecter une dérive du build officiel
 

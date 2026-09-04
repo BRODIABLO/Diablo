@@ -36,12 +36,14 @@ Expliquer pourquoi le mecanisme retenu correspond mieux au besoin que les autres
 
 ## Router vers les preuves gouvernees
 
-1. Pour une DLL candidate, verifier seulement que l'option peut respecter les invariants RuffnecKk Suite d'`AGENTS.md`. Si la decision finale retient cette DLL, identifier `d2rloader-plugin-incubation` comme gate obligatoire apres `GO`; ne pas lancer son workflow operationnel pendant la revue.
-2. Pour un hook, une ABI, une signature, un RVA ou un memory patch visant le runtime courant D2R.exe 3.3.93847, appliquer `d2r33-reverse-engineering` et commencer par son gate `status`. L'identité binaire utile avec le corpus 92777 étant établie, ses preuves gouvernées sont directement réutilisables.
-3. Pour toute lecture de table TXT/TSV ou analyse de schema, appliquer `diablo-tsv` et respecter les sources read-only.
-4. Pour D2RMM, traiter sa sortie comme une composition locale a auditer, jamais comme la source de verite de BKVince.
-5. Concevoir la future qualification runtime selon `d2r-runtime-validation`, sans l'executer pendant cette revue read-only.
-6. Ne pas recopier dans cette analyse les procedures detaillees de ces skills; les utiliser comme autorites specialisees.
+1. Pour toute option D2RLoader, commencer par `npm run baseline:d2rloader -- status`. Concevoir contre la baseline `promoted`; présenter séparément les deltas d'un candidat non promu et ne jamais les transformer en contrat acquis.
+2. Si Vincent annonce une nouvelle release D2RLoader ou PluginSDK pendant la revue, appliquer `d2rloader-release-intake` en mode read-only; l'annonce ne change pas silencieusement la baseline de conception.
+3. Pour une DLL candidate, verifier seulement que l'option peut respecter les invariants RuffnecKk Suite d'`AGENTS.md`. Si la decision finale retient cette DLL, identifier `d2rloader-plugin-incubation` comme gate obligatoire apres `GO`; ne pas lancer son workflow operationnel pendant la revue.
+4. Pour un hook, une ABI, une signature, un RVA ou un memory patch visant le runtime courant D2R.exe 3.3.93847, appliquer `d2r33-reverse-engineering` et commencer par son gate `status`. L'identité binaire utile avec le corpus 92777 étant établie, ses preuves gouvernées sont directement réutilisables.
+5. Pour toute lecture de table TXT/TSV ou analyse de schema, appliquer `diablo-tsv` et respecter les sources read-only.
+6. Pour D2RMM, traiter sa sortie comme une composition locale a auditer, jamais comme la source de verite de BKVince.
+7. Concevoir la future qualification runtime selon `d2r-runtime-validation`, sans l'executer pendant cette revue read-only.
+8. Ne pas recopier dans cette analyse les procedures detaillees de ces skills; les utiliser comme autorites specialisees.
 
 ## Construire le dossier de decision
 

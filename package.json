@@ -57,6 +57,8 @@
     "generate:extended-item-stats-fixture": "node scripts/reverse-engineering/extended-item-stats-fixture.mjs --output analysis-cache/extended-item-stats/synthetic-120-stats.d2i",
     "native:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/reverse-engineering/Build-NativePlugins.ps1",
     "re:tools": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/reverse-engineering/Runtime-Tools.ps1",
+    "baseline:d2rloader": "node scripts/reverse-engineering/d2rloader-baseline.mjs",
+    "test:d2rloader-baseline": "node --test scripts/reverse-engineering/d2rloader-baseline.test.mjs && node scripts/reverse-engineering/d2rloader-baseline.mjs validate",
     "re:d2r33:capture": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/reverse-engineering/Capture-D2RRuntime.ps1",
     "re:d2r33": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/reverse-engineering/d2r33.ps1",
     "re:d2r32:capture": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/reverse-engineering/Capture-D2RRuntime.ps1",

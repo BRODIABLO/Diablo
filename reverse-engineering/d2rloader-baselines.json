@@ -1,0 +1,154 @@
+{
+  "$schema": "./d2rloader-baselines.schema.json",
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-04T13:21:24.124Z",
+  "promotedBaselineId": "d2rloader-1.2.1-public",
+  "policy": {
+    "allowVersionBasedRuntimeGate": false,
+    "promotionRequiresQualification": true,
+    "keepHistory": true
+  },
+  "baselines": [
+    {
+      "id": "d2rloader-1.2.1-public",
+      "version": "1.2.1",
+      "channel": "public",
+      "stage": "promoted",
+      "observedAt": "2026-09-04",
+      "promotedAt": "2026-09-04",
+      "supersededAt": null,
+      "source": {
+        "kind": "official-release",
+        "url": "https://d2rloader.net/",
+        "verifiedAt": "2026-09-04",
+        "evidence": [
+          "Mission/ruffneckk-suite-next-release.md:7-33",
+          "analysis-cache/d2rloader-1.2.1-release-audit/"
+        ]
+      },
+      "artifacts": [
+        {
+          "name": "D2RLoader.exe",
+          "size": 23581032,
+          "sha256": "27A79CCD61360CC03E7C623D20A46546E5732B9997C41DC185B5EFC335B5C084",
+          "fileVersion": "1.2.1-beta",
+          "evidencePath": "analysis-cache/d2rloader-1.2.1-release-audit/D2RLoader.exe"
+        },
+        {
+          "name": "D2RCore.dll",
+          "size": 16903512,
+          "sha256": "2130A98D0B879696116A7DDDE5C11AE8C91942B54B8276DB43E02074A715BBC8",
+          "fileVersion": "1.2.1-beta",
+          "evidencePath": "analysis-cache/d2rloader-1.2.1-release-audit/D2RCore.dll"
+        },
+        {
+          "name": "d2rloader.mpq",
+          "size": 10820639,
+          "sha256": "47BDAFFD1B2633C341640B8B823F782625467433DFBE3C5827DFAD44C381F997",
+          "fileVersion": null,
+          "evidencePath": "analysis-cache/d2rloader-1.2.1-release-audit/d2rloader.mpq"
+        }
+      ],
+      "sdk": {
+        "selectionPolicy": "minimum-required-capability",
+        "pins": [
+          {
+            "apiVersion": 3,
+            "tag": "v3",
+            "commit": "4933e2c42cb2592958cd0df3b6dc5003102252d1",
+            "role": "existing-component-default",
+            "repository": "https://github.com/D2RLoader/PluginSDK"
+          },
+          {
+            "apiVersion": 4,
+            "tag": "v4",
+            "commit": "6eb8f8b6192868214706bd6d528c5294f2f551b7",
+            "role": "capability-opt-in",
+            "repository": "https://github.com/D2RLoader/PluginSDK"
+          }
+        ]
+      },
+      "contracts": {
+        "reviewed": true,
+        "pluginManifestVersion": 2,
+        "requiredExports": [
+          "D2RLoaderGetPluginInfo",
+          "D2RLoaderLoadPlugin",
+          "D2RLoaderUnloadPlugin"
+        ],
+        "runtimeSelectionPolicy": "native-fingerprint-only"
+      },
+      "impactReview": [
+        {
+          "component": "ISC12",
+          "disposition": "adapted",
+          "evidence": "The public D2RCore provider set and compiler capture capacity were added and qualified in Mission/ruffneckk-suite-next-release.md:164-183."
+        },
+        {
+          "component": "Vendor Stock Refresh",
+          "disposition": "adapted",
+          "evidence": "The public SendClientGameplayPacket provider was fingerprinted and qualified in Mission/ruffneckk-suite-next-release.md:185-206."
+        },
+        {
+          "component": "Ground Item Label Limit",
+          "disposition": "superseded-by-loader",
+          "evidence": "D2RLoader 1.2 provides the equivalent native feature; the RuffnecKk presets were removed from the next Suite scope."
+        }
+      ],
+      "gates": {
+        "sourceVerified": {
+          "status": "passed",
+          "evidence": [
+            "The public 1.2.1 distribution was inspected on 2026-09-04."
+          ]
+        },
+        "artifactIntegrity": {
+          "status": "passed",
+          "evidence": [
+            "The three extracted public artifacts were sized and SHA-256 hashed from analysis-cache/d2rloader-1.2.1-release-audit/."
+          ]
+        },
+        "sdkAudit": {
+          "status": "passed",
+          "evidence": [
+            "PluginSDK v3 and v4 pins are documented in the Suite THIRD_PARTY_NOTICES.md and the governed SDK service audit."
+          ]
+        },
+        "contractAudit": {
+          "status": "passed",
+          "evidence": [
+            "Manifest v2, the three plugin exports, service contracts and version-neutral native selection policy were reviewed for the Suite."
+          ]
+        },
+        "staticCompatibility": {
+          "status": "passed",
+          "evidence": [
+            "The affected ISC12 and Vendor providers were checked byte-exact before runtime qualification."
+          ]
+        },
+        "runtimeQualification": {
+          "status": "passed",
+          "evidence": [
+            "Cold start on D2R 3.3.93847 with the public D2RLoader 1.2.1 reached 24/24 on 2026-09-04."
+          ]
+        },
+        "fullStackCoexistence": {
+          "status": "passed",
+          "evidence": [
+            "The qualified run loaded 37 plugins and 17 memory patches with only the two documented pre-existing failures."
+          ]
+        },
+        "multiplayer": {
+          "status": "not-run",
+          "evidence": [
+            "No multiplayer compatibility claim is inherited from the loader baseline."
+          ]
+        }
+      },
+      "notes": [
+        "The PE file version remains 1.2.1-beta even though this is the inspected public 1.2.1 distribution.",
+        "Loader version and channel are diagnostic metadata and never authorize or reject plugin loading."
+      ]
+    }
+  ]
+}

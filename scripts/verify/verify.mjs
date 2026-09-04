@@ -67,6 +67,7 @@ try {
     'scripts/workstreams/workstreams.test.mjs',
     'scripts/validate-tde-catalog/validate.test.mjs',
     'scripts/checkpoint/checkpoint.test.mjs',
+    'scripts/reverse-engineering/d2rloader-baseline.test.mjs',
     '.codex/hooks/diablo-guard.test.mjs',
   ], 'repository guardrail tests');
   if (process.platform === 'win32') {

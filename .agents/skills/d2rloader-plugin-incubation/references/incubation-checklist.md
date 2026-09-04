@@ -11,12 +11,13 @@
 ## Audit de la Suite et de la pile tierce
 
 ```powershell
+npm.cmd run baseline:d2rloader -- status
 npm.cmd run ref:d2rlplugins -- status
 npm.cmd run ref:d2rlplugins -- search <terme>
 npm.cmd run ref:d2rlplugins -- symbol <symbole>
 ```
 
-Relever la baseline D2R/D2RLoader/API-SDK de la Suite, les versions et hashes de ses composants, le commit PluginPack épinglé, les contrats inter-DLL, les structures partagées, les callbacks, les RVA et chaque plage d'octets lue ou écrite. Citer commit, chemin et ligne dans la mission.
+Relever la baseline D2RLoader promue, ses artefacts, ses pins API-SDK et ses contrats depuis `reverse-engineering/d2rloader-baselines.json`. Signaler tout candidat plus récent sans lui attribuer une compatibilité acquise. Relever ensuite la baseline D2R de la Suite, les versions et hashes de ses composants, le commit PluginPack épinglé, les contrats inter-DLL, les structures partagées, les callbacks, les RVA et chaque plage d'octets lue ou écrite. Citer commit, chemin et ligne dans la mission.
 
 ## Gates techniques
 
@@ -31,6 +32,7 @@ Relever la baseline D2R/D2RLoader/API-SDK de la Suite, les versions et hashes de
 - Tests de politique prouvant qu'une identité ou version inconnue avec empreinte complète valide charge, qu'une identité Steam/Battle.net connue avec empreinte invalide est refusée, que chaque profil natif se sélectionne sans métadonnée de version et que les correspondances absentes, partielles ou ambiguës échouent avant le premier hook; matrice statique/runtime/gameplay consignée pour le runtime effectivement qualifié.
 - Audit de release couvrant chaque DLL republiée, y compris historique; toute comparaison autorisante ou bloquante avec un numéro de build bloque la nouvelle release.
 - Baseline D2RLoader/SDK gouvernée respectée et version d'ABI inter-DLL explicitement contrôlée.
+- Pin PluginSDK minimal justifié par les capabilities réellement consommées; aucune migration imposée par la seule nouveauté d'un SDK.
 - Installation globale et mod-locale démontrée, sans `ModScopedOnly`.
 - Configuration dédiée indépendante valide en JSON ou TOML; priorité mod actif puis repli global, sans bloc dans `D2RPlugins.json`.
 - Contenu et commentaires de configuration entièrement en anglais.

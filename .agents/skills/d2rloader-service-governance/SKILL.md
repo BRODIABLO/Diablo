@@ -19,6 +19,8 @@ Ne jamais transformer une liste de frictions possibles en liste d'implantations 
 
 ## Auditer les faits avant de concevoir l'API
 
+Commencer par `npm run baseline:d2rloader -- status`. Si le service provient d'une release encore candidate, lire son audit `d2rloader-release-intake` et conserver son statut provisoire jusqu'à promotion de la baseline. Ne jamais recopier un numéro de loader ou de SDK dans ce skill.
+
 Pour chaque proposition, établir à partir du code, des missions, des tests ou des logs :
 
 1. le plugin ou workstream actif qui consommerait le service;
