@@ -1,7 +1,7 @@
 {
   "name": "@ruffneckk/d2r-save-converter",
   "private": true,
-  "version": "0.2.1",
+  "version": "1.0.0",
   "type": "module",
   "bin": {
     "d2r-save-converter": "src/cli-entry.mjs"

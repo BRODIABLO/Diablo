@@ -1,6 +1,6 @@
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     cmake_minimum_required(VERSION 3.28)
-    project(ISC12 VERSION 0.2.1 LANGUAGES CXX RC ASM_MASM)
+    project(ISC12 VERSION 1.0.0 LANGUAGES CXX RC ASM_MASM)
     include(CTest)
 else()
     enable_language(RC)

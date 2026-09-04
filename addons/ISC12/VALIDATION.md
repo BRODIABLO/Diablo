@@ -1,5 +1,8 @@
 # ISC12 validation gates
 
+The completed evidence below belongs to candidate 0.2.1. Version 1.0.0 must be
+rebuilt and requalified as the exact final artifact before release.
+
 ## Foundation and governance
 
 - [x] Governed producer/consumer/sentinel ledger inventories 211 sites across

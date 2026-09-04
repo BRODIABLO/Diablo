@@ -1,15 +1,15 @@
-# ISC12 0.2.1
+# ISC12 1.0.0
 
-> Config-free public-test candidate. Installing the DLL activates ISC12 after
+> Config-free public release. Installing the DLL activates ISC12 after
 > its complete native fingerprint passes.
 
 ISC12 is a clean-sheet D2RLoader format for overhaul mods that need more than
 511 `ItemStatCost` rows. It reserves serialized IDs `0..4094` for stats and
 `0xFFF` as the list terminator.
 
-Version 0.2.1 preserves the production-callable experimental publication path
-introduced in 0.2.0 and adds one narrowly attested coexistence contract for
-`ExtendedItemStats.dll` 0.3.14. It uses a same-thread authority bounded to the
+Version 1.0.0 promotes the proven 0.2.1 candidate and its narrowly attested
+coexistence contract for `ExtendedItemStats.dll` 0.3.14. It uses a same-thread
+authority bounded to the
 synchronous initial
 `D2RLoaderLoadPlugin` callback, preflights every G0, G10 and codec surface before
 the first write, reserves relay/state lifetime, then commits G0, G10 and codec
@@ -340,10 +340,9 @@ is unsupported. D2RLoader's native `.d2rl` environment record provides the visib
 plugin/mod compatibility warning; it is not a cryptographic schema marker and
 ISC12 does not promise to hard-block every misuse. Backups remain mandatory.
 
-The config-free 0.2.1 candidate is being distributed first as a small public
-test for new characters and new shared stashes. D2R Save Converter remains a
-separate companion tool. Its source-to-target migration and solo runtime gates
-are closed; publish it separately after final packaging and review.
+The config-free 1.0.0 plugin is distributed with D2R Save Converter 1.0.0 as a
+separate companion tool. Rebuild and validate both final artifacts before
+publishing them.
 
 ## Credits
 
