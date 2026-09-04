@@ -1,33 +1,29 @@
 # Mission courante
 
-Dernière mise à jour : 3 septembre 2026
+Dernière mise à jour : 4 septembre 2026
 
 ## Priorité active
 
-[RuffnecKk D2RLoader Suite — prochaine release publique](ruffneckk-suite-next-release.md)
+[RuffnecKk D2RLoader Suite — release publique v1.3.1](ruffneckk-suite-next-release.md)
 
-État : **périmètre 1.3.0 verrouillé dans un registre gouverné, packaging encore
-bloqué**. La dernière release publique reste `v1.2.0`. La cible contient 22
-plugins, 17 memory patches, l'EXE D2R Save Converter et deux bundles, soit 42
-assets. ISC12 0.2.1 et son convertisseur rejoignent finalement cette release;
-Cast Triggers, Armageddon-Hurricane CtC Fix et Resistance Floor entrent en
-`1.0.0`; Remote Stash 2.3.0, Vendor Stock Refresh 2.0.0 et Shadow Master AI Fix
-sont inclus. Ground Item Label Limit est retiré; Extended Act Level IDs,
-MapSense et la feature update MassID sont reportés.
+État : **la RuffnecKk D2RLoader Suite `v1.3.1` est publique depuis le
+3 septembre 2026**. Elle pointe sur le commit produit `c63ac0c`, contient
+exactement 24 plugins, 17 memory patches et deux bundles, distribués dans deux
+archives reproductibles. Le registre privé final est au commit `47df4a4`.
 
-Le gate actif est de synchroniser ces composants dans le dépôt produit,
-verrouiller la version de maintenance MassID, puis qualifier la pile complète
-sur Steam 3.3.93787. Aucun composant ne peut utiliser un numéro de build comme
-allowlist. `releaseReady` reste faux et le générateur refuse toute allowlist qui
-ne correspond pas au registre. Aucun commit, push, tag ou asset GitHub n'est
-autorisé par cette priorité seule.
+Le cold start final sous D2R `3.3.93847` et D2RLoader
+`1.2.1-beta preview 10` atteint `24/24`; ISC12 `1.0.1`, Vendor Stock Refresh
+`2.0.1` et Remote Stash `2.3.1` sont actifs. L'absence du fichier optionnel de
+skin MPQ de Remote Stash retombe correctement sur le TOML D2RLoader. Steam
+`3.3.93787` reste non testé et aucune qualification Steam ou multijoueur n'est
+revendiquée par cette release.
 
 ## Prochain gate
 
-Conserver le registre 1.3.0 valide à 22 plugins, 17 patches, un outil autonome
-et deux bundles; synchroniser les composants retenus, réconcilier la version de
-maintenance MassID, puis qualifier la pile Steam complète avant de passer le
-registre à `package-ready` ou de promouvoir l'allowlist de 42 assets.
+La release `v1.3.1` est terminée et ne conserve aucun gate de publication
+ouvert. Le prochain gate est de choisir explicitement la prochaine mission
+significative sans réouvrir les gates clos de `v1.3.1`. Les sections de
+priorités précédentes ci-dessous demeurent des handoffs historiques.
 
 ## Priorité précédente conservée — ISC12
 
