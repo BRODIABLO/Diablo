@@ -1524,6 +1524,24 @@ void CheckNativeAutomapAtlasPolicy() {
     CHECK(!CanAppendNativeAutomapEmittedCell(10'517U));
     CHECK(5'461U * NativeAutomapSerializedBytesPerCell == 32'766U);
     CHECK(5'462U * NativeAutomapSerializedBytesPerCell == 32'772U);
+    CHECK(NativeAutomapSerializerByteCountVanilla.size() == 13U);
+    CHECK(NativeAutomapSerializerByteCountWide.size() == 13U);
+    CHECK(NativeAutomapSerializerByteCountVanilla
+        != NativeAutomapSerializerByteCountWide);
+    constexpr std::array<std::uint8_t, 13U> expectedSerializerByteCountWide{
+        0x33, 0xC9, 0x8B, 0x56, 0x08, 0x03, 0xD2,
+        0x0F, 0x43, 0xCA, 0x41, 0x89, 0x0F,
+    };
+    CHECK(NativeAutomapSerializerByteCountWide
+        == expectedSerializerByteCountWide);
+    CHECK(IsSupportedNativeAutomapSerializerByteCount(
+        NativeAutomapSerializerByteCountVanilla));
+    CHECK(IsSupportedNativeAutomapSerializerByteCount(
+        NativeAutomapSerializerByteCountWide));
+    auto unknownSerializerByteCount = NativeAutomapSerializerByteCountWide;
+    unknownSerializerByteCount[0] ^= 0x01U;
+    CHECK(!IsSupportedNativeAutomapSerializerByteCount(
+        unknownSerializerByteCount));
 
     NativeAutomapCellKeyValue rejected{};
     CHECK(!BuildNativeAutomapCellKeyValue(

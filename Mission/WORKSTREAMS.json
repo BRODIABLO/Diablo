@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-01",
+  "updatedAt": "2026-09-03",
   "workstreams": [
     {
       "id": "extended-item-stats",
@@ -695,6 +695,21 @@
       ]
     },
     {
+      "id": "automap-serialization-fix",
+      "name": "Automap Serialization Fix",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/automap-serialization-fix-3.3.md",
+      "nextGate": "Reproduce a sidecar payload above 32767 bytes on Battle.net 3.3.93847, verify layer transition and automap persistence, then keep Steam, cross-build multiplayer, packaging and Suite 1.3.0 promotion explicitly separate.",
+      "include": [
+        "Mission/automap-serialization-fix-3.3.md",
+        "addons/AutomapSerializationFix/**",
+        "addons/RuffnecKkMapSense/src/reveal_engine.cpp",
+        "addons/RuffnecKkMapSense/src/reveal_engine.hpp",
+        "addons/RuffnecKkMapSense/src/mapsense_tests.cpp"
+      ]
+    },
+    {
       "id": "workstream-registry",
       "name": "Workstream Registry",
       "status": "maintenance",
@@ -1138,6 +1153,30 @@
         "pd2-inspiration-bkvince"
       ],
       "reason": "The FourthSkillTree mission owns this scenario while the existing PD2 workstream still governs the shared game-tests harness tree."
+    },
+    {
+      "pattern": "addons/RuffnecKkMapSense/src/reveal_engine.cpp",
+      "workstreams": [
+        "ruffneckk-mapsense",
+        "automap-serialization-fix"
+      ],
+      "reason": "MapSense owns its reveal engine while Automap Serialization Fix requires the exact dual-state serializer witness for load-order-independent coexistence."
+    },
+    {
+      "pattern": "addons/RuffnecKkMapSense/src/reveal_engine.hpp",
+      "workstreams": [
+        "ruffneckk-mapsense",
+        "automap-serialization-fix"
+      ],
+      "reason": "MapSense owns its reveal policy while Automap Serialization Fix shares only the exact vanilla/corrected serializer byte sequences."
+    },
+    {
+      "pattern": "addons/RuffnecKkMapSense/src/mapsense_tests.cpp",
+      "workstreams": [
+        "ruffneckk-mapsense",
+        "automap-serialization-fix"
+      ],
+      "reason": "MapSense policy coverage also verifies the exact corrected serializer sequence accepted for optional plugin coexistence."
     }
   ]
 }

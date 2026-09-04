@@ -1,6 +1,6 @@
 # RuffnecKk MapSense — D2R 3.2.92777 et 3.3.93847
 
-Dernière mise à jour : 2 septembre 2026
+Dernière mise à jour : 3 septembre 2026
 
 ## Décision et état
 
@@ -2774,3 +2774,22 @@ Le workstream couvre cette mission et les futurs fichiers propres à
 registres natifs restent partagés. Le `reveal-map.toml` préexistant n'est pas
 revendiqué avant identification de son propriétaire. Aucun commit ni push
 n'est effectué sans demande explicite de Vincent.
+
+## Maintenance 1.0.0 — coexistence Automap Serialization Fix
+
+Le 3 septembre 2026, MapSense `1.0.0` devient un consommateur read-only des
+deux états complets du témoin à `D2R+0xD7E3F` : les 13 octets vanilla ou les
+13 octets possédés par le plugin autonome `Automap Serialization Fix 0.1.0`.
+Une troisième séquence demeure fail-closed. Le premier essai runtime a révélé
+un faux message d'erreur lorsque le premier état testé échouait avant que le
+second réussisse; la comparaison finale est silencieuse entre les deux états
+admis et ne journalise qu'un refus réel.
+
+Deux builds propres et CTest `1/1` passent. Le build, le package et l'artefact
+runtime final sont byte-identiques : `3 553 280` octets, PE/PluginInfo `1.0.0`,
+SHA-256
+`2B71748E53084FDE72E36731293251C9776072F690AA7224F4E579AE7CC624A1`.
+Les deux ordres de chargement passent sur Battle.net D2R `3.3.93847` avec
+`39` plugins, `17` patches, les cinq DLL eezstreet et zéro erreur fraîche.
+Le runtime BKVince est ensuite restauré byte-exact à MapSense `0.13.41`; le
+candidat `1.0.0` n'y reste pas déployé.

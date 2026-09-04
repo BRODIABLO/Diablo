@@ -1104,9 +1104,6 @@ auto ValidateRuntime() noexcept -> bool {
     // Unique serializer epilogue: [RSI+8] is the emitted uint16 element count,
     // not tree+0x20's total node count. Each zero-tag key contributes three
     // words; the doubled signed result bounds only those emitted records.
-    constexpr std::array<std::uint8_t, 13> serializerLimitExpected{
-        0x0F, 0xB7, 0x4E, 0x08, 0x66, 0x03, 0xC9,
-        0x0F, 0xBF, 0xC9, 0x41, 0x89, 0x0F};
     // The standard room callback proves both the Levels record +0x08 Layer
     // field and the GetOrCreateLayer ABI before it reveals the ActiveRoom.
     constexpr std::array<std::uint8_t, 31> layerWitnessExpected{
@@ -1151,6 +1148,16 @@ auto ValidateRuntime() noexcept -> bool {
             expected.data(),
             static_cast<std::uint32_t>(expected.size()));
     };
+    const auto checkSerializerByteCount = []() noexcept {
+        std::array<std::uint8_t, 13U> live{};
+        const auto* const address = reinterpret_cast<const std::uint8_t*>(
+            Context->exeBase + AutomapSerializerLimitWitnessRva);
+        std::copy_n(address, live.size(), live.begin());
+        if (IsSupportedNativeAutomapSerializerByteCount(live)) return true;
+        Context->LogError(
+            "MapSense: automap serializer byte-count witness matched neither the complete vanilla nor RuffnecKk fixed state.");
+        return false;
+    };
     return check(GetLocalDataContextRva, localContextExpected)
         && check(GetLocalPlayerRva, localPlayerExpected)
         && check(GetLevelRva, getLevelExpected)
@@ -1177,9 +1184,7 @@ auto ValidateRuntime() noexcept -> bool {
         && check(CurrentAutomapLayerOwnerWitnessRva, currentOwnerExpected)
         && check(FindAutomapCellRva, findCellExpected)
         && check(InsertAutomapCellRva, insertCellExpected)
-        && check(
-            AutomapSerializerLimitWitnessRva,
-            serializerLimitExpected)
+        && checkSerializerByteCount()
         && check(
             StandardAutomapLayerWitnessRva,
             layerWitnessExpected)
