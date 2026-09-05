@@ -2,6 +2,46 @@
 
 Dernière mise à jour : 4 septembre 2026
 
+## Potion Auto Pickup 2.0.0 — stacking autorisé
+
+Le 4 septembre 2026, Vincent autorise l'implantation du stacking de potions
+dans la DLL RuffnecKk autonome existante `Potion Auto Pickup`. Le chantier
+conserve une seule DLL hybride globale/mod-locale et sépare dans son TOML les
+capacités `auto_pickup` et `potion_stacking`. Chaque famille Health, Mana et
+Rejuvenation reçoit un `max_stack` indépendant compris entre 1 et la limite
+native 511; la même limite s'applique dans l'inventory et la belt.
+
+Pour chaque code exact, l'autopickup complète d'abord les piles partielles dans
+les colonnes configurées, parcourt chaque colonne du bas vers le haut, puis
+ouvre une nouvelle pile dans la première row libre. Lorsque les colonnes belt
+ne peuvent plus recevoir la potion, les règles existantes
+`inventory_fallback_potion_codes` gouvernent l'overflow : pile partielle de
+même code, puis cellule libre, sinon l'item reste au sol. Aucun tier différent
+ne fusionne avec la pile ciblée.
+
+La future DLL générique `Stack Split` et son geste d'unstack manuel restent
+explicitement hors de ce chantier. Les gates ouverts sont la preuve native des
+mutations de stackabilité, de fusion et de consommation en belt, l'implantation
+fail-closed, les tests de politique, les builds Release reproductibles, puis la
+qualification pile complète, sauvegarde/rechargement et multijoueur.
+
+L'implantation statique autorisée est réalisée le 4 septembre 2026 dans la
+source produit de la Suite sous `plugins/potion-auto-pickup/`, avec version
+`2.0.0`, configuration anglaise et crédit D2MOO. La revue a corrigé la
+couverture des tables compilées pour viser les trois banks gouvernés Classic,
+LoD et RotW (`dataContext 1..3`), BKVince utilisant RotW `3`. Le build Release
+produit une DLL de 71 168 octets au SHA-256
+`E81DD82A548F5E2D05A04E9B9BDA96089CCBF080F8C51820C033D6335CD7A421`;
+le test de politique, les politiques de source/packaging, le self-test du
+corpus natif et la validation du cadastre passent. Les 23 écritures fixes du
+plugin ne chevauchent aucune autre écriture gouvernée. Le test global de
+collision reste actuellement bloqué avant son audit par un changement
+concurrent hors périmètre : le patch local
+`patches/ruffneckk-shadow-master-ai-fix.json` n'est pas encore inscrit dans son
+manifest global. La qualification runtime pile complète, les sauvegardes et le
+multijoueur restent donc ouvertes; aucun déploiement ni lancement du jeu n'a
+été exécuté dans ce gate.
+
 ## MapSense 1.0.2 — Reveal Map exact pour les niveaux custom
 
 Le 4 septembre 2026, le Rift Level 7 de BKVince, `LevelId 256`, révèle un
