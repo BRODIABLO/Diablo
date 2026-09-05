@@ -6618,6 +6618,166 @@
       "confidence": "high",
       "source": "Mission/ruffneckk-suite-next-release.md; reverse-engineering/d2r-3.2.92777/findings.md",
       "notes": "Observed Windows x64 ABI (game, player, item, target) -> void. Dispatches the ItemsTxt use function and decrements quantity itself only for Book type 0x12. Its sole direct caller returns at 0x4F5923 and conditionally deletes the item according to parsed packet byte +1, enabling Potion Auto Pickup to preserve a potion object only after an authoritative -1 quantity synchronization."
+    },
+    {
+      "rva": "0x444F50",
+      "name": "MONSTERMODE_DeathModeCallback",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 48-byte entry signature with observed Windows x64 ABI int32(game, modeChange); modeChange+0x08 is the dying Unit. The routine performs the complete native death transition and conditionally enters the MonStats deathDmg corpse-explosion route. Its PDATA fragment does not describe reliable logical bounds and is not used as an ABI gate. Doll Explosion owns this entry exclusively, calls the original exactly once and runs custom work only after a successful return."
+    },
+    {
+      "rva": "0x445016",
+      "name": "MONSTERMODE_DeathDamageGuardWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 58-byte interior witness in the death callback. It reads Game+0x106 as the data context, resolves the MonStats row by class and tests byte +0x3E for the deathDmg bit before entering the native corpse-explosion branch. A clear bit jumps past that entire route, proving that classic BKVince Dolls with blank deathDmg never reach the later missile-117 callsite."
+    },
+    {
+      "rva": "0x445322",
+      "name": "MONSTERMODE_CorpseExplosionMissileCallWitness",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 79-byte call context for CreateSkillMissile at 0x44535F. It passes game, missile ID 117, dying monster owner, skill 0, level 1, next game counter, zero origin offsets, captured X/Y and check 1. A null result skips the native area-damage branch. Doll Explosion fingerprints this semantic witness but does not hook it because deathDmg-blank targets are gated out earlier."
+    },
+    {
+      "rva": "0x4333F0",
+      "name": "MISSILES_CreateSkillMissile",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 32-byte entry signature with observed 11-position Windows x64 ABI (game, missileId, owner, skillId, skillLevel, nextGameCounter, originX, originY, targetX, targetY, check) -> missile Unit*. The index contains 24 direct calls, including the governed monster corpse-explosion call at 0x44535F. Doll Explosion borrows this helper only after validating its exact entry and caller-layout witnesses."
+    },
+    {
+      "rva": "0x466B40",
+      "name": "MISSILES_GenericServerCallback",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 32-byte entry signature with observed Windows x64 ABI int32(game, missile). It has exactly two native xrefs: the pSrvDo=1 basic-handler tail jump at 0x45584C and call 0x457B44. Doll Explosion owns the entry exclusively, delegates foreign missiles exactly, calls the original before inspecting its result and consumes a matched delay sidecar only when the original returns 2."
+    },
+    {
+      "rva": "0x455750",
+      "name": "MISSILES_ServerDoBasic",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 32-byte entry signature for the native pSrvDo selector 1 handler. It resolves the context-aware Missiles row, performs basic missile work and tail-jumps to MISSILES_GenericServerCallback at 0x45584C. Doll Explosion does not hook this helper; it requires the live pSrvDo table entry 1 to keep resolving this exact address."
+    },
+    {
+      "rva": "0x466CE0",
+      "name": "MISSILES_ServerDoDispatcher",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 32-byte entry signature for the server missile-do dispatcher. It resolves the context-aware Missiles row, reads signed WORD pSrvDo at +0x2C, calls the indexed function table and removes the missile through the native lifecycle path when that callback returns 2. Doll Explosion fingerprints this dispatcher without modifying it."
+    },
+    {
+      "rva": "0x466E46",
+      "name": "MISSILES_ServerDoTableCallWitness",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 32-byte dispatcher witness. It sign-extends MissilesTxt+0x2C, indexes the native function table at 0x2380E80, invokes ABI int32(game, missile), compares EAX with 2 and enters the governed native removal branch on equality. This closes the delayed-carrier expiration handoff."
+    },
+    {
+      "rva": "0x2380E80",
+      "name": "MISSILES_ServerDoFunctionTable",
+      "kind": "data",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Native pSrvDo function-pointer table base referenced by the unique dispatcher callsite at 0x466E46. Selector 1 is expected to resolve D2R+0x455750 at runtime. Doll Explosion treats the live pointer relation as an additional fail-closed layout witness rather than authorizing by build name or channel."
+    },
+    {
+      "rva": "0x44556A",
+      "name": "MONSTERMODE_CorpseExplosionDamageInitWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 64-byte interior witness for the native corpse-explosion D2Damage initialization. It writes physical damage to record +0x18 and initializes the inline container pointer, size and capacity marker at +0x40/+0x48/+0x50. Doll Explosion reproduces the governed 0x180-byte record layout and calls the native destructor."
+    },
+    {
+      "rva": "0x4455D2",
+      "name": "MONSTERMODE_CorpseExplosionAreaDamageCallWitness",
+      "kind": "call-site",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 80-byte call context closing the native area-damage contract: (game, missile, x, y, radius, D2Damage*, 0, 0, null, 0x581). It also witnesses the D2Damage owned-subobject sentinel at +0x158 and surrounding zero-initialization before the direct 0x44A120 call."
+    },
+    {
+      "rva": "0x3BB18A",
+      "name": "MISSILES_CurrentFrameLayoutWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 64-byte missile-timing witness. It dereferences Unit+0x10 as MissileData, reads signed WORD total frames at MissileData+0x10 and reads the floating current-frame countdown at +0x14. The governed getter divides that float by 40 before truncation. Doll Explosion changes total and current frames together through exact native setters and verifies both through exact native getters."
+    },
+    {
+      "rva": "0x3BC411",
+      "name": "MISSILES_TotalFramesLayoutWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 48-byte independent witness that validates unit type 3, dereferences Unit+0x10 as MissileData and reads the signed WORD total-frame field at +0x10. This independently closes the configurable delay width at 0..32767 frames."
+    },
+    {
+      "rva": "0x44A120",
+      "name": "MISSILES_ApplyAreaDamage",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 32-byte entry signature with five direct callers. The governed corpse-explosion caller establishes ABI int32(game, sourceMissile, x, y, radius, D2Damage*, int32, int32, callback, flags). The routine resolves missile ownership, enumerates targets and deep-copies the supplied D2Damage before native missile-damage application."
+    },
+    {
+      "rva": "0x166040",
+      "name": "DATATBLS_GetMissilesTxtRecordForContext",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 32-byte entry signature with observed Windows x64 ABI (uint8 dataContext, int32 missileId) -> compiled MissilesTxt record pointer. The server dispatcher and generic missile callback call it after reading Game+0x106. Doll Explosion uses it to require pSrvDo WORD +0x2C equal 1 and pSrvHit WORD +0x2E equal 0 for missile IDs 117 and 587."
+    },
+    {
+      "rva": "0x404270",
+      "name": "GAME_NextGameCounter",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 32-byte entry signature with observed Windows x64 ABI (game) -> int32. It advances or derives the per-game counter passed as the sixth argument to CreateSkillMissile. The native monster corpse-explosion route calls it immediately before constructing missile 117; Doll Explosion reuses the same helper for visual and delay-carrier creation."
+    },
+    {
+      "rva": "0x3BB1E0",
+      "name": "MISSILES_GetCurrentFrame",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 32-byte entry signature with observed Windows x64 ABI (missile Unit*) -> int32. It validates unit type 3, dereferences MissileData through Unit+0x10, divides the float at MissileData+0x14 by 40 and truncates the result. The generic callback reads this countdown, subtracts one, writes it back and enters terminal handling at zero."
+    },
+    {
+      "rva": "0x3BC3E0",
+      "name": "MISSILES_GetTotalFrames",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 32-byte entry signature with observed Windows x64 ABI (missile Unit*) -> int32. It validates unit type 3, dereferences MissileData through Unit+0x10 and sign-extends the total-frame WORD at MissileData+0x10. Doll Explosion uses it to verify the native carrier range and the configured replacement."
+    },
+    {
+      "rva": "0x3BD450",
+      "name": "MISSILES_SetCurrentFrame",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 32-byte entry signature with observed Windows x64 ABI (missile Unit*, int32 frames) -> void. It validates unit type 3 and MissileData, multiplies the accepted frame count by 40, converts it to float and stores it at MissileData+0x14. The generic callback invokes it after decrementing the current-frame countdown."
+    },
+    {
+      "rva": "0x3BDBC0",
+      "name": "MISSILES_SetTotalFrames",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/doll-explosion-3.3.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique 32-byte entry signature with observed Windows x64 ABI (missile Unit*, int32 frames) -> void. It validates unit type 3 and MissileData, bounds the input to the signed 16-bit domain and stores the total-frame WORD at MissileData+0x10. Native missile construction calls it immediately before MISSILES_SetCurrentFrame with the same computed range."
     }
   ]
 }

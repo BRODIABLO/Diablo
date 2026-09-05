@@ -3834,3 +3834,72 @@ confiance explicite.
   `0710A1FFB1442115F5F8236BFDAB5393F3B12D7CA38665600F73BC881189FEF8`.
   Verdict : **PASS STATIQUE** pour l'implantation; aucune conclusion runtime
   n'est revendiquée.
+
+## 2026-09-05 — Doll Explosion 0.1.0, mort complète et transporteur natif sûr
+
+- La couture initialement candidate à `0x44535F` est rejetée pour les sept
+  Dolls classiques : l'entrée de mort `0x444F50` résout le MonStats contextuel
+  à `0x44501F`, lit le byte `+0x3E` et saute toute la branche d'explosion à
+  `0x44504F` lorsque `deathDmg` est absent. Les IDs BKVince 212, 213, 214,
+  215, 216, 690 et 691 ont ce champ vide; un hook du seul callsite serait donc
+  inerte. Le bit `deathDmg` est le bit 20 du DWORD de flags, soit `0x10` dans
+  le byte `+0x3E`, corroboré sémantiquement par D2MOO
+  `19019806df7f3e877fa105b05395d1e3597e2316` sans transposition d'ABI.
+- L'entrée `0x444F50` possède une signature unique de 48 octets et l'ABI
+  observée `int32(game, modeChange)`, avec l'unité mourante à
+  `modeChange+8`. Son découpage PDATA reste fragmenté et n'est pas employé
+  comme borne logique. La DLL appelle l'original exactement une fois puis
+  planifie son effet. Elle revalide type/classe, l'état Revive 96, contexte,
+  difficulté, record MonStats, chemin et coordonnées avant cette mutation.
+- Le callsite unique `0x445322..0x445370` ferme les onze arguments de
+  `CreateSkillMissile 0x4333F0` : `(game, missileId, owner, skillId,
+  skillLevel, nextCounter, originX, originY, targetX, targetY, check)`. La
+  fonction possède 24 appels directs; Doll Explosion ne la hooke pas et exige
+  sa signature d'entrée unique.
+- Le transporteur retenu est `baalcorpseexplodedelay`, missile 587. Sa ligne
+  UTF-8 sans EOL, SHA-256
+  `EE37A176A002DF6F7CF83D36BA0E4EEBA46D34DDB6438C69D47CC881E9FE858C`,
+  est identique dans vanilla 3.2, vanilla 3.3 et BKVince : `pSrvDo=1`, aucun
+  `pSrvHit`, `Range=10`, aucun CelFile et aucun dommage serveur. Le candidat
+  `armageddoncontrol` 577 est rejeté car son `pSrvHit=56` peut produire un
+  effet offensif si le sidecar disparaît.
+- `DATATBLS_GetMissilesTxtRecordForContext 0x166040` expose `pSrvDo` WORD à
+  `+0x2C` et `pSrvHit` WORD à `+0x2E`. Le dispatcher `0x466CE0` indexe la
+  table live `0x2380E80`; son callsite unique `0x466E46` retire le missile
+  lorsque le callback renvoie 2. L'entrée 1 doit toujours résoudre le handler
+  basique `0x455750`, qui tail-jumpe vers `0x466B40` à `0x45584C`.
+- Le gestionnaire générique `0x466B40` possède une signature unique de 32
+  octets, l'ABI `int32(game, missile)` et exactement deux xrefs natifs : le
+  tail-jump `0x45584C` et l'appel `0x457B44`. La DLL appelle son trampoline
+  avant toute décision; un retour différent de 2 conserve le sidecar, et un
+  retour 2 déclenche l'explosion avant que le dispatcher retire le missile.
+- Les témoins uniques `0x3BB18A` et `0x3BC411` ferment `Unit+0x10` comme
+  MissileData, sa durée totale signée 16 bits à `+0x10` et son compteur courant
+  flottant à `+0x14`. La création native initialise les deux compteurs avec la
+  même portée : le constructeur appelle `MISSILES_SetTotalFrames 0x3BDBC0`
+  puis `MISSILES_SetCurrentFrame 0x3BD450`, tandis que le callback générique
+  lit le compteur courant par `MISSILES_GetCurrentFrame 0x3BB1E0`, le décrémente
+  puis le réécrit avant de terminer à zéro. `MISSILES_GetTotalFrames 0x3BC3E0`
+  fournit la vérification indépendante du WORD. Une instance 587 n'est
+  revendiquée qu'après vérification du type 3, de la classe, du GUID et des
+  deux valeurs initiales à 10; la DLL règle ensuite les deux valeurs par ces
+  quatre helpers fingerprintés et les relit avant d'armer le délai configuré.
+- Le visuel `monstercorpseexplode` 117 est lui aussi identique dans les trois
+  tables, SHA-256 de ligne UTF-8 sans EOL
+  `F3E1010E5B7FF8B47B02ACFD89073AA57989047D56AD2266B4A66078CEC37146`.
+  La DLL exige son record compilé `pSrvDo=1/pSrvHit=0` et une instance type 3,
+  classe 117 avant le dommage.
+- L'AoE `0x44A120` possède cinq appels directs. Le callsite vanilla unique de
+  mort à `0x4455D2` ferme dix arguments : `(game, missile, x, y, radius,
+  D2Damage*, 0, 0, null, 0x581)`. Le record fait 0x180 octets, le physique
+  réside à `+0x18`, le stockage inline à `+0x40/+0x48/+0x50`, le sentinel
+  possédé à `+0x158`, et le destructeur gouverné reste `0x4496E0`.
+- Les 19 nouvelles signatures d'entrée, callsites, helpers et témoins ont chacune une
+  occurrence exacte dans l'image canonique. Aucun propriétaire concurrent des
+  entrées `0x444F50` et `0x466B40` n'est trouvé dans les sources RuffnecKk,
+  les patches BKVince ou D2RL-Plugins
+  `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`.
+- Verdict : **PASS STATIQUE** pour les coutures et l'ABI de l'incubation.
+  Délai frame-exact, attribution, corps consommé, résistances, player count,
+  TCP/IP, unload et coexistence pile complète demeurent explicitement des
+  gates runtime.

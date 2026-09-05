@@ -3325,6 +3325,76 @@
                                                                                 "kind":  "file"
                                                                             }
                                                                         ]
+                                                       },
+                                                       {
+                                                         "name": "DollExplosion",
+                                                         "path": "addons/DollExplosion",
+                                                         "kind": "directory",
+                                                         "meta": {
+                                                           "role": "x-standalone-d2rloader-addon",
+                                                           "summary": "Plugin autonome Doll Explosion 0.1.0 de la RuffnecKk Suite : retarde les explosions des Stygian Dolls et configure leurs degats physiques.",
+                                                           "agentAccess": "read-write",
+                                                           "status": "experimental"
+                                                         },
+                                                         "children": [
+                                                           {
+                                                             "name": "src",
+                                                             "path": "addons/DollExplosion/src",
+                                                             "kind": "directory",
+                                                             "children": [
+                                                               {
+                                                                 "name": "CMakeLists.txt",
+                                                                 "path": "addons/DollExplosion/src/CMakeLists.txt",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "doll_explosion_policy.hpp",
+                                                                 "path": "addons/DollExplosion/src/doll_explosion_policy.hpp",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "native_fingerprint.hpp",
+                                                                 "path": "addons/DollExplosion/src/native_fingerprint.hpp",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "plugin.cpp",
+                                                                 "path": "addons/DollExplosion/src/plugin.cpp",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "plugin.rc",
+                                                                 "path": "addons/DollExplosion/src/plugin.rc",
+                                                                 "kind": "file"
+                                                               },
+                                                               {
+                                                                 "name": "policy_tests.cpp",
+                                                                 "path": "addons/DollExplosion/src/policy_tests.cpp",
+                                                                 "kind": "file"
+                                                               }
+                                                             ]
+                                                           },
+                                                           {
+                                                             "name": "NATIVE-CONTRACT.md",
+                                                             "path": "addons/DollExplosion/NATIVE-CONTRACT.md",
+                                                             "kind": "file"
+                                                           },
+                                                           {
+                                                             "name": "README.md",
+                                                             "path": "addons/DollExplosion/README.md",
+                                                             "kind": "file"
+                                                           },
+                                                           {
+                                                             "name": "ruffneckk-doll-explosion.toml",
+                                                             "path": "addons/DollExplosion/ruffneckk-doll-explosion.toml",
+                                                             "kind": "file"
+                                                           },
+                                                           {
+                                                             "name": "VALIDATION.md",
+                                                             "path": "addons/DollExplosion/VALIDATION.md",
+                                                             "kind": "file"
+                                                           }
+                                                         ]
                                                        }
                                                    ]
                                   },
@@ -41277,6 +41347,11 @@
                                                            "name":  "automap-serialization-fix-3.3.md",
                                                            "path":  "Mission/automap-serialization-fix-3.3.md",
                                                            "kind":  "file"
+                                                       },
+                                                       {
+                                                         "name": "doll-explosion-3.3.md",
+                                                         "path": "Mission/doll-explosion-3.3.md",
+                                                         "kind": "file"
                                                        }
                                                    ]
                                   },

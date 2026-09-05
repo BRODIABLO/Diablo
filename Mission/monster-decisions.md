@@ -129,7 +129,7 @@ pas être masqué en ajoutant des flags sans consommateur prouvé.
 | # | Changement audité | Décision et cible BKVince exacte | Cellules/ressources et route | Dépendances | Tests solo | Rollback |
 |---:|---|---|---|---|---|---|
 | 1 | Holy Shock dans Aura Enchanted | **IMPLANTÉ** : fréquence `6/6/12`; pool monster-only `[MonConviction, MonFanaticism, MonHolyShock, MonHolyFreeze, MonHolyFire, MonMight, MonConcentration, MonVigor]`; niveau `clamp(floor(mlvl/7),1,13)`; portée ×2; Vigor conserve sa courbe BKVince ≈ `13–39 %` au lieu du scaling PD2 | `monumod.txt`, `skills.txt`, `pd2-aura-enchanted-scaling.json` — **TXT + memory patch gouverné** | ordinals et sélecteur 92777 prouvés; Lord de Seis reste Fanaticism; Uber Meph reste hors de ce lot | T0 passé, T3 en jeu restant | R1 + R4 |
-| 2 | Dolls PD2 | **ACCEPT** sur les huit Dolls classiques BKV : proc 100 %, délai visé 25 frames, rayon 4, dégâts physiques fixes N `18–30`, NM `54–96`, H `318–540`; conserver l'explosion BKV des Rift Dolls et le comportement `ISREVIVE` | `monstats.txt`, `monprop.txt`, `properties.txt`, `itemstatcost.txt`, `skills.txt`, `missiles.txt`, AnimData au besoin — **TXT + native** | funcs event/skill/missile 92777; classification classique/Rift; ownership | T0, T4 | R1 + R4 |
+| 2 | Dolls PD2 | **ACCEPT** sur les sept Dolls classiques BKV : proc 100 %, délai visé 25 frames, rayon 4, dégâts physiques fixes N `18–30`, NM `54–96`, H `318–540`; conserver l'explosion BKV des Rift Dolls et le comportement `ISREVIVE` | `monstats.txt`, `monprop.txt`, `properties.txt`, `itemstatcost.txt`, `skills.txt`, `missiles.txt`, AnimData au besoin — **TXT + native** | funcs event/skill/missile 92777; classification classique/Rift; ownership | T0, T4 | R1 + R4 |
 | 3 | `primeevil` comme axe | **ACCEPT** : liste exacte de 15 ci-dessus; `uberizual=1`, `baalclone` vide; ne pas étendre aux 149 flags PD2 | `monstats.txt.primeevil` — **TXT**; consommateurs séparés — **native** | contrat stable `PrimeEvilRules` | T0, T5 | R1/R4 |
 | 4 | Taxonomies Act/Apex/Rift/etc. | **DEFER** : aucun sidecar ni taxonomie chargée dans ce merge | aucun fichier — route future **TXT/native** | définitions et loader futurs | aucun tant que différé | R0 |
 | 5 | Dégâts Prime merc/pet | **ACCEPT** : multiplicateur total ×2 pour mercenaires et invocations/pets, jamais ×4 | consommateur de dégâts Prime; ne pas modifier globalement `DifficultyLevels.txt` sans isolation — **native** | flags d'unité, ownership/source des DoT, preuve 92777 | T0, T5 | R4 |
@@ -210,7 +210,8 @@ modifier `monlvl.txt`. Les cellules réellement écrites sont :
 4. **Aura Enchanted — implanté le 12 août 2026** : sélecteur 92777 prouvé et
    redirigé vers huit auras monster-only; `upick=6/6/12`, Holy Fire et Holy Shock
    réels, portée ×2, scaling `mlvl/7` cap13; Vigor conserve la courbe BKVince.
-5. **Dolls** : huit classiques selon PD2; Rift Dolls et `ISREVIVE` préservés.
+5. **Dolls** : sept classiques selon le modèle PD2; Rift Doll 777 et `ISREVIVE`
+   préservés.
 6. **Règles Prime Evil** : flags exacts, puis immunité universelle à tous les
    slows et chaque autre protection/multiplicateur comme sous-lot isolé. La
    preuve recherchée porte sur le résultat BKVince, pas sur le runtime PD2.
@@ -244,7 +245,8 @@ du merge est le suivant.
   Andy/Meph/Duriel/Baal, quest et TZ; poids d'essences; trio Uber recalibré;
   `BKV Baal Lowres` niveau 13 dans le slot 6 d'Uber Baal; pool Aura Enchanted
   monster-only PD2 avec exception Vigor BKVince.
-- **Non implanté, dépendance native ouverte** : explosions des huit Dolls;
+- **Non implanté, dépendance native ouverte** : explosions des sept Dolls
+  classiques; la Doll Rift 777 conserve sa route distincte;
   ralentissements Prime autres que chill/froid; quatre curses
   d'AI; dégâts ×2 mercenaires/pets; Conviction spéciale d'Uber Mephisto. Aucun
   sidecar, loader, plugin ou DLL n'a été créé pour contourner ces gates.

@@ -811,6 +811,20 @@
         "Mission/autosort-3.3.md",
         "addons/AutoSort/**"
       ]
+    },
+    {
+      "id": "doll-explosion",
+      "name": "DollExplosion",
+      "status": "active",
+      "owner": "Vincent + Codex",
+      "mission": "Mission/doll-explosion-3.3.md",
+      "nextGate": "Run the full-stack D2R runtime matrix for DollExplosion 0.1.0 only after explicit runtime authorization. Verify frame-exact delay, damage, radius, corpse interactions, host/joiner authority and both installation scopes; keep it outside release registries and Suite promotion until qualification.",
+      "include": [
+        "Mission/doll-explosion-3.3.md",
+        "addons/DollExplosion/**",
+        "reverse-engineering/d2r-3.2.92777/findings.md",
+        "reverse-engineering/d2r-3.2.92777/known-rvas.json"
+      ]
     }
   ],
   "sharedPaths": [
