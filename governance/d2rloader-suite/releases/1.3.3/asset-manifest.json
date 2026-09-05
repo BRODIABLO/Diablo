@@ -1,0 +1,217 @@
+[
+  {
+    "sha256": "288090AE6C7D7D569540094AA40AA2FE89533FD6C31A47BC2A3542707B4547C8",
+    "size": 16840,
+    "name": "RuffnecKk-All-Patches-v1.3.3.zip"
+  },
+  {
+    "sha256": "5F2A942AA293B339C5EAF6576BC164CACC5F54B36A45DF667096414CB722339C",
+    "size": 18912003,
+    "name": "RuffnecKk-All-Plugins-v1.3.3.zip"
+  },
+  {
+    "sha256": "5B96DE144F30BC3889CA3DFF56845386B4FCFB283E928C6ECAEB5AF8823AF1E9",
+    "size": 178014,
+    "name": "RuffnecKk-armageddon-hurricane-ctc-fix-v1.0.0.zip"
+  },
+  {
+    "sha256": "145E0AEE968CD7FFC46EF5C570C50F6474E610134D5B82E8C0798241343B3108",
+    "size": 328653,
+    "name": "RuffnecKk-bulk-currency-deposit-v1.1.2.zip"
+  },
+  {
+    "sha256": "4BFDABA02DEC12D6964895F5BED4AE671604ACD22317480AED59A7DE43CFF5C7",
+    "size": 122893,
+    "name": "RuffnecKk-bulk-skill-point-allocation-v1.3.4.zip"
+  },
+  {
+    "sha256": "0F68E85CD730A194D828FC35A66F24F9E2DFF635E22CF3AAE384D45969FDFCBE",
+    "size": 190230,
+    "name": "RuffnecKk-burn-damage-fix-v1.0.1.zip"
+  },
+  {
+    "sha256": "ECB45C861C0F92B2B864F10CB65BFA0C32B0FB635A65E228F38667A6F5F706D6",
+    "size": 259877,
+    "name": "RuffnecKk-cast-triggers-v1.0.0.zip"
+  },
+  {
+    "sha256": "97EEEA17CE5FFB69627436A152686BD2A574B48063D6CC2303C3426E6E4E3D58",
+    "size": 43459,
+    "name": "RuffnecKk-charm-aura-trigger-fix-v1.6.4.zip"
+  },
+  {
+    "sha256": "5EC489266D3BBBD32AF192FA2A0FF948FAEFCF4F8593794F6E64DCBE0BD5BD6F",
+    "size": 40867,
+    "name": "RuffnecKk-cube-quick-move-v1.0.3.zip"
+  },
+  {
+    "sha256": "3844D4BA9BBA7A5401247CF6DB201EA34931C14D01B30A67130C0B84036A3B70",
+    "size": 402,
+    "name": "ruffneckk-enemy-resistance-vs-immunes.json"
+  },
+  {
+    "sha256": "A70C6FD08E536C2494EDEBD0D3A729CD6A5FC89FBF7BF0ECEF473F2AA8C6178B",
+    "size": 39916,
+    "name": "RuffnecKk-enhanced-damage-min-max-fix-v1.2.4.zip"
+  },
+  {
+    "sha256": "2D0B701D0929F7040B78C1D1653F228287C7A12601FDE6BE02C1460EA15BD4C4",
+    "size": 39204,
+    "name": "RuffnecKk-equipped-item-to-cube-v1.0.2.zip"
+  },
+  {
+    "sha256": "1E2A052FF486D1D1F1CEB2D4EE77F387072572A242950BED447FDF89EE819149",
+    "size": 57657,
+    "name": "RuffnecKk-ethereal-item-rules-v1.0.2.zip"
+  },
+  {
+    "sha256": "CD991183111C574C3C95C66ABE32382D87FBC111F5141D0BB62232B5774D4B25",
+    "size": 48836,
+    "name": "RuffnecKk-extended-act-level-ids-v1.0.0.zip"
+  },
+  {
+    "sha256": "0313D135BB45EC1237CF437763F6DE0F2A20D249168CAAF186A27A42BD29FE41",
+    "size": 496914,
+    "name": "RuffnecKk-floating-damage-v1.4.3.zip"
+  },
+  {
+    "sha256": "C87D6D1AA5061401758E0C9B155D145250FD72D7806E1770231493AEFCC74411",
+    "size": 405,
+    "name": "ruffneckk-gamble-screen-limit.json"
+  },
+  {
+    "sha256": "064F005EE30734A5EDE07371B71F3B6A4E08134C9D741E6885DD983134AE1E8E",
+    "size": 982,
+    "name": "ruffneckk-gold-capacities.json"
+  },
+  {
+    "sha256": "9EC4AB0B0AD9D612DD55AB8F13A77728280C9173EC5BDF767CC2C9A9F10B43A9",
+    "size": 1391,
+    "name": "ruffneckk-hireling-ai.json"
+  },
+  {
+    "sha256": "FF859045E8304AC6F5B7C9ECA58453A708A7824857847A8C4E04BEADF2DCED9E",
+    "size": 1958,
+    "name": "ruffneckk-hit-chance-0-100.json"
+  },
+  {
+    "sha256": "DB10DC42C65D02C2D9CA0A5D472EF03F92ACF0B5F79F7B06F456639D51AAB420",
+    "size": 644,
+    "name": "ruffneckk-infinite-quantities.json"
+  },
+  {
+    "sha256": "F48A010F4B5D4292D17F41A4D94823B5957C2F40A4413FECD237D0C1D4C3DAA1",
+    "size": 1293,
+    "name": "ruffneckk-infinite-quest-rewards.json"
+  },
+  {
+    "sha256": "08E0706FBD50929E79F117548665A2E2085C24FDEF9B23CA5F567CF6157EFE79",
+    "size": 95026879,
+    "name": "RuffnecKk-isc12-v1.0.2.zip"
+  },
+  {
+    "sha256": "4831786F90C471590010862DF18FBC8E88A7C02C5571CFA350411944F2090C13",
+    "size": 362,
+    "name": "ruffneckk-itd-vs-champions-uniques.json"
+  },
+  {
+    "sha256": "4E59A3A6C713F89E2A488C85A325D58FD6E93E691BAAA88D5248846F58E654BE",
+    "size": 51622,
+    "name": "RuffnecKk-item-durability-v1.2.5.zip"
+  },
+  {
+    "sha256": "FF55C9F28B4CA18D68CBC5429751FAD55460683244D8B47D6204BE9224977F1E",
+    "size": 156997,
+    "name": "RuffnecKk-larzuk-sockets-v1.0.3.zip"
+  },
+  {
+    "sha256": "780F20F22E2B1CF1ACFE78A24A4DBD529B8183BFA11EE4EE5313AE7972135574",
+    "size": 374,
+    "name": "ruffneckk-level-100-plus.json"
+  },
+  {
+    "sha256": "5AD8D38A548EE2FD0DAD8CF6F9CC3CBCD0596F1344A1EB2486ACC61B37631718",
+    "size": 674,
+    "name": "ruffneckk-linear-magic-find.json"
+  },
+  {
+    "sha256": "9C14D5DEB01D41A91A03365A7FE5DAB24003F48633D27A1D95DB60F4C2704ACB",
+    "size": 15368469,
+    "name": "RuffnecKk-mapsense-v1.0.2.zip"
+  },
+  {
+    "sha256": "0607184DB796ECDB445CB2D36E1FAB6828055C5B89FA996CDAAA0E0292C29EF8",
+    "size": 54709,
+    "name": "RuffnecKk-mass-identify-v2.0.3.zip"
+  },
+  {
+    "sha256": "8235BDA6DB284635FBA842615C7887646DE0AEBA3611B4EFB08112B270CF07EC",
+    "size": 392,
+    "name": "ruffneckk-maximum-staffmods.json"
+  },
+  {
+    "sha256": "E7C069290174F34CD6DF005DB8F244EA1BC552623B52EB67771A74FC12DE6BD4",
+    "size": 776,
+    "name": "ruffneckk-no-run-penalties.json"
+  },
+  {
+    "sha256": "CD178C3926A0184FD009F67342EB7E65BD831871086A7D70765D80A876DDD96F",
+    "size": 1834,
+    "name": "ruffneckk-player-difficulty-overrides.json"
+  },
+  {
+    "sha256": "F1CEDB907C8A6D19C171D6834B781A281F0D50945C2489526AF4A0A9D295B976",
+    "size": 61026,
+    "name": "RuffnecKk-potion-auto-pickup-v1.3.3.zip"
+  },
+  {
+    "sha256": "4E23E7E032A176D18B2FEB2BF9F45C187EADFC992ABAEF7CDCCFA43B8C50D9A6",
+    "size": 371,
+    "name": "ruffneckk-preserve-terror-zone-music.json"
+  },
+  {
+    "sha256": "7CF0FA9763F2A5B56B46AE77B8A7BCE956788B6EDB6F0C765448AC8DED0BB6DF",
+    "size": 39758,
+    "name": "RuffnecKk-prevent-merc-death-in-town-v1.0.2.zip"
+  },
+  {
+    "sha256": "D3229D384ABE3D199A714EC2893070267F5F0DFC0909060B6317CE45DFBE8157",
+    "size": 145478,
+    "name": "RuffnecKk-progressive-affixes-v0.3.5.zip"
+  },
+  {
+    "sha256": "EDB97712D58AF4244579207C0B0F0AC08113F853E636CD4E3415F5DFB70BC995",
+    "size": 546,
+    "name": "ruffneckk-quantity-display-fix.json"
+  },
+  {
+    "sha256": "9B260D58D88EA3AE9FAD6DEF0AC157CFFBBF4909D1FE925958694F1F0E3D95CC",
+    "size": 569361,
+    "name": "RuffnecKk-remote-stash-v2.3.1.zip"
+  },
+  {
+    "sha256": "213B875EA0B23B8D086642E1D4BE116C5E1CC1A51D243A69F1FD16DEE5AB99B3",
+    "size": 61589,
+    "name": "RuffnecKk-repair-costs-cap-v1.4.4.zip"
+  },
+  {
+    "sha256": "FC5B26D960B92525EB3952F81E31F5E777419E5F8EB9B4D42C81DA1A4E38B451",
+    "size": 179391,
+    "name": "RuffnecKk-resistance-floor-v1.0.2.zip"
+  },
+  {
+    "sha256": "DB30A52416DEA6705DCE9EAE15F32589AC79AA4238C73B64CF3087F1C94B760A",
+    "size": 536,
+    "name": "ruffneckk-shadow-master-ai-fix.json"
+  },
+  {
+    "sha256": "AF35CC9093B52EFE5476C2D9E8D74EEE8B6F9043BFD5923DA368DC29862CFC79",
+    "size": 1138,
+    "name": "ruffneckk-thorns-burn-kill-credit.json"
+  },
+  {
+    "sha256": "A22FC56C14E38C381442F8F5C4750F87AB6423B50567DBE868A1C93103AD199E",
+    "size": 50121,
+    "name": "RuffnecKk-vendor-stock-refresh-v2.0.2.zip"
+  }
+]

@@ -1,0 +1,19 @@
+{
+  "assetManifest": "asset-manifest.json",
+  "notes": "RELEASE_NOTES.md",
+  "tag": "v1.3.3",
+  "publishedAt": "2026-09-05T22:54:17Z",
+  "reproducibleCatalogs": 2,
+  "githubDigestsMatch": true,
+  "loaderBaseline": "d2rloader-1.2.1-public",
+  "commit": "3637a3013eaf07b59567d611f678ff70b4a5c36c",
+  "verifiedAt": "2026-09-05T22:54:58.4634493Z",
+  "runtimeDlls": 24,
+  "assets": 43,
+  "runtimePatches": 17,
+  "releaseId": 383397210,
+  "url": "https://github.com/RuffDood/RuffnecKk-D2RLoader-Suite/releases/tag/v1.3.3",
+  "laboratoryRestored": true,
+  "gameplayConfirmedBy": "Vincent",
+  "runtimeBuild": "3.3.93847"
+}

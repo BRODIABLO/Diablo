@@ -1,0 +1,582 @@
+{
+  "schemaVersion": 1,
+  "suite": {
+    "id": "ruffneckk-d2rloader-suite",
+    "version": "1.3.3",
+    "compatibility": {
+      "policy": "native-fingerprint-fail-closed",
+      "runtimeQualified": [
+        {
+          "evidence": "Final BKVince cold start on 2026-09-05 at 18:48 EDT reached 24/24 with all 24 exact Suite DLLs and 17 exact Suite patches present and loaded, plus the unchanged laboratory extensions. 39 plugins loaded; only the pre-existing Doll Explosion failure remained, explicitly excluded by Vincent. Potion Auto Pickup used its released 1.3.3 TOML; ISC12 published its schema, and Floating Damage rendered its first frame through MapSense. Vincent confirmed gameplay of both updated plugins in the prior exact-DLL test. Laboratory files and TOML restored byte-exact after the bounded test.",
+          "build": 93847,
+          "version": "3.3"
+        }
+      ],
+      "nativeEquivalent": [
+        {
+          "version": "3.2",
+          "build": 92777,
+          "evidence": "byte-exact governed native surfaces"
+        }
+      ],
+      "otherBuilds": "eligible only when every native signature, layout witness, ABI contract, RVA and owned range matches"
+    },
+    "targetLoader": "D2RLoader 1.2.1; PluginSDK v4 is required by Vendor Stock Refresh 2.0.2",
+    "targetPluginSdk": "v3",
+    "pluginSdkOverrides": [
+      {
+        "componentId": "ruffneckk-vendor-stock-refresh",
+        "version": "v4",
+        "commit": "6eb8f8b6192868214706bd6d528c5294f2f551b7"
+      }
+    ]
+  },
+  "distribution": {
+    "model": "modular-catalog",
+    "sourceFolders": [
+      "plugins",
+      "patches",
+      "tools"
+    ],
+    "primaryDownloads": "individual-components",
+    "canonicalPackagingRuntime": "PowerShell 7",
+    "reproducibilityContract": "Two clean runs with the canonical packaging runtime must produce byte-identical assets.",
+    "suiteReleaseRole": "Locks one tested combination while allowing players to install any subset.",
+    "pluginArchivePattern": "RuffnecKk-<plugin-slug>-v<plugin-version>.zip",
+    "patchAssetPattern": "ruffneckk-<patch-name>.json",
+    "optionalBundles": [
+      "RuffnecKk-All-Plugins-v<suite-version>.zip",
+      "RuffnecKk-All-Patches-v<suite-version>.zip"
+    ],
+    "expectedGithubAssets": {
+      "individualPluginArchives": 24,
+      "individualPatchFiles": 17,
+      "standaloneTools": 0,
+      "optionalBundles": 2,
+      "total": 43
+    }
+  },
+  "policy": {
+    "expectedCounts": {
+      "pluginDlls": 24,
+      "pluginReadmes": 2,
+      "pluginCompanionExecutables": 1,
+      "embeddedToolExecutables": 1,
+      "embeddedToolReadmes": 1,
+      "looseConfigJson": 2,
+      "pluginConfigToml": 20,
+      "memoryPatchJson": 17,
+      "standaloneTools": 0,
+      "total": 68
+    },
+    "readmeIncluded": true,
+    "readmeLocation": "selected-plugin-archives",
+    "requireSha256": true,
+    "stagingContract": "Build outputs, loose JSON files, companion executables, embedded tools and patches are relative to SourceRoot. Plugin TOML and reviewed README files are read from governed repository paths. Archive destinations use the canonical D2RLoader install layout.",
+    "deniedBasenames": [
+      "plugin-items.dll",
+      "plugin-levels.dll",
+      "plugin-misc.dll",
+      "plugin-quests.dll",
+      "plugin-skills.dll",
+      "RemoteStash.dll",
+      "ProgressiveAffixesPlugin.dll",
+      "MeleeSplash.dll",
+      "d2rl-ruffneckk-melee-splash.dll",
+      "GroundItemLabelLimit.dll",
+      "BurnDamage.dll",
+      "BurnDamageFix.dll",
+      "ruffneckk-ground-item-label-limit-64.json",
+      "ruffneckk-ground-item-label-limit-128.json",
+      "ruffneckk-normal-area-scaling.json"
+    ]
+  },
+  "entries": [
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-armageddon-hurricane-ctc-fix",
+      "version": "1.0.0",
+      "source": "plugins/d2rl-ruffneckk-armageddon-hurricane-ctc-fix.dll",
+      "destination": "plugins/d2rl-ruffneckk-armageddon-hurricane-ctc-fix.dll",
+      "sha256": "FBF449062EF06D1693B9E268C6EA2637757BFC472CCA648C7BEF27AD57C3A56D"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-bulk-currency-deposit",
+      "version": "1.1.2",
+      "source": "plugins/d2rl-ruffneckk-bulk-currency-deposit.dll",
+      "destination": "plugins/d2rl-ruffneckk-bulk-currency-deposit.dll",
+      "sha256": "66570CD00A77F7802F314897275688E455912AF071A3A3EBC84FEB048D45B61B"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-bulk-skill-point-allocation",
+      "version": "1.3.4",
+      "source": "plugins/d2rl-ruffneckk-bulk-skill-point-allocation.dll",
+      "destination": "plugins/d2rl-ruffneckk-bulk-skill-point-allocation.dll",
+      "sha256": "5DD5124D6FAC5AC9185A1D84529E3715384A1D12EE6AC794077187500D8FE455"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-burn-damage-fix",
+      "version": "1.0.1",
+      "source": "plugins/d2rl-ruffneckk-burn-damage-fix.dll",
+      "destination": "plugins/d2rl-ruffneckk-burn-damage-fix.dll",
+      "sha256": "98673E02821FB84C7328ED31F07FF29D8DE3BA8AE7E4A99D41A1DA29950BF020"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-cast-triggers",
+      "version": "1.0.0",
+      "source": "plugins/d2rl-ruffneckk-cast-triggers.dll",
+      "destination": "plugins/d2rl-ruffneckk-cast-triggers.dll",
+      "sha256": "FCC8993377349C8FC4B7CE8C7C48C78092F39E19E7A800FA611B1AEF2E7ED343"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-charm-aura-trigger-fix",
+      "version": "1.6.4",
+      "source": "plugins/d2rl-ruffneckk-charm-aura-trigger-fix.dll",
+      "destination": "plugins/d2rl-ruffneckk-charm-aura-trigger-fix.dll",
+      "sha256": "DB0AD5DE9069BED6F1C21825341E25A013290724DFA1F1A585121BC05D874011"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-cube-quick-move",
+      "version": "1.0.3",
+      "source": "plugins/d2rl-ruffneckk-cube-quick-move.dll",
+      "destination": "plugins/d2rl-ruffneckk-cube-quick-move.dll",
+      "sha256": "3460EFF06C634D140FB96FB32979107F5CBFA419EB4DE47B05F42DDA6DD23960"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-enhanced-damage-min-max-fix",
+      "version": "1.2.4",
+      "source": "plugins/d2rl-ruffneckk-enhanced-damage-min-max-fix.dll",
+      "destination": "plugins/d2rl-ruffneckk-enhanced-damage-min-max-fix.dll",
+      "sha256": "A09ECF955D907DC357BBAB29A64073FDEA8FD4B8605EBEBCED8FC0E5C641075B"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-equipped-item-to-cube",
+      "version": "1.0.2",
+      "source": "plugins/d2rl-ruffneckk-equipped-item-to-cube.dll",
+      "destination": "plugins/d2rl-ruffneckk-equipped-item-to-cube.dll",
+      "sha256": "3D0DECC4393916F70B48BDBB73CEB6B43E48FDF38425A6FBC80E7C465A75B606"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-ethereal-item-rules",
+      "version": "1.0.2",
+      "source": "plugins/d2rl-ruffneckk-ethereal-item-rules.dll",
+      "destination": "plugins/d2rl-ruffneckk-ethereal-item-rules.dll",
+      "sha256": "AA5C461EEC08A7CC2D717DBC884BBB6CC77D8C7D11559C70754CFAF6D06B6157"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-extended-act-level-ids",
+      "version": "1.0.0",
+      "source": "plugins/d2rl-ruffneckk-extended-act-level-ids.dll",
+      "destination": "plugins/d2rl-ruffneckk-extended-act-level-ids.dll",
+      "sha256": "979DC79C6CF791B58728178B48B44B9F8A141528E7BE51F038DDC8CF2F24F8F0"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-floating-damage",
+      "version": "1.4.3",
+      "source": "plugins/d2rl-ruffneckk-floating-damage.dll",
+      "destination": "plugins/d2rl-ruffneckk-floating-damage.dll",
+      "sha256": "1F6BAE0AAC61FEA227E221719F0B7260C581EFC0F342A26039F4CA54D4E7FE2B"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-isc12",
+      "version": "1.0.2",
+      "source": "plugins/d2rl-ruffneckk-isc12.dll",
+      "destination": "plugins/d2rl-ruffneckk-isc12.dll",
+      "sha256": "FE350F171B0521D2AD5107425DAD4190C5C3A267651268FC7735280193908F45"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-item-durability",
+      "version": "1.2.5",
+      "source": "plugins/d2rl-ruffneckk-item-durability.dll",
+      "destination": "plugins/d2rl-ruffneckk-item-durability.dll",
+      "sha256": "9DE769C9C1999430E4E751E1C3EAFDC65500813D83A000D44CA926C5CD8430BB"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-larzuk-sockets",
+      "version": "1.0.3",
+      "source": "plugins/d2rl-ruffneckk-larzuk-sockets.dll",
+      "destination": "plugins/d2rl-ruffneckk-larzuk-sockets.dll",
+      "sha256": "894B3FBCBDAA6FF8C46CDBBE6A90E3305715763577C14ACDAA38BDB68478876A"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-mapsense",
+      "version": "1.0.2",
+      "source": "plugins/d2rl-ruffneckk-mapsense.dll",
+      "destination": "plugins/d2rl-ruffneckk-mapsense.dll",
+      "sha256": "FA8A2EE04156A18934F515BF97F9A2CEF330AD7E01716E9A131BA7F2A39EF724"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-mass-identify",
+      "version": "2.0.3",
+      "source": "plugins/d2rl-ruffneckk-mass-identify.dll",
+      "destination": "plugins/d2rl-ruffneckk-mass-identify.dll",
+      "sha256": "F5F061C2646F035CD55CC448918093F8E6677B47AC722AB6673CCCFA81D6BA1E"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-potion-auto-pickup",
+      "version": "1.3.3",
+      "source": "plugins/d2rl-ruffneckk-potion-auto-pickup.dll",
+      "destination": "plugins/d2rl-ruffneckk-potion-auto-pickup.dll",
+      "sha256": "D13C1B8EA08D06B455A1617CFB8AE31329285D41C13E3F88F6F05A20D00248D0"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-prevent-merc-death-in-town",
+      "version": "1.0.2",
+      "source": "plugins/d2rl-ruffneckk-prevent-merc-death-in-town.dll",
+      "destination": "plugins/d2rl-ruffneckk-prevent-merc-death-in-town.dll",
+      "sha256": "F854E2083F42B782C8C88F81769E4483C2B56101EEFFA89490A466D34B4CACE3"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-progressive-affixes",
+      "version": "0.3.5",
+      "source": "plugins/d2rl-ruffneckk-progressive-affixes.dll",
+      "destination": "plugins/d2rl-ruffneckk-progressive-affixes.dll",
+      "sha256": "536FF8C63336B048024624B4D84AFD9BB957701CA23CBCEF54C45DFE2E93049F"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-remote-stash",
+      "version": "2.3.1",
+      "source": "plugins/d2rl-ruffneckk-remote-stash.dll",
+      "destination": "plugins/d2rl-ruffneckk-remote-stash.dll",
+      "sha256": "3359C51861EB4E23497980D008242E4B95799B080FF2E0F3993626484E9BBC9C"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-repair-costs-cap",
+      "version": "1.4.4",
+      "source": "plugins/d2rl-ruffneckk-repair-costs-cap.dll",
+      "destination": "plugins/d2rl-ruffneckk-repair-costs-cap.dll",
+      "sha256": "1E5156F7AAA0B3F0AD2148754B74574188358198A209884BFB59A85D2DE712DC"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-resistance-floor",
+      "version": "1.0.2",
+      "source": "plugins/d2rl-ruffneckk-resistance-floor.dll",
+      "destination": "plugins/d2rl-ruffneckk-resistance-floor.dll",
+      "sha256": "28B1B934E180C3863077B478017A310D0880212A50CCC1B0CB557B7ABF6540B6"
+    },
+    {
+      "kind": "plugin-dll",
+      "componentId": "ruffneckk-vendor-stock-refresh",
+      "version": "2.0.2",
+      "source": "plugins/d2rl-ruffneckk-vendor-stock-refresh.dll",
+      "destination": "plugins/d2rl-ruffneckk-vendor-stock-refresh.dll",
+      "sha256": "12F452FCD369DF280B32EFE58E23C580E20394CD6E3AD9E1D31A07221E494E1C"
+    },
+    {
+      "kind": "plugin-companion-exe",
+      "componentId": "ruffneckk-mapsense",
+      "source": "plugins/RuffnecKkMapSenseMapgen.exe",
+      "destination": "plugins/RuffnecKkMapSenseMapgen.exe",
+      "sha256": "74CC1DACA28E836C53E10FDB43EE7B37883E73F0894A06E14AA2A8287B138A43"
+    },
+    {
+      "kind": "plugin-readme",
+      "componentId": "ruffneckk-cast-triggers",
+      "source": "plugins/cast-triggers/README.md",
+      "destination": "README.md",
+      "sha256": "D48016BF499B95FFB7038039FFEF4B885975C5DC99A9386526156FA417B69252"
+    },
+    {
+      "kind": "plugin-readme",
+      "componentId": "ruffneckk-isc12",
+      "source": "plugins/isc12/README.md",
+      "destination": "RuffnecKk-isc12-v1.0.2-README.md",
+      "sha256": "B9C4DC6524E2AFBB7C71D6F096C7CDEABAF3682C6863996C8282474382343D98"
+    },
+    {
+      "kind": "embedded-tool-exe",
+      "componentId": "ruffneckk-d2r-save-converter",
+      "archiveComponentId": "ruffneckk-isc12",
+      "version": "1.0.0",
+      "source": "tools/D2RSaveConverter.exe",
+      "destination": "D2R Save Converter/D2RSaveConverter.exe",
+      "sha256": "5BC08306B1A165641383D991AC430CF135126E5FB034667B34DE2A00FB95FD48"
+    },
+    {
+      "kind": "embedded-tool-readme",
+      "componentId": "ruffneckk-d2r-save-converter",
+      "archiveComponentId": "ruffneckk-isc12",
+      "source": "tools/d2r-save-converter/README.md",
+      "destination": "RuffnecKk-isc12-v1.0.2-D2R-Save-Converter-README.md",
+      "sha256": "A18BB77D7244D69BF504278B4159D938FB79D4163B3C9B806C15A9C8B9EF83A8"
+    },
+    {
+      "kind": "loose-config-json",
+      "componentId": "ruffneckk-bulk-skill-point-allocation",
+      "source": "config/BulkSkillPointAllocation.json",
+      "destination": "config/BulkSkillPointAllocation.json",
+      "sha256": "98438174C749A3BDAC13F3A69F7E0C713F357B2F2431D84A65BFC4A935199629"
+    },
+    {
+      "kind": "loose-config-json",
+      "componentId": "ruffneckk-larzuk-sockets",
+      "source": "config/ForceLarzukSockets.json",
+      "destination": "config/ForceLarzukSockets.json",
+      "sha256": "BFF10590E957B5F3BCEBBC92CA96AAB2DEA8B606F9635AF1E231F308F76B2BF7"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-armageddon-hurricane-ctc-fix",
+      "source": "plugins/armageddon-hurricane-ctc-fix/config/ruffneckk-armageddon-hurricane-ctc-fix.toml",
+      "destination": "config/ruffneckk-armageddon-hurricane-ctc-fix.toml",
+      "sha256": "1A09A49AFA694E87BB5A618DEB17F9DB805468E94999A784CABA9CAD897D7543"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-bulk-currency-deposit",
+      "source": "plugins/bulk-currency-deposit/config/ruffneckk-bulk-currency-deposit.toml",
+      "destination": "config/ruffneckk-bulk-currency-deposit.toml",
+      "sha256": "C6C85977C63A2FD1BC4B22F6523A17FAB292C0202A2108BB027546D3DAE854B7"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-burn-damage-fix",
+      "source": "plugins/burn-damage-fix/config/ruffneckk-burn-damage-fix.toml",
+      "destination": "config/ruffneckk-burn-damage-fix.toml",
+      "sha256": "17624E097E5C78497C43AC1B4A0D1C9F741371A9D0EB2A578DD229DBB77DB34B"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-cast-triggers",
+      "source": "plugins/cast-triggers/config/ruffneckk-cast-triggers.toml",
+      "destination": "config/ruffneckk-cast-triggers.toml",
+      "sha256": "7685BB873B2896ED33F2FBE779A77A3B00B898674C7D5F7338BD56C6F82EEF8D"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-charm-aura-trigger-fix",
+      "source": "plugins/charm-aura-trigger-fix/config/ruffneckk-charm-aura-trigger-fix.toml",
+      "destination": "config/ruffneckk-charm-aura-trigger-fix.toml",
+      "sha256": "437EB592638F39972AB163C8B370DAFB4BE7D25D40C19CCA0DA6DB95B53A2CE4"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-cube-quick-move",
+      "source": "plugins/cube-quick-move/config/ruffneckk-cube-quick-move.toml",
+      "destination": "config/ruffneckk-cube-quick-move.toml",
+      "sha256": "B6914E70618D70FFFC43A2519AB90810AB087A18F95EF765D0EC8C0FA8E80FA3"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-enhanced-damage-min-max-fix",
+      "source": "plugins/enhanced-damage-min-max-fix/config/ruffneckk-enhanced-damage-min-max-fix.toml",
+      "destination": "config/ruffneckk-enhanced-damage-min-max-fix.toml",
+      "sha256": "C1C3610BEC10F03D638CC935E0AB8232C57511C04DD5C459A4EA6733DB6D1254"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-equipped-item-to-cube",
+      "source": "plugins/equipped-item-to-cube/config/ruffneckk-equipped-item-to-cube.toml",
+      "destination": "config/ruffneckk-equipped-item-to-cube.toml",
+      "sha256": "FD3C0FDABEDC0A6EC6455BD2970EF774735C02B0A60AB29CFAA2D1849D838BA1"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-ethereal-item-rules",
+      "source": "plugins/ethereal-item-rules/config/ruffneckk-ethereal-item-rules.toml",
+      "destination": "config/ruffneckk-ethereal-item-rules.toml",
+      "sha256": "2EFFF65F919839F9694F3C36CBF6C3B7039B991DF63A0F5C1DC6012C6DCC823F"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-floating-damage",
+      "source": "plugins/floating-damage/config/ruffneckk-floating-damage.toml",
+      "destination": "config/ruffneckk-floating-damage.toml",
+      "sha256": "D8CA12D35E7DDED7E26E8566A01C7FBAEE52E17AE294981385C962F0E7F82D40"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-item-durability",
+      "source": "plugins/item-durability/config/ruffneckk-item-durability.toml",
+      "destination": "config/ruffneckk-item-durability.toml",
+      "sha256": "1BC6A1F1AFF726AB951CCAE1DFE39A3CF3C97239E7409D11346D55A795E07B9C"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-mapsense",
+      "source": "plugins/mapsense/config/ruffneckk-mapsense.toml",
+      "destination": "config/ruffneckk-mapsense.toml",
+      "sha256": "C286358724195E17288B5949A83F69373C477D96A20273FE0C92B8912961D241"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-mass-identify",
+      "source": "plugins/mass-identify/config/ruffneckk-mass-identify.toml",
+      "destination": "config/ruffneckk-mass-identify.toml",
+      "sha256": "AC6A3226EB699E3DF791BB5B5F8F57045875027C75EFE485D7E9104827AF757A"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-potion-auto-pickup",
+      "source": "plugins/potion-auto-pickup/config/ruffneckk-potion-auto-pickup.toml",
+      "destination": "config/ruffneckk-potion-auto-pickup.toml",
+      "sha256": "C9AF1344D16D33B42985CC34B7941B7B3D7C8ADB011954E931F3F881DDF38B6E"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-prevent-merc-death-in-town",
+      "source": "plugins/prevent-merc-death-in-town/config/ruffneckk-prevent-merc-death-in-town.toml",
+      "destination": "config/ruffneckk-prevent-merc-death-in-town.toml",
+      "sha256": "FFD3D155769D7E12B26D062F2A7093327874AC10668B9428014C291E16BA52DA"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-progressive-affixes",
+      "source": "plugins/progressive-affixes/config/ruffneckk-progressive-affixes.toml",
+      "destination": "config/ruffneckk-progressive-affixes.toml",
+      "sha256": "C4982BE206C01AE0D672D526475F869DF030597705BDCA0EC399A1B65404010C"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-remote-stash",
+      "source": "plugins/remote-stash/config/ruffneckk-remote-stash.toml",
+      "destination": "config/ruffneckk-remote-stash.toml",
+      "sha256": "31A81955ECB6AF1683B68D589FC54B64DBBC0584CE2BC28482FCC5D54A44BE82"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-repair-costs-cap",
+      "source": "plugins/repair-costs-cap/config/ruffneckk-repair-costs-cap.toml",
+      "destination": "config/ruffneckk-repair-costs-cap.toml",
+      "sha256": "8CD13EA0110990F0729F20A3994ADE7003640F0C1D51B9607CCF6E91BB6CCC38"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-resistance-floor",
+      "source": "plugins/resistance-floor/config/ruffneckk-resistance-floor.toml",
+      "destination": "config/ruffneckk-resistance-floor.toml",
+      "sha256": "ECE65F3684A0D3515C5ADA5F7EEA46F85AA614183CAFEA17FABC23C55A596443"
+    },
+    {
+      "kind": "plugin-config-toml",
+      "componentId": "ruffneckk-vendor-stock-refresh",
+      "source": "plugins/vendor-stock-refresh/config/ruffneckk-vendor-stock-refresh.toml",
+      "destination": "config/ruffneckk-vendor-stock-refresh.toml",
+      "sha256": "418C724262FAA5A6F821941B6003738C943292367F40A952697B82EF87D685B8"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-enemy-resistance-vs-immunes.json",
+      "destination": "patches/ruffneckk-enemy-resistance-vs-immunes.json",
+      "sha256": "3844D4BA9BBA7A5401247CF6DB201EA34931C14D01B30A67130C0B84036A3B70"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-gamble-screen-limit.json",
+      "destination": "patches/ruffneckk-gamble-screen-limit.json",
+      "sha256": "C87D6D1AA5061401758E0C9B155D145250FD72D7806E1770231493AEFCC74411"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-gold-capacities.json",
+      "destination": "patches/ruffneckk-gold-capacities.json",
+      "sha256": "064F005EE30734A5EDE07371B71F3B6A4E08134C9D741E6885DD983134AE1E8E"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-hireling-ai.json",
+      "destination": "patches/ruffneckk-hireling-ai.json",
+      "sha256": "9EC4AB0B0AD9D612DD55AB8F13A77728280C9173EC5BDF767CC2C9A9F10B43A9"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-hit-chance-0-100.json",
+      "destination": "patches/ruffneckk-hit-chance-0-100.json",
+      "sha256": "FF859045E8304AC6F5B7C9ECA58453A708A7824857847A8C4E04BEADF2DCED9E"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-infinite-quantities.json",
+      "destination": "patches/ruffneckk-infinite-quantities.json",
+      "sha256": "DB10DC42C65D02C2D9CA0A5D472EF03F92ACF0B5F79F7B06F456639D51AAB420"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-infinite-quest-rewards.json",
+      "destination": "patches/ruffneckk-infinite-quest-rewards.json",
+      "sha256": "F48A010F4B5D4292D17F41A4D94823B5957C2F40A4413FECD237D0C1D4C3DAA1"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-itd-vs-champions-uniques.json",
+      "destination": "patches/ruffneckk-itd-vs-champions-uniques.json",
+      "sha256": "4831786F90C471590010862DF18FBC8E88A7C02C5571CFA350411944F2090C13"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-level-100-plus.json",
+      "destination": "patches/ruffneckk-level-100-plus.json",
+      "sha256": "780F20F22E2B1CF1ACFE78A24A4DBD529B8183BFA11EE4EE5313AE7972135574"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-linear-magic-find.json",
+      "destination": "patches/ruffneckk-linear-magic-find.json",
+      "sha256": "5AD8D38A548EE2FD0DAD8CF6F9CC3CBCD0596F1344A1EB2486ACC61B37631718"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-maximum-staffmods.json",
+      "destination": "patches/ruffneckk-maximum-staffmods.json",
+      "sha256": "8235BDA6DB284635FBA842615C7887646DE0AEBA3611B4EFB08112B270CF07EC"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-no-run-penalties.json",
+      "destination": "patches/ruffneckk-no-run-penalties.json",
+      "sha256": "E7C069290174F34CD6DF005DB8F244EA1BC552623B52EB67771A74FC12DE6BD4"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-player-difficulty-overrides.json",
+      "destination": "patches/ruffneckk-player-difficulty-overrides.json",
+      "sha256": "CD178C3926A0184FD009F67342EB7E65BD831871086A7D70765D80A876DDD96F"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-preserve-terror-zone-music.json",
+      "destination": "patches/ruffneckk-preserve-terror-zone-music.json",
+      "sha256": "4E23E7E032A176D18B2FEB2BF9F45C187EADFC992ABAEF7CDCCFA43B8C50D9A6"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-quantity-display-fix.json",
+      "destination": "patches/ruffneckk-quantity-display-fix.json",
+      "sha256": "EDB97712D58AF4244579207C0B0F0AC08113F853E636CD4E3415F5DFB70BC995"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-shadow-master-ai-fix.json",
+      "destination": "patches/ruffneckk-shadow-master-ai-fix.json",
+      "sha256": "DB30A52416DEA6705DCE9EAE15F32589AC79AA4238C73B64CF3087F1C94B760A"
+    },
+    {
+      "kind": "memory-patch-json",
+      "source": "patches/ruffneckk-thorns-burn-kill-credit.json",
+      "destination": "patches/ruffneckk-thorns-burn-kill-credit.json",
+      "sha256": "AF35CC9093B52EFE5476C2D9E8D74EEE8B6F9043BFD5923DA368DC29862CFC79"
+    }
+  ]
+}

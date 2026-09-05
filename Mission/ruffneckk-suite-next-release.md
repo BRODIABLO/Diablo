@@ -1,6 +1,53 @@
 # RuffnecKk D2RLoader Suite — prochaine release publique
 
-Dernière mise à jour : 4 septembre 2026
+Dernière mise à jour : 5 septembre 2026
+
+## Suite 1.3.3 publiée et vérifiée — 5 septembre 2026
+
+La release publique `v1.3.3` est publiée et marquée latest :
+https://github.com/RuffDood/RuffnecKk-D2RLoader-Suite/releases/tag/v1.3.3
+
+Le commit produit `3637a3013eaf07b59567d611f678ff70b4a5c36c` est poussé sur
+`main`; le tag distant pointe exactement sur ce commit. Les 43 assets
+(24 archives de plugins, 17 patches, deux bundles) sont reproductibles
+byte-exact entre les deux catalogues locaux et leurs 43 digests GitHub
+concordent. Les notes approuvées ne contiennent aucune section Compatibility.
+MapSense 1.0.2 r3 et Resistance Floor 1.0.2 sont les seules mises à jour;
+les autres versions, configurations et artefacts internes publiés sont conservés.
+
+Le cold start final du 5 septembre à 18:48 EDT couvre les 24 DLL exactes
+et les 17 patches du catalogue, sous D2R 3.3.93847 et D2RLoader 1.2.1 public.
+Il atteint 24/24 avec 39 plugins et 18 patches installés, dont les extensions
+de laboratoire conservées; les cinq plugins eezstreet chargent. Le seul refus
+est Doll Explosion, hors release et explicitement exclu du verdict par Vincent.
+ISC12 publie son schéma; Potion Auto Pickup 1.3.3 charge avec son TOML publié;
+Floating Damage rend sa première frame via MapSense. Vincent avait confirmé
+le gameplay des deux DLL finales pendant le premier essai ciblé.
+Ce cold start ne prétend pas tester chaque option, langue, périphérique ou
+scénario multijoueur. Le rendu CJK exhaustif et les autres scénarios non observés
+ne sont pas transformés en preuves runtime.
+
+Le premier essai du catalogue exact avait laissé le TOML expérimental Potion
+Auto Pickup 2.0.0, refusé par la DLL 1.3.3. Après accord explicite, le TOML
+publié a été testé puis restauré. Tous les remplacements temporaires, le
+doublon Extended Act Level IDs du laboratoire et le TOML personnel sont
+restaurés byte-exact. MapSense et Resistance Floor restent à jour; aucun jeu
+ne reste ouvert. Aucun plugin hors release n'a été désactivé pour obtenir ce résultat.
+
+Le générateur de release accepte maintenant les noms de README racine
+explicitement gouvernés et déjà utilisés par ISC12 1.3.2, avec validation du
+registre et des SHA-256 maintenue. Les nouveaux README MapSense et Resistance
+Floor sont à côté des ZIP, pas dedans. Les deux README ISC12 et celui de Cast
+Triggers précédemment approuvés restent dans leurs archives inchangées.
+
+Preuves autoritaires : `governance/d2rloader-suite/releases/1.3.3/`, incluant
+`publication.json`, `asset-manifest.json`, `release-allowlist.json` et les notes.
+Livraison locale : `addons/RuffnecKk-Suite-1.3.3-release/`.
+Logs, reçus et snapshot de packaging jetable :
+`analysis-cache/ruffneckk-suite-release-1.3.3/`.
+La source produit reste exclusivement le dépôt Suite, au commit publié.
+Les travaux GPS, Potion Auto Pickup 2.0.0 et les changements concurrents sont
+préservés hors commit. Le suivi Diablo rejoint le checkpoint de publication autorisé.
 
 ## Potion Auto Pickup 2.0.0 — stacking autorisé
 

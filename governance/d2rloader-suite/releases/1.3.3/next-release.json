@@ -4,10 +4,10 @@
     "id": "ruffneckk-d2rloader-suite",
     "latestPublicVersion": "1.3.2",
     "targetVersion": "1.3.3",
-    "status": "draft",
-    "releaseReady": false,
+    "status": "published",
+    "releaseReady": true,
     "owner": "Vincent + Codex",
-    "decisionDate": "2026-09-04"
+    "decisionDate": "2026-09-05"
   },
   "compatibility": {
     "policy": "native-fingerprint-fail-closed",
@@ -16,8 +16,8 @@
         "name": "Battle.net",
         "gameVersion": "3.3",
         "build": 93847,
-        "status": "pending",
-        "claim": "Exact Suite 1.3.3 full-stack qualification on the official D2R 3.3.93847 runtime is pending."
+        "status": "passed",
+        "claim": "Final BKVince cold start on 2026-09-05 at 18:48 EDT reached 24/24 with all 24 exact Suite DLLs and 17 exact Suite patches present and loaded, plus the unchanged laboratory extensions. 39 plugins loaded; only the pre-existing Doll Explosion failure remained, explicitly excluded by Vincent. Potion Auto Pickup used its released 1.3.3 TOML; ISC12 published its schema, and Floating Damage rendered its first frame through MapSense. Vincent confirmed gameplay of both updated plugins in the prior exact-DLL test. Laboratory files and TOML restored byte-exact after the bounded test."
       },
       {
         "name": "Steam",
@@ -76,11 +76,11 @@
       "releaseNote": "Retains Bulk Currency Deposit 1.1.2 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -97,11 +97,11 @@
       "releaseNote": "Retains Bulk Skill Point Allocation 1.3.4 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -118,11 +118,11 @@
       "releaseNote": "Retains Burn Damage Fix 1.0.1 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -148,11 +148,11 @@
         "decision": "Vincent reviewed and updated the modder setup guide, then required it inside the individual Cast Triggers release ZIP."
       },
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -169,11 +169,11 @@
       "releaseNote": "Retains Charm Aura Trigger Fix 1.6.4 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -190,11 +190,11 @@
       "releaseNote": "Retains Cube Quick Move 1.0.3 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -211,11 +211,11 @@
       "releaseNote": "Retains Enhanced Damage Min/Max Fix 1.2.4 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -232,11 +232,11 @@
       "releaseNote": "Retains Equipped Item to Cube 1.0.2 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -253,11 +253,11 @@
       "releaseNote": "Retains Ethereal Item Rules 1.0.2 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -274,11 +274,11 @@
       "releaseNote": "Retains Floating Damage 1.4.3 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -295,11 +295,11 @@
       "releaseNote": "Retains Item Durability 1.2.5 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -316,11 +316,11 @@
       "releaseNote": "Retains Larzuk Sockets 1.0.3 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -337,11 +337,11 @@
       "releaseNote": "Retains MassID 2.0.3 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -358,11 +358,11 @@
       "releaseNote": "Retains Potion Auto Pickup 1.3.3 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -379,11 +379,11 @@
       "releaseNote": "Retains Prevent Merc Death in Town 1.0.2 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -400,11 +400,11 @@
       "releaseNote": "Retains Progressive Affixes 0.3.5 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -421,11 +421,11 @@
       "releaseNote": "Retains Remote Stash 2.3.1 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -442,11 +442,11 @@
       "releaseNote": "Retains Repair Costs Cap 1.4.4 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -463,11 +463,11 @@
       "releaseNote": "Retains Vendor Stock Refresh 2.0.2 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -484,11 +484,11 @@
       "releaseNote": "Retains Armageddon-Hurricane CtC Fix 1.0.0 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -503,13 +503,13 @@
       "sourceRef": "suite:plugins/resistance-floor",
       "releaseNoteCategory": "Fixed",
       "releaseNote": "Removes the D2R build-number allowlist and relies only on the complete native fingerprint.",
-      "decision": "Publish the corrected fingerprint-only admission policy as Resistance Floor 1.0.2; the immutable 1.0.1 asset remains a rollback-only historical release.",
+      "decision": "Publish the corrected fingerprint-only admission policy as Resistance Floor 1.0.2; the immutable 1.0.1 asset remains a rollback-only historical release. The canonical source was rebuilt on 2026-09-05 and reproduced SHA-256 28B1B934E180C3863077B478017A310D0880212A50CCC1B0CB557B7ABF6540B6. The authorized BKVince cold start accepted the native fingerprint and activated both gameplay relays and the Character Screen operand. Exact retained-catalog coexistence and gameplay evidence remain pending. Vincent explicitly confirmed the current in-game behavior on 2026-09-05. Doll Explosion is outside this release and its pre-existing failure is excluded from the release verdict by explicit instruction. The exact full-catalog runtime remains pending because laboratory variants are active. Final BKVince cold start on 2026-09-05 at 18:48 EDT reached 24/24 with all 24 exact Suite DLLs and 17 exact Suite patches present and loaded, plus the unchanged laboratory extensions. 39 plugins loaded; only the pre-existing Doll Explosion failure remained, explicitly excluded by Vincent. Potion Auto Pickup used its released 1.3.3 TOML; ISC12 published its schema, and Floating Damage rendered its first frame through MapSense. Vincent confirmed gameplay of both updated plugins in the prior exact-DLL test. Laboratory files and TOML restored byte-exact after the bounded test.",
       "gates": {
         "source": "passed",
         "build": "passed",
-        "battleNetRuntime": "pending",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -526,11 +526,11 @@
       "releaseNote": "Retains Enemy Resistance vs Immunes from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -547,11 +547,11 @@
       "releaseNote": "Retains Gamble Screen Limit from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -568,11 +568,11 @@
       "releaseNote": "Retains Gold Capacities from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -589,11 +589,11 @@
       "releaseNote": "Retains Ranged Hireling AI from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -610,11 +610,11 @@
       "releaseNote": "Retains Hit Chance 0% to 100% from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -631,11 +631,11 @@
       "releaseNote": "Retains Infinite Quantities from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -652,11 +652,11 @@
       "releaseNote": "Retains Infinite Quest Rewards from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -673,11 +673,11 @@
       "releaseNote": "Retains ITD vs Champions and Uniques from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -694,11 +694,11 @@
       "releaseNote": "Retains Level 100+ Characters from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -715,11 +715,11 @@
       "releaseNote": "Retains Linear Magic Find from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -736,11 +736,11 @@
       "releaseNote": "Retains Maximum Staffmods from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -757,11 +757,11 @@
       "releaseNote": "Retains No Run Penalties from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -778,11 +778,11 @@
       "releaseNote": "Retains Player Difficulty Overrides from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -799,11 +799,11 @@
       "releaseNote": "Retains Preserve Terror Zone Music from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -820,11 +820,11 @@
       "releaseNote": "Retains Quantity Display Fix from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -841,11 +841,11 @@
       "releaseNote": "Retains Shadow Master AI Fix from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -862,11 +862,11 @@
       "releaseNote": "Retains Thorns/Burn Kill Credit from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "not-required",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -946,11 +946,11 @@
       "releaseNote": "Retains Extended Act Level IDs 1.0.0 from Suite 1.3.2.",
       "decision": "Retain the published Suite 1.3.2 component unless an explicit 1.3.3 update supersedes it.",
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -976,11 +976,11 @@
         "decision": "Vincent reviewed and inserted the focused ISC12 technical README in the individual release ZIP."
       },
       "gates": {
-        "source": "pending",
-        "build": "pending",
-        "battleNetRuntime": "pending",
+        "source": "passed",
+        "build": "passed",
+        "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -1015,11 +1015,11 @@
         "decision": "The offline Converter is packaged only in the individual ISC12 ZIP, isolated from D2RLoader paths and excluded from the All Plugins bundle."
       },
       "gates": {
-        "source": "pending",
-        "build": "pending",
+        "source": "passed",
+        "build": "passed",
         "battleNetRuntime": "not-required",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     },
     {
@@ -1050,12 +1050,12 @@
       "disposition": "include",
       "changeType": "update",
       "targetVersion": "1.0.2",
-      "versionStatus": "candidate",
+      "versionStatus": "locked",
       "asset": "RuffnecKk-mapsense-v1.0.2.zip",
       "sourceRef": "suite:plugins/mapsense",
       "releaseNoteCategory": "Fixed",
-      "releaseNote": "Fixes shutdown, renderer coexistence, menu scaling, portable map generation and exact reveal for custom levels.",
-      "decision": "MapSense 1.0.2 source, reproducible builds and Battle.net full-stack runtime pass on the exact custom-level reveal candidate; final packaging remains open.",
+      "releaseNote": "Fixes shutdown, HUD and unknown-state occlusion, vanilla labels without -txt, menu localization and sizing, locale-prioritized CJK fonts, startup diagnostics, resolution-aware label sizes and exit/icon spacing, portable map generation and exact reveal for custom levels.",
+      "decision": "MapSense 1.0.2 player-test revision 3 adds locale-prioritized private CJK fonts, missing-glyph-only fallbacks, full Japanese kanji coverage and GPU-idle late-language font selection to the prior shutdown, CPU, menu, custom reveal, HUD, unknown-state, vanilla, localization and resolution-aware label fixes. Shared default fonts and native projected anchors are preserved. Two strict builds are byte-identical; policy and real Windows font tests pass 2/2 in both trees. The current DLL is SHA-256 FA8A2EE04156A18934F515BF97F9A2CEF330AD7E01716E9A131BA7F2A39EF724; the r3 test ZIP is 6F57F1967298AFF299214FBDED69AEF26DC24810713400142058392CDACBB477. Helper and TOML are unchanged; previous test ZIPs remain available for rollback. No D2R runtime or GPU upload was launched by explicit request; CJK visual quality, late localization, live resize and complete-stack coexistence remain player gates before final public packaging. Replacement-character encoding and experimental Automap Serialization Fix are outside this correction. Vincent approved publication of the current r3 as 1.0.2 on 2026-09-05. The authorized BKVince cold start reached 24/24 with the exact DLL and portable helper; private western fonts initialized and Floating Damage 1.4.3 rendered its first frame through MapSense. Exact retained-catalog coexistence and visual/gameplay evidence remain pending. Vincent explicitly confirmed the current in-game behavior on 2026-09-05. Doll Explosion is outside this release and its pre-existing failure is excluded from the release verdict by explicit instruction. The exact full-catalog runtime remains pending because laboratory variants are active. Final BKVince cold start on 2026-09-05 at 18:48 EDT reached 24/24 with all 24 exact Suite DLLs and 17 exact Suite patches present and loaded, plus the unchanged laboratory extensions. 39 plugins loaded; only the pre-existing Doll Explosion failure remained, explicitly excluded by Vincent. Potion Auto Pickup used its released 1.3.3 TOML; ISC12 published its schema, and Floating Damage rendered its first frame through MapSense. Vincent confirmed gameplay of both updated plugins in the prior exact-DLL test. Laboratory files and TOML restored byte-exact after the bounded test.",
       "archiveCompanions": [
         {
           "kind": "plugin-companion-exe",
@@ -1071,7 +1071,7 @@
         "build": "passed",
         "battleNetRuntime": "passed",
         "steamRuntime": "not-required",
-        "packaging": "pending"
+        "packaging": "passed"
       }
     }
   ]

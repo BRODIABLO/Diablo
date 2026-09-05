@@ -1,6 +1,6 @@
 # Mission courante
 
-Dernière mise à jour : 4 septembre 2026
+Dernière mise à jour : 5 septembre 2026
 
 ## Priorité active
 
@@ -57,42 +57,8 @@ restaurés byte-exact, sans crash ni processus résiduel.
 
 ## Prochain gate
 
-Pour MapSense `1.0.2`, source, builds reproductibles, cold start, renderer,
-coexistence Floating Damage, fermeture normale et Reveal Map du vrai custom
-LevelId 256 sont fermés sur Battle.net `93847`. Le packaging final, la matrice
-menu 1080p/1440p/ultrawide et le changement de résolution en direct restent
-ouverts. Le trajet fatal exact reste `not run` faute de déclencheur local sûr;
-la preuve binaire élimine néanmoins le destructeur fautif. L'incident Floating
-Damage du premier reporter reste en attente de ses preuves de version et
-d'inventaire.
 
-La réorganisation est implantée sans modification de la ROADMAP : la Suite
-publique reste dans son dépôt produit frère, tandis que sa gouvernance publique
-est versionnée dans Diablo sous `governance/d2rloader-suite/`, hors du dépôt
-produit et hors de `analysis-cache`. Le checkpoint agrège les deux dépôts Git;
-la promotion incubation → Suite et la synchronisation release → runtime sont
-gouvernées par des procédures dédiées. Le registre `1.3.2` pointe uniquement
-vers les sources `suite:` promues.
-
-Le contrôle post-publication a aussi trouvé que le binaire Resistance Floor
-`1.0.1` de l'asset immuable `v1.3.2` contient encore une allowlist de numéros de
-build. La source canonique publique est corrigée et testée. Le `GO` du 4
-septembre ferme aussi le trou d'automatisation : le générateur exige maintenant
-le gate source complet avant toute sortie, puis inspecte les DLL des ZIP
-individuels et du bundle `All Plugins`. L'asset fautif réel est rejeté, la DLL
-corrigée est acceptée et un refus synthétique sur un futur build est rejeté.
-Resistance Floor est maintenant versionné `1.0.2` dans sa source autoritaire :
-les métadonnées concordent, le build Release vaut
-`28B1B934E180C3863077B478017A310D0880212A50CCC1B0CB557B7ABF6540B6`, le scan
-binaire et la politique Suite sont `VALID`, et le CTest ciblé passe `3/3`.
-Le registre complet `1.3.3` est ouvert en `draft`, `releaseReady=false`, avec
-MapSense `1.0.2` et Resistance Floor `1.0.2`. Sa structure et ses références
-Suite sont valides; MapSense passe son runtime exact, tandis que Resistance
-Floor et le packaging restent `pending`. Demander une autorisation séparée
-avant tout commit ou push du dépôt
-Diablo ou du dépôt Suite, toute nouvelle release ou toute synchronisation vers
-un runtime installé.
-L'ancien dépôt privé Governance reste un repli temporaire non autoritaire.
+Suite 1.3.3 publiée et vérifiée : MapSense 1.0.2 r3 et Resistance Floor 1.0.2, commit produit 3637a3013eaf07b59567d611f678ff70b4a5c36c poussé et tag v1.3.3 exact. Deux catalogues de 43 assets sont byte-identiques et leurs 43 digests GitHub concordent. Le catalogue exact de 24 DLL et 17 patches passe le cold start 24/24 sous D2RLoader 1.2.1; gameplay des deux mises à jour confirmé par Vincent. Doll Explosion reste hors verdict sur instruction explicite. Laboratoire et TOML restaurés byte-exact, MapSense et Resistance Floor à jour, aucun jeu ouvert. Notes approuvées sans section Compatibility. Registre published, releaseReady=true. Le suivi et la gouvernance Diablo font partie du checkpoint de publication autorisé. Les travaux GPS et Potion Auto Pickup 2.0.0 restent hors release.
 
 ## Priorité précédente conservée — ISC12
 
