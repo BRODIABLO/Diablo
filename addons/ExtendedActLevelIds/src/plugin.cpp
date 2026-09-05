@@ -58,8 +58,17 @@ constexpr std::uintptr_t CLIENT_HandlePacket0x60_PortalStateRva = 0x1CB1C0;
 constexpr std::uintptr_t CLIENT_GetUnitByIdAndTypeRva = 0x9A5D0;
 constexpr std::uintptr_t ClientPortalLabelContextWitnessRva = 0xC187F;
 constexpr std::uintptr_t ClientPortalLabelLevelsRecordCallRva = 0xC188E;
+constexpr std::uintptr_t ClientTownPortalUsabilityRva = 0xFE1F0;
+constexpr std::uintptr_t ClientTownPortalLevelsContextWitnessRva = 0xFE2FC;
+constexpr std::uintptr_t ClientTownPortalLevelsRecordCallRva = 0xFE307;
+constexpr std::uintptr_t ClientTownPortalLevelDefContextWitnessRva = 0xFE328;
+constexpr std::uintptr_t ClientTownPortalLevelDefRecordCallRva = 0xFE333;
+constexpr std::uintptr_t ClientPortalStateOwnerLevelWitnessRva = 0x1CB23A;
 constexpr std::uintptr_t PortalUnitLayoutWitnessRva = 0x538821;
 constexpr std::uintptr_t PortalStateSendCallerWitnessRva = 0x5388CA;
+constexpr std::uintptr_t PortalStatePrimarySendCallRva = 0x5388E4;
+constexpr std::uintptr_t PortalStateSecondaryCallerWitnessRva = 0x592FFA;
+constexpr std::uintptr_t PortalStateSecondarySendCallRva = 0x593012;
 constexpr std::size_t D2ClientPlayerIdOffset = 0x270;
 constexpr std::size_t GameDataContextOffset = 0x106;
 constexpr std::size_t UnitTypeOffset = 0x00;
@@ -67,6 +76,7 @@ constexpr std::size_t UnitClassIdOffset = 0x04;
 constexpr std::size_t UnitGuidOffset = 0x08;
 constexpr std::size_t UnitDataOffset = 0x10;
 constexpr std::size_t ObjectInteractTypeOffset = 0x08;
+constexpr std::size_t ClientPortalOwnerRoomLevelIdOffset = 0x1BA;
 constexpr std::size_t OperateGameOffset = 0x00;
 constexpr std::size_t OperateObjectOffset = 0x08;
 constexpr std::size_t OperatePlayerOffset = 0x10;
@@ -239,6 +249,32 @@ constexpr auto ClientPortalLabelContextWitnessExpected =
     });
 constexpr auto ClientPortalLabelLevelsRecordCallExpected =
     std::to_array<std::uint8_t>({0xE8,0x0D,0xAC,0x26,0x00});
+constexpr auto ClientTownPortalUsabilityExpected =
+    std::to_array<std::uint8_t>({
+        0x40,0x53,0x57,0x48,0x83,0xEC,0x28,0x48,
+        0x8B,0xDA,0x48,0x8B,0xF9,0x48,0x85,0xC9,
+        0x74,0x09,0xE8,0xC9,0xD7,0x24,0x00,0x85,
+        0xC0,0x74,0x14,0x48,0x8D,0x4C,0x24,0x40,
+    });
+constexpr auto ClientTownPortalLevelsContextWitnessExpected =
+    std::to_array<std::uint8_t>({
+        0x0F,0xB6,0x93,0xBA,0x01,0x00,0x00,0x40,
+        0x0F,0xB6,0xCE,0xE8,0x94,0xE1,0x22,0x00,
+    });
+constexpr auto ClientTownPortalLevelsRecordCallExpected =
+    std::to_array<std::uint8_t>({0xE8,0x94,0xE1,0x22,0x00});
+constexpr auto ClientTownPortalLevelDefContextWitnessExpected =
+    std::to_array<std::uint8_t>({
+        0x0F,0xB6,0x93,0xBA,0x01,0x00,0x00,0x40,
+        0x0F,0xB6,0xCE,0xE8,0xC8,0xDE,0x22,0x00,
+    });
+constexpr auto ClientTownPortalLevelDefRecordCallExpected =
+    std::to_array<std::uint8_t>({0xE8,0xC8,0xDE,0x22,0x00});
+constexpr auto ClientPortalStateOwnerLevelWitnessExpected =
+    std::to_array<std::uint8_t>({
+        0x0F,0xB6,0x43,0x0B,0x88,0x87,0xBA,0x01,
+        0x00,0x00,0x48,0x8B,0x5C,0x24,0x30,
+    });
 constexpr auto PortalUnitLayoutWitnessExpected =
     std::to_array<std::uint8_t>({
         0x48,0x8B,0x46,0x10,0x41,0xB0,0x02,0x44,
@@ -257,6 +293,16 @@ constexpr auto PortalStateSendCallerWitnessExpected =
         0x8B,0xD6,0x66,0x89,0x4C,0x24,0x20,0x49,
         0x8B,0xCE,0xE8,0x37,0x6D,0xF4,0xFF,
     });
+constexpr auto PortalStatePrimarySendCallExpected =
+    std::to_array<std::uint8_t>({0xE8,0x37,0x6D,0xF4,0xFF});
+constexpr auto PortalStateSecondaryCallerWitnessExpected =
+    std::to_array<std::uint8_t>({
+        0x44,0x0F,0xB6,0xC7,0x44,0x0F,0xB7,0x8C,
+        0x24,0x80,0x00,0x00,0x00,0x48,0x8B,0xD6,
+        0x66,0x89,0x4C,0x24,0x20,
+    });
+constexpr auto PortalStateSecondarySendCallExpected =
+    std::to_array<std::uint8_t>({0xE8,0x09,0xC6,0xEE,0xFF});
 
 using ResolveActFromLevelIdFn = std::uint8_t(__fastcall*)(
     std::uint8_t dataContext,
@@ -391,8 +437,10 @@ std::atomic_uint64_t CompatiblePeerAnnouncements{};
 std::atomic_uint64_t NetworkWarnings{};
 std::atomic_uint64_t PortalPairsPublished{};
 std::atomic_uint64_t PortalOperations{};
-std::atomic_uint64_t EncodedPortalPackets{};
-std::atomic_uint64_t DecodedPortalPackets{};
+std::atomic_uint64_t PublishedPortalPackets{};
+std::atomic_uint64_t ValidatedPortalPackets{};
+std::atomic_uint64_t RefusedPortalClientIdentities{};
+std::atomic_uint64_t RefusedPortalSidecars{};
 std::atomic_uint64_t RefusedPortalOperations{};
 std::atomic_uint64_t ClientPortalPublications{};
 std::atomic_uint64_t ClientPortalEvictions{};
@@ -609,11 +657,38 @@ bool ValidateRuntime() noexcept {
                 ClientPortalLabelLevelsRecordCallRva,
                 ClientPortalLabelLevelsRecordCallExpected)
             || !matches(
+                ClientTownPortalUsabilityRva,
+                ClientTownPortalUsabilityExpected)
+            || !matches(
+                ClientTownPortalLevelsContextWitnessRva,
+                ClientTownPortalLevelsContextWitnessExpected)
+            || !matches(
+                ClientTownPortalLevelsRecordCallRva,
+                ClientTownPortalLevelsRecordCallExpected)
+            || !matches(
+                ClientTownPortalLevelDefContextWitnessRva,
+                ClientTownPortalLevelDefContextWitnessExpected)
+            || !matches(
+                ClientTownPortalLevelDefRecordCallRva,
+                ClientTownPortalLevelDefRecordCallExpected)
+            || !matches(
+                ClientPortalStateOwnerLevelWitnessRva,
+                ClientPortalStateOwnerLevelWitnessExpected)
+            || !matches(
                 PortalUnitLayoutWitnessRva,
                 PortalUnitLayoutWitnessExpected)
             || !matches(
                 PortalStateSendCallerWitnessRva,
-                PortalStateSendCallerWitnessExpected)) {
+                PortalStateSendCallerWitnessExpected)
+            || !matches(
+                PortalStatePrimarySendCallRva,
+                PortalStatePrimarySendCallExpected)
+            || !matches(
+                PortalStateSecondaryCallerWitnessRva,
+                PortalStateSecondaryCallerWitnessExpected)
+            || !matches(
+                PortalStateSecondarySendCallRva,
+                PortalStateSecondarySendCallExpected)) {
         Context->LogError(
             "ExtendedActLevelIds: Town Portal packet/layout fingerprint mismatch; plugin refused.");
         return false;
@@ -996,10 +1071,11 @@ bool EvictClientPortalGuid(
 }
 
 bool PublishClientPortal(
-        const ClientPortalDescriptor& descriptor) noexcept {
+        const PortalEndpointDescriptor& endpoint,
+        std::optional<std::int32_t> ownerRoomLevelId = std::nullopt) noexcept {
     try {
         std::lock_guard lock(ClientPortalPublicationMutex);
-        if (descriptor.sessionGeneration
+        if (endpoint.sessionGeneration
                 != SessionGeneration.load(std::memory_order_acquire)) {
             return false;
         }
@@ -1007,6 +1083,34 @@ bool PublishClientPortal(
             std::memory_order_acquire);
         auto mutableNext = std::make_shared<ClientPortalMap>();
         if (current) mutableNext->entries = current->entries;
+        ClientPortalDescriptor descriptor{
+            .sessionGeneration = endpoint.sessionGeneration,
+            .guid = endpoint.guid,
+            .destinationLevelId = endpoint.destinationLevelId,
+            .nativeLowLevelId = endpoint.nativeLowLevelId,
+        };
+        const auto previous = std::find_if(
+            mutableNext->entries.begin(),
+            mutableNext->entries.end(),
+            [&](const ClientPortalDescriptor& candidate) {
+                return candidate.sessionGeneration
+                        == endpoint.sessionGeneration
+                    && candidate.guid == endpoint.guid
+                    && candidate.destinationLevelId
+                        == endpoint.destinationLevelId
+                    && candidate.nativeLowLevelId
+                        == endpoint.nativeLowLevelId;
+            });
+        if (previous != mutableNext->entries.end()) {
+            descriptor.ownerRoomLevelId = previous->ownerRoomLevelId;
+            descriptor.ownerRoomNativeLowLevelId =
+                previous->ownerRoomNativeLowLevelId;
+        }
+        if (ownerRoomLevelId) {
+            descriptor.ownerRoomLevelId = *ownerRoomLevelId;
+            descriptor.ownerRoomNativeLowLevelId =
+                LowLevelId(*ownerRoomLevelId);
+        }
         if (!UpsertClientPortalDescriptor(
                 mutableNext->entries,
                 descriptor,
@@ -1026,6 +1130,22 @@ bool PublishClientPortal(
             "ExtendedActLevelIds: client Town Portal sidecar publication failed; the session was refused.");
         return false;
     }
+}
+
+std::optional<ClientPortalDescriptor> FindClientPortalDescriptor(
+        std::uint64_t sessionGeneration,
+        std::uint32_t guid) noexcept {
+    const auto map = ClientPortalEndpoints.load(std::memory_order_acquire);
+    if (!map) return std::nullopt;
+    const auto found = std::find_if(
+        map->entries.begin(),
+        map->entries.end(),
+        [&](const ClientPortalDescriptor& descriptor) {
+            return descriptor.sessionGeneration == sessionGeneration
+                && descriptor.guid == guid;
+        });
+    if (found == map->entries.end()) return std::nullopt;
+    return *found;
 }
 
 std::optional<PortalEndpointDescriptor> FindPortalEndpoint(
@@ -1500,6 +1620,135 @@ void* __fastcall HookClientPortalLabelGetLevelsTxtRecord(
     return nullptr;
 }
 
+void* ResolveClientTownPortalOwnerRecord(
+        GetLevelRecordFn original,
+        std::uint8_t dataContext,
+        std::int32_t requestedLevelId,
+        const void* unit) noexcept {
+    if (!original) return nullptr;
+    const auto lookupGeneration = SessionGeneration.load(
+        std::memory_order_acquire);
+    const auto isDynamicTownPortal = unit
+        && ReadValue<std::uint32_t>(unit, UnitTypeOffset) == 2
+        && ReadValue<std::uint32_t>(unit, UnitClassIdOffset)
+            == DynamicTownPortalClassId;
+    if (!isDynamicTownPortal) {
+        ClientPortalFallbacks.fetch_add(1, std::memory_order_relaxed);
+        return original(dataContext, requestedLevelId);
+    }
+
+    std::uint32_t guid{};
+    std::uint8_t destinationLowLevelId{};
+    if (!ReadPortalUnit(unit, guid, destinationLowLevelId)) {
+        PoisonClientPortalSession(
+            lookupGeneration,
+            "ExtendedActLevelIds: client Town Portal owner-room lookup found an invalid live object; the session was refused.");
+        return nullptr;
+    }
+    const auto ownerRoomNativeLowLevelId = ReadValue<std::uint8_t>(
+        unit,
+        ClientPortalOwnerRoomLevelIdOffset);
+    const auto map = ClientPortalEndpoints.load(std::memory_order_acquire);
+    const auto entries = map
+        ? std::span<const ClientPortalDescriptor>(map->entries)
+        : std::span<const ClientPortalDescriptor>{};
+    const auto poisoned = PortalSessionPoisoned.load(
+        std::memory_order_acquire);
+    const auto descriptorPresent = std::any_of(
+        entries.begin(),
+        entries.end(),
+        [&](const ClientPortalDescriptor& descriptor) {
+            return descriptor.sessionGeneration == lookupGeneration
+                && descriptor.guid == guid;
+        });
+    const auto ownerDescriptorKnown = descriptorPresent
+        && std::any_of(
+            entries.begin(),
+            entries.end(),
+            [&](const ClientPortalDescriptor& descriptor) {
+                return descriptor.sessionGeneration == lookupGeneration
+                    && descriptor.guid == guid
+                    && descriptor.ownerRoomLevelId
+                        != UnknownClientPortalLevelId;
+            });
+    const auto fullLevelIdKnown = ownerDescriptorKnown
+        && std::any_of(
+            entries.begin(),
+            entries.end(),
+            [&](const ClientPortalDescriptor& descriptor) {
+                return descriptor.sessionGeneration == lookupGeneration
+                    && descriptor.guid == guid
+                    && IsValidClientPortalDescriptor(descriptor)
+                    && descriptor.nativeLowLevelId
+                        == destinationLowLevelId
+                    && descriptor.ownerRoomLevelId
+                        != UnknownClientPortalLevelId
+                    && IsKnownLevelIdForContext(
+                        dataContext,
+                        descriptor.ownerRoomLevelId);
+            });
+    const auto decision = DecideClientPortalOwnerRoomLookup(
+        entries,
+        lookupGeneration,
+        guid,
+        ownerRoomNativeLowLevelId,
+        requestedLevelId,
+        true,
+        poisoned,
+        fullLevelIdKnown);
+    if (decision.decision == ClientPortalLookupDecision::FullLevelId) {
+        if (lookupGeneration
+                != SessionGeneration.load(std::memory_order_acquire)) {
+            return nullptr;
+        }
+        ClientPortalFullLookups.fetch_add(1, std::memory_order_relaxed);
+        return original(dataContext, decision.levelId);
+    }
+    if (decision.decision == ClientPortalLookupDecision::Original) {
+        ClientPortalFallbacks.fetch_add(1, std::memory_order_relaxed);
+        return original(dataContext, decision.levelId);
+    }
+    if (!poisoned
+            && (ownerDescriptorKnown
+                || ownerRoomNativeLowLevelId != requestedLevelId)) {
+        RefusedPortalSidecars.fetch_add(1, std::memory_order_relaxed);
+        PoisonClientPortalSession(
+            lookupGeneration,
+            "ExtendedActLevelIds: client Town Portal owner-room sidecar mismatch; the session was refused.");
+    }
+    return nullptr;
+}
+
+void* __fastcall HookClientTownPortalGetLevelsTxtRecord(
+        std::uint8_t dataContext,
+        std::int32_t requestedLevelId,
+        const void* unit) noexcept {
+    return ResolveClientTownPortalOwnerRecord(
+        OriginalGetLevelsTxtRecord,
+        dataContext,
+        requestedLevelId,
+        unit);
+}
+
+void* __fastcall HookClientTownPortalGetLevelDefRecord(
+        std::uint8_t dataContext,
+        std::int32_t requestedLevelId,
+        const void* unit) noexcept {
+    return ResolveClientTownPortalOwnerRecord(
+        OriginalGetLevelDefRecord,
+        dataContext,
+        requestedLevelId,
+        unit);
+}
+
+void __fastcall HookSendPortalStatePacketWithFullId(
+    void* client,
+    void* portal,
+    std::uint8_t ownerRoomLowLevelId,
+    std::uint16_t ownerX,
+    std::uint16_t ownerY,
+    std::int32_t ownerRoomLevelId) noexcept;
+
 void* AllocatePortalRecordRelayPage(void* hint) noexcept {
     SYSTEM_INFO systemInfo{};
     GetSystemInfo(&systemInfo);
@@ -1553,6 +1802,65 @@ bool WriteClientPortalLabelRelay(
     return true;
 }
 
+bool WriteClientTownPortalRelay(
+        std::uint8_t* destination,
+        const void* target) noexcept {
+    if (!destination || !target) return false;
+    std::array<std::uint8_t, 17> relay{
+        0x49,0x89,0xD8,
+        0xFF,0x25,0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    };
+    const auto address = reinterpret_cast<std::uintptr_t>(target);
+    std::memcpy(relay.data() + 9, &address, sizeof(address));
+    std::memcpy(destination, relay.data(), relay.size());
+    return true;
+}
+
+bool WritePortalStateFullLevelRelay(
+        std::uint8_t* destination,
+        const void* target,
+        bool fullLevelIdInR12) noexcept {
+    if (!destination || !target) return false;
+    constexpr auto Prefix = std::to_array<std::uint8_t>({
+        0x48,0x83,0xEC,0x38,
+        0x0F,0xB7,0x44,0x24,0x60,
+        0x66,0x89,0x44,0x24,0x20,
+    });
+    constexpr auto Suffix = std::to_array<std::uint8_t>({
+        0x48,0xB8,
+        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        0xFF,0xD0,
+        0x48,0x83,0xC4,0x38,
+        0xC3,
+    });
+    std::memcpy(destination, Prefix.data(), Prefix.size());
+    auto offset = Prefix.size();
+    if (fullLevelIdInR12) {
+        constexpr auto MoveFullLevelId = std::to_array<std::uint8_t>({
+            0x44,0x89,0x64,0x24,0x28,
+        });
+        std::memcpy(
+            destination + offset,
+            MoveFullLevelId.data(),
+            MoveFullLevelId.size());
+        offset += MoveFullLevelId.size();
+    } else {
+        constexpr auto MoveFullLevelId = std::to_array<std::uint8_t>({
+            0x89,0x7C,0x24,0x28,
+        });
+        std::memcpy(
+            destination + offset,
+            MoveFullLevelId.data(),
+            MoveFullLevelId.size());
+        offset += MoveFullLevelId.size();
+    }
+    std::memcpy(destination + offset, Suffix.data(), Suffix.size());
+    const auto address = reinterpret_cast<std::uintptr_t>(target);
+    std::memcpy(destination + offset + 2, &address, sizeof(address));
+    return true;
+}
+
 bool IsRel32Reachable(
         std::uintptr_t callRva,
         std::uintptr_t targetRva) noexcept {
@@ -1563,8 +1871,9 @@ bool IsRel32Reachable(
 }
 
 bool InstallPortalRecordCallRedirects() noexcept {
-    constexpr std::size_t RelayStride = 32;
-    constexpr std::size_t RelayBytes = RelayStride * 3;
+    constexpr std::size_t RelayStride = 64;
+    constexpr std::size_t RelayCount = 7;
+    constexpr std::size_t RelayBytes = RelayStride * RelayCount;
     if (!Context || !Context->exeBase) return false;
 
     auto* base = reinterpret_cast<std::uint8_t*>(Context->exeBase);
@@ -1581,7 +1890,25 @@ bool InstallPortalRecordCallRedirects() noexcept {
             || !WriteClientPortalLabelRelay(
                 relays + (RelayStride * 2),
                 reinterpret_cast<const void*>(
-                    &HookClientPortalLabelGetLevelsTxtRecord))) {
+                    &HookClientPortalLabelGetLevelsTxtRecord))
+            || !WriteClientTownPortalRelay(
+                relays + (RelayStride * 3),
+                reinterpret_cast<const void*>(
+                    &HookClientTownPortalGetLevelsTxtRecord))
+            || !WriteClientTownPortalRelay(
+                relays + (RelayStride * 4),
+                reinterpret_cast<const void*>(
+                    &HookClientTownPortalGetLevelDefRecord))
+            || !WritePortalStateFullLevelRelay(
+                relays + (RelayStride * 5),
+                reinterpret_cast<const void*>(
+                    &HookSendPortalStatePacketWithFullId),
+                true)
+            || !WritePortalStateFullLevelRelay(
+                relays + (RelayStride * 6),
+                reinterpret_cast<const void*>(
+                    &HookSendPortalStatePacketWithFullId),
+                false)) {
         VirtualFree(PortalRecordRelayPage, 0, MEM_RELEASE);
         PortalRecordRelayPage = nullptr;
         return false;
@@ -1618,7 +1945,19 @@ bool InstallPortalRecordCallRedirects() noexcept {
                 relayRva + RelayStride)
             || !IsRel32Reachable(
                 ClientPortalLabelLevelsRecordCallRva,
-                relayRva + (RelayStride * 2))) {
+                relayRva + (RelayStride * 2))
+            || !IsRel32Reachable(
+                ClientTownPortalLevelsRecordCallRva,
+                relayRva + (RelayStride * 3))
+            || !IsRel32Reachable(
+                ClientTownPortalLevelDefRecordCallRva,
+                relayRva + (RelayStride * 4))
+            || !IsRel32Reachable(
+                PortalStatePrimarySendCallRva,
+                relayRva + (RelayStride * 5))
+            || !IsRel32Reachable(
+                PortalStateSecondarySendCallRva,
+                relayRva + (RelayStride * 6))) {
         VirtualFree(PortalRecordRelayPage, 0, MEM_RELEASE);
         PortalRecordRelayPage = nullptr;
         return false;
@@ -1645,14 +1984,48 @@ bool InstallPortalRecordCallRedirects() noexcept {
             PortalLevelDefRecordCallExpected.size()))) {
         return false;
     }
+    if (!Context->PatchCallRel32(
+            ClientPortalLabelLevelsRecordCallRva,
+            ClientPortalLabelLevelsRecordCallExpected.data(),
+            static_cast<std::uint32_t>(
+                ClientPortalLabelLevelsRecordCallExpected.size()),
+            relayRva + (RelayStride * 2),
+            static_cast<std::uint32_t>(
+                ClientPortalLabelLevelsRecordCallExpected.size()))
+            || !Context->PatchCallRel32(
+                ClientTownPortalLevelsRecordCallRva,
+                ClientTownPortalLevelsRecordCallExpected.data(),
+                static_cast<std::uint32_t>(
+                    ClientTownPortalLevelsRecordCallExpected.size()),
+                relayRva + (RelayStride * 3),
+                static_cast<std::uint32_t>(
+                    ClientTownPortalLevelsRecordCallExpected.size()))
+            || !Context->PatchCallRel32(
+                ClientTownPortalLevelDefRecordCallRva,
+                ClientTownPortalLevelDefRecordCallExpected.data(),
+                static_cast<std::uint32_t>(
+                    ClientTownPortalLevelDefRecordCallExpected.size()),
+                relayRva + (RelayStride * 4),
+                static_cast<std::uint32_t>(
+                    ClientTownPortalLevelDefRecordCallExpected.size()))
+            || !Context->PatchCallRel32(
+                PortalStatePrimarySendCallRva,
+                PortalStatePrimarySendCallExpected.data(),
+                static_cast<std::uint32_t>(
+                    PortalStatePrimarySendCallExpected.size()),
+                relayRva + (RelayStride * 5),
+                static_cast<std::uint32_t>(
+                    PortalStatePrimarySendCallExpected.size()))) {
+        return false;
+    }
     return Context->PatchCallRel32(
-        ClientPortalLabelLevelsRecordCallRva,
-        ClientPortalLabelLevelsRecordCallExpected.data(),
+        PortalStateSecondarySendCallRva,
+        PortalStateSecondarySendCallExpected.data(),
         static_cast<std::uint32_t>(
-            ClientPortalLabelLevelsRecordCallExpected.size()),
-        relayRva + (RelayStride * 2),
+            PortalStateSecondarySendCallExpected.size()),
+        relayRva + (RelayStride * 6),
         static_cast<std::uint32_t>(
-            ClientPortalLabelLevelsRecordCallExpected.size()));
+            PortalStateSecondarySendCallExpected.size()));
 }
 
 void __fastcall HookSendObjectSpawnPacket(
@@ -1665,23 +2038,16 @@ void __fastcall HookSendObjectSpawnPacket(
         std::uint16_t y,
         std::uint8_t animation,
         std::uint8_t interactType) noexcept {
+    const auto isTownPortalPacket = opcode == 0x51
+        && unitType == 2
+        && objectId == DynamicTownPortalClassId;
     if (PortalSessionPoisoned.load(std::memory_order_acquire)
-            && unitType == 2
-            && objectId == DynamicTownPortalClassId) {
+            && isTownPortalPacket) {
         RefusePortalContractOnce(
             "ExtendedActLevelIds: Town Portal object packet refused after a session sidecar failure.");
         return;
     }
-    const auto endpoint = opcode == 0x51
-            && unitType == 2
-            && objectId == DynamicTownPortalClassId
-        ? FindPortalEndpoint(
-            0,
-            guid,
-            objectId,
-            interactType)
-        : std::nullopt;
-    if (!endpoint || !IsExtendedLevelId(endpoint->destinationLevelId)) {
+    if (!isTownPortalPacket) {
         OriginalSendObjectSpawnPacket(
             client,
             opcode,
@@ -1694,22 +2060,62 @@ void __fastcall HookSendObjectSpawnPacket(
             interactType);
         return;
     }
-    const auto encoded = EncodeLevelCoordinate(
-        endpoint->destinationLevelId,
-        x);
-    if (!IsLocalClient(client) || !encoded) {
-        RefusePortalContractOnce(
-            "ExtendedActLevelIds: extended Town Portal object packet refused outside the local codec contract.");
+    const auto endpoint = isTownPortalPacket
+        ? FindPortalEndpoint(
+            0,
+            guid,
+            objectId,
+            interactType)
+        : std::nullopt;
+    const auto packetGeneration = SessionGeneration.load(
+        std::memory_order_acquire);
+    if (!endpoint) {
+        if (IsLocalClient(client)
+                && !EvictClientPortalGuid(guid, packetGeneration)) {
+            return;
+        }
+        OriginalSendObjectSpawnPacket(
+            client,
+            opcode,
+            unitType,
+            guid,
+            objectId,
+            x,
+            y,
+            animation,
+            interactType);
         return;
     }
-    EncodedPortalPackets.fetch_add(1, std::memory_order_relaxed);
+    if (!IsLocalClient(client)) {
+        RefusedPortalClientIdentities.fetch_add(
+            1,
+            std::memory_order_relaxed);
+        RefusePortalContractOnce(
+            "ExtendedActLevelIds: extended Town Portal object packet refused for a non-local client identity.");
+        return;
+    }
+    const auto dataContext = ReadValue<std::uint8_t>(
+        reinterpret_cast<const void*>(endpoint->gameIdentity),
+        GameDataContextOffset);
+    if (!IsKnownLevelIdForContext(
+            dataContext,
+            endpoint->destinationLevelId)) {
+        RefusedPortalSidecars.fetch_add(1, std::memory_order_relaxed);
+        PoisonPortalSession(
+            "ExtendedActLevelIds: Town Portal object sidecar referenced an unknown destination Level ID; the session was refused.");
+        return;
+    }
+    if (!PublishClientPortal(*endpoint)) {
+        return;
+    }
+    PublishedPortalPackets.fetch_add(1, std::memory_order_relaxed);
     OriginalSendObjectSpawnPacket(
         client,
         opcode,
         unitType,
         guid,
         objectId,
-        encoded->x,
+        x,
         y,
         animation,
         interactType);
@@ -1728,9 +2134,11 @@ void __fastcall HookHandleObjectSpawnPacket(
     const auto guid = ReadValue<std::uint32_t>(packet, 2);
     const auto packetGeneration = SessionGeneration.load(
         std::memory_order_acquire);
-    if (!EvictClientPortalGuid(guid, packetGeneration)) return;
-    if ((ReadValue<std::uint16_t>(packet, 8)
-            & CodecMarkerMask) == 0) {
+    const auto descriptor = FindClientPortalDescriptor(
+        packetGeneration,
+        guid);
+    if (!descriptor) {
+        if (!EvictClientPortalGuid(guid, packetGeneration)) return;
         OriginalHandleObjectSpawnPacket(packet);
         return;
     }
@@ -1739,34 +2147,41 @@ void __fastcall HookHandleObjectSpawnPacket(
             "ExtendedActLevelIds: extended Town Portal object packet refused after a session sidecar failure.");
         return;
     }
-    const auto decoded = DecodeLevelCoordinate(
-        packet[13],
-        ReadValue<std::uint16_t>(packet, 8));
-    if (!decoded || !IsKnownExtendedLevelId(decoded->levelId)) {
-        PoisonClientPortalSession(
-            packetGeneration,
-            "ExtendedActLevelIds: malformed extended Town Portal object packet refused.");
+    OriginalHandleObjectSpawnPacket(packet);
+    if (packetGeneration
+            != SessionGeneration.load(std::memory_order_acquire)
+            || !ClientGetUnitByIdAndType) {
         return;
     }
-    std::array<std::uint8_t, 14> nativePacket{};
-    std::memcpy(nativePacket.data(), packet, nativePacket.size());
-    WriteValue(nativePacket.data(), 8, decoded->x);
-    DecodedPortalPackets.fetch_add(1, std::memory_order_relaxed);
-    OriginalHandleObjectSpawnPacket(nativePacket.data());
-    (void)PublishClientPortal(ClientPortalDescriptor{
-        .sessionGeneration = packetGeneration,
-        .guid = guid,
-        .destinationLevelId = decoded->levelId,
-        .nativeLowLevelId = packet[13],
-    });
+    const auto* unit = ClientGetUnitByIdAndType(guid, 2);
+    std::uint32_t liveGuid{};
+    std::uint8_t liveDestinationLowLevelId{};
+    if (!unit
+            || !ReadPortalUnit(
+                unit,
+                liveGuid,
+                liveDestinationLowLevelId)
+            || liveGuid != guid
+            || !IsValidClientPortalDescriptor(*descriptor)
+            || descriptor->nativeLowLevelId != packet[13]
+            || liveDestinationLowLevelId != packet[13]) {
+        RefusedPortalSidecars.fetch_add(1, std::memory_order_relaxed);
+        PoisonClientPortalSession(
+            packetGeneration,
+            "ExtendedActLevelIds: client Town Portal object sidecar did not match the live object; the session was refused.");
+        return;
+    }
+    ValidatedPortalPackets.fetch_add(1, std::memory_order_relaxed);
 }
 
-void __fastcall HookSendPortalStatePacket(
+void __fastcall HookSendPortalStatePacketWithFullId(
         void* client,
         void* portal,
         std::uint8_t ownerRoomLowLevelId,
         std::uint16_t ownerX,
-        std::uint16_t ownerY) noexcept {
+        std::uint16_t ownerY,
+        std::int32_t ownerRoomLevelId) noexcept {
+    if (!OriginalSendPortalStatePacket) return;
     if (PortalSessionPoisoned.load(std::memory_order_acquire)
             && portal
             && ReadValue<std::uint32_t>(portal, UnitClassIdOffset)
@@ -1776,7 +2191,7 @@ void __fastcall HookSendPortalStatePacket(
         return;
     }
     const auto endpoint = FindPortalEndpointForUnit(nullptr, portal);
-    if (!endpoint || !IsExtendedLevelId(endpoint->destinationLevelId)) {
+    if (!endpoint) {
         OriginalSendPortalStatePacket(
             client,
             portal,
@@ -1785,20 +2200,40 @@ void __fastcall HookSendPortalStatePacket(
             ownerY);
         return;
     }
-    const auto encoded = EncodeLevelCoordinate(
-        endpoint->destinationLevelId,
-        ownerX);
-    if (!IsLocalClient(client) || !encoded) {
+    if (!IsLocalClient(client)) {
+        RefusedPortalClientIdentities.fetch_add(
+            1,
+            std::memory_order_relaxed);
         RefusePortalContractOnce(
-            "ExtendedActLevelIds: extended Town Portal state packet refused outside the local codec contract.");
+            "ExtendedActLevelIds: extended Town Portal state packet refused for a non-local client identity.");
         return;
     }
-    EncodedPortalPackets.fetch_add(1, std::memory_order_relaxed);
+    const auto dataContext = ReadValue<std::uint8_t>(
+        reinterpret_cast<const void*>(endpoint->gameIdentity),
+        GameDataContextOffset);
+    if (ownerRoomLevelId <= 0
+            || ownerRoomLevelId > MaximumLevelId
+            || ownerRoomLowLevelId != LowLevelId(ownerRoomLevelId)
+            || !IsKnownLevelIdForContext(
+                dataContext,
+                endpoint->destinationLevelId)
+            || !IsKnownLevelIdForContext(
+                dataContext,
+                ownerRoomLevelId)) {
+        RefusedPortalSidecars.fetch_add(1, std::memory_order_relaxed);
+        PoisonPortalSession(
+            "ExtendedActLevelIds: Town Portal state sidecar rejected an invalid full owner-room Level ID; the session was refused.");
+        return;
+    }
+    if (!PublishClientPortal(*endpoint, ownerRoomLevelId)) {
+        return;
+    }
+    PublishedPortalPackets.fetch_add(1, std::memory_order_relaxed);
     OriginalSendPortalStatePacket(
         client,
         portal,
         ownerRoomLowLevelId,
-        encoded->x,
+        ownerX,
         ownerY);
 }
 
@@ -1811,20 +2246,11 @@ void __fastcall HookHandlePortalStatePacket(
     const auto guid = ReadValue<std::uint32_t>(packet, 3);
     const auto packetGeneration = SessionGeneration.load(
         std::memory_order_acquire);
-    if ((ReadValue<std::uint16_t>(packet, 7)
-            & CodecMarkerMask) == 0) {
+    const auto descriptor = FindClientPortalDescriptor(
+        packetGeneration,
+        guid);
+    if (!descriptor) {
         OriginalHandlePortalStatePacket(packet);
-        if (packetGeneration
-                == SessionGeneration.load(std::memory_order_acquire)
-                && ClientGetUnitByIdAndType) {
-            const auto* unit = ClientGetUnitByIdAndType(guid, 2);
-            std::uint32_t liveGuid{};
-            std::uint8_t nativeLowLevelId{};
-            if (ReadPortalUnit(unit, liveGuid, nativeLowLevelId)
-                    && liveGuid == guid) {
-                (void)EvictClientPortalGuid(guid, packetGeneration);
-            }
-        }
         return;
     }
     if (PortalSessionPoisoned.load(std::memory_order_acquire)) {
@@ -1832,20 +2258,7 @@ void __fastcall HookHandlePortalStatePacket(
             "ExtendedActLevelIds: extended Town Portal state packet refused after a session sidecar failure.");
         return;
     }
-    const auto decoded = DecodeLevelCoordinate(
-        packet[2],
-        ReadValue<std::uint16_t>(packet, 7));
-    if (!decoded || !IsKnownExtendedLevelId(decoded->levelId)) {
-        PoisonClientPortalSession(
-            packetGeneration,
-            "ExtendedActLevelIds: malformed extended Town Portal state packet refused.");
-        return;
-    }
-    std::array<std::uint8_t, 12> nativePacket{};
-    std::memcpy(nativePacket.data(), packet, nativePacket.size());
-    WriteValue(nativePacket.data(), 7, decoded->x);
-    DecodedPortalPackets.fetch_add(1, std::memory_order_relaxed);
-    OriginalHandlePortalStatePacket(nativePacket.data());
+    OriginalHandlePortalStatePacket(packet);
     if (packetGeneration
             != SessionGeneration.load(std::memory_order_acquire)) {
         return;
@@ -1857,23 +2270,32 @@ void __fastcall HookHandlePortalStatePacket(
         return;
     }
     const auto* unit = ClientGetUnitByIdAndType(guid, 2);
-    if (!unit) return;
     std::uint32_t liveGuid{};
-    std::uint8_t nativeLowLevelId{};
-    if (!ReadPortalUnit(unit, liveGuid, nativeLowLevelId)
+    std::uint8_t liveDestinationLowLevelId{};
+    const auto liveOwnerRoomLowLevelId = ReadValue<std::uint8_t>(
+        unit,
+        ClientPortalOwnerRoomLevelIdOffset);
+    const auto ownerRoomKnown = descriptor->ownerRoomLevelId
+        != UnknownClientPortalLevelId;
+    if (!unit
+            || !ReadPortalUnit(
+                unit,
+                liveGuid,
+                liveDestinationLowLevelId)
             || liveGuid != guid
-            || nativeLowLevelId != packet[2]) {
+            || !IsValidClientPortalDescriptor(*descriptor)
+            || descriptor->nativeLowLevelId != packet[2]
+            || liveDestinationLowLevelId != packet[2]
+            || liveOwnerRoomLowLevelId != packet[11]
+            || (ownerRoomKnown
+                && descriptor->ownerRoomNativeLowLevelId != packet[11])) {
+        RefusedPortalSidecars.fetch_add(1, std::memory_order_relaxed);
         PoisonClientPortalSession(
             packetGeneration,
             "ExtendedActLevelIds: client Town Portal state sidecar did not match the live object; the session was refused.");
         return;
     }
-    (void)PublishClientPortal(ClientPortalDescriptor{
-        .sessionGeneration = packetGeneration,
-        .guid = guid,
-        .destinationLevelId = decoded->levelId,
-        .nativeLowLevelId = packet[2],
-    });
+    ValidatedPortalPackets.fetch_add(1, std::memory_order_relaxed);
 }
 
 bool IsCompatiblePlayer(std::uint32_t playerId) noexcept {
@@ -2355,7 +2777,7 @@ auto Status(
     std::snprintf(
         message,
         sizeof(message),
-        "Extended Act Level IDs 2.1.1: %s; cache=%s; revision=%llu; rows=%zu/%zu/%zu; compatible peers=%zu; portal endpoints=%zu; client portal endpoints=%zu; portal blocked=%s; portal pairs=%llu; portal operations=%llu; portal packets=%llu/%llu; client portal publish/evict/full/fallback=%llu/%llu/%llu/%llu; portal refused=%llu; room packets=%llu/%llu/%llu; Levels resolutions=%llu; original fallbacks=%llu; build=%s.",
+        "Extended Act Level IDs 2.1.2: %s; cache=%s; revision=%llu; rows=%zu/%zu/%zu; compatible peers=%zu; portal endpoints=%zu; client portal endpoints=%zu; portal blocked=%s; portal pairs=%llu; portal operations=%llu; portal packets publish/validate=%llu/%llu; portal identity/sidecar refusals=%llu/%llu; client portal publish/evict/full/fallback=%llu/%llu/%llu/%llu; portal refused=%llu; room packets=%llu/%llu/%llu; Levels resolutions=%llu; original fallbacks=%llu; build=%s.",
         Operational.load(std::memory_order_acquire) ? "active" : "inactive",
         CacheReady.load(std::memory_order_acquire) ? "ready" : "not ready",
         static_cast<unsigned long long>(
@@ -2373,9 +2795,13 @@ auto Status(
         static_cast<unsigned long long>(
             PortalOperations.load(std::memory_order_relaxed)),
         static_cast<unsigned long long>(
-            EncodedPortalPackets.load(std::memory_order_relaxed)),
+            PublishedPortalPackets.load(std::memory_order_relaxed)),
         static_cast<unsigned long long>(
-            DecodedPortalPackets.load(std::memory_order_relaxed)),
+            ValidatedPortalPackets.load(std::memory_order_relaxed)),
+        static_cast<unsigned long long>(
+            RefusedPortalClientIdentities.load(std::memory_order_relaxed)),
+        static_cast<unsigned long long>(
+            RefusedPortalSidecars.load(std::memory_order_relaxed)),
         static_cast<unsigned long long>(
             ClientPortalPublications.load(std::memory_order_relaxed)),
         static_cast<unsigned long long>(
@@ -2414,8 +2840,10 @@ void ResetState() noexcept {
     NetworkWarnings.store(0, std::memory_order_relaxed);
     PortalPairsPublished.store(0, std::memory_order_relaxed);
     PortalOperations.store(0, std::memory_order_relaxed);
-    EncodedPortalPackets.store(0, std::memory_order_relaxed);
-    DecodedPortalPackets.store(0, std::memory_order_relaxed);
+    PublishedPortalPackets.store(0, std::memory_order_relaxed);
+    ValidatedPortalPackets.store(0, std::memory_order_relaxed);
+    RefusedPortalClientIdentities.store(0, std::memory_order_relaxed);
+    RefusedPortalSidecars.store(0, std::memory_order_relaxed);
     RefusedPortalOperations.store(0, std::memory_order_relaxed);
     ClientPortalPublications.store(0, std::memory_order_relaxed);
     ClientPortalEvictions.store(0, std::memory_order_relaxed);
@@ -2456,7 +2884,7 @@ constexpr D2RL::PluginInfo Info{
     .apiVersion = D2RL_PLUGIN_API_VERSION,
     .id = "ruffneckk-extended-act-level-ids",
     .name = "Extended Act Level IDs",
-    .version = "2.1.1",
+    .version = "2.1.2",
     .author = "RuffnecKk",
     .description = "Extends functional level IDs to the native 1023-record limit.",
     .flags = D2RL::PluginFlags::Shared | D2RL::PluginFlags::NativeHooks,
@@ -2594,6 +3022,9 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
     ClientGetUnitByIdAndType =
         reinterpret_cast<ClientGetUnitByIdAndTypeFn>(
             Context->exeBase + CLIENT_GetUnitByIdAndTypeRva);
+    OriginalSendPortalStatePacket =
+        reinterpret_cast<SendPortalStatePacketFn>(
+            Context->exeBase + D2GAME_SendPacket0x60_PortalStateRva);
     if (!InstallPortalRecordCallRedirects()) {
         Context->LogError(
             "ExtendedActLevelIds: portal-local Levels call redirects are unavailable.");
@@ -2690,13 +3121,6 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
                 HookHandleObjectSpawnPacket,
                 &OriginalHandleObjectSpawnPacket)
             || !Context->InstallInlineHook(
-                D2GAME_SendPacket0x60_PortalStateRva,
-                D2GAME_SendPacket0x60_PortalStateExpected.data(),
-                static_cast<std::uint32_t>(
-                    D2GAME_SendPacket0x60_PortalStateExpected.size()),
-                HookSendPortalStatePacket,
-                &OriginalSendPortalStatePacket)
-            || !Context->InstallInlineHook(
                 CLIENT_HandlePacket0x60_PortalStateRva,
                 CLIENT_HandlePacket0x60_PortalStateExpected.data(),
                 static_cast<std::uint32_t>(
@@ -2713,7 +3137,7 @@ D2RL_PLUGIN_EXPORT auto D2RLoaderLoadPlugin(
 
     Operational.store(true, std::memory_order_release);
     const auto message = std::string(
-        "Extended Act Level IDs 2.1.1 by RuffnecKk active; native fingerprints, server/client Town Portal sidecars, and private compatibility channel accepted; build=")
+        "Extended Act Level IDs 2.1.2 by RuffnecKk active; native fingerprints, coordinate-free local Town Portal sidecars, and private compatibility channel accepted; build=")
         + RuntimeBuildName + ".";
     Context->LogInfo(message.c_str());
     return true;

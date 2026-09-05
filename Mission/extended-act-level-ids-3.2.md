@@ -1,13 +1,22 @@
 # Extended Act Level IDs — D2R 3.3.93847
 
-Dernière mise à jour : 4 septembre 2026
+Dernière mise à jour : 5 septembre 2026
+
+Statut du chantier : **ARRÊTÉ à la demande de Vincent — superseded-by-loader
+selon son annonce de l'intégration de la fonctionnalité par Dimentio dans le
+nouveau loader**. La version exacte et son implantation n'ont pas été auditées
+dans ce lot. Les sources et preuves ci-dessous sont conservées comme référence;
+aucun nouveau développement, déploiement, test runtime ou packaging du plugin
+autonome n'est prévu. Cet arrêt ne vaut pas qualification runtime de la 2.1.2
+ni promotion d'une nouvelle baseline D2RLoader.
 
 Statut : **cache physique deux passes qualifié avec 1023 records; voyage
-physique Harrogath ↔ Level 256 validé; correction Town Portal 2.1.1 avec
-sidecars serveur/client et relay UI `0xC188E` implantée et qualifiée
-statiquement; runtime 2.1.1 non exécuté et release bloquée**.
+physique Harrogath ↔ Level 256 validé; Town Portal 2.1.2 process-local sans
+codec de coordonnées implanté et qualifié statiquement avec relays serveur
+`0x5388E4/0x593012` et client `0xC188E/0xFE307/0xFE333`; runtime 2.1.2 non
+exécuté; release bloquée**.
 Vincent a donné `GO` le 4 septembre 2026 pour étendre le produit existant à la
-limite native de 1023 records. La source 2.1.1 conserve le cache deux passes et
+limite native de 1023 records. La source 2.1.2 conserve le cache deux passes et
 le codec room-visibility qualifiés, puis ajoute le contrat Town Portal
 local/offline sous empreintes fail-closed. Le
 diagnostic 2.0.1 a montré que `findRowById(256)` retourne `NotFound` malgré une
@@ -21,11 +30,13 @@ Town Portal depuis Level 256 atteint le garde natif
 `eLevelIdLocal <= 255` avant une troncature réelle vers
 `ObjectData.InteractType:uint8`. Le census natif complet ferme maintenant la
 création, l'opération, les paquets `0x51/0x60`, la compression/réactivation par
-GUID et les suppressions. La 2.1.1 retient un sidecar éphémère par paire de
+GUID et les suppressions. La 2.1.2 retient un sidecar éphémère par paire de
 GUID côté serveur et un sidecar GUID/session borné côté client, sans `Unit*`
-persistant; le multijoueur TCP reste bloqué faute d'énumération autoritaire de
-tous les clients actifs. Le waypoint, automap visuel, save/reload et
-host/joiner restent ouverts avant toute archive ou release. Les résultats
+persistant; ses paquets Town Portal restent vanilla et ses relays exacts
+récupèrent séparément destination et owner-room. Le multijoueur TCP reste
+bloqué faute d'énumération autoritaire de tous les clients actifs. Le waypoint,
+automap visuel, save/reload et host/joiner restent ouverts avant toute archive
+ou release. Les résultats
 0.1.1 ci-dessous demeurent l'historique qualifié de la première fonction
 `Levels.txt → Act`, pas une preuve gameplay complète du codec v2.
 
@@ -671,8 +682,11 @@ la sauvegarde ni la synchronisation client/serveur.
    rend son graphe de rooms et passe les transitions physiques répétées avec
    Harrogath. Le census puis l'implantation statique `2.1.0` du sidecar serveur
    sont passés; son runtime passe la création et Level 256 → Harrogath, puis
-   échoue avant le retour sur le lookup client tronqué. Le census du sidecar
-   client est maintenant passé, mais sa correction n'est pas implantée.
+   échoue avant le retour sur le lookup client tronqué. Le sidecar client
+   `2.1.1` et son UI passent les gates statiques, mais le runtime expose une
+   limite de coordonnées du codec `0x60` et deux autres lookups client huit
+   bits à `0xFE307/0xFE333`. Leur census read-only est maintenant passé; la
+   seconde correction n'est pas implantée.
    Waypoints, automap visuel, quêtes, sauvegarde/rechargement, souris/manette,
    solo réseau, hôte et joiner restent ouverts.
 7. **Bloqué par le gate 6** — générer le ZIP public uniquement après les gates; conserver le README
@@ -804,13 +818,149 @@ la sauvegarde ni la synchronisation client/serveur.
   table, save, ZIP, commit ou push n'a été touché. La ROADMAP reste inchangée
   faute de confirmation spécifique.
 
-## Prochain gate
+## Runtime sidecar client 2.1.1 — 4 septembre 2026
 
-Après un `GO` runtime séparé, déployer temporairement la candidate 2.1.1 et la
-fixture Level 256 dans le profil BKVince mod-local complet : créer le portail
-depuis Level 256, traverser vers Harrogath, vérifier le label sans assertion,
-reprendre le portail vers Level 256, nettoyer la paire et capturer les compteurs
-client publication/éviction/full lookup/fallback/refus. Restaurer ensuite DLL,
-tables et personnage byte-exact. Save/reload, waypoint, automap et tous les
-rôles réseau restent des gates distincts; la release et son ZIP restent
-bloqués.
+- Vincent a confirmé la séquence runtime séparée après présentation du profil,
+  de l'allowlist, du lancement unique et du rollback. La candidate exacte
+  `2.1.1` de 88 576 octets, SHA-256
+  `DC1DEFC82D8B62F3F33859D2D57B621F8802CFEFAE14644D5B5884179E5887F6`,
+  a été déployée temporairement avec les fixtures `levels.txt`
+  `5C9B604E…28B2DF` et `lvlprest.txt` `4EF8B404…69EC39` dans la portée
+  BKVince mod-locale.
+- Le runtime réellement testé est Battle.net D2R `3.3.93847`, Build Key
+  `623f7a1f73eabb08ccb2b2046e3f9164`, sous D2RLoader public `1.2.1`.
+  La pile complète charge 38 plugins, applique 17 patches, conserve les cinq
+  plugins eezstreet et atteint `24/24`. Extended Act Level IDs accepte son
+  empreinte complète et publie `Classic=137`, `LoD=137`, `RotW=1023`.
+- Le trajet atteint Harrogath avec un portail dont le label visible est
+  `Rift Level 7`, mais le retour n'est pas tenté : à `15:40:34.090`, le plugin
+  journalise `extended Town Portal state packet refused outside the local
+  codec contract`. À `15:40:37.850`, D2R présente ensuite
+  `BC_ASSERT: eLevelId > 0 && eLevelId < DataTablesGetNumLevels(ver)` dans
+  `D2Common/src/DataTbls/LvlTbls.cpp:284`.
+- La pile native fraîche traverse `DATATBLS_GetLevelsTxtRecord` à
+  `0x32C501`, puis revient vers `0xFE30C`; elle ne revient pas au relay UI
+  retenu `0xC188E`. Le gate invalide donc à la fois l'hypothèse que le contrat
+  local `0x60` est satisfait dans ce trajet et l'exhaustivité pratique du
+  census client centré sur `0xC188E`. Une assertion TACT distincte
+  `result < tactResult::_Count` apparaît plus tôt pendant le démarrage et reste
+  non attribuée; elle n'est pas utilisée pour expliquer l'échec portail.
+- Le résultat est **FAIL**. Aucun compteur final n'est disponible parce que
+  l'assertion précède la commande de statut et le retour. Aucun bouton
+  `Continue` n'a servi de preuve. L'instance était déjà terminée au moment du
+  rollback; les trois sources, les trois cibles runtime et les neuf fichiers
+  `QtyTester` ont tous été restaurés byte-exact, sans processus résiduel.
+- Les logs frais, reçus Plan/Apply, snapshots avant/échec et preuves de rollback
+  résident sous
+  `analysis-cache/extended-act-level-ids-v2/runtime/20260904-town-portal-client-local-offline-2.1.1/`.
+  La ROADMAP reste inchangée.
+
+## Census natif du paquet 0x60 et du caller 0xFE30C — 4 septembre 2026
+
+- Vincent a autorisé le prochain gate read-only avec `next gate go`. Le statut
+  du workbench commun 92777/93847, son image, son index et la référence D2MOO
+  épinglée ont été revérifiés avant les requêtes. Aucun code de plugin, table,
+  runtime, processus ou save n'a été modifié.
+- L'hypothèse provisoire d'un rejet par identité client est écartée.
+  `D2Client+0x270` est bien le GUID de l'unité joueur et concorde avec le
+  contrat `LocalPlayerReady.playerId` utilisé avec succès lors de la création
+  locale du portail.
+- Le rejet est expliqué par la capacité du codec : la version 2.1.1 exige
+  `ownerX <= 8191` afin de réutiliser les bits X `15..13`. Or la fixture
+  Level 256 commence à `OffsetX=3300` tiles. La conversion native sémantique
+  tile → subtile multiplie par cinq; la room occupe donc X `[16500,16700)`,
+  entièrement hors contrat. Le logger 2.1.1 fusionne encore les refus identité
+  et coordonnée, mais le refus coordonnée est garanti pour ce paquet source.
+- Le caller principal de `D2GAME_PACKETS_SendPacket0x60_PortalState` conserve
+  le full owner-room Level ID dans R12D jusqu'au call `0x5388E4`; le caller
+  secondaire le conserve dans EDI jusqu'au call `0x593012`. Le builder ne
+  reçoit volontairement que R8B. Les deux contextes sont uniques et peuvent
+  alimenter un sidecar process-local avant de déléguer au paquet stock sans
+  altérer X, Y, sa taille de 12 octets ou son contenu.
+- Le handler client `0x1CB1C0` écrit explicitement `packet[0x0B]` dans
+  `Unit+0x1BA`. La fonction `0xFE1F0`, prédicat client de disponibilité d'un
+  Town Portal, relit ce byte aux calls `0xFE307` (`Levels`) et `0xFE333`
+  (`LevelDef`). Le retour runtime `0xFE30C` désigne exactement le premier call.
+  Pour un owner-room Level ID 256, la valeur passée est donc zéro et déclenche
+  l'assertion observée. Cette donnée est distincte du full destination ID
+  utilisé par le label UI à `0xC188E`.
+- `0xFE1F0` conserve les contrôles natifs de type/classe, propriétaire, parti,
+  Act online et quêtes. Le mécanisme recommandé ne clone pas ce prédicat : il
+  redirige seulement les deux calls uniques par des relays qui transmettent le
+  portail RBX et ne substituent un full owner-room ID qu'après validation
+  session/GUID/classe/low-byte/contexte/record. Les getters partagés restent
+  intacts pour MapSense et tous leurs autres consommateurs.
+- Verdict : **PASS statique read-only**. Les preuves stables sont gouvernées
+  dans `reverse-engineering/d2r-3.2.92777/{findings.md,known-rvas.json}`.
+
+## Plan approuvé pour l'implantation 2.1.2
+
+Implanter statiquement, sans déploiement, un transport Town Portal local/offline
+par sidecar process-local et GUID : abandonner le codec de coordonnées pour
+`0x51/0x60`, publier les full IDs depuis les seams serveur qui les possèdent
+encore, puis ajouter les relays clients exacts `0xFE307/0xFE333`. Le lot doit
+inclure des logs séparant identité/sidecar, des empreintes uniques, des tests
+de mismatch et deux builds reproductibles. Toute relance runtime, sauvegarde,
+waypoint, automap ou rôle réseau reste un gate distinct; la release et son ZIP
+restent bloqués.
+
+## Autorisation d'implantation Town Portal sans codec — 4 septembre 2026
+
+- Vincent a donné explicitement
+  `GO implantation Town Portal sidecar process-local sans codec coordonnée + relays FE307/FE333`.
+- Le lot demeure la DLL autonome RuffnecKk Extended Act Level IDs, membre de
+  la RuffnecKk D2RLoader Suite, hybride globale/mod-locale, sans configuration
+  et sans dépendance à une DLL tierce.
+- Le périmètre autorisé couvre la publication process-local des full IDs
+  destination/owner-room, la suppression du codec de coordonnées des seuls
+  paquets Town Portal `0x51/0x60`, les relays clients exacts
+  `0xFE307/0xFE333`, leurs empreintes, tests, documentation et deux builds
+  Release reproductibles.
+- Ce GO n'autorise aucun déploiement, lancement de D2R, accès aux saves, test
+  réseau, ZIP, commit ou push. `ROADMAP.html` reste hors du lot faute de
+  confirmation spécifique.
+
+## Implantation Town Portal 2.1.2 sans codec — 4 septembre 2026
+
+- Le codec marqué X reste strictement limité aux paquets room-visibility
+  `0x07/0x08`. Les hooks Town Portal `0x51/0x60` passent désormais tailles,
+  champs et coordonnées vanilla inchangés aux builders et handlers stock.
+- Le sender `0x51` publie le full destination ID depuis le sidecar serveur.
+  Deux relays exacts aux calls `0x5388E4/0x593012` capturent le full owner-room
+  ID encore vivant en R12D/EDI, le fournissent comme sixième argument privé,
+  puis rappellent le builder `0x60` avec ses cinq arguments originaux.
+- La publication client fusionne atomiquement destination et owner-room sous
+  `{génération, GUID}`. La map immutable reste bornée à 1024 entrées, sans
+  `Unit*`, avec lecture lock-free, éviction sur réemploi du GUID et purge au
+  changement de session.
+- Les handlers client stock s'exécutent avant validation du portail vivant.
+  Le relay UI `0xC188E` récupère le full destination; les nouveaux relays
+  `0xFE307/0xFE333` exécutent `mov r8,rbx` et substituent seulement un full
+  owner-room validé aux getters d'origine. Le prédicat natif complet conserve
+  ses contrôles propriétaire, parti, Act online et quêtes; les getters partagés
+  demeurent intacts pour MapSense.
+- Les refus sont séparés entre identité non locale et sidecar invalide. Toute
+  génération périmée, session empoisonnée, absence pour un low byte zéro,
+  classe/GUID/low byte incohérent, contexte ou record inconnu échoue fermé.
+- Les six contextes natifs stricts `0xFE1F0`, `0xFE2FC`, `0xFE328`,
+  `0x1CB23A`, `0x5388CA` et `0x592FFA` ont chacun exactement une occurrence
+  dans le corpus gouverné commun 92777/93847. Aucun autre add-on RuffnecKk,
+  patch/config BKVince ou plugin eezstreet épinglé ne revendique ces seams.
+- Les tests de politique renforcés passent `CTest 1/1` dans deux builds Release
+  MSVC 19.44 / Windows SDK 10.0.26100.0 indépendants et sans warning. Les DLL
+  sont byte-identiques : 91 648 octets, SHA-256
+  `0710A1FFB1442115F5F8236BFDAB5393F3B12D7CA38665600F73BC881189FEF8`.
+  Les métadonnées PE portent `RuffnecKk / 2.1.2`; seuls les trois exports
+  D2RLoader et les dépendances Windows/MSVC attendues sont présents.
+- Verdict : **PASS STATIQUE**. Aucun déploiement, lancement D2R, table, save,
+  ZIP, commit ou push n'a été effectué. La ROADMAP n'a pas été modifiée.
+
+## Clôture du chantier — 5 septembre 2026
+
+Vincent demande de committer et pousser le prototype 2.1.2, puis d'arrêter ce
+projet, car Dimentio a intégré la fonctionnalité dans le nouveau loader.
+Le prochain gate runtime Town Portal est annulé. Les gates gameplay restants
+demeurent non exécutés, sans être reclassés comme réussis. L'historique natif,
+les tests et les builds reproductibles restent disponibles pour référence.
+La décision n'entraîne aucune suppression ou modification du runtime installé,
+aucune modification de ROADMAP.html et aucun changement de baseline.

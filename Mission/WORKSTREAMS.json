@@ -150,10 +150,10 @@
     {
       "id": "extended-act-level-ids",
       "name": "Extended Act Level IDs",
-      "status": "active",
+      "status": "paused",
       "owner": "Vincent + Codex",
       "mission": "Mission/extended-act-level-ids-3.2.md",
-      "nextGate": "Author a playable test area with an ID above 146 and Act=0, then validate transitions, town/start, waypoints, automap, quests, portals, save/reload, mouse/controller, solo, host and joiner before producing a public ZIP.",
+      "nextGate": "Stopped by Vincent on 2026-09-05: superseded-by-loader according to his report that Dimentio integrated this feature. Preserve the 2.1.2 prototype and native evidence as reference; cancel further standalone development, runtime and packaging. The replacement loader has not been audited or promoted here.",
       "include": [
         "Mission/extended-act-level-ids-3.2.md",
         "addons/ExtendedActLevelIds/**",

@@ -111,12 +111,16 @@ int main() {
         .guid = 200,
         .destinationLevelId = 256,
         .nativeLowLevelId = 0,
+        .ownerRoomLevelId = 256,
+        .ownerRoomNativeLowLevelId = 0,
     };
     constexpr ClientPortalDescriptor clientPortal1022{
         .sessionGeneration = 7,
         .guid = 201,
         .destinationLevelId = 1022,
         .nativeLowLevelId = 254,
+        .ownerRoomLevelId = 1022,
+        .ownerRoomNativeLowLevelId = 254,
     };
     static_assert(IsValidClientPortalDescriptor(clientPortal256));
     static_assert(IsValidClientPortalDescriptor(clientPortal1022));
@@ -127,6 +131,16 @@ int main() {
         .nativeLowLevelId = 253,
     };
     static_assert(!IsValidClientPortalDescriptor(invalidClientPortal));
+    constexpr ClientPortalDescriptor clientPortalVanillaDestination{
+        .sessionGeneration = 7,
+        .guid = 203,
+        .destinationLevelId = 109,
+        .nativeLowLevelId = 109,
+        .ownerRoomLevelId = 256,
+        .ownerRoomNativeLowLevelId = 0,
+    };
+    static_assert(IsValidClientPortalDescriptor(
+        clientPortalVanillaDestination));
 
     std::vector<ClientPortalDescriptor> clientPortals;
     assert(UpsertClientPortalDescriptor(clientPortals, clientPortal256));
@@ -143,6 +157,111 @@ int main() {
     assert(clientLookup.decision
         == ClientPortalLookupDecision::FullLevelId);
     assert(clientLookup.levelId == 256);
+    auto ownerRoomLookup = DecideClientPortalOwnerRoomLookup(
+        clientPortals,
+        7,
+        200,
+        0,
+        0,
+        true,
+        false,
+        true);
+    assert(ownerRoomLookup.decision
+        == ClientPortalLookupDecision::FullLevelId);
+    assert(ownerRoomLookup.levelId == 256);
+
+    constexpr std::array clientPortal1022Entries{clientPortal1022};
+    ownerRoomLookup = DecideClientPortalOwnerRoomLookup(
+        clientPortal1022Entries,
+        7,
+        201,
+        254,
+        254,
+        true,
+        false,
+        true);
+    assert(ownerRoomLookup.decision
+        == ClientPortalLookupDecision::FullLevelId);
+    assert(ownerRoomLookup.levelId == 1022);
+
+    ownerRoomLookup = DecideClientPortalOwnerRoomLookup(
+        clientPortals,
+        7,
+        200,
+        1,
+        1,
+        true,
+        false,
+        true);
+    assert(ownerRoomLookup.decision == ClientPortalLookupDecision::Refuse);
+    ownerRoomLookup = DecideClientPortalOwnerRoomLookup(
+        clientPortals,
+        8,
+        200,
+        0,
+        0,
+        true,
+        false,
+        true);
+    assert(ownerRoomLookup.decision == ClientPortalLookupDecision::Refuse);
+    ownerRoomLookup = DecideClientPortalOwnerRoomLookup(
+        clientPortals,
+        7,
+        200,
+        0,
+        0,
+        true,
+        true,
+        true);
+    assert(ownerRoomLookup.decision == ClientPortalLookupDecision::Refuse);
+    ownerRoomLookup = DecideClientPortalOwnerRoomLookup(
+        {},
+        7,
+        300,
+        109,
+        109,
+        true,
+        false,
+        false);
+    assert(ownerRoomLookup.decision == ClientPortalLookupDecision::Original);
+    ownerRoomLookup = DecideClientPortalOwnerRoomLookup(
+        {},
+        7,
+        300,
+        0,
+        0,
+        true,
+        false,
+        false);
+    assert(ownerRoomLookup.decision == ClientPortalLookupDecision::Refuse);
+    constexpr ClientPortalDescriptor ownerUnknown{
+        .sessionGeneration = 7,
+        .guid = 204,
+        .destinationLevelId = 256,
+        .nativeLowLevelId = 0,
+    };
+    static_assert(IsValidClientPortalDescriptor(ownerUnknown));
+    constexpr std::array ownerUnknownEntries{ownerUnknown};
+    ownerRoomLookup = DecideClientPortalOwnerRoomLookup(
+        ownerUnknownEntries,
+        7,
+        204,
+        0,
+        0,
+        true,
+        false,
+        false);
+    assert(ownerRoomLookup.decision == ClientPortalLookupDecision::Refuse);
+    ownerRoomLookup = DecideClientPortalOwnerRoomLookup(
+        ownerUnknownEntries,
+        7,
+        204,
+        1,
+        1,
+        true,
+        false,
+        false);
+    assert(ownerRoomLookup.decision == ClientPortalLookupDecision::Refuse);
 
     clientLookup = DecideClientPortalLookup(
         {},
@@ -155,6 +274,30 @@ int main() {
         false);
     assert(clientLookup.decision == ClientPortalLookupDecision::Original);
     assert(clientLookup.levelId == 109);
+    constexpr std::array vanillaDestinationEntries{
+        clientPortalVanillaDestination};
+    clientLookup = DecideClientPortalLookup(
+        vanillaDestinationEntries,
+        7,
+        203,
+        109,
+        109,
+        true,
+        false,
+        true);
+    assert(clientLookup.decision == ClientPortalLookupDecision::Original);
+    ownerRoomLookup = DecideClientPortalOwnerRoomLookup(
+        vanillaDestinationEntries,
+        7,
+        203,
+        0,
+        0,
+        true,
+        false,
+        true);
+    assert(ownerRoomLookup.decision
+        == ClientPortalLookupDecision::FullLevelId);
+    assert(ownerRoomLookup.levelId == 256);
     clientLookup = DecideClientPortalLookup(
         {},
         7,
@@ -326,6 +469,18 @@ int main() {
         != std::string::npos);
     assert(pluginText.find("ClientPortalLabelContextWitnessExpected")
         != std::string::npos);
+    assert(pluginText.find("ClientTownPortalUsabilityExpected")
+        != std::string::npos);
+    assert(pluginText.find("ClientTownPortalLevelsRecordCallRva")
+        != std::string::npos);
+    assert(pluginText.find("ClientTownPortalLevelDefRecordCallRva")
+        != std::string::npos);
+    assert(pluginText.find("ClientPortalStateOwnerLevelWitnessExpected")
+        != std::string::npos);
+    assert(pluginText.find("PortalStatePrimarySendCallRva")
+        != std::string::npos);
+    assert(pluginText.find("PortalStateSecondarySendCallRva")
+        != std::string::npos);
     assert(pluginText.find("PortalEndpointDescriptor") != std::string::npos);
     assert(pluginText.find("ClientPortalDescriptor") != std::string::npos);
     assert(pluginText.find("ClientPortalEndpoints") != std::string::npos);
@@ -339,6 +494,11 @@ int main() {
     assert(pluginText.find("WriteClientPortalLabelRelay")
         != std::string::npos);
     assert(pluginText.find("0x49,0x89,0xF0") != std::string::npos);
+    assert(pluginText.find("WriteClientTownPortalRelay")
+        != std::string::npos);
+    assert(pluginText.find("0x49,0x89,0xD8") != std::string::npos);
+    assert(pluginText.find("WritePortalStateFullLevelRelay")
+        != std::string::npos);
     assert(pluginText.find("PatchCallRel32") != std::string::npos);
     assert(pluginText.find("PortalSessionPoisoned") != std::string::npos);
     assert(pluginText.find("if (needsExtension && !eligible)")
@@ -348,7 +508,27 @@ int main() {
     assert(pluginText.find("packet[11] != packet[2]") == std::string::npos);
     assert(pluginText.find("linkedLevelId != endpoint->nativeLowLevelId")
         == std::string::npos);
-    assert(pluginText.find("2.1.1") != std::string::npos);
+    const auto portalPacketHooksBegin = pluginText.find(
+        "void __fastcall HookSendObjectSpawnPacket");
+    const auto portalPacketHooksEnd = pluginText.find(
+        "bool IsCompatiblePlayer",
+        portalPacketHooksBegin);
+    assert(portalPacketHooksBegin != std::string::npos);
+    assert(portalPacketHooksEnd != std::string::npos);
+    const auto portalPacketHooks = pluginText.substr(
+        portalPacketHooksBegin,
+        portalPacketHooksEnd - portalPacketHooksBegin);
+    assert(portalPacketHooks.find("EncodeLevelCoordinate")
+        == std::string::npos);
+    assert(portalPacketHooks.find("DecodeLevelCoordinate")
+        == std::string::npos);
+    assert(portalPacketHooks.find("CodecMarkerMask") == std::string::npos);
+    assert(portalPacketHooks.find("encoded->x") == std::string::npos);
+    assert(pluginText.find("HookSendPortalStatePacket(")
+        == std::string::npos);
+    assert(pluginText.find("outside the local codec contract")
+        == std::string::npos);
+    assert(pluginText.find("2.1.2") != std::string::npos);
     assert(pluginText.find("KeyedValidationRowCount") != std::string::npos);
     assert(pluginText.find("serviceResult=%u") != std::string::npos);
     assert(pluginText.find("rowIndex=%u, levelId=%d") != std::string::npos);

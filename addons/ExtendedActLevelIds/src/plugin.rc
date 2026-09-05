@@ -13,11 +13,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "RuffnecKk"
       VALUE "FileDescription", "Extends functional level IDs to the native 1023-record limit."
-      VALUE "FileVersion", "2.1.1"
+      VALUE "FileVersion", "2.1.2"
       VALUE "InternalName", "extended-act-level-ids"
       VALUE "OriginalFilename", "d2rl-ruffneckk-extended-act-level-ids.dll"
       VALUE "ProductName", "Extended Act Level IDs"
-      VALUE "ProductVersion", "2.1.1"
+      VALUE "ProductVersion", "2.1.2"
     END
   END
   BLOCK "VarFileInfo"

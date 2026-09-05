@@ -3745,3 +3745,92 @@ confiance explicite.
   chaque plugin ni leur qualification runtime. Steam 3.3.93787 reste un
   candidat admissible non qualifié tant que les surfaces réellement utilisées
   ne sont pas prouvées byte-exact.
+
+## 2026-09-04 — paquet Town Portal 0x60 et caller client 0xFE30C
+
+- Le gate read-only part du runtime 2.1.1 : le plugin a refusé un paquet
+  `0x60` « outside the local codec contract », puis
+  `DATATBLS_GetLevelsTxtRecord 0x32C4A0` a asserté avec une adresse de retour
+  `0xFE30C`. Aucun plugin, table, profil runtime, processus ou save n'a été
+  modifié pendant le census.
+- Le contrôle d'identité client n'est pas la cause démontrée du refus.
+  `D2Client+0x270` est bien un GUID de joueur : le témoin unique `0x537CAC`
+  le transmet comme tel, et d'autres chemins natifs l'emploient avec le type
+  `D2Client+0x26C` pour résoudre l'unité serveur. En local/offline, ce GUID est
+  le même contrat que `LocalPlayerReady.playerId` déjà validé lors de la
+  création du portail.
+- Le codec de coordonnées 2.1.1 est en revanche structurellement insuffisant.
+  Il réserve les bits X `15..13` et exige donc `X <= 8191`. La fixture jouée
+  Level 256 possède `OffsetX=3300`, `OffsetY=2400`, `SizeX=40` et
+  `SizeY=52`. La référence sémantique D2MOO épinglée initialise les coordonnées
+  de room depuis `nTileXPos/nTileYPos` dans `DrlgDrlg.cpp:512-522`, puis
+  `DUNGEON_GameTileToSubtileCoords` multiplie X et Y par cinq dans
+  `D2Dungeon.cpp:1323-1326`. Toute coordonnée X de cette fixture tombe donc
+  dans `[16500,16700)`, hors codec. Le refus 0x60 est inévitable lorsque le
+  propriétaire est encore dans cette room; cacher les bits hauts dans X doit
+  être abandonné pour Town Portal.
+- Le builder `D2GAME_PACKETS_SendPacket0x60_PortalState 0x47F620` reçoit
+  `(D2Client*, portal Unit*, ownerRoomLevelLow, ownerX, ownerY)` et produit
+  exactement 12 octets. Le caller principal conserve le Level ID complet dans
+  R12D à `0x5388E4`; le caller secondaire le conserve dans EDI à `0x593012`.
+  Les deux ne placent que R12B/DIL en R8B. Leurs contextes stricts à
+  `0x5388CA` et `0x592FFA` n'ont chacun qu'une occurrence. Ces callsites
+  permettent de publier le full owner-room ID dans un sidecar local sans
+  modifier le paquet ni ses coordonnées.
+- `CLIENT_HandlePacket0x60_PortalState 0x1CB1C0` écrit le byte paquet
+  `+0x0B` à `Unit+0x1BA`; le témoin `0x1CB23A` est unique. Ce champ est le
+  low byte du niveau courant du propriétaire et reste distinct de la
+  destination `ObjectData.InteractType` provenant de `packet[2]`.
+- La fonction `0xFE1F0` est le prédicat client de disponibilité d'un Town
+  Portal avec ABI observée `(localPlayer Unit*, portal Unit*) -> bool`. Son
+  entrée stricte de 32 octets est unique. Elle exige un joueur et un objet
+  type `2`, classe `59`, valide propriétaire ou parti, récupère le contexte
+  de données du joueur, puis relit `Unit+0x1BA` pour
+  `DATATBLS_GetLevelsTxtRecord` à `0xFE307` et
+  `DATATBLS_GetLevelDefRecord` à `0xFE333`. Elle conserve ensuite les gardes
+  Act online et quêtes natives. Pour Level 256, le byte zéro explique
+  exactement l'assertion retournant à `0xFE30C`.
+- Les contextes des deux calls, à `0xFE2FC` et `0xFE328`, sont uniques. La
+  seam minimale est donc deux relays exacts qui transmettent RBX comme portail
+  vivant à un résolveur, récupèrent seulement un full owner-room ID validé par
+  `{session, GUID, classe, low byte, contexte, record}`, puis rappellent les
+  getters originaux. L'entrée partagée `0x32C4A0`, la logique propriétaire,
+  le parti, les restrictions online et les quêtes restent inchangés.
+- Le mécanisme recommandé pour le prochain gate d'implantation est un sidecar
+  process-local par GUID, alimenté avant l'envoi stock depuis les deux
+  callsites qui possèdent encore le DWORD complet. Les wrappers clients
+  `0x51/0x60` gardent l'éviction et la revalidation du portail vivant, mais ne
+  décodent plus X; les paquets restent byte-exacts vanilla. Cloner entièrement
+  `0xFE1F0`, hooker globalement les getters ou employer un faux record proxy
+  sont rejetés pour leur rayon ABI, leur collision MapSense ou leur sémantique
+  Act/quête incorrecte.
+- Verdict : **PASS statique read-only**. Les identités stables sont promues
+  dans `known-rvas.json`. Une implantation, un build et tout nouveau runtime
+  exigent des gates séparés; save/reload, waypoint, automap et réseau restent
+  ouverts.
+
+## 2026-09-04 — implantation Town Portal 2.1.2 process-local sans codec
+
+- Le gate autorisé implante les seams issus du census sans nouvelle hypothèse
+  native. Le codec de coordonnées reste réservé à la visibilité des rooms
+  `0x07/0x08`; les builders et handlers Town Portal `0x51/0x60` reçoivent les
+  coordonnées et champs stock inchangés.
+- Les calls `0x5388E4` et `0x593012` sont redirigés par relays exacts. Le
+  premier transporte R12D et le second EDI comme sixième argument privé vers
+  le publisher sidecar, tout en conservant client, portail, low byte, X et Y
+  dans l'ABI stock du builder `0x47F620`.
+- Les relays `0xFE307/0xFE333` exécutent `mov r8,rbx` avant les résolveurs
+  scoped. Ceux-ci exigent portail type 2/classe 59, GUID, destination low,
+  owner-room low, génération, contexte et record cohérents avant de substituer
+  le full owner-room ID. Ils ne modifient ni les getters partagés ni le reste
+  du prédicat natif `0xFE1F0`.
+- La revalidation d'unicité donne une occurrence exacte pour chacun des
+  contextes `0xFE1F0`, `0xFE2FC`, `0xFE328`, `0x1CB23A`, `0x5388CA` et
+  `0x592FFA`. L'audit ne trouve aucun propriétaire concurrent dans les autres
+  sources RuffnecKk, les patches/configs BKVince ou la référence eezstreet
+  épinglée `dc75b49ffbb67b887d7757ee00ee9a03bcde5d8a`.
+- Deux builds Release indépendants sont byte-identiques : 91 648 octets,
+  SHA-256
+  `0710A1FFB1442115F5F8236BFDAB5393F3B12D7CA38665600F73BC881189FEF8`.
+  Verdict : **PASS STATIQUE** pour l'implantation; aucune conclusion runtime
+  n'est revendiquée.

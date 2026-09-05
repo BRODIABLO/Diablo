@@ -24,6 +24,7 @@ inline constexpr std::uint32_t MaximumKeyedValidationLevelId = 0xFF;
 inline constexpr std::int32_t MaximumVanillaNetworkLevelId = 0xFF;
 inline constexpr std::uint32_t DynamicTownPortalClassId = 59;
 inline constexpr std::uint32_t InvalidUnitGuid = 0xFFFFFFFFU;
+inline constexpr std::int32_t UnknownClientPortalLevelId = -1;
 inline constexpr std::size_t MaximumClientPortalEntries = 1024;
 inline constexpr std::uint16_t CoordinateValueMask = 0x1FFF;
 inline constexpr std::uint16_t CodecMarkerMask = 0x8000;
@@ -94,6 +95,8 @@ struct ClientPortalDescriptor {
     std::uint32_t guid{InvalidUnitGuid};
     std::int32_t destinationLevelId{};
     std::uint8_t nativeLowLevelId{};
+    std::int32_t ownerRoomLevelId{UnknownClientPortalLevelId};
+    std::uint8_t ownerRoomNativeLowLevelId{};
 
     auto operator<=>(const ClientPortalDescriptor&) const noexcept = default;
 };
@@ -135,10 +138,19 @@ constexpr bool IsValidPortalEndpoint(
 
 constexpr bool IsValidClientPortalDescriptor(
         const ClientPortalDescriptor& descriptor) noexcept {
-    return descriptor.guid != InvalidUnitGuid
-        && IsExtendedLevelId(descriptor.destinationLevelId)
+    const auto destinationValid = descriptor.destinationLevelId >= 0
+        && descriptor.destinationLevelId <= MaximumLevelId
         && descriptor.nativeLowLevelId
             == LowLevelId(descriptor.destinationLevelId);
+    const auto ownerRoomUnknown = descriptor.ownerRoomLevelId
+        == UnknownClientPortalLevelId;
+    const auto ownerRoomValid = descriptor.ownerRoomLevelId >= 0
+        && descriptor.ownerRoomLevelId <= MaximumLevelId
+        && descriptor.ownerRoomNativeLowLevelId
+            == LowLevelId(descriptor.ownerRoomLevelId);
+    return descriptor.guid != InvalidUnitGuid
+        && destinationValid
+        && (ownerRoomUnknown || ownerRoomValid);
 }
 
 inline bool UpsertClientPortalDescriptor(
@@ -211,9 +223,62 @@ inline ClientPortalLookupResult DecideClientPortalLookup(
             || !fullLevelIdKnown) {
         return {ClientPortalLookupDecision::Refuse, requestedLevelId};
     }
+    if (!IsExtendedLevelId(found->destinationLevelId)) {
+        return {ClientPortalLookupDecision::Original, requestedLevelId};
+    }
     return {
         ClientPortalLookupDecision::FullLevelId,
         found->destinationLevelId};
+}
+
+inline ClientPortalLookupResult DecideClientPortalOwnerRoomLookup(
+        std::span<const ClientPortalDescriptor> entries,
+        std::uint64_t sessionGeneration,
+        std::uint32_t guid,
+        std::uint8_t nativeLowLevelId,
+        std::int32_t requestedLevelId,
+        bool isDynamicTownPortal,
+        bool sessionPoisoned,
+        bool fullLevelIdKnown) noexcept {
+    if (!isDynamicTownPortal) {
+        return {ClientPortalLookupDecision::Original, requestedLevelId};
+    }
+    if (sessionPoisoned
+            || requestedLevelId < 0
+            || requestedLevelId > MaximumVanillaNetworkLevelId
+            || nativeLowLevelId != requestedLevelId) {
+        return {ClientPortalLookupDecision::Refuse, requestedLevelId};
+    }
+    const auto found = std::find_if(
+        entries.begin(),
+        entries.end(),
+        [&](const ClientPortalDescriptor& descriptor) {
+            return descriptor.sessionGeneration == sessionGeneration
+                && descriptor.guid == guid;
+        });
+    if (found == entries.end()) {
+        return nativeLowLevelId == 0
+            ? ClientPortalLookupResult{
+                ClientPortalLookupDecision::Refuse,
+                requestedLevelId}
+            : ClientPortalLookupResult{
+                ClientPortalLookupDecision::Original,
+                requestedLevelId};
+    }
+    if (found->ownerRoomLevelId == UnknownClientPortalLevelId) {
+        return {ClientPortalLookupDecision::Refuse, requestedLevelId};
+    }
+    if (!IsValidClientPortalDescriptor(*found)
+            || found->ownerRoomNativeLowLevelId != nativeLowLevelId
+            || !fullLevelIdKnown) {
+        return {ClientPortalLookupDecision::Refuse, requestedLevelId};
+    }
+    if (!IsExtendedLevelId(found->ownerRoomLevelId)) {
+        return {ClientPortalLookupDecision::Original, requestedLevelId};
+    }
+    return {
+        ClientPortalLookupDecision::FullLevelId,
+        found->ownerRoomLevelId};
 }
 
 constexpr bool IsReciprocalPortalPair(

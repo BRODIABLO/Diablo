@@ -833,7 +833,15 @@
       "kind": "layout-witness",
       "confidence": "high",
       "source": "Mission/extended-act-level-ids-3.2.md; addons/ExtendedActLevelIds/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
-      "notes": "Strict unique 31-byte caller witness proving the D2GAME_PACKETS_SendPacket0x60_PortalState ABI: client in RCX, portal in RDX, owner-player current-room Level ID low byte in R8B, owner-player X in R9W and owner-player Y in the fifth stack slot. The caller obtains the owner unit through SUNIT_GetPortalOwner, then its live room and coordinates. R8B is therefore independent from the portal destination InteractType stored by the sender at packet +2; version 2.1.0 incorrectly required those values to match."
+      "notes": "Strict unique 31-byte caller witness proving the D2GAME_PACKETS_SendPacket0x60_PortalState ABI: client in RCX, portal in RDX, owner-player current-room Level ID low byte in R8B, owner-player X in R9W and owner-player Y in the fifth stack slot. The caller obtains the owner unit through SUNIT_GetPortalOwner, then its live room and coordinates. The full current-room Level ID remains live in R12D at the exact call 0x5388E4 before R8B truncation. R8B is independent from the portal destination InteractType stored by the sender at packet +2; version 2.1.0 incorrectly required those values to match."
+    },
+    {
+      "rva": "0x5388E4",
+      "name": "D2GAME_PortalStatePrimaryFullLevelCall",
+      "kind": "callsite",
+      "confidence": "high",
+      "source": "Mission/extended-act-level-ids-3.2.md; addons/ExtendedActLevelIds/src/plugin.cpp; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Primary direct call to D2GAME_PACKETS_SendPacket0x60_PortalState. Its strict unique context begins at 0x5388CA and proves that the full owner-room Level ID remains in R12D while only R12B is passed in R8B. Extended Act Level IDs 2.1.2 redirects only this call through a relay that supplies R12D as a private sixth helper argument and preserves all five stock builder arguments, packet bytes and coordinates."
     },
     {
       "rva": "0x47CE40",
@@ -841,7 +849,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/UNIT/SUnitMsg.cpp:72-83; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/include/D2PacketDef.h:1204-1213",
-      "notes": "Unique 32-byte entry and unique direct call at 0x53885E. It sends the exact 14-byte object-spawn packet: opcode +0, unit type +1, GUID DWORD +2, object ID WORD +6, X WORD +8, Y WORD +0x0A, animation +0x0C and ObjectData.InteractType byte +0x0D. A compatible portal codec can preserve the packet size by carrying high Level-ID bits in the marked X word and restoring the coordinate before native client creation."
+      "notes": "Unique 32-byte entry and unique direct call at 0x53885E. It sends the exact 14-byte object-spawn packet: opcode +0, unit type +1, GUID DWORD +2, object ID WORD +6, X WORD +8, Y WORD +0x0A, animation +0x0C and ObjectData.InteractType byte +0x0D. Extended Act Level IDs 2.1.2 calls this stock builder with every field and coordinate unchanged after publishing the full destination through a process-local GUID/session sidecar."
     },
     {
       "rva": "0x129D70",
@@ -849,7 +857,7 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/include/D2PacketDef.h:1204-1213",
-      "notes": "Unique 32-byte entry for the stock 0x51 object-spawn consumer. It reads GUID DWORD +2, object class WORD +6, X WORD +8, Y WORD +0x0A and InteractType byte +0x0D, then calls CLIENT_CreateObjectFromPacket 0x99510 at 0x129DD8. That helper performs the native creation before writing packet byte +0x0D through UNITS_SetObjectInteractType at 0x99582; its entry is not promoted because the 32-byte prefix has two corpus matches. Extended Act Level IDs 2.1.0 already owns this handler and decodes only marked local class-59 packet copies. The proven client-side correction is to evict the same GUID on every class-59 spawn, delegate the X-restored copy first, and then publish the decoded full destination in a separate session/GUID sidecar; any later lookup must revalidate the live unit rather than retaining its pointer."
+      "notes": "Unique 32-byte entry for the stock 0x51 object-spawn consumer. It reads GUID DWORD +2, object class WORD +6, X WORD +8, Y WORD +0x0A and InteractType byte +0x0D, then calls CLIENT_CreateObjectFromPacket 0x99510 at 0x129DD8. That helper performs the native creation before writing packet byte +0x0D through UNITS_SetObjectInteractType at 0x99582; its entry is not promoted because the 32-byte prefix has two corpus matches. Extended Act Level IDs 2.1.2 evicts a reused class-59 GUID, delegates the unchanged stock packet first, then validates the live object against the process-local destination sidecar; no client Unit pointer is retained."
     },
     {
       "rva": "0x47F620",
@@ -873,7 +881,55 @@
       "kind": "function",
       "confidence": "high",
       "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md; D2MOO@19019806df7f3e877fa105b05395d1e3597e2316:source/D2Game/src/GAME/SCmd.cpp:2057-2068",
-      "notes": "Stock client consumer for portal-state packet 0x60. Its strict 29-byte entry witness is unique in the common corpus. It resolves the client object by packet GUID at +3 through CLIENT_GetUnitByIdAndType(unitType=2), reads destination byte +2 and calls UNITS_SetObjectInteractType, then stores owner-player coordinates +7/+9 and owner-player current-room Level ID byte +0x0B in the client unit. Version 2.1.0 incorrectly required the two Level bytes to agree and, even after decoding a marked packet, did not publish the recovered destination to a client GUID/session sidecar. The corrected client contract restores only X in a packet copy, delegates first, resolves the live object again, requires class 59, GUID and destination low-byte agreement, and then refreshes the separate client sidecar. Packet +0x0B is never part of destination validation."
+      "notes": "Stock client consumer for portal-state packet 0x60. Its strict 29-byte entry witness is unique in the common corpus. It resolves the client object by packet GUID at +3 through CLIENT_GetUnitByIdAndType(unitType=2), reads destination byte +2 and calls UNITS_SetObjectInteractType, then stores owner-player coordinates +7/+9 at Unit+0x1B6/+0x1B8 and owner-player current-room Level ID byte +0x0B at Unit+0x1BA. The client Town Portal usability predicate at 0xFE1F0 later consumes Unit+0x1BA at calls 0xFE307 and 0xFE333. Packet +0x0B is never part of destination validation, but it requires a separate full owner-room Level ID sidecar when the value exceeds 255."
+    },
+    {
+      "rva": "0x1CB23A",
+      "name": "CLIENT_PortalStateOwnerLevelUnitLayoutWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Strict unique 15-byte packet-0x60 witness. It loads packet byte +0x0B and stores it at Unit+0x1BA after the same handler stored owner-player coordinates at Unit+0x1B6/+0x1B8. The value is the owner player's current-room Level ID low byte, not the portal destination InteractType."
+    },
+    {
+      "rva": "0xFE1F0",
+      "name": "CLIENT_CanUseTownPortal",
+      "kind": "function",
+      "confidence": "high",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Observed client Town Portal usability predicate with ABI bool (localPlayer Unit*, portal Unit*). Its strict unique 32-byte entry requires a player, then a type-2 class-59 portal, validates owner or party eligibility, derives the data context from the player and consumes the owner-room Level ID byte at portal Unit+0x1BA. It preserves all native online-Act and quest restrictions after the two record lookups. The failed 2.1.1 runtime returned from the first lookup at 0xFE30C."
+    },
+    {
+      "rva": "0xFE307",
+      "name": "CLIENT_TownPortalUsability_GetLevelsTxtRecordCall",
+      "kind": "callsite",
+      "confidence": "high",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique direct call from CLIENT_CanUseTownPortal to DATATBLS_GetLevelsTxtRecord after loading EDX from portal Unit+0x1BA and ECX from the local player's data context. The runtime assertion return 0xFE30C identifies this exact call. Extended Act Level IDs 2.1.2 redirects only this call through a relay that passes RBX as the live portal argument and substitutes a validated full owner-room Level ID without touching the shared getter."
+    },
+    {
+      "rva": "0xFE333",
+      "name": "CLIENT_TownPortalUsability_GetLevelDefRecordCall",
+      "kind": "callsite",
+      "confidence": "high",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Unique direct call from CLIENT_CanUseTownPortal to DATATBLS_GetLevelDefRecord after loading the same portal Unit+0x1BA owner-room byte and data context. It is reached for non-owner party eligibility and feeds the unchanged native quest checks. Extended Act Level IDs 2.1.2 redirects only this call through the same validated full owner-room sidecar contract as 0xFE307, preserving the surrounding checks."
+    },
+    {
+      "rva": "0x537CAC",
+      "name": "D2Client_PlayerUnitGuidLayoutWitness",
+      "kind": "layout-witness",
+      "confidence": "high",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Strict unique 15-byte witness that reads D2Client+0x270 as a DWORD player-unit GUID and passes it beside a live Unit pointer to a native predicate. Independent server paths use D2Client+0x26C as unit type and +0x270 as unit GUID for SUNIT_GetServerUnit. This validates the existing local-client identity field; it does not explain the 2.1.1 0x60 refusal."
+    },
+    {
+      "rva": "0x593012",
+      "name": "D2GAME_PortalStateSecondaryFullLevelCall",
+      "kind": "callsite",
+      "confidence": "high",
+      "source": "Mission/extended-act-level-ids-3.2.md; reverse-engineering/d2r-3.2.92777/findings.md",
+      "notes": "Secondary direct call to D2GAME_PACKETS_SendPacket0x60_PortalState. The caller obtains the portal owner, reads its full room Level ID, retains that DWORD in EDI and passes only DIL in R8B. Its strict context at 0x592FFA is unique. Extended Act Level IDs 2.1.2 redirects only this call through a relay that supplies EDI as a private sixth helper argument and preserves all five stock builder arguments, packet bytes and coordinates."
     },
     {
       "rva": "0x4C8650",
