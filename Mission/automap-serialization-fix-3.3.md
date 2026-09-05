@@ -1,6 +1,76 @@
 # Automap Serialization Fix — D2R 3.3
 
-Dernière mise à jour : 3 septembre 2026
+Dernière mise à jour : 5 septembre 2026
+
+## Reprise prioritaire — compatibilité avec la base MapSense 1.0.2
+
+Vincent autorise le 5 septembre 2026 par `go` la réintégration ciblée du
+témoin à deux états exacts dans la source produit MapSense, ainsi que son
+suivi. Cette compatibilité précède la reprise des tests de dimensions des
+grandes zones extérieures. Le candidat sera identifié MapSense `1.0.3` pour
+ne pas confondre son binaire avec la version `1.0.2` publiée.
+
+L'audit source retrouve l'adaptation dans
+`addons/RuffnecKkMapSense/src/reveal_engine.{hpp,cpp}` et ses tests, tandis que
+`suite:plugins/mapsense/src/reveal_engine.cpp` n'accepte que l'épilogue vanilla.
+Automap Serialization Fix `0.1.0` conserve exclusivement les 13 octets à
+`0xD7E3F`; MapSense reste consommateur read-only. Le report porte seulement sur
+ce contrat, ses tests et les métadonnées du candidat, sans reprendre les
+divergences GPS/mapgen ou les autres travaux du laboratoire.
+
+Baseline : D2RLoader `1.2.1` public, PluginSDK API v3 minimal existant, corpus
+natif commun vérifié pour Battle.net `3.3.93847` et `3.2.92777`. La release
+Suite `1.3.3` publiée demeure inchangée. La qualification MapSense `1.0.0`
+du 3 septembre ne vaut pas qualification de ce candidat.
+
+Gates de reprise : tests exacts vanilla/corrigé et refus des altérations,
+builds stricts reproductibles, identité DLL/package, puis pile complète dans
+les deux ordres et portées, et aller-retour de layer avec payload >32 767
+octets. Runtime du nouveau candidat : `not run`. Rollback : restaurer les
+artefacts précédents depuis leur sauvegarde vérifiée; aucune migration de save.
+
+### Preuves hors jeu du candidat 1.0.3
+
+- Source autoritaire : `C:/Workspaces/RuffnecKk-D2RLoader-Suite/plugins/mapsense/`,
+  HEAD d'audit `95ba7133a80ff7f5b818c1fc41d750a2cc9438ab`; report ciblé de
+  l'adaptation du laboratoire, sans copie de son arbre divergent.
+- Deux builds Release x64 MSVC `/W4 /WX` dans
+  `analysis-cache/mapsense-1.0.3-automap-{a,b}` sont byte-identiques :
+  `3 578 368` octets, SHA-256
+  `D2F71263A3871EC3B4A356064603B601AF1A3E098C72A03CC47CDEC30BB4B965`.
+- PE et PluginInfo `1.0.3`, auteur `RuffnecKk`, trois exports D2RLoader et
+  export de coopération renderer préexistant conservés.
+- CTest `2/2` dans chaque build : politiques et vraies polices Windows.
+  Le contrat accepte les deux séquences complètes, refuse les `6 630`
+  substitutions d'un octet et traite exactement les `8 192` combinaisons
+  vanilla/corrigé, en refusant tout mélange distinct des deux états admis.
+- Automap Serialization Fix reste byte-identique à
+  `C7193FADB024236136E241B79164EFF4CF86C0ED5C0E7CA77454D1BD7CD8CE17`;
+  son CTest existant passe `1/1`.
+- `Test-Suite.ps1 -RequireAll`, `Test-NextRelease.ps1` avec le registre,
+  schéma et allowlist `1.3.3` explicites, et `Test-SuiteGovernance.ps1` :
+  `VALID`. Ces contrôles préservent la release publiée; le candidat ne devient
+  ni publié ni package-ready par leur succès.
+- ZIP de test local :
+  `addons/RuffnecKkMapSense/package/RuffnecKk-mapsense-v1.0.3-automap-test-r1.zip`,
+  SHA-256 `DD2C8CD0F51E0587FB72F5A50E7ADC01F4D132AA25E2A37688EB96A7D89B431D`.
+  Trois fichiers seulement, hashes vérifiés après extraction : DLL candidate,
+  helper publié `74CC1DACA28E836C53E10FDB43EE7B37883E73F0894A06E14AA2A8287B138A43`,
+  TOML publié `C286358724195E17288B5949A83F69373C477D96A20273FE0C92B8912961D241`.
+  README produit copié à côté du ZIP, exclu de l'archive.
+- Installation observée : `C:/Games/Diablo II Resurrected`, profil BKVince,
+  MapSense `1.0.2` publié `FA8A2EE0...9EF724`, helper publié exact,
+  aucun Automap Serialization Fix installé, aucun processus D2R actif.
+  D2R et `.build.info` correspondent aux hashes gouvernés ci-dessous;
+  D2RLoader public `1.2.1` vaut `27A79CCD...5C084` et D2RCore `2130A98D...5BBC8`.
+
+Prochaine séquence proposée : quatre cold starts BKVince hors ligne,
+deux ordres pour chaque portée globale/mod-locale, pile complète active;
+le dernier couvre aussi le payload de `6 000` cellules tag-zéro, `36 000`
+octets et le retour `layer 0 → 1 → 0`. Sauvegarder puis restaurer byte-exact
+les DLL, configurations et saves affectées, ainsi que les noms temporaires
+servant à contrôler l'ordre. Le harness diagnostique est temporaire.
+Cette séquence runtime attend sa confirmation opérationnelle explicite.
 
 ## Décision autonome RuffnecKk Suite
 

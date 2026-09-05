@@ -700,7 +700,7 @@
       "status": "active",
       "owner": "Vincent + Codex",
       "mission": "Mission/automap-serialization-fix-3.3.md",
-      "nextGate": "Battle.net 3.3.93847 gameplay passes with a deterministic 36000-byte single-tree payload and 6000/6000 cells restored after layer 0→1→0; the DLL-only 0.1.0-rc.1 ZIP is built. Keep Steam, cross-build multiplayer, public promotion and Suite 1.3.0 inclusion explicitly separate.",
+      "nextGate": "Priority approved 2026-09-05: restore Automap Serialization Fix coexistence on the MapSense 1.0.2 product base before outdoor-size tests. MapSense 1.0.3 candidate accepts both exact serializer states; two strict builds are byte-identical (D2F71263...B965), CTest 2/2 each, fix CTest 1/1, Suite source/governance checks VALID, three-file test ZIP verified. Fresh four-start full-stack scope/load-order and 36000-byte gameplay matrix awaits runtime authorization. Existing MapSense 1.0.0 evidence does not qualify this candidate; published Suite 1.3.3 remains unchanged.",
       "include": [
         "Mission/automap-serialization-fix-3.3.md",
         "addons/AutomapSerializationFix/**",
